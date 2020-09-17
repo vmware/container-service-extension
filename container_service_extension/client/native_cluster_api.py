@@ -57,7 +57,8 @@ class NativeClusterApi:
         msg = "Operation not supported; Under implementation"
         raise vcd_exceptions.OperationNotSupportedException(msg)
 
-    def get_cluster_info(self, cluster_name, org=None, vdc=None, **kwargs):
+    def get_cluster_info(self, cluster_name, cluster_id=None,
+                         org=None, vdc=None, **kwargs):
         """Get cluster information using DEF API.
 
         :param str cluster_name: name of the cluster
@@ -68,6 +69,8 @@ class NativeClusterApi:
         :return: cluster information
         :rtype: dict
         """
+        if cluster_id:
+            return self.get_cluster_info_by_id(cluster_id)
         filters = client_utils.construct_filters(org=org, vdc=vdc)
         entity_svc = def_entity_svc.DefEntityService(self._cloudapi_client)
         def_entity = entity_svc.get_native_entity_by_name(name=cluster_name, filters=filters)  # noqa: E501
@@ -91,7 +94,8 @@ class NativeClusterApi:
         logger.CLIENT_LOGGER.debug(f"Defined entity info from server: {def_entity}")  # noqa: E501
         return yaml.dump(asdict(def_entity.entity))
 
-    def delete_cluster(self, cluster_name, org=None, vdc=None):
+    def delete_cluster(self, cluster_name, cluster_id=None,
+                       org=None, vdc=None):
         """Delete DEF native cluster by name.
 
         :param str cluster_name: native cluster name
@@ -101,12 +105,14 @@ class NativeClusterApi:
         :rtype: str
         :raises ClusterNotFoundError
         """
-        filters = client_utils.construct_filters(org=org, vdc=vdc)
-        entity_svc = def_entity_svc.DefEntityService(self._cloudapi_client)
-        def_entity = entity_svc.get_native_entity_by_name(name=cluster_name, filters=filters)  # noqa: E501
-        if def_entity:
-            return self.delete_cluster_by_id(def_entity.id)
-        raise cse_exceptions.ClusterNotFoundError(f"Cluster '{cluster_name}' not found.")  # noqa: E501
+        if not cluster_id:
+            filters = client_utils.construct_filters(org=org, vdc=vdc)
+            entity_svc = def_entity_svc.DefEntityService(self._cloudapi_client)
+            def_entity = entity_svc.get_native_entity_by_name(name=cluster_name, filters=filters)  # noqa: E501
+            if not def_entity:
+                cse_exceptions.ClusterNotFoundError(f"Cluster '{cluster_name}' not found.")  # noqa: E501
+            cluster_id = def_entity.id
+        return self.delete_cluster_by_id(cluster_id)
 
     def delete_cluster_by_id(self, cluster_id, **kwargs):
         """Delete the existing Kubernetes cluster by id.
@@ -161,7 +167,8 @@ class NativeClusterApi:
         cluster_entity = def_models.DefEntity(**response_processor.process_response(response))  # noqa: E501
         return client_utils.construct_task_console_message(cluster_entity.entity.status.task_href)  # noqa: E501
 
-    def get_cluster_config(self, cluster_name, org=None, vdc=None):
+    def get_cluster_config(self, cluster_name, cluster_id=None,
+                           org=None, vdc=None):
         """Get cluster config for the given cluster name.
 
         :param str cluster_name: name of the cluster
@@ -172,12 +179,14 @@ class NativeClusterApi:
         :rtype: str
         :raises ClusterNotFoundError, CseDuplicateClusterError
         """
-        filters = client_utils.construct_filters(org=org, vdc=vdc)
-        entity_svc = def_entity_svc.DefEntityService(self._cloudapi_client)
-        def_entity = entity_svc.get_native_entity_by_name(name=cluster_name, filters=filters)  # noqa: E501
-        if def_entity:
-            return self.get_cluster_config_by_id(def_entity.id)
-        raise cse_exceptions.ClusterNotFoundError(f"Cluster '{cluster_name}' not found.")  # noqa: E501
+        if not cluster_id:
+            filters = client_utils.construct_filters(org=org, vdc=vdc)
+            entity_svc = def_entity_svc.DefEntityService(self._cloudapi_client)
+            def_entity = entity_svc.get_native_entity_by_name(name=cluster_name, filters=filters)  # noqa: E501
+            cluster_id = def_entity.id
+            if not def_entity:
+                raise cse_exceptions.ClusterNotFoundError(f"Cluster '{cluster_name}' not found.")  # noqa: E501
+        return self.get_cluster_config_by_id(def_entity.id)
 
     def get_cluster_config_by_id(self, cluster_id, **kwargs):
         """Get the cluster config for given cluster id.

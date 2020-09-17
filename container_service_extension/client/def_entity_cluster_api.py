@@ -183,7 +183,8 @@ class DefEntityClusterApi:
 
         return cluster, additional_entity_properties, is_native_cluster
 
-    def get_cluster_info(self, cluster_name, org=None, vdc=None, **kwargs):
+    def get_cluster_info(self, cluster_name, cluster_id=None,
+                         org=None, vdc=None, **kwargs):
         """Get cluster information using DEF API.
 
         :param str cluster_name: name of the cluster
@@ -197,6 +198,8 @@ class DefEntityClusterApi:
         """
         # TODO(Display Owner information): Owner information needs to be
         # displayed
+        if cluster_id:
+            return self.get_cluster_info_by_id(cluster_id, org=org)
         cluster, _, is_native_cluster = \
             self._get_tkg_native_clusters_by_name(cluster_name,
                                                   org=org, vdc=vdc)
@@ -221,7 +224,8 @@ class DefEntityClusterApi:
             return self._nativeCluster.get_cluster_info_by_id(cluster_id=cluster_id)  # noqa: E501
         return self._tkgCluster.get_cluster_info_by_id(cluster_id, org=org)  # noqa: E501
 
-    def get_cluster_config(self, cluster_name, org=None, vdc=None):
+    def get_cluster_config(self, cluster_name, cluster_id=None,
+                           org=None, vdc=None):
         """Get cluster config.
 
         :param str cluster_name: name of the cluster
@@ -232,6 +236,8 @@ class DefEntityClusterApi:
         :rtype: str
         :raises ClusterNotFoundError, CseDuplicateClusterError
         """
+        if cluster_id:
+            return self.get_cluster_config_by_id(cluster_id, org=org)
         cluster, entity_properties, is_native_cluster = \
             self._get_tkg_native_clusters_by_name(cluster_name,
                                                   org=org, vdc=vdc)
@@ -250,7 +256,8 @@ class DefEntityClusterApi:
             return self._nativeCluster.get_cluster_config_by_id(cluster_id)
         return self._tkgCluster.get_cluster_config_by_id(cluster_id, org=org)
 
-    def delete_cluster(self, cluster_name, org=None, vdc=None):
+    def delete_cluster(self, cluster_name, cluster_id=None,
+                       org=None, vdc=None):
         """Delete DEF cluster by name.
 
         :param str cluster_name: name of the cluster
@@ -260,6 +267,8 @@ class DefEntityClusterApi:
         :rtype: str
         :raises ClusterNotFoundError, CseDuplicateClusterError
         """
+        if cluster_id:
+            return self.delete_cluster_by_id(cluster_id)
         cluster, entity_properties, is_native_cluster = \
             self._get_tkg_native_clusters_by_name(cluster_name,
                                                   org=org, vdc=vdc)

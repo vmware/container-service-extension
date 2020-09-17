@@ -153,7 +153,8 @@ class TKGClusterApi:
                 "same Organization. Please contact the administrator.")
         return tkg_entities, tkg_def_entities
 
-    def get_cluster_info(self, cluster_name, org=None, vdc=None):
+    def get_cluster_info(self, cluster_name, cluster_id=None,
+                         org=None, vdc=None, **kwargs):
         """Get cluster information of a TKG cluster API.
 
         :param str cluster_name: name of the cluster
@@ -164,6 +165,8 @@ class TKGClusterApi:
         :rtype: str
         :raises ClusterNotFoundError
         """
+        if cluster_id:
+            return self.get_cluster_info_by_id(cluster_id, org=org)
         try:
             tkg_entities, _ = \
                 self.get_tkg_clusters_by_name(cluster_name, vdc=vdc, org=org)
@@ -263,7 +266,8 @@ class TKGClusterApi:
             logger.CLIENT_LOGGER.error(f"Error deleting cluster: {e}")
             raise
 
-    def delete_cluster(self, cluster_name, org=None, vdc=None):
+    def delete_cluster(self, cluster_name, cluster_id=None,
+                       org=None, vdc=None):
         """Delete TKG cluster by name.
 
         :param str cluster_name: TKG cluster name
@@ -274,9 +278,11 @@ class TKGClusterApi:
         :raises ClusterNotFoundError, CseDuplicateClusterError
         """
         try:
-            _, tkg_def_entities = \
-                self.get_tkg_clusters_by_name(cluster_name, org=org, vdc=vdc)
-            return self.delete_cluster_by_id(tkg_def_entities[0]['id'])
+            if not cluster_id:
+                _, tkg_def_entities = \
+                    self.get_tkg_clusters_by_name(cluster_name, org=org, vdc=vdc)  # noqa: E501
+                cluster_id = tkg_def_entities[0]['id']
+            return self.delete_cluster_by_id(cluster_id)
         except tkg_rest.ApiException as e:
             server_message = json.loads(e.body).get('message') or e.reason
             msg = cli_constants.TKG_RESPONSE_MESSAGES_BY_STATUS_CODE.get(e.status, f"{server_message}")  # noqa: E501
@@ -315,16 +321,20 @@ class TKGClusterApi:
             logger.CLIENT_LOGGER.error(f"{e}")
             raise
 
-    def get_cluster_config(self, cluster_name, org=None, vdc=None):
+    def get_cluster_config(self, cluster_name, cluster_id=None,
+                           org=None, vdc=None):
         """Get TKG cluster config by cluster name.
 
         :param str cluster_name: name of the cluster
+        :param str cluster_id: ID of the cluster
         :param str org: name of the org
         :param str vdc: name of the vdc
         """
         try:
-            _, tkg_def_entities = \
-                self.get_tkg_clusters_by_name(cluster_name, org=org, vdc=vdc)
+            if not cluster_id:
+                _, tkg_def_entities = \
+                    self.get_tkg_clusters_by_name(cluster_name, org=org, vdc=vdc)  # noqa: E501
+                cluster_id = tkg_def_entities[0]['id']
             return self.get_cluster_config_by_id(tkg_def_entities[0]['id'],
                                                  org=org)
         except tkg_rest.ApiException as e:
