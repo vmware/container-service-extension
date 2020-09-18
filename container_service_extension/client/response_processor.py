@@ -47,7 +47,8 @@ def process_response(response):
     if response.status_code in [
         requests.codes.ok,
         requests.codes.created,
-        requests.codes.accepted
+        requests.codes.accepted,
+        requests.codes.too_many_requests
     ]:
         response = deserialize_response_content(response)
         wire_logger.debug(f"Response received: {response}")

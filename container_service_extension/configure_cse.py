@@ -233,7 +233,7 @@ def _check_mqtt_extension_installation(client, msg_update_callback, err_msgs):
             SERVER_CLI_LOGGER.error(msg)
             err_msgs.append(msg)
         else:
-            msg = "MQTT extension and API filter found"
+            msg = "MQTT extension and API filters found"
             msg_update_callback.general(msg)
             SERVER_CLI_LOGGER.info(msg)
     else:

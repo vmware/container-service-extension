@@ -59,7 +59,7 @@ class Singleton(type):
 
 
 def signal_handler(signal, frame):
-    print('\nCrtl+C detected, exiting')
+    print('\nCtrl+C detected, exiting')
     raise KeyboardInterrupt()
 
 
@@ -67,8 +67,9 @@ def consumer_thread(c):
     try:
         logger.SERVER_LOGGER.info(f"About to start consumer_thread {c}.")
         c.run()
-    except Exception:
-        click.echo("About to stop consumer_thread.")
+    except Exception as e:
+        click.echo(f"Exception in MessageConsumer thread. "
+                   f"About to stop thread due to: {e}")
         logger.SERVER_LOGGER.error(traceback.format_exc())
         c.stop()
 
@@ -157,8 +158,7 @@ class Service(object, metaclass=Singleton):
         self.should_check_config = should_check_config
         self.skip_config_decryption = skip_config_decryption
         self.decryption_password = decryption_password
-        self.consumers = []
-        self.threads = []
+        self.consumer = None
         self.pks_cache = None
         self._state = ServerState.STOPPED
         self._kubernetesInterface: def_models.DefInterface = None
@@ -174,13 +174,11 @@ class Service(object, metaclass=Singleton):
         return bool(self.pks_cache)
 
     def active_requests_count(self):
-        n = 0
         # TODO(request_count) Add support for PksBroker - VCDA-938
-        for t in threading.enumerate():
-            from container_service_extension.vcdbroker import VcdBroker
-            if type(t) == VcdBroker:
-                n += 1
-        return n
+        if self.consumer is None:
+            return 0
+        else:
+            return self.consumer.get_num_active_threads()
 
     def get_status(self):
         return self._state.value
@@ -192,7 +190,8 @@ class Service(object, metaclass=Singleton):
         result = utils.get_cse_info()
         result[shared_constants.CSE_SERVER_API_VERSION] = utils.get_server_api_version()  # noqa: E501
         if get_sysadmin_info:
-            result['consumer_threads'] = len(self.threads)
+            result['all_consumer_threads'] = 0 if self.consumer is None else \
+                self.consumer.get_num_total_threads()
             result['all_threads'] = threading.activeCount()
             result['requests_in_progress'] = self.active_requests_count()
             result['config_file'] = self.config_file
@@ -291,6 +290,7 @@ class Service(object, metaclass=Singleton):
                     msg = 'MQTT Api filter is not set up'
                     logger.SERVER_LOGGER.error(msg)
                     raise cse_exception.MQTTExtensionError(msg)
+
                 token_info = mqtt_ext_manager.create_extension_token(
                     token_name=server_constants.MQTT_TOKEN_NAME,
                     ext_urn_id=ext_urn_id)
@@ -350,26 +350,31 @@ class Service(object, metaclass=Singleton):
                 orgs=pks_config.get('orgs', []),
                 nsxt_servers=pks_config.get('nsxt_servers', []))
 
-        num_consumers = self.config['service']['listeners']
-        for n in range(num_consumers):
-            try:
-                c = MessageConsumer(self.config)
-                name = 'MessageConsumer-%s' % n
-                t = Thread(name=name, target=consumer_thread, args=(c, ))
-                t.daemon = True
-                t.start()
-                msg = f"Started thread '{name} ({t.ident})'"
-                msg_update_callback.general(msg)
-                logger.SERVER_LOGGER.info(msg)
-                self.threads.append(t)
-                self.consumers.append(c)
-                time.sleep(0.25)
-            except KeyboardInterrupt:
-                break
-            except Exception:
-                logger.SERVER_LOGGER.error(traceback.format_exc())
+        num_processors = self.config['service']['processors']
+        try:
+            self.consumer = MessageConsumer(self.config, num_processors)
+            name = server_constants.MESSAGE_CONSUMER_THREAD
+            t = Thread(name=name, target=consumer_thread,
+                       args=(self.consumer, ))
+            t.daemon = True
+            t.start()
+            msg = f"Started thread '{name}'"
+            msg_update_callback.general(msg)
+            logger.SERVER_LOGGER.info(msg)
+        except KeyboardInterrupt:
+            if self.consumer:
+                self.consumer.stop()
+            interrupt_msg = f"\nKeyboard interrupt when starting thread " \
+                            f"'{name}'"
+            logger.SERVER_LOGGER.debug(interrupt_msg)
+            raise Exception(interrupt_msg)
+        except Exception:
+            if self.consumer:
+                self.consumer.stop()
+            logger.SERVER_LOGGER.error(traceback.format_exc())
+            raise  # TODO: restart thread with watchdog
 
-        logger.SERVER_LOGGER.info(f"Number of threads started: {len(self.threads)}")  # noqa: E501
+        logger.SERVER_LOGGER.info("One MessageConsumer thread started")
 
         self._state = ServerState.RUNNING
 
@@ -409,11 +414,10 @@ class Service(object, metaclass=Singleton):
 
         logger.SERVER_LOGGER.info("Stop detected")
         logger.SERVER_LOGGER.info("Closing connections...")
-        for c in self.consumers:
-            try:
-                c.stop()
-            except Exception:
-                logger.SERVER_LOGGER.error(traceback.format_exc())
+        try:
+            self.consumer.stop()
+        except Exception:
+            logger.SERVER_LOGGER.error(traceback.format_exc())
 
         self._state = ServerState.STOPPED
         logger.SERVER_LOGGER.info("Done")
