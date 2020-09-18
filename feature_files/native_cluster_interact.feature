@@ -15,7 +15,7 @@ Scenario: Create CSE native cluster
   And User sees an error message stating that there are no org VDC that can host K8s clusters.
 
   When User sees the 'Kubernetes Runtime' section
-  And atleast one org VDC is enabled for native K8s clusters
+  And at least one org VDC is enabled for native K8s clusters
   Then there is a card in the dialog, viz. 'Native' as an option for K8s runtime
 
   When User chooses Native radio button
@@ -36,7 +36,7 @@ Scenario: Create CSE native cluster
   Then User sees the 'Virtual Data Center' section
 
   When User sees the 'Virtual Data Center' section
-  Then User sees all the oVDCs as cards, that are enabled for Native cluster deployment
+  Then User sees all the org VDCs as cards, that are enabled for Native cluster deployment
   And User chooses one of them by clicking on the radio button in one of the cards
 
   When User is on 'Virtual Data Center' section
@@ -52,8 +52,8 @@ Scenario: Create CSE native cluster
 
   When User continues to fill the 'Compute' section of the wizard
   And User sees number of control plane nodes set to 1 and this field is not editable
-  And User selects Control Plane Sizing policy from a drop down list containing the policies available to the oVDC selected in last step
-  And User selects Worker Sizing policy from a drop down list containing the policies available to the oVDC selected in last step
+  And User selects Control Plane Sizing policy from a drop down list containing the policies available to the org VDC selected in last step
+  And User selects Worker Sizing policy from a drop down list containing the policies available to the org VDC selected in last step
   And User clicks on Next button
   Then User sees the 'Storage' section of the wizard
 
@@ -65,7 +65,7 @@ Scenario: Create CSE native cluster
   Then User sees the 'Network' section of the wizard
 
   When User is on the 'Network' section
-  And User chooses a network from a list of networks available to the selected oVDC, by clicking on radio button
+  And User chooses a network from a list of networks available to the selected org VDC, by clicking on radio button
   And User clicks on Next button
   Then User sees the 'Review' section of the wizard
 
@@ -73,14 +73,14 @@ Scenario: Create CSE native cluster
   Then User can review the details of the cluster to be created
 
   When User clicks on 'Finish' button
-  And User doesn't have DEF rights assigned to their role
+  And User doesn't have native DEF rights assigned to their role
   Then User sees a modal dialog informing the User of the error
   And User is taken back to the landing page on dismissing the modal dialog
   And User sees the cluster create task in failed state with the appropriate error message
 
-  When User clicks on 'Finish   ' button
-  And User has DEF rights assigned to their role
-  Then User sees a modal dialog informing the User that CSE server has accepted their request to create a cluster
+  When User clicks on 'Finish' button
+  And User has native DEF rights assigned to their role
+  Then User sees a modal dialog informing that CSE server has accepted their request to create a cluster
   And User is taken back to the landing page on dismissing the modal dialog.
   And they see the cluster to be created listed on the page in "CREATE : IN PROGRESS" state
 
@@ -90,35 +90,37 @@ Scenario: Create CSE native cluster
 
 Scenario: Fetch CSE native cluster's kubectl config
   Given cluster 'mycluster' has been previously created by User
-  When User selects the radio button in front of the entry of 'mycluster'
+  When User selects the radio button in front of the entry of 'mycluster
+  And cluster 'mycluster' is in 'READY' state
   Then the 'Download Kube Config' button turns from grayed out to enabled
 
   When User clicks on 'Download Kube Config' button
-  And User doesn't have the required DEF right in their role
+  And User doesn't have the required native DEF right in their role
   Then no error messages are shown
   And the button appears to perform no action
 
   When User clicks on 'Download Kube Config' button
-  And User has the required DEF right in their role
-  Then cluster 'mycluster''s kubectl config is fetched from CSE server and downloaded as yaml file by the browser
+  And User has the required native DEF right in their role
+  Then cluster "mycluster"'s kubectl config is fetched from CSE server and downloaded as yaml file by the browser
 
 
 Scenario: Delete a CSE native cluster
   Given cluster 'mycluster' has been previously created by User
   When User selects the radio button in front of the entry of 'mycluster'
+  And cluster 'mycluster' is in 'READY' state
   Then the 'Delete' button turns from grayed out to enabled
 
   When User clicks on 'Delete' button
   Then a confirmation dialog pops up
 
   When User selects 'Yes' on the confirmation dialog
-  And User doesn't have required DEF rights assigned to their role
+  And User doesn't have required native DEF rights assigned to their role
   Then User sees a modal dialog informing the User of the error
   And User is taken back to the landing page on dismissing the modal dialog
   And User sees the cluster delete task in failed state with the appropriate error message
 
   When User selects 'Yes' on the confirmation dialog
-  And User has required DEF rights assigned to their role
+  And User has required native DEF rights assigned to their role
   Then User sees a modal dialog informing the User that CSE server has accepted their request to delete the cluster
   And User is taken back to the landing page on dismissing the modal dialog.
   And a task tracking the deletion of the cluster shows up in the tasks tab
@@ -129,7 +131,8 @@ Scenario: Delete a CSE native cluster
 
 Scenario: Resize a CSE native cluster
   Given cluster 'mycluster' has been previously created by User
-  When User selects the radio button in front of the entry of 'mycluster'
+  When User selects the radio button in front of the entry of 'mycluster
+  And cluster 'mycluster' is in 'READY' state
   Then the 'Resize' button turns from grayed out to enabled
 
   When User clicks on 'Resize' button
@@ -148,13 +151,13 @@ Scenario: Resize a CSE native cluster
   Then an appropriate error message is displayed in the dialog
 
   When User clicks on 'Resize' button the dialog
-  And User doesn't have the required DEF rights assigned to their role
+  And User doesn't have the required native DEF rights assigned to their role
   Then User sees a modal dialog informing the User of the error
   And User is taken back to the landing page on dismissing the modal dialog
   And User sees the cluster resize task in failed state with the appropriate error message
 
   When User clicks on 'Resize' button the dialog
-  And User has the required DEF rights assigned to their role
+  And User has the required native DEF rights assigned to their role
   Then User sees a modal dialog informing the User of the error
   And User is taken back to the landing page on dismissing the modal dialog
   And User sees a task tracking the resize operation on the cluster show up in the tasks tab

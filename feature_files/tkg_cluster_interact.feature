@@ -4,14 +4,10 @@ Rules:
   - Container UI plugin is published to tenant
   - User is on Container UI plugin's landing page
   - TKG is enabled in vCenter
-  - At least one of the oVDC in the org is configured to host TKG clusters
+  - At least one of the org VDC in the org is configured to host TKG clusters
 
 Scenario: Create TKG cluster
   When User clicks on 'New' button on Container UI plugin landing page
-  Then User sees the 'General' section of the cluster create wizard
-  And User fills out the name and description of the cluster 
-
-  When User clicks on Next button in General section
   Then User sees the 'Kubernetes Runtime' section
 
   When User sees the 'Kubernetes Runtime' section
@@ -21,41 +17,64 @@ Scenario: Create TKG cluster
   And User sees an error message stating that there are no org VDC that can host K8s clusters.
 
   When User sees the 'Kubernetes Runtime' section
-  And atleast one org VDC is enabled for TKG clusters
-  And there is a card in the dialog, viz. 'vSphere Kubernetes' as an option for K8s runtime
+  And at least one org VDC is enabled for TKG clusters
+  And there is a card in the dialog, viz. 'vSphere with Tanzu' as an option for K8s runtime
 
-  When User chooses 'vSphere Kubernetes' radio button
+  When User chooses 'vSphere with Tanzu' radio button
   And User clicks on Next
-  Then User sees all the oVDCs as cards, that are enabled for TKG cluster deployment
-  And User chooses one of them by clicking on the radio button in one of the cards
+  Then User sees the 'General' section of the cluster create wizard
 
-  When User clicks on Next button
+  When User sees the 'General' section
+  And User fills up name of the cluster
+  And User clicks on Next
+  Then User sees the 'Virtual Data Center' section
+
+  When User sees the 'Virtual Data Center' section  
+  Then User sees list of all the org VDCs, that are enabled for TKG cluster deployment
+  And User chooses one of them by clicking on the radio button of that entry
+
+  When User is on 'Virtual Data Center' section 
+  And User clicks on Next button
   Then User sees the 'Kubernetes Policy' section of the wizard
-  And User sees a list of Kubernetes policies that have been published to the selected oVDC
+
+  When User is on 'Kubernetes Policy' section
+  Then User sees a list of Kubernetes policies that have been published to the selected org VDC
   And User selects one of them, by clicking on the radio of the entry
+  And User selects the Kubernetes version from a drop down menu in the dialog
 
-  When User clicks on Next button
-  Then User sees the 'Sizing' section of the wizard
-  And User sees the current number of Control Plane nodes as 1 (non editable field)
-  And User enters the desired number of worker nodes (default is set to 3)
+  When User is on 'Kubernetes Policy' section
+  And User clicks on Next button
+  Then User sees the 'Compute' section of the wizard
 
-  When User enters a negative value for desired number of worker nodes
+  When User is on 'Compute' section
+  Then User enters the desired number of Control Plane nodes (default is set to 3)
+  And User enters the desired number of worker nodes 
+
+  When User is on 'Compute' section
+  And User enters a negative value for desired number of control plane / worker nodes
   Then User sees an appropriate error message
 
-  When User continues to fill the section of the wizard
-  And User sees list of Sizing policies associated with the selected Kubernetes policy
-  And User chooses a policy for the control plane nodes
-  And User chooses a policy for the worker nodes
+  When User continues to fill the 'Compute' section of the wizard
+  And User sees two identical lists containing all Sizing policies associated with the selected Kubernetes policy
+  And User chooses a policy for the control plane nodes from list 1
+  And User chooses a policy for the worker nodes from list 2
 
-  When User clicks on Next button
-  Then User sees the 'Network' section of the wizard
-  And User chooses a network from a list of networks available to the selected oVDC, by clicking on radio button
+  When User is on 'Compute' section
+  And User clicks on Next button
+  Then User sees the 'Storage' section of the wizard
 
+  When User is on 'Storage' section
+  Then User selects storage class for Control planes nodes from a list of storage profile available to the selected org VDC
+  And User selects storage class for Worker nodes from a list of storage profile available to the selected org VDC
+
+  When User is on 'Storage' section
   When User clicks on Next button
   Then User sees the 'Review' section of the wizard
-  And User can review the details of the cluster to be created
 
-  When User clicks on 'Create' button
+  When User is on the 'Review' section
+  Then User can review the details of the cluster to be created
+
+  When User clicks on 'Finish' button
   Then User sees a modal dialog informing the User that vCD server has accepted their request to create a cluster
   And User is taken back to the landing page on dismissing the modal dialog
   And they see the cluster to be created listed on the page in "CREATE : IN PROGRESS" state
@@ -67,6 +86,7 @@ Scenario: Create TKG cluster
 Scenario: Fetch TKG cluster's kubectl config
   Given cluster 'mycluster' has been previously created by User
   When User selects the radio button in front of the entry of 'mycluster'
+  And cluster 'mycluster' is in 'READY' state
   Then the 'Download Kube Config' button turns from grayed out to enabled
 
   When User clicks on 'Download Kube Config' button
@@ -82,6 +102,7 @@ Scenario: Fetch TKG cluster's kubectl config
 Scenario: Delete a TKG cluster
   Given cluster 'mycluster' has been previously created by User
   When User selects the radio button in front of the entry of 'mycluster'
+  And cluster 'mycluster' is in 'READY' state
   Then the 'Delete' button turns from grayed out to enabled
 
   When User clicks on 'Delete' button
@@ -98,7 +119,8 @@ Scenario: Delete a TKG cluster
 
 Scenario: Resize a TKG cluster
   Given cluster 'mycluster' has been previously created by User
-  When User selects the radio button in front of the entry of 'mycluster'
+  When User selects the radio button in front of the entry of 'mycluster
+  And cluster 'mycluster' is in 'READY' state
   Then the 'Resize' button turns from grayed out to enabled
 
   When User clicks on 'Resize' button
