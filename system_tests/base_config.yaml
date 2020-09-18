@@ -51,7 +51,7 @@ vcs:
 
 service:
   enforce_authorization: false
-  listeners: 5
+  processors: 5
   log_wire: false
   telemetry:
     enable: false
