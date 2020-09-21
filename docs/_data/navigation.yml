@@ -1,8 +1,21 @@
-- name: WORK IN PROGRESS
+- name: CSE 3.0
   subdir: cse3_0
   link: INTRO.html
   default: false
   subtoc:
+  - name: "What's new in CSE 3.0?"
+    link: CSE30.html
+    subtoc:
+    - name: Overview
+      sublink: overview
+    - name: Provider workflows
+      sublink: provider-workflows
+    - name: Tenant workflows
+      sublink: tenant-workflows
+    - name: Known issues
+      sublink: known-issues
+    - name: FAQ
+      sublink: faq
   - name: "Introduction"
     link: INTRO.html
     subtoc:

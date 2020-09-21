@@ -12,7 +12,6 @@ from container_service_extension.client.pks_cluster import PksCluster
 from container_service_extension.client.pks_ovdc import PksOvdc
 import container_service_extension.client.utils as client_utils
 from container_service_extension.logger import CLIENT_LOGGER
-from container_service_extension.server_constants import K8sProvider
 from container_service_extension.shared_constants import RESPONSE_MESSAGE_KEY
 
 
@@ -493,7 +492,6 @@ def ovdc_disable(ctx, ovdc_name, org_name):
                 org_name = ctx.obj['profiles'].get('org_in_use')
             result = ovdc.update_ovdc(enable=False,
                                       ovdc_name=ovdc_name,
-                                      k8s_provider=K8sProvider.PKS,
                                       org_name=org_name)
             stdout(result, ctx)
             CLIENT_LOGGER.debug(result)
