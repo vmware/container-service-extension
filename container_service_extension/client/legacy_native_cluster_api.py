@@ -215,7 +215,7 @@ class LegacyNativeClusterApi:
                     shared_constants.RequestKey.OVDC_NAME: vdc})
         return process_response(response)
 
-    def get_cluster_config(self, cluster_name, org=None, vdc=None):
+    def get_cluster_config(self, cluster_name, org=None, vdc=None, **kwargs):
         method = shared_constants.RequestMethod.GET
         uri = f"{self._uri}/cluster/{cluster_name}/config"
         response = self.client._do_request_prim(
