@@ -67,6 +67,11 @@ TOKEN_PATH = 'tokens'
 # Thread Pool Executor
 MESSAGE_CONSUMER_THREAD = 'MessageConsumer'
 
+# Encryption constants
+PBKDF2_ITERATIONS = 100000
+SALT_SIZE = 32
+PBKDF2_OUTPUT_SIZE = 32
+
 
 @unique
 class NodeType(str, Enum):

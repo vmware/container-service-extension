@@ -183,7 +183,8 @@ class DefEntityClusterApi:
 
         return cluster, additional_entity_properties, is_native_cluster
 
-    def get_cluster_info(self, cluster_name, org=None, vdc=None, **kwargs):
+    def get_cluster_info(self, cluster_name, cluster_id=None,
+                         org=None, vdc=None, **kwargs):
         """Get cluster information using DEF API.
 
         :param str cluster_name: name of the cluster
@@ -197,6 +198,8 @@ class DefEntityClusterApi:
         """
         # TODO(Display Owner information): Owner information needs to be
         # displayed
+        if cluster_id:
+            return self.get_cluster_info_by_id(cluster_id, org=org)
         cluster, _, is_native_cluster = \
             self._get_tkg_native_clusters_by_name(cluster_name,
                                                   org=org, vdc=vdc)
@@ -209,7 +212,20 @@ class DefEntityClusterApi:
             f"Received defined entity of cluster {cluster_name} : {cluster_info}")  # noqa: E501
         return yaml.dump(cluster_info)
 
-    def get_cluster_config(self, cluster_name, org=None, vdc=None):
+    def get_cluster_info_by_id(self, cluster_id, org=None):
+        """Obtain cluster information using cluster ID.
+
+        :param str cluster_id
+        :return: yaml representation of the cluster information
+        :rtype: str
+        """
+        entity_svc = def_entity_svc.DefEntityService(self._cloudapi_client)
+        if entity_svc.is_native_entity(cluster_id):
+            return self._nativeCluster.get_cluster_info_by_id(cluster_id=cluster_id)  # noqa: E501
+        return self._tkgCluster.get_cluster_info_by_id(cluster_id, org=org)  # noqa: E501
+
+    def get_cluster_config(self, cluster_name, cluster_id=None,
+                           org=None, vdc=None):
         """Get cluster config.
 
         :param str cluster_name: name of the cluster
@@ -220,6 +236,8 @@ class DefEntityClusterApi:
         :rtype: str
         :raises ClusterNotFoundError, CseDuplicateClusterError
         """
+        if cluster_id:
+            return self.get_cluster_config_by_id(cluster_id, org=org)
         cluster, entity_properties, is_native_cluster = \
             self._get_tkg_native_clusters_by_name(cluster_name,
                                                   org=org, vdc=vdc)
@@ -227,7 +245,19 @@ class DefEntityClusterApi:
             return self._nativeCluster.get_cluster_config_by_id(cluster.id)
         return self._tkgCluster.get_cluster_config_by_id(cluster_id=entity_properties.get('id'))  # noqa: E501
 
-    def delete_cluster(self, cluster_name, org=None, vdc=None):
+    def get_cluster_config_by_id(self, cluster_id, org=None):
+        """Fetch kube config of the cluster using cluster ID.
+
+        :param str cluster_id:
+        :param str org:
+        """
+        entity_svc = def_entity_svc.DefEntityService(self._cloudapi_client)
+        if entity_svc.is_native_entity(cluster_id):
+            return self._nativeCluster.get_cluster_config_by_id(cluster_id)
+        return self._tkgCluster.get_cluster_config_by_id(cluster_id, org=org)
+
+    def delete_cluster(self, cluster_name, cluster_id=None,
+                       org=None, vdc=None):
         """Delete DEF cluster by name.
 
         :param str cluster_name: name of the cluster
@@ -237,12 +267,27 @@ class DefEntityClusterApi:
         :rtype: str
         :raises ClusterNotFoundError, CseDuplicateClusterError
         """
+        if cluster_id:
+            return self.delete_cluster_by_id(cluster_id)
         cluster, entity_properties, is_native_cluster = \
             self._get_tkg_native_clusters_by_name(cluster_name,
                                                   org=org, vdc=vdc)
         if is_native_cluster:
             return self._nativeCluster.delete_cluster_by_id(cluster.id)
         return self._tkgCluster.delete_cluster_by_id(cluster_id=entity_properties.get('id'))  # noqa: E501
+
+    def delete_cluster_by_id(self, cluster_id, org=None):
+        """Delete cluster using cluster id.
+
+        :param str cluster_id: id of the cluster to be deleted
+        :return: deleted cluster information
+        :rtype: str
+        :raises: ClusterNotFoundError
+        """
+        entity_svc = def_entity_svc.DefEntityService(self._cloudapi_client)
+        if entity_svc.is_native_entity(cluster_id):
+            return self._nativeCluster.delete_cluster_by_id(cluster_id)
+        return self._tkgCluster.delete_cluster_by_id(cluster_id, org=org)
 
     def get_upgrade_plan(self, cluster_name, org=None, vdc=None):
         """Get the upgrade plan for the given cluster name.

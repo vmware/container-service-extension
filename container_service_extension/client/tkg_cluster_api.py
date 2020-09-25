@@ -47,12 +47,20 @@ class TKGClusterApi:
         api_version = self._client.get_api_version()
         self._tkg_client.set_default_header(cli_constants.TKGRequestHeaderKey.ACCEPT,  # noqa: E501
                                             f"application/json;version={api_version}")  # noqa: E501
-        org_logged_in = vcd_utils.get_org(self._client)
-        org_id = org_logged_in.href.split('/')[-1]
-        # TODO setting right tenant context for sysadmin users
-        self._tkg_client.set_default_header(cli_constants.TKGRequestHeaderKey.X_VMWARE_VCLOUD_TENANT_CONTEXT,  # noqa: E501
-                                            org_id)
         self._tkg_client_api = TkgClusterApi(api_client=self._tkg_client)
+
+    def set_tenant_org_context(self, org_name=None):
+        """Set tenant org context if not set in the client.
+
+        :param str org_name: Name of the org. If not set, makes use of
+            the logged in org name
+        """
+        if cli_constants.TKGRequestHeaderKey.X_VMWARE_VCLOUD_TENANT_CONTEXT not in self._tkg_client.default_headers:  # noqa: E501
+            logger.CLIENT_LOGGER.debug(f"Setting client org context with org name {org_name}")  # noqa: E501
+            org_resource = vcd_utils.get_org(self._client, org_name=org_name)
+            org_id = org_resource.href.split('/')[-1]
+            self._tkg_client.set_default_header(cli_constants.TKGRequestHeaderKey.X_VMWARE_VCLOUD_TENANT_CONTEXT,  # noqa: E501
+                                                org_id)
 
     def get_tkg_cluster(self, cluster_id):
         """Sample method to use tkg_client.
@@ -65,9 +73,16 @@ class TKGClusterApi:
         """
         # Returns tuple of response_data, response_status, response_headers,
         #   tkg_def_entities
-        response = self._tkg_client_api.get_tkg_cluster(cluster_id)
-        cluster: TkgCluster = response[0]
-        return cluster.to_dict()
+        try:
+            response = self._tkg_client_api.get_tkg_cluster(
+                cluster_id,
+                _return_http_data_only=False)
+            cluster: TkgCluster = response[0]
+            cluster_def_entity = response[3]
+            return cluster, cluster_def_entity
+        except Exception as e:
+            logger.CLIENT_LOGGER.debug(e)
+            raise
 
     def list_tkg_clusters(self, vdc=None, org=None):
         """List all the TKG clusters.
@@ -78,11 +93,7 @@ class TKGClusterApi:
         :rtype: List[dict]
         """
         filters = []
-        if org:
-            org_resource = vcd_utils.get_org(self._client, org_name=org)
-            org_id = org_resource.href.split('/')[-1]
-            self._tkg_client.set_default_header(cli_constants.TKGRequestHeaderKey.X_VMWARE_VCLOUD_TENANT_CONTEXT,  # noqa: E501
-                                                org_id)
+        self.set_tenant_org_context(org_name=org)
         if vdc:
             filters.append((cli_constants.TKGEntityFilterKey.VDC_NAME.value, vdc))  # noqa: E501
         filter_string = None
@@ -116,11 +127,7 @@ class TKGClusterApi:
 
     def get_tkg_clusters_by_name(self, name, vdc=None, org=None):
         filters = [(cli_constants.TKGEntityFilterKey.CLUSTER_NAME.value, name)]
-        if org:
-            org_resource = vcd_utils.get_org(self._client, org_name=org)
-            org_id = org_resource.href.split('/')[-1]
-            self._tkg_client.set_default_header(cli_constants.TKGRequestHeaderKey.X_VMWARE_VCLOUD_TENANT_CONTEXT,  # noqa: E501
-                                                org_id)
+        self.set_tenant_org_context(org_name=org)
         if vdc:
             filters.append((cli_constants.TKGEntityFilterKey.VDC_NAME.value, vdc))  # noqa: E501
         filter_string = ";".join([f"{f[0]}=={f[1]}" for f in filters])
@@ -146,7 +153,8 @@ class TKGClusterApi:
                 "same Organization. Please contact the administrator.")
         return tkg_entities, tkg_def_entities
 
-    def get_cluster_info(self, cluster_name, org=None, vdc=None):
+    def get_cluster_info(self, cluster_name, cluster_id=None,
+                         org=None, vdc=None, **kwargs):
         """Get cluster information of a TKG cluster API.
 
         :param str cluster_name: name of the cluster
@@ -157,14 +165,47 @@ class TKGClusterApi:
         :rtype: str
         :raises ClusterNotFoundError
         """
-        tkg_entities, _ = \
-            self.get_tkg_clusters_by_name(cluster_name, vdc=vdc, org=org)
-        cluster_entity_dict = client_utils.swagger_object_to_dict(tkg_entities[0])  # noqa: E501
-        logger.CLIENT_LOGGER.debug(
-            f"Received defined entity of cluster {cluster_name} : {cluster_entity_dict}")  # noqa: E501
-        return yaml.dump(cluster_entity_dict)
+        if cluster_id:
+            return self.get_cluster_info_by_id(cluster_id, org=org)
+        try:
+            tkg_entities, _ = \
+                self.get_tkg_clusters_by_name(cluster_name, vdc=vdc, org=org)
+            cluster_entity_dict = client_utils.swagger_object_to_dict(tkg_entities[0])  # noqa: E501
+            logger.CLIENT_LOGGER.debug(
+                f"Received defined entity of cluster {cluster_name} : {cluster_entity_dict}")  # noqa: E501
+            return yaml.dump(cluster_entity_dict)
+        except tkg_rest.ApiException as e:
+            msg = cli_constants.TKG_RESPONSE_MESSAGES_BY_STATUS_CODE.get(e.status, f"{e.reason}")  # noqa: E501
+            logger.CLIENT_LOGGER.error(msg)
+            raise Exception(msg)
+        except Exception as e:
+            logger.CLIENT_LOGGER.error(f"Error deleting cluster: {e}")
+            raise
 
-    def apply(self, cluster_config: dict, org=None, **kwargs):
+    def get_cluster_info_by_id(self, cluster_id, org=None, **kwargs):
+        """Get TKG cluster information using cluster ID.
+
+        :param str cluster_id:
+        :param str org:
+        :return: cluster information in yaml format
+        :rtype: string
+        """
+        try:
+            self.set_tenant_org_context(org_name=org)
+            tkg_entity, _ = self.get_tkg_cluster(cluster_id)
+            cluster_info = client_utils.swagger_object_to_dict(tkg_entity)
+            logger.CLIENT_LOGGER.debug(f"Retrieved TKG entitty for ID {cluster_id}: {cluster_info}")  # noqa: E501
+            return yaml.dump(cluster_info)
+        except tkg_rest.ApiException as e:
+            logger.CLIENT_LOGGER.debug(e)
+            msg = cli_constants.TKG_RESPONSE_MESSAGES_BY_STATUS_CODE.get(e.status, f"{e.reason}")  # noqa: E501
+            logger.CLIENT_LOGGER.error(msg)
+            raise Exception(msg)
+        except Exception as e:
+            logger.CLIENT_LOGGER.error(f"Error getting TKG cluster information: {e}")  # noqa: E501
+            raise
+
+    def apply(self, cluster_config: dict, cluster_id=None, org=None, **kwargs):
         """Apply the configuration either to create or update the cluster.
 
         :param dict cluster_config: cluster configuration information
@@ -172,20 +213,20 @@ class TKGClusterApi:
         :rtype: str
         """
         try:
-            if org:
-                org_logged_in = vcd_utils.get_org(self._client, org_name=org)
-                org_id = org_logged_in.href.split('/')[-1]
-                # TODO setting right tenant context for sysadmin users
-                self._tkg_client.set_default_header(cli_constants.TKGRequestHeaderKey.X_VMWARE_VCLOUD_TENANT_CONTEXT,  # noqa: E501
-                                                    org_id)
+            self.set_tenant_org_context(org_name=org)
             cluster_name = cluster_config.get('metadata', {}).get('name')
             vdc_name = cluster_config.get('metadata', {}).get('virtualDataCenterName')  # noqa: E501
             response = None
             try:
-                tkg_entity, tkg_def_entities = \
-                    self.get_tkg_clusters_by_name(cluster_name, vdc=vdc_name)
-                cluster_id = tkg_def_entities[0].get('id')
-                cluster_config['metadata']['resourceVersion'] = tkg_entity[0].metadata.resource_version  # noqa: E501
+                if cluster_id:
+                    tkg_entity, tkg_def_entity = self.get_tkg_cluster(cluster_id)  # noqa: E501
+                else:
+                    tkg_entities, tkg_def_entities = \
+                        self.get_tkg_clusters_by_name(cluster_name, vdc=vdc_name)  # noqa: E501
+                    tkg_entity = tkg_entities[0]
+                    tkg_def_entity = tkg_def_entities[0]
+                cluster_id = tkg_def_entity.get('id')
+                cluster_config['metadata']['resourceVersion'] = tkg_entity.metadata.resource_version  # noqa: E501
                 response = \
                     self._tkg_client_api.update_tkg_cluster_with_http_info(
                         tkg_cluster_id=cluster_id,
@@ -205,15 +246,14 @@ class TKGClusterApi:
             logger.CLIENT_LOGGER.error(f"Error while applying cluster spec: {e}")  # noqa: E501
             raise
 
-    def delete_cluster_by_id(self, cluster_id):
+    def delete_cluster_by_id(self, cluster_id, org=None, **kwargs):
         """Delete a cluster using the cluster id.
 
         :param str cluster_id:
         :return: string containing the task href of delete cluster operation
         """
-        # Assumes that the caller of the function has
-        # already set the org context
         try:
+            self.set_tenant_org_context(org_name=org)
             response = \
                 self._tkg_client_api.delete_tkg_cluster_with_http_info(tkg_cluster_id=cluster_id)  # noqa: E501
             headers = response[2]
@@ -226,7 +266,8 @@ class TKGClusterApi:
             logger.CLIENT_LOGGER.error(f"Error deleting cluster: {e}")
             raise
 
-    def delete_cluster(self, cluster_name, org=None, vdc=None):
+    def delete_cluster(self, cluster_name, cluster_id=None,
+                       org=None, vdc=None):
         """Delete TKG cluster by name.
 
         :param str cluster_name: TKG cluster name
@@ -237,9 +278,11 @@ class TKGClusterApi:
         :raises ClusterNotFoundError, CseDuplicateClusterError
         """
         try:
-            _, tkg_def_entities = \
-                self.get_tkg_clusters_by_name(cluster_name, org=org, vdc=vdc)
-            return self.delete_cluster_by_id(tkg_def_entities[0]['id'])
+            if not cluster_id:
+                _, tkg_def_entities = \
+                    self.get_tkg_clusters_by_name(cluster_name, org=org, vdc=vdc)  # noqa: E501
+                cluster_id = tkg_def_entities[0]['id']
+            return self.delete_cluster_by_id(cluster_id)
         except tkg_rest.ApiException as e:
             server_message = json.loads(e.body).get('message') or e.reason
             msg = cli_constants.TKG_RESPONSE_MESSAGES_BY_STATUS_CODE.get(e.status, f"{server_message}")  # noqa: E501
@@ -249,7 +292,7 @@ class TKGClusterApi:
             logger.CLIENT_LOGGER.error(f"{e}")
             raise
 
-    def get_cluster_config_by_id(self, cluster_id):
+    def get_cluster_config_by_id(self, cluster_id, org=None, **kwargs):
         """Get TKG cluster config by cluster id.
 
         :param str cluster_id: ID of the cluster
@@ -257,9 +300,8 @@ class TKGClusterApi:
         :return the cluster config of the TKG cluster
         :rtype: str
         """
-        # Assumes that the caller of the function has
-        # already set the org context
         try:
+            self.set_tenant_org_context(org_name=org)
             response = self._tkg_client_api.create_tkg_cluster_config_task(id=cluster_id)  # noqa: E501
             # Extract the task for creating the config from the Location header
             headers = response[2]
@@ -279,17 +321,22 @@ class TKGClusterApi:
             logger.CLIENT_LOGGER.error(f"{e}")
             raise
 
-    def get_cluster_config(self, cluster_name, org=None, vdc=None):
+    def get_cluster_config(self, cluster_name, cluster_id=None,
+                           org=None, vdc=None):
         """Get TKG cluster config by cluster name.
 
         :param str cluster_name: name of the cluster
+        :param str cluster_id: ID of the cluster
         :param str org: name of the org
         :param str vdc: name of the vdc
         """
         try:
-            _, tkg_def_entities = \
-                self.get_tkg_clusters_by_name(cluster_name, org=org, vdc=vdc)
-            return self.get_cluster_config_by_id(tkg_def_entities[0]['id'])
+            if not cluster_id:
+                _, tkg_def_entities = \
+                    self.get_tkg_clusters_by_name(cluster_name, org=org, vdc=vdc)  # noqa: E501
+                cluster_id = tkg_def_entities[0]['id']
+            return self.get_cluster_config_by_id(tkg_def_entities[0]['id'],
+                                                 org=org)
         except tkg_rest.ApiException as e:
             server_message = json.loads(e.body).get('message') or e.reason
             msg = cli_constants.TKG_RESPONSE_MESSAGES_BY_STATUS_CODE.get(e.status, f"{server_message}")  # noqa: E501

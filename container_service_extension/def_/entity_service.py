@@ -252,3 +252,12 @@ class DefEntityService():
             nss=keys_map[def_utils.DefKey.ENTITY_TYPE_NSS],
             version=keys_map[def_utils.DefKey.ENTITY_TYPE_VERSION])
         return schema_svc.get_entity_type(entity_type_id)
+
+    def is_native_entity(self, entity_id: str):
+        """."""
+        response_body = self._cloudapi_client.do_request(
+            method=RequestMethod.GET,
+            cloudapi_version=CLOUDAPI_VERSION_1_0_0,
+            resource_url_relative_path=f"{CloudApiResource.ENTITIES}/"
+                                       f"{entity_id}")
+        return def_utils.DEF_NATIVE_ENTITY_TYPE_NSS in response_body['entityType']  # noqa: E501
