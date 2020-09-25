@@ -305,6 +305,8 @@ class ClusterService(abstract_broker.AbstractBroker):
             DefEntityPhase(DefEntityOperation.DELETE,
                            DefEntityOperationStatus.IN_PROGRESS))
 
+        # attempt deleting the defined entity;
+        # lets vCD authorize the user for delete operation.
         self.entity_svc.delete_entity(cluster_id)
         self.context.is_async = True
         self._delete_cluster_async(cluster_name=cluster_name,
@@ -1810,6 +1812,7 @@ def _execute_script_in_nodes(sysadmin_client: vcd_client.Client,
     all_results = []
     for node_name in node_names:
         try:
+            raise Exception("faked an error")
             LOGGER.debug(f"will try to execute script on {node_name}:\n"
                          f"{script}")
 
