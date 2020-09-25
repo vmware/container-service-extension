@@ -18,7 +18,7 @@ pika >= 0.11.2, < 1.0.0
 
 # pyvcloud 22.0.1
 # pyvcloud >= 22.0.1, < 23.0.0
-pyvcloud == 22.0.2.dev27
+pyvcloud == 22.0.2.dev31
 
 # pyvmomi 6.7.3
 pyvmomi >= 6.7.0 , < 7.0.0
