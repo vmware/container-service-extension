@@ -1812,7 +1812,6 @@ def _execute_script_in_nodes(sysadmin_client: vcd_client.Client,
     all_results = []
     for node_name in node_names:
         try:
-            raise Exception("faked an error")
             LOGGER.debug(f"will try to execute script on {node_name}:\n"
                          f"{script}")
 
