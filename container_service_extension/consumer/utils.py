@@ -25,6 +25,10 @@ def get_response_fields(request_msg, fsencoding, is_mqtt):
                 payload_json['httpRequest']))
             request_id = payload_json["headers"]["requestId"]
             msg_json = http_req_json['message']
+
+            # use api access token as authorization token
+            msg_json['headers']['Authorization'] = \
+                'Bearer ' + http_req_json['securityContext']['apiAccessToken']
         else:
             msg_json = json.loads(request_msg.decode(fsencoding))[0]
             request_id = msg_json['id']
