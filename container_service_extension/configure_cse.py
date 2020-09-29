@@ -856,6 +856,68 @@ def _setup_placement_policies(client,
         INSTALL_LOGGER.info(msg)
 
 
+def _assign_placement_policies_to_existing_templates(client, config,
+                                                     log_wire=False,
+                                                     msg_update_callback=utils.NullPrinter()):  # noqa: E501
+    """Read existing templates and assign respective placement policies.
+
+    Read metadata of existing templates, get the value for the 'kind' metadata,
+    assign the respective placement policy to the template.
+
+    :param vcdClient.Client client:
+    :param dict config:
+    :param bool log_wire:
+    :param utils.ConsoleMessagePrinter msg_update_callback:
+    """
+    catalog_name = config['broker']['catalog']
+    org_name = config['broker']['org']
+    all_templates = \
+        ltm.get_all_k8s_local_template_definition(client, catalog_name=catalog_name,  # noqa: E501
+                                                  org_name=org_name)
+    cpm = compute_policy_manager.ComputePolicyManager(client,
+                                                      log_wire=log_wire)
+    for template in all_templates:
+        kind = template.get(server_constants.LocalTemplateKey.KIND)
+        template_name = template[server_constants.LocalTemplateKey.NAME]
+        if not kind:
+            # skip processing the template if kind value is not present
+            continue
+        # TODO: The following code is a duplicate of
+        # template_builder._tag_with_cse_placement_policy. Create a method
+        # in compute_policy_manager after refactoring it.
+        placement_policy_name = \
+            shared_constants.RUNTIME_DISPLAY_NAME_TO_INTERNAL_NAME_MAP[kind]  # noqa: E501
+        try:
+            policy = cpm.get_vdc_compute_policy(placement_policy_name,
+                                                is_placement_policy=True)
+            task = cpm.assign_vdc_placement_policy_to_vapp_template_vms(
+                policy['href'],
+                org_name,
+                catalog_name,
+                template_name)
+            if task is not None:
+                client.get_task_monitor().wait_for_success(task)
+                msg = "Successfully tagged template " \
+                      f"{template_name} with placement policy " \
+                      f"{placement_policy_name}."
+            else:
+                msg = f"{template_name} already tagged with" \
+                      f" placement policy {placement_policy_name}."
+            msg_update_callback.info(msg)
+            INSTALL_LOGGER.info(msg)
+        except EntityNotFoundException:
+            msg = f"Placement policy {placement_policy_name} not found"
+            msg_update_callback.error(msg)
+            INSTALL_LOGGER.error(msg)
+            raise
+        except Exception as err:
+            msg = f"Failed to tag template {template_name} with " \
+                  f"placement policy {placement_policy_name}. Error: {err}"
+            msg_update_callback.error(msg)
+            INSTALL_LOGGER.error(msg)
+            raise
+
+
 def _install_all_templates(
         client, config, skip_template_creation, force_create, retain_temp_vapp,
         ssh_key, msg_update_callback=utils.NullPrinter()):
@@ -1425,6 +1487,13 @@ def _upgrade_to_35(client, config, ext_vcd_api_version,
         client=client,
         msg_update_callback=msg_update_callback,
         log_wire=log_wire)
+
+    # Assign placement policies to the existing templates
+    _assign_placement_policies_to_existing_templates(
+        client=client,
+        config=config,
+        log_wire=log_wire,
+        msg_update_callback=msg_update_callback)
 
     # Recreate all supported templates
     _install_all_templates(
