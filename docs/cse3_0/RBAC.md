@@ -7,6 +7,10 @@ title: Role Based Access Control
 <a name="overview"></a>
 ## Overview
 
+In the context of CSE 3.0, below content is applicable only if CSE 3.0 is 
+hooked to vCD < 10.2. For CSE 3.0 hooked to vCD >= 10.2, it leverages the RBAC 
+that comes with vCD's Defined Entity framework. Refer to [CSE 3.0 tenant onboarding](CSE30.html#tenant-onboarding)
+
 Till CSE 1.2.5, any authenticated vCloud Director user is able to leverage CSE
 for Kubernetes Cluster deployments. There are no mechanics in CSE Service to
 restrict its usage. This page describes the new role based access control

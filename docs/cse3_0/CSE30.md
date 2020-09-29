@@ -4,10 +4,11 @@ title: Introduction
 ---
 # What's new in CSE 3.0?
 
+For greenfield installations, please refer to the [CSE introduction](INTRO.html) and the below content.
 <a name="overview"></a>
 ## Overview
 * CSE-CLI and CSE-UI can be used to manage Cloud Director provisioned Tanzu Kubernetes Clusters (link to vCD-vSphere with Tanzu documentation) alongside Native and TKGIE(Ent-PKS) clusters.
-* CSE 3.0 has been architecturally redesigned to leverage the latest features of Cloud Director like the Defined entity framework. Native clusters are now represented as defined entities. Users will not see any difference in the functionality of native clusters, but the underlying implementation has been enhanced to leverage defined entities, thus adding some level of persistence to native clusters in vCD. In other words, users can now query native clusters using defined entity API.
+* CSE 3.0 has been architecturally redesigned to leverage the latest features of Cloud Director (>=10.2) like the Defined entity framework, Placement policies. Native clusters are now represented as defined entities. Users will not see any difference in the functionality of native clusters, but the underlying implementation has been enhanced to leverage defined entities, thus adding some level of persistence to native clusters in vCD. In other words, users can now query native clusters using defined entity API.
 * Separate command group for TKGI (Ent-PKS).
 ![user-ctx](img/cse30-user-ctx.png)
 ![system-ctx](img/cse30-system-ctx.png)
@@ -24,23 +25,26 @@ title: Introduction
 
 ### CSE Server
 #### Greenfield installation
-With CSE 3.0, two additional steps are performed during the CSE installation (command: "cse install -c config.yaml")
+Please refer to [CSE Server Installation Prerequisites](CSE_INSTALL_PREREQUISITES.html) and [CSE Server Management](CSE_SERVER_MANAGEMENT.html) for getting started.
 
-* Prepares the environment for Providers to be able to perform organization VDC enablement for native clusters. Empty placement policy(s) are created at the global level, which will further be used in organization VDC enablement commands for native clusters. 
-* Registers defined entity schema for native clusters. As a side effect, "cse:native cluster entitlement" right bundle gets created in the Cloud Director and all native cluster operations will be guarded by these rights.
+With CSE 3.0 - vCD 10.2 combination, CSE installation command `cse install -c config.yaml` does two additional steps than what it used to do in the earlier versions.
+
+1. Prepares the environment for Providers to be able to perform organization VDC enablement for native clusters. More details can be found in FAQ - [placement policies](#faq).
+2. Registers defined entity schema for native clusters. As a side effect, "cse:native cluster entitlement" right bundle gets created in the Cloud Director and all native cluster operations will be guarded by these rights.
 Invoke this API to get a detailed view of defined entity schema for native clusters - https://<vcd-ip>/cloudapi/1.0.0/entityTypes/cse/nativeCluster/1.0.0
 
 #### Brownfield upgrade
-CSE 3.0 has been architecturally redesigned to leverage the latest features of Cloud Director like Defined entity framework and placement policies. The new command "cse upgrade" has been introduced to make the old environment fully forward compatible with the latest technologies used in CSE 3.0. The only valid upgrade path is CSE 2.6 → CSE 3.0; any versions below CSE 2.6 cannot be directly upgraded to CSE 3.0.
+CSE 3.0 has been architecturally redesigned to leverage the latest features of Cloud Director like Defined entity framework and placement policies. The new command `cse upgrade` has been introduced to make the old environment fully forward compatible with the latest technologies used in CSE 3.0. The only valid upgrade path is CSE 2.6 → CSE 3.0; any versions below CSE 2.6 cannot be directly upgraded to CSE 3.0.
 
-The command "cse upgrade" must be run to ensure the environment is forward compatible with CSE 3.0. The below steps will be performed during the upgrade. Please run the command "cse upgrade --help" for more details.
+The command `cse upgrade` must be run to ensure the environment is forward compatible with CSE 3.0. The below steps will be performed during the upgrade. Please run the command `cse upgrade --help` for more details.
 
 * Delete old compute policies in the environment: untag old templates with existing compute policies, unpublish existing compute policies from the organization virtual data center(s), delete the legacy compute policies.
-* Prepare the environment to be able to perform organization virtual data center enablement for native clusters.
+* Prepare the environment to be able to perform organization virtual data center enablement for native clusters. 
 * Auto-install templates of the latest revision unless specified otherwise.
 * Identify existing organization virtual datacenter(s) with existing clusters and publish appropriate placement policies on the same.
 * Make legacy clusters forward compatible; create corresponding defined entities for all of the old clusters in the environment.
 
+<a name="tenant-onboarding"></a>
 #### Tenant onboarding
 The provider needs to perform below operations to enable Kubernetes cluster deployments in tenant organizations and tenant virtual data centers.
 1. Native cluster operations are no longer gated by CSE API extension-specific rights as used in CSE 2.6.x. With the introduction of defined entity representation for native clusters, a new right bundle "cse:nativeCluster entitlement" is registered in Cloud Director during CSE Server installation, which is what guards the native cluster operations in CSE 3.0. The same is the case for Tkg clusters. 
@@ -93,7 +97,7 @@ Content needed from Andrew
 Tenant users can manage the Kubernetes cluster deployments either through CLI or UI.
 
 ### CLI
-1. "vcd cse cluster apply <create_cluster.yaml>" command - Takes a cluster specification file as an input and applies it to a cluster resource. The cluster resource will be created if it does not exist. 
+1. `vcd cse cluster apply <create_cluster.yaml>` command - Takes a cluster specification file as an input and applies it to a cluster resource. The cluster resource will be created if it does not exist. 
     * Command usage examples:
         ```sh
         vcd cse cluster apply <resize_cluster.yaml> (applies the specification on the resource specified; the cluster resource will be created if it does not exist). 
@@ -194,32 +198,42 @@ Tenant users can manage the Kubernetes cluster deployments either through CLI or
 
 content needed from Andrew
 
+<a name="faq"></a>
 ## FAQ
 
 1. Is CSE 3.0 backward compatible? In other words, does it work with older API versions of Cloud Director (<= 34.0)?
     * Yes. CSE Server 3.0, when hooked with Cloud Director of API versions <= 34.0, will continue to behave as CSE 2.6.x. For accurate results, always ensure CLI and Server are of the same version 3.0 and UI of 2.0
-2. Can native and tkg clusters be deployed in the same organizational virtual datacenter?
+2. How do placement policies work? What is their relationship with ovdc enablement?
+    * CSE 3.0, when hooked to vCD >= 10.2, leverages the concept of placement policies to restrict native K8 deployments to specific organization virtual datacenters. During CSE install or upgrade, 
+    it creates an empty provider Vdc level placement policy and tags the native templates with the same. In other words, one can instantiate VM(s) from those (placement-policy tagged )templates in a given ovdc,
+     if and only if the ovdc has the corresponding placement policy published.
+        1. `cse install` or `cse upgrade` creates native placement policy and tags the relevant templates with the respective placement policy.
+        2. `vcd cse ovdc enable` publishes the native placement policy on to the chosen ovdc.
+        3. `vcd cse cluster apply` - vCD validates the ovdc eligibility to host the clusters instantiated from the native templates, by checking if the template's placement policy is published on the ovdc.
+    * Note that CSE 3.0, when hooked to vCD < 10.2, will continue to behave as CSE 2.6 in terms of template restriction.
+3. Can native and tkg clusters be deployed in the same organizational virtual datacenter?
     * Yes. As long as the given virtual datacenter is enabled for both native & tkg, and virtual datacenter network intended for native has internet connectivity, users should be able to deploy both native and tkg clusters in the same organization virtual datacenter (ovdc).
-3. What are the steps to share a cluster with other tenant users?
+4. What are the steps to share a cluster with other tenant users?
     * Native
         * Share the backing vApp to the desired users. 
         * Share the defined entity of the cluster using ACL API - <sample example>; link to defined entities page.
     * Tkg
         * Share the defined entity of the cluster using ACL API - <sample example>; link to defined entities page.
-4. Is heterogeneity in Native cluster nodes supported? In other words, can nodes of different sizes and shapes exist in a given cluster?
+5. Is heterogeneity in Native cluster nodes supported? In other words, can nodes of different sizes and shapes exist in a given cluster?
     * No. The specification provided during cluster creation will be used throughout the life cycle management of the cluster. For example, worker_storage_profile specified during the cluster creation step will be used for further resize operations.
-5. Are scale-up and down operations supported for native and tkg clusters?
+6. Are scale-up and down operations supported for native and tkg clusters?
     * Yes.
-6. Is scale-down supported for the NFS nodes of the native clusters via "vcd cse cluster apply" command?
+7. Is scale-down supported for the NFS nodes of the native clusters via "vcd cse cluster apply" command?
     * No. One has to use "vcd cse cluster delete-nfs <cluster-name> <nfs-node-name>" command to delete a given NFS node.
-7. Where do I read more about defined entities and relevant API?
+8. Where do I read more about defined entities and relevant API?
     * Link to defined entities 
-8. If defined entity representation seems to be stale or out of sync with the actual state of the backing cluster vApp, how to sync the defined entity status?
+9. If defined entity representation seems to be stale or out of sync with the actual state of the backing cluster vApp, how to sync the defined entity status?
     * Invoke an API call to the CSE server from postman - GET on https://<vcd-ip>/api/cse/3.0/clusters/<id>
-9. On cluster delete operation, if native cluster deletion fails for any unknown reason, why do CLI and UI sometimes give out a false impression that the cluster has been deleted successfully?
-    * This is a known issue. It is best to track the cluster deletion with the task_href that gets printed on the CLI console.
 10. Can providers provide Certificates during CSE installation and startup?
     * Customers can provide the path to their CA Bundle and set the REQUESTS_CA_BUNDLE environment variable with the provided path. This has been tested on Mac OS.
+11. With CSE 3.0 - vCD 10.1 combination, as native clusters are by default allowed to be deployed on any organization virtual datacenters, how can we prevent native clusters from getting deployed on Ent-PKS enbled ovdc(s)?
+    * Use template rules to protect native templates. Refer [enable template restriction](TEMPLATE_MANAGEMENT.html#restrict_templates).
  
 ## Known Issues
-Yet to be done.
+1. On cluster delete operation, if native cluster deletion fails for any unknown reason, why do CLI and UI sometimes give out a false impression that the cluster has been deleted successfully?
+    * This is a known issue. It is best to track the cluster deletion with the task_href that gets printed on the CLI console.

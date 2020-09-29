@@ -50,6 +50,12 @@ The following diagram illustrates installation steps visually.
 
 ![cse-install](img/cse-server-installation.png)
 
+When CSE 3.0 is hooked to Cloud Director >= 10.2, CSE installation command `cse install -c config.yaml` does two additional steps than what has been mentioned in the above diagram.
+
+1. Prepares the environment for Providers to be able to perform organization VDC enablement for native clusters. More details can be found in FAQ - [placement policies](CSE30.html#faq).
+2. Registers defined entity schema for native clusters. As a side effect, "cse:native cluster entitlement" right bundle gets created in the Cloud Director and all native cluster operations will be guarded by these rights.
+Invoke this API to get a detailed view of defined entity schema for native clusters - https://<vcd-ip>/cloudapi/1.0.0/entityTypes/cse/nativeCluster/1.0.0
+
 The `cse install` command supports the following options:
 
 | Option                    | Short | Argument(s)                        | Description                                                                                                      | Default Value |
@@ -71,6 +77,17 @@ In the temporary vApp, the output of the customization script is captured in
 tail -f /tmp/FILENAME.out
 tail -f /tmp/FILENAME.err
 ```
+### CSE Upgrade
+
+CSE 3.0 has been architecturally redesigned to leverage the latest features of Cloud Director like Defined entity framework and placement policies. The new command `cse upgrade` has been introduced in CSE 3.0 to make the old environment fully forward compatible with the latest technologies used in CSE 3.0. The only valid upgrade path is CSE 2.6 → CSE 3.0; any versions below CSE 2.6 cannot be directly upgraded to CSE 3.0.
+
+The command `cse upgrade` must be run to ensure the environment is forward compatible with CSE 3.0. The below steps will be performed during the upgrade. Please run the command `cse upgrade --help` for more details.
+
+* Delete old compute policies in the environment: untag old templates with existing compute policies, unpublish existing compute policies from the organization virtual data center(s), delete the legacy compute policies.
+* Prepare the environment to be able to perform organization virtual data center enablement for native clusters. 
+* Auto-install templates of the latest revision unless specified otherwise.
+* Identify existing organization virtual datacenter(s) with existing clusters and publish appropriate placement policies on the same.
+* Make legacy clusters forward compatible; create corresponding defined entities for all of the old clusters in the environment.
 
 ### Validate CSE Installation
 
@@ -300,6 +317,7 @@ Upgrading CSE server is no different than installing it for the first time.
 `cse ...` commands are used by system administrators to:
 
 * Install CSE Server
+* Upgrade CSE Server to make older environments forward compatible with CSE version >= 3.0
 * Create/Update templates
 * Run CSE Server manually
 
@@ -316,6 +334,7 @@ The following show useful sample commands.
 # Use '-h' option to see help page and options for any cse command.
 cse -h
 cse install --config config.yaml -h
+cse upgrade --config config.yaml -h
 cse check config.yaml -h
 cse run --config config.yaml -h
 
@@ -331,6 +350,10 @@ vcd org use SAMPLE_ORG_NAME
 # Let SAMPLE_VDC_NAME be active vdc for this session.
 vcd vdc use SAMPLE_VDC_NAME
 
-# Enable organization vdc for a particular K8s provider (Native/Enterprise PKS)
-vcd cse ovdc enable SAMPLE_VDC_NAME --k8s-provider [native|ent-pks]
+# Enable organization vdc for Native
+vcd cse ovdc enable SAMPLE_VDC_NAME
+
+# Enable organization vdc for TKGI (Ent-PKS)
+vcd pks ovdc enable SAMPLE_VDC_NAME
+
 ```

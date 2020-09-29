@@ -5,6 +5,20 @@ title: Release Notes
 
 # Release Notes
 
+## CSE 3.0
+Release Date:
+
+**Compatibility matrix and relevant features**
+
+
+|CSE CLI | CSE UI                    | CSE Server | Cloud Director| Features offered | 
+|------|------------------------------------------|----------------|-------|--------------------------|
+|3.0 | 2.0     | NA            | 10.2 | Tkg cluster management only     |
+|3.0 | 2.0 | 3.0            | 10.2 | Native, Tkg, and Ent-PKS Cluster management; Defined entity representation for both native and tkg. |
+|3.0 | 2.0 | 3.0            | 10.1, 10.0 | Legacy features (Native and Ent-PKS cluster management) |
+
+Refer to [What's new in CSE 3.0](CSE30.html)
+
 ## CSE 2.6.1 GA(2.6.1)
 Release Date: 2020-04-30
 

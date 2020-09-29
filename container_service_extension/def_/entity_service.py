@@ -18,6 +18,7 @@ import container_service_extension.def_.schema_service as def_schema_svc
 import container_service_extension.def_.utils as def_utils
 import container_service_extension.exceptions as cse_exception
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
+from container_service_extension.minor_error_codes import MinorErrorCode
 from container_service_extension.shared_constants import RequestMethod
 
 
@@ -42,7 +43,9 @@ def handle_entity_service_exception(func):
             response_dict = json.loads(error.response.text)
             error_message = response_dict.get('message')
             LOGGER.error(error_message)
-            raise cse_exception.DefEntityServiceError(error_message=error_message, minor_error_code=error.response.status_code)  # noqa: E501
+            raise cse_exception.DefEntityServiceError(
+                error_message=error_message,
+                minor_error_code=MinorErrorCode.DEFAULT_ERROR_CODE)
         except Exception as error:
             LOGGER.error(error)
             raise error
@@ -73,13 +76,14 @@ class DefEntityService():
         additional_headers = {}
         if tenant_org_context:
             additional_headers['x-vmware-vcloud-tenant-context'] = tenant_org_context  # noqa: E501
-        self._cloudapi_client.do_request(
+        return self._cloudapi_client.do_request(
             method=RequestMethod.POST,
             cloudapi_version=CLOUDAPI_VERSION_1_0_0,
             resource_url_relative_path=f"{CloudApiResource.ENTITY_TYPES}/"
                                        f"{entity_type_id}",
             payload=asdict(entity),
-            additional_headers=additional_headers)
+            additional_headers=additional_headers,
+            return_headers=True)
 
     @handle_entity_service_exception
     def list_entities_by_entity_type(self, vendor: str, nss: str, version: str,
@@ -189,7 +193,7 @@ class DefEntityService():
         :param dict filters: key-value pairs representing filter options
         :return:
         """
-        filters[def_utils.ClusterEntityFilterKey.CLUSTER_NAME.value] = name  # noqa: E501
+        filters[def_utils.ClusterEntityFilterKey.CLUSTER_NAME.value] = name
         entity_type: DefEntityType = self.get_def_entity_type()
         for entity in \
             self.list_entities_by_entity_type(vendor=entity_type.vendor,
@@ -252,3 +256,12 @@ class DefEntityService():
             nss=keys_map[def_utils.DefKey.ENTITY_TYPE_NSS],
             version=keys_map[def_utils.DefKey.ENTITY_TYPE_VERSION])
         return schema_svc.get_entity_type(entity_type_id)
+
+    def is_native_entity(self, entity_id: str):
+        """."""
+        response_body = self._cloudapi_client.do_request(
+            method=RequestMethod.GET,
+            cloudapi_version=CLOUDAPI_VERSION_1_0_0,
+            resource_url_relative_path=f"{CloudApiResource.ENTITIES}/"
+                                       f"{entity_id}")
+        return def_utils.DEF_NATIVE_ENTITY_TYPE_NSS in response_body['entityType']  # noqa: E501

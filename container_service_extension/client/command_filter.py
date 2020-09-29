@@ -71,22 +71,22 @@ UNSUPPORTED_SUBCOMMAND_OPTIONS_BY_VERSION = {
     vcd_client.ApiVersion.VERSION_33.value: {
         GroupKey.CLUSTER: {
             CommandNameKey.CREATE: ['sizing_class'],
-            CommandNameKey.DELETE: ['k8_runtime'],
-            CommandNameKey.INFO: ['k8_runtime'],
+            CommandNameKey.DELETE: ['k8_runtime', 'cluster_id'],
+            CommandNameKey.INFO: ['k8_runtime', 'cluster_id'],
             CommandNameKey.UPGRADE: ['k8_runtime'],
             CommandNameKey.UPGRADE_PLAN: ['k8_runtime'],
-            CommandNameKey.CONFIG: ['k8_runtime']
+            CommandNameKey.CONFIG: ['k8_runtime', 'cluster_id']
         },
     },
 
     vcd_client.ApiVersion.VERSION_34.value: {
         GroupKey.CLUSTER: {
             CommandNameKey.CREATE: ['sizing_class'],
-            CommandNameKey.DELETE: ['k8_runtime'],
-            CommandNameKey.INFO: ['k8_runtime'],
+            CommandNameKey.DELETE: ['k8_runtime', 'cluster_id'],
+            CommandNameKey.INFO: ['k8_runtime', 'cluster_id'],
             CommandNameKey.UPGRADE: ['k8_runtime'],
             CommandNameKey.UPGRADE_PLAN: ['k8_runtime'],
-            CommandNameKey.CONFIG: ['k8_runtime']
+            CommandNameKey.CONFIG: ['k8_runtime', 'cluster_id']
         }
     },
 
