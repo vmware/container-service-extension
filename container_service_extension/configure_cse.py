@@ -55,7 +55,7 @@ from container_service_extension.telemetry.telemetry_handler import \
     record_user_action_details
 from container_service_extension.telemetry.telemetry_utils import \
     store_telemetry_settings
-from container_service_extension.template_builder import TemplateBuilder
+import container_service_extension.template_builder as template_builder
 import container_service_extension.utils as utils
 from container_service_extension.vcdbroker import get_all_clusters as get_all_cse_clusters # noqa: E501
 from container_service_extension.vsphere_utils import populate_vsphere_list
@@ -869,6 +869,10 @@ def _assign_placement_policies_to_existing_templates(client, config,
     :param bool log_wire:
     :param utils.ConsoleMessagePrinter msg_update_callback:
     """
+    msg = 'Assigning placement policies to existing templates.'
+    INSTALL_LOGGER.debug(msg)
+    msg_update_callback.general(msg)
+
     catalog_name = config['broker']['catalog']
     org_name = config['broker']['org']
     all_templates = \
@@ -882,40 +886,17 @@ def _assign_placement_policies_to_existing_templates(client, config,
         if not kind:
             # skip processing the template if kind value is not present
             continue
-        # TODO: The following code is a duplicate of
-        # template_builder._tag_with_cse_placement_policy. Create a method
-        # in compute_policy_manager after refactoring it.
         placement_policy_name = \
             shared_constants.RUNTIME_DISPLAY_NAME_TO_INTERNAL_NAME_MAP[kind]  # noqa: E501
-        try:
-            policy = cpm.get_vdc_compute_policy(placement_policy_name,
-                                                is_placement_policy=True)
-            task = cpm.assign_vdc_placement_policy_to_vapp_template_vms(
-                policy['href'],
-                org_name,
-                catalog_name,
-                template_name)
-            if task is not None:
-                client.get_task_monitor().wait_for_success(task)
-                msg = "Successfully tagged template " \
-                      f"{template_name} with placement policy " \
-                      f"{placement_policy_name}."
-            else:
-                msg = f"{template_name} already tagged with" \
-                      f" placement policy {placement_policy_name}."
-            msg_update_callback.info(msg)
-            INSTALL_LOGGER.info(msg)
-        except EntityNotFoundException:
-            msg = f"Placement policy {placement_policy_name} not found"
-            msg_update_callback.error(msg)
-            INSTALL_LOGGER.error(msg)
-            raise
-        except Exception as err:
-            msg = f"Failed to tag template {template_name} with " \
-                  f"placement policy {placement_policy_name}. Error: {err}"
-            msg_update_callback.error(msg)
-            INSTALL_LOGGER.error(msg)
-            raise
+        template_builder.assign_placement_policy_to_template(
+            client,
+            placement_policy_name,
+            catalog_name,
+            template_name,
+            org_name,
+            logger=INSTALL_LOGGER,
+            log_wire=log_wire,
+            msg_update_callback=msg_update_callback)
 
 
 def _install_all_templates(
@@ -925,6 +906,11 @@ def _install_all_templates(
         msg = "Skipping creation of templates."
         msg_update_callback.info(msg)
         INSTALL_LOGGER.info(msg)
+        _assign_placement_policies_to_existing_templates(
+            client=client,
+            config=config,
+            log_wire=utils.str_to_bool(config['service'].get('log_wire')),
+            msg_update_callback=msg_update_callback)
     else:
         # read remote template cookbook, download all scripts
         rtm = RemoteTemplateManager(
@@ -1133,9 +1119,10 @@ def _install_single_template(
                              f" Expected {shared_constants.RUNTIME_DISPLAY_NAME_TO_INTERNAL_NAME_MAP.keys()}") # noqa: E501
         build_params[templateBuildKey.CSE_PLACEMENT_POLICY] = \
             shared_constants.RUNTIME_DISPLAY_NAME_TO_INTERNAL_NAME_MAP[template.get(server_constants.RemoteTemplateKey.KIND)] # noqa: E501
-    builder = TemplateBuilder(client, client, build_params, ssh_key=ssh_key,
-                              logger=INSTALL_LOGGER,
-                              msg_update_callback=msg_update_callback)
+    builder = template_builder.TemplateBuilder(client, client, build_params,
+                                               ssh_key=ssh_key,
+                                               logger=INSTALL_LOGGER,
+                                               msg_update_callback=msg_update_callback)  # noqa: E501
     builder.build(force_recreate=force_update,
                   retain_temp_vapp=retain_temp_vapp)
 
@@ -1487,13 +1474,6 @@ def _upgrade_to_35(client, config, ext_vcd_api_version,
         client=client,
         msg_update_callback=msg_update_callback,
         log_wire=log_wire)
-
-    # Assign placement policies to the existing templates
-    _assign_placement_policies_to_existing_templates(
-        client=client,
-        config=config,
-        log_wire=log_wire,
-        msg_update_callback=msg_update_callback)
 
     # Recreate all supported templates
     _install_all_templates(
