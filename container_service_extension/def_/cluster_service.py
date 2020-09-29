@@ -184,25 +184,16 @@ class ClusterService(abstract_broker.AbstractBroker):
             org_resource = vcd_utils.get_org(self.context.client,
                                              org_name=def_entity.entity.metadata.org_name)  # noqa: E501
             org_context = org_resource.href.split('/')[-1]
-        _, headers = \
-            self.entity_svc.create_entity(
-                def_utils.get_registered_def_entity_type().id,
-                entity=def_entity,
-                tenant_org_context=org_context)
-        # Task href for the create entity operation is present in
-        # the 'Location' header
-        entity_create_task_href = headers.get('Location')
-        entity_create_task = \
-            self.context.client.get_resource(entity_create_task_href)
-        self.context.client.get_task_monitor().wait_for_success(entity_create_task)  # noqa: E501
-        entity_create_task = \
-            self.context.client.get_resource(entity_create_task_href)
-        cluster_id = entity_create_task.Owner.get('id')
+        self.entity_svc.create_entity(
+            def_utils.get_registered_def_entity_type().id,
+            entity=def_entity,
+            tenant_org_context=org_context)
+        def_entity = self.entity_svc.get_native_entity_by_name(cluster_name)
         self.context.is_async = True
         telemetry_handler.record_user_action_details(
             cse_operation=telemetry_constants.CseOperation.V35_CLUSTER_APPLY,
             cse_params=def_entity)
-        self._create_cluster_async(cluster_id, cluster_spec)
+        self._create_cluster_async(def_entity.id, cluster_spec)
         return def_entity
 
     def resize_cluster(self, cluster_id: str,
