@@ -58,8 +58,7 @@ class CloudApiClient(object):
                    resource_url_absolute_path=None,
                    payload=None,
                    content_type=None,
-                   additional_headers=None,
-                   return_headers=False):
+                   additional_headers=None):
         """Make a request to cloudpai server.
 
         :param shared_constants.RequestMethod method: One of the HTTP verb
@@ -76,8 +75,6 @@ class CloudApiClient(object):
         :param dict payload: JSON payload for the REST call.
         :param str content_type: content type of the body of the request
         :param dict additional_headers: request specific headers
-        :param bool return_headers: should response headers be included in the
-            response
 
         :return: body of the response text (JSON) in form of a dictionary and
             the response headers if return_headers is set
@@ -125,9 +122,5 @@ class CloudApiClient(object):
         self.LOGGER_WIRE.debug(f"Response body : {response.text}")
 
         response.raise_for_status()
-        response_body = None
         if response.text:
-            response_body = json.loads(response.text)
-        if return_headers:
-            return (response_body, response.headers)
-        return response_body
+            return json.loads(response.text)
