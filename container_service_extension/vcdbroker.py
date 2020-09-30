@@ -1549,7 +1549,7 @@ def get_all_clusters(client, cluster_name=None, cluster_id=None,
         if org_name is not None and org_name.lower() != SYSTEM_ORG_NAME.lower(): # noqa: E501
             org_resource = client.get_org_by_name(org_name)
             org = vcd_org.Org(client, resource=org_resource)
-            query_filter += f";org=={urllib.parse.quote(org.resource.get('id'))}"
+            query_filter += f";org=={urllib.parse.quote(org.resource.get('id'))}" # noqa: E501
 
     # 2 queries are required because each query can only return 8 metadata
     q = client.get_typed_query(
