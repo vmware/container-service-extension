@@ -354,10 +354,10 @@ class TKGClusterApi:
         :param str vdc: name of the vdc
         """
         raise NotImplementedError(
-            "Get Cluster upgrade-plan yet to be implemented for TKG clusters")
+            "Get Cluster upgrade-plan not supported for TKG clusters")
 
     def upgrade_cluster(self, cluster_name, template_name,
                         template_revision, **kwargs):
         """Upgrade TKG cluster to the given distribution."""
         raise NotImplementedError(
-            "Cluster upgrade yet to be implemented for TKG clusters")
+            "Cluster upgrade not supported for TKG clusters")
