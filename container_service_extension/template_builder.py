@@ -35,7 +35,7 @@ TEMP_VAPP_FENCE_MODE = FenceMode.BRIDGED.value
 def assign_placement_policy_to_template(client, cse_placement_policy,
                                         catalog_name, catalog_item_name,
                                         org_name, logger=NULL_LOGGER,
-                                        log_wire=False,msg_update_callback=NullPrinter()): # noqa: E501
+                                        log_wire=False, msg_update_callback=NullPrinter()): # noqa: E501
 
     policy = None
     cpm = compute_policy_manager.ComputePolicyManager(client,
@@ -51,22 +51,25 @@ def assign_placement_policy_to_template(client, cse_placement_policy,
         if task is not None:
             client.get_task_monitor().wait_for_success(task)
             msg = "Successfully tagged template " \
-                    f"{catalog_item_name} with placement policy " \
-                    f"{cse_placement_policy}."
+                  f"{catalog_item_name} with placement policy " \
+                  f"{cse_placement_policy}."
         else:
             msg = f"{catalog_item_name} already tagged with" \
-                    f" placement policy {cse_placement_policy}."
+                  f" placement policy {cse_placement_policy}."
         msg_update_callback.info(msg)
         logger.info(msg)
-    except EntityNotFoundException:
-        msg = f"Placement policy {cse_placement_policy} not found"
+    except EntityNotFoundException as err:
+        msg = f"Placement policy {cse_placement_policy} not found: {err}"
         msg_update_callback.error(msg)
         logger.error(msg)
+        raise
     except Exception as err:
         msg = f"Failed to tag template {catalog_item_name} with " \
-                f"placement policy {cse_placement_policy}. Error: {err}"
+              f"placement policy {cse_placement_policy}. Error: {err}"
         msg_update_callback.error(msg)
         logger.error(msg)
+        raise
+
 
 class TemplateBuilder():
     """Builder calls for K8 templates."""

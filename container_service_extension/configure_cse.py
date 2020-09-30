@@ -878,13 +878,19 @@ def _assign_placement_policies_to_existing_templates(client, config,
     all_templates = \
         ltm.get_all_k8s_local_template_definition(client, catalog_name=catalog_name,  # noqa: E501
                                                   org_name=org_name)
-    cpm = compute_policy_manager.ComputePolicyManager(client,
-                                                      log_wire=log_wire)
     for template in all_templates:
         kind = template.get(server_constants.LocalTemplateKey.KIND)
-        template_name = template[server_constants.LocalTemplateKey.NAME]
+        catalog_item_name = ltm.get_revisioned_template_name(
+            template[server_constants.RemoteTemplateKey.NAME],
+            template[server_constants.RemoteTemplateKey.REVISION])
+        msg = f"Processing template {catalog_item_name}"
+        INSTALL_LOGGER.debug(msg)
+        msg_update_callback.general(msg)
         if not kind:
             # skip processing the template if kind value is not present
+            msg = f"Skipping processing of template {catalog_item_name}. Template kind not found"  # noqa: E501
+            INSTALL_LOGGER.debug(msg)
+            msg_update_callback.general(msg)
             continue
         placement_policy_name = \
             shared_constants.RUNTIME_DISPLAY_NAME_TO_INTERNAL_NAME_MAP[kind]  # noqa: E501
@@ -892,7 +898,7 @@ def _assign_placement_policies_to_existing_templates(client, config,
             client,
             placement_policy_name,
             catalog_name,
-            template_name,
+            catalog_item_name,
             org_name,
             logger=INSTALL_LOGGER,
             log_wire=log_wire,
@@ -906,11 +912,6 @@ def _install_all_templates(
         msg = "Skipping creation of templates."
         msg_update_callback.info(msg)
         INSTALL_LOGGER.info(msg)
-        _assign_placement_policies_to_existing_templates(
-            client=client,
-            config=config,
-            log_wire=utils.str_to_bool(config['service'].get('log_wire')),
-            msg_update_callback=msg_update_callback)
     else:
         # read remote template cookbook, download all scripts
         rtm = RemoteTemplateManager(
@@ -1474,6 +1475,13 @@ def _upgrade_to_35(client, config, ext_vcd_api_version,
         client=client,
         msg_update_callback=msg_update_callback,
         log_wire=log_wire)
+
+    if skip_template_creation:
+        _assign_placement_policies_to_existing_templates(
+            client=client,
+            config=config,
+            log_wire=utils.str_to_bool(config['service'].get('log_wire')),
+            msg_update_callback=msg_update_callback)
 
     # Recreate all supported templates
     _install_all_templates(
