@@ -2,6 +2,7 @@
 # Copyright (c) 2019 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 import copy
+import urllib
 
 import pyvcloud.vcd.client as vcd_client
 import pyvcloud.vcd.exceptions as vcd_e
@@ -185,10 +186,12 @@ def ovdc_list(request_data, op_ctx: ctx.OperationContext):
                 pks_server = ''
                 if k8s_provider == K8sProvider.PKS:
                     # vc name for vdc can only be found using typed query
+                    qfilter = f"name=={urllib.parse.quote(ovdc_name)};" \
+                              f"orgName=={urllib.parse.quote(org_name)}"
                     q = op_ctx.client.get_typed_query(
                         vcd_client.ResourceType.ADMIN_ORG_VDC.value,
                         query_result_format=vcd_client.QueryResultFormat.RECORDS, # noqa: E501
-                        qfilter=f"name=={ovdc_name};orgName=={org_name}")
+                        qfilter=qfilter)
                 # should only ever be one element in the generator
                     ovdc_records = list(q.execute())
                     if len(ovdc_records) == 0:
