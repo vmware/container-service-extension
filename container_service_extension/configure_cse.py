@@ -884,14 +884,6 @@ def _assign_placement_policies_to_existing_templates(client, config,
                                                   org_name=org_name)
     for template in all_templates:
         kind = template.get(server_constants.LocalTemplateKey.KIND)
-        if kind == shared_constants.ClusterEntityKind.TKG_PLUS:
-            msg = "Found a TKG+ template." \
-                  " However TKG PLUS is not enabled in CSE. vDC(s) hosting " \
-                  "Please enable TKG PLUS for CSE and re-run " \
-                  "`cse upgrade` to process these vDC(s)."
-            INSTALL_LOGGER.error(msg)
-            msg_update_callback.error(msg)
-            raise cse_exception.CseUpgradeError(msg)
         catalog_item_name = ltm.get_revisioned_template_name(
             template[server_constants.RemoteTemplateKey.NAME],
             template[server_constants.RemoteTemplateKey.REVISION])
@@ -904,6 +896,14 @@ def _assign_placement_policies_to_existing_templates(client, config,
             INSTALL_LOGGER.debug(msg)
             msg_update_callback.general(msg)
             continue
+        if kind == shared_constants.ClusterEntityKind.TKG_PLUS:
+            msg = "Found a TKG+ template." \
+                  " However TKG PLUS is not enabled in CSE. vDC(s) hosting " \
+                  "Please enable TKG PLUS for CSE and re-run " \
+                  "`cse upgrade` to process these vDC(s)."
+            INSTALL_LOGGER.error(msg)
+            msg_update_callback.error(msg)
+            raise cse_exception.CseUpgradeError(msg)
         placement_policy_name = \
             shared_constants.RUNTIME_DISPLAY_NAME_TO_INTERNAL_NAME_MAP[kind]  # noqa: E501
         template_builder.assign_placement_policy_to_template(
