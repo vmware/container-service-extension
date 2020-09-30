@@ -861,6 +861,7 @@ def _setup_placement_policies(client,
 
 
 def _assign_placement_policies_to_existing_templates(client, config,
+                                                     is_tkg_plus_enabled,
                                                      log_wire=False,
                                                      msg_update_callback=utils.NullPrinter()):  # noqa: E501
     """Read existing templates and assign respective placement policies.
@@ -870,6 +871,7 @@ def _assign_placement_policies_to_existing_templates(client, config,
 
     :param vcdClient.Client client:
     :param dict config:
+    :param bool is_tkg_plus_enable:
     :param bool log_wire:
     :param utils.ConsoleMessagePrinter msg_update_callback:
     """
@@ -896,13 +898,13 @@ def _assign_placement_policies_to_existing_templates(client, config,
             INSTALL_LOGGER.debug(msg)
             msg_update_callback.general(msg)
             continue
-        if kind == shared_constants.ClusterEntityKind.TKG_PLUS:
+        if kind == shared_constants.ClusterEntityKind.TKG_PLUS.value and \
+                not is_tkg_plus_enabled:
             msg = "Found a TKG+ template." \
-                  " However TKG PLUS is not enabled in CSE. vDC(s) hosting " \
-                  "Please enable TKG PLUS for CSE and re-run " \
+                  " However TKG+ is not enabled in CSE. " \
+                  "Please enable TKG+ for CSE and re-run " \
                   "`cse upgrade` to process these vDC(s)."
             INSTALL_LOGGER.error(msg)
-            msg_update_callback.error(msg)
             raise cse_exception.CseUpgradeError(msg)
         placement_policy_name = \
             shared_constants.RUNTIME_DISPLAY_NAME_TO_INTERNAL_NAME_MAP[kind]  # noqa: E501
@@ -1462,6 +1464,7 @@ def _upgrade_to_35(client, config, ext_vcd_api_version,
         _assign_placement_policies_to_existing_templates(
             client=client,
             config=config,
+            is_tkg_plus_enabled=is_tkg_plus_enabled,
             log_wire=utils.str_to_bool(config['service'].get('log_wire')),
             msg_update_callback=msg_update_callback)
     else:
@@ -2009,13 +2012,12 @@ def _assign_placement_policy_to_vdc_with_existing_clusters(
             msg_update_callback.general(msg)
 
     if tkg_plus_ovdcs:
-        msg = f"Found {len(tkg_plus_ovdcs)} vDC(s) hosting TKG PLUS clusters."
+        msg = f"Found {len(tkg_plus_ovdcs)} vDC(s) hosting TKG+ clusters."
         if not is_tkg_plus_enabled:
-            msg += " However TKG PLUS is not enabled in CSE. vDC(s) hosting " \
-                   "TKG PLUS clusters will not be processed. Please enable " \
-                   "TKG PLUS for CSE and re-run `cse upgrade` to process " \
+            msg += " However TKG+ is not enabled in CSE. vDC(s) hosting " \
+                   "TKG+ clusters will not be processed. Please enable " \
+                   "TKG+ for CSE and re-run `cse upgrade` to process " \
                    "these vDC(s)."
-            msg_update_callback.error(msg)
             INSTALL_LOGGER.error(msg)
             raise cse_exception.CseUpgradeError(msg)
         msg_update_callback.info(msg)
@@ -2163,12 +2165,11 @@ def _create_def_entity_for_existing_clusters(
         if policy_name == \
                 shared_constants.TKG_PLUS_CLUSTER_RUNTIME_INTERNAL_NAME and \
                 not is_tkg_plus_enabled:
-            msg = "Found a TKG PLUS cluster." \
-                  " However TKG PLUS is not enabled in CSE. " \
-                  "Please enable TKG PLUS for CSE and re-run" \
+            msg = "Found a TKG+ cluster." \
+                  " However TKG+ is not enabled in CSE. " \
+                  "Please enable TKG+ for CSE and re-run" \
                   "`cse upgrade` to process these clusters"
             INSTALL_LOGGER.error(msg)
-            msg_update_callback.error(msg)
             raise cse_exception.CseUpgradeError(msg)
         if policy_name == shared_constants.NATIVE_CLUSTER_RUNTIME_INTERNAL_NAME:  # noqa: E501
             # TODO combine to a single constant
@@ -2300,7 +2301,7 @@ def _print_users_in_need_of_def_rights(
             org_user_dict[cluster['org_name']] = []
         org_user_dict[cluster['org_name']].append(cluster['owner_name'])
 
-    msg = "The following users own CSE k8s clusters and will require [TODO] rights to access them in CSE 3.0"  # noqa: E501
+    msg = "The following users own CSE k8s clusters and will require `cse:nativeCluster Entitlement` rights to access them in CSE 3.0"  # noqa: E501
     msg_update_callback.info(msg)
     INSTALL_LOGGER.info(msg)
 
