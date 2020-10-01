@@ -6,12 +6,14 @@ import pyvcloud.vcd.client as vcd_client
 
 from container_service_extension.cloudapi.constants import CLOUDAPI_VERSION_1_0_0  # noqa: E501
 from container_service_extension.cloudapi.constants import CloudApiResource
+import container_service_extension.def_.utils as def_utils
 from container_service_extension.logger import NULL_LOGGER
 from container_service_extension.logger import SERVER_CLOUDAPI_WIRE_LOGGER
 import container_service_extension.pyvcloud_utils as vcd_utils
 from container_service_extension.shared_constants import RequestMethod
 
-CSE_NATIVE_RIGHT_BUNDLE_NAME = 'cse:nativeCluster Entitlement'
+CSE_NATIVE_RIGHT_BUNDLE_NAME = \
+    f'{def_utils.DEF_CSE_VENDOR}:{def_utils.DEF_NATIVE_ENTITY_TYPE_NSS} Entitlement'  # noqa: E501
 
 
 class RightBundleManager():

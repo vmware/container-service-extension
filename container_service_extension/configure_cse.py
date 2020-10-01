@@ -2328,13 +2328,16 @@ def _print_users_in_need_of_def_rights(
             org_user_dict[cluster['org_name']] = []
         org_user_dict[cluster['org_name']].append(cluster['owner_name'])
 
-    msg = "The following users own CSE k8s clusters and will require `cse:nativeCluster Entitlement` rights to access them in CSE 3.0"  # noqa: E501
-    msg_update_callback.info(msg)
-    INSTALL_LOGGER.info(msg)
-
+    msg = "The following users own CSE k8s clusters and will require " \
+          "`cse:nativeCluster Entitlement` right bundle " \
+          "to access them in CSE 3.0"
+    org_users_msg = ""
     for org_name, user_list in org_user_dict.items():
-        msg = f"Org : {org_name} -> Users : {', '.join(set(user_list))}"
-        msg_update_callback.general(msg)
+        org_users_msg += f"\nOrg : {org_name} -> Users : {', '.join(set(user_list))}"  # noqa: E501
+
+    if org_users_msg:
+        msg = msg + org_users_msg
+        msg_update_callback.info(msg)
         INSTALL_LOGGER.info(msg)
 
 

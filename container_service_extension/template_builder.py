@@ -58,11 +58,6 @@ def assign_placement_policy_to_template(client, cse_placement_policy,
                   f" placement policy {cse_placement_policy}."
         msg_update_callback.info(msg)
         logger.info(msg)
-    except EntityNotFoundException as err:
-        msg = f"Placement policy {cse_placement_policy} not found: {err}"
-        msg_update_callback.error(msg)
-        logger.error(msg)
-        raise
     except Exception as err:
         msg = f"Failed to tag template {catalog_item_name} with " \
               f"placement policy {cse_placement_policy}. Error: {err}"
