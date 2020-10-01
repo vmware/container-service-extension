@@ -10,6 +10,7 @@ import platform
 import stat
 import sys
 import threading
+import urllib
 
 import click
 import pkg_resources
@@ -429,3 +430,19 @@ def flatten_dictionary(input_dict, parent_key='', separator='.'):
         else:
             flattened_dict.update({key_prefix: val})
     return flattened_dict
+
+
+def escape_query_filter_expression_value(value):
+    value_str = str(value)
+    value_str = value_str.replace('(', "\\(")
+    value_str = value_str.replace(')', "\\)")
+    value_str = value_str.replace(';', "\\;")
+    value_str = value_str.replace(',', "\\,")
+    return value_str
+
+
+def construct_filter_string(filters: dict):
+    filter_string = ""
+    if filters:
+        filter_string = ";".join([f"{key}=={urllib.parse.quote(escape_query_filter_expression_value(value))}" for (key, value) in filters.items()]) # noqa: E501
+    return filter_string
