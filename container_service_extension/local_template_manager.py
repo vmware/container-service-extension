@@ -6,6 +6,7 @@ import ast
 import os
 import pathlib
 
+from pyvcloud.vcd.client import ApiVersion as vCDApiVersion
 from pyvcloud.vcd.client import MetadataDomain
 from pyvcloud.vcd.client import MetadataVisibility
 from pyvcloud.vcd.org import Org
@@ -14,6 +15,7 @@ from pyvcloud.vcd.utils import metadata_to_dict
 import container_service_extension.logger as logger
 from container_service_extension.pyvcloud_utils import get_org
 from container_service_extension.server_constants import LocalTemplateKey
+import container_service_extension.shared_constants as shared_constants
 
 LOCAL_SCRIPTS_DIR = '.cse_scripts'
 
