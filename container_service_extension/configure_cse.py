@@ -44,6 +44,7 @@ from container_service_extension.nsxt.nsxt_client import NSXTClient
 import container_service_extension.pyvcloud_utils as vcd_utils
 from container_service_extension.remote_template_manager import \
     RemoteTemplateManager
+import container_service_extension.right_bundle_manager as right_bundle_manager
 import container_service_extension.server_constants as server_constants
 import container_service_extension.shared_constants as shared_constants
 from container_service_extension.telemetry.constants import CseOperation
@@ -1503,7 +1504,7 @@ def _upgrade_to_35(client, config, ext_vcd_api_version,
     clusters = get_all_cse_clusters(client=client, fetch_details=True)
 
     # Add new vdc (placement) compute policy to ovdc with existing CSE clusters
-    _assign_placement_policy_to_vdc_with_existing_clusters(
+    _assign_placement_policy_to_vdc_and_right_bundle_to_org(
         client=client,
         cse_clusters=clusters,
         is_tkg_plus_enabled=is_tkg_plus_enabled,
@@ -1952,12 +1953,13 @@ def _get_placement_policy_name_from_template_name(template_name):
     return policy_name
 
 
-def _assign_placement_policy_to_vdc_with_existing_clusters(
+def _assign_placement_policy_to_vdc_and_right_bundle_to_org(
         client,
         cse_clusters,
         is_tkg_plus_enabled,
         msg_update_callback=utils.NullPrinter(),
         log_wire=False):
+    """Assign placement policies to VDCs and right bundles to Orgs with existing clusters."""  # noqa: E501
     msg = "Assigning placement compute policy(s) to vDC(s) hosting existing CSE clusters." # noqa: E501
     msg_update_callback.info(msg)
     INSTALL_LOGGER.info(msg)
@@ -1969,6 +1971,7 @@ def _assign_placement_policy_to_vdc_with_existing_clusters(
     tkg_plus_ovdcs = []
     native_ovdcs = []
     vdc_names = {}
+    org_ids = set()
     for cluster in cse_clusters:
         try:
             policy_name = _get_placement_policy_name_from_template_name(
@@ -1987,6 +1990,8 @@ def _assign_placement_policy_to_vdc_with_existing_clusters(
             id = cluster['vdc_id']
             tkg_plus_ovdcs.append(id)
             vdc_names[id] = cluster['vdc_name']
+        org_id = cluster['org_href'].split('/')[-1]
+        org_ids.add(org_id)
 
     native_ovdcs = set(native_ovdcs)
     tkg_plus_ovdcs = set(tkg_plus_ovdcs)
@@ -2036,6 +2041,28 @@ def _assign_placement_policy_to_vdc_with_existing_clusters(
                       f"'{vdc_names[vdc_id]}'"
                 INSTALL_LOGGER.info(msg)
                 msg_update_callback.general(msg)
+
+    if len(org_ids) > 0:
+        msg = "Publishing CSE native cluster right bundles to orgs where " \
+              "clusters are deployed"
+        INSTALL_LOGGER.info(msg)
+        msg_update_callback.info(msg)
+        try:
+            rbm = right_bundle_manager.RightBundleManager(client,
+                                                          log_wire=log_wire,
+                                                          logger_debug=INSTALL_LOGGER)  # noqa: E501
+            cse_right_bundle = \
+                rbm.get_right_bundle_by_name(right_bundle_manager.CSE_NATIVE_RIGHT_BUNDLE_NAME)  # noqa: E501
+            rbm.publish_cse_right_bundle_to_tenants(
+                right_bundle_id=cse_right_bundle['id'],
+                org_ids=list(org_ids))
+        except Exception as err:
+            msg = f"Error adding right bundles to the Organizations: {err}"
+            INSTALL_LOGGER.error(msg)
+            raise
+        msg = "Successfully published CSE native cluster right bundle to Orgs"
+        INSTALL_LOGGER.info(msg)
+        msg_update_callback.general(msg)
 
 
 def _remove_old_cse_sizing_compute_policies(
