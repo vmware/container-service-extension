@@ -11,6 +11,7 @@ from container_service_extension.logger import NULL_LOGGER
 from container_service_extension.logger import SERVER_CLOUDAPI_WIRE_LOGGER
 import container_service_extension.pyvcloud_utils as vcd_utils
 from container_service_extension.shared_constants import RequestMethod
+import container_service_extension.utils as utils
 
 CSE_NATIVE_RIGHT_BUNDLE_NAME = \
     f'{def_utils.DEF_CSE_VENDOR}:{def_utils.DEF_NATIVE_ENTITY_TYPE_NSS} Entitlement'  # noqa: E501
@@ -29,7 +30,11 @@ class RightBundleManager():
             logger_wire=self.logger_wire)
 
     def get_right_bundle_by_name(self, right_bundle_name):
-        query_string = f"filter=name=={right_bundle_name}"
+        filters = {'name': right_bundle_name}
+        filter_string = utils.construct_filter_string(filters)
+        query_string = ""
+        if filter_string:
+            query_string = f"filter={filter_string}"
         response_body = self.cloudapi_client.do_request(
             method=RequestMethod.GET,
             cloudapi_version=CLOUDAPI_VERSION_1_0_0,

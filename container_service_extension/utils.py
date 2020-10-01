@@ -444,5 +444,10 @@ def escape_query_filter_expression_value(value):
 def construct_filter_string(filters: dict):
     filter_string = ""
     if filters:
-        filter_string = ";".join([f"{key}=={urllib.parse.quote(escape_query_filter_expression_value(value))}" for (key, value) in filters.items()]) # noqa: E501
+        filter_expressions = []
+        for (key, value) in filters.items():
+            if key and value:
+                filter_exp = f"{key}=={urllib.parse.quote(escape_query_filter_expression_value(value))}"  # noqa: E501
+                filter_expressions.append(filter_exp)
+        filter_string = ";".join(filter_expressions)
     return filter_string

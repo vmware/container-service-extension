@@ -93,8 +93,8 @@ class TKGClusterApi:
         :return: list of TKG cluster information.
         :rtype: List[dict]
         """
-        filters = {}
         self.set_tenant_org_context(org_name=org)
+        filters = {}
         if vdc:
             filters[cli_constants.TKGEntityFilterKey.VDC_NAME.value] = vdc
         filter_string = utils.construct_filter_string(filters)
