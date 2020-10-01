@@ -14,6 +14,7 @@ import container_service_extension.def_.models as def_models
 import container_service_extension.logger as logger
 import container_service_extension.operation_context as ctx
 import container_service_extension.pyvcloud_utils as vcd_utils
+from container_service_extension.shared_constants import ClusterEntityKind
 from container_service_extension.shared_constants import RequestKey
 from container_service_extension.shared_constants import RUNTIME_DISPLAY_NAME_TO_INTERNAL_NAME_MAP  # noqa: E501
 from container_service_extension.shared_constants import RUNTIME_INTERNAL_NAME_TO_DISPLAY_NAME_MAP  # noqa: E501
@@ -61,6 +62,12 @@ def update_ovdc(operation_context: ctx.OperationContext,
     # NOTE: Telemetry is currently handled in the async function as it is not
     # possible to know the operation (enable/disable) without comparing it to
     # current k8s runtimes.
+    if ClusterEntityKind.TKG_PLUS.value in ovdc_spec.k8s_runtime and \
+            not utils.is_tkg_plus_enabled():
+        msg = "TKG+ is not enabled in CSE server. Please enable TKG+ in the " \
+              "server and try again."
+        logger.SERVER_LOGGER.debug(msg)
+        raise Exception(msg)
     policy_list = [RUNTIME_DISPLAY_NAME_TO_INTERNAL_NAME_MAP[p] for p in ovdc_spec.k8s_runtime]  # noqa: E501
     _update_ovdc_using_placement_policy_async(operation_context=operation_context, # noqa:E501
                                               task=task,
@@ -93,6 +100,9 @@ def get_ovdc(operation_context: ctx.OperationContext, ovdc_id: str) -> dict:
                                                  log_wire=log_wire))
     # TODO: Find a better way to avoid sending remove_cp_from_vms_on_disable
     # flag
+    if ClusterEntityKind.TKG_PLUS.value in result['k8s_runtime'] \
+            and not utils.is_tkg_plus_enabled():
+        result['k8s_runtime'].remove(ClusterEntityKind.TKG_PLUS.value)
     del result['remove_cp_from_vms_on_disable']
     return result
 
@@ -122,6 +132,9 @@ def list_ovdc(operation_context: ctx.OperationContext) -> List[dict]:
                 get_ovdc_k8s_runtime_details(operation_context.sysadmin_client,
                                              org_name=org_name,
                                              ovdc_name=ovdc_name))
+            if ClusterEntityKind.TKG_PLUS.value in ovdc_details['k8s_runtime'] \
+                    and not utils.is_tkg_plus_enabled():  # noqa: E501
+                ovdc_details['k8s_runtime'].remove(ClusterEntityKind.TKG_PLUS.value)  # noqa: E501
             # TODO: Find a better way to remove remove_cp_from_vms_on_disable
             del ovdc_details['remove_cp_from_vms_on_disable']
             ovdcs.append(ovdc_details)
