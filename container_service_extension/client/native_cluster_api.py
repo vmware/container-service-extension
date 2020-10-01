@@ -110,7 +110,7 @@ class NativeClusterApi:
             entity_svc = def_entity_svc.DefEntityService(self._cloudapi_client)
             def_entity = entity_svc.get_native_entity_by_name(name=cluster_name, filters=filters)  # noqa: E501
             if not def_entity:
-                cse_exceptions.ClusterNotFoundError(f"Cluster '{cluster_name}' not found.")  # noqa: E501
+                raise cse_exceptions.ClusterNotFoundError(f"Cluster '{cluster_name}' not found.")  # noqa: E501
             cluster_id = def_entity.id
         return self.delete_cluster_by_id(cluster_id)
 
@@ -183,10 +183,10 @@ class NativeClusterApi:
             filters = client_utils.construct_filters(org=org, vdc=vdc)
             entity_svc = def_entity_svc.DefEntityService(self._cloudapi_client)
             def_entity = entity_svc.get_native_entity_by_name(name=cluster_name, filters=filters)  # noqa: E501
-            cluster_id = def_entity.id
             if not def_entity:
                 raise cse_exceptions.ClusterNotFoundError(f"Cluster '{cluster_name}' not found.")  # noqa: E501
-        return self.get_cluster_config_by_id(def_entity.id)
+            cluster_id = def_entity.id
+        return self.get_cluster_config_by_id(cluster_id)
 
     def get_cluster_config_by_id(self, cluster_id, **kwargs):
         """Get the cluster config for given cluster id.
@@ -255,7 +255,7 @@ class NativeClusterApi:
         if current_entity:
             current_entity.entity.spec.k8_distribution.template_name = template_name  # noqa: E501
             current_entity.entity.spec.k8_distribution.template_revision = template_revision  # noqa: E501
-            return self.upgrade_cluster_by_cluster_id(current_entity.id, cluster_entity=asdict(current_entity))  # noqa: E501
+            return self.upgrade_cluster_by_cluster_id(current_entity.id, cluster_def_entity=asdict(current_entity))  # noqa: E501
         raise cse_exceptions.ClusterNotFoundError(f"Cluster '{cluster_name}' not found.")  # noqa: E501
 
     def upgrade_cluster_by_cluster_id(self, cluster_id, cluster_def_entity, **kwargs):  # noqa: E501
