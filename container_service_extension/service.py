@@ -505,7 +505,9 @@ class Service(object, metaclass=Singleton):
             org_name = self.config['broker']['org']
             catalog_name = self.config['broker']['catalog']
             k8_templates = ltm.get_all_k8s_local_template_definition(
-                client=client, catalog_name=catalog_name, org_name=org_name)
+                client=client, catalog_name=catalog_name, org_name=org_name,
+                is_tkg_plus_enabled=utils.is_tkg_plus_enabled(self.config),
+                logger_debug=logger.SERVER_LOGGER)
 
             if not k8_templates:
                 msg = "No valid K8 templates were found in catalog " \

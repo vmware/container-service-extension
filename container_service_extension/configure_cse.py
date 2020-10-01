@@ -883,8 +883,12 @@ def _assign_placement_policies_to_existing_templates(client, config,
     catalog_name = config['broker']['catalog']
     org_name = config['broker']['org']
     all_templates = \
-        ltm.get_all_k8s_local_template_definition(client, catalog_name=catalog_name,  # noqa: E501
-                                                  org_name=org_name)
+        ltm.get_all_k8s_local_template_definition(
+            client,
+            catalog_name=catalog_name,  # noqa: E501
+            org_name=org_name,
+            is_tkg_plus_enabled=is_tkg_plus_enabled,
+            logger_debug=INSTALL_LOGGER)
     for template in all_templates:
         kind = template.get(server_constants.LocalTemplateKey.KIND)
         catalog_item_name = ltm.get_revisioned_template_name(

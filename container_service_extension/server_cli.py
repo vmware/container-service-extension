@@ -921,7 +921,9 @@ def list_template(ctx, config_file_path, skip_config_decryption,
                     ltm.get_all_k8s_local_template_definition(
                         client=client,
                         catalog_name=catalog_name,
-                        org_name=org_name)
+                        org_name=org_name,
+                        is_tkg_plus_enabled=utils.is_tkg_plus_enabled(config_dict),  # noqa: E501
+                        logger_debug=SERVER_CLI_LOGGER)
 
                 default_template_name = \
                     config_dict['broker']['default_template_name']
