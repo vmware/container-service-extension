@@ -938,8 +938,8 @@ def list_template(ctx, config_file_path, skip_config_decryption,
                     config_dict['broker']['default_template_name']
                 default_template_revision = \
                     str(config_dict['broker']['default_template_revision'])
+                api_version = float(client.get_api_version())
                 for definition in local_template_definitions:
-                    api_version = float(client.get_api_version())
                     if api_version >= float(vcd_client.ApiVersion.VERSION_35.value) and \
                             definition[LocalTemplateKey.KIND] == ClusterEntityKind.TKG_PLUS.value and \
                             not is_tkg_plus_enabled:  # noqa: E501

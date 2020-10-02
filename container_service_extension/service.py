@@ -538,6 +538,7 @@ class Service(object, metaclass=Singleton):
                           f"'{template[server_constants.LocalTemplateKey.NAME]}' as " \
                           "TKG+ is not enabled"  # noqa: E501
                     logger.SERVER_LOGGER.debug(msg)
+                    k8_templates.remove(template)
                     continue
                 if str(template[server_constants.LocalTemplateKey.REVISION]) == default_template_revision and \
                         template[server_constants.LocalTemplateKey.NAME] == default_template_name: # noqa: E501

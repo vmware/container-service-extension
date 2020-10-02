@@ -909,7 +909,7 @@ def _assign_placement_policies_to_existing_templates(client, config,
                 not is_tkg_plus_enabled:
             msg = "Found a TKG+ template." \
                   " However TKG+ is not enabled on CSE. " \
-                  "Please enable TKG+ for CSE and re-run " \
+                  "Please enable TKG+ for CSE via config file and re-run " \
                   "`cse upgrade` to process these vDC(s)."
             INSTALL_LOGGER.error(msg)
             raise cse_exception.CseUpgradeError(msg)
@@ -1099,7 +1099,7 @@ def _install_single_template(
             not is_tkg_plus_enabled:
         msg = "Found a TKG+ template." \
               " However TKG+ is not enabled on CSE. " \
-              "Please enable TKG+ for CSE and re-run " \
+              "Please enable TKG+ for CSE via config file and re-run " \
               "`cse upgrade` to process these vDC(s)."
         INSTALL_LOGGER.error(msg)
         msg_update_callback.error(msg)
@@ -2049,8 +2049,8 @@ def _assign_placement_policy_to_vdc_and_right_bundle_to_org(
         if not is_tkg_plus_enabled:
             msg += " However TKG+ is not enabled on CSE. vDC(s) hosting " \
                    "TKG+ clusters will not be processed. Please enable " \
-                   "TKG+ for CSE and re-run `cse upgrade` to process " \
-                   "these vDC(s)."
+                   "TKG+ for CSE via config file and re-run `cse upgrade` " \
+                   "to process these vDC(s)."
             INSTALL_LOGGER.error(msg)
             raise cse_exception.CseUpgradeError(msg)
         msg_update_callback.info(msg)
@@ -2222,7 +2222,7 @@ def _create_def_entity_for_existing_clusters(
                 not is_tkg_plus_enabled:
             msg = "Found a TKG+ cluster." \
                   " However TKG+ is not enabled on CSE. " \
-                  "Please enable TKG+ for CSE and re-run" \
+                  "Please enable TKG+ for CSE via config file and re-run" \
                   "`cse upgrade` to process these clusters"
             INSTALL_LOGGER.error(msg)
             raise cse_exception.CseUpgradeError(msg)
