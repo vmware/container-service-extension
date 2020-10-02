@@ -17,6 +17,7 @@ from container_service_extension.shared_constants import RESPONSE_MESSAGE_KEY
 
 def get_response_fields(request_msg, fsencoding, is_mqtt):
     """Get the msg json and response fields request message."""
+    msg_json, request_id = None, None
     try:
         # Parse the message
         if is_mqtt:
@@ -26,7 +27,8 @@ def get_response_fields(request_msg, fsencoding, is_mqtt):
             request_id = payload_json["headers"]["requestId"]
             msg_json = http_req_json['message']
 
-            # use api access token as authorization token
+            # Use api access token as authorization token -- this may involve
+            # overwriting the current authorization token
             msg_json['headers']['Authorization'] = \
                 'Bearer ' + http_req_json['securityContext']['apiAccessToken']
         else:
@@ -35,14 +37,14 @@ def get_response_fields(request_msg, fsencoding, is_mqtt):
 
         result = request_processor.process_request(msg_json)
         status_code = result['status_code']
-        reply_body = json.dumps(result['body'])
+        reply_body = result['body']
 
     except Exception as e:
         if isinstance(e, CseRequestError):
             status_code = e.status_code
         else:
             status_code = requests.codes.internal_server_error
-        reply_body = json.dumps({RESPONSE_MESSAGE_KEY: str(e)})
+        reply_body = {RESPONSE_MESSAGE_KEY: str(e)}
 
         tb = traceback.format_exc()
         LOGGER.error(tb)
@@ -55,3 +57,12 @@ def str_to_json(json_str, fsencoding):
 
 def format_response_body(body, fsencoding):
     return base64.b64encode(body.encode()).decode(fsencoding)
+
+
+def get_task_href(body):
+    if type(body) != dict:
+        return None
+    if body.get('entity') is not None and \
+            body['entity'].get('status') is not None:
+        return body['entity']['status'].get('task_href')
+    return None

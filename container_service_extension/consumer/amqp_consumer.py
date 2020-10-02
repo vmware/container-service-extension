@@ -169,13 +169,14 @@ class AMQPConsumer(object):
             is_mqtt=False)
 
         if properties.reply_to is not None:
+            reply_body_str = json.dumps(reply_body)
             reply_msg = self.form_response_json(
                 request_id=req_id,
                 status_code=status_code,
-                reply_body=reply_body)
-            LOGGER.debug(f"reply: {reply_body}")
+                reply_body=reply_body_str)
 
             self.send_response(reply_msg, properties)
+            LOGGER.debug(f"AMQP reply: {reply_msg}")
 
     def send_response(self, reply_msg, properties):
         reply_properties = pika.BasicProperties(

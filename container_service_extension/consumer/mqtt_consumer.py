@@ -3,6 +3,7 @@
 # SPDX-License-Identifier: BSD-2-Clause
 
 import json
+import re
 import ssl
 import sys
 from threading import Lock
@@ -38,7 +39,8 @@ class MQTTConsumer:
         self._ctpe = ConsumerThreadPoolExecutor(self.num_processors)
         self._publish_lock = Lock()
 
-    def form_response_json(self, request_id, status_code, reply_body):
+    def form_response_json(self, request_id, status_code, reply_body,
+                           task_path):
         response_json = {
             "type": "API_RESPONSE",
             "headers": {
@@ -53,6 +55,15 @@ class MQTTConsumer:
                 "body": utils.format_response_body(reply_body, self.fsencoding)
             }
         }
+
+        # Add location header is appropriate status code
+        if status_code in (requests.codes.created,
+                           requests.codes.accepted,
+                           requests.codes.found,
+                           requests.codes.see_other):
+            response_json['httpResponse']['headers']['Location'] = \
+                str(status_code) if task_path is None else \
+                f"{status_code};{task_path}"
         return response_json
 
     def process_mqtt_message(self, msg):
@@ -64,12 +75,19 @@ class MQTTConsumer:
         LOGGER.debug(f"Received message with request_id: {req_id}, mid: "
                      f"{msg.mid}, and msg json: {msg_json}")
 
+        task_href = utils.get_task_href(reply_body)
+        task_path = re.search('/api/task/.*', task_href).group() \
+            if task_href is not None else None
+
+        reply_body_str = json.dumps(reply_body)
         response_json = self.form_response_json(
             request_id=req_id,
             status_code=status_code,
-            reply_body=reply_body)
+            reply_body=reply_body_str,
+            task_path=task_path)
 
         self.send_response(response_json)
+        LOGGER.debug(f'MQTT response: {response_json}')
 
     def send_response(self, response_json):
         self._publish_lock.acquire()
