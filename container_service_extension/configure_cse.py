@@ -876,6 +876,9 @@ def _assign_placement_policies_to_existing_templates(client, config,
     :param bool log_wire:
     :param utils.ConsoleMessagePrinter msg_update_callback:
     """
+    # NOTE: In CSE 3.0 if `enable_tkg_plus` flag in the config is set to false,
+    # And there is an existing TKG+ template, throw an exception on the console
+    # and fail the upgrade.
     msg = 'Assigning placement policies to existing templates.'
     INSTALL_LOGGER.debug(msg)
     msg_update_callback.general(msg)
@@ -906,7 +909,7 @@ def _assign_placement_policies_to_existing_templates(client, config,
         if kind == shared_constants.ClusterEntityKind.TKG_PLUS.value and \
                 not is_tkg_plus_enabled:
             msg = "Found a TKG+ template." \
-                  " However TKG+ is not enabled in CSE. " \
+                  " However TKG+ is not enabled on CSE. " \
                   "Please enable TKG+ for CSE and re-run " \
                   "`cse upgrade` to process these vDC(s)."
             INSTALL_LOGGER.error(msg)
@@ -948,6 +951,7 @@ def _install_all_templates(
             force_update=force_create,
             retain_temp_vapp=retain_temp_vapp,
             ssh_key=ssh_key,
+            is_tkg_plus_enabled=utils.is_tkg_plus_enabled(config),
             msg_update_callback=msg_update_callback)
 
 
@@ -1051,6 +1055,7 @@ def install_template(template_name, template_revision, config_file_name,
                     force_update=force_create,
                     retain_temp_vapp=retain_temp_vapp,
                     ssh_key=ssh_key,
+                    is_tkg_plus_enabled=utils.is_tkg_plus_enabled(config),
                     msg_update_callback=msg_update_callback)
 
         if not found_template:
@@ -1083,7 +1088,23 @@ def _install_single_template(
         client, remote_template_manager, template, org_name,
         vdc_name, catalog_name, network_name, ip_allocation_mode,
         storage_profile, force_update, retain_temp_vapp,
-        ssh_key, msg_update_callback=utils.NullPrinter()):
+        ssh_key, is_tkg_plus_enabled=False,
+        msg_update_callback=utils.NullPrinter()):
+    # NOTE: For CSE 3.0, if the template is a TKG+ template
+    # and `enable_tkg_plus` is set to false,
+    # An error should be thrown and template installation should be skipped.
+    api_version = float(client.get_api_version())
+    if api_version >= float(vCDApiVersion.VERSION_35.value) and\
+            template[server_constants.LocalTemplateKey.KIND] == \
+            shared_constants.ClusterEntityKind.TKG_PLUS.value and \
+            not is_tkg_plus_enabled:
+        msg = "Found a TKG+ template." \
+              " However TKG+ is not enabled on CSE. " \
+              "Please enable TKG+ for CSE and re-run " \
+              "`cse upgrade` to process these vDC(s)."
+        INSTALL_LOGGER.error(msg)
+        msg_update_callback.error(msg)
+        raise Exception(msg)
     localTemplateKey = server_constants.LocalTemplateKey
     templateBuildKey = server_constants.TemplateBuildKey
     remote_template_manager.download_template_scripts(
@@ -1964,6 +1985,10 @@ def _assign_placement_policy_to_vdc_and_right_bundle_to_org(
         msg_update_callback=utils.NullPrinter(),
         log_wire=False):
     """Assign placement policies to VDCs and right bundles to Orgs with existing clusters."""  # noqa: E501
+    # NOTE: For CSE 3.0, if `enable_tkg_plus` flag in the config is set to
+    # false,
+    # Throw an error on the console and do not publish TKG+ placement policy to
+    # the VDC
     msg = "Assigning placement compute policy(s) to vDC(s) hosting existing CSE clusters." # noqa: E501
     msg_update_callback.info(msg)
     INSTALL_LOGGER.info(msg)
@@ -2023,7 +2048,7 @@ def _assign_placement_policy_to_vdc_and_right_bundle_to_org(
     if tkg_plus_ovdcs:
         msg = f"Found {len(tkg_plus_ovdcs)} vDC(s) hosting TKG+ clusters."
         if not is_tkg_plus_enabled:
-            msg += " However TKG+ is not enabled in CSE. vDC(s) hosting " \
+            msg += " However TKG+ is not enabled on CSE. vDC(s) hosting " \
                    "TKG+ clusters will not be processed. Please enable " \
                    "TKG+ for CSE and re-run `cse upgrade` to process " \
                    "these vDC(s)."
@@ -2197,7 +2222,7 @@ def _create_def_entity_for_existing_clusters(
                 shared_constants.TKG_PLUS_CLUSTER_RUNTIME_INTERNAL_NAME and \
                 not is_tkg_plus_enabled:
             msg = "Found a TKG+ cluster." \
-                  " However TKG+ is not enabled in CSE. " \
+                  " However TKG+ is not enabled on CSE. " \
                   "Please enable TKG+ for CSE and re-run" \
                   "`cse upgrade` to process these clusters"
             INSTALL_LOGGER.error(msg)

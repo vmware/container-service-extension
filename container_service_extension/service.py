@@ -478,6 +478,9 @@ class Service(object, metaclass=Singleton):
 
     def _load_template_definition_from_catalog(self,
                                                msg_update_callback=utils.NullPrinter()): # noqa: E501
+        # NOTE: If `enable_tkg_plus` in the config file is set to false,
+        # CSE server will skip loading the TKG+ template this will prevent
+        # users from performing TKG+ related operations.
         msg = "Loading k8s template definition from catalog"
         logger.SERVER_LOGGER.info(msg)
         msg_update_callback.general_no_color(msg)
@@ -530,9 +533,9 @@ class Service(object, metaclass=Singleton):
                         template[server_constants.LocalTemplateKey.KIND] == \
                         shared_constants.ClusterEntityKind.TKG_PLUS.value and \
                         not is_tkg_plus_enabled:
-                    # TKG+ is not enabled in CSE config. Skip the template and log the
-                    # relevant information.
-                    msg = "Skipping loading template " \
+                    # TKG+ is not enabled on CSE config. Skip the template and
+                    # log the relevant information.
+                    msg = "Skipping loading template data for " \
                           f"'{template[server_constants.LocalTemplateKey.NAME]}' as " \
                           "TKG+ is not enabled"  # noqa: E501
                     logger.SERVER_LOGGER.debug(msg)

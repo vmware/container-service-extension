@@ -34,6 +34,9 @@ def update_ovdc(operation_context: ctx.OperationContext,
     :return: dictionary containing the task href for the update operation
     :rtype: dict
     """
+    # NOTE: For CSE 3.0, if `enable_tkg_plus` flag in config is set to false,
+    # Prevent enable/disable of OVDC for TKG+ k8s runtime by throwing an
+    # exception
     msg = "Updating OVDC placement policies"
     task = vcd_task.Task(operation_context.sysadmin_client)
     org = vcd_utils.get_org(operation_context.client)
@@ -64,7 +67,7 @@ def update_ovdc(operation_context: ctx.OperationContext,
     # current k8s runtimes.
     if ClusterEntityKind.TKG_PLUS.value in ovdc_spec.k8s_runtime and \
             not utils.is_tkg_plus_enabled():
-        msg = "TKG+ is not enabled in CSE server. Please enable TKG+ in the " \
+        msg = "TKG+ is not enabled on CSE server. Please enable TKG+ in the " \
               "server and try again."
         logger.SERVER_LOGGER.debug(msg)
         raise Exception(msg)
@@ -88,6 +91,8 @@ def get_ovdc(operation_context: ctx.OperationContext, ovdc_id: str) -> dict:
     :return: dictionary containing the ovdc information
     :rtype: dict
     """
+    # NOTE: For CSE 3.0, if `enable_tkg_plus` flag in config is set to false,
+    # Prevent showing information about TKG+ by skipping TKG+ from the result.
     cse_params = {
         RequestKey.OVDC_ID: ovdc_id
     }
@@ -114,6 +119,8 @@ def list_ovdc(operation_context: ctx.OperationContext) -> List[dict]:
     :return: list of dictionary containing details about the ovdc
     :rtype: List[dict]
     """
+    # NOTE: For CSE 3.0, if `enable_tkg_plus` flag in config is set to false,
+    # Prevent showing information about TKG+ by skipping TKG+ from the result.
     # Record telemetry
     telemetry_handler.record_user_action_details(cse_operation=CseOperation.OVDC_LIST, # noqa: E501
                                                  cse_params={})

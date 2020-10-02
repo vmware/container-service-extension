@@ -549,6 +549,10 @@ def install(ctx, config_file_path, pks_config_file_path,
             skip_config_decryption, skip_template_creation,
             retain_temp_vapp, ssh_key_file):
     """Install CSE on vCloud Director."""
+    # NOTE: For CSE 3.0, if `enable_tkg_plus` in config file is set to false
+    # and if `cse install` is invoked without skipping template creation,
+    # an Exception will be thrown if TKG+ template is present in the
+    # remote_template_cookbook.
     SERVER_CLI_LOGGER.debug(f"Executing command: {ctx.command_path}")
     console_message_printer = ConsoleMessagePrinter()
     check_python_version(console_message_printer)
@@ -802,6 +806,10 @@ def upgrade(ctx, config_file_path, skip_config_decryption,
       CSE template repository to adhere to CSE 3.0 template requirements.
     - Update existing CSE k8s cluster's to match CSE 3.0 k8s clusters.
     """
+    # NOTE: For CSE 3.0, if `enable_tkg_plus` in the config is set to false,
+    # an exception is throwin if
+    # 1. If there is an existing TKG+ template
+    # 2. If remote template cookbook contains a TKG+ template.
     SERVER_CLI_LOGGER.debug(f"Executing command: {ctx.command_path}")
     console_message_printer = ConsoleMessagePrinter()
     check_python_version(console_message_printer)
@@ -918,7 +926,7 @@ def list_template(ctx, config_file_path, skip_config_decryption,
 
                 org_name = config_dict['broker']['org']
                 catalog_name = config_dict['broker']['catalog']
-                is_tkg_plus_enabled=utils.is_tkg_plus_enabled(config_dict)
+                is_tkg_plus_enabled = utils.is_tkg_plus_enabled(config_dict)
                 local_template_definitions = \
                     ltm.get_all_k8s_local_template_definition(
                         client=client,
@@ -936,9 +944,9 @@ def list_template(ctx, config_file_path, skip_config_decryption,
                     if api_version >= float(vcd_client.ApiVersion.VERSION_35.value) and \
                             definition[LocalTemplateKey.KIND] == ClusterEntityKind.TKG_PLUS.value and \
                             not is_tkg_plus_enabled:  # noqa: E501
-                        # TKG+ is not enabled in CSE config. Skip the template and log the
-                        # relevant information.
-                        msg = "Skipping loading template " \
+                        # TKG+ is not enabled on CSE config. Skip the template
+                        # and log the relevant information.
+                        msg = "Skipping loading template data for " \
                               f"'{definition[LocalTemplateKey.NAME]}' as " \
                               "TKG+ is not enabled"
                         SERVER_CLI_LOGGER.debug(msg)
@@ -1095,6 +1103,8 @@ def install_cse_template(ctx, template_name, template_revision,
     Use '*' for TEMPLATE_NAME and TEMPLATE_REVISION to install
     all listed templates.
     """
+    # NOTE: For CSE 3.0, if `enable_tkg_plus` flag in config is set to false,
+    # Throw an error if TKG+ template creation is issued.
     SERVER_CLI_LOGGER.debug(f"Executing command: {ctx.command_path}")
     console_message_printer = ConsoleMessagePrinter()
     check_python_version(console_message_printer)
