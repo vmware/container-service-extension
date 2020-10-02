@@ -20,6 +20,7 @@ import container_service_extension.exceptions as cse_exception
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
 from container_service_extension.minor_error_codes import MinorErrorCode
 from container_service_extension.shared_constants import RequestMethod
+import container_service_extension.utils as utils
 
 
 def handle_entity_service_exception(func):
@@ -102,10 +103,7 @@ class DefEntityService():
         :return: List of entities of that entity type
         :rtype: Generator[DefEntity, None, None]
         """
-        filter_string = None
-        if filters:
-            filter_string = ";".join(
-                [f"{k}=={v}" for (k, v) in filters.items()])  # noqa: E501
+        filter_string = utils.construct_filter_string(filters)
         page_num = 0
         while True:
             page_num += 1

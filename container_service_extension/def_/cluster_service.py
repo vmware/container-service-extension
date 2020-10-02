@@ -7,6 +7,7 @@ import string
 import threading
 import time
 from typing import List
+import urllib
 
 import pkg_resources
 import pyvcloud.vcd.client as vcd_client
@@ -1494,16 +1495,16 @@ def _is_valid_cluster_name(name):
 
 
 def _cluster_exists(client, cluster_name, org_name=None, ovdc_name=None):
-    query_filter = f'name=={cluster_name}'
+    query_filter = f'name=={urllib.parse.quote(cluster_name)}'
     if ovdc_name is not None:
-        query_filter += f";vdcName=={ovdc_name}"
-    resource_type = 'vApp'
+        query_filter += f";vdcName=={urllib.parse.quote(ovdc_name)}"
+    resource_type = vcd_client.ResourceType.VAPP.value
     if client.is_sysadmin():
-        resource_type = 'adminVApp'
+        resource_type = vcd_client.ResourceType.ADMIN_VAPP.value
         if org_name is not None and org_name.lower() != SYSTEM_ORG_NAME.lower(): # noqa: E501
             org_resource = client.get_org_by_name(org_name)
             org = vcd_org.Org(client, resource=org_resource)
-            query_filter += f";org=={org.resource.get('id')}"
+            query_filter += f";org=={urllib.parse.quote(org.resource.get('id'))}"  # noqa: E501
 
     q = client.get_typed_query(
         resource_type,
@@ -1653,7 +1654,7 @@ def _add_nodes(sysadmin_client, num_nodes, node_type, org, vdc, vapp,
             # TODO: get details of the exception to determine cause of failure,
             # e.g. not enough resources available.
             node_list = [entry.get('target_vm_name') for entry in specs]
-            if hasattr(err, 'vcd_error') and \
+            if hasattr(err, 'vcd_error') and err.vcd_error and \
                     "throwPolicyNotAvailableException" in err.vcd_error.get('stackTrace', ''):  # noqa: E501
                 raise e.NodeCreationError(node_list,
                                           f"OVDC not enabled for {template[LocalTemplateKey.KIND]}")  # noqa: E501

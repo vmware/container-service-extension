@@ -44,6 +44,7 @@ from container_service_extension.nsxt.nsxt_client import NSXTClient
 import container_service_extension.pyvcloud_utils as vcd_utils
 from container_service_extension.remote_template_manager import \
     RemoteTemplateManager
+import container_service_extension.right_bundle_manager as right_bundle_manager
 import container_service_extension.server_constants as server_constants
 import container_service_extension.shared_constants as shared_constants
 from container_service_extension.telemetry.constants import CseOperation
@@ -55,7 +56,7 @@ from container_service_extension.telemetry.telemetry_handler import \
     record_user_action_details
 from container_service_extension.telemetry.telemetry_utils import \
     store_telemetry_settings
-from container_service_extension.template_builder import TemplateBuilder
+import container_service_extension.template_builder as template_builder
 import container_service_extension.utils as utils
 from container_service_extension.vcdbroker import get_all_clusters as get_all_cse_clusters # noqa: E501
 from container_service_extension.vsphere_utils import populate_vsphere_list
@@ -440,15 +441,19 @@ def install_cse(config_file_name, skip_template_creation,
             org, config['broker']['catalog'], catalog_desc='CSE templates',
             logger=INSTALL_LOGGER, msg_update_callback=msg_update_callback)
 
-        # install all templates
-        _install_all_templates(
-            client=client,
-            config=config,
-            skip_template_creation=skip_template_creation,
-            force_create=False,
-            retain_temp_vapp=retain_temp_vapp,
-            ssh_key=retain_temp_vapp,
-            msg_update_callback=msg_update_callback)
+        if skip_template_creation:
+            msg = "Skipping creation of templates."
+            msg_update_callback.info(msg)
+            INSTALL_LOGGER.info(msg)
+        else:
+            # install all templates
+            _install_all_templates(
+                client=client,
+                config=config,
+                force_create=False,
+                retain_temp_vapp=retain_temp_vapp,
+                ssh_key=retain_temp_vapp,
+                msg_update_callback=msg_update_callback)
 
         # if it's a PKS setup, setup NSX-T constructs
         if config.get('pks_config'):
@@ -856,36 +861,90 @@ def _setup_placement_policies(client,
         INSTALL_LOGGER.info(msg)
 
 
-def _install_all_templates(
-        client, config, skip_template_creation, force_create, retain_temp_vapp,
-        ssh_key, msg_update_callback=utils.NullPrinter()):
-    if skip_template_creation:
-        msg = "Skipping creation of templates."
-        msg_update_callback.info(msg)
-        INSTALL_LOGGER.info(msg)
-    else:
-        # read remote template cookbook, download all scripts
-        rtm = RemoteTemplateManager(
-            remote_template_cookbook_url=config['broker']['remote_template_cookbook_url'], # noqa: E501
-            logger=INSTALL_LOGGER, msg_update_callback=msg_update_callback)
-        remote_template_cookbook = rtm.get_remote_template_cookbook()
+def _assign_placement_policies_to_existing_templates(client, config,
+                                                     is_tkg_plus_enabled,
+                                                     log_wire=False,
+                                                     msg_update_callback=utils.NullPrinter()):  # noqa: E501
+    """Read existing templates and assign respective placement policies.
 
-        # create all templates defined in cookbook
-        for template in remote_template_cookbook['templates']:
-            _install_single_template(
-                client=client,
-                remote_template_manager=rtm,
-                template=template,
-                org_name=config['broker']['org'],
-                vdc_name=config['broker']['vdc'],
-                catalog_name=config['broker']['catalog'],
-                network_name=config['broker']['network'],
-                ip_allocation_mode=config['broker']['ip_allocation_mode'],
-                storage_profile=config['broker']['storage_profile'],
-                force_update=force_create,
-                retain_temp_vapp=retain_temp_vapp,
-                ssh_key=ssh_key,
-                msg_update_callback=msg_update_callback)
+    Read metadata of existing templates, get the value for the 'kind' metadata,
+    assign the respective placement policy to the template.
+
+    :param vcdClient.Client client:
+    :param dict config:
+    :param bool is_tkg_plus_enable:
+    :param bool log_wire:
+    :param utils.ConsoleMessagePrinter msg_update_callback:
+    """
+    msg = 'Assigning placement policies to existing templates.'
+    INSTALL_LOGGER.debug(msg)
+    msg_update_callback.general(msg)
+
+    catalog_name = config['broker']['catalog']
+    org_name = config['broker']['org']
+    all_templates = \
+        ltm.get_all_k8s_local_template_definition(client, catalog_name=catalog_name,  # noqa: E501
+                                                  org_name=org_name)
+    for template in all_templates:
+        kind = template.get(server_constants.LocalTemplateKey.KIND)
+        catalog_item_name = ltm.get_revisioned_template_name(
+            template[server_constants.RemoteTemplateKey.NAME],
+            template[server_constants.RemoteTemplateKey.REVISION])
+        msg = f"Processing template {catalog_item_name}"
+        INSTALL_LOGGER.debug(msg)
+        msg_update_callback.general(msg)
+        if not kind:
+            # skip processing the template if kind value is not present
+            msg = f"Skipping processing of template {catalog_item_name}. Template kind not found"  # noqa: E501
+            INSTALL_LOGGER.debug(msg)
+            msg_update_callback.general(msg)
+            continue
+        if kind == shared_constants.ClusterEntityKind.TKG_PLUS.value and \
+                not is_tkg_plus_enabled:
+            msg = "Found a TKG+ template." \
+                  " However TKG+ is not enabled in CSE. " \
+                  "Please enable TKG+ for CSE and re-run " \
+                  "`cse upgrade` to process these vDC(s)."
+            INSTALL_LOGGER.error(msg)
+            raise cse_exception.CseUpgradeError(msg)
+        placement_policy_name = \
+            shared_constants.RUNTIME_DISPLAY_NAME_TO_INTERNAL_NAME_MAP[kind]  # noqa: E501
+        template_builder.assign_placement_policy_to_template(
+            client,
+            placement_policy_name,
+            catalog_name,
+            catalog_item_name,
+            org_name,
+            logger=INSTALL_LOGGER,
+            log_wire=log_wire,
+            msg_update_callback=msg_update_callback)
+
+
+def _install_all_templates(
+        client, config, force_create, retain_temp_vapp,
+        ssh_key, msg_update_callback=utils.NullPrinter()):
+    # read remote template cookbook, download all scripts
+    rtm = RemoteTemplateManager(
+        remote_template_cookbook_url=config['broker']['remote_template_cookbook_url'], # noqa: E501
+        logger=INSTALL_LOGGER, msg_update_callback=msg_update_callback)
+    remote_template_cookbook = rtm.get_remote_template_cookbook()
+
+    # create all templates defined in cookbook
+    for template in remote_template_cookbook['templates']:
+        _install_single_template(
+            client=client,
+            remote_template_manager=rtm,
+            template=template,
+            org_name=config['broker']['org'],
+            vdc_name=config['broker']['vdc'],
+            catalog_name=config['broker']['catalog'],
+            network_name=config['broker']['network'],
+            ip_allocation_mode=config['broker']['ip_allocation_mode'],
+            storage_profile=config['broker']['storage_profile'],
+            force_update=force_create,
+            retain_temp_vapp=retain_temp_vapp,
+            ssh_key=ssh_key,
+            msg_update_callback=msg_update_callback)
 
 
 def install_template(template_name, template_revision, config_file_name,
@@ -1071,9 +1130,10 @@ def _install_single_template(
                              f" Expected {shared_constants.RUNTIME_DISPLAY_NAME_TO_INTERNAL_NAME_MAP.keys()}") # noqa: E501
         build_params[templateBuildKey.CSE_PLACEMENT_POLICY] = \
             shared_constants.RUNTIME_DISPLAY_NAME_TO_INTERNAL_NAME_MAP[template.get(server_constants.RemoteTemplateKey.KIND)] # noqa: E501
-    builder = TemplateBuilder(client, client, build_params, ssh_key=ssh_key,
-                              logger=INSTALL_LOGGER,
-                              msg_update_callback=msg_update_callback)
+    builder = template_builder.TemplateBuilder(client, client, build_params,
+                                               ssh_key=ssh_key,
+                                               logger=INSTALL_LOGGER,
+                                               msg_update_callback=msg_update_callback)  # noqa: E501
     builder.build(force_recreate=force_update,
                   retain_temp_vapp=retain_temp_vapp)
 
@@ -1334,23 +1394,19 @@ def _legacy_upgrade_to_33_34(client, config, ext_vcd_api_version,
                           amqp['password'],
                           msg_update_callback=msg_update_callback)
 
-    # update cse api extension
-    _update_cse_amqp_extension(
-        client=client,
-        routing_key=amqp['routing_key'],
-        exchange=amqp['exchange'],
-        target_vcd_api_version=config['vcd']['api_version'],
-        msg_update_callback=msg_update_callback)
-
-    # Recreate all supported templates
-    _install_all_templates(
-        client=client,
-        config=config,
-        skip_template_creation=skip_template_creation,
-        force_create=True,
-        retain_temp_vapp=retain_temp_vapp,
-        ssh_key=retain_temp_vapp,
-        msg_update_callback=msg_update_callback)
+    if skip_template_creation:
+        msg = "Skipping creation of templates."
+        msg_update_callback.info(msg)
+        INSTALL_LOGGER.info(msg)
+    else:
+        # Recreate all supported templates
+        _install_all_templates(
+            client=client,
+            config=config,
+            force_create=True,
+            retain_temp_vapp=retain_temp_vapp,
+            ssh_key=retain_temp_vapp,
+            msg_update_callback=msg_update_callback)
 
     # Fix cluster metadata and admin password
     clusters = get_all_cse_clusters(client)
@@ -1363,6 +1419,14 @@ def _legacy_upgrade_to_33_34(client, config, ext_vcd_api_version,
         client=client,
         cse_clusters=clusters,
         new_admin_password=admin_password,
+        msg_update_callback=msg_update_callback)
+
+    # update cse api extension
+    _update_cse_amqp_extension(
+        client=client,
+        routing_key=amqp['routing_key'],
+        exchange=amqp['exchange'],
+        target_vcd_api_version=config['vcd']['api_version'],
         msg_update_callback=msg_update_callback)
 
 
@@ -1378,6 +1442,102 @@ def _upgrade_to_35(client, config, ext_vcd_api_version,
     :raises requests.exceptions.HTTPError: (when using MQTT) if the MQTT
         components were not installed correctly
     """
+    is_tkg_plus_enabled = utils.is_tkg_plus_enabled(config=config)
+
+    # Add global placement polcies
+    _setup_placement_policies(
+        client=client,
+        policy_list=shared_constants.CLUSTER_RUNTIME_PLACEMENT_POLICIES,
+        is_tkg_plus_enabled=is_tkg_plus_enabled,
+        msg_update_callback=msg_update_callback,
+        log_wire=log_wire)
+
+    # Register def schema
+    _register_def_schema(
+        client=client,
+        msg_update_callback=msg_update_callback,
+        log_wire=log_wire)
+
+    if skip_template_creation:
+        msg = "Skipping creation of templates."
+        msg_update_callback.info(msg)
+        INSTALL_LOGGER.info(msg)
+        _assign_placement_policies_to_existing_templates(
+            client=client,
+            config=config,
+            is_tkg_plus_enabled=is_tkg_plus_enabled,
+            log_wire=utils.str_to_bool(config['service'].get('log_wire')),
+            msg_update_callback=msg_update_callback)
+    else:
+        # Recreate all supported templates
+        _install_all_templates(
+            client=client,
+            config=config,
+            force_create=True,
+            retain_temp_vapp=retain_temp_vapp,
+            ssh_key=retain_temp_vapp,
+            msg_update_callback=msg_update_callback)
+
+    msg = "Loading all CSE clusters for processing..."
+    INSTALL_LOGGER.info(msg)
+    msg_update_callback.info(msg)
+    clusters = get_all_cse_clusters(client=client, fetch_details=False)
+
+    # Update clusters to have auto generated password and fix their metadata
+    _fix_cluster_metadata(
+        client=client,
+        config=config,
+        cse_clusters=clusters,
+        msg_update_callback=msg_update_callback)
+    _fix_cluster_admin_password(
+        client=client,
+        cse_clusters=clusters,
+        new_admin_password=admin_password,
+        msg_update_callback=msg_update_callback)
+
+    # Loading the clusters again after their metadata has been fixed.
+    # This time do fetch node details, org name etc. So that the def schema
+    # can be populated.
+    msg = "Loading all CSE clusters for processing..."
+    INSTALL_LOGGER.info(msg)
+    msg_update_callback.info(msg)
+    clusters = get_all_cse_clusters(client=client, fetch_details=True)
+
+    # Add new vdc (placement) compute policy to ovdc with existing CSE clusters
+    _assign_placement_policy_to_vdc_and_right_bundle_to_org(
+        client=client,
+        cse_clusters=clusters,
+        is_tkg_plus_enabled=is_tkg_plus_enabled,
+        msg_update_callback=msg_update_callback,
+        log_wire=log_wire)
+
+    # Remove all old CSE compute policies from the system
+    _remove_old_cse_sizing_compute_policies(
+        client=client,
+        msg_update_callback=msg_update_callback,
+        log_wire=log_wire)
+
+    # The new placement policies can't be assigned to existing CSE k8s clusters
+    # because the support for assigning compute policy to deployed vms is not
+    # there in CSE's compute policy manager. However skipping this step is not
+    # going to hurt us, since the cse placement policies are dummy policies
+    # designed to gate cluster deployment and has no play once the cluster has
+    # been deployed.
+
+    # Create DEF entity for all existing clusters (if missing)
+    _create_def_entity_for_existing_clusters(
+        client=client,
+        cse_clusters=clusters,
+        msg_update_callback=msg_update_callback,
+        is_tkg_plus_enabled=is_tkg_plus_enabled,
+        log_wire=log_wire)
+
+    # Print list of users categorized by org, who currently owns CSE clusters
+    # and will need DEF entity rights.
+    _print_users_in_need_of_def_rights(
+        cse_clusters=clusters, msg_update_callback=msg_update_callback)
+
+    # update extension
     if utils.should_use_mqtt_protocol(config):
         # Caller guarantees that there is an extension present
         existing_ext_type = _get_existing_extension_type(client)
@@ -1409,90 +1569,6 @@ def _upgrade_to_35(client, config, ext_vcd_api_version,
             exchange=config['amqp']['exchange'],
             target_vcd_api_version=config['vcd']['api_version'],
             msg_update_callback=msg_update_callback)
-
-    is_tkg_plus_enabled = utils.is_tkg_plus_enabled(config=config)
-
-    # Add global placement polcies
-    _setup_placement_policies(
-        client=client,
-        policy_list=shared_constants.CLUSTER_RUNTIME_PLACEMENT_POLICIES,
-        is_tkg_plus_enabled=is_tkg_plus_enabled,
-        msg_update_callback=msg_update_callback,
-        log_wire=log_wire)
-
-    # Register def schema
-    _register_def_schema(
-        client=client,
-        msg_update_callback=msg_update_callback,
-        log_wire=log_wire)
-
-    # Recreate all supported templates
-    _install_all_templates(
-        client=client,
-        config=config,
-        skip_template_creation=skip_template_creation,
-        force_create=True,
-        retain_temp_vapp=retain_temp_vapp,
-        ssh_key=retain_temp_vapp,
-        msg_update_callback=msg_update_callback)
-
-    msg = "Loading all CSE clusters for processing..."
-    INSTALL_LOGGER.info(msg)
-    msg_update_callback.info(msg)
-    clusters = get_all_cse_clusters(client=client, fetch_details=False)
-
-    # Update clusters to have auto generated password and fix their metadata
-    _fix_cluster_metadata(
-        client=client,
-        config=config,
-        cse_clusters=clusters,
-        msg_update_callback=msg_update_callback)
-    _fix_cluster_admin_password(
-        client=client,
-        cse_clusters=clusters,
-        new_admin_password=admin_password,
-        msg_update_callback=msg_update_callback)
-
-    # Loading the clusters again after their metadata has been fixed.
-    # This time do fetch node details, org name etc. So that the def schema
-    # can be populated.
-    msg = "Loading all CSE clusters for processing..."
-    INSTALL_LOGGER.info(msg)
-    msg_update_callback.info(msg)
-    clusters = get_all_cse_clusters(client=client, fetch_details=True)
-
-    # Add new vdc (placement) compute policy to ovdc with existing CSE clusters
-    _assign_placement_policy_to_vdc_with_existing_clusters(
-        client=client,
-        cse_clusters=clusters,
-        is_tkg_plus_enabled=is_tkg_plus_enabled,
-        msg_update_callback=msg_update_callback,
-        log_wire=log_wire)
-
-    # Remove all old CSE compute policies from the system
-    _remove_old_cse_sizing_compute_policies(
-        client=client,
-        msg_update_callback=msg_update_callback,
-        log_wire=log_wire)
-
-    # The new placement policies can't be assigned to existing CSE k8s clusters
-    # because the support for assigning compute policy to deployed vms is not
-    # there in CSE's compute policy manager. However skipping this step is not
-    # going to hurt us, since the cse placement policies are dummy policies
-    # designed to gate cluster deployment and has no play once the cluster has
-    # been deployed.
-
-    # Create DEF entity for all existing clusters (if missing)
-    _create_def_entity_for_existing_clusters(
-        client=client,
-        cse_clusters=clusters,
-        msg_update_callback=msg_update_callback,
-        log_wire=log_wire)
-
-    # Print list of users categorized by org, who currently owns CSE clusters
-    # and will need DEF entity rights.
-    _print_users_in_need_of_def_rights(
-        cse_clusters=clusters, msg_update_callback=msg_update_callback)
 
 
 def _fix_cluster_metadata(client,
@@ -1877,12 +1953,13 @@ def _get_placement_policy_name_from_template_name(template_name):
     return policy_name
 
 
-def _assign_placement_policy_to_vdc_with_existing_clusters(
+def _assign_placement_policy_to_vdc_and_right_bundle_to_org(
         client,
         cse_clusters,
         is_tkg_plus_enabled,
         msg_update_callback=utils.NullPrinter(),
         log_wire=False):
+    """Assign placement policies to VDCs and right bundles to Orgs with existing clusters."""  # noqa: E501
     msg = "Assigning placement compute policy(s) to vDC(s) hosting existing CSE clusters." # noqa: E501
     msg_update_callback.info(msg)
     INSTALL_LOGGER.info(msg)
@@ -1894,6 +1971,7 @@ def _assign_placement_policy_to_vdc_with_existing_clusters(
     tkg_plus_ovdcs = []
     native_ovdcs = []
     vdc_names = {}
+    org_ids = set()
     for cluster in cse_clusters:
         try:
             policy_name = _get_placement_policy_name_from_template_name(
@@ -1912,6 +1990,8 @@ def _assign_placement_policy_to_vdc_with_existing_clusters(
             id = cluster['vdc_id']
             tkg_plus_ovdcs.append(id)
             vdc_names[id] = cluster['vdc_name']
+        org_id = cluster['org_href'].split('/')[-1]
+        org_ids.add(org_id)
 
     native_ovdcs = set(native_ovdcs)
     tkg_plus_ovdcs = set(tkg_plus_ovdcs)
@@ -1937,12 +2017,14 @@ def _assign_placement_policy_to_vdc_with_existing_clusters(
             msg_update_callback.general(msg)
 
     if tkg_plus_ovdcs:
-        msg = f"Found {len(tkg_plus_ovdcs)} vDC(s) hosting TKG PLUS clusters."
+        msg = f"Found {len(tkg_plus_ovdcs)} vDC(s) hosting TKG+ clusters."
         if not is_tkg_plus_enabled:
-            msg += " However TKG PLUS is not enabled in CSE. vDC(s) hosting " \
-                   "TKG PLUS clusters will not be processed. Please enable " \
-                   "TKG PLUS for CSE and re-run `cse upgrade` to process " \
+            msg += " However TKG+ is not enabled in CSE. vDC(s) hosting " \
+                   "TKG+ clusters will not be processed. Please enable " \
+                   "TKG+ for CSE and re-run `cse upgrade` to process " \
                    "these vDC(s)."
+            INSTALL_LOGGER.error(msg)
+            raise cse_exception.CseUpgradeError(msg)
         msg_update_callback.info(msg)
         INSTALL_LOGGER.info(msg)
 
@@ -1959,6 +2041,28 @@ def _assign_placement_policy_to_vdc_with_existing_clusters(
                       f"'{vdc_names[vdc_id]}'"
                 INSTALL_LOGGER.info(msg)
                 msg_update_callback.general(msg)
+
+    if len(org_ids) > 0:
+        msg = "Publishing CSE native cluster right bundles to orgs where " \
+              "clusters are deployed"
+        INSTALL_LOGGER.info(msg)
+        msg_update_callback.info(msg)
+        try:
+            rbm = right_bundle_manager.RightBundleManager(client,
+                                                          log_wire=log_wire,
+                                                          logger_debug=INSTALL_LOGGER)  # noqa: E501
+            cse_right_bundle = \
+                rbm.get_right_bundle_by_name(right_bundle_manager.CSE_NATIVE_RIGHT_BUNDLE_NAME)  # noqa: E501
+            rbm.publish_cse_right_bundle_to_tenants(
+                right_bundle_id=cse_right_bundle['id'],
+                org_ids=list(org_ids))
+        except Exception as err:
+            msg = f"Error adding right bundles to the Organizations: {err}"
+            INSTALL_LOGGER.error(msg)
+            raise
+        msg = "Successfully published CSE native cluster right bundle to Orgs"
+        INSTALL_LOGGER.info(msg)
+        msg_update_callback.general(msg)
 
 
 def _remove_old_cse_sizing_compute_policies(
@@ -2038,6 +2142,7 @@ def _remove_old_cse_sizing_compute_policies(
 def _create_def_entity_for_existing_clusters(
         client,
         cse_clusters,
+        is_tkg_plus_enabled,
         msg_update_callback=utils.NullPrinter(),
         log_wire=False):
     msg = "Making old CSE k8s clusters compatible with CSE 3.0"
@@ -2084,6 +2189,15 @@ def _create_def_entity_for_existing_clusters(
             INSTALL_LOGGER.info(msg)
             continue
 
+        if policy_name == \
+                shared_constants.TKG_PLUS_CLUSTER_RUNTIME_INTERNAL_NAME and \
+                not is_tkg_plus_enabled:
+            msg = "Found a TKG+ cluster." \
+                  " However TKG+ is not enabled in CSE. " \
+                  "Please enable TKG+ for CSE and re-run" \
+                  "`cse upgrade` to process these clusters"
+            INSTALL_LOGGER.error(msg)
+            raise cse_exception.CseUpgradeError(msg)
         if policy_name == shared_constants.NATIVE_CLUSTER_RUNTIME_INTERNAL_NAME:  # noqa: E501
             # TODO combine to a single constant
             kind = shared_constants.ClusterEntityKind.NATIVE.value
@@ -2214,13 +2328,16 @@ def _print_users_in_need_of_def_rights(
             org_user_dict[cluster['org_name']] = []
         org_user_dict[cluster['org_name']].append(cluster['owner_name'])
 
-    msg = "The following users own CSE k8s clusters and will require [TODO] rights to access them in CSE 3.0"  # noqa: E501
-    msg_update_callback.info(msg)
-    INSTALL_LOGGER.info(msg)
-
+    msg = "The following users own CSE k8s clusters and will require " \
+          "`cse:nativeCluster Entitlement` right bundle " \
+          "to access them in CSE 3.0"
+    org_users_msg = ""
     for org_name, user_list in org_user_dict.items():
-        msg = f"Org : {org_name} -> Users : {', '.join(set(user_list))}"
-        msg_update_callback.general(msg)
+        org_users_msg += f"\nOrg : {org_name} -> Users : {', '.join(set(user_list))}"  # noqa: E501
+
+    if org_users_msg:
+        msg = msg + org_users_msg
+        msg_update_callback.info(msg)
         INSTALL_LOGGER.info(msg)
 
 

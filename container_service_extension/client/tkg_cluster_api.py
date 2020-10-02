@@ -20,6 +20,7 @@ import container_service_extension.exceptions as cse_exceptions
 import container_service_extension.logger as logger
 import container_service_extension.pyvcloud_utils as vcd_utils
 import container_service_extension.shared_constants as shared_constants
+import container_service_extension.utils as utils
 
 
 class TKGClusterApi:
@@ -92,13 +93,11 @@ class TKGClusterApi:
         :return: list of TKG cluster information.
         :rtype: List[dict]
         """
-        filters = []
         self.set_tenant_org_context(org_name=org)
+        filters = {}
         if vdc:
-            filters.append((cli_constants.TKGEntityFilterKey.VDC_NAME.value, vdc))  # noqa: E501
-        filter_string = None
-        if filters:
-            filter_string = ";".join([f"{f[0]}=={f[1]}" for f in filters])
+            filters[cli_constants.TKGEntityFilterKey.VDC_NAME.value] = vdc
+        filter_string = utils.construct_filter_string(filters)
         # tkg_def_entities in the following statement represents the
         # information associated with the defined entity
         (entities, status, headers, tkg_def_entities) = \
@@ -126,11 +125,11 @@ class TKGClusterApi:
         return clusters
 
     def get_tkg_clusters_by_name(self, name, vdc=None, org=None):
-        filters = [(cli_constants.TKGEntityFilterKey.CLUSTER_NAME.value, name)]
         self.set_tenant_org_context(org_name=org)
+        filters = {cli_constants.TKGEntityFilterKey.CLUSTER_NAME.value: name}
         if vdc:
-            filters.append((cli_constants.TKGEntityFilterKey.VDC_NAME.value, vdc))  # noqa: E501
-        filter_string = ";".join([f"{f[0]}=={f[1]}" for f in filters])
+            filters[cli_constants.TKGEntityFilterKey.VDC_NAME.value] = vdc
+        filter_string = utils.construct_filter_string(filters)
         response = \
             self._tkg_client_api.list_tkg_clusters(
                 f"{DEF_VMWARE_VENDOR}/{DEF_TKG_ENTITY_TYPE_NSS}/{DEF_TKG_ENTITY_TYPE_VERSION}", # noqa: E501
@@ -354,10 +353,10 @@ class TKGClusterApi:
         :param str vdc: name of the vdc
         """
         raise NotImplementedError(
-            "Get Cluster upgrade-plan yet to be implemented for TKG clusters")
+            "Get Cluster upgrade-plan not supported for TKG clusters")
 
     def upgrade_cluster(self, cluster_name, template_name,
                         template_revision, **kwargs):
         """Upgrade TKG cluster to the given distribution."""
         raise NotImplementedError(
-            "Cluster upgrade yet to be implemented for TKG clusters")
+            "Cluster upgrade not supported for TKG clusters")

@@ -51,6 +51,9 @@ class CloudApiClient(object):
         if self._last_response:
             return self._last_response.headers
 
+    def get_org_urn_from_id(self, org_id):
+        return f"urn:vcloud:org:{org_id}"
+
     def do_request(self,
                    method,
                    cloudapi_version=None,

@@ -80,9 +80,7 @@ class ComputePolicyManager:
         :rtype: Generator[Dict, None, None]
         """
         self._raise_error_if_not_supported()
-        filter_string = None
-        if filters:
-            filter_string = ";".join([f"{key}=={value}" for (key, value) in filters.items()]) # noqa: E501
+        filter_string = utils.construct_filter_string(filters)
         cloudapiResource = cloudapi_constants.CloudApiResource
         page_num = 0
         while True:
@@ -120,9 +118,7 @@ class ComputePolicyManager:
         :rtype: Generator[Dict, None, None]
         """
         self._raise_error_if_not_supported()
-        filter_string = None
-        if filters:
-            filter_string = ";".join([f"{key}=={value}" for (key, value) in filters.items()]) # noqa: E501
+        filter_string = utils.construct_filter_string(filters)
         cloudapiResource = cloudapi_constants.CloudApiResource
         page_num = 0
         while True:
@@ -429,9 +425,7 @@ class ComputePolicyManager:
         self._raise_error_if_not_supported()
         vdc_urn = self._generate_vdc_urn_from_id(vdc_id=vdc_id)
         relative_path = f"vdcs/{vdc_urn}/computePolicies"
-        filter_string = ""
-        if filters:
-            filter_string = ";".join([f"{key}=={value}" for (key, value) in filters.items()]) # noqa: E501
+        filter_string = utils.construct_filter_string(filters)
         page_num = 0
         while True:
             page_num += 1
