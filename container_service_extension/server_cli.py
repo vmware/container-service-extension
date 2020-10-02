@@ -41,6 +41,7 @@ from container_service_extension.server_constants import LocalTemplateKey
 from container_service_extension.server_constants import RemoteTemplateKey
 from container_service_extension.server_constants import SYSTEM_ORG_NAME
 import container_service_extension.service as cse_service
+from container_service_extension.shared_constants import ClusterEntityKind
 from container_service_extension.shared_constants import RequestMethod
 from container_service_extension.telemetry.constants import CseOperation
 from container_service_extension.telemetry.constants import OperationStatus
@@ -917,12 +918,13 @@ def list_template(ctx, config_file_path, skip_config_decryption,
 
                 org_name = config_dict['broker']['org']
                 catalog_name = config_dict['broker']['catalog']
+                is_tkg_plus_enabled=utils.is_tkg_plus_enabled(config_dict)
                 local_template_definitions = \
                     ltm.get_all_k8s_local_template_definition(
                         client=client,
                         catalog_name=catalog_name,
                         org_name=org_name,
-                        is_tkg_plus_enabled=utils.is_tkg_plus_enabled(config_dict),  # noqa: E501
+                        is_tkg_plus_enabled=is_tkg_plus_enabled,  # noqa: E501
                         logger_debug=SERVER_CLI_LOGGER)
 
                 default_template_name = \
@@ -930,6 +932,17 @@ def list_template(ctx, config_file_path, skip_config_decryption,
                 default_template_revision = \
                     str(config_dict['broker']['default_template_revision'])
                 for definition in local_template_definitions:
+                    api_version = float(client.get_api_version())
+                    if api_version >= float(vcd_client.ApiVersion.VERSION_35.value) and \
+                            definition[LocalTemplateKey.KIND] == ClusterEntityKind.TKG_PLUS.value and \
+                            not is_tkg_plus_enabled:  # noqa: E501
+                        # TKG+ is not enabled in CSE config. Skip the template and log the
+                        # relevant information.
+                        msg = "Skipping loading template " \
+                              f"'{definition[LocalTemplateKey.NAME]}' as " \
+                              "TKG+ is not enabled"
+                        SERVER_CLI_LOGGER.debug(msg)
+                        continue
                     template = {}
                     template['name'] = definition[LocalTemplateKey.NAME]
                     # Any metadata read from vCD is sting due to how pyvcloud

@@ -502,11 +502,12 @@ class Service(object, metaclass=Singleton):
                                                 self.config['vcd']['password'])
             client.set_credentials(credentials)
 
+            is_tkg_plus_enabled = utils.is_tkg_plus_enabled(self.config)
             org_name = self.config['broker']['org']
             catalog_name = self.config['broker']['catalog']
             k8_templates = ltm.get_all_k8s_local_template_definition(
                 client=client, catalog_name=catalog_name, org_name=org_name,
-                is_tkg_plus_enabled=utils.is_tkg_plus_enabled(self.config),
+                is_tkg_plus_enabled=is_tkg_plus_enabled,
                 logger_debug=logger.SERVER_LOGGER)
 
             if not k8_templates:
@@ -524,6 +525,18 @@ class Service(object, metaclass=Singleton):
                 str(self.config['broker']['default_template_revision'])
             found_default_template = False
             for template in k8_templates:
+                api_version = float(client.get_api_version())
+                if api_version >= float(vCDApiVersion.VERSION_35.value) and \
+                        template[server_constants.LocalTemplateKey.KIND] == \
+                        shared_constants.ClusterEntityKind.TKG_PLUS.value and \
+                        not is_tkg_plus_enabled:
+                    # TKG+ is not enabled in CSE config. Skip the template and log the
+                    # relevant information.
+                    msg = "Skipping loading template " \
+                          f"'{template[server_constants.LocalTemplateKey.NAME]}' as " \
+                          "TKG+ is not enabled"  # noqa: E501
+                    logger.SERVER_LOGGER.debug(msg)
+                    continue
                 if str(template[server_constants.LocalTemplateKey.REVISION]) == default_template_revision and \
                         template[server_constants.LocalTemplateKey.NAME] == default_template_name: # noqa: E501
                     found_default_template = True
