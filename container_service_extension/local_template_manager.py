@@ -44,7 +44,6 @@ def get_script_filepath(template_name, revision, script_file_name):
 
 def get_all_k8s_local_template_definition(client, catalog_name, org=None,
                                           org_name=None,
-                                          is_tkg_plus_enabled=False,
                                           logger_debug=logger.NULL_LOGGER):
     """Fetch all CSE k8s templates in a catalog.
 

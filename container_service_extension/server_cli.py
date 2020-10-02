@@ -932,7 +932,6 @@ def list_template(ctx, config_file_path, skip_config_decryption,
                         client=client,
                         catalog_name=catalog_name,
                         org_name=org_name,
-                        is_tkg_plus_enabled=is_tkg_plus_enabled,  # noqa: E501
                         logger_debug=SERVER_CLI_LOGGER)
 
                 default_template_name = \

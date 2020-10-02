@@ -890,7 +890,6 @@ def _assign_placement_policies_to_existing_templates(client, config,
             client,
             catalog_name=catalog_name,  # noqa: E501
             org_name=org_name,
-            is_tkg_plus_enabled=is_tkg_plus_enabled,
             logger_debug=INSTALL_LOGGER)
     for template in all_templates:
         kind = template.get(server_constants.LocalTemplateKey.KIND)

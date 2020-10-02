@@ -510,7 +510,6 @@ class Service(object, metaclass=Singleton):
             catalog_name = self.config['broker']['catalog']
             k8_templates = ltm.get_all_k8s_local_template_definition(
                 client=client, catalog_name=catalog_name, org_name=org_name,
-                is_tkg_plus_enabled=is_tkg_plus_enabled,
                 logger_debug=logger.SERVER_LOGGER)
 
             if not k8_templates:
