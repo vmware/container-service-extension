@@ -3,6 +3,7 @@
 # SPDX-License-Identifier: BSD-2-Clause
 
 import pathlib
+import urllib
 
 import pyvcloud.vcd.client as vcd_client
 from pyvcloud.vcd.exceptions import EntityNotFoundException
@@ -234,7 +235,7 @@ def get_pvdc_id_from_pvdc_name(name, vc_name_in_vcd):
         query = client.get_typed_query(
             vcd_client.ResourceType.PROVIDER_VDC.value,
             query_result_format=vcd_client.QueryResultFormat.RECORDS,
-            qfilter=f'vcName=={vc_name_in_vcd}',
+            qfilter=f'vcName=={urllib.parse.quote(vc_name_in_vcd)}',
             equality_filter=('name', name))
         for pvdc_record in list(query.execute()):
             href = pvdc_record.get('href')

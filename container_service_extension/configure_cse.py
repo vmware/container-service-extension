@@ -1394,14 +1394,6 @@ def _legacy_upgrade_to_33_34(client, config, ext_vcd_api_version,
                           amqp['password'],
                           msg_update_callback=msg_update_callback)
 
-    # update cse api extension
-    _update_cse_amqp_extension(
-        client=client,
-        routing_key=amqp['routing_key'],
-        exchange=amqp['exchange'],
-        target_vcd_api_version=config['vcd']['api_version'],
-        msg_update_callback=msg_update_callback)
-
     if skip_template_creation:
         msg = "Skipping creation of templates."
         msg_update_callback.info(msg)
@@ -1427,6 +1419,14 @@ def _legacy_upgrade_to_33_34(client, config, ext_vcd_api_version,
         client=client,
         cse_clusters=clusters,
         new_admin_password=admin_password,
+        msg_update_callback=msg_update_callback)
+
+    # update cse api extension
+    _update_cse_amqp_extension(
+        client=client,
+        routing_key=amqp['routing_key'],
+        exchange=amqp['exchange'],
+        target_vcd_api_version=config['vcd']['api_version'],
         msg_update_callback=msg_update_callback)
 
 
