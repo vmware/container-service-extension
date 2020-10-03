@@ -7,8 +7,16 @@ title: Introduction
 For greenfield installations, please refer to the [CSE introduction](INTRO.html) and the below content.
 <a name="overview"></a>
 ## Overview
-* CSE-CLI and CSE-UI can be used to manage Cloud Director provisioned Tanzu Kubernetes Clusters (link to vCD-vSphere with Tanzu documentation) alongside Native and TKGIE(Ent-PKS) clusters.
-* CSE 3.0 has been architecturally redesigned to leverage the latest features of Cloud Director (>=10.2) like the Defined entity framework, Placement policies. Native clusters are now represented as defined entities. Users will not see any difference in the functionality of native clusters, but the underlying implementation has been enhanced to leverage defined entities, thus adding some level of persistence to native clusters in vCD. In other words, users can now query native clusters using defined entity API.
+* CLI for Container Extension and Kubernetes Cluster UI Plugin can be used to 
+manage Cloud Director provisioned [Tanzu Kubernetes Clusters](https://docs-staging.vmware.com/en/draft/VMware-Cloud-Director/10.2/VMware-Cloud-Director-Service-Provider-Admin-Portal-Guide/GUID-E9839D4E-3024-445E-9D08-372113CF6FE0.html)
+ alongside Native and TKGI(Ent-PKS) clusters.
+* CSE 3.0 has been architecturally redesigned to leverage the latest features 
+of Cloud Director (>=10.2) like the Defined entity framework, Placement policies. 
+Native clusters are now represented as defined entities. Users will not see any
+ difference in the functionality of native clusters, but the underlying 
+ implementation has been enhanced to leverage defined entities, thus adding 
+ some level of persistence to native clusters in vCD. In other words, users can
+  now query native clusters using defined entity API.
 * Separate command group for TKGI (Ent-PKS).
 ![user-ctx](img/cse30-user-ctx.png)
 ![system-ctx](img/cse30-system-ctx.png)
@@ -25,69 +33,26 @@ For greenfield installations, please refer to the [CSE introduction](INTRO.html)
 
 ### CSE Server
 #### Greenfield installation
-Please refer to [CSE Server Installation Prerequisites](CSE_INSTALL_PREREQUISITES.html) and [CSE Server Management](CSE_SERVER_MANAGEMENT.html) for getting started.
-
-With CSE 3.0 - vCD 10.2 combination, CSE installation command `cse install -c config.yaml` does two additional steps than what it used to do in the earlier versions.
-
-1. Prepares the environment for Providers to be able to perform organization VDC enablement for native clusters. More details can be found in FAQ - [placement policies](#faq).
-2. Registers defined entity schema for native clusters. As a side effect, "cse:native cluster entitlement" right bundle gets created in the Cloud Director and all native cluster operations will be guarded by these rights.
-Invoke this API to get a detailed view of defined entity schema for native clusters - https://<vcd-ip>/cloudapi/1.0.0/entityTypes/cse/nativeCluster/1.0.0
+With CSE 3.0 - vCD 10.2 combination, CSE installation command 
+`cse install -c config.yaml` does two additional steps than what it used to do 
+in the earlier versions. Refer [CSE 3.0 installation](CSE_SERVER_MANAGEMENT.html#cse30-greenfield).
 
 #### Brownfield upgrade
-CSE 3.0 has been architecturally redesigned to leverage the latest features of Cloud Director like Defined entity framework and placement policies. The new command `cse upgrade` has been introduced to make the old environment fully forward compatible with the latest technologies used in CSE 3.0. The only valid upgrade path is CSE 2.6 → CSE 3.0; any versions below CSE 2.6 cannot be directly upgraded to CSE 3.0.
+CSE 3.0 has been architecturally redesigned to leverage the latest features of 
+Cloud Director like Defined entity framework and placement policies. The new 
+command `cse upgrade` has been introduced to make the old environment fully 
+forward compatible with the latest technologies used in CSE 3.0. The only 
+valid upgrade path is CSE 2.6 → CSE 3.0; any versions below CSE 2.6 cannot be 
+directly upgraded to CSE 3.0. Refer [CSE 3.0 upgrade command](CSE_SERVER_MANAGEMENT.html#cse30-upgrade-cmd).
 
-The command `cse upgrade` must be run to ensure the environment is forward compatible with CSE 3.0. The below steps will be performed during the upgrade. Please run the command `cse upgrade --help` for more details.
-
-* Delete old compute policies in the environment: untag old templates with existing compute policies, unpublish existing compute policies from the organization virtual data center(s), delete the legacy compute policies.
-* Prepare the environment to be able to perform organization virtual data center enablement for native clusters. 
-* Auto-install templates of the latest revision unless specified otherwise.
-* Identify existing organization virtual datacenter(s) with existing clusters and publish appropriate placement policies on the same.
-* Make legacy clusters forward compatible; create corresponding defined entities for all of the old clusters in the environment.
-
-<a name="tenant-onboarding"></a>
 #### Tenant onboarding
-The provider needs to perform below operations to enable Kubernetes cluster deployments in tenant organizations and tenant virtual data centers.
-1. Native cluster operations are no longer gated by CSE API extension-specific rights as used in CSE 2.6.x. With the introduction of defined entity representation for native clusters, a new right bundle "cse:nativeCluster entitlement" is registered in Cloud Director during CSE Server installation, which is what guards the native cluster operations in CSE 3.0. The same is the case for Tkg clusters. 
-Grant the Tkg cluster and Native cluster right bundles to the desired organizations and then grant the admin-level defined entity type rights to the Tenant Administrator role. This will enable the tenant administrator to grant the relevant cluster management rights to the desired tenant users. Users cannot view or deploy clusters unless they have one of the below-mentioned rights.  Link to Defined entity framework (or) how to read defined entity type rights.
-
-    * Right bundle for Tkg Cluster → vmware:tkgcluster entitlement
-    * Right bundle for Native cluster → cse:nativeCluster entitlement
-    * Five rights exist in each of the above right bundles. Note that any custom roles created with the below-mentioned rights need to at least have privileges of the pre-defined role of "vApp Author" in order to deploy native clusters.
-
-        * Admin view
-            * When granted to the tenant user, he/she can view all the entities from the organization.
-            * When granted to the system administrator, he/she can view all the entities of all the organizations.
-        * Admin full control
-            * Full control lets user not only to modify entities but also delete them
-            * When granted to tenant user, he/she will have full control over all the entities of his organization. Tenant administrators usually have this privilege.
-            * When granted to the system administrator, he/she will have full control over all the entities of all the organizations.
-        * Full control
-            * When granted to the custom-role of Cluster-administrator, one can modify and delete the entities he/she owns and also the shared entities with Full control ACL.
-        * Modify
-            * When granted to the custom-role of Cluster-author, one can modify the entities he/she owns and also the shared entities with Modify ACL.
-        * View
-            * When granted to the custom-role of Cluster-user, one can view those entities he/she owns or shared.
-    * Sample commands to clone pre-defined roles, grant rights to the custom roles, assign roles to the users.
-        ```sh
-        vcd role add-right cluster-org-admin 'cse:nativeCluster: View'  'cse:nativeCluster: Administrator View' 'cse:nativeCluster: Full Access' 'cse:nativeCluster: Modify' 'cse:nativeCluster: Administrator Full access' -o org1
-        vcd role add-right cluster-admin 'cse:nativeCluster: View'   'cse:nativeCluster: Full Access' 'cse:nativeCluster: Modify'  -o org1
-        vcd role add-right cluster-author 'cse:nativeCluster: View'    'cse:nativeCluster: Modify'  -o org1
-        vcd role add-right cluster-user 'cse:nativeCluster: View'      -o org1
-
-        vcd role add-right cluster-org-admin 'vmware:tkgcluster: View' 'vmware:tkgcluster: Administrator View' 'vmware:tkgcluster: Full Access' 'vmware:tkgcluster: Modify' 'vmware:tkgcluster: Administrator Full access' -o org1
-        vcd role add-right cluster-admin 'vmware:tkgcluster: View' 'vmware:tkgcluster: Full Access' 'vmware:tkgcluster: Modify'  -o org1
-        vcd role add-right cluster-author 'vmware:tkgcluster: View'  'vmware:tkgcluster: Modify'  -o org1
-        vcd role add-right cluster-user 'vmware:tkgcluster: View'   -o org1
-
-        vcd user create -E cluster-org-admin 'ca$hcow' cluster-org-admin
-        vcd user create -E cluster-admin 'ca$hcow' cluster-admin 
-        vcd user create -E cluster-author 'ca$hcow' cluster-author 
-        vcd user create -E cluster-user 'ca$hcow' cluster-user  
-        ```
+The provider needs to perform below operations to enable Kubernetes cluster 
+deployments in tenant organizations and tenant virtual data centers.
+1. Grant rights to the tenant users. Refer [CSE 3.0 RBAC](RBAC.html#DEF-RBAC) for more details.
 2. Enable the desired organization virtual datacenter(s) for either Native or Tkg cluster deployments.
-Tkg clusters → Publish Kubernetes policy for Tkg Clusters → Link to Cloud Director documentation for vSphere TKG
-Native clusters → Run "vdc cse vdc enable <vdc-name>" command from CSE-CLI.
-3. Register and enable CSE-UI plugin for the desired organizations.
+    * Tkg clusters → [Publish Kubernetes policy for Tkg Clusters](https://docs-staging.vmware.com/en/draft/VMware-Cloud-Director/10.2/VMware-Cloud-Director-Service-Provider-Admin-Portal-Guide/GUID-E9839D4E-3024-445E-9D08-372113CF6FE0.html)
+    * Native clusters → Run `vdc cse vdc enable <vdc-name>` command.
+3. Publish Kubernetes Clusters UI plugin to the desired organizations.
 
 ### UI Plugin
 Link to Cloud Director documentation

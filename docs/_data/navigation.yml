@@ -74,16 +74,10 @@
   - name: "Role Based Access Control"
     link: RBAC.html
     subtoc:
-    - name: Overview
-      sublink: overview
-    - name: Capability
-      sublink: capability
-    - name: Functioning
-      sublink: functioning
-    - name: Enablement
-      sublink: enablement
-    - name: FAQ
-      sublink: faq
+    - name: CSE 3.0 with vCD 10.2
+      sublink: DEF-RBAC
+    - name: CSE < 3.0 with vCD < 10.2
+      sublink: old-RBAC
   - name: "Kubernetes Cluster Management"
     link: CLUSTER_MANAGEMENT.html
     subtoc:

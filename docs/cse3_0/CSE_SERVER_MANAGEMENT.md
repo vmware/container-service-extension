@@ -49,12 +49,12 @@ Please find more details on how to generate sample config file and populate it c
 The following diagram illustrates installation steps visually.
 
 ![cse-install](img/cse-server-installation.png)
-
+<a name="cse30-greenfield"></a>
 When CSE 3.0 is hooked to Cloud Director >= 10.2, CSE installation command `cse install -c config.yaml` does two additional steps than what has been mentioned in the above diagram.
 
-1. Prepares the environment for Providers to be able to perform organization VDC enablement for native clusters. More details can be found in FAQ - [placement policies](CSE30.html#faq).
-2. Registers defined entity schema for native clusters. As a side effect, "cse:native cluster entitlement" right bundle gets created in the Cloud Director and all native cluster operations will be guarded by these rights.
-Invoke this API to get a detailed view of defined entity schema for native clusters - https://<vcd-ip>/cloudapi/1.0.0/entityTypes/cse/nativeCluster/1.0.0
+1. Prepares the environment for Providers to be able to perform organization VDC enablement for native clusters. More details can be found in FAQ - [creation of placement policies](CSE30.html#faq).
+2. Registers defined entity schema for native clusters. As a side effect, `cse:native cluster entitlement` right bundle gets created in the Cloud Director and all native cluster operations will be guarded by these rights.
+Invoke this API to get a detailed view of defined entity schema for native clusters - `https://<vcd-ip>/cloudapi/1.0.0/entityTypes/cse/nativeCluster/1.0.0`
 
 The `cse install` command supports the following options:
 
@@ -77,7 +77,8 @@ In the temporary vApp, the output of the customization script is captured in
 tail -f /tmp/FILENAME.out
 tail -f /tmp/FILENAME.err
 ```
-### CSE Upgrade
+<a name="cse30-upgrade-cmd"></a>
+### CSE 3.0 Upgrade Command
 
 CSE 3.0 has been architecturally redesigned to leverage the latest features of Cloud Director like Defined entity framework and placement policies. The new command `cse upgrade` has been introduced in CSE 3.0 to make the old environment fully forward compatible with the latest technologies used in CSE 3.0. The only valid upgrade path is CSE 2.6 → CSE 3.0; any versions below CSE 2.6 cannot be directly upgraded to CSE 3.0.
 
