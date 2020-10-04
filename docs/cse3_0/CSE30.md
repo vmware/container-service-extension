@@ -10,6 +10,7 @@ For greenfield installations, please get started with [CSE introduction](INTRO.h
 * CLI for Container Extension and Kubernetes Cluster UI Plugin can be used to 
 manage Cloud Director provisioned [Tanzu Kubernetes Clusters](https://docs-staging.vmware.com/en/draft/VMware-Cloud-Director/10.2/VMware-Cloud-Director-Service-Provider-Admin-Portal-Guide/GUID-E9839D4E-3024-445E-9D08-372113CF6FE0.html)
  alongside Native and TKGI(Ent-PKS) clusters.
+ 
 * Native clusters are now represented as defined entities.CSE 3.0 has been 
 architecturally redesigned to leverage the latest features of Cloud Director 
 (>=10.2) like the [Defined entity framework](https://docs-staging.vmware.com/en/draft/VMware-Cloud-Director/10.2/VMware-Cloud-Director-Service-Provider-Admin-Portal-Guide/GUID-0749DEA0-08A2-4F32-BDD7-D16869578F96.html), 
@@ -18,6 +19,7 @@ and [Placement policies](TROUBLESHOOTING.html#placement-policies). Users will no
  implementation has been enhanced to leverage defined entities, thus adding 
  some level of persistence to native clusters in vCD. In other words, users can
   now query native clusters using defined entity API.
+  
 * Separate command group for TKGI (Ent-PKS).
 ![user-ctx](img/cse30-user-ctx.png)
 ![system-ctx](img/cse30-system-ctx.png)
