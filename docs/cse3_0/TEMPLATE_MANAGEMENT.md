@@ -66,7 +66,8 @@ environment.
 ## Restricting Kubernetes Templates for Tenants
 
 In the context of CSE 3.0, below content is applicable only if CSE is hooked to
- vCD < 10.2. For vCD >= 10.2, please refer to [CSE 3.0 placement policies FAQ](CSE30.html#faq) 
+ vCD < 10.2. For vCD >= 10.2, please refer to 
+ [CSE 3.0 template restriction by placement policies](TROUBLESHOOTING.html#placement-policies) 
 
 Out of the box, Kubernetes templates are not restricted for use. All tenants
 have access to all the Kubernetes templates to deploy Kubernetes clusters, as

@@ -31,25 +31,39 @@ Procedures for creating and managing NFS nodes can be found at
 
 Here is a summary of commands available to view templates and manage clusters and nodes:
 
-| Command                                                                | Description                                                                |
-|------------------------------------------------------------------------|----------------------------------------------------------------------------|
-| `vcd cse template list`                                                | List templates that a Kubernetes cluster can be deployed from.             |
-| `vcd cse cluster create CLUSTER_NAME`                                  | Create a new Kubernetes cluster.                                           |
-| `vcd cse cluster create CLUSTER_NAME --enable-nfs`                     | Create a new Kubernetes cluster with NFS Persistent Volume support.        |
-| `vcd cse cluster list`                                                 | List available Kubernetes clusters.                                        |
-| `vcd cse cluster info CLUSTER_NAME`                                    | Retrieve detailed information of a Kubernetes cluster.                     |
-| `vcd cse cluster resize CLUSTER_NAME`                                  | Grow a Kubernetes cluster by adding new nodes.                             |
-| `vcd cse cluster config CLUSTER_NAME`                                  | Retrieve the kubectl configuration file of the Kubernetes cluster.         |
-| `vcd cse cluster upgrade-plan CLUSTER_NAME`                            | Retrieve the allowed path for upgrading Kubernetes software on the custer. |
-| `vcd cse cluster upgrade CLUSTER_NAME TEMPLATE_NAME TEMPLATE_REVISION` | Upgrade cluster software to specified template's software versions.        |
-| `vcd cse cluster delete CLUSTER_NAME`                                  | Delete a Kubernetes cluster.                                               |
-| `vcd cse node create CLUSTER_NAME --nodes n`                           | Add `n` nodes to a Kubernetes cluster.                                     |
-| `vcd cse node create CLUSTER_NAME --type nfsd`                         | Add an NFS node to a Kubernetes cluster.                                   |
-| `vcd cse node list CLUSTER_NAME`                                       | List nodes of a cluster.                                                   |
-| `vcd cse node info CLUSTER_NAME NODE_NAME`                             | Retrieve detailed information of a node in a Kubernetes cluster.           |
-| `vcd cse node delete CLUSTER_NAME NODE_NAME`                           | Delete nodes from a cluster.                                               |
+| Command                                                              | API version 35.0 | API version <= 34.0 | Description                                                                |
+|----------------------------------------------------------------------|------------------|---------------------|----------------------------------------------------------------------------|
+| `vcd cse template list`                                              | Yes              | Yes                 | List templates that a Kubernetes cluster can be deployed from.            |
+| `vcd cse cluster apply CLUSTER_CONFIG>YAML`                          | Yes              | No                  | Create or update a Kubernetes cluster.                                     |
+| `vcd cse cluster create CLUSTER_NAME`                                | No               | Yes                 | Create a new Kubernetes cluster.                                           |
+| `vcd cse cluster create CLUSTER_NAME --enable-nfs`                   | No               | Yes                 | Create a new Kubernetes cluster with NFS Persistent Volume support.        |
+| `vcd cse cluster list`                                               | Yes              | Yes                 | List available Kubernetes clusters.                                        |
+| `vcd cse cluster info CLUSTER_NAME`                                  | Yes              | Yes                 | Retrieve detailed information of a Kubernetes cluster.                     |
+| `vcd cse cluster resize CLUSTER_NAME`                                | No               | Yes                 | Grow a Kubernetes cluster by adding new nodes.                             |
+| `vcd cse cluster config CLUSTER_NAME`                                | Yes              | Yes                 | Retrieve the kubectl configuration file of the Kubernetes cluster.         |
+| `vcd cse cluster upgrade-plan CLUSTER_NAME`                          | Yes              | Yes                 | Retrieve the allowed path for upgrading Kubernetes software on the custer. |
+| `vcd cse cluster upgrade CLUSTER_NAME TEMPLATE_NAME TEMPLATE_REVISION`| Yes              | Yes                 | Upgrade cluster software to specified template's software versions.        |
+| `vcd cse cluster delete CLUSTER_NAME`                                | Yes              | Yes                 | Delete a Kubernetes cluster.                                               |
+| `vcd cse cluster delete-nfs CLUSTER_NAME NFS_NODE_NAME`              | Yes              | No                  | Delete NFS node of a given Kubernetes cluster                              |
+| `vcd cse node create CLUSTER_NAME --nodes n`                         | No               | Yes                 | Add `n` nodes to a Kubernetes cluster.                                     |
+| `vcd cse node create CLUSTER_NAME --type nfsd`                       | No               | Yes                 | Add an NFS node to a Kubernetes cluster.                                   |
+| `vcd cse node list CLUSTER_NAME`                                     | No               | Yes                 | List nodes of a cluster.                                                   |
+| `vcd cse node info CLUSTER_NAME NODE_NAME`                           | No               | Yes                 | Retrieve detailed information of a node in a Kubernetes cluster.           |
+| `vcd cse node delete CLUSTER_NAME NODE_NAME`                         | No               | Yes                 | Delete nodes from a cluster.                                               |
 
-By default, CSE Client will display the task progress until the
+<a name="cse30_cli_changes"></a>
+CSE 3.0 brings in below changes in CLI
+1. CLI is smart enough to display the most relevant commands and command 
+options based on the API version with which the CSE server is running. 
+This intelligence will only be enabled when the user logs into the environment
+ using “vcd login” command. For example: `vcd cse cluster apply` is displayed 
+ only if CSE server is running at api version >= 35.
+2. One can use CLI to deploy Tkg Clusters even without CSE server installed. CLI directly communicates with the Cloud Director to manage Tanzu Kubernetes clusters.
+3. Node commands have been deprecated for CSE 3.0. All of the node management (or) resize operations can be done through “vcd cse cluster apply” command in CSE 3.0. Node commands continue to exist if CSE server is running with vCD API version <= 34.0
+4. New command has been added for NFS deletion - “vcd cse cluster delete-nfs "
+5. Separate command group for Ent-PKS - “vcd cse pks –help”
+
+For CSE versions < 3.0, by default, CSE Client will display the task progress until the
 task finishes or fails. The `--no-wait` flag can be used to skip waiting on the
 task. CSE client will still show the task information of console, and end user
 can choose to monitor the task progress manually.
@@ -63,7 +77,89 @@ can choose to monitor the task progress manually.
 # lists the current running tasks in the organization
 > vcd task list running
 ```
+<a name="cse30_cluster_apply"></a>
+### CSE 3.0 `Cluster apply` command
 
+1. `vcd cse cluster apply <create_cluster.yaml>` command - Takes a cluster specification file as an input and applies it to a cluster resource. The cluster resource will be created if it does not exist. 
+    * Command usage examples:
+        ```sh
+        vcd cse cluster apply <resize_cluster.yaml> (applies the specification on the resource specified; the cluster resource will be created if it does not exist). 
+        vcd cse cluster apply --sample --tkg (generates the sample specification file for tkg clusters).
+        vcd cse cluster apply --sample --native (generates the sample specification file for native clusters).
+        ```
+    * Sample input specification file
+        ```sh
+        # Short description of various properties used in this sample cluster configuration
+        # kind: The kind of the Kubernetes cluster.
+        #
+        # metadata: This is a required section
+        # metadata.cluster_name: Name of the cluster to be created or resized
+        # metadata.org_name: The name of the Organization in which cluster needs to be created or managed.
+        # metadata.ovdc_name: The name of the Organization Virtual data center in which the cluster need to be created or managed.
+        #
+        # spec: User specification of the desired state of the cluster.
+        # spec.control_plane: An optional sub-section for desired control-plane state of the cluster. The properties "sizing_class" and "storage_profile" can be specified only during the cluster creation phase. These properties will no longer be modifiable in further update operations like "resize" and "upgrade".
+        # spec.control_plane.count: Number of master node(s). Only single master node is supported.
+        # spec.control_plane.sizing_class: The compute sizing policy with which control-plane node needs to be provisioned in a given "ovdc". The specified sizing policy is expected to be pre-published to the given ovdc.
+        # spec.control_plane.storage_profile: The storage-profile with which control-plane needs to be provisioned in a given "ovdc". The specified storage-profile is expected to be available on the given ovdc.
+        #
+        # spec.k8_distribution: This is a required sub-section.
+        # spec.k8_distribution.template_name: Template name based on guest OS, Kubernetes version, and the Weave software version
+        # spec.k8_distribution.template_revision: revision number
+        #
+        # spec.nfs: Optional sub-section for desired nfs state of the cluster. The properties "sizing_class" and "storage_profile" can be specified only during the cluster creation phase. These properties will no longer be modifiable in further update operations like "resize" and "upgrade".
+        # spec.nfs.count: Nfs nodes can only be scaled-up; they cannot be scaled-down. Default value is 0.
+        # spec.nfs.sizing_class: The compute sizing policy with which nfs node needs to be provisioned in a given "ovdc". The specified sizing policy is expected to be pre-published to the given ovdc.
+        # spec.nfs.storage_profile: The storage-profile with which nfs needs to be provisioned in a given "ovdc". The specified storage-profile is expected to be available on the given ovdc.
+        #
+        # spec.settings: This is a required sub-section
+        # spec.settings.network: This value is mandatory. Name of the Organization's virtual data center network
+        # spec.settings.rollback_on_failure: Optional value that is true by default. On any cluster operation failure, if the value is set to true, affected node VMs will be automatically deleted.
+        # spec.settings.ssh_key: Optional ssh key that users can use to log into the node VMs without explicitly providing passwords.
+        #
+        # spec.workers: Optional sub-section for the desired worker state of the cluster. The properties "sizing_class" and "storage_profile" can be specified only during the cluster creation phase. These properties will no longer be modifiable in further update operations like "resize" and "upgrade". Non uniform worker nodes in the clusters is not yet supported.
+        # spec.workers.count: number of worker nodes (default value:1) Worker nodes can be scaled up and down.
+        # spec.workers.sizing_class: The compute sizing policy with which worker nodes need to be provisioned in a given "ovdc". The specified sizing policy is expected to be pre-published to the given ovdc.
+        # spec.workers.storage_profile: The storage-profile with which worker nodes need to be provisioned in a given "ovdc". The specified storage-profile is expected to be available on the given ovdc.
+        #
+        # status: Current state of the cluster in the server. This is not a required section for any of the operations.
+         
+        api_version: ''
+        kind: native
+        metadata:
+          cluster_name: cluster_name
+          org_name: organization_name
+          ovdc_name: org_virtual_datacenter_name
+        spec:
+          control_plane:
+            count: 1
+            sizing_class: Large_sizing_policy_name
+            storage_profile: Gold_storage_profile_name
+          k8_distribution:
+            template_name: ubuntu-16.04_k8-1.17_weave-2.6.0
+            template_revision: 2
+          nfs:
+            count: 1
+            sizing_class: Large_sizing_policy_name
+            storage_profile: Platinum_storage_profile_name
+          settings:
+            network: ovdc_network_name
+            rollback_on_failure: true
+            ssh_key: null
+          workers:
+            count: 2
+            sizing_class: Medium_sizing_policy_name
+            storage_profile: Silver_storage_profile
+        status:
+          cni: null
+          docker_version: null
+          kubernetes: null
+          nodes: null
+          os: null
+          phase: null
+          task_href: null
+        ```
+      
 <a name="k8s_upgrade"></a>
 ## Upgrading software installed on Kubernetes clusters
 Kubernetes is a fast paced piece of software, which gets a new minor release

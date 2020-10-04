@@ -6,8 +6,11 @@ title: CSE UI Plugin for VCD
 # CSE UI plugin for VCD
 
 ## Overview
-
 From CSE 2.6.0 onwards, CSE users can use this plugin to interact with CSE Kubernetes clusters directly from VCD UI.
+
+## Kubernetes clusters UI plug-in for CSE 3.0
+
+Yet to be filled by Andrew
 
 ## Get CSE UI plugin
 

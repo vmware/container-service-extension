@@ -165,21 +165,22 @@ Below steps of granting rights are required only if [RBAC feature](/container-se
 ```
 
 **Enabling ovdc(s) for a particular K8-provider:**
-
+Starting CSE 3.0, separate command group has been dedicated to Ent-PKS
 ```sh
-* vcd cse ovdc list
-* vcd cse ovdc enable ovdc1 -o tenant1 -k native
-* vcd cse ovdc enable ovdc2 -o tenant1 -k ent-pks --pks-plan "gold" --pks-cluster-domain "tenant1.com"
-* vcd cse ovdc enable ovdc1 -o tenant2 -k native
+* vcd cse pks ovdc list
+* vcd cse pks ovdc enable ovdc1 -o tenant1 -k native
+* vcd cse pks ovdc enable ovdc2 -o tenant1 -k ent-pks --pks-plan "gold" --pks-cluster-domain "tenant1.com"
+* vcd cse pks ovdc enable ovdc1 -o tenant2 -k native
 ```
 
 ### Cluster management commands
+Starting CSE 3.0, separate command group has been dedicated to Ent-PKS
 ```sh
-* vcd cse cluster list
-* vcd cse cluster create
-* vcd cse cluster info
-* vcd cse cluster resize
-* vcd cse cluster delete
+* vcd cse pks cluster list
+* vcd cse pks cluster create
+* vcd cse pks cluster info
+* vcd cse pks cluster resize
+* vcd cse pks cluster delete
 ```
 
 <a name="faq"></a>
