@@ -31,7 +31,7 @@ amqp:
   vhost: /
 
 vcd:
-  api_version: '33.0'
+  api_version: '35.0'
   host: vcd.vmware.com
   log: true
   password: my_secret_password

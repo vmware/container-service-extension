@@ -52,9 +52,12 @@ The following diagram illustrates installation steps visually.
 <a name="cse30-greenfield"></a>
 When CSE 3.0 is hooked to Cloud Director >= 10.2, CSE installation command `cse install -c config.yaml` does two additional steps than what has been mentioned in the above diagram.
 
-1. Prepares the environment for Providers to be able to perform organization VDC enablement for native clusters. More details can be found in FAQ - [creation of placement policies](CSE30.html#faq).
+1. Prepares the environment for Providers to be able to perform organization 
+VDC enablement for native clusters. Refer [how to enable ovdc(s) for native deployments](TEMPLATE_MANAGEMENT.html#cse30-restrict_templates) 
+for more details on how CSE3.0 leverages placement policies to restrict k8 
+deployments on organizational virtual datacenters (ovdcs).
 2. Registers defined entity schema for native clusters. As a side effect, `cse:native cluster entitlement` right bundle gets created in the Cloud Director and all native cluster operations will be guarded by these rights.
-Invoke this API to get a detailed view of defined entity schema for native clusters - `https://<vcd-ip>/cloudapi/1.0.0/entityTypes/cse/nativeCluster/1.0.0`
+Invoke below API to get a detailed view of native defined entity schema - `https://<vcd-ip>/cloudapi/1.0.0/entityTypes/urn:vcloud:type:cse:nativeCluster:1.0.0`
 
 The `cse install` command supports the following options:
 

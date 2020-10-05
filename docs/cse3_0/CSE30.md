@@ -9,18 +9,27 @@ For greenfield installations, please get started with [CSE introduction](INTRO.h
 ## 1. Overview
 * CLI for Container Extension and Kubernetes Cluster UI Plugin can be used to 
 manage Cloud Director provisioned [Tanzu Kubernetes Clusters](https://docs-staging.vmware.com/en/draft/VMware-Cloud-Director/10.2/VMware-Cloud-Director-Service-Provider-Admin-Portal-Guide/GUID-E9839D4E-3024-445E-9D08-372113CF6FE0.html)
- alongside Native and TKGI(Ent-PKS) clusters.
+ alongside Native and TKGI (Ent-PKS) clusters.
  
-* Native clusters are now represented as defined entities.CSE 3.0 has been 
+* Native clusters are now represented as defined entities. CSE 3.0 has been 
 architecturally redesigned to leverage the latest features of Cloud Director 
 (>=10.2) like the [Defined entity framework](https://docs-staging.vmware.com/en/draft/VMware-Cloud-Director/10.2/VMware-Cloud-Director-Service-Provider-Admin-Portal-Guide/GUID-0749DEA0-08A2-4F32-BDD7-D16869578F96.html), 
-and [Placement policies](TROUBLESHOOTING.html#placement-policies). Users will not see any
- difference in the functionality of native clusters, but the underlying 
- implementation has been enhanced to leverage defined entities, thus adding 
- some level of persistence to native clusters in vCD. In other words, users can
-  now query native clusters using defined entity API.
-  
+and placement policies. Users will not see any difference in the functionality 
+of native clusters, but the underlying implementation has been enhanced to 
+leverage defined entities for persisting native cluster entities in vCD DB and 
+placement policies for [restricting native  deployments](TEMPLATE_MANAGEMENT.html#restrict_templates) 
+to specific organization virtual datcenters (ovdcs). Users can now query native 
+clusters using vCD's defined entity API. 
+
 * Separate command group for TKGI (Ent-PKS).
+
+**Terminology:**
+* TKG cluster ~ Tanzu Kubernetes  cluster ~ Tanzu Kubernetes Grid cluster ~ vSphere with Tanzu cluster
+* TKGI cluster ~ Ent-PKS cluster ~ Tanzu Kubernetes Grid Integrated Edition cluster
+* Defined entities ~ Runtime defined entities ~ RDE ~ Defined Entity Framework
+* Native entities: Native defined entities representing Native clusters.
+* Tkg entities: Tkg defined entities representing Tkg clusters
+
 ![user-ctx](img/cse30-user-ctx.png)
 ![system-ctx](img/cse30-system-ctx.png)
 
@@ -56,11 +65,13 @@ deployments in tenant organizations and tenant virtual data centers.
 1. Grant rights to the tenant users. Refer [CSE 3.0 RBAC](RBAC.html#DEF-RBAC) for more details.
 2. Enable the desired organization virtual datacenter(s) for either Native or Tkg cluster deployments.
     * Tkg clusters → [Publish Kubernetes policy for Tkg Clusters](https://docs-staging.vmware.com/en/draft/VMware-Cloud-Director/10.2/VMware-Cloud-Director-Service-Provider-Admin-Portal-Guide/GUID-E9839D4E-3024-445E-9D08-372113CF6FE0.html)
-    * Native clusters → Run `vdc cse vdc enable <vdc-name>` command.
+    * Native clusters → [Publish Native placement policy on ovdc](TEMPLATE_MANAGEMENT.html#restrict_templates). 
+    In other words, run `vdc cse vdc enable <vdc-name>` command.
 3. Publish Kubernetes Clusters UI plugin to the desired organizations.
 
 ### 2.3 Kubernetes Clusters UI plug-in
-To be filled by Andrew. Details on UI plug-in is now part of vCD and how to publish UI plug-in to tenants.
+To be filled by Andrew. UI plug-in is now part of vCD and the provider can 
+publish UI plug-in to the desired tenants.
 
 ## 3. Tenant workflows
 Tenant users can manage the Kubernetes cluster deployments either through CSE CLI or Kubernetes clusters UI plug-in

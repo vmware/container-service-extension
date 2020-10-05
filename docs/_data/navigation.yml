@@ -125,6 +125,11 @@
       sublink: faq
   - name: "Troubleshooting"
     link: TROUBLESHOOTING.html
+    subtoc:
+    - name: CSE 3.0 FAQ
+      sublink: cse30-faq
+    - name: Log bundles
+      sublink: log-bundles
   - name: "Known Issues"
     link: KNOWN_ISSUES.html
     subtoc:

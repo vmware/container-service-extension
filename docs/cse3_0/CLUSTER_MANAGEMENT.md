@@ -20,7 +20,7 @@ behind the covers.
 
 CSE Kubernetes clusters can include persistent volumes mounted on NFS.
 Procedures for creating and managing NFS nodes can be found at
-[NFS Node Management](/container-service-extension/NFS_STATIC_PV.html).
+[NFS Node Management](NFS_STATIC_PV.html).
 
 <a name="useful_commands"></a>
 ## Useful Commands
@@ -52,16 +52,20 @@ Here is a summary of commands available to view templates and manage clusters an
 | `vcd cse node delete CLUSTER_NAME NODE_NAME`                         | No               | Yes                 | Delete nodes from a cluster.                                               |
 
 <a name="cse30_cli_changes"></a>
-CSE 3.0 brings in below changes in CLI
+CSE 3.0 introduces few of the below changes in CLI
 1. CLI is smart enough to display the most relevant commands and command 
 options based on the API version with which the CSE server is running. 
 This intelligence will only be enabled when the user logs into the environment
- using “vcd login” command. For example: `vcd cse cluster apply` is displayed 
- only if CSE server is running at api version >= 35.
-2. One can use CLI to deploy Tkg Clusters even without CSE server installed. CLI directly communicates with the Cloud Director to manage Tanzu Kubernetes clusters.
-3. Node commands have been deprecated for CSE 3.0. All of the node management (or) resize operations can be done through “vcd cse cluster apply” command in CSE 3.0. Node commands continue to exist if CSE server is running with vCD API version <= 34.0
-4. New command has been added for NFS deletion - “vcd cse cluster delete-nfs "
-5. Separate command group for Ent-PKS - “vcd cse pks –help”
+ using `vcd login` command. For example: `vcd cse cluster apply` is displayed 
+ only if CSE server is running at api version >= 35.0. Refer [what commands are available for what CSE versions?](TROUBLESHOOTING.html#cmds-per-cse) for more details.
+2. One can use CLI to deploy Tkg Clusters even without CSE server installed. 
+CLI directly communicates with the Cloud Director to manage Tanzu Kubernetes clusters.
+3. Node commands have been deprecated for CSE 3.0. All of the node management 
+(or) resize operations can be done through `vcd cse cluster apply` command in 
+CSE 3.0. Node commands continue to be operational if CSE server is running with
+ vCD API version <= 34.0
+4. New command has been added for NFS deletion: `vcd cse cluster delete-nfs`
+5. Separate command group for Ent-PKS: `vcd cse pks –help`
 
 For CSE versions < 3.0, by default, CSE Client will display the task progress until the
 task finishes or fails. The `--no-wait` flag can be used to skip waiting on the
@@ -236,7 +240,22 @@ client.logout()
 <a name="example"></a>
 ## Example Use Case
 
+Please note that several of the commands are version specific. Not all the 
+commands are applicable to all versions of CSE. Please refer to [CLI commands per CSE version](TROUBLESHOOTING.html#cmds-per-cse)
+
 ```sh
+# [CSE 3.0] create the cluster
+> vcd cse cluster apply create_cluster.yaml
+
+# [CSE 3.0] resize the cluster
+> vcd cse cluster apply resize_cluster.yaml
+
+# [CSE 3.0] scale-up nfs nodes in a given cluster
+> vcd cse cluster apply scale_up_nfs.yaml
+
+# [CSE 3.0] Delete Nfs node in a given cluster
+> vcd cse cluster delete-nfs mycluster nfsd-ghyt
+
 # create cluster mycluster with one master and two nodes, connected to provided network
 # a public key is provided to be able to ssh into the VMs
 > vcd cse cluster create mycluster --network intranet --ssh-key ~/.ssh/id_rsa.pub

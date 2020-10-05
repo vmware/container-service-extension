@@ -67,30 +67,31 @@ cleaning up.
 
 NFS administration starts with cluster creation, where we can
 provision an NFS node. Let's create an Ubuntu based cluster using
-the `vcd cse cluster create` command shown below. The `--enable-nfs`
-option signals that CSE should include an NFS node. The `--ssh-key`
-option ensures nodes are provisioned with the user's SSH key. The
-SSH key is necessary to login to the NFS host and set up shares.
+one of the below commands:
+* For CSE 3.0 - vCD 10.2, use [vcd cse cluster apply](CLUSTER_MANAGEMENT.html#cse30_cluster_apply) command
+* For CSE <= 3.0 - vCD < 10.2, use `vcd cse cluster create` command shown below. 
+  The `--enable-nfs` option signals that CSE should include an NFS node. The `--ssh-key` 
+  option ensures nodes are provisioned with the user's SSH key. The 
+  SSH key is necessary to login to the NFS host and set up shares.
+    1. ```shell
+       # Login.
+       vcd login cse.acme.scom devops imanadmin  --password='T0pS3cr3t'
+       # Create cluster with 2 worker nodes and NFS server node.
+       vcd cse cluster create mycluster --nodes 2 \
+       --network mynetwork -t ubuntu-16.04_k8-1.13_weave-2.3.0 -r 1 --enable-nfs \
+       --ssh-key ~/.ssh/id_rsa.pub
+       ```
+       This operation will take several minutes while the CSE extension builds the
+       Kubernetes vApp.
+    2. You can also add a node to an existing cluster using a command like the 
+    following.
+        ```shell
+        # Add an NFS server (node of type NFS).
+        vcd cse node create mycluster --nodes 1 --network mynetwork \
+        -t ubuntu-16.04_k8-1.13_weave-2.3.0 -r 1 --type nfsd
+        ```
 
-```shell
-# Login.
-vcd login cse.acme.com devops imanadmin  --password='T0pS3cr3t'
-# Create cluster with 2 worker nodes and NFS server node.
-vcd cse cluster create mycluster --nodes 2 \
- --network mynetwork -t ubuntu-16.04_k8-1.13_weave-2.3.0 -r 1 --enable-nfs \
- --ssh-key ~/.ssh/id_rsa.pub
-```
-This operation will take several minutes while the CSE extension builds the
-Kubernetes vApp.
 
-You can also add a node to an existing cluster using a command like the
-following.
-
-```shell
-# Add an NFS server (node of type NFS).
-vcd cse node create mycluster --nodes 1 --network mynetwork \
-  -t ubuntu-16.04_k8-1.13_weave-2.3.0 -r 1 --type nfsd
-```
 
 ### Setting up NFS Shares
 
