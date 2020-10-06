@@ -28,7 +28,7 @@ CSE project.
 ### Creating Kubernetes Templates
 During CSE server installation, CSE provides the option to create Kubernetes
 templates from all template definitions available at the remote repository
-URL specified in the [config file](/container-service-extension/CSE_CONFIG.html#broker).
+URL specified in the [config file](CSE_CONFIG.html#broker).
 Alternatively, Service Providers have the option to install CSE server with
 `--skip-template-creation` flag, if specified CSE does not create any
 Kubernetes templates during installation. Once CSE server installation is
@@ -106,7 +106,7 @@ deployments from tagged templates to only tagged organization VDCs.
 
 #### Enable Restriction on Kubernetes Templates
 Restriction on Kubernetes templates is enabled by leveraging the [template_rules
-section](/container-service-extension/CSE_CONFIG.html#templte_rules) in CSE
+section](CSE_CONFIG.html#templte_rules) in CSE
 config file. Service Providers can mark Kubernetes templates as _protected_ by
 tagging them with a `VdcComputePolicy`. To do so, Service Providers need to
 define a template rule in the `template_rules` section, whose target is the

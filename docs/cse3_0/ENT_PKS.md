@@ -69,12 +69,12 @@ Below timeline diagram depicts infrastructure set-up and tenant
       Enterprise PKS' vSphere(s). Ensure these pvdc(s) are dedicated for Enterprise
       PKS K8 deployments only.
  5. Install, configure and start CSE
-    * Follow instructions to install CSE 2.0 beta [here](/container-service-extension/RELEASE_NOTES.html)
+    * Follow instructions to install CSE 2.0 beta [here](RELEASE_NOTES.html)
     * Use `cse sample` command to generate `config.yaml` and `pks.yaml` skeleton config files.
     * Configure `config.yaml` with VCD details.
     * Configure `pks.yaml` with Enterprise PKS details. This file is necessary
       only if there is an intention to leverage Enterprise PKS for K8
-      deployments. Refer [here](/container-service-extension/CSE_CONFIG.html#ent_pks_config)
+      deployments. Refer [here](CSE_CONFIG.html#ent_pks_config)
       for more details on how to fill in `pks.yaml`.
     * Run `cse install` command. Specify the Enterprise PKS configuration file
       along with regular CSE configuration file via the flag --pks-config-file
@@ -108,7 +108,7 @@ CSE's default behavior i.e., all ovdc-s are open for native K8s cluster deployme
 1. Create ovdc(s) in tenant organization from newly created provider-vdc(s) above via VCD UI.
 Do not choose Pay-as-you-go model for ovdc(s). Refer [FAQ](#faq) for more details.
 2. Use these [CSE commands](#cse-commands) to grant K8 deployment rights to chosen tenants and tenant-users. Refer
-[RBAC feature](/container-service-extension/RBAC.html) for more details
+[RBAC feature](RBAC.html) for more details
 3. Use [CSE command](#cse-commands) to enable organization vdc(s) with a chosen K8-provider (native (or) ent-pks).
 
 Below diagram illustrates a time sequence view of setting up the infrastructure for CSE 2.0,
@@ -145,7 +145,7 @@ In this illustration, user from  tenant "Pepsi" attempts to create a new K8 clus
 
 **Granting rights to Tenants and Users:**
 
-Below steps of granting rights are required only if [RBAC feature](/container-service-extension/RBAC.html) is turned on.
+Below steps of granting rights are required only if [RBAC feature](RBAC.html) is turned on.
 
 ```sh
 * vcd right add "{cse}:CSE NATIVE DEPLOY RIGHT" -o tenant1
@@ -226,7 +226,7 @@ Starting CSE 3.0, separate command group has been dedicated to Ent-PKS
     The performance optimizations will be coming in near future
 * If there are Extension time out errors while executing commands, how can they be remedied?
     * Increase the VCD extension timeout to a higher value. Refer to
-      [Setting the API Extension Timeout](/container-service-extension/CSE_SERVER_MANAGEMENT.html#extension-timeout)
+      [Setting the API Extension Timeout](CSE_SERVER_MANAGEMENT.html#extension-timeout)
 
 <a name="compatibility-matrix"></a>
 ## Compatibility matrix
