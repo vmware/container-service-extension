@@ -14,8 +14,8 @@ Kubernetes templates including their life cycle management.
 <a name="kubernetes_templates"></a>
 ## Kubernetes Templates
 
-`CSE 2.5` supports deploying Kubernetes clusters from multiple Kubernetes
-templates. Templates vary by guest OS (e.g. PhotonOS, Ubuntu), as well as,
+Starting CSE 2.5, Kubernetes cluster deployment from multiple Kubernetes
+templates is supported. Templates vary by guest OS (e.g. PhotonOS, Ubuntu), as well as,
 software versions, like Kubernetes, Docker, or Weave. Each template name is
 uniquely constructed based on the flavor of guest OS, Kubernetes version, and
 the Weave software version. The definitions of different templates reside in an
@@ -64,6 +64,33 @@ environment.
 
 <a name="restrict_templates"></a>
 ## Restricting Kubernetes Templates for Tenants
+    
+<a name="cse30-restrict_templates"></a>
+### CSE 3.0 and vCD 10.2
+
+When CSE 3.0 is hooked to vCD 10.2, `cse install` (or) `cse upgrade` command 
+execution enforces  _deny-native-template-usage_ by default. The provider has 
+to explicitly enable organizational virtual datacenter(s) to host native 
+deployments, by running the command: `vcd cse ovdc enable`. 
+
+CSE 3.0 leverages vCD's feature of placement policies to restrict native K8 
+deployments to specific organization virtual datacenters (ovdcs).
+During CSE install or upgrade, it creates an empty provider Vdc level placement 
+policy **cse----native** and tags the native templates with the same. In 
+effect, one can instantiate cluster VM(s) from **cse----native** tagged templates, 
+only in those ovdc(s) with the placement policy **cse----native** published.
+
+1. (provider command) `cse install` or `cse upgrade` creates native 
+placement policy **cse----native** and tags the relevant templates with
+the same placement policy.
+2. (provider command) `vcd cse ovdc enable` publishes the native 
+placement policy on to the chosen ovdc.
+3. (tenant command) `vcd cse cluster apply` - During the cluster creation,
+vCD internally validates the ovdc eligibility to host the cluster VMs 
+instantiated from the native templates, by checking if the template's 
+placement policy is published onto the ovdc or not.
+ 
+### CSE < 3.0 and vCD < 10.2
 
 Out of the box, Kubernetes templates are not restricted for use. All tenants
 have access to all the Kubernetes templates to deploy Kubernetes clusters, as
@@ -77,7 +104,7 @@ CSE 2.5 offers the capability to service providers to tag selected templates
 and organization VDCs with compute policy which restricts Kubernetes cluster
 deployments from tagged templates to only tagged organization VDCs.
 
-### Enable Restriction on Kubernetes Templates
+#### Enable Restriction on Kubernetes Templates
 Restriction on Kubernetes templates is enabled by leveraging the [template_rules
 section](/container-service-extension/CSE_CONFIG.html#templte_rules) in CSE
 config file. Service Providers can mark Kubernetes templates as _protected_ by
@@ -102,7 +129,7 @@ the Kubernetes template is restricted from further use, until tenant
 organization VDCs are enabled with matching compute policy to permit Kubernetes
 cluster deployments.
 
-### Grant Tenants access to Kubernetes Templates
+#### Grant Tenants access to Kubernetes Templates
 Service providers select tenants to whom they want to grant access of certain
 Kubernetes Templates based cluster deployments. Then, they enable selected
 tenants' organization VDCs with the same compute policy as present on the
@@ -111,7 +138,7 @@ Kubernetes Template. To do so, the following command should be used
 vcd cse ovdc compute-policy add ORG_NAME OVDC_NAME POLICY_NAME
 ```
 
-### Revoke Permission to use Kubernetes Templates from Tenants
+#### Revoke Permission to use Kubernetes Templates from Tenants
 Permission to use a protected template can be revoked at any time from the
 tenant, via the following command.
 ```sh
@@ -121,7 +148,7 @@ If there are Kubernetes clusters in that organization VDC, use `-f/--force`
 flag to force the operation. The clusters will remain deployed, and will
 switch to `System Default` compute policy.
 
-### Remove restriction from Kubernetes Templates
+#### Remove restriction from Kubernetes Templates
 In order to remove the restriction from Kubernetes templates, Service providers
 can delete the template rule from the config file and restart the CSE server.
 Alternatively, the same outcome can be achieved by specifying an empty policy
