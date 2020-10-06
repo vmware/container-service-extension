@@ -114,7 +114,7 @@ class UserContext:
                 logger_wire = logger.SERVER_CLOUDAPI_WIRE_LOGGER
             self._sysadmin_cloudapi_client = \
                 vcd_utils.get_cloudapi_client_from_vcd_client(
-                    self._sysadmin_client,
+                    self.sysadmin_client,
                     logger.SERVER_LOGGER,
                     logger_wire)
         return self._sysadmin_cloudapi_client

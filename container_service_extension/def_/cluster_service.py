@@ -58,6 +58,8 @@ class ClusterService(abstract_broker.AbstractBroker):
         self.task_update_lock = threading.Lock()
         self.entity_svc = def_entity_svc.DefEntityService(
             op_ctx.cloudapi_client)
+        self.sysadmin_entity_svc = def_entity_svc.DefEntityService(
+            op_ctx.sysadmin_cloudapi_client)
 
     def get_cluster_info(self, cluster_id: str) -> def_models.DefEntity:
         """Get the corresponding defined entity of the native cluster.
@@ -617,8 +619,8 @@ class ClusterService(abstract_broker.AbstractBroker):
                                  exc_info=True)
                 try:
                     # Delete the corresponding defined entity
-                    self.entity_svc.resolve_entity(cluster_id)
-                    self.entity_svc.delete_entity(cluster_id)
+                    self.sysadmin_entity_svc.resolve_entity(cluster_id)
+                    self.sysadmin_entity_svc.delete_entity(cluster_id)
                 except Exception:
                     LOGGER.error("Failed to delete the defined entity for "
                                  f"cluster '{cluster_name}'", exc_info=True)
