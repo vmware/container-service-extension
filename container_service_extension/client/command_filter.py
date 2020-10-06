@@ -51,13 +51,13 @@ UNSUPPORTED_SUBCOMMANDS_BY_VERSION = {
         GroupKey.CLUSTER: ['apply', 'delete-nfs'],
         # TODO(metadata based enablement for < v35): Revisit after decision
         # to support metadata way of enabling for native clusters
-        GroupKey.OVDC: ['enable', 'disable', 'info']
+        GroupKey.OVDC: ['enable', 'disable', 'list', 'info']
     },
     vcd_client.ApiVersion.VERSION_34.value: {
         GroupKey.CLUSTER: ['apply', 'delete-nfs'],
         # TODO(metadata based enablement for < v35): Revisit after decision
         # to support metadata way of enabling for native clusters
-        GroupKey.OVDC: ['enable', 'disable', 'info']
+        GroupKey.OVDC: ['enable', 'disable', 'list', 'info']
     },
     vcd_client.ApiVersion.VERSION_35.value: {
         GroupKey.CLUSTER: ['create', 'resize'],
@@ -71,22 +71,22 @@ UNSUPPORTED_SUBCOMMAND_OPTIONS_BY_VERSION = {
     vcd_client.ApiVersion.VERSION_33.value: {
         GroupKey.CLUSTER: {
             CommandNameKey.CREATE: ['sizing_class'],
-            CommandNameKey.DELETE: ['k8_runtime'],
-            CommandNameKey.INFO: ['k8_runtime'],
+            CommandNameKey.DELETE: ['k8_runtime', 'cluster_id'],
+            CommandNameKey.INFO: ['k8_runtime', 'cluster_id'],
             CommandNameKey.UPGRADE: ['k8_runtime'],
             CommandNameKey.UPGRADE_PLAN: ['k8_runtime'],
-            CommandNameKey.CONFIG: ['k8_runtime']
+            CommandNameKey.CONFIG: ['k8_runtime', 'cluster_id']
         },
     },
 
     vcd_client.ApiVersion.VERSION_34.value: {
         GroupKey.CLUSTER: {
             CommandNameKey.CREATE: ['sizing_class'],
-            CommandNameKey.DELETE: ['k8_runtime'],
-            CommandNameKey.INFO: ['k8_runtime'],
+            CommandNameKey.DELETE: ['k8_runtime', 'cluster_id'],
+            CommandNameKey.INFO: ['k8_runtime', 'cluster_id'],
             CommandNameKey.UPGRADE: ['k8_runtime'],
             CommandNameKey.UPGRADE_PLAN: ['k8_runtime'],
-            CommandNameKey.CONFIG: ['k8_runtime']
+            CommandNameKey.CONFIG: ['k8_runtime', 'cluster_id']
         }
     },
 

@@ -15,6 +15,7 @@ import container_service_extension.def_.models as def_models
 from container_service_extension.def_.utils import raise_error_if_def_not_supported # noqa: E501
 import container_service_extension.exceptions as cse_exceptions
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
+from container_service_extension.minor_error_codes import MinorErrorCode
 import container_service_extension.shared_constants as cse_shared_constants
 
 
@@ -39,7 +40,9 @@ def handle_schema_service_exception(func):
             response_dict = json.loads(error.response.text)
             error_message = response_dict.get('message')
             LOGGER.error(error_message)
-            raise cse_exceptions.DefSchemaServiceError(error_message=error_message, minor_error_code=error.response.status_code)  # noqa: E501
+            raise cse_exceptions.DefSchemaServiceError(
+                error_message=error_message,
+                minor_error_code=MinorErrorCode.DEFAULT_ERROR_CODE)
         except Exception as error:
             LOGGER.error(error)
             raise error

@@ -50,7 +50,7 @@ class LegacyNativeClusterApi:
             clusters.append(cluster)
         return clusters
 
-    def get_cluster_info(self, name, org=None, vdc=None):
+    def get_cluster_info(self, name, org=None, vdc=None, **kwargs):
         method = shared_constants.RequestMethod.GET
         uri = f'{self._uri}/cluster/{name}'
         response = self.client._do_request_prim(
@@ -203,7 +203,7 @@ class LegacyNativeClusterApi:
             accept_type='application/json')
         return process_response(response)
 
-    def delete_cluster(self, cluster_name, org=None, vdc=None):
+    def delete_cluster(self, cluster_name, org=None, vdc=None, **kwargs):
         method = shared_constants.RequestMethod.DELETE
         uri = f"{self._uri}/cluster/{cluster_name}"
         response = self.client._do_request_prim(
@@ -215,7 +215,7 @@ class LegacyNativeClusterApi:
                     shared_constants.RequestKey.OVDC_NAME: vdc})
         return process_response(response)
 
-    def get_cluster_config(self, cluster_name, org=None, vdc=None):
+    def get_cluster_config(self, cluster_name, org=None, vdc=None, **kwargs):
         method = shared_constants.RequestMethod.GET
         uri = f"{self._uri}/cluster/{cluster_name}/config"
         response = self.client._do_request_prim(
