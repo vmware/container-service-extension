@@ -33,6 +33,10 @@ class CseServerError(Exception):
     """Base class for cse server side exceptions."""
 
 
+class CseUpgradeError(Exception):
+    """Base class for cse server upgrade exception."""
+
+
 class CseServerNotRunningError(CseServerError):
     """Raised when CLI makes requests to CSE server when it is not available."""  # noqa: E501
 

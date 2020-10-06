@@ -84,7 +84,7 @@ SAMPLE_VCD_CONFIG = {
         'port': 443,
         'username': 'administrator',
         'password': 'my_secret_password',
-        'api_version': '33.0',
+        'api_version': '35.0',
         'verify': True,
         'log': True
     }
@@ -134,6 +134,9 @@ SAMPLE_BROKER_CONFIG = {
 }
 
 TEMPLATE_RULE_NOTE = """# [Optional] Template rule section
+# Note : Template rules are only supported when CSE server is started with
+# vCD api v33.0 or v34.0.
+#
 # Rules can be defined to override template definitions as defined by remote
 # template cookbook.
 # Any rule defined in this section can match exactly one template.

@@ -198,7 +198,8 @@ Examples
     required=False,
     metavar='CLUSTER_ID',
     help="ID of the cluster whose cluster config has to be obtained;"
-         "Supported only for CSE api version >= 35")
+         "Supported only for CSE api version >= 35."
+         "ID gets precedence over cluster name.")
 def cluster_delete(ctx, name, vdc, org, k8_runtime=None, cluster_id=None):
     """Delete a Kubernetes cluster.
 
@@ -639,7 +640,8 @@ Examples
     required=False,
     metavar='CLUSTER_ID',
     help="ID of the cluster to which the configuration should be applied;"
-         "Supported only for CSE api version >=35")
+         "Supported only for CSE api version >=35."
+         "ID gets precedence over cluster name.")
 def apply(ctx, cluster_config_file_path, generate_sample_config, k8_runtime, output, org, cluster_id):  # noqa: E501
     CLIENT_LOGGER.debug(f'Executing command: {ctx.command_path}')
     try:
@@ -921,7 +923,8 @@ Example
     required=False,
     metavar='CLUSTER_ID',
     help="ID of the cluster whose cluster config has to be obtained."
-         "Supported only for CSE api version >= 35")
+         "Supported only for CSE api version >= 35."
+         "ID gets precedence over cluster name.")
 def cluster_config(ctx, name, vdc, org, k8_runtime=None, cluster_id=None):
     """Display cluster configuration.
 
@@ -1005,7 +1008,8 @@ Examples:
     required=False,
     metavar='CLUSTER_ID',
     help="ID of the cluster whose cluster config has to be obtained;"
-         "Supported only for CSE api version >=35")
+         "Supported only for CSE api version >=35. "
+         "ID gets precedence over cluster name.")
 def cluster_info(ctx, name, org, vdc, k8_runtime=None, cluster_id=None):
     """Display info about a Kubernetes cluster.
 

@@ -11,6 +11,7 @@ from pyvcloud.vcd.client import MetadataVisibility
 from pyvcloud.vcd.org import Org
 from pyvcloud.vcd.utils import metadata_to_dict
 
+import container_service_extension.logger as logger
 from container_service_extension.pyvcloud_utils import get_org
 from container_service_extension.server_constants import LocalTemplateKey
 
@@ -42,7 +43,8 @@ def get_script_filepath(template_name, revision, script_file_name):
 
 
 def get_all_k8s_local_template_definition(client, catalog_name, org=None,
-                                          org_name=None):
+                                          org_name=None,
+                                          logger_debug=logger.NULL_LOGGER):
     """Fetch all CSE k8s templates in a catalog.
 
     A CSE k8s template is a catalog item that has all the necessary metadata
@@ -82,10 +84,10 @@ def get_all_k8s_local_template_definition(client, catalog_name, org=None,
         if num_missing_metadata_keys > 0:
             # This catalog item has partial CSE metadata, so skip it but also
             # log relevant information.
-            # msg = f"Catalog item '{item_name}' missing " \
-            #       f"{num_missing_metadata_keys} metadata: " \
-            #       f"{missing_metadata_keys}" # noqa: F841
-            # ToDo: Log the msg.
+            msg = f"Catalog item '{item_name}' missing " \
+                  f"{num_missing_metadata_keys} metadata: " \
+                  f"{missing_metadata_keys}" # noqa: F841
+            logger_debug.debug(msg)
             continue
 
         # non-string metadata is written to the dictionary as a string
