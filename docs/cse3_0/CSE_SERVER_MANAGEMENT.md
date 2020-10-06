@@ -83,7 +83,12 @@ tail -f /tmp/FILENAME.err
 <a name="cse30-upgrade-cmd"></a>
 ### CSE 3.0 Upgrade Command
 
-CSE 3.0 has been architecturally redesigned to leverage the latest features of Cloud Director like Defined entity framework and placement policies. The new command `cse upgrade` has been introduced in CSE 3.0 to make the old environment fully forward compatible with the latest technologies used in CSE 3.0. The only valid upgrade path is CSE 2.6 → CSE 3.0; any versions below CSE 2.6 cannot be directly upgraded to CSE 3.0.
+CSE 3.0 has been architecturally redesigned to leverage the latest features of 
+Cloud Director like Defined entity framework and placement policies. The new 
+command `cse upgrade` has been introduced in CSE 3.0 to make the old 
+environment fully forward compatible with the latest technologies used in 
+CSE 3.0. Any previous version of CSE can be directly upgraded to CSE 3.0 using 
+`cse upgrade` command.
 
 The command `cse upgrade` must be run to ensure the environment is forward compatible with CSE 3.0. The below steps will be performed during the upgrade. Please run the command `cse upgrade --help` for more details.
 

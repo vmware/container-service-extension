@@ -515,7 +515,7 @@ Supported VCD versions: 9.0, 9.1, 9.5
     * Improved console output and error messages to be more clearly represent what actions are taking place during installation.
     * Added config file validation using `cse check`
     * Updated CSE installation validation to use `cse check -i`
-* Fixed bug where master node creation fails during cluster create command.
+* Fixed bug where control plane node creation fails during cluster create command.
 
 **Documentation:**
 
@@ -525,7 +525,7 @@ Supported VCD versions: 9.0, 9.1, 9.5
 
 ## CSE 1.2.3
 
-Replaced with 1.2.4 due to bug where master node creation fails during cluster create command.
+Replaced with 1.2.4 due to bug where control plane node creation fails during cluster create command.
 
 ---
 

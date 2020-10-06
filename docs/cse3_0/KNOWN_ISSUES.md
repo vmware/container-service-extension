@@ -146,7 +146,7 @@ with the kubeadm config file contents necessary for the workaround specified in
 The main issue is that etcd prioritizes the DNS server (if it exists) over the
 `/etc/hosts` file to resolve hostnames, when the conventional behavior would be
 to prioritize checking any hosts files before going to the DNS server. This
-becomes problematic when **kubeadm** attempts to initialize the master node
+becomes problematic when **kubeadm** attempts to initialize the control plane node
 using `localhost`. **etcd** checks the DNS server for any entry like
 `localhost.suffix`, and if this actually resolves to an IP, attempts to do some
 operations involving that incorrect IP, instead of `localhost`.
@@ -154,8 +154,8 @@ operations involving that incorrect IP, instead of `localhost`.
 The workaround (More detail [HERE](https://github.com/kubernetes/kubernetes/issues/57709#issuecomment-355709778)
 is to create a **kubeadm** config file (no way to specify **listen-peer-urls**
 argument in command line), and modify the `kubeadm init` command in the CSE
-master script for the template of the cluster you are attempting to deploy.
-CSE master script is located at
+control plane script for the template of the cluster you are attempting to deploy.
+CSE control plane script is located at
 `~/.cse-scripts/<template name>_rev<template_revision>/scripts/mstr.sh`
 
 Change command from,
@@ -177,7 +177,7 @@ created for each Kubernetes cluster, which is in our road-map to
 implement. Until then, please choose one of below workarounds to
 avert this problem if the need arises.
 
-* Give access to only master & worker nodes of the cluster by adding individual
+* Give access to only control plane & worker nodes of the cluster by adding individual
   IPs of the nodes into /etc/exports file on NFS server.
     * Create and run a script periodically which retrieves IPs of nodes in the
       cluster and then add them to NFS server access list (/etc/exports).
@@ -193,7 +193,7 @@ avert this problem if the need arises.
       * Copy ssh public key of each worker node into `~/.ssh/authorized_keys` in NFS server
     * Client: Generate key using `ssh-keygen` and copy the contents of `~/.ssh/id_rsa.pub`
     * NFS server: Paste the contents (public key) from client into `~/.ssh/authorized_keys`
-    * In each master/worker node,
+    * In each control plane/worker node,
       * `apt-get install portmap`
       * `ssh -fNv -L 3049:127.0.0.1:2049 user@NFSServer`
     * Read more about this approach at

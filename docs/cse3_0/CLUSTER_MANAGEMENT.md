@@ -103,7 +103,7 @@ can choose to monitor the task progress manually.
         #
         # spec: User specification of the desired state of the cluster.
         # spec.control_plane: An optional sub-section for desired control-plane state of the cluster. The properties "sizing_class" and "storage_profile" can be specified only during the cluster creation phase. These properties will no longer be modifiable in further update operations like "resize" and "upgrade".
-        # spec.control_plane.count: Number of master node(s). Only single master node is supported.
+        # spec.control_plane.count: Number of control plane node(s). Only single control plane node is supported.
         # spec.control_plane.sizing_class: The compute sizing policy with which control-plane node needs to be provisioned in a given "ovdc". The specified sizing policy is expected to be pre-published to the given ovdc.
         # spec.control_plane.storage_profile: The storage-profile with which control-plane needs to be provisioned in a given "ovdc". The specified storage-profile is expected to be available on the given ovdc.
         #
@@ -256,20 +256,20 @@ commands are applicable to all versions of CSE. Please refer to [CLI commands pe
 # [CSE 3.0] Delete Nfs node in a given cluster
 > vcd cse cluster delete-nfs mycluster nfsd-ghyt
 
-# create cluster mycluster with one master and two nodes, connected to provided network
+# create cluster mycluster with one control plane and two nodes, connected to provided network
 # a public key is provided to be able to ssh into the VMs
 > vcd cse cluster create mycluster --network intranet --ssh-key ~/.ssh/id_rsa.pub
 
 # list the worker nodes of a cluster
 > vcd cse node list mycluster
 
-# create cluster mycluster with one master, three nodes and connected to provided network
+# create cluster mycluster with one control plane, three nodes and connected to provided network
 > vcd cse cluster create mycluster --network intranet --nodes 3 --ssh-key ~/.ssh/id_rsa.pub
 
 # create a single worker node cluster, connected to the specified network. Nodes can be added later
 > vcd cse cluster create mycluster --network intranet --nodes 0 --ssh-key ~/.ssh/id_rsa.pub
 
-# create cluster mycluster with one master, three worker nodes, connected to provided network
+# create cluster mycluster with one control plane, three worker nodes, connected to provided network
 # and one node of type NFS server
 > vcd cse cluster create mycluster --network intranet --nodes 3 --ssh-key ~/.ssh/id_rsa.pub --enable-nfs
 

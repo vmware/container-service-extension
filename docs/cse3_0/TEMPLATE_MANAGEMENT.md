@@ -69,7 +69,7 @@ environment.
 ### CSE 3.0 and vCD 10.2
 
 When CSE 3.0 is hooked to vCD 10.2, `cse install` (or) `cse upgrade` command 
-execution enforces  _deny-native-template-usage_ by default. The provider has 
+execution restricts native template usage by default. The provider has 
 to explicitly enable organizational virtual datacenter(s) to host native 
 deployments, by running the command: `vcd cse ovdc enable`. 
 
