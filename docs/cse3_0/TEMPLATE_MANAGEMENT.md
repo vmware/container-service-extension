@@ -14,8 +14,8 @@ Kubernetes templates including their life cycle management.
 <a name="kubernetes_templates"></a>
 ## Kubernetes Templates
 
-`CSE 2.5` supports deploying Kubernetes clusters from multiple Kubernetes
-templates. Templates vary by guest OS (e.g. PhotonOS, Ubuntu), as well as,
+Starting CSE 2.5, Kubernetes cluster deployment from multiple Kubernetes
+templates is supported. Templates vary by guest OS (e.g. PhotonOS, Ubuntu), as well as,
 software versions, like Kubernetes, Docker, or Weave. Each template name is
 uniquely constructed based on the flavor of guest OS, Kubernetes version, and
 the Weave software version. The definitions of different templates reside in an

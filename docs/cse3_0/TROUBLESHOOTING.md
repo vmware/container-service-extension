@@ -44,7 +44,7 @@ versions of Cloud Director (<= 34.0)?
 6. Can providers provide Certificates during CSE installation and startup?
     * Customers can provide the path to their CA Bundle and set the REQUESTS_CA_BUNDLE environment variable with the provided path. This has been tested on Mac OS.
 7. With CSE 3.0 - vCD 10.1 combination, as native clusters are by default allowed to be deployed on any organization virtual datacenters, how can we prevent native clusters from getting deployed on Ent-PKS enbled ovdc(s)?
-    * Use template rules to protect native templates. Refer [enable template restriction](TEMPLATE_MANAGEMENT.html#restrict_templates).
+    * Use template rules to protect native templates. Refer [CSE 2.6 template restriction](TEMPLATE_MANAGEMENT.html#restrict_templates).
      
 ## Tenant operations
 
