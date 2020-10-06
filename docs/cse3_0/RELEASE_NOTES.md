@@ -10,11 +10,11 @@ Release Date:
 
 **Compatibility matrix and relevant features**
 
-| CSE CLI | CSE UI | CSE Server | Cloud Director | Features offered                                                                                    |
-|---------|--------|------------|----------------|-----------------------------------------------------------------------------------------------------|
-| 3.0     | 2.0    | NA         | 10.2           | Tkg cluster management only                                                                         |
-| 3.0     | 2.0    | 3.0        | 10.2           | Native, Tkg, and Ent-PKS Cluster management; Defined entity representation for both native and tkg. |
-| 3.0     | 1.0.3  | 3.0        | 10.1, 10.0     | Legacy features (Native and Ent-PKS cluster management)                                             |
+| CSE CLI | CSE UI | CSE Server | Cloud Director | Ent-PKS | Features offered                                                                                    |
+|---------|--------|------------|----------------|---------|-----------------------------------------------------------------------------------------------------|
+| 3.0     | 2.0    | NA         | 10.2           | NA      | Tkg cluster management only                                                                         |
+| 3.0     | 2.0    | 3.0        | 10.2           | ?       | Native, Tkg, and Ent-PKS Cluster management; Defined entity representation for both native and tkg. |
+| 3.0     | 1.0.3  | 3.0        | 10.1, 10.0     | ?       | Legacy features (Native and Ent-PKS cluster management)                                             |
 
 Refer to [What's new in CSE 3.0](CSE30.html)
 

@@ -358,6 +358,6 @@ vcd vdc use SAMPLE_VDC_NAME
 vcd cse ovdc enable SAMPLE_VDC_NAME
 
 # Enable organization vdc for TKGI (Ent-PKS)
-vcd pks ovdc enable SAMPLE_VDC_NAME
+vcd cse pks ovdc enable SAMPLE_VDC_NAME
 
 ```
