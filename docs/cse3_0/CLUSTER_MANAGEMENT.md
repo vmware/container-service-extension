@@ -176,7 +176,7 @@ clusters. The softwares that can be upgraded to a newer version are
 * Docker engine
 
 The upgrade matrix is built on the CSE native templates (read more about them
-[here](/container-service-extension/TEMPLATE_MANAGEMENT.html)). The template
+[here](TEMPLATE_MANAGEMENT.html)). The template
 originally used to deploy a cluster determines the valid target templates for
 upgrade. The supported upgrade paths can be discovered using the following command
 

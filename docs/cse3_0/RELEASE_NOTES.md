@@ -49,7 +49,7 @@ CSE UI plugin compatibility matrix
   * Fixed bug where network gateway CIDR shows netmask instead of gateway IP
   * Fixed bug where cluster/node creation wizard does not show shared ovdc networks
   * PKS clusters now display Kubernetes version
-  * Read more about it [here](/container-service-extension/CSE_UI_PLUGIN.html)
+  * Read more about it [here](CSE_UI_PLUGIN.html)
 
 **Notes to System Administrator**
 
@@ -98,16 +98,16 @@ CSE UI plugin compatibility matrix
 
 **New Features**
 * New Templates with updated Kubernetes and Weave
-  * [Template Announcements](/container-service-extension/TEMPLATE_ANNOUNCEMENTS.html)
+  * [Template Announcements](TEMPLATE_ANNOUNCEMENTS.html)
 * In place Kubernetes upgrade for clusters
   * CSE offers the new capability to do in place upgrade of Kubernetes
     related software in Native clusters. More details
-    [here](/container-service-extension/CLUSTER_MANAGEMENT.html#k8s_upgrade).
+    [here](CLUSTER_MANAGEMENT.html#k8s_upgrade).
 * Secure Configuration files
   * CSE now supports encrypted configuration files. More details
-  [here](/container-service-extension/CSE_CONFIG.html#encrypt_decrypt).
+  [here](CSE_CONFIG.html#encrypt_decrypt).
 * CSE UI Plugin for VCD
-  * Read more about it [here](/container-service-extension/CSE_UI_PLUGIN.html)
+  * Read more about it [here](CSE_UI_PLUGIN.html)
 * Interoperability with VCD 10.1.0
 
 **Notes to System Administrator**
@@ -156,16 +156,16 @@ CSE 2.6.0 beta.
 **New Features**
 
 * New Templates with updated Kubernetes and Weave
-  * [Template Announcements](/container-service-extension/TEMPLATE_ANNOUNCEMENTS.html)
+  * [Template Announcements](TEMPLATE_ANNOUNCEMENTS.html)
 * In place Kubernetes upgrade for clusters
   * CSE offers the new capability to do in place upgrade of Kubernetes
     related software in Native clusters. More details
-    [here](/container-service-extension/CLUSTER_MANAGEMENT.html#k8s_upgrade).
+    [here](CLUSTER_MANAGEMENT.html#k8s_upgrade).
 * Secure Configuration files
   * CSE now supports encrypted configuration files. More details
-  [here](/container-service-extension/CSE_CONFIG.html#encrypt_decrypt).
+  [here](CSE_CONFIG.html#encrypt_decrypt).
 * CSE UI Plugin for VCD
-  * Read more about it [here](/container-service-extension/CSE_UI_PLUGIN.html)
+  * Read more about it [here](CSE_UI_PLUGIN.html)
 * Interoperability with VCD 10.1.0 Beta
 
 **Notes to System Administrator**
@@ -198,7 +198,7 @@ Enterprise PKS compatibility matrix
 
 **New Features**
 * New Template revisions with updated Kubernetes
-  * [Template Announcements](/container-service-extension/TEMPLATE_ANNOUNCEMENTS.html)
+  * [Template Announcements](TEMPLATE_ANNOUNCEMENTS.html)
 
 **Bug Fixes**
 * Fixed known issue where users are unable to start CSE 2.5 server if a new compute policy is defined in the template_rules section of the CSE server config file
@@ -220,18 +220,18 @@ Enterprise PKS compatibility matrix
 
 **New Features**
 * New Templates with updated Kubernetes and Weave
-  * [Template Announcements](/container-service-extension/TEMPLATE_ANNOUNCEMENTS.html)
+  * [Template Announcements](TEMPLATE_ANNOUNCEMENTS.html)
 * Multiple Kubernetes Templates
   * CSE now offers the new capability to use variety of
     Kubernetes templates in real time for Kubernetes cluster deployments. With
     that also comes the complete offering of Kubernetes templates life-cycle
     management for Service Providers. More details
-    [here](/container-service-extension/TEMPLATE_MANAGEMENT.html#kubernetes_templates).
+    [here](TEMPLATE_MANAGEMENT.html#kubernetes_templates).
 * Remote Repository for Kubernetes Templates
   * Service Providers can fetch  new and/or revised Kubernetes templates from
   remote repository without updating CSE (Exception - bug fixes and new
   features will require newer CSE versions). More details
-  [here](/container-service-extension/TEMPLATE_MANAGEMENT.html#creating_kubernetes_templates).
+  [here](TEMPLATE_MANAGEMENT.html#creating_kubernetes_templates).
 
 **Notes to System Administrator**
 
@@ -321,9 +321,9 @@ Native VCD templates need to be updated to avail below versions of K8 distributi
 
 **New Updates**
 
-- [Enterprise PKS enablement](/container-service-extension/ENT_PKS.html) - CSE
+- [Enterprise PKS enablement](ENT_PKS.html) - CSE
 now supports new K8 provider Enterprise PKS in addition to Native VCD as K8 provider.
-- [Role based access control](/container-service-extension/RBAC.html) - Enabling
+- [Role based access control](RBAC.html) - Enabling
  this feature allows users granted with specific K8 rights only to deploy K8 clusters.
 - Python version has to be >= 3.7.3. This change has been made in order to address
 [CVE-2019-9636](https://nvd.nist.gov/vuln/detail/CVE-2019-9636)
@@ -346,7 +346,7 @@ To be specific,
 - If Enterprise PKS is present in the CSE set up, users are allowed to deploy K8 clusters only in those
 organization vdc(s) enabled either for Native (or) Enterprise PKS.
 
-Click [here](/container-service-extension/CSE_CONFIG.html#pksconfig) for more details.
+Click [here](CSE_CONFIG.html#pksconfig) for more details.
 
 **VCD Native templates patching**
 
@@ -386,8 +386,8 @@ Note: `pip install container-service-extension` installs previous official
 
 **New Features**
 
-- [Enterprise PKS enablement](/container-service-extension/ENT_PKS.html)
-- [Role based access control](/container-service-extension/RBAC.html)
+- [Enterprise PKS enablement](ENT_PKS.html)
+- [Role based access control](RBAC.html)
 
 **Compatibility matrix**
 
