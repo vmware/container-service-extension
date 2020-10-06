@@ -141,20 +141,20 @@ client.logout()
 ## Example Use Case
 
 ```sh
-# create cluster mycluster with one master and two nodes, connected to provided network
+# create cluster mycluster with one control plane and two nodes, connected to provided network
 # a public key is provided to be able to ssh into the VMs
 > vcd cse cluster create mycluster --network intranet --ssh-key ~/.ssh/id_rsa.pub
 
 # list the worker nodes of a cluster
 > vcd cse node list mycluster
 
-# create cluster mycluster with one master, three nodes and connected to provided network
+# create cluster mycluster with one control plane, three nodes and connected to provided network
 > vcd cse cluster create mycluster --network intranet --nodes 3 --ssh-key ~/.ssh/id_rsa.pub
 
 # create a single worker node cluster, connected to the specified network. Nodes can be added later
 > vcd cse cluster create mycluster --network intranet --nodes 0 --ssh-key ~/.ssh/id_rsa.pub
 
-# create cluster mycluster with one master, three worker nodes, connected to provided network
+# create cluster mycluster with one control plane, three worker nodes, connected to provided network
 # and one node of type NFS server
 > vcd cse cluster create mycluster --network intranet --nodes 3 --ssh-key ~/.ssh/id_rsa.pub --enable-nfs
 
