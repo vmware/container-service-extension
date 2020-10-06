@@ -32,6 +32,40 @@ TEMP_VAPP_NETWORK_ADAPTER_TYPE = NetworkAdapterType.VMXNET3.value
 TEMP_VAPP_FENCE_MODE = FenceMode.BRIDGED.value
 
 
+def assign_placement_policy_to_template(client, cse_placement_policy,
+                                        catalog_name, catalog_item_name,
+                                        org_name, logger=NULL_LOGGER,
+                                        log_wire=False, msg_update_callback=NullPrinter()): # noqa: E501
+
+    policy = None
+    cpm = compute_policy_manager.ComputePolicyManager(client,
+                                                      log_wire=log_wire)
+    try:
+        policy = cpm.get_vdc_compute_policy(cse_placement_policy,
+                                            is_placement_policy=True)
+        task = cpm.assign_vdc_placement_policy_to_vapp_template_vms(
+            policy['href'],
+            org_name,
+            catalog_name,
+            catalog_item_name)
+        if task is not None:
+            client.get_task_monitor().wait_for_success(task)
+            msg = "Successfully tagged template " \
+                  f"{catalog_item_name} with placement policy " \
+                  f"{cse_placement_policy}."
+        else:
+            msg = f"{catalog_item_name} already tagged with" \
+                  f" placement policy {cse_placement_policy}."
+        msg_update_callback.info(msg)
+        logger.info(msg)
+    except Exception as err:
+        msg = f"Failed to tag template {catalog_item_name} with " \
+              f"placement policy {cse_placement_policy}. Error: {err}"
+        msg_update_callback.error(msg)
+        logger.error(msg)
+        raise
+
+
 class TemplateBuilder():
     """Builder calls for K8 templates."""
 
@@ -389,36 +423,15 @@ class TemplateBuilder():
             self.msg_update_callback.info(msg)
             self.logger.debug(msg)
             return
-        policy = None
-        cpm = compute_policy_manager.ComputePolicyManager(self.client,
-                                                          log_wire=self.log_wire) # noqa: E501
-        try:
-            policy = cpm.get_vdc_compute_policy(self.cse_placement_policy,
-                                                is_placement_policy=True)
-            task = cpm.assign_vdc_placement_policy_to_vapp_template_vms(
-                policy['href'],
-                self.org_name,
-                self.catalog_name,
-                self.catalog_item_name)
-            if task is not None:
-                self.client.get_task_monitor().wait_for_success(task)
-                msg = "Successfully tagged template " \
-                      f"{self.catalog_item_name} with placement policy " \
-                      f"{self.cse_placement_policy}."
-            else:
-                msg = f"{self.catalog_item_name} already tagged with" \
-                      f" placement policy {self.cse_placement_policy}."
-            self.msg_update_callback.info(msg)
-            self.logger.info(msg)
-        except EntityNotFoundException:
-            msg = f"Placement policy {self.cse_placement_policy} not found"
-            self.msg_update_callback.error(msg)
-            self.logger.error(msg)
-        except Exception as err:
-            msg = f"Failed to tag template {self.catalog_item_name} with " \
-                  f"placement policy {self.cse_placement_policy}. Error: {err}"
-            self.msg_update_callback.error(msg)
-            self.logger.error(msg)
+        assign_placement_policy_to_template(
+            self.client,
+            self.cse_placement_policy,
+            self.catalog_name,
+            self.catalog_item_name,
+            self.org_name,
+            logger=self.logger,
+            log_wire=self.log_wire,
+            msg_update_callback=self.msg_update_callback)
 
     def build(self, force_recreate=False, retain_temp_vapp=False):
         """Create a K8 template.

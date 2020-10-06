@@ -148,7 +148,7 @@
       sublink: usage
     - name: Standard Git Workflow
       sublink: git
-- name: CSE 3.0
+- name: Upcoming (WIP)
   subdir: cse3_0
   link: CSE30.html
   default: false

@@ -7,6 +7,7 @@ import random
 import re
 import string
 import time
+import urllib
 import uuid
 
 import pkg_resources
@@ -1537,18 +1538,18 @@ def get_all_clusters(client, cluster_name=None, cluster_id=None,
     """
     query_filter = f'metadata:{ClusterMetadataKey.CLUSTER_ID}==STRING:*'
     if cluster_id is not None:
-        query_filter = f'metadata:{ClusterMetadataKey.CLUSTER_ID}==STRING:{cluster_id}' # noqa: E501
+        query_filter = f'metadata:{ClusterMetadataKey.CLUSTER_ID}==STRING:{urllib.parse.quote(cluster_id)}' # noqa: E501
     if cluster_name is not None:
-        query_filter += f';name=={cluster_name}'
+        query_filter += f';name=={urllib.parse.quote(cluster_name)}'
     if ovdc_name is not None:
-        query_filter += f";vdcName=={ovdc_name}"
-    resource_type = 'vApp'
+        query_filter += f";vdcName=={urllib.parse.quote(ovdc_name)}"
+    resource_type = vcd_client.ResourceType.VAPP.value
     if client.is_sysadmin():
-        resource_type = 'adminVApp'
+        resource_type = vcd_client.ResourceType.ADMIN_VAPP.value
         if org_name is not None and org_name.lower() != SYSTEM_ORG_NAME.lower(): # noqa: E501
             org_resource = client.get_org_by_name(org_name)
             org = vcd_org.Org(client, resource=org_resource)
-            query_filter += f";org=={org.resource.get('id')}"
+            query_filter += f";org=={urllib.parse.quote(org.resource.get('id'))}" # noqa: E501
 
     # 2 queries are required because each query can only return 8 metadata
     q = client.get_typed_query(

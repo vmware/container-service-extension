@@ -20,6 +20,7 @@ import container_service_extension.exceptions as cse_exception
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
 from container_service_extension.minor_error_codes import MinorErrorCode
 from container_service_extension.shared_constants import RequestMethod
+import container_service_extension.utils as utils
 
 
 def handle_entity_service_exception(func):
@@ -76,14 +77,13 @@ class DefEntityService():
         additional_headers = {}
         if tenant_org_context:
             additional_headers['x-vmware-vcloud-tenant-context'] = tenant_org_context  # noqa: E501
-        return self._cloudapi_client.do_request(
+        self._cloudapi_client.do_request(
             method=RequestMethod.POST,
             cloudapi_version=CLOUDAPI_VERSION_1_0_0,
             resource_url_relative_path=f"{CloudApiResource.ENTITY_TYPES}/"
                                        f"{entity_type_id}",
             payload=asdict(entity),
-            additional_headers=additional_headers,
-            return_headers=True)
+            additional_headers=additional_headers)
 
     @handle_entity_service_exception
     def list_entities_by_entity_type(self, vendor: str, nss: str, version: str,
@@ -103,10 +103,7 @@ class DefEntityService():
         :return: List of entities of that entity type
         :rtype: Generator[DefEntity, None, None]
         """
-        filter_string = None
-        if filters:
-            filter_string = ";".join(
-                [f"{k}=={v}" for (k, v) in filters.items()])  # noqa: E501
+        filter_string = utils.construct_filter_string(filters)
         page_num = 0
         while True:
             page_num += 1

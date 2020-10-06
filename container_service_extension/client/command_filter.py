@@ -51,13 +51,13 @@ UNSUPPORTED_SUBCOMMANDS_BY_VERSION = {
         GroupKey.CLUSTER: ['apply', 'delete-nfs'],
         # TODO(metadata based enablement for < v35): Revisit after decision
         # to support metadata way of enabling for native clusters
-        GroupKey.OVDC: ['enable', 'disable', 'info']
+        GroupKey.OVDC: ['enable', 'disable', 'list', 'info']
     },
     vcd_client.ApiVersion.VERSION_34.value: {
         GroupKey.CLUSTER: ['apply', 'delete-nfs'],
         # TODO(metadata based enablement for < v35): Revisit after decision
         # to support metadata way of enabling for native clusters
-        GroupKey.OVDC: ['enable', 'disable', 'info']
+        GroupKey.OVDC: ['enable', 'disable', 'list', 'info']
     },
     vcd_client.ApiVersion.VERSION_35.value: {
         GroupKey.CLUSTER: ['create', 'resize'],
