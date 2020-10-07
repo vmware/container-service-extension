@@ -95,6 +95,10 @@ class ClusterService(abstract_broker.AbstractBroker):
         :rtype: dict
         """
         curr_entity = self.entity_svc.get_entity(cluster_id)
+        if curr_entity.state != def_utils.DEF_RESOLVED_STATE:
+            raise e.CseServerError(
+                f"Cluster {curr_entity.name} with id {cluster_id} is not in a "
+                f"valid state for this operation. Please contact the administrator")  # noqa: E501
 
         telemetry_handler.record_user_action_details(
             cse_operation=telemetry_constants.CseOperation.V35_CLUSTER_CONFIG,
