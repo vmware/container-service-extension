@@ -58,6 +58,8 @@ class ClusterService(abstract_broker.AbstractBroker):
         self.task_update_lock = threading.Lock()
         self.entity_svc = def_entity_svc.DefEntityService(
             op_ctx.cloudapi_client)
+        self.sysadmin_entity_svc = def_entity_svc.DefEntityService(
+            op_ctx.sysadmin_cloudapi_client)
 
     def get_cluster_info(self, cluster_id: str) -> def_models.DefEntity:
         """Get the corresponding defined entity of the native cluster.
@@ -93,6 +95,10 @@ class ClusterService(abstract_broker.AbstractBroker):
         :rtype: dict
         """
         curr_entity = self.entity_svc.get_entity(cluster_id)
+        if curr_entity.state != def_utils.DEF_RESOLVED_STATE:
+            raise e.CseServerError(
+                f"Cluster {curr_entity.name} with id {cluster_id} is not in a "
+                f"valid state for this operation. Please contact the administrator")  # noqa: E501
 
         telemetry_handler.record_user_action_details(
             cse_operation=telemetry_constants.CseOperation.V35_CLUSTER_CONFIG,
@@ -164,10 +170,6 @@ class ClusterService(abstract_broker.AbstractBroker):
 
         # create the corresponding defined entity .
         def_entity = def_models.DefEntity(entity=cluster_spec)
-        msg = f"Creating cluster vApp '{cluster_name}' ({def_entity.id}) " \
-              f"from template '{template_name}' (revision {template_revision})"
-        self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
-        def_entity.entity.status.task_href = self.task_resource.get('href')
         def_entity.entity.status.phase = str(
             DefEntityPhase(DefEntityOperation.CREATE,
                            DefEntityOperationStatus.IN_PROGRESS))
@@ -185,11 +187,23 @@ class ClusterService(abstract_broker.AbstractBroker):
             org_resource = vcd_utils.get_org(self.context.client,
                                              org_name=def_entity.entity.metadata.org_name)  # noqa: E501
             org_context = org_resource.href.split('/')[-1]
-        self.entity_svc.create_entity(
-            def_utils.get_registered_def_entity_type().id,
-            entity=def_entity,
-            tenant_org_context=org_context)
-        def_entity = self.entity_svc.get_native_entity_by_name(cluster_name)
+        msg = f"Creating cluster '{cluster_name}' " \
+              f"from template '{template_name}' (revision {template_revision})"
+        self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
+        def_entity.entity.status.task_href = self.task_resource.get('href')
+        try:
+            self.entity_svc.create_entity(
+                def_utils.get_registered_def_entity_type().id,
+                entity=def_entity,
+                tenant_org_context=org_context)
+            def_entity = self.entity_svc.get_native_entity_by_name(cluster_name)  # noqa: E501
+        except Exception as err:
+            msg = f"Error creating the cluster '{cluster_name}'"
+            LOGGER.error(f"{msg}: {err}")
+            self._update_task(vcd_client.TaskStatus.ERROR,
+                              message=msg,
+                              error_message=str(err))
+            raise
         self.context.is_async = True
         telemetry_handler.record_user_action_details(
             cse_operation=telemetry_constants.CseOperation.V35_CLUSTER_APPLY,
@@ -257,8 +271,14 @@ class ClusterService(abstract_broker.AbstractBroker):
         curr_entity.entity.status.phase = str(
             DefEntityPhase(DefEntityOperation.UPDATE,
                            DefEntityOperationStatus.IN_PROGRESS))
-        curr_entity = self.entity_svc.update_entity(cluster_id, curr_entity)
-
+        try:
+            curr_entity = self.entity_svc.update_entity(cluster_id, curr_entity)  # noqa: E501
+        except Exception as err:
+            self._update_task(vcd_client.TaskStatus.ERROR,
+                              message=msg,
+                              error_message=str(err))
+            LOGGER.error(str(err))
+            raise
         # trigger async operation
         self.context.is_async = True
         self._monitor_resize(cluster_id=cluster_id,
@@ -296,10 +316,16 @@ class ClusterService(abstract_broker.AbstractBroker):
         curr_entity.entity.status.phase = str(
             DefEntityPhase(DefEntityOperation.DELETE,
                            DefEntityOperationStatus.IN_PROGRESS))
-
-        # attempt deleting the defined entity;
-        # lets vCD authorize the user for delete operation.
-        self.entity_svc.delete_entity(cluster_id)
+        try:
+            # attempt deleting the defined entity;
+            # lets vCD authorize the user for delete operation.
+            self.entity_svc.delete_entity(cluster_id)
+        except Exception as err:
+            self._update_task(vcd_client.TaskStatus.ERROR,
+                              message=msg,
+                              error_message=str(err))
+            LOGGER.error(str(err))
+            raise
         self.context.is_async = True
         self._delete_cluster_async(cluster_name=cluster_name,
                                    org_name=org_name, ovdc_name=ovdc_name,
@@ -387,7 +413,14 @@ class ClusterService(abstract_broker.AbstractBroker):
         curr_entity.entity.status.phase = str(
             DefEntityPhase(DefEntityOperation.UPGRADE, DefEntityOperationStatus.IN_PROGRESS))  # noqa: E501
         curr_entity.entity.status.task_href = self.task_resource.get('href')
-        curr_entity = self.entity_svc.update_entity(cluster_id, curr_entity)
+        try:
+            curr_entity = self.entity_svc.update_entity(cluster_id, curr_entity)  # noqa: E501
+        except Exception as err:
+            self._update_task(vcd_client.TaskStatus.ERROR,
+                              message=msg,
+                              error_message=str(err))
+            LOGGER.error(str(err))
+            raise
 
         self.context.is_async = True
         self._upgrade_cluster_async(cluster_id=cluster_id,
@@ -418,7 +451,14 @@ class ClusterService(abstract_broker.AbstractBroker):
         curr_entity.entity.status.phase = str(
             DefEntityPhase(DefEntityOperation.UPDATE,
                            DefEntityOperationStatus.IN_PROGRESS))
-        curr_entity = self.entity_svc.update_entity(cluster_id, curr_entity)
+        try:
+            curr_entity = self.entity_svc.update_entity(cluster_id, curr_entity)  # noqa: E501
+        except Exception as err:
+            self._update_task(vcd_client.TaskStatus.ERROR,
+                              message=msg,
+                              error_message=str(err))
+            LOGGER.error(str(err))
+            raise
 
         self.context.is_async = True
         self._monitor_delete_nodes(cluster_id=cluster_id,
@@ -600,8 +640,8 @@ class ClusterService(abstract_broker.AbstractBroker):
         except (e.ControlPlaneNodeCreationError, e.WorkerNodeCreationError,
                 e.NFSNodeCreationError, e.ClusterJoiningError,
                 e.ClusterInitializationError, e.ClusterOperationError) as err:
-            LOGGER.error(
-                f"Error creating cluster '{cluster_name}'", exc_info=True)
+            msg = f"Error creating cluster '{cluster_name}'"
+            LOGGER.error(msg, exc_info=True)
             if rollback:
                 msg = f"Error creating cluster '{cluster_name}'. " \
                       f"Deleting cluster (rollback=True)"
@@ -617,23 +657,25 @@ class ClusterService(abstract_broker.AbstractBroker):
                                  exc_info=True)
                 try:
                     # Delete the corresponding defined entity
-                    self.entity_svc.resolve_entity(cluster_id)
-                    self.entity_svc.delete_entity(cluster_id)
+                    self.sysadmin_entity_svc.resolve_entity(cluster_id)
+                    self.sysadmin_entity_svc.delete_entity(cluster_id)
                 except Exception:
                     LOGGER.error("Failed to delete the defined entity for "
                                  f"cluster '{cluster_name}'", exc_info=True)
             else:
                 self._fail_operation_and_resolve_entity(
                     cluster_id, DefEntityOperation.CREATE, vapp)
-            self._update_task(
-                vcd_client.TaskStatus.ERROR, error_message=str(err))
+            self._update_task(vcd_client.TaskStatus.ERROR,
+                              message=msg,
+                              error_message=str(err))
         except Exception as err:
-            LOGGER.error(f"Unknown error creating cluster '{cluster_name}'",
-                         exc_info=True)
+            msg = f"Unknown error creating cluster '{cluster_name}'"
+            LOGGER.error(msg, exc_info=True)
             self._fail_operation_and_resolve_entity(cluster_id,
                                                     DefEntityOperation.CREATE,
                                                     vapp)
             self._update_task(vcd_client.TaskStatus.ERROR,
+                              message=msg,
                               error_message=str(err))
         finally:
             self.context.end()
@@ -707,12 +749,14 @@ class ClusterService(abstract_broker.AbstractBroker):
 
             self._sync_def_entity(cluster_id, curr_entity)
         except Exception as err:
-            LOGGER.error(f"Unexpected error while resizing nodes for "
-                         f"{cluster_name} ({cluster_id}): {err}",
+            msg = f"Unexpected error while resizing nodes for {cluster_name}" \
+                  f" ({cluster_id})"
+            LOGGER.error(f"{msg}",
                          exc_info=True)
             self._fail_operation_and_resolve_entity(cluster_id,
                                                     DefEntityOperation.UPDATE)
             self._update_task(vcd_client.TaskStatus.ERROR,
+                              message=msg,
                               error_message=str(err))
         finally:
             self.context.end()
@@ -829,8 +873,8 @@ class ClusterService(abstract_broker.AbstractBroker):
                   f" nfs nodes for '{cluster_name}' ({cluster_id}) "
             self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
         except (e.NodeCreationError, e.ClusterJoiningError) as err:
-            LOGGER.error(f"Error adding nodes to cluster '{cluster_name}'",
-                         exc_info=True)
+            msg = f"Error adding nodes to cluster '{cluster_name}'"
+            LOGGER.error(msg, exc_info=True)
             if rollback:
                 msg = f"Error adding nodes to cluster '{cluster_name}' " \
                       f"({cluster_id}). Deleting nodes: {err.node_names} " \
@@ -848,14 +892,17 @@ class ClusterService(abstract_broker.AbstractBroker):
                                  exc_info=True)
             self._fail_operation_and_resolve_entity(
                 cluster_id, DefEntityOperation.UPDATE, vapp)
-            self._update_task(
-                vcd_client.TaskStatus.ERROR, error_message=str(err))
+            self._update_task(vcd_client.TaskStatus.ERROR,
+                              message=msg,
+                              error_message=str(err))
         except Exception as err:
             LOGGER.error(err, exc_info=True)
+            msg = f"Error adding nodes to cluster '{cluster_name}'"
             self._fail_operation_and_resolve_entity(
                 cluster_id, DefEntityOperation.UPDATE, vapp)
-            self._update_task(
-                vcd_client.TaskStatus.ERROR, error_message=str(err))
+            self._update_task(vcd_client.TaskStatus.ERROR,
+                              message=msg,
+                              error_message=str(err))
 
     @utils.run_async
     def _delete_cluster_async(self, cluster_name, org_name, ovdc_name,
@@ -876,9 +923,11 @@ class ClusterService(abstract_broker.AbstractBroker):
             msg = f"Deleted cluster '{cluster_name}'"
             self._update_task(vcd_client.TaskStatus.SUCCESS, message=msg)
         except Exception as err:
-            LOGGER.error(f"Unexpected error while deleting cluster: {err}",
+            msg = f"Unexpected error while deleting cluster {cluster_name}"
+            LOGGER.error(f"{msg}",
                          exc_info=True)
             self._update_task(vcd_client.TaskStatus.ERROR,
+                              message=msg,
                               error_message=str(err))
         finally:
             self.context.end()
@@ -1065,12 +1114,13 @@ class ClusterService(abstract_broker.AbstractBroker):
             LOGGER.info(f"{msg} ({vapp_href})")
         except Exception as err:
             msg = f"Unexpected error while upgrading cluster " \
-                  f"'{cluster_name}': {err}"
-            LOGGER.error(msg, exc_info=True)
+                  f"'{cluster_name}'"
+            LOGGER.error(f"{msg}", exc_info=True)
             self._fail_operation_and_resolve_entity(cluster_id,
                                                     DefEntityOperation.UPGRADE,
                                                     vapp)
-            self._update_task(vcd_client.TaskStatus.ERROR, error_message=msg)
+            self._update_task(vcd_client.TaskStatus.ERROR,
+                              message=msg, error_message=str(err))
 
         finally:
             self.context.end()
@@ -1112,12 +1162,14 @@ class ClusterService(abstract_broker.AbstractBroker):
                                    DefEntityOperationStatus.SUCCEEDED))
             self._sync_def_entity(cluster_id, curr_entity)
         except Exception as err:
-            LOGGER.error(f"Unexpected error while deleting nodes for "
-                         f"{cluster_name} ({cluster_id}): {err}",
+            msg = f"Unexpected error while deleting nodes for " \
+                  f"{cluster_name} ({cluster_id})"
+            LOGGER.error(f"{msg}",
                          exc_info=True)
             self._fail_operation_and_resolve_entity(cluster_id,
                                                     DefEntityOperation.UPDATE)
             self._update_task(vcd_client.TaskStatus.ERROR,
+                              message=msg,
                               error_message=str(err))
         finally:
             self.context.end()
@@ -1188,13 +1240,14 @@ class ClusterService(abstract_broker.AbstractBroker):
                   f" to cluster '{cluster_name}'"
             self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
         except Exception as err:
-            LOGGER.error(f"Unexpected error while deleting nodes "
-                         f"{nodes_to_del}: {err}",
+            msg = f"Unexpected error while deleting nodes {nodes_to_del}"
+            LOGGER.error(f"{msg}",
                          exc_info=True)
             self._fail_operation_and_resolve_entity(cluster_id,
                                                     DefEntityOperation.UPDATE,
                                                     vapp)
             self._update_task(vcd_client.TaskStatus.ERROR,
+                              message=msg,
                               error_message=str(err))
 
     def _sync_def_entity(self, cluster_id, curr_entity=None, vapp=None):
@@ -1227,8 +1280,10 @@ class ClusterService(abstract_broker.AbstractBroker):
             self._sync_def_entity(cluster_id, def_entity)
             self.entity_svc.resolve_entity(cluster_id)
         except Exception as err:
-            LOGGER.error(f"Failed on resolve entity:{err}", exc_info=True)
-            self._update_task(vcd_client.TaskStatus.ERROR, error_message=str(err))  # noqa: E501
+            msg = f"Failed to resolve defined entity for cluster {cluster_id}"
+            LOGGER.error(f"{msg}", exc_info=True)
+            self._update_task(vcd_client.TaskStatus.ERROR,
+                              message=msg, error_message=str(err))
 
     def _update_task(self, status, message='', error_message=None,
                      stack_trace=''):
