@@ -7,19 +7,19 @@ title: Introduction
 For greenfield installations, please get started with [CSE introduction](INTRO.html).
 <a name="overview"></a>
 ## 1. Overview
-* CLI for Container Extension and Kubernetes Cluster UI Plugin can be used to 
+* CLI for Container Extension and Kubernetes Cluster UI Plugin can be used to
 manage Cloud Director provisioned [Tanzu Kubernetes Clusters](https://docs-staging.vmware.com/en/draft/VMware-Cloud-Director/10.2/VMware-Cloud-Director-Service-Provider-Admin-Portal-Guide/GUID-E9839D4E-3024-445E-9D08-372113CF6FE0.html)
  alongside Native and TKGI (Ent-PKS) clusters.
- 
-* Native clusters are now represented as defined entities. CSE 3.0 has been 
-architecturally redesigned to leverage the latest features of Cloud Director 
-(>=10.2) like the [Defined entity framework](https://docs-staging.vmware.com/en/draft/VMware-Cloud-Director/10.2/VMware-Cloud-Director-Service-Provider-Admin-Portal-Guide/GUID-0749DEA0-08A2-4F32-BDD7-D16869578F96.html), 
-and placement policies. Users will not see any difference in the functionality 
-of native clusters, but the underlying implementation has been enhanced to 
-leverage defined entities for persisting native cluster entities in vCD DB and 
-placement policies for [restricting native  deployments](TEMPLATE_MANAGEMENT.html#restrict_templates) 
-to specific organization virtual datcenters (ovdcs). Users can now query native 
-clusters using vCD's defined entity API. 
+
+* Native clusters are now represented as defined entities. CSE 3.0 has been
+architecturally redesigned to leverage the latest features of Cloud Director
+(>=10.2) like the [Defined entity framework](https://docs-staging.vmware.com/en/draft/VMware-Cloud-Director/10.2/VMware-Cloud-Director-Service-Provider-Admin-Portal-Guide/GUID-0749DEA0-08A2-4F32-BDD7-D16869578F96.html),
+and placement policies. Users will not see any difference in the functionality
+of native clusters, but the underlying implementation has been enhanced to
+leverage defined entities for persisting native cluster entities in vCD DB and
+placement policies for [restricting native  deployments](TEMPLATE_MANAGEMENT.html#restrict_templates)
+to specific organization virtual datcenters (ovdcs). Users can now query native
+clusters using vCD's defined entity API.
 
 * Separate command group for TKGI (Ent-PKS).
 
@@ -43,34 +43,34 @@ clusters using vCD's defined entity API.
 |---------|--------|------------|----------------|---------|-----------------------------------------------------------------------------------------------------|
 | 3.0     | 2.0    | NA         | 10.2           | NA      | Tkg cluster management only                                                                         |
 | 3.0     | 2.0    | 3.0        | 10.2           | ?       | Native, Tkg, and Ent-PKS Cluster management; Defined entity representation for both native and tkg. |
-| 3.0     | 1.0.3  | 3.0        | 10.1, 10.0     | ?       | Legacy features (Native and Ent-PKS cluster management)                                             |
+| 3.0     | [1.0.3](./CSE_UI_PLUGIN.md)  | 3.0        | 10.1, 10.0     | ?       | Legacy features (Native and Ent-PKS cluster management)                                             |
 
 ### 2.2 CSE Server
 #### 2.2.1 Greenfield installation
-With CSE 3.0 - vCD 10.2 combination, CSE installation command 
-`cse install -c config.yaml` does two additional steps than what it used to do 
+With CSE 3.0 - vCD 10.2 combination, CSE installation command
+`cse install -c config.yaml` does two additional steps than what it used to do
 in the earlier versions. Refer [CSE 3.0 installation](CSE_SERVER_MANAGEMENT.html#cse30-greenfield).
 
 #### 2.2.2 Brownfield upgrade
-CSE 3.0 has been architecturally redesigned to leverage the latest features of 
-Cloud Director like Defined entity framework and placement policies. The new 
-command `cse upgrade` has been introduced to make the old environment fully 
-forward compatible with the latest technologies used in CSE 3.0. The only 
-valid upgrade path is CSE 2.6 → CSE 3.0; any versions below CSE 2.6 cannot be 
+CSE 3.0 has been architecturally redesigned to leverage the latest features of
+Cloud Director like Defined entity framework and placement policies. The new
+command `cse upgrade` has been introduced to make the old environment fully
+forward compatible with the latest technologies used in CSE 3.0. The only
+valid upgrade path is CSE 2.6 → CSE 3.0; any versions below CSE 2.6 cannot be
 directly upgraded to CSE 3.0. Refer [CSE 3.0 upgrade command](CSE_SERVER_MANAGEMENT.html#cse30-upgrade-cmd).
 
 #### 2.2.3 Tenant onboarding
-The provider needs to perform below operations to enable Kubernetes cluster 
+The provider needs to perform below operations to enable Kubernetes cluster
 deployments in tenant organizations and tenant virtual data centers.
 1. Grant rights to the tenant users. Refer [CSE 3.0 RBAC](RBAC.html#DEF-RBAC) for more details.
 2. Enable the desired organization virtual datacenter(s) for either Native or Tkg cluster deployments.
     * Tkg clusters → [Publish Kubernetes policy for Tkg Clusters](https://docs-staging.vmware.com/en/draft/VMware-Cloud-Director/10.2/VMware-Cloud-Director-Service-Provider-Admin-Portal-Guide/GUID-E9839D4E-3024-445E-9D08-372113CF6FE0.html)
-    * Native clusters → [Publish Native placement policy on ovdc](TEMPLATE_MANAGEMENT.html#restrict_templates). 
+    * Native clusters → [Publish Native placement policy on ovdc](TEMPLATE_MANAGEMENT.html#restrict_templates).
     In other words, run `vdc cse vdc enable <vdc-name>` command.
 3. Publish Kubernetes Clusters UI plugin to the desired organizations.
 
 ### 2.3 Kubernetes Clusters UI plug-in
-To be filled by Andrew. UI plug-in is now part of vCD and the provider can 
+To be filled by Andrew. UI plug-in is now part of vCD and the provider can
 publish UI plug-in to the desired tenants.
 
 ## 3. Tenant workflows
