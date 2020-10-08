@@ -69,9 +69,8 @@ deployments in tenant organizations and tenant virtual data centers.
     In other words, run `vdc cse vdc enable <vdc-name>` command.
 3. Publish Kubernetes Clusters UI plugin to the desired organizations.
 
-### 2.3 Kubernetes Clusters UI plug-in
-To be filled by Andrew. UI plug-in is now part of vCD and the provider can
-publish UI plug-in to the desired tenants.
+### 2.3 Container UI Plugin 2.0.0
+Container UI Plugin 2.0.0 comes pre-installed with VCD 10.2, and service providers can publish the plugin to specific tenants.
 
 ## 3. Tenant workflows
 Tenant users can manage the Kubernetes cluster deployments either through CSE CLI or Kubernetes clusters UI plug-in
@@ -81,10 +80,12 @@ Tenant users can manage the Kubernetes cluster deployments either through CSE CL
  in CSE 3.0. Refer [cluster apply usage](CLUSTER_MANAGEMENT.html#cse30_cluster_apply) for more details.
 2. [Other miscellaneous changes in CLI 3.0](CLUSTER_MANAGEMENT.html#cse30_cli_changes)
 
-### 3.2 Kubernetes Clusters UI plug-in
-1. [Deploy Tanzu Kubernetes Cluster](https://docs-staging.vmware.com/en/draft/VMware-Cloud-Director/10.2/VMware-Cloud-Director-Tenant-Portal-Guide/GUID-CA4A2F24-3E7C-4992-9E54-61AB8A4B80E7.html)
-2. [Deploy Native cluster](https://docs-staging.vmware.com/en/draft/VMware-Cloud-Director/10.2/VMware-Cloud-Director-Tenant-Portal-Guide/GUID-F831C6A1-8280-4376-A6D9-9D997D987E91.html)
-3. [Deploy TKGI (Ent-PKS) cluster](https://docs-staging.vmware.com/en/draft/VMware-Cloud-Director/10.2/VMware-Cloud-Director-Tenant-Portal-Guide/GUID-1BDF9D95-1484-4C9D-8748-26C8FC773530.html)
+### 3.2 Container UI Plugin 2.0.0
+Container UI Plugin 2.0.0 allows tenants to manage all 3 types of clusters (Native, vSphere with Tanzu, TKGI).
+
+1. [Deploy 'vSphere with Tanzu' Kubernetes Cluster](https://docs-staging.vmware.com/en/draft/VMware-Cloud-Director/10.2/VMware-Cloud-Director-Tenant-Portal-Guide/GUID-CA4A2F24-3E7C-4992-9E54-61AB8A4B80E7.html)
+2. [Deploy 'Native' Kubernetes Cluster](https://docs-staging.vmware.com/en/draft/VMware-Cloud-Director/10.2/VMware-Cloud-Director-Tenant-Portal-Guide/GUID-F831C6A1-8280-4376-A6D9-9D997D987E91.html)
+3. [Deploy 'TKGI' Kubernetes Cluster](https://docs-staging.vmware.com/en/draft/VMware-Cloud-Director/10.2/VMware-Cloud-Director-Tenant-Portal-Guide/GUID-1BDF9D95-1484-4C9D-8748-26C8FC773530.html)
 
 <a name="faq"></a>
 ## 4. FAQ

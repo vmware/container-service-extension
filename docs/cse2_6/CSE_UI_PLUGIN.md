@@ -1,6 +1,6 @@
 ---
 layout: default
-title: CSE UI Plugin for VCD
+title: Container UI Plugin for VCD
 ---
 
 # Container UI Plugin for VCD
