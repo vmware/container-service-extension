@@ -906,7 +906,10 @@ def list_template(ctx, config_file_path, skip_config_decryption,
             logger_debug=SERVER_CLI_LOGGER)
 
         # Record telemetry details
-        cse_params = {PayloadKey.DISPLAY_OPTION: display_option}
+        cse_params = {
+            PayloadKey.DISPLAY_OPTION: display_option,
+            PayloadKey.WAS_DECRYPTION_SKIPPED: bool(skip_config_decryption)
+        }
         record_user_action_details(cse_operation=CseOperation.TEMPLATE_LIST,
                                    cse_params=cse_params,
                                    telemetry_settings=config_dict['service']['telemetry'])  # noqa: E501

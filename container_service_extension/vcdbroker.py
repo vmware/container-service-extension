@@ -981,15 +981,18 @@ class VcdBroker(abstract_broker.AbstractBroker):
                 except Exception:
                     LOGGER.error(f"Failed to delete cluster '{cluster_name}'",
                                  exc_info=True)
-            LOGGER.error(f"Error creating cluster '{cluster_name}'",
-                         exc_info=True)
+            msg = f"Error creating cluster '{cluster_name}'"
+            LOGGER.error(msg, exc_info=True)
             self._update_task(vcd_client.TaskStatus.ERROR,
+                              message=msg,
                               error_message=str(err))
             # raising an exception here prints a stacktrace to server console
         except Exception as err:
-            LOGGER.error(f"Unknown error creating cluster '{cluster_name}'",
-                         exc_info=True)
+            msg = "Unknown error occured while creating " \
+                  f"cluster '{cluster_name}'"
+            LOGGER.error(msg, exc_info=True)
             self._update_task(vcd_client.TaskStatus.ERROR,
+                              message=msg,
                               error_message=str(err))
         finally:
             self.context.end()
@@ -1074,14 +1077,18 @@ class VcdBroker(abstract_broker.AbstractBroker):
                     LOGGER.error(f"Failed to delete nodes {err.node_names} "
                                  f"from cluster '{cluster_name}'",
                                  exc_info=True)
-            LOGGER.error(f"Error adding nodes to cluster '{cluster_name}'",
-                         exc_info=True)
+            msg = f"Error adding nodes to cluster '{cluster_name}' ({cluster_id})"  # noqa: E501
+            LOGGER.error(msg, exc_info=True)
             self._update_task(vcd_client.TaskStatus.ERROR,
+                              message=msg,
                               error_message=str(err))
             # raising an exception here prints a stacktrace to server console
         except Exception as err:
-            LOGGER.error(str(err), exc_info=True)
+            msg = "Unexpected error while adding nodes for " \
+                  f"cluster {cluster_name}"
+            LOGGER.error(msg, exc_info=True)
             self._update_task(vcd_client.TaskStatus.ERROR,
+                              message=msg,
                               error_message=str(err))
         finally:
             self.context.end()
@@ -1122,10 +1129,11 @@ class VcdBroker(abstract_broker.AbstractBroker):
             LOGGER.debug(msg)
             self._update_task(vcd_client.TaskStatus.SUCCESS, message=msg)
         except Exception as err:
-            LOGGER.error(f"Unexpected error while deleting nodes "
-                         f"{node_names_list}: {err}",
-                         exc_info=True)
+            msg = "Unexpected error while deleting nodes for " \
+                  f"cluster {cluster_name}. nodes: {node_names_list}"
+            LOGGER.error(msg, exc_info=True)
             self._update_task(vcd_client.TaskStatus.ERROR,
+                              message=msg,
                               error_message=str(err))
         finally:
             self.context.end()
@@ -1142,9 +1150,10 @@ class VcdBroker(abstract_broker.AbstractBroker):
             LOGGER.debug(msg)
             self._update_task(vcd_client.TaskStatus.SUCCESS, message=msg)
         except Exception as err:
-            LOGGER.error(f"Unexpected error while deleting cluster: {err}",
-                         exc_info=True)
+            msg = f"Unexpected error while deleting cluster {cluster_name}"
+            LOGGER.error(msg, exc_info=True)
             self._update_task(vcd_client.TaskStatus.ERROR,
+                              message=msg,
                               error_message=str(err))
         finally:
             self.context.end()
@@ -1296,10 +1305,11 @@ class VcdBroker(abstract_broker.AbstractBroker):
             LOGGER.debug(f"{msg} ({vapp_href})")
             self._update_task(vcd_client.TaskStatus.SUCCESS, message=msg)
         except Exception as err:
-            msg = f"Unexpected error while upgrading cluster " \
-                  f"'{cluster_name}': {err}"
+            msg = f"Unexpected error while upgrading cluster {cluster.get('name')}"  # noqa: E501
             LOGGER.error(msg, exc_info=True)
-            self._update_task(vcd_client.TaskStatus.ERROR, error_message=msg)
+            self._update_task(vcd_client.TaskStatus.ERROR,
+                              message=msg,
+                              error_message=str(err))
         finally:
             self.context.end()
 
