@@ -23,6 +23,21 @@ violates the schema rules of the corresponding defined entity type, then cluster
 list cmd will fail to retrieve other valid entities. As a workaround, carefully 
 update the defined entity with the correct schema and [sync the defined entity](TROUBLESHOOTING.html#sync-def-entity) 
 using CSE server API.
+
+### How to force native deployments to be placed in a particular storage profile by default?
+Several GitHub issues have been filed requesting for a way to let the native 
+clusters be deployed in a particular storage-profile by default (something 
+other than template's storage-profile), that is without users having to explicitly 
+specify the storage-profile through CLI.
+
+vCD follows particular order of precedence to pick the storage-profile for any VM instantiation:
+1. User-specified storage-profile
+2. Storage-profile with which the template is created (if VM is being instantiated from a template)
+3. Organization virtual datacenter default storage-profile
+
+Workaround:
+1. Disable the storage-profile with which the template is created on the ovdc.
+2. Set the desired storage-profile as default on the ovdc.
     
 ### Existing clusters show Kubernetes version as 0.0.0 after CSE is upgraded to 2.6.0
 The way Kubernetes version of a cluster is determined, changed between
