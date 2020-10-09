@@ -49,7 +49,7 @@ class MQTTConsumer:
                 "statusCode": status_code,
                 "headers": {
                     "Content-Type": "application/json",
-                    'Content-Length': len(reply_body_str)
+                    "Content-Length": len(reply_body_str)
                 },
                 "body": utils.format_response_body(reply_body_str,
                                                    self.fsencoding)
