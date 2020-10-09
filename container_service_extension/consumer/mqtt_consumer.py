@@ -60,10 +60,9 @@ class MQTTConsumer:
         if status_code in (requests.codes.created,
                            requests.codes.accepted,
                            requests.codes.found,
-                           requests.codes.see_other):
-            response_json['httpResponse']['headers']['Location'] = \
-                str(status_code) if task_path is None else \
-                f"{status_code};{task_path}"
+                           requests.codes.see_other) \
+                and task_path is not None:
+            response_json['httpResponse']['headers']['Location'] = task_path
         return response_json
 
     def process_mqtt_message(self, msg):
