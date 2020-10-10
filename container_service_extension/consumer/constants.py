@@ -3,8 +3,8 @@
 # SPDX-License-Identifier: BSD-2-Clause
 
 # Shared bewteen AMQP and MQTT consumers
-TOO_MANY_REQUESTS_BODY = '[{"CSE Server is handling too many requests. ' \
-                         'Please wait and try again.":""}]'
+TOO_MANY_REQUESTS_BODY = '[{"Error":"CSE Server is handling too many ' \
+                         'requests. Please wait and try again."}]'
 
 # Used by MQTT consumer
 MQTT_BROKER_PATH = '/messaging/mqtt'

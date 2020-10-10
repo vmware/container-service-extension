@@ -63,7 +63,7 @@ def signal_handler(signal, frame):
     raise KeyboardInterrupt()
 
 
-def consumer_thread(c):
+def consumer_thread_run(c):
     try:
         logger.SERVER_LOGGER.info(f"About to start consumer_thread {c}.")
         c.run()
@@ -72,6 +72,25 @@ def consumer_thread(c):
                    f"About to stop thread due to: {e}")
         logger.SERVER_LOGGER.error(traceback.format_exc())
         c.stop()
+
+
+def watchdog_thread_run(service_obj, num_processors):
+    logger.SERVER_LOGGER.info("Starting watchdog thread")
+    while True:
+        service_status = service_obj.get_status()
+        if service_status == ServerState.STOPPED or \
+                service_status == ServerState.STOPPING:
+            break
+        time.sleep(60)
+        if not service_obj.consumer_thread.is_alive():
+            service_obj.consumer = MessageConsumer(service_obj.config,
+                                                   num_processors)
+            consumer_thread = Thread(name=server_constants.MESSAGE_CONSUMER_THREAD,  # noqa: E501
+                                     target=consumer_thread_run,
+                                     args=(service_obj.consumer, ))
+            consumer_thread.daemon = True
+            consumer_thread.start()
+            service_obj.consumer_thread = consumer_thread
 
 
 def verify_version_compatibility(sysadmin_client: Client,
@@ -132,11 +151,13 @@ class Service(object, metaclass=Singleton):
         self.should_check_config = should_check_config
         self.skip_config_decryption = skip_config_decryption
         self.decryption_password = decryption_password
-        self.consumer = None
         self.pks_cache = None
         self._state = ServerState.STOPPED
         self._kubernetesInterface: def_models.DefInterface = None
         self._nativeEntityType: def_models.DefEntityType = None
+        self.consumer = None
+        self.consumer_thread = None
+        self._consumer_watchdog = None
 
     def get_service_config(self):
         return self.config
@@ -328,10 +349,11 @@ class Service(object, metaclass=Singleton):
         try:
             self.consumer = MessageConsumer(self.config, num_processors)
             name = server_constants.MESSAGE_CONSUMER_THREAD
-            t = Thread(name=name, target=consumer_thread,
-                       args=(self.consumer, ))
-            t.daemon = True
-            t.start()
+            consumer_thread = Thread(name=name, target=consumer_thread_run,
+                                     args=(self.consumer, ))
+            consumer_thread.daemon = True
+            consumer_thread.start()
+            self.consumer_thread = consumer_thread
             msg = f"Started thread '{name}'"
             msg_update_callback.general(msg)
             logger.SERVER_LOGGER.info(msg)
@@ -346,9 +368,14 @@ class Service(object, metaclass=Singleton):
             if self.consumer:
                 self.consumer.stop()
             logger.SERVER_LOGGER.error(traceback.format_exc())
-            raise  # TODO: restart thread with watchdog
 
-        logger.SERVER_LOGGER.info("One MessageConsumer thread started")
+        # Start consumer watchdog
+        consumer_watchdog = Thread(name='Consumer Watchdog',
+                                   target=watchdog_thread_run,
+                                   args=(self, num_processors))
+        consumer_watchdog.daemon = True
+        consumer_watchdog.start()
+        self._consumer_watchdog = consumer_watchdog
 
         self._state = ServerState.RUNNING
 

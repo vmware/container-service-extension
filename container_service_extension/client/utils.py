@@ -182,6 +182,10 @@ def filter_columns(result, value_field_to_display_field):
     :rtype: list(dict) or dict
     """
     if isinstance(result, list):
+        # Check if error message
+        if len(result) == 1 and isinstance(result[0], dict) and \
+                result[0].get('Error') is not None:
+            return result
         filtered_result = []
         for result_record in result:
             filtered_record = {}
