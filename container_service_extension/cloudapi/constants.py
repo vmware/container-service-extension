@@ -20,3 +20,4 @@ class CloudApiResource(str, Enum):
     ENTITY_TYPES_TOKEN = 'types'
     ENTITIES = 'entities'
     ENTITY_RESOLVE = 'resolve'
+    RIGHT_BUNDLES = 'rightsBundles'

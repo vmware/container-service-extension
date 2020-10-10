@@ -1,15 +1,34 @@
 <h1>Navigation</h1>
+<script>
+  cseDirectoryPrefix = 'cse'
+  if (window.location.href.indexOf('cse') == -1) {
+    window.location.href = "cse2_6/INTRO.html"
+  }
+</script>
 <ol>
   {% for item in site.data.navigation %}
-    <li {% if page.url contains item.link %}class="current"{% endif %}>
-    <a href="{{ item.link }}" {% if page.url == item.link %}class="current"{% endif %}>{{ item.name }}</a>
-    {% if page.url contains item.link %}
-    <ol>
-    {% for subitem in item.subtoc %}
-      <li><a href="{{ item.link }}#{{ subitem.sublink }}">{{ subitem.name }}</a></li>
-    {% endfor %}
-    </ol>
-    {% endif %}
+    <li {% if page.url contains item.subdir %}class="current"{% endif %}>
+      {% if page.url contains item.subdir %}
+        <a href="{{ item.link }}" class="current">{{item.name}}</a>
+      {% else %}
+        <a href="../{{ item.subdir }}/{{ item.link }}">{{item.name}}</a>
+      {% endif %}
+      {% if page.url contains item.subdir %}
+        <ol>
+        {% for subitem in item.subtoc %}
+          <li {% if page.url contains subitem.link %}class="current"{% endif %}>
+            <a href="{{ subitem.link }}">{{ subitem.name }}</a>
+          </li>
+          {% if page.url contains subitem.link %}
+          <ol>
+            {% for topic in subitem.subtoc %}
+              <li><a href="{{ subitem.link }}#{{ topic.sublink }}">{{ topic.name }}</a></li>
+            {% endfor %}
+          </ol>
+          {% endif %}
+        {% endfor %}
+        </ol>
+      {% endif %}
     </li>
   {% endfor %}
 </ol>

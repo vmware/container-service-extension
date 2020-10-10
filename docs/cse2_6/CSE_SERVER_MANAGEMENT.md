@@ -33,9 +33,9 @@ The CSE appliance requires network access to the VCD cell, vCenter(s),
 and AMQP server. It does not require access to the network(s) that powers the
 org VDC where the Kubernetes templates will be created nor the tenant network(s)
 that powers that org VDC where the clusters will be deployed. Please find more
-details on the VCD prerequisites for CSE installation [here](/container-service-extension/CSE_INSTALL_PREREQUISITES.html).
+details on the VCD prerequisites for CSE installation [here](CSE_INSTALL_PREREQUISITES.html).
 
-The CSE software should be installed on the CSE appliance as described [here](/container-service-extension/INSTALLATION.html).
+The CSE software should be installed on the CSE appliance as described [here](INSTALLATION.html).
 
 Next, CSE server setup should be invoked via the `cse install` command.
 The example below shows a typical invocation.
@@ -44,7 +44,7 @@ The example below shows a typical invocation.
 cse install -c config.yaml --ssh-key ~/.ssh/id_rsa.pub
 ```
 
-Please find more details on how to generate sample config file and populate it correctly, [here](/container-service-extension/CSE_CONFIG.html).
+Please find more details on how to generate sample config file and populate it correctly, [here](CSE_CONFIG.html).
 
 The following diagram illustrates installation steps visually.
 
@@ -272,13 +272,13 @@ Upgrading CSE server is no different than installing it for the first time.
 1. Gracefully stop CSE Server.
 2. Reinstall `container-service-extension` from PyPI:
    * `pip3 install --user --upgrade container-service-extension`
-3. Check the [release notes](/container-service-extension/RELEASE_NOTES.html) for version compatibility.
+3. Check the [release notes](RELEASE_NOTES.html) for version compatibility.
 4. Use `cse sample` command to generate a new sample config file and fill in
    the relevant values from the previous config file.
 5. If the previously generated templates are no longer supported by the new version,
    delete the old templates (from VCD UI / vcd-cli) and generate new ones via
    * `cse install -c myconfig.yaml`
-   Check [here](/container-service-extension/TEMPLATE_ANNOUNCEMENTS.html) for available templates.
+   Check [here](TEMPLATE_ANNOUNCEMENTS.html) for available templates.
 6. If CSE is being run as a service, start the new version of the service with
    * `systemctl start cse`.
 

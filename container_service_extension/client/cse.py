@@ -163,7 +163,7 @@ Examples
 @cluster_group.command('delete',
                        short_help='Delete a cluster')
 @click.pass_context
-@click.argument('name', required=True)
+@click.argument('name', required=False, default=None)
 @click.confirmation_option(prompt='Are you sure you want to delete the '
                                   'cluster?')
 @click.option(
@@ -191,7 +191,16 @@ Examples
     metavar='K8-RUNTIME',
     help='Restrict cluster search to cluster kind; Supported only for'
          ' vcd api version >= 35')
-def cluster_delete(ctx, name, vdc, org, k8_runtime=None):
+@click.option(
+    '--id',
+    'cluster_id',
+    default=None,
+    required=False,
+    metavar='CLUSTER_ID',
+    help="ID of the cluster whose cluster config has to be obtained;"
+         "Supported only for CSE api version >= 35."
+         "ID gets precedence over cluster name.")
+def cluster_delete(ctx, name, vdc, org, k8_runtime=None, cluster_id=None):
     """Delete a Kubernetes cluster.
 
 \b
@@ -200,11 +209,18 @@ Example
         Delete cluster 'mycluster' without prompting.
         '--vdc' option can be used for faster command execution.
 \b
-
-    """
+    vcd cse cluster delete --id urn:vcloud:entity:cse:nativeCluster:1.0.0:0632c7c7-a613-427c-b4fc-9f1247da5561
+        Delete cluster with cluster ID 'urn:vcloud:entity:cse:nativeCluster:1.0.0:0632c7c7-a613-427c-b4fc-9f1247da5561'.
+        (--id option is suported only applicable for api version >= 35)
+    """  # noqa: E501
     CLIENT_LOGGER.debug(f'Executing command: {ctx.command_path}')
     try:
         client_utils.cse_restore_session(ctx)
+        if not (cluster_id or name):
+            # --id is not required when working with api version 33 and 34
+            raise Exception("Please specify cluster name (or) cluster Id. "
+                            "Note that '--id' flag is applicable for API versions >= 35 only.")  # noqa: E501
+
         client = ctx.obj['client']
         if client_utils.is_cli_for_tkg_only():
             if k8_runtime in [shared_constants.ClusterEntityKind.NATIVE.value,
@@ -215,7 +231,8 @@ Example
         cluster = Cluster(client, k8_runtime=k8_runtime)
         if not client.is_sysadmin() and org is None:
             org = ctx.obj['profiles'].get('org_in_use')
-        result = cluster.delete_cluster(name, org, vdc)
+        result = cluster.delete_cluster(name, cluster_id=cluster_id,
+                                        org=org, vdc=vdc)
         if len(result) == 0:
             click.secho(f"Delete cluster operation has been initiated on "
                         f"{name}, please check the status using"
@@ -616,7 +633,16 @@ Examples
     required=False,
     metavar='ORGANIZATION',
     help="Organization on which the cluster configuration needs to be applied")
-def apply(ctx, cluster_config_file_path, generate_sample_config, k8_runtime, output, org):  # noqa: E501
+@click.option(
+    '--id',
+    'cluster_id',
+    default=None,
+    required=False,
+    metavar='CLUSTER_ID',
+    help="ID of the cluster to which the configuration should be applied;"
+         "Supported only for CSE api version >=35."
+         "ID gets precedence over cluster name.")
+def apply(ctx, cluster_config_file_path, generate_sample_config, k8_runtime, output, org, cluster_id):  # noqa: E501
     CLIENT_LOGGER.debug(f'Executing command: {ctx.command_path}')
     try:
         console_message_printer = utils.ConsoleMessagePrinter()
@@ -666,7 +692,8 @@ def apply(ctx, cluster_config_file_path, generate_sample_config, k8_runtime, out
                 org_name = ctx.obj['profiles'].get('org_in_use')
 
         cluster = Cluster(client, k8_runtime=cluster_config.get('kind'))  # noqa: E501
-        result = cluster.apply(cluster_config, org=org_name)
+        result = cluster.apply(cluster_config, cluster_id=cluster_id,
+                               org=org_name)
         stdout(result, ctx)
         CLIENT_LOGGER.debug(result)
     except Exception as e:
@@ -863,7 +890,7 @@ Example
 @cluster_group.command('config',
                        short_help='Retrieve cluster configuration details')
 @click.pass_context
-@click.argument('name', required=True)
+@click.argument('name', default=None, required=False)
 @click.option(
     '-o',
     '--org',
@@ -887,8 +914,18 @@ Example
     default=None,
     required=False,
     metavar='K8-RUNTIME',
-    help='Restrict cluster search to cluster kind; Supported only for vcd api version >= 35')  # noqa: E501
-def cluster_config(ctx, name, vdc, org, k8_runtime=None):
+    help='Restrict cluster search to cluster kind;'
+         'Supported only for vcd api version >= 35')
+@click.option(
+    '--id',
+    'cluster_id',
+    default=None,
+    required=False,
+    metavar='CLUSTER_ID',
+    help="ID of the cluster whose cluster config has to be obtained."
+         "Supported only for CSE api version >= 35."
+         "ID gets precedence over cluster name.")
+def cluster_config(ctx, name, vdc, org, k8_runtime=None, cluster_id=None):
     """Display cluster configuration.
 
 \b
@@ -900,9 +937,16 @@ Examples:
     (Supported only for vcd api version >= 35)
 
     To write to a file: `vcd cse cluster config mycluster > ~/.kube/my_config`
-    """
+\b
+    vcd cse cluster config --id urn:vcloud:entity:cse:nativeCluster:1.0.0:0632c7c7-a613-427c-b4fc-9f1247da5561
+    (--id option is supported only for vcd api version >= 35)
+    """  # noqa: E501
     CLIENT_LOGGER.debug(f'Executing command: {ctx.command_path}')
     try:
+        if not (cluster_id or name):
+            # --id is not required when working with api version 33 and 34
+            raise Exception("Please specify cluster name (or) cluster Id. "
+                            "Note that '--id' flag is applicable for API versions >= 35 only.")  # noqa: E501
         client_utils.cse_restore_session(ctx)
         if client_utils.is_cli_for_tkg_only():
             if k8_runtime in [shared_constants.ClusterEntityKind.NATIVE.value,
@@ -914,8 +958,10 @@ Examples:
         cluster = Cluster(client, k8_runtime=k8_runtime)
         if not client.is_sysadmin() and org is None:
             org = ctx.obj['profiles'].get('org_in_use')
-        cluster_config = cluster.get_cluster_config(name, vdc=vdc, org=org) \
-            .get(shared_constants.RESPONSE_MESSAGE_KEY)
+        cluster_config = \
+            cluster.get_cluster_config(name, cluster_id=cluster_id,
+                                       vdc=vdc, org=org) \
+            .get(shared_constants.RESPONSE_MESSAGE_KEY)  # noqa: E501
         if os.name == 'nt':
             cluster_config = str.replace(cluster_config, '\n', '\r\n')
 
@@ -929,7 +975,7 @@ Examples:
 @cluster_group.command('info',
                        short_help='Display info about a cluster')
 @click.pass_context
-@click.argument('name', required=True)
+@click.argument('name', default=None, required=False)
 @click.option(
     '-v',
     '--vdc',
@@ -953,8 +999,18 @@ Examples:
     default=None,
     required=False,
     metavar='K8-RUNTIME',
-    help='Restrict cluster search to cluster kind; Supported only for vcd api version >=35')  # noqa: E501
-def cluster_info(ctx, name, org, vdc, k8_runtime=None):
+    help='Restrict cluster search to cluster kind;'
+         'Supported only for vcd api version >=35')
+@click.option(
+    '--id',
+    'cluster_id',
+    default=None,
+    required=False,
+    metavar='CLUSTER_ID',
+    help="ID of the cluster whose cluster config has to be obtained;"
+         "Supported only for CSE api version >=35. "
+         "ID gets precedence over cluster name.")
+def cluster_info(ctx, name, org, vdc, k8_runtime=None, cluster_id=None):
     """Display info about a Kubernetes cluster.
 
 \b
@@ -962,9 +1018,18 @@ Example
     vcd cse cluster info mycluster
         Display detailed information about cluster 'mycluster'.
         '--vdc' option can be used for faster command execution.
-    """
+\b
+    vcd cse cluster info --id urn:vcloud:entity:cse:nativeCluster:1.0.0:0632c7c7-a613-427c-b4fc-9f1247da5561
+        Display cluster information about cluster with
+        ID 'urn:vcloud:entity:cse:nativeCluster:1.0.0:0632c7c7-a613-427c-b4fc-9f1247da5561'
+        (--id option is supported only for api version >= 35)
+    """  # noqa: E501
     CLIENT_LOGGER.debug(f'Executing command: {ctx.command_path}')
     try:
+        if not (cluster_id or name):
+            # --id is not required when working with api version 33 and 34
+            raise Exception("Please specify cluster name (or) cluster Id. "
+                            "Note that '--id' flag is applicable for API versions >= 35 only.")  # noqa: E501
         client_utils.cse_restore_session(ctx)
         if client_utils.is_cli_for_tkg_only():
             if k8_runtime in [shared_constants.ClusterEntityKind.NATIVE.value,
@@ -976,7 +1041,8 @@ Example
         cluster = Cluster(client, k8_runtime=k8_runtime)
         if not client.is_sysadmin() and org is None:
             org = ctx.obj['profiles'].get('org_in_use')
-        result = cluster.get_cluster_info(name, org=org, vdc=vdc)
+        result = cluster.get_cluster_info(name, cluster_id=cluster_id,
+                                          org=org, vdc=vdc)
         stdout(result, ctx)
         CLIENT_LOGGER.debug(result)
     except Exception as e:
