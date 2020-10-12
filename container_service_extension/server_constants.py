@@ -67,6 +67,9 @@ TOKEN_PATH = 'tokens'
 # Thread Pool Executor
 MESSAGE_CONSUMER_THREAD = 'MessageConsumer'
 
+# CSE Server Busy strings
+CSE_SERVER_BUSY_KEY = 'CSE Server Busy'
+
 
 @unique
 class NodeType(str, Enum):
