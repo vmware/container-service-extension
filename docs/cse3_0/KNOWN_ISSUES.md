@@ -24,6 +24,22 @@ list cmd will fail to retrieve other valid entities. As a workaround, carefully
 update the defined entity with the correct schema and [sync the defined entity](TROUBLESHOOTING.html#sync-def-entity) 
 using CSE server API.
 
+### (CSE 3.0 - vCD 10.2) How to delete clusters stuck in _CREATE:IN_PROGRESS_ state?
+If the cluster creation ever seems to be stuck, it could mean that the cluster 
+creation failed for some unknown reason, but the backend failed to update the 
+defined entity state to an ERROR state. Confirm if the cluster status  
+matches the corresponding task status (retrieve task_href from the result of 
+command `vcd cse cluster info <cluster_name>`). If it does not match, follow the 
+below steps to clean up the stale entries of the cluster
+1. Delete the defined entity
+    * POST https://<vcd-fqdn>/cloudapi/1.0.0/entities/<cluster-id>/resolve
+    * DEL https://<vcd-fqdn>/cloudapi/1.0.0/entities/<cluster-id>
+2. Delete the cluster vApp. 
+    * Retrieve the vApp ID. vApp Id is same as the externalID value in the 
+    corresponding defined entity
+        * GET https://<vcd-fqdn>/cloudapi/1.0.0/entities/<cluster-id>
+    * Delete the corresponding cluster vApp
+
 ### How to force native deployments to be placed in a particular storage profile by default?
 Several GitHub issues have been filed requesting for a way to let the native 
 clusters be deployed in a particular storage-profile by default (something 
