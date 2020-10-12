@@ -113,7 +113,7 @@ def _get_sample_cluster_configuration_by_k8_runtime(k8_runtime):
     )
 
     nfs = def_models.Nfs(
-        count=1,
+        count=0,
         sizing_class='Large_sizing_policy_name',
         storage_profile='Platinum_storage_profile_name'
     )
