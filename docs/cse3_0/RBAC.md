@@ -65,7 +65,7 @@ Tenant user need to perform below steps to share a native cluster to another use
 2. Share the corresponding defined entity to the desired user with the same level of ACL grant mentioned in step-1. Refer [Sharing defined entities](https://docs-staging.vmware.com/en/draft/VMware-Cloud-Director/10.2/VMware-Cloud-Director-Service-Provider-Admin-Portal-Guide/GUID-DAFF4CE9-B276-4A0B-99D9-22B985153236.html) for more details.
 
 <a name="old RBAC"></a>
-## CSE < 3.0 with vCD < 10.2
+## CSE <= 3.0 with vCD < 10.2
 Below content describes the role based access control
 (RBAC) mechanism through which administrators can administer restrictive
 usage of CSE hooked to vCD versions < 10.2. It also explains the functioning of
