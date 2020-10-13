@@ -201,7 +201,7 @@ class AMQPConsumer(object):
             self.send_response(reply_msg, properties)
 
     def on_message(self, unused_channel, basic_deliver, properties, body):
-        # No longer processing messages if server is closing
+        # If consumer is closing, no longer adding messages to thread pool
         if self._closing:
             return
 
@@ -237,10 +237,10 @@ class AMQPConsumer(object):
     def stop(self):
         LOGGER.info("Stopping")
         self._closing = True
-        self.stop_consuming()
         self._ctpe.shutdown(wait=True)
+        self.stop_consuming()
         if self._connection:
-            self._connection.ioloop.start()
+            self._connection.ioloop.stop()
         LOGGER.info("Stopped")
 
     def close_connection(self):
