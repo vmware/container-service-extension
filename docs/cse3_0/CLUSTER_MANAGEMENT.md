@@ -34,7 +34,7 @@ Here is a summary of commands available to view templates and manage clusters an
 | Command                                                              | API version 35.0 | API version <= 34.0 | Description                                                                |
 |----------------------------------------------------------------------|------------------|---------------------|----------------------------------------------------------------------------|
 | `vcd cse template list`                                              | Yes              | Yes                 | List templates that a Kubernetes cluster can be deployed from.            |
-| `vcd cse cluster apply CLUSTER_CONFIG>YAML`                          | Yes              | No                  | Create or update a Kubernetes cluster.                                     |
+| `vcd cse cluster apply CLUSTER_CONFIG.YAML`                          | Yes              | No                  | Create or update a Kubernetes cluster.                                     |
 | `vcd cse cluster create CLUSTER_NAME`                                | No               | Yes                 | Create a new Kubernetes cluster.                                           |
 | `vcd cse cluster create CLUSTER_NAME --enable-nfs`                   | No               | Yes                 | Create a new Kubernetes cluster with NFS Persistent Volume support.        |
 | `vcd cse cluster list`                                               | Yes              | Yes                 | List available Kubernetes clusters.                                        |
@@ -46,7 +46,7 @@ Here is a summary of commands available to view templates and manage clusters an
 | `vcd cse cluster delete CLUSTER_NAME`                                | Yes              | Yes                 | Delete a Kubernetes cluster.                                               |
 | `vcd cse cluster delete-nfs CLUSTER_NAME NFS_NODE_NAME`              | Yes              | No                  | Delete NFS node of a given Kubernetes cluster                              |
 | `vcd cse node create CLUSTER_NAME --nodes n`                         | No               | Yes                 | Add `n` nodes to a Kubernetes cluster.                                     |
-| `vcd cse node create CLUSTER_NAME --type nfsd`                       | No               | Yes                 | Add an NFS node to a Kubernetes cluster.                                   |
+| `vcd cse node create CLUSTER_NAME --nodes n --enable-nfs`            | No               | Yes                 | Add an NFS node to a Kubernetes cluster.                                   |
 | `vcd cse node list CLUSTER_NAME`                                     | No               | Yes                 | List nodes of a cluster.                                                   |
 | `vcd cse node info CLUSTER_NAME NODE_NAME`                           | No               | Yes                 | Retrieve detailed information of a node in a Kubernetes cluster.           |
 | `vcd cse node delete CLUSTER_NAME NODE_NAME`                         | No               | Yes                 | Delete nodes from a cluster.                                               |
