@@ -201,6 +201,10 @@ class AMQPConsumer(object):
             self.send_response(reply_msg, properties)
 
     def on_message(self, unused_channel, basic_deliver, properties, body):
+        # No longer processing messages if server is closing
+        if self._closing:
+            return
+
         self.acknowledge_message(basic_deliver.delivery_tag)
         if self._ctpe.max_threads_busy():
             self.send_too_many_requests_response(properties, body)

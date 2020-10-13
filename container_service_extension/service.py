@@ -77,11 +77,9 @@ def consumer_thread_run(c):
 def watchdog_thread_run(service_obj, num_processors):
     logger.SERVER_LOGGER.info("Starting watchdog thread")
     while True:
-        service_status = service_obj.get_status()
-        if service_status == ServerState.STOPPED or \
-                service_status == ServerState.STOPPING:
+        if service_obj.get_status() != ServerState.RUNNING.value:
             break
-        time.sleep(60)
+
         if service_obj.consumer_thread is not None and \
                 not service_obj.consumer_thread.is_alive():
             service_obj.consumer = MessageConsumer(service_obj.config,
@@ -92,6 +90,7 @@ def watchdog_thread_run(service_obj, num_processors):
             consumer_thread.daemon = True
             consumer_thread.start()
             service_obj.consumer_thread = consumer_thread
+        time.sleep(60)
 
 
 def verify_version_compatibility(sysadmin_client: Client,
@@ -416,6 +415,7 @@ class Service(object, metaclass=Singleton):
 
         logger.SERVER_LOGGER.info("Stop detected")
         logger.SERVER_LOGGER.info("Closing connections...")
+        self._state = ServerState.STOPPING
         try:
             self.consumer.stop()
         except Exception:
