@@ -16,7 +16,7 @@ Release Date:
 | 3.0     | 2.0    | 3.0        | 10.2           | ?       | Native, Tkg, and Ent-PKS Cluster management; Defined entity representation for both native and tkg. |
 | 3.0     | 1.0.3  | 3.0        | 10.1, 10.0     | ?       | Legacy features (Native and Ent-PKS cluster management)                                             |
 
-Refer to [What's new in CSE 3.0](CSE30.html)
+Refer to [What's new in CSE 3.0?](CSE30.html)
 
 ## CSE 2.6.1 GA(2.6.1)
 Release Date: 2020-04-30
