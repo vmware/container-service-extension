@@ -88,7 +88,7 @@ one of the below commands:
         ```shell
         # Add an NFS server (node of type NFS).
         vcd cse node create mycluster --nodes 1 --network mynetwork \
-        -t ubuntu-16.04_k8-1.13_weave-2.3.0 -r 1 --type nfsd
+        -t ubuntu-16.04_k8-1.13_weave-2.3.0 -r 1 --enable-nfs
         ```
 
 
