@@ -66,7 +66,7 @@ deployments in tenant organizations and tenant virtual data centers.
 2. Enable the desired organization virtual datacenter(s) for either Native or Tkg cluster deployments.
     * Tkg clusters → [Publish Kubernetes policy for Tkg Clusters](https://docs-staging.vmware.com/en/draft/VMware-Cloud-Director/10.2/VMware-Cloud-Director-Service-Provider-Admin-Portal-Guide/GUID-E9839D4E-3024-445E-9D08-372113CF6FE0.html)
     * Native clusters → [Publish Native placement policy on ovdc](TEMPLATE_MANAGEMENT.html#restrict_templates). 
-    In other words, run `vdc cse vdc enable <vdc-name>` command.
+    In other words, run `vdc cse ovdc enable <vdc-name>` command.
 3. Publish Kubernetes Clusters UI plugin to the desired organizations.
 
 ### 2.3 Kubernetes Clusters UI plug-in
