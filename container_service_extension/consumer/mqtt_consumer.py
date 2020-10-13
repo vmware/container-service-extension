@@ -37,6 +37,7 @@ class MQTTConsumer:
         self._mqtt_client = None
         self._ctpe = ConsumerThreadPoolExecutor(self.num_processors)
         self._publish_lock = Lock()
+        self._is_closing = False
 
     def form_response_json(self, request_id, status_code, reply_body):
         response_json = {
@@ -101,6 +102,10 @@ class MQTTConsumer:
             mqtt_client.subscribe(self.listen_topic, qos=constants.QOS_LEVEL)
 
         def on_message(mqtt_client, userdata, msg):
+            # No longer processing messages if server is closing
+            if self._is_closing:
+                return
+
             if self._ctpe.max_threads_busy():
                 self.send_too_many_requests_response(msg)
             else:
@@ -139,9 +144,10 @@ class MQTTConsumer:
 
     def stop(self):
         LOGGER.info("MQTT consumer stopping")
+        self._is_closing = True
+        self._ctpe.shutdown(wait=True)  # Let jobs finish before disconnecting
         if self._mqtt_client:
             self._mqtt_client.disconnect()
-        self._ctpe.shutdown(wait=True)
 
     def get_num_active_threads(self):
         return self._ctpe.get_num_active_threads()

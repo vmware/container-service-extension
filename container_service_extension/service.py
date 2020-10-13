@@ -82,7 +82,8 @@ def watchdog_thread_run(service_obj, num_processors):
                 service_status == ServerState.STOPPING:
             break
         time.sleep(60)
-        if not service_obj.consumer_thread.is_alive():
+        if service_obj.consumer_thread is not None and \
+                not service_obj.consumer_thread.is_alive():
             service_obj.consumer = MessageConsumer(service_obj.config,
                                                    num_processors)
             consumer_thread = Thread(name=server_constants.MESSAGE_CONSUMER_THREAD,  # noqa: E501
