@@ -55,9 +55,9 @@ in the earlier versions. Refer [CSE 3.0 installation](CSE_SERVER_MANAGEMENT.html
 CSE 3.0 has been architecturally redesigned to leverage the latest features of 
 Cloud Director like Defined entity framework and placement policies. The new 
 command `cse upgrade` has been introduced to make the old environment fully 
-forward compatible with the latest technologies used in CSE 3.0. The only 
-valid upgrade path is CSE 2.6 → CSE 3.0; any versions below CSE 2.6 cannot be 
-directly upgraded to CSE 3.0. Refer [CSE 3.0 upgrade command](CSE_SERVER_MANAGEMENT.html#cse30-upgrade-cmd).
+forward compatible with the latest technologies used in CSE 3.0. Any previous 
+version of CSE can be directly upgraded to CSE 3.0 using `cse upgrade` command; 
+Refer [CSE 3.0 upgrade command](CSE_SERVER_MANAGEMENT.html#cse30-upgrade-cmd).
 
 #### 2.2.3 Tenant onboarding
 The provider needs to perform below operations to enable Kubernetes cluster 
