@@ -149,15 +149,16 @@ class AMQPConsumer(object):
         if self._channel:
             self._channel.close()
 
-    def form_response_json(self, request_id, status_code, reply_body):
+    def form_response_json(self, request_id, status_code, reply_body_str):
         response_json = {
             'id': request_id,
             'headers': {
                 'Content-Type': 'application/json',
-                'Content-Length': len(reply_body)
+                'Content-Length': len(reply_body_str)
             },
             'statusCode': status_code,
-            'body': utils.format_response_body(reply_body, self.fsencoding),
+            'body': utils.format_response_body(reply_body_str,
+                                               self.fsencoding),
             'request': False
         }
         return response_json
@@ -169,13 +170,14 @@ class AMQPConsumer(object):
             is_mqtt=False)
 
         if properties.reply_to is not None:
+            reply_body_str = json.dumps(reply_body)
             reply_msg = self.form_response_json(
                 request_id=req_id,
                 status_code=status_code,
-                reply_body=reply_body)
-            LOGGER.debug(f"reply: {reply_body}")
+                reply_body_str=reply_body_str)
 
             self.send_response(reply_msg, properties)
+            LOGGER.debug(f"AMQP reply: {reply_msg}")
 
     def send_response(self, reply_msg, properties):
         reply_properties = pika.BasicProperties(
@@ -196,7 +198,7 @@ class AMQPConsumer(object):
             reply_msg = self.form_response_json(
                 request_id=body_json['id'],
                 status_code=requests.codes.too_many_requests,
-                reply_body=constants.TOO_MANY_REQUESTS_BODY)
+                reply_body_str=constants.TOO_MANY_REQUESTS_BODY)
             LOGGER.debug(f"reply: {constants.TOO_MANY_REQUESTS_BODY}")
             self.send_response(reply_msg, properties)
 

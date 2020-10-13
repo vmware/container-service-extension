@@ -51,6 +51,9 @@ class CloudApiClient(object):
         if self._last_response:
             return self._last_response.headers
 
+    def get_org_urn_from_id(self, org_id):
+        return f"urn:vcloud:org:{org_id}"
+
     def do_request(self,
                    method,
                    cloudapi_version=None,
@@ -76,9 +79,10 @@ class CloudApiClient(object):
         :param str content_type: content type of the body of the request
         :param dict additional_headers: request specific headers
 
-        :return: body of the response text (JSON) in form of a dictionary.
+        :return: body of the response text (JSON) in form of a dictionary and
+            the response headers if return_headers is set
 
-        :rtype: dict
+        :rtype: dict or (dict, dict)
 
         :raises HTTPError: if the underlying REST call fails.
         """
@@ -121,6 +125,5 @@ class CloudApiClient(object):
         self.LOGGER_WIRE.debug(f"Response body : {response.text}")
 
         response.raise_for_status()
-
         if response.text:
             return json.loads(response.text)

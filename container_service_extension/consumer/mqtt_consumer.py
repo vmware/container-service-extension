@@ -39,7 +39,8 @@ class MQTTConsumer:
         self._publish_lock = Lock()
         self._is_closing = False
 
-    def form_response_json(self, request_id, status_code, reply_body):
+    def form_response_json(self, request_id, status_code, reply_body_str,
+                           task_path=None):
         response_json = {
             "type": "API_RESPONSE",
             "headers": {
@@ -49,11 +50,20 @@ class MQTTConsumer:
                 "statusCode": status_code,
                 "headers": {
                     "Content-Type": "application/json",
-                    'Content-Length': len(reply_body)
+                    "Content-Length": len(reply_body_str)
                 },
-                "body": utils.format_response_body(reply_body, self.fsencoding)
+                "body": utils.format_response_body(reply_body_str,
+                                                   self.fsencoding)
             }
         }
+
+        # Add location header is appropriate status code
+        if status_code in (requests.codes.created,
+                           requests.codes.accepted,
+                           requests.codes.found,
+                           requests.codes.see_other) \
+                and task_path is not None:
+            response_json['httpResponse']['headers']['Location'] = task_path
         return response_json
 
     def process_mqtt_message(self, msg):
@@ -65,12 +75,16 @@ class MQTTConsumer:
         LOGGER.debug(f"Received message with request_id: {req_id}, mid: "
                      f"{msg.mid}, and msg json: {msg_json}")
 
+        task_path = utils.get_task_path_from_reply_body(reply_body)
+        reply_body_str = json.dumps(reply_body)
         response_json = self.form_response_json(
             request_id=req_id,
             status_code=status_code,
-            reply_body=reply_body)
+            reply_body_str=reply_body_str,
+            task_path=task_path)
 
         self.send_response(response_json)
+        LOGGER.debug(f'MQTT response: {response_json}')
 
     def send_response(self, response_json):
         self._publish_lock.acquire()
@@ -92,7 +106,7 @@ class MQTTConsumer:
         response_json = self.form_response_json(
             request_id=request_id,
             status_code=requests.codes.too_many_requests,
-            reply_body=constants.TOO_MANY_REQUESTS_BODY)
+            reply_body_str=constants.TOO_MANY_REQUESTS_BODY)
         self.send_response(response_json)
 
     def connect(self):

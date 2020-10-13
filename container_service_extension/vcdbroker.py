@@ -7,6 +7,7 @@ import random
 import re
 import string
 import time
+import urllib
 import uuid
 
 import pkg_resources
@@ -980,15 +981,18 @@ class VcdBroker(abstract_broker.AbstractBroker):
                 except Exception:
                     LOGGER.error(f"Failed to delete cluster '{cluster_name}'",
                                  exc_info=True)
-            LOGGER.error(f"Error creating cluster '{cluster_name}'",
-                         exc_info=True)
+            msg = f"Error creating cluster '{cluster_name}'"
+            LOGGER.error(msg, exc_info=True)
             self._update_task(vcd_client.TaskStatus.ERROR,
+                              message=msg,
                               error_message=str(err))
             # raising an exception here prints a stacktrace to server console
         except Exception as err:
-            LOGGER.error(f"Unknown error creating cluster '{cluster_name}'",
-                         exc_info=True)
+            msg = "Unknown error occured while creating " \
+                  f"cluster '{cluster_name}'"
+            LOGGER.error(msg, exc_info=True)
             self._update_task(vcd_client.TaskStatus.ERROR,
+                              message=msg,
                               error_message=str(err))
         finally:
             self.context.end()
@@ -1073,14 +1077,18 @@ class VcdBroker(abstract_broker.AbstractBroker):
                     LOGGER.error(f"Failed to delete nodes {err.node_names} "
                                  f"from cluster '{cluster_name}'",
                                  exc_info=True)
-            LOGGER.error(f"Error adding nodes to cluster '{cluster_name}'",
-                         exc_info=True)
+            msg = f"Error adding nodes to cluster '{cluster_name}' ({cluster_id})"  # noqa: E501
+            LOGGER.error(msg, exc_info=True)
             self._update_task(vcd_client.TaskStatus.ERROR,
+                              message=msg,
                               error_message=str(err))
             # raising an exception here prints a stacktrace to server console
         except Exception as err:
-            LOGGER.error(str(err), exc_info=True)
+            msg = "Unexpected error while adding nodes for " \
+                  f"cluster {cluster_name}"
+            LOGGER.error(msg, exc_info=True)
             self._update_task(vcd_client.TaskStatus.ERROR,
+                              message=msg,
                               error_message=str(err))
         finally:
             self.context.end()
@@ -1121,10 +1129,11 @@ class VcdBroker(abstract_broker.AbstractBroker):
             LOGGER.debug(msg)
             self._update_task(vcd_client.TaskStatus.SUCCESS, message=msg)
         except Exception as err:
-            LOGGER.error(f"Unexpected error while deleting nodes "
-                         f"{node_names_list}: {err}",
-                         exc_info=True)
+            msg = "Unexpected error while deleting nodes for " \
+                  f"cluster {cluster_name}. nodes: {node_names_list}"
+            LOGGER.error(msg, exc_info=True)
             self._update_task(vcd_client.TaskStatus.ERROR,
+                              message=msg,
                               error_message=str(err))
         finally:
             self.context.end()
@@ -1141,9 +1150,10 @@ class VcdBroker(abstract_broker.AbstractBroker):
             LOGGER.debug(msg)
             self._update_task(vcd_client.TaskStatus.SUCCESS, message=msg)
         except Exception as err:
-            LOGGER.error(f"Unexpected error while deleting cluster: {err}",
-                         exc_info=True)
+            msg = f"Unexpected error while deleting cluster {cluster_name}"
+            LOGGER.error(msg, exc_info=True)
             self._update_task(vcd_client.TaskStatus.ERROR,
+                              message=msg,
                               error_message=str(err))
         finally:
             self.context.end()
@@ -1295,10 +1305,11 @@ class VcdBroker(abstract_broker.AbstractBroker):
             LOGGER.debug(f"{msg} ({vapp_href})")
             self._update_task(vcd_client.TaskStatus.SUCCESS, message=msg)
         except Exception as err:
-            msg = f"Unexpected error while upgrading cluster " \
-                  f"'{cluster_name}': {err}"
+            msg = f"Unexpected error while upgrading cluster {cluster.get('name')}"  # noqa: E501
             LOGGER.error(msg, exc_info=True)
-            self._update_task(vcd_client.TaskStatus.ERROR, error_message=msg)
+            self._update_task(vcd_client.TaskStatus.ERROR,
+                              message=msg,
+                              error_message=str(err))
         finally:
             self.context.end()
 
@@ -1537,18 +1548,18 @@ def get_all_clusters(client, cluster_name=None, cluster_id=None,
     """
     query_filter = f'metadata:{ClusterMetadataKey.CLUSTER_ID}==STRING:*'
     if cluster_id is not None:
-        query_filter = f'metadata:{ClusterMetadataKey.CLUSTER_ID}==STRING:{cluster_id}' # noqa: E501
+        query_filter = f'metadata:{ClusterMetadataKey.CLUSTER_ID}==STRING:{urllib.parse.quote(cluster_id)}' # noqa: E501
     if cluster_name is not None:
-        query_filter += f';name=={cluster_name}'
+        query_filter += f';name=={urllib.parse.quote(cluster_name)}'
     if ovdc_name is not None:
-        query_filter += f";vdcName=={ovdc_name}"
-    resource_type = 'vApp'
+        query_filter += f";vdcName=={urllib.parse.quote(ovdc_name)}"
+    resource_type = vcd_client.ResourceType.VAPP.value
     if client.is_sysadmin():
-        resource_type = 'adminVApp'
+        resource_type = vcd_client.ResourceType.ADMIN_VAPP.value
         if org_name is not None and org_name.lower() != SYSTEM_ORG_NAME.lower(): # noqa: E501
             org_resource = client.get_org_by_name(org_name)
             org = vcd_org.Org(client, resource=org_resource)
-            query_filter += f";org=={org.resource.get('id')}"
+            query_filter += f";org=={urllib.parse.quote(org.resource.get('id'))}" # noqa: E501
 
     # 2 queries are required because each query can only return 8 metadata
     q = client.get_typed_query(
@@ -1864,39 +1875,45 @@ def _init_cluster(sysadmin_client: vcd_client.Client, vapp, template_name,
 def _join_cluster(sysadmin_client: vcd_client.Client, vapp, template_name,
                   template_revision, target_nodes=None):
     vcd_utils.raise_error_if_not_sysadmin(sysadmin_client)
-    script = "#!/usr/bin/env bash\n" \
-             "kubeadm token create\n" \
-             "ip route get 1 | awk '{print $NF;exit}'\n"
-    node_names = _get_node_names(vapp, NodeType.CONTROL_PLANE)
-    control_plane_result = _execute_script_in_nodes(sysadmin_client, vapp=vapp,
-                                                    node_names=node_names,
-                                                    script=script)
-    errors = _get_script_execution_errors(control_plane_result)
-    if errors:
-        raise e.ScriptExecutionError(f"Join cluster script execution failed "
-                                     f"on control plane node "
-                                     f"{node_names}:{errors}")
-    init_info = control_plane_result[0][1].content.decode().split()
+    try:
+        script = "#!/usr/bin/env bash\n" \
+                 "kubeadm token create\n" \
+                 "ip route get 1 | awk '{print $NF;exit}'\n"
+        node_names = _get_node_names(vapp, NodeType.CONTROL_PLANE)
+        control_plane_result = _execute_script_in_nodes(sysadmin_client,
+                                                        vapp=vapp,
+                                                        node_names=node_names,
+                                                        script=script)
+        errors = _get_script_execution_errors(control_plane_result)
+        if errors:
+            raise e.ScriptExecutionError("Join cluster script execution "
+                                         "failed on control plane node "
+                                         f"{node_names}:{errors}")
+        init_info = control_plane_result[0][1].content.decode().split()
 
-    node_names = _get_node_names(vapp, NodeType.WORKER)
-    if target_nodes is not None:
-        node_names = [name for name in node_names if name in target_nodes]
-    tmp_script_filepath = ltm.get_script_filepath(template_name,
-                                                  template_revision,
-                                                  ScriptFile.NODE)
-    tmp_script = utils.read_data_file(tmp_script_filepath, logger=LOGGER)
-    script = tmp_script.format(token=init_info[0], ip=init_info[1])
-    worker_results = _execute_script_in_nodes(sysadmin_client, vapp=vapp,
-                                              node_names=node_names,
-                                              script=script)
-    errors = _get_script_execution_errors(worker_results)
-    if errors:
-        raise e.ScriptExecutionError(f"Join cluster script execution failed "
-                                     f"on worker node  {node_names}:{errors}")
-    for result in worker_results:
-        if result[0] != 0:
-            raise e.ClusterJoiningError(f"Couldn't join cluster:"
-                                        f"\n{result[2].content.decode()}")
+        node_names = _get_node_names(vapp, NodeType.WORKER)
+        if target_nodes is not None:
+            node_names = [name for name in node_names if name in target_nodes]
+        tmp_script_filepath = ltm.get_script_filepath(template_name,
+                                                      template_revision,
+                                                      ScriptFile.NODE)
+        tmp_script = utils.read_data_file(tmp_script_filepath, logger=LOGGER)
+        script = tmp_script.format(token=init_info[0], ip=init_info[1])
+        worker_results = _execute_script_in_nodes(sysadmin_client, vapp=vapp,
+                                                  node_names=node_names,
+                                                  script=script)
+        errors = _get_script_execution_errors(worker_results)
+        if errors:
+            raise e.ScriptExecutionError("Join cluster script execution "
+                                         "failed on worker node"
+                                         f" {node_names}:{errors}")
+        for result in worker_results:
+            if result[0] != 0:
+                raise e.ClusterJoiningError(f"Couldn't join cluster:"
+                                            f"\n{result[2].content.decode()}")
+    except Exception as err:
+        LOGGER.error(err, exc_info=True)
+        raise e.ClusterJoiningError(f"Couldn't join cluster: {str(err)}")
 
 
 def _wait_until_ready_to_exec(vs, vm, password, tries=30):
@@ -1929,48 +1946,50 @@ def _execute_script_in_nodes(sysadmin_client: vcd_client.Client,
     vcd_utils.raise_error_if_not_sysadmin(sysadmin_client)
     all_results = []
     for node_name in node_names:
-        LOGGER.debug(f"will try to execute script on {node_name}:\n"
-                     f"{script}")
+        try:
+            LOGGER.debug(f"will try to execute script on {node_name}:\n"
+                         f"{script}")
 
-        vs = vs_utils.get_vsphere(sysadmin_client, vapp, vm_name=node_name,
-                                  logger=LOGGER)
-        vs.connect()
-        moid = vapp.get_vm_moid(node_name)
-        vm = vs.get_vm_by_moid(moid)
-        password = vapp.get_admin_password(node_name)
-        if check_tools:
-            LOGGER.debug(f"waiting for tools on {node_name}")
-            vs.wait_until_tools_ready(
-                vm,
-                sleep=5,
-                callback=_wait_for_tools_ready_callback)
-            _wait_until_ready_to_exec(vs, vm, password)
-        LOGGER.debug(f"about to execute script on {node_name} "
-                     f"(vm={vm}), wait={wait}")
-        if wait:
-            result = vs.execute_script_in_guest(
-                vm, 'root', password, script,
-                target_file=None,
-                wait_for_completion=True,
-                wait_time=10,
-                get_output=True,
-                delete_script=True,
-                callback=_wait_for_guest_execution_callback)
-            result_stdout = result[1].content.decode()
-            result_stderr = result[2].content.decode()
-        else:
-            result = [
-                vs.execute_program_in_guest(vm, 'root', password, script,
-                                            wait_for_completion=False,
-                                            get_output=False)
-            ]
-            result_stdout = ''
-            result_stderr = ''
-        LOGGER.debug(result[0])
-        LOGGER.debug(result_stderr)
-        LOGGER.debug(result_stdout)
-        all_results.append(result)
-
+            vs = vs_utils.get_vsphere(sysadmin_client, vapp, vm_name=node_name,
+                                      logger=LOGGER)
+            vs.connect()
+            moid = vapp.get_vm_moid(node_name)
+            vm = vs.get_vm_by_moid(moid)
+            password = vapp.get_admin_password(node_name)
+            if check_tools:
+                LOGGER.debug(f"waiting for tools on {node_name}")
+                vs.wait_until_tools_ready(
+                    vm,
+                    sleep=5,
+                    callback=_wait_for_tools_ready_callback)
+                _wait_until_ready_to_exec(vs, vm, password)
+            LOGGER.debug(f"about to execute script on {node_name} "
+                         f"(vm={vm}), wait={wait}")
+            if wait:
+                result = vs.execute_script_in_guest(
+                    vm, 'root', password, script,
+                    target_file=None,
+                    wait_for_completion=True,
+                    wait_time=10,
+                    get_output=True,
+                    delete_script=True,
+                    callback=_wait_for_guest_execution_callback)
+                result_stdout = result[1].content.decode()
+                result_stderr = result[2].content.decode()
+            else:
+                result = [
+                    vs.execute_program_in_guest(vm, 'root', password, script,
+                                                wait_for_completion=False,
+                                                get_output=False)
+                ]
+                result_stdout = ''
+                result_stderr = ''
+            LOGGER.debug(result[0])
+            LOGGER.debug(result_stderr)
+            LOGGER.debug(result_stdout)
+            all_results.append(result)
+        except Exception:
+            raise e.ScriptExecutionError(f"Error executing script in node {node_name}: {str(e)}")  # noqa: E501
     return all_results
 
 

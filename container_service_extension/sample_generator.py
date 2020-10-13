@@ -84,7 +84,7 @@ SAMPLE_VCD_CONFIG = {
         'port': 443,
         'username': 'administrator',
         'password': 'my_secret_password',
-        'api_version': '33.0',
+        'api_version': '35.0',
         'verify': True,
         'log': True
     }
@@ -129,11 +129,14 @@ SAMPLE_BROKER_CONFIG = {
         'storage_profile': '*',
         'default_template_name': 'my_template',
         'default_template_revision': 0,
-        'remote_template_cookbook_url': 'http://raw.githubusercontent.com/vmware/container-service-extension-templates/upgrades/template.yaml', # noqa: E501
+        'remote_template_cookbook_url': 'http://raw.githubusercontent.com/vmware/container-service-extension-templates/master/template.yaml', # noqa: E501
     }
 }
 
 TEMPLATE_RULE_NOTE = """# [Optional] Template rule section
+# Note : Template rules are only supported when CSE server is started with
+# vCD api v33.0 or v34.0.
+#
 # Rules can be defined to override template definitions as defined by remote
 # template cookbook.
 # Any rule defined in this section can match exactly one template.
