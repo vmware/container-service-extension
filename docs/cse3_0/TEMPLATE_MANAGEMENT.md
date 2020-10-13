@@ -90,7 +90,7 @@ vCD internally validates the ovdc eligibility to host the cluster VMs
 instantiated from the native templates, by checking if the template's 
 placement policy is published onto the ovdc or not.
  
-### CSE < 3.0 and vCD < 10.2
+### CSE <= 3.0 and vCD < 10.2
 
 Out of the box, Kubernetes templates are not restricted for use. All tenants
 have access to all the Kubernetes templates to deploy Kubernetes clusters, as
