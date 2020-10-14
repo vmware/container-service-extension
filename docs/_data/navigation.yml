@@ -239,7 +239,7 @@
       sublink: automation
     - name: Example Use Case
       sublink: example
-  - name: "Container UI Plugin"
+  - name: "Kubernetes Clusters UI Plugin"
     link: CSE_UI_PLUGIN.html
   - name: "Enterprise PKS enablement"
     link: ENT_PKS.html
