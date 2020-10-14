@@ -59,12 +59,12 @@ Service Providers can enable/disable Kubernetes Clusters UI Plugin as well as ma
 
 ## Enable/Disable plugin
 
-On `Customize Portal` page, select `Kubernetes Clusters UI Plugin`, and click on the `ENABLE` or `DISABLE` button.
+On `Customize Portal` page, select `Container UI Plugin`, and click on the `ENABLE` or `DISABLE` button.
 Disabling the plugin will make the plugin inaccessible for both providers and tenants
 
 ## Access control for tenants
 
-On `Customize Portal` page, select `Kubernetes Clusters UI Plugin`, and click on the `PUBLISH` button. . In the wizard, customize the scope to publish to. To remove plugin access from specific tenants, un-select them from the scope and click publish.
+On `Customize Portal` page, select `Container UI Plugin`, and click on the `PUBLISH` button. . In the wizard, customize the scope to publish to. To remove plugin access from specific tenants, un-select them from the scope and click publish.
 
 ---
 
