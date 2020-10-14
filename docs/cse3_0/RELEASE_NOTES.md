@@ -6,15 +6,17 @@ title: Release Notes
 # Release Notes
 
 ## CSE 3.0
-Release Date:
+Release Date: 2020-10-15
 
 **Compatibility matrix and relevant features**
 
-| CSE CLI | CSE UI | CSE Server | Cloud Director | Ent-PKS | Features offered                                                                                    |
-|---------|--------|------------|----------------|---------|-----------------------------------------------------------------------------------------------------|
-| 3.0     | 2.0    | NA         | 10.2           | NA      | Tkg cluster management only                                                                         |
-| 3.0     | 2.0    | 3.0        | 10.2           | ?       | Native, Tkg, and Ent-PKS Cluster management; Defined entity representation for both native and tkg. |
-| 3.0     | 1.0.3  | 3.0        | 10.1, 10.0     | ?       | Legacy features (Native and Ent-PKS cluster management)                                             |
+| CSE Server | CSE CLI | CSE UI | Cloud Director | Ent-PKS | Features offered                                                                                    |
+|------------|---------|--------|----------------|---------|-----------------------------------------------------------------------------------------------------|
+| 3.0        | 3.0     | 2.0*   | 10.2           | 1.7     | Native, Tkg, and Ent-PKS Cluster management; Defined entity representation for both native and tkg. |
+| 3.0        | 3.0     | 1.0.3  | 10.1, 10.0     | 1.7     | Native and Ent-PKS cluster management                                                               |
+| NA         | 3.0     | 2.0*   | 10.2           | NA      | Tkg cluster management only                                                                         |
+
+2.0* -> Kubernetes clusters UI plug-in 2.0 ships with VCD 10.2
 
 Refer to [What's new in CSE 3.0?](CSE30.html)
 
