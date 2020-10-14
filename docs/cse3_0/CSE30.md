@@ -7,7 +7,7 @@ title: Introduction
 For greenfield installations, please get started with [CSE introduction](INTRO.html).
 <a name="overview"></a>
 ## 1. Overview
-* CLI for Container Extension and Kubernetes Cluster UI Plugin can be used to
+* CLI for Container Extension and Kubernetes Clusters UI Plugin can be used to
 manage Cloud Director provisioned [Tanzu Kubernetes Clusters](https://docs-staging.vmware.com/en/draft/VMware-Cloud-Director/10.2/VMware-Cloud-Director-Service-Provider-Admin-Portal-Guide/GUID-E9839D4E-3024-445E-9D08-372113CF6FE0.html)
  alongside Native and TKGI (Ent-PKS) clusters.
 
@@ -69,8 +69,9 @@ deployments in tenant organizations and tenant virtual data centers.
     In other words, run `vdc cse vdc enable <vdc-name>` command.
 3. Publish Kubernetes Clusters UI plugin to the desired organizations.
 
-### 2.3 Container UI Plugin 2.0.0
-Container UI Plugin 2.0.0 comes pre-installed with VCD 10.2, and service providers can publish the plugin to specific tenants.
+### 2.3 Kubernetes Clusters UI Plugin 2.0.0
+
+Kubernetes Clusters UI Plugin 2.0.0 comes pre-installed with VCD 10.2, and service providers can publish the plugin to specific tenants.
 
 ## 3. Tenant workflows
 Tenant users can manage the Kubernetes cluster deployments either through CSE CLI or Kubernetes clusters UI plug-in
@@ -80,8 +81,9 @@ Tenant users can manage the Kubernetes cluster deployments either through CSE CL
  in CSE 3.0. Refer [cluster apply usage](CLUSTER_MANAGEMENT.html#cse30_cluster_apply) for more details.
 2. [Other miscellaneous changes in CLI 3.0](CLUSTER_MANAGEMENT.html#cse30_cli_changes)
 
-### 3.2 Container UI Plugin 2.0.0
-Container UI Plugin 2.0.0 allows tenants to manage all 3 types of clusters (Native, vSphere with Tanzu, TKGI).
+### 3.2 Kubernetes Clusters UI Plugin 2.0.0
+
+Kubernetes Clusters UI Plugin 2.0.0 allows tenants to manage all 3 types of clusters (Native, vSphere with Tanzu, TKGI).
 
 1. [Deploy 'vSphere with Tanzu' Kubernetes Cluster](https://docs-staging.vmware.com/en/draft/VMware-Cloud-Director/10.2/VMware-Cloud-Director-Tenant-Portal-Guide/GUID-CA4A2F24-3E7C-4992-9E54-61AB8A4B80E7.html)
 2. [Deploy 'Native' Kubernetes Cluster](https://docs-staging.vmware.com/en/draft/VMware-Cloud-Director/10.2/VMware-Cloud-Director-Tenant-Portal-Guide/GUID-F831C6A1-8280-4376-A6D9-9D997D987E91.html)
