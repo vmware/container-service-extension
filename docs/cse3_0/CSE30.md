@@ -44,7 +44,7 @@ VCD’s defined entity APIs.
 | 3.0        | 3.0     | 1.0.3  | 10.1, 10.0     | 1.7     | Native and Ent-PKS cluster management                                                               |
 | NA         | 3.0     | 2.0*   | 10.2           | NA      | Tkg cluster management only                                                                         |
 
-2.0* -> Kubernetes clusters UI plug-in 2.0 ships with VCD 10.2
+2.0* -> Kubernetes Clusters UI Plugin 2.0 ships with VCD 10.2
 
 ### 2.2 CSE Server
 #### 2.2.1 Greenfield installation
@@ -70,31 +70,30 @@ Tkg cluster or Ent-PKS deployments.
     * Tkg clusters → [Publish Kubernetes policy on VDC for Tkg Clusters](https://docs-staging.vmware.com/en/draft/VMware-Cloud-Director/10.2/VMware-Cloud-Director-Service-Provider-Admin-Portal-Guide/GUID-E9839D4E-3024-445E-9D08-372113CF6FE0.html)
     * Native clusters → [Enable VDC for Native clusters](TEMPLATE_MANAGEMENT.html#restrict_templates).
     * Ent-PKS clusters → [Enable VDC for Ent-PKS clusters](ENT_PKS.html#cse-commands)
-3. [Publish Kubernetes Clusters UI plugin](https://docs-staging.vmware.com/en/draft/VMware-Cloud-Director/10.2/VMware-Cloud-
+3. [Publish Kubernetes Clusters UI Plugin](https://docs-staging.vmware.com/en/draft/VMware-Cloud-Director/10.2/VMware-Cloud-
 Director-Service-Provider-Admin-Portal-Guide/GUID-A1910FF9-B2CF-49DD-B031-D1245E8740AE.html)
 to the desired organizations.
 
-### 2.3 Kubernetes Clusters UI plug-in
+### 2.3 Kubernetes Clusters UI Plugin
 Starting CSE 3.0 and VCD 10.2, Kubernetes Clusters UI Plugin 2.0 is available
 out of the box with VCD 10.2. Provider can publish it to the desired tenants
-to offer Kubernetes services. Refer [publish kubernetes clusters UI plugin](https://docs-staging.vmware.com/en/draft/VMware-Cloud-Director/10.2/VMware-Cloud-
+to offer Kubernetes services. Refer [publish Kubernetes Clusters UI Plugin](https://docs-staging.vmware.com/en/draft/VMware-Cloud-Director/10.2/VMware-Cloud-
 Director-Service-Provider-Admin-Portal-Guide/GUID-A1910FF9-B2CF-49DD-B031-D1245E8740AE.html)
 
-For VCD < 10.2 versions that inter-operate with CSE 3.0, Kubernetes Clusters UI
-Plugin 1.0.3 must be installed separately by a Provider and published to the
-desired tenants. Refer [Register CSE UI plug-in 1.0.3](CSE_UI_PLUGIN.html) for more details.
+For VCD < 10.2 versions that inter-operate with CSE 3.0, Kubernetes Clusters UI Plugin 1.0.3 must be installed separately by a Provider and published to the desired tenants.
+Refer [Register CSE UI Plugin 1.0.3](CSE_UI_PLUGIN.html) for more details.
 
 ## 3. Tenant workflows
-Tenant users can manage the Kubernetes cluster deployments either through CSE CLI or Kubernetes clusters UI plug-in
+Tenant users can manage the Kubernetes cluster deployments either through CSE CLI or Kubernetes Clusters UI Plugin
 
 ### 3.1 CLI for Container Extension
 1. New command `vcd cse cluster apply <create_cluster.yaml>` has been introduced
  in CSE 3.0. Refer [cluster apply usage](CLUSTER_MANAGEMENT.html#cse30_cluster_apply) for more details.
 2. [Other miscellaneous changes in CLI 3.0](CLUSTER_MANAGEMENT.html#cse30_cli_changes)
 
-### 3.2 Kubernetes Clusters UI plug-in
+### 3.2 Kubernetes Clusters UI Plugin
 
-For VCD 10.2, you must use the [Kubernetes Clusters UI plugin 2.0](https://docs-staging.vmware.com/en/draft/VMware-Cloud-Director/10.2/VMware-Cloud-Director-Tenant-Portal-Guide/GUID-8C05E8F0-2F08-44C9-A016-D383205039E1.html
+For VCD 10.2, you must use the [Kubernetes Clusters UI Plugin 2.0](https://docs-staging.vmware.com/en/draft/VMware-Cloud-Director/10.2/VMware-Cloud-Director-Tenant-Portal-Guide/GUID-8C05E8F0-2F08-44C9-A016-D383205039E1.html
 ) that comes with VCD to manage the cluster deployments.
 
 If you are working with VCD < 10.2, you must use the [Kubernetes Clusters UI
