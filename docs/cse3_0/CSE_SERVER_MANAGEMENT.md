@@ -50,13 +50,16 @@ The following diagram illustrates installation steps visually.
 
 ![cse-install](img/cse-server-installation.png)
 <a name="cse30-greenfield"></a>
-When CSE 3.0 is hooked to Cloud Director >= 10.2, CSE installation command `cse install -c config.yaml` does two additional steps than what has been mentioned in the above diagram.
+When CSE 3.0 is connected to Cloud Director 10.2, CSE installation command 
+`cse install -c config.yaml` does two additional steps than what has been mentioned in the above diagram.
 
 1. Prepares the environment for Providers to be able to perform organization 
-VDC enablement for native clusters. Refer [how to enable ovdc(s) for native deployments](TEMPLATE_MANAGEMENT.html#cse30-restrict_templates) 
+virtual datacenter enablement for native clusters. Refer [how to enable ovdc(s) for native deployments](TEMPLATE_MANAGEMENT.html#cse30-restrict_templates) 
 for more details on how CSE3.0 leverages placement policies to restrict k8 
 deployments on organizational virtual datacenters (ovdcs).
-2. Registers defined entity schema for native clusters. As a side effect, `cse:native cluster entitlement` right bundle gets created in the Cloud Director and all native cluster operations will be guarded by these rights.
+2. Registers defined entity schema for native clusters. As a side effect, 
+`cse:native cluster entitlement` right bundle gets created in the Cloud Director 
+and all native cluster operations are guarded by these rights.
 Invoke below API to get a detailed view of native defined entity schema - `https://<vcd-ip>/cloudapi/1.0.0/entityTypes/urn:vcloud:type:cse:nativeCluster:1.0.0`
 
 The `cse install` command supports the following options:
@@ -84,19 +87,25 @@ tail -f /tmp/FILENAME.err
 ### CSE 3.0 Upgrade Command
 
 CSE 3.0 has been architecturally redesigned to leverage the latest features of 
-Cloud Director like Defined entity framework and placement policies. The new 
+Cloud Director 10.2 like Defined entity framework and placement policies. The new 
 command `cse upgrade` has been introduced in CSE 3.0 to make the old 
 environment fully forward compatible with the latest technologies used in 
 CSE 3.0. Any previous version of CSE can be directly upgraded to CSE 3.0 using 
 `cse upgrade` command.
 
-The command `cse upgrade` must be run to ensure the environment is forward compatible with CSE 3.0. The below steps will be performed during the upgrade. Please run the command `cse upgrade --help` for more details.
+The command `cse upgrade` must be run to ensure the environment is forward 
+compatible with CSE 3.0. The below steps will be performed during the upgrade. 
+Please run the command `cse upgrade --help` for more details.
 
-* Delete old compute policies in the environment: untag old templates with existing compute policies, unpublish existing compute policies from the organization virtual data center(s), delete the legacy compute policies.
-* Prepare the environment to be able to perform organization virtual data center enablement for native clusters. 
+* Delete old compute policies in the environment: untag old templates with 
+existing compute policies, unpublish existing compute policies from the 
+organization virtual data center(s), delete the legacy compute policies.
+* Prepare the environment to be able to perform organization virtual datacenter 
+enablement for native clusters. 
 * Auto-install templates of the latest revision unless specified otherwise.
-* Identify existing organization virtual datacenter(s) with existing clusters and publish appropriate placement policies on the same.
-* Make legacy clusters forward compatible; create corresponding defined entities for all of the old clusters in the environment.
+* Identify existing organization virtual datacenter(s) with existing clusters 
+and publish appropriate placement policies on the same.
+* Make pre-existing clusters forward compatible.
 
 ### Validate CSE Installation
 
@@ -303,9 +312,10 @@ Upgrading CSE server is no different than installing it for the first time.
    the relevant values from the previous config file.
 5. If the previously generated templates are no longer supported by the new version,
    delete the old templates (from VCD UI / vcd-cli) and generate new ones via
-   * `cse install -c myconfig.yaml`
+   * `cse install -c myconfig.yaml` (or) `cse upgrade`
    Check [here](TEMPLATE_ANNOUNCEMENTS.html) for available templates.
-6. If CSE is being run as a service, start the new version of the service with
+6. Run `cse upgrade` command to make the environment forward compatible. Refer [CSE 3.0 upgrade command](CSE_SERVER_MANAGEMENT.html#cse30-upgrade-cmd)
+7. If CSE is being run as a service, start the new version of the service with
    * `systemctl start cse`.
 
 ### Uninstalling CSE Server
@@ -335,7 +345,6 @@ Upgrading CSE server is no different than installing it for the first time.
 * Monitor status of CSE Server and clusters
 * Operate CSE as a service
 * Enable a given organization vdc for either Native or Enterprise PKS deployments.
-This command is necessary only when more than one K8s provider exists in the system
 
 The following show useful sample commands.
 

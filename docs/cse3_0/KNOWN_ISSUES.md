@@ -10,14 +10,14 @@ title: Known Issues
 ### (CSE 3.0 - vCD 10.2) Cluster delete operation may leave stale entries for native clusters.
 On cluster delete operation, if native cluster deletion fails for any unknown 
 reason, CLI and UI sometimes may give out a false impression that the cluster 
-has been deleted successfully. The reason being the corresponding defined entity 
+has been deleted successfully. The reason being the corresponding runtime definedentity 
 may get deleted; however, the actual cluster vapp deletion may have failed. It 
 is best to track the cluster deletion with the task_href, until the issue is fixed.
 As a workaround, manually delete the stale vApp VMs.
 
 ### (CSE 3.0 - vCD 10.2) Cluster list operation may fail to retrieve results
 Listing clusters either by CLI (vcd cse cluster list) or UI will fail if any of 
-the clusters' defined entities are corrupted. For example, if the defined entity 
+the clusters' RDEs are corrupted. For example, if the defined entity 
 is manually modified (using defined entity api directly) to the extent that it 
 violates the schema rules of the corresponding defined entity type, then cluster 
 list cmd will fail to retrieve other valid entities. As a workaround, carefully 

@@ -5,9 +5,9 @@ title: Role Based Access Control
 
 # Role Based Access Control (RBAC)
 <a name="DEF-RBAC"></a>
-## CSE 3.0 with vCD 10.2
+## CSE 3.0 with VCD 10.2
 
-CSE 3.0, when hooked to vCD >= 10.2, leverages the RBAC that comes with vCD's feature
+CSE 3.0, when connected to VCD >= 10.2, leverages the RBAC that comes with VCD's feature
 [Defined Entity framework](https://docs-staging.vmware.com/en/draft/VMware-Cloud-Director/10.2/VMware-Cloud-Director-Service-Provider-Admin-Portal-Guide/GUID-0749DEA0-08A2-4F32-BDD7-D16869578F96.html).
 
 _Note: The RBAC in this section refers to the roles and rights required for the tenants
@@ -22,53 +22,31 @@ representation for native clusters, a new right bundle `cse:nativeCluster entitl
 gets created in Cloud Director during CSE Server installation, which is what 
 guards the native cluster operations in CSE 3.0. The same is the case for Tkg clusters. 
 
-The Provider needs to grant the Tkg cluster and Native cluster right bundles to the desired organizations and then grant the admin-level defined entity type rights to the Tenant Administrator role. This will enable the tenant administrator to grant the relevant cluster management rights to the desired tenant users. Users cannot view or deploy clusters unless they have one of the below-mentioned rights. Refer [How to manage defined entities](https://docs-staging.vmware.com/en/draft/VMware-Cloud-Director/10.2/VMware-Cloud-Director-Service-Provider-Admin-Portal-Guide/GUID-0749DEA0-08A2-4F32-BDD7-D16869578F96.html) for more details.
+The Provider needs to grant the Tkg cluster and Native cluster right bundles 
+to the desired organizations and then grant the admin-level defined entity type 
+rights to the Tenant Administrator role. This will enable the tenant administrator 
+to grant the relevant cluster management rights to the desired tenant users. 
+Users cannot view or deploy clusters unless they have one of the rights in the 
+below-mentioned right bundles. Refer [How to manage runtime defined entities](https://docs-staging.vmware.com/en/draft/VMware-Cloud-Director/10.2/VMware-Cloud-Director-Service-Provider-Admin-Portal-Guide/GUID-0749DEA0-08A2-4F32-BDD7-D16869578F96.html) for more details.
 
    * Right bundle for Tkg Cluster → `vmware:tkgcluster entitlement`
    * Right bundle for Native cluster → `cse:nativeCluster entitlement`
-   * Five rights exist in each of the above right bundles. Note that any custom roles created with the below-mentioned rights need to at least have privileges of the pre-defined role of `vApp Author` in order to deploy native clusters.
-
-       * Admin read
-            * Tenant user with this right can view all the entities from the organization.
-            * System administrator with this right can view all the entities of all the organizations.
-       * Admin full control
-            * Full control lets user not only to modify entities but also delete them
-            * Tenant user with this right will have full control over all the entities of his organization.
-            * System administrator with this right will have full control over all the entities of all the organizations.
-       * Full control
-            * Tenant user (say, cluster-admin role) with this right can modify and delete the entities he/she owns and also the shared entities with Full control ACL.
-       * Modify
-            * Tenant user (say, cluster-author role) with this right can modify the entities he/she owns and also the shared entities with Modify ACL.
-       * Read
-            * Tenant user (say, cluster-user role) with this right can view those entities he/she owns or shared.
-   * Sample commands to clone pre-defined roles, grant rights to the custom roles, assign roles to the users.
-        ```sh
-        vcd role add-right cluster-org-admin 'cse:nativeCluster: View'  'cse:nativeCluster: Administrator View' 'cse:nativeCluster: Full Access' 'cse:nativeCluster: Modify' 'cse:nativeCluster: Administrator Full access' -o org1
-        vcd role add-right cluster-admin 'cse:nativeCluster: View'   'cse:nativeCluster: Full Access' 'cse:nativeCluster: Modify'  -o org1
-        vcd role add-right cluster-author 'cse:nativeCluster: View'    'cse:nativeCluster: Modify'  -o org1
-        vcd role add-right cluster-user 'cse:nativeCluster: View'      -o org1
-
-        vcd role add-right cluster-org-admin 'vmware:tkgcluster: View' 'vmware:tkgcluster: Administrator View' 'vmware:tkgcluster: Full Access' 'vmware:tkgcluster: Modify' 'vmware:tkgcluster: Administrator Full access' -o org1
-        vcd role add-right cluster-admin 'vmware:tkgcluster: View' 'vmware:tkgcluster: Full Access' 'vmware:tkgcluster: Modify'  -o org1
-        vcd role add-right cluster-author 'vmware:tkgcluster: View'  'vmware:tkgcluster: Modify'  -o org1
-        vcd role add-right cluster-user 'vmware:tkgcluster: View'   -o org1
-
-        vcd user create -E cluster-org-admin 'ca$hcow' cluster-org-admin
-        vcd user create -E cluster-admin 'ca$hcow' cluster-admin 
-        vcd user create -E cluster-author 'ca$hcow' cluster-author 
-        vcd user create -E cluster-user 'ca$hcow' cluster-user  
-        ```
+   * Five rights exist in each of the above right bundles. Note that any custom 
+   roles created with the below-mentioned rights need to at least have privileges 
+   of the pre-defined role of `vApp Author` in order to deploy native clusters.
 
 ### Sharing native clusters 
-Tenant user need to perform below steps to share a native cluster to another user of the same organization.
+Tenant user need to perform below steps to share a native cluster to another 
+user of the same organization.
 1. Share the cluster vApp to the desired user with the desired ACL grant.
-2. Share the corresponding defined entity to the desired user with the same level of ACL grant mentioned in step-1. Refer [Sharing defined entities](https://docs-staging.vmware.com/en/draft/VMware-Cloud-Director/10.2/VMware-Cloud-Director-Service-Provider-Admin-Portal-Guide/GUID-DAFF4CE9-B276-4A0B-99D9-22B985153236.html) for more details.
+2. Share the corresponding defined entity to the desired user with the same 
+level of ACL grant mentioned in step-1. Refer [Sharing runtime defined entities](https://docs-staging.vmware.com/en/draft/VMware-Cloud-Director/10.2/VMware-Cloud-Director-Service-Provider-Admin-Portal-Guide/GUID-DAFF4CE9-B276-4A0B-99D9-22B985153236.html) for more details.
 
 <a name="old RBAC"></a>
-## CSE < 3.0 with vCD < 10.2
+## CSE 3.0 with VCD < 10.2
 Below content describes the role based access control
 (RBAC) mechanism through which administrators can administer restrictive
-usage of CSE hooked to vCD versions < 10.2. It also explains the functioning of
+usage of CSE connected to vCD versions < 10.2. It also explains the functioning of
  RBAC along with desired behaviors.
 
 
