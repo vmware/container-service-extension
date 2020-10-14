@@ -1,24 +1,25 @@
 ---
 layout: default
-title: CSE UI Plugin for VCD
+title: Kubernetes Clusters UI Plugin for VCD
 ---
 
-# CSE UI plugin for VCD
+# Kubernetes Clusters UI Plugin for VCD
+
+Starting CSE 3.0 and VCD 10.2, Kubernetes Clusters UI Plugin 2.0 is available out of the box with VCD 10.2
+
+*Refer to [Compability Matrix](./CSE30.md) for link to Kubernetes Clusters UI Plugin 2.0.0 documentation*
 
 ## Overview
-From CSE 2.6.0 onwards, CSE users can use this plugin to interact with CSE Kubernetes clusters directly from VCD UI.
 
-## Kubernetes clusters UI plug-in for CSE 3.0
+For VCD versions before 10.2, Kubernetes Clusters UI Plugin 1.0.3 can be used with CSE 3.0 to manage Kubernetes Clusters directly from VCD UI
 
-Yet to be filled by Andrew
+## Get Kubernetes Clusters UI Plugin
 
-## Get CSE UI plugin
-
-The v1.0.2 plugin binary can be downloaded from [here](https://github.com/vmware/container-service-extension/raw/master/cse_ui/1.0.2/container-ui-plugin.zip).
+The v1.0.3 plugin binary can be downloaded from [here](https://github.com/vmware/container-service-extension/raw/master/cse_ui/1.0.3/container-ui-plugin.zip).
 
 ---
 
-## Register and publish the plugin
+## Register and publish Kubernetes Clusters UI Plugin
 
 **Method 1:** Via CSE server cli
 
@@ -53,23 +54,17 @@ To unregister the plugin, select the plugin in `Customize Portal` and click on
 
 ## Access Control
 
-Tenant users themselves do not have the authority to register/unregister the
-plugin. They can only use the plugin once access to it has been granted by
-Service Provider. Service Provider has the authority to enable or disable and
-manage access control to the UI Plugin.
+Tenant users cannot register/unregister Kubernetes Clusters UI Plugin, and they can only use the plugin once access has been granted by Service Provider.
+Service Providers can enable/disable Kubernetes Clusters UI Plugin as well as manage access contorl to the plugin.
 
 ## Enable/Disable plugin
 
-From `Customize Portal`, choose the plugin to be enabled/disabled, then click on
-`ENABLE` or `DISABLE` button. Once the plugin has been disabled and the page
-has been refreshed, the plugin should be inaccessible from both provider and
-tenant view.
+On `Customize Portal` page, select `Container UI Plugin`, and click on the `ENABLE` or `DISABLE` button.
+Disabling the plugin will make the plugin inaccessible for both providers and tenants
 
 ## Access control for tenants
 
-From `Customize Portal`, choose the plugin, click on `PUBLISH` button. Then in
-the wizard, customize the scope to publish. To remove plugin access from
-certain tenants, just un-select them from the scope and then publish.
+On `Customize Portal` page, select `Container UI Plugin`, and click on the `PUBLISH` button. . In the wizard, customize the scope to publish to. To remove plugin access from specific tenants, un-select them from the scope and click publish.
 
 ---
 
@@ -77,81 +72,49 @@ certain tenants, just un-select them from the scope and then publish.
 
 ### Landing Page
 
-After selecting `Kubernetes Container Clusters` option in the navigation menu,
-users can access the landing page. Landing page displays a list of Kubernetes
-container clusters created from Container Service Extension (CSE) and their
-basic information.
+Select `Kubernetes Container Clusters` in the navigation menu to access the landing page.
+A list of Kubernetes clusters created by Container Service Extension (CSE) will be displayed, along with some basic cluster information.
 
 **Provider View**
 
-For Service Provider, it shows all the clusters from all organizations from
-current vCloud Director.
+Service providers can view all clusters in all organizations
 
 **Tenant View**
 
-For Tenants, it shows clusters created in current organization.
+Tenants can only view clusters in their organization that they have visibility for
 
-* Organization Administrator - can view all clusters in the current organization.
-* Catalog author, vApp user and console access only roles - can view clusters
-  created by catalog authors.
-* vApp author - can view only self owned clusters.
+**Common Roles**
 
-All columns can be sorted and filtered. Upon clicking on the cluster name, users
-can view the details page of the corresponding cluster.
+* Organization Administrator: can view all clusters in the organization
+* Catalog Author, vApp User and Console Access Only: can view clusters
+  created by catalog authors
+* vApp Author: can view clusters they own
+
+Upon clicking on the cluster name, users can view the details page of the corresponding cluster.
 
 **Cluster Creation**
 
-Users can also create new Kubernetes clusters by clicking on the `Add` link on
-the top left. Clicking on this link will open up the `Create New Cluster`
-wizard.
+Clicking the `NEW` button on the top left will open the cluster creation wizard.
 
 **Cluster Deletion**
 
-Selecting a cluster on the landing page, displays an option to delete it on
-top left.
+Select a cluster in the datagrid, and click the `DELETE` button on the top left.
 
-### Details Page
+### Cluster Info Page
 
-Upon clicking on a container cluster, it takes you to it's details page.
-Details page shows more specific information based on the Kubernetes provider
-(either native or Enterprise PKS) of the cluster, which provides following
-functionalities:
+Clicking on the cluster name will redirect you to its info page.
+This info page contains the following functionalities:
 
-* Navigate back to landing page from the top navigation bar.
-* Download `kubectl` configuration from the button to the right of cluster title.
-* View General information of Enterprise PKS clusters.
-* View General and Nodes information of native clusters. Info and Details are sub-sections containing cluster-centric and VCD/CSE related attributes.
-* Add new worker nodes to native clusters. Removing worker nodes from native clusters is currently not supported via UI.
+* Navigate back to the landing page using the top navigation bar
+* Download the cluster's kube config (to be used with `kubectl`) using the button on the right of the cluster name.
+* View cluster information. **Info** section contains cluster-specific details, while **Details** section contains VCD/CSE details.
+* Add new worker nodes to Native clusters. Removing worker nodes from native clusters is not supported in Kubernetes Clusters UI Plugin 1.0.3
 
 ---
 
 ## Known Issues
 
-**Clarity datagrids in wizards that have more than 9 items do not render** ([github issue](https://github.com/vmware/container-service-extension/issues/648))
-
-Fixed in: 1.0.2
-Affected UI versions: 1.0.0, 1.0.1
-
-Clarity has a bug where datagrids in wizards that have > 9 items have their height set to 0
-Detailed here: https://github.com/vmware/clarity/issues/2364
-This affects displaying networks, ovdcs, templates in cluster creation wizard.
-UI plugin has implemented a workaround where we force set datagrid height to auto
-
----
-
-**Networks are not displayed if the org vdc name has space(s)** ([github issue](https://github.com/vmware/container-service-extension/issues/625))
-
-Fixed in: 1.0.2
-Affected UI versions: 1.0.0, 1.0.1
-
-Fixed in 1.0.2 by manually encoding the affected URLs before making the vcd api call
-
-* Fix bug where plugin could not display networks from ovdcs with space(s) in the name
-* Fix clarity bug where datagrids that have several items in them got their height set to 0
-
----
-
-**Re-registering 2.6.0 GA CSE UI plugin with VCD doesn't work properly**
+**Re-registering Kubernetes Clusters UI Plugin with VCD fails**
 
 If the beta version of CSE UI plugin is already registered with VCD, trying to
 upgrade it via CSE cli or VCD UI will fail. Right now, the only way to update
@@ -161,11 +124,12 @@ the tenants that were previously given access to the CSE UI plugin.
 
 ---
 
-**CSE landing page on VCD UI perpetually shows a spinning wheel**
+**Kubernetes Clusters UI Plugin landing page on VCD UI perpetually shows a spinning wheel**
 
 If CSE server is inaccessible/down, on VCD UI's CSE landing page, user only
-sees the loading spinner instead of an error message. Workaround: Make sure CSE
-server is up and running.
+sees the loading spinner instead of an error message.
+
+Workaround: Make sure CSE server is running.
 
 ---
 
@@ -174,16 +138,14 @@ server is up and running.
 On clicking `confirm` in cluster creation/deletion wizards/confirmation message
 boxes, user does not immediately get to know if the plugin successfully sent
 the request, or if CSE Server successfully received the same. Form validation
-and HTTP error display has not been implemented in CSE UI plugin yet.
+and HTTP error display is not implemented in Kubernetes Clusters UI Plugin 1.0.3
 
 ---
 
 **Enterprise PKS cluster creation fails from UI**
 
 If CSE is enabled with Enterprise PKS but OrgVDCs are not enabled with
-Enterprise PKS as their k8s provider, UI will allow cluster creation operation
-on that OrgVDC, but the operation will eventually fail. This behavior is as
-designed.
+Enterprise PKS as their k8s provider, Kubernetes Clusters UI Plugin 1.0.3 will allow cluster creation operation on that OrgVDC, but the operation will eventually fail. This behavior is as designed.
 
 *Workaround:* - Enable the OrgVDC explicitly for Enterprise PKS cluster
 deployment via the following command

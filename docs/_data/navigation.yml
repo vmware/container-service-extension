@@ -21,7 +21,7 @@
       sublink: kubectl
     - name: Install CSE Software
       sublink: getting_cse
-    - name: Enable CSE Client 
+    - name: Enable CSE Client
       sublink: enable_cse_vcd_cli
   - name: "CSE Server Installation Prerequisites"
     link: CSE_INSTALL_PREREQUISITES.html
@@ -84,7 +84,7 @@
       sublink: automation
     - name: Example Use Case
       sublink: example
-  - name: "CSE UI Plugin"
+  - name: "Container UI Plugin"
     link: CSE_UI_PLUGIN.html
   - name: "Enterprise PKS enablement"
     link: ENT_PKS.html
@@ -239,7 +239,7 @@
       sublink: automation
     - name: Example Use Case
       sublink: example
-  - name: "CSE UI Plugin"
+  - name: "Kubernetes Clusters UI Plugin"
     link: CSE_UI_PLUGIN.html
   - name: "Enterprise PKS enablement"
     link: ENT_PKS.html
