@@ -7,21 +7,20 @@ title: Introduction
 For greenfield installations, please get started with [CSE introduction](INTRO.html).
 <a name="overview"></a>
 ## 1. Overview
-* CLI for Container Extension and Kubernetes Cluster UI Plugin can be used to 
+* Starting CSE 3.0, CLI for Container Service Extension and Kubernetes Clusters UI Plugin can be used to 
 manage Cloud Director provisioned [Tanzu Kubernetes Clusters](https://docs-staging.vmware.com/en/draft/VMware-Cloud-Director/10.2/VMware-Cloud-Director-Service-Provider-Admin-Portal-Guide/GUID-E9839D4E-3024-445E-9D08-372113CF6FE0.html)
  alongside Native and TKGI (Ent-PKS) clusters.
  
-* Native clusters are now represented as defined entities. CSE 3.0 has been 
-architecturally redesigned to leverage the latest features of Cloud Director 
-(>=10.2) like the [Defined entity framework](https://docs-staging.vmware.com/en/draft/VMware-Cloud-Director/10.2/VMware-Cloud-Director-Service-Provider-Admin-Portal-Guide/GUID-0749DEA0-08A2-4F32-BDD7-D16869578F96.html), 
-and placement policies. Users will not see any difference in the functionality 
-of native clusters, but the underlying implementation has been enhanced to 
-leverage defined entities for persisting native cluster entities in vCD DB and 
-placement policies for [restricting native  deployments](TEMPLATE_MANAGEMENT.html#restrict_templates) 
-to specific organization virtual datcenters (ovdcs). Users can now query native 
-clusters using vCD's defined entity API. 
+* CSE 3.0 has been architecturally redesigned to consume the latest technology of Cloud Director 
+(>=10.2), like the [Defined entity framework](https://docs-staging.vmware.com/en/draft/VMware-Cloud-Director/10.2/VMware-Cloud-Director-Service-Provider-Admin-Portal-Guide/GUID-0749DEA0-08A2-4F32-BDD7-D16869578F96.html), 
+and placement policies. CSE's native clusters are now represented as runtime 
+defined entities to leverage VCD database for persistence. CSE 3.0 also uses 
+Placement Policies for [restricting native Clusters deployments](TEMPLATE_MANAGEMENT.html#restrict_templates) 
+to specific organization VDCs. Users will not see any difference in the 
+functionality of native clusters. Users can now query native clusters using 
+VCD’s defined entity APIs.
 
-* Separate command group for TKGI (Ent-PKS).
+* CSE 3.0 also offers a new command group for TKGI (Ent-PKS).
 
 **Terminology:**
 * TKG cluster ~ Tanzu Kubernetes  cluster ~ Tanzu Kubernetes Grid cluster ~ vSphere with Tanzu cluster
@@ -39,15 +38,17 @@ clusters using vCD's defined entity API.
 <a name="cse30-compatibility-matrix"></a>
 ### 2.1 Compatibility matrix and relevant features
 
-| CSE CLI | CSE UI | CSE Server | Cloud Director | Ent-PKS | Features offered                                                                                    |
-|---------|--------|------------|----------------|---------|-----------------------------------------------------------------------------------------------------|
-| 3.0     | 2.0    | NA         | 10.2           | NA      | Tkg cluster management only                                                                         |
-| 3.0     | 2.0    | 3.0        | 10.2           | ?       | Native, Tkg, and Ent-PKS Cluster management; Defined entity representation for both native and tkg. |
-| 3.0     | 1.0.3  | 3.0        | 10.1, 10.0     | ?       | Legacy features (Native and Ent-PKS cluster management)                                             |
+| CSE Server | CSE CLI | CSE UI | Cloud Director | Ent-PKS | Features offered                                                                                    |
+|------------|---------|--------|----------------|---------|-----------------------------------------------------------------------------------------------------|
+| 3.0        | 3.0     | 2.0*   | 10.2           | 1.7     | Native, Tkg, and Ent-PKS Cluster management; Defined entity representation for both native and tkg. |
+| 3.0        | 3.0     | 1.0.3  | 10.1, 10.0     | 1.7     | Native and Ent-PKS cluster management                                                               |
+| NA         | 3.0     | 2.0*   | 10.2           | NA      | Tkg cluster management only                                                                         |
+
+2.0* -> Kubernetes clusters UI plug-in 2.0 ships with VCD 10.2
 
 ### 2.2 CSE Server
 #### 2.2.1 Greenfield installation
-With CSE 3.0 - vCD 10.2 combination, CSE installation command 
+With CSE 3.0 - VCD 10.2 combination, CSE installation command 
 `cse install -c config.yaml` does two additional steps than what it used to do 
 in the earlier versions. Refer [CSE 3.0 installation](CSE_SERVER_MANAGEMENT.html#cse30-greenfield).
 
@@ -62,16 +63,26 @@ Refer [CSE 3.0 upgrade command](CSE_SERVER_MANAGEMENT.html#cse30-upgrade-cmd).
 #### 2.2.3 Tenant onboarding
 The provider needs to perform below operations to enable Kubernetes cluster 
 deployments in tenant organizations and tenant virtual data centers.
-1. Grant rights to the tenant users. Refer [CSE 3.0 RBAC](RBAC.html#DEF-RBAC) for more details.
-2. Enable the desired organization virtual datacenter(s) for either Native or Tkg cluster deployments.
-    * Tkg clusters → [Publish Kubernetes policy for Tkg Clusters](https://docs-staging.vmware.com/en/draft/VMware-Cloud-Director/10.2/VMware-Cloud-Director-Service-Provider-Admin-Portal-Guide/GUID-E9839D4E-3024-445E-9D08-372113CF6FE0.html)
-    * Native clusters → [Publish Native placement policy on ovdc](TEMPLATE_MANAGEMENT.html#restrict_templates). 
-    In other words, run `vdc cse ovdc enable <vdc-name>` command.
-3. Publish Kubernetes Clusters UI plugin to the desired organizations.
+1. Grant rights to the tenant users. Refer [CSE 3.0 RBAC](RBAC.html#DEF-RBAC) 
+for more details.
+2. Enable the desired organization virtual datacenter(s) for either Native or 
+Tkg cluster or Ent-PKS deployments.
+    * Tkg clusters → [Publish Kubernetes policy on VDC for Tkg Clusters](https://docs-staging.vmware.com/en/draft/VMware-Cloud-Director/10.2/VMware-Cloud-Director-Service-Provider-Admin-Portal-Guide/GUID-E9839D4E-3024-445E-9D08-372113CF6FE0.html)
+    * Native clusters → [Enable VDC for Native clusters](TEMPLATE_MANAGEMENT.html#restrict_templates). 
+    * Ent-PKS clusters → [Enable VDC for Ent-PKS clusters](ENT_PKS.html#cse-commands)
+3. [Publish Kubernetes Clusters UI plugin](https://docs-staging.vmware.com/en/draft/VMware-Cloud-Director/10.2/VMware-Cloud-
+Director-Service-Provider-Admin-Portal-Guide/GUID-A1910FF9-B2CF-49DD-B031-D1245E8740AE.html) 
+to the desired organizations.
 
 ### 2.3 Kubernetes Clusters UI plug-in
-To be filled by Andrew. UI plug-in is now part of vCD and the provider can 
-publish UI plug-in to the desired tenants.
+Starting CSE 3.0 and VCD 10.2, Kubernetes Clusters UI Plugin 2.0 is available 
+out of the box with VCD 10.2. Provider can publish it to the desired tenants 
+to offer Kubernetes services. Refer [publish kubernetes clusters UI plugin](https://docs-staging.vmware.com/en/draft/VMware-Cloud-Director/10.2/VMware-Cloud-
+Director-Service-Provider-Admin-Portal-Guide/GUID-A1910FF9-B2CF-49DD-B031-D1245E8740AE.html)
+
+For VCD < 10.2 versions that inter-operate with CSE 3.0, Kubernetes Clusters UI 
+Plugin 1.0.3 must be installed separately by a Provider and published to the 
+desired tenants. Refer [Register CSE UI plug-in 1.0.3](CSE_UI_PLUGIN.html) for more details.
 
 ## 3. Tenant workflows
 Tenant users can manage the Kubernetes cluster deployments either through CSE CLI or Kubernetes clusters UI plug-in
@@ -82,9 +93,12 @@ Tenant users can manage the Kubernetes cluster deployments either through CSE CL
 2. [Other miscellaneous changes in CLI 3.0](CLUSTER_MANAGEMENT.html#cse30_cli_changes)
 
 ### 3.2 Kubernetes Clusters UI plug-in
-1. [Deploy Tanzu Kubernetes Cluster](https://docs-staging.vmware.com/en/draft/VMware-Cloud-Director/10.2/VMware-Cloud-Director-Tenant-Portal-Guide/GUID-CA4A2F24-3E7C-4992-9E54-61AB8A4B80E7.html)
-2. [Deploy Native cluster](https://docs-staging.vmware.com/en/draft/VMware-Cloud-Director/10.2/VMware-Cloud-Director-Tenant-Portal-Guide/GUID-F831C6A1-8280-4376-A6D9-9D997D987E91.html)
-3. [Deploy TKGI (Ent-PKS) cluster](https://docs-staging.vmware.com/en/draft/VMware-Cloud-Director/10.2/VMware-Cloud-Director-Tenant-Portal-Guide/GUID-1BDF9D95-1484-4C9D-8748-26C8FC773530.html)
+
+For VCD 10.2, you must use the [Kubernetes Clusters UI plugin 2.0](https://docs-staging.vmware.com/en/draft/VMware-Cloud-Director/10.2/VMware-Cloud-Director-Tenant-Portal-Guide/GUID-8C05E8F0-2F08-44C9-A016-D383205039E1.html 
+) that comes with VCD to manage the cluster deployments. 
+
+If you are working with VCD < 10.2, you must use the [Kubernetes Clusters UI 
+Plugin 1.0.3](CSE_UI_PLUGIN.html) to manage the cluster deployments.
 
 <a name="faq"></a>
 ## 4. FAQ

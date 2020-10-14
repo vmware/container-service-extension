@@ -8,11 +8,11 @@ title: Troubleshooting
 ## Admin operations
 1. Is CSE 3.0 backward compatible? In other words, does it work with older API 
 versions of Cloud Director (<= 34.0)?
-    * Yes. CSE Server 3.0, when hooked with Cloud Director of API versions <= 34.0, 
+    * Yes. CSE Server 3.0, when connected with Cloud Director of API versions <= 34.0, 
     will continue to behave as CSE 2.6.x. For accurate results, follow the 
     [compatibility matrix](CSE30.html#cse30-compatibility-matrix)
 2. How do placement policies work? What is their relationship with ovdc enablement and template restriction?
-    * CSE 3.0, when hooked to vCD >= 10.2, leverages the concept of placement 
+    * CSE 3.0, when connected to VCD >= 10.2, leverages the concept of placement 
     policies to restrict native K8 deployments to specific organization virtual 
     datacenters. During CSE install or upgrade, it creates an empty provider 
     Vdc level placement policy **cse----native** and tags the native templates 
@@ -24,20 +24,20 @@ versions of Cloud Director (<= 34.0)?
         2. (provider command) `vcd cse ovdc enable` publishes the native 
         placement policy on to the chosen ovdc.
         3. (tenant command) `vcd cse cluster apply` - During the cluster creation,
-        vCD internally validates the ovdc eligibility to host the cluster VMs 
+        VCD internally validates the ovdc eligibility to host the cluster VMs 
         instantiated from the native templates, by checking if the template's 
         placement policy is published onto the ovdc or not.
-    * Note that CSE 3.0, when hooked to vCD < 10.2, will continue to behave as 
+    * Note that CSE 3.0, when connected to VCD < 10.2, will continue to behave as 
     CSE 2.6 in terms of [template restriction](TEMPLATE_MANAGEMENT.html#restrict_templates).
 3. What does it mean for CSE server to be running at a certain vCD API version?
     * CSE server uses the api version (vcd->api_version) specified in the `config.yaml` to communicate to vCD. 
-    * For example: With CSE server hooked to vCD 10.2, if the `api_version`
+    * For example: With CSE server connected to vCD 10.2, if the `api_version`
      specified in the `config.yaml` is 34.0, then CSE server is said to be 
      running at `api_version` 34.0, even though the maximum supported `api_version`
       of vCD 10.2 is 35.0. Admin(s) need to update the `config.yaml` with the 
       desired api_version they want CSE server to communicate with Cloud Director.
-4. Where do I read more about defined entities and relevant API?
-    * [Defined entities](https://docs-staging.vmware.com/en/draft/VMware-Cloud-Director/10.2/VMware-Cloud-Director-Service-Provider-Admin-Portal-Guide/GUID-0749DEA0-08A2-4F32-BDD7-D16869578F96.html)
+4. Where do I read more about runtime defined entities and relevant API?
+    * [Runtime defined entities](https://docs-staging.vmware.com/en/draft/VMware-Cloud-Director/10.2/VMware-Cloud-Director-Service-Provider-Admin-Portal-Guide/GUID-0749DEA0-08A2-4F32-BDD7-D16869578F96.html)
 <a name="sync-def-entity"></a>
 5. If defined entity representation seems to be stale or out of sync with the actual state of the backing cluster vApp, how to sync the defined entity status?
     * Invoke an API call to the CSE server from postman - GET on `https://<vcd-ip>/api/cse/3.0/clusters/<id>`
@@ -52,7 +52,7 @@ versions of Cloud Director (<= 34.0)?
     * Yes. As long as the given virtual datacenter is enabled for both native & tkg, and virtual datacenter network intended for native has internet connectivity, users should be able to deploy both native and tkg clusters in the same organization virtual datacenter (ovdc).
 2. Can Native, TKG and Ent-PKS be deployed in the same organizational virtual datacenter?
     * No. Ent-PKS requires dedicated virtual datacenter.
-3. Are Ent-PKS clusters represented as defined entities in CSE 3.0?
+3. Are Ent-PKS clusters represented as Runtime defined entities in CSE 3.0?
     * No.
 4. What are the steps to share a cluster with other tenant users?
     * Native
