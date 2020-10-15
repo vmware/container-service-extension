@@ -1,33 +1,32 @@
-# Commented versions are the versions being picked up for CSE 2.6 by default
-# as of 2020-04-01
+# Commented versions are the versions being picked up for CSE 3.0 by default
+# as of 2020-10-13
 
 # cachetools 3.1.1
 cachetools >= 2.0.1, < 4.0.0
 
-# cryptography 2.8
+# cryptography 2.9.2
 cryptography >= 2.8, < 3.0
 
 # humanfriendly 4.18
 humanfriendly >= 4.8, < 5.0
 
-#paho-mqtt 1.5.0
-paho-mqtt == 1.5.0
+#paho-mqtt 1.5.1
+paho-mqtt >=1.5.0, < 1.6.0
 
 # pika 0.13.1
 pika >= 0.11.2, < 1.0.0
 
-# pyvcloud 22.0.1
-# pyvcloud >= 22.0.1, < 23.0.0
-pyvcloud == 22.0.2.dev32
+# pyvcloud 23.0.0
+pyvcloud >= 23.0.0, < 24.0.0
 
 # pyvmomi 6.7.3
 pyvmomi >= 6.7.0 , < 7.0.0
 
-# semantic-version 2.8.4
+# semantic-version 2.8.5
 semantic-version >= 2.8.4, < 3.0.0
 
-# vcd-cli 23.0.0
-vcd-cli >= 23.0.0, < 24.0.0
+# vcd-cli 24.0.0
+vcd-cli >= 24.0.0, < 25.0.0
 
 # vsphere-guest-run 0.0.7
 vsphere-guest-run >= 0.0.7, < 1.0.0
