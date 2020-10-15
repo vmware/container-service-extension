@@ -10,15 +10,17 @@ Release Date: 2020-10-15
 
 **Compatibility matrix and relevant features**
 
-| CSE Server | CSE CLI | CSE UI | Cloud Director | Ent-PKS | Features offered                                                                                    |
-|------------|---------|--------|----------------|---------|-----------------------------------------------------------------------------------------------------|
-| 3.0        | 3.0     | 2.0*   | 10.2           | 1.7     | Native, Tkg, and Ent-PKS Cluster management; Defined entity representation for both native and tkg. |
-| 3.0        | 3.0     | 1.0.3  | 10.1, 10.0     | 1.7     | Native and Ent-PKS cluster management                                                               |
-| NA         | 3.0     | 2.0*   | 10.2           | NA      | Tkg cluster management only                                                                         |
+| CSE Server | CSE CLI | CSE UI | Cloud Director | Ent-PKS with NSX-T | Features offered                                                                                    |
+|------------|---------|--------|----------------|--------------------|-----------------------------------------------------------------------------------------------------|
+| 3.0        | 3.0     | 2.0*   | 10.2           | 1.7 with 2.5.1     | Native, Tkg, and Ent-PKS Cluster management; Defined entity representation for both native and tkg. |
+| 3.0        | 3.0     | 1.0.3  | 10.1, 10.0     | 1.7 with 2.5.1     | Native and Ent-PKS cluster management                                                               |
+| NA         | 3.0     | 2.0*   | 10.2           | NA                 | Tkg cluster management only                                                                         |
 
 2.0* -> Kubernetes clusters UI plug-in 2.0 ships with VCD 10.2
 
-Refer to [What's new in CSE 3.0?](CSE30.html)
+Refer to [What's new in CSE 3.0?](CSE30.html) for more details.
+Supported (and tested) VCD versions: 10.2, 10.1.2, 10.0.3
+New Kubernetes templates are added. Refer [Template Announcements](TEMPLATE_ANNOUNCEMENTS.html)
 
 ## CSE 2.6.1 GA(2.6.1)
 Release Date: 2020-04-30
