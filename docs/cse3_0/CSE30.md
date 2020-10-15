@@ -15,14 +15,15 @@ manage Cloud Director provisioned [Tanzu Kubernetes Clusters](https://docs-stagi
 * CSE 3.0 has been architecturally redesigned to consume the latest technology of Cloud Director 10.2, like the [Defined entity framework](https://docs-staging.vmware.com/en/draft/VMware-Cloud-Director/10.2/VMware-Cloud-Director-Service-Provider-Admin-Portal-Guide/GUID-0749DEA0-08A2-4F32-BDD7-D16869578F96.html),
 and placement policies. CSE's native clusters are now represented as runtime
 defined entities to leverage VCD database for persistence. CSE 3.0 also uses
-Placement Policies for [restricting native Clusters deployments](TEMPLATE_MANAGEMENT.html#restrict_templates)
+placement Policies for [restricting native Clusters deployments](TEMPLATE_MANAGEMENT.html#restrict_templates)
 to specific organization VDCs. Users will not see any difference in the
 functionality of native clusters. Users can now query native clusters using
 VCD’s defined entity APIs.
 
 * CSE 3.0 also offers a new command group for TKGI (Ent-PKS).
 
-* New Kubernetes templates are added. Refer [Template announcements](TEMPLATE_ANNOUNCEMENTS.html).
+* Newer versions of native Kubernetes templates are available. 
+Refer [Template announcements](TEMPLATE_ANNOUNCEMENTS.html).
 
 **Terminology:**
 * TKG cluster ~ Tanzu Kubernetes  cluster ~ Tanzu Kubernetes Grid cluster ~ vSphere with Tanzu cluster

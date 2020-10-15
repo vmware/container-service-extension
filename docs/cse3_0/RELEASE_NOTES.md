@@ -18,9 +18,10 @@ Release Date: 2020-10-15
 
 2.0* -> Kubernetes clusters UI plug-in 2.0 ships with VCD 10.2
 
-Refer to [What's new in CSE 3.0?](CSE30.html) for more details.
-Supported (and tested) VCD versions: 10.2, 10.1.2, 10.0.3
-New Kubernetes templates are added. Refer [Template Announcements](TEMPLATE_ANNOUNCEMENTS.html)
+1. Refer to [What's new in CSE 3.0?](CSE30.html) for more details.
+2. Supported (and tested) VCD versions with CSE 3.0 are 10.2, 10.1.2, 10.0.3.
+3. Newer versions of native kubernetes templates are available. Refer 
+[Template Announcements](TEMPLATE_ANNOUNCEMENTS.html)
 
 ## CSE 2.6.1 GA(2.6.1)
 Release Date: 2020-04-30
