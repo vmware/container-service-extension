@@ -5,6 +5,7 @@ title: Introduction
 # What's new in CSE 3.0?
 
 For greenfield installations, please get started with [CSE introduction](INTRO.html).
+
 <a name="overview"></a>
 ## 1. Overview
 * Starting CSE 3.0, CLI for Container Service Extension and Kubernetes Clusters UI Plugin can be used to
