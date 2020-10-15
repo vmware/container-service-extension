@@ -15,7 +15,7 @@ manage Cloud Director provisioned [Tanzu Kubernetes Clusters](https://docs-stagi
 * CSE 3.0 has been redesigned to consume latest technology from Cloud Director 10.2, e.g. [Defined entity framework](https://docs-staging.vmware.com/en/draft/VMware-Cloud-Director/10.2/VMware-Cloud-Director-Service-Provider-Admin-Portal-Guide/GUID-0749DEA0-08A2-4F32-BDD7-D16869578F96.html), 
 placement policies, etc. CSE native clusters are now represented as runtime
 defined entities to leverage VCD database for persistence. CSE 3.0 also uses
-placement Policies for [restricting native Clusters deployments](TEMPLATE_MANAGEMENT.html#restrict_templates)
+placement policies for [restricting native clusters deployments](TEMPLATE_MANAGEMENT.html#restrict_templates)
 to specific organization VDCs. Users will not see any functional difference 
 between CSE 3.0 native clusters and previously deployed native clusters in the 
 context of Kubernetes. Additionally, users can now leverage VCD’s defined 
