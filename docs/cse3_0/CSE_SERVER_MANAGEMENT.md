@@ -67,7 +67,6 @@ The `cse install` command supports the following options:
 | Option                    | Short | Argument(s)                        | Description                                                                                                      | Default Value |
 |---------------------------|-------|------------------------------------|------------------------------------------------------------------------------------------------------------------|---------------|
 | \--config                 | -c    | path to config file                | Filepath of CSE config file to use for installation                                                              | config.yaml   |
-| \--force-update           | -f    | n/a                                | Recreate CSE k8s templates on VCD even if they already exist                                                     | False         |
 | \--pks-config-file        | -p    | path to Enterprise PKS config file | Filepath of Enterprise PKS config file to use for installation                                                   | -             |
 | \--retain-temp-vapp       | -d    | n/a                                | Retain the temporary vApp after the template has been captured --ssh-key option is required if this flag is used | False         |
 | \--skip-config-decryption | -s    | n/a                                | Skips decrypting the configuration file and pks configuration file, and assumes them to be plain text            | -             |
@@ -98,7 +97,8 @@ compatible with CSE 3.0. The below steps will be performed during the upgrade.
 
 * Delete old compute policies in the environment: untag old templates with 
 existing compute policies, unpublish existing compute policies from the 
-organization virtual data center(s), delete the legacy compute policies.
+organization virtual data center(s), delete the old compute policies. Note 
+that this clean-up is done only on CSE-created compute policies.
 * Prepare the environment to be able to perform organization virtual datacenter 
 enablement for native clusters. 
 * Auto-install templates of the latest revision unless specified otherwise.
