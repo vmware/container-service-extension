@@ -380,7 +380,7 @@ class Service(object, metaclass=Singleton):
             consumer_thread.daemon = True
             consumer_thread.start()
             self.consumer_thread = consumer_thread
-            msg = f"Started thread '{name}'"
+            msg = f"Started thread '{name}' ({consumer_thread.ident})"
             msg_update_callback.general(msg)
             logger.SERVER_LOGGER.info(msg)
         except KeyboardInterrupt:
@@ -395,15 +395,21 @@ class Service(object, metaclass=Singleton):
                 self.consumer.stop()
             logger.SERVER_LOGGER.error(traceback.format_exc())
 
+        # Updating state to Running before starting watchdog because watchdog
+        # exits when server is not Running
+        self._state = ServerState.RUNNING
+
         # Start consumer watchdog
-        consumer_watchdog = Thread(name='Consumer Watchdog',
+        name = server_constants.WATCHDOG_THREAD
+        consumer_watchdog = Thread(name=name,
                                    target=watchdog_thread_run,
                                    args=(self, num_processors))
         consumer_watchdog.daemon = True
         consumer_watchdog.start()
         self._consumer_watchdog = consumer_watchdog
-
-        self._state = ServerState.RUNNING
+        msg = f"Started thread '{name}' ({consumer_watchdog.ident})"
+        msg_update_callback.general(msg)
+        logger.SERVER_LOGGER.info(msg)
 
         message = f"Container Service Extension for vCloud Director" \
                   f"\nServer running using config file: {self.config_file}" \

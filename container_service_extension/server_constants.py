@@ -75,9 +75,9 @@ PBKDF2_ITERATIONS = 100000
 SALT_SIZE = 32
 PBKDF2_OUTPUT_SIZE = 32
 
-# Name of single Message Consumer Thread, which passes jobs to a
-# Thread Pool Executor
+# Names of Message Consumer Thread and Watchdog Thread
 MESSAGE_CONSUMER_THREAD = 'MessageConsumer'
+WATCHDOG_THREAD = 'ConsumerWatchdog'
 
 
 @unique
