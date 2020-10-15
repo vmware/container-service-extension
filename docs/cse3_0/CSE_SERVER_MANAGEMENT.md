@@ -95,7 +95,6 @@ CSE 3.0. Any previous version of CSE can be directly upgraded to CSE 3.0 using
 
 The command `cse upgrade` must be run to ensure the environment is forward 
 compatible with CSE 3.0. The below steps will be performed during the upgrade. 
-Please run the command `cse upgrade --help` for more details.
 
 * Delete old compute policies in the environment: untag old templates with 
 existing compute policies, unpublish existing compute policies from the 
