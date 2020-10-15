@@ -12,8 +12,9 @@ Listing clusters either by CLI (`vcd cse cluster list`) or UI will fail if any o
 the clusters' representing defined entities are corrupted. For example, if the defined entity 
 is manually modified (using direct defined entity api) and if it 
 violates the schema rules of the corresponding defined entity type, then cluster 
-list cmd will fail to retrieve other valid entities. As a workaround, carefully 
-update the defined entity with the correct schema (using direct defined entity api) 
+list cmd will fail to retrieve other valid entities. 
+
+**Workaround:** Update the defined entity with the correct schema (using direct defined entity api) 
 and sync the defined entity using CSE server API - GET on `https://<vcd-ip>/api/cse/3.0/clusters/<id>`
 
 ### In CSE 3.0 configured with vCD 10.2, native clusters are stuck in _CREATE:IN_PROGRESS_ state.
@@ -21,6 +22,7 @@ When native clusters are stuck in such state, it means that the cluster
 creation has failed for unknown reason, and the representing defined entity 
 has not transitioned to the ERROR state. 
 
+**Workaround:**
 1. Delete the defined entity
     * POST `https://<vcd-fqdn>/cloudapi/1.0.0/entities/<cluster-id>/resolve`
     * DEL `https://<vcd-fqdn>/cloudapi/1.0.0/entities/<cluster-id>`
@@ -33,10 +35,12 @@ has not transitioned to the ERROR state.
 ### In CSE 3.0 configured with vCD 10.1, prevent native clusters from getting deployed in Ent-PKS enbled ovdc(s)
 As native clusters are by default allowed to be deployed on any organization 
 virtual datacenters in this set-up, native clusters can inadvertently be deployed on 
-Ent-PKS enbled ovdc(s). We can prevent that by protecting native templates using template rules. 
+Ent-PKS enbled ovdc(s). 
+
+**Workaround:** We can prevent that by protecting native templates using template rules. 
 Refer [CSE 2.6 template restriction](TEMPLATE_MANAGEMENT.html#restrict_templates).
 
-### Unable to change the default storage profile for Native cluster deployments?
+### Unable to change the default storage profile for Native cluster deployments
 The default storage profile for native cluster deployments can't be changed in 
 CSE, unless specified via CLI.
 
@@ -45,7 +49,7 @@ vCD follows particular order of precedence to pick the storage-profile for any V
 2. Storage-profile with which the template is created (if VM is being instantiated from a template)
 3. Organization virtual datacenter default storage-profile
 
-Workaround:
+**Workaround:**
 1. Disable the storage-profile with which the template is created on the ovdc.
 2. Set the desired storage-profile as default on the ovdc.
     
@@ -54,7 +58,7 @@ The way Kubernetes version of a cluster is determined, changed between
 CSE 2.5.x and 2.6.0. If the cluster metadata is not properly updated, then
 CSE 2.6.0 defaults the version to 0.0.0.
 
-*Workaround:* CSE 2.6.1 takes care of this issue and defaults to the Kubernetes
+**Workaround:** CSE 2.6.1 takes care of this issue and defaults to the Kubernetes
 version of the template from which the cluster is deployed. However, please note
 that if the template itself was created by CSE 2.5.x, then this approach is not
 foolproof. In such cases it's better to recreate the template in CSE 2.6.1, and

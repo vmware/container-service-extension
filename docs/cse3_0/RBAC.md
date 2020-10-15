@@ -7,7 +7,7 @@ title: Role Based Access Control
 <a name="DEF-RBAC"></a>
 ## CSE 3.0 with VCD 10.2
 
-CSE 3.0, when connected to VCD >= 10.2, leverages the RBAC that comes with VCD's feature
+CSE 3.0, when connected to VCD 10.2, leverages the RBAC that comes with VCD's feature
 [Defined Entity framework](https://docs-staging.vmware.com/en/draft/VMware-Cloud-Director/10.2/VMware-Cloud-Director-Service-Provider-Admin-Portal-Guide/GUID-0749DEA0-08A2-4F32-BDD7-D16869578F96.html) 
 for Native and Tkg clusters. [RBAC for Enterprise PKS clusters](#old RBAC) remain as-is.
 
