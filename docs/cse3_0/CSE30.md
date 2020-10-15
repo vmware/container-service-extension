@@ -12,10 +12,11 @@ For greenfield installations, please get started with [CSE introduction](INTRO.h
 manage Cloud Director provisioned [Tanzu Kubernetes Clusters](https://docs-staging.vmware.com/en/draft/VMware-Cloud-Director/10.2/VMware-Cloud-Director-Service-Provider-Admin-Portal-Guide/GUID-E9839D4E-3024-445E-9D08-372113CF6FE0.html)
  alongside Native and TKGI (Ent-PKS) clusters.
 
-* CSE 3.0 has been architecturally redesigned to consume the latest technology of Cloud Director 10.2, like the [Defined entity framework](https://docs-staging.vmware.com/en/draft/VMware-Cloud-Director/10.2/VMware-Cloud-Director-Service-Provider-Admin-Portal-Guide/GUID-0749DEA0-08A2-4F32-BDD7-D16869578F96.html),
+* CSE 3.0 has been architecturally redesigned to consume the latest technology 
+of Cloud Director 10.2, like the [Defined entity framework](https://docs-staging.vmware.com/en/draft/VMware-Cloud-Director/10.2/VMware-Cloud-Director-Service-Provider-Admin-Portal-Guide/GUID-0749DEA0-08A2-4F32-BDD7-D16869578F96.html),
 and placement policies. CSE's native clusters are now represented as runtime
 defined entities to leverage VCD database for persistence. CSE 3.0 also uses
-placement Policies for [restricting native Clusters deployments](TEMPLATE_MANAGEMENT.html#restrict_templates)
+placement Policies for [restricting native clusters deployments](TEMPLATE_MANAGEMENT.html#restrict_templates)
 to specific organization VDCs. Users will not see any difference in the
 functionality of native clusters. Users can now query native clusters using
 VCD’s defined entity APIs.
