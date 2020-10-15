@@ -17,14 +17,14 @@ placement policies, etc. CSE native clusters are now represented as runtime
 defined entities to leverage VCD database for persistence. CSE 3.0 also uses
 placement Policies for [restricting native Clusters deployments](TEMPLATE_MANAGEMENT.html#restrict_templates)
 to specific organization VDCs. Users will not see any functional difference 
-between CSE 3.0 native clusters and previously deployed native clusters in 
+between CSE 3.0 native clusters and previously deployed native clusters in the 
 context of Kubernetes. Additionally, users can now leverage VCD’s defined 
-entity APIs to query forCSE native clusters
+entity APIs to query for CSE native clusters
 
 * CSE 3.0 also offers a new command group for TKGI (Ent-PKS).
 
 * Newer versions of native Kubernetes templates are available. 
-Refer [Template announcements](TEMPLATE_ANNOUNCEMENTS.html).
+Refer to [Template announcements](TEMPLATE_ANNOUNCEMENTS.html).
 
 **Terminology:**
 * TKG cluster ~ Tanzu Kubernetes  cluster ~ Tanzu Kubernetes Grid cluster ~ vSphere with Tanzu cluster
@@ -99,7 +99,7 @@ CSE 3.0 introduces below changes in CLI
 2. CLI is smart enough to display the most relevant commands and their options 
 based on the API version with which the CSE server runs. This intelligence is 
 enabled when the user logs into the environment using `vcd login` command. 
-For example: `vcd cse cluster apply` is displayed when CSE server runs at API version 35.0.
+For example: `vcd cse cluster apply` is displayed only when CSE server runs at API version 35.0.
 3. One can use CLI to deploy Tkg Clusters on VCD 10.2 without the installation 
 of CSE server. CLI directly communicates with VCD to manage Tanzu Kubernetes clusters.
 4. Node commands are deprecated in CSE 3.0 for VCD 10.2. All of the node 
