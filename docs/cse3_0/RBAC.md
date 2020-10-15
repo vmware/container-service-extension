@@ -33,7 +33,7 @@ below-mentioned right bundles. Refer [How to manage runtime defined entities](ht
    * Right bundle for Tkg Cluster → `vmware:tkgcluster entitlement`
    * Right bundle for Native cluster → `cse:nativeCluster entitlement`
    * Five rights exist in each of the above right bundles. Note that any custom 
-   roles created with the below-mentioned rights need to at least have privileges 
+   roles created with these rights need to at least have privileges 
    of the pre-defined role of `vApp Author` in order to deploy native clusters.
 
 ### Sharing native clusters 

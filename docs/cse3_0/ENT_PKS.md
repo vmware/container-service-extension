@@ -164,13 +164,11 @@ Below steps of granting rights are required only if [RBAC feature](RBAC.html) is
 * vcd user create 'power-user' 'password' 'Omni K8 Author'
 ```
 
-**Enabling ovdc(s) for a particular K8-provider:**
+**Enabling ovdc(s) for Ent-PKS deployments:**
 Starting CSE 3.0, separate command group has been dedicated to Ent-PKS
 ```sh
 * vcd cse pks ovdc list
-* vcd cse pks ovdc enable ovdc1 -o tenant1 -k native
 * vcd cse pks ovdc enable ovdc2 -o tenant1 -k ent-pks --pks-plan "gold" --pks-cluster-domain "tenant1.com"
-* vcd cse pks ovdc enable ovdc1 -o tenant2 -k native
 ```
 
 ### Cluster management commands
@@ -205,8 +203,8 @@ Starting CSE 3.0, separate command group has been dedicated to Ent-PKS
     * Allocation model and reservation models only. Pay-as-you-go is unsupported.
      Elasticity with other models is also not supported.
 * Are Enterprise PKS based clusters visible in VCD UI?
-    * This functionality is not available yet.
-     Enterprise PKS based clusters can only be managed via CSE-CLI as of today.
+    * Kubernetes Clusters UI Plugin versions 2.0 and 1.0.3, both can be used 
+    to manage Enterprise PKS Clusters. Refer [compatibility matrix](CSE30.html#cse30-compatibility-matrix)
 * Do Enterprise PKS based clusters adhere to their parent organization-vdc compute settings?
     * Yes. Both native and Enterprise PkS clusters' combined usage is accounted towards
     reaching compute-limits of a given organization-vdc resource-pool.
@@ -239,5 +237,6 @@ Starting CSE 3.0, separate command group has been dedicated to Ent-PKS
 |2.6.0 Beta | 9.5, 9.7, 10.0, 10.1   | 1.4          | 2.3, 2.4 |
 |2.6.0      | 9.5, 9.7, 10.0, 10.1   | 1.4          | 2.3, 2.4 |
 |2.6.1      | 9.5, 9.7, 10.0, 10.1   | 1.7          | 2.5.1    |
+|3.0        | 10.0, 10.1, 10.2       | 1.7          | 2.5.1    |
 
 

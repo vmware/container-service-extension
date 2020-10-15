@@ -52,20 +52,19 @@ Here is a summary of commands available to view templates and manage clusters an
 | `vcd cse node delete CLUSTER_NAME NODE_NAME`                         | No               | Yes                 | Delete nodes from a cluster.                                               |
 
 <a name="cse30_cli_changes"></a>
-CSE 3.0 introduces few of the below changes in CLI
-1. CLI is smart enough to display the most relevant commands and command 
-options based on the API version with which the CSE server is running. 
-This intelligence will only be enabled when the user logs into the environment
- using `vcd login` command. For example: `vcd cse cluster apply` is displayed 
- only if CSE server is running at api version >= 35.0. Refer [what commands are available for what CSE versions?](TROUBLESHOOTING.html#cmds-per-cse) for more details.
-2. One can use CLI to deploy Tkg Clusters even without CSE server installed. 
-CLI directly communicates with the Cloud Director to manage Tanzu Kubernetes clusters.
-3. Node commands have been deprecated for CSE 3.0. All of the node management 
-(or) resize operations can be done through `vcd cse cluster apply` command in 
-CSE 3.0. Node commands continue to be operational if CSE server is running with
- vCD API version <= 34.0
-4. New command has been added for NFS deletion: `vcd cse cluster delete-nfs`
-5. Separate command group for Ent-PKS: `vcd cse pks –help`
+CSE 3.0 introduces below changes in CLI
+1. CLI is smart enough to display the most relevant commands and their options 
+based on the API version with which the CSE server runs. This intelligence is 
+enabled when the user logs into the environment using `vcd login` command. 
+For example: `vcd cse cluster apply` is displayed when CSE server runs at API version 35.0.
+2. One can use CLI to deploy Tkg Clusters on VCD 10.2 without the installation 
+of CSE server. CLI directly communicates with VCD to manage Tanzu Kubernetes clusters.
+3. Node commands are deprecated in CSE 3.0 for VCD 10.2. All of the node 
+management (or) resize operations are done through `vcd cse cluster apply` 
+command in CSE 3.0 with VCD 10.2. Node commands continue to be operational for 
+CSE server with VCD < 10.2.
+4. New command is available for NFS deletion: `vcd cse cluster delete-nfs`
+5. Separate command group is available for Ent-PKS: `vcd cse pks –help`
 
 For CSE versions < 3.0, by default, CSE Client will display the task progress until the
 task finishes or fails. The `--no-wait` flag can be used to skip waiting on the

@@ -22,6 +22,8 @@ VCD’s defined entity APIs.
 
 * CSE 3.0 also offers a new command group for TKGI (Ent-PKS).
 
+* New Kubernetes templates are added. Refer [Template announcements](TEMPLATE_ANNOUNCEMENTS.html).
+
 **Terminology:**
 * TKG cluster ~ Tanzu Kubernetes  cluster ~ Tanzu Kubernetes Grid cluster ~ vSphere with Tanzu cluster
 * TKGI cluster ~ Ent-PKS cluster ~ Tanzu Kubernetes Grid Integrated Edition cluster
@@ -38,11 +40,11 @@ VCD’s defined entity APIs.
 <a name="cse30-compatibility-matrix"></a>
 ### 2.1 Compatibility matrix and relevant features
 
-| CSE Server | CSE CLI | CSE UI | Cloud Director | Ent-PKS | Features offered                                                                                    |
-|------------|---------|--------|----------------|---------|-----------------------------------------------------------------------------------------------------|
-| 3.0        | 3.0     | 2.0*   | 10.2           | 1.7     | Native, Tkg, and Ent-PKS Cluster management; Defined entity representation for both native and tkg. |
-| 3.0        | 3.0     | 1.0.3  | 10.1, 10.0     | 1.7     | Native and Ent-PKS cluster management                                                               |
-| NA         | 3.0     | 2.0*   | 10.2           | NA      | Tkg cluster management only                                                                         |
+| CSE Server | CSE CLI | CSE UI | Cloud Director | Ent-PKS with NSX-T | Features offered                                                                                    |
+|------------|---------|--------|----------------|--------------------|-----------------------------------------------------------------------------------------------------|
+| 3.0        | 3.0     | 2.0*   | 10.2           | 1.7 with 2.5.1     | Native, Tkg, and Ent-PKS Cluster management; Defined entity representation for both native and tkg. |
+| 3.0        | 3.0     | 1.0.3  | 10.1, 10.0     | 1.7 with 2.5.1     | Native and Ent-PKS cluster management                                                               |
+| NA         | 3.0     | 2.0*   | 10.2           | NA                 | Tkg cluster management only                                                                         |
 
 2.0* -> Kubernetes Clusters UI Plugin 2.0 ships with VCD 10.2
 
@@ -87,9 +89,22 @@ Refer [Register CSE UI Plugin 1.0.3](CSE_UI_PLUGIN.html) for more details.
 Tenant users can manage the Kubernetes cluster deployments either through CSE CLI or Kubernetes Clusters UI Plugin
 
 ### 3.1 CLI for Container Extension
+CSE 3.0 introduces below changes in CLI
+
 1. New command `vcd cse cluster apply <create_cluster.yaml>` has been introduced
  in CSE 3.0. Refer [cluster apply usage](CLUSTER_MANAGEMENT.html#cse30_cluster_apply) for more details.
-2. [Other miscellaneous changes in CLI 3.0](CLUSTER_MANAGEMENT.html#cse30_cli_changes)
+2. CLI is smart enough to display the most relevant commands and their options 
+based on the API version with which the CSE server runs. This intelligence is 
+enabled when the user logs into the environment using `vcd login` command. 
+For example: `vcd cse cluster apply` is displayed when CSE server runs at API version 35.0.
+3. One can use CLI to deploy Tkg Clusters on VCD 10.2 without the installation 
+of CSE server. CLI directly communicates with VCD to manage Tanzu Kubernetes clusters.
+4. Node commands are deprecated in CSE 3.0 for VCD 10.2. All of the node 
+management (or) resize operations are done through `vcd cse cluster apply` 
+command in CSE 3.0 with VCD 10.2. Node commands continue to be operational for 
+CSE server with VCD < 10.2.
+5. New command is available for NFS deletion: `vcd cse cluster delete-nfs`
+6. Separate command group is dedicated for Ent-PKS: `vcd cse pks –help`
 
 ### 3.2 Kubernetes Clusters UI Plugin
 

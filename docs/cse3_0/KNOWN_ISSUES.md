@@ -7,30 +7,20 @@ title: Known Issues
 <a name="general"></a>
 ## General Issues
 ---
-### (CSE 3.0 - vCD 10.2) Cluster delete operation may leave stale entries for native clusters.
-On cluster delete operation, if native cluster deletion fails for any unknown 
-reason, CLI and UI sometimes may give out a false impression that the cluster 
-has been deleted successfully. The reason being the corresponding runtime definedentity 
-may get deleted; however, the actual cluster vapp deletion may have failed. It 
-is best to track the cluster deletion with the task_href, until the issue is fixed.
-As a workaround, manually delete the stale vApp VMs.
-
-### (CSE 3.0 - vCD 10.2) Cluster list operation may fail to retrieve results
-Listing clusters either by CLI (vcd cse cluster list) or UI will fail if any of 
-the clusters' RDEs are corrupted. For example, if the defined entity 
-is manually modified (using defined entity api directly) to the extent that it 
+### In CSE 3.0 configured with vCD 10.2, Cluster list operation may fail to retrieve results
+Listing clusters either by CLI (`vcd cse cluster list`) or UI will fail if any of 
+the clusters' representing defined entities are corrupted. For example, if the defined entity 
+is manually modified (using direct defined entity api) and if it 
 violates the schema rules of the corresponding defined entity type, then cluster 
 list cmd will fail to retrieve other valid entities. As a workaround, carefully 
-update the defined entity with the correct schema and [sync the defined entity](TROUBLESHOOTING.html#sync-def-entity) 
-using CSE server API.
+update the defined entity with the correct schema (using direct defined entity api) 
+and sync the defined entity using CSE server API - GET on `https://<vcd-ip>/api/cse/3.0/clusters/<id>`
 
-### (CSE 3.0 - vCD 10.2) How to delete the clusters stuck in _CREATE:IN_PROGRESS_ state?
-If the cluster creation ever seems to be stuck, it could mean that the cluster 
-creation failed for some unknown reason, but the backend failed to update the 
-defined entity state to an ERROR state. Confirm if the cluster status 
-matches the corresponding task status (retrieve _task_href_ from the result of 
-command `vcd cse cluster info <cluster_name>`). If it does not match, follow the 
-below steps to clean up the stale entries of the cluster
+### In CSE 3.0 configured with vCD 10.2, native clusters are stuck in _CREATE:IN_PROGRESS_ state.
+When native clusters are stuck in such state, it means that the cluster 
+creation has failed for unknown reason, and the representing defined entity 
+has not transitioned to the ERROR state. 
+
 1. Delete the defined entity
     * POST `https://<vcd-fqdn>/cloudapi/1.0.0/entities/<cluster-id>/resolve`
     * DEL `https://<vcd-fqdn>/cloudapi/1.0.0/entities/<cluster-id>`
@@ -40,11 +30,15 @@ below steps to clean up the stale entries of the cluster
         * GET `https://<vcd-fqdn>/cloudapi/1.0.0/entities/<cluster-id>`
     * Delete the corresponding cluster vApp
 
-### How to force native deployments to be placed in a particular storage profile by default?
-Several GitHub issues have been filed requesting for a way to let the native 
-clusters be deployed in a particular storage-profile by default (something 
-other than template's storage-profile), that is without users having to explicitly 
-specify the storage-profile through CLI.
+### In CSE 3.0 configured with vCD 10.1, prevent native clusters from getting deployed in Ent-PKS enbled ovdc(s)
+As native clusters are by default allowed to be deployed on any organization 
+virtual datacenters in this set-up, native clusters can inadvertently be deployed on 
+Ent-PKS enbled ovdc(s). We can prevent that by protecting native templates using template rules. 
+Refer [CSE 2.6 template restriction](TEMPLATE_MANAGEMENT.html#restrict_templates).
+
+### Unable to change the default storage profile for Native cluster deployments?
+The default storage profile for native cluster deployments can't be changed in 
+CSE, unless specified via CLI.
 
 vCD follows particular order of precedence to pick the storage-profile for any VM instantiation:
 1. User-specified storage-profile
