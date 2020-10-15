@@ -89,7 +89,8 @@ Refer to [Register CSE UI Plugin 1.0.3](CSE_UI_PLUGIN.html) for more details.
 
 <a name="tenant-workflows"></a>
 ## 3. Tenant workflows
-Tenant users can manage the Kubernetes cluster deployments either through CSE CLI or Kubernetes Clusters UI Plugin
+Tenant users can manage the Kubernetes cluster deployments either through 
+CSE CLI or Kubernetes Clusters UI Plugin
 
 ### 3.1 CLI for Container Extension
 CSE 3.0 introduces below changes in CLI
