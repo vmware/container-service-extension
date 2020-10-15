@@ -5,14 +5,14 @@ title: Introduction
 # What's new in CSE 3.0?
 
 For greenfield installations, please get started with [CSE introduction](INTRO.html).
+
 <a name="overview"></a>
 ## 1. Overview
 * Starting CSE 3.0, CLI for Container Service Extension and Kubernetes Clusters UI Plugin can be used to
 manage Cloud Director provisioned [Tanzu Kubernetes Clusters](https://docs-staging.vmware.com/en/draft/VMware-Cloud-Director/10.2/VMware-Cloud-Director-Service-Provider-Admin-Portal-Guide/GUID-E9839D4E-3024-445E-9D08-372113CF6FE0.html)
  alongside Native and TKGI (Ent-PKS) clusters.
 
-* CSE 3.0 has been architecturally redesigned to consume the latest technology of Cloud Director
-(>=10.2), like the [Defined entity framework](https://docs-staging.vmware.com/en/draft/VMware-Cloud-Director/10.2/VMware-Cloud-Director-Service-Provider-Admin-Portal-Guide/GUID-0749DEA0-08A2-4F32-BDD7-D16869578F96.html),
+* CSE 3.0 has been architecturally redesigned to consume the latest technology of Cloud Director 10.2, like the [Defined entity framework](https://docs-staging.vmware.com/en/draft/VMware-Cloud-Director/10.2/VMware-Cloud-Director-Service-Provider-Admin-Portal-Guide/GUID-0749DEA0-08A2-4F32-BDD7-D16869578F96.html),
 and placement policies. CSE's native clusters are now represented as runtime
 defined entities to leverage VCD database for persistence. CSE 3.0 also uses
 Placement Policies for [restricting native Clusters deployments](TEMPLATE_MANAGEMENT.html#restrict_templates)
@@ -50,7 +50,7 @@ VCD’s defined entity APIs.
 
 ### 2.2 CSE Server
 #### 2.2.1 Greenfield installation
-With CSE 3.0 - VCD 10.2 combination, CSE installation command
+When CSE 3.0 is configured with vCD 10.2, CSE installation command
 `cse install -c config.yaml` does two additional steps than what it used to do
 in the earlier versions. Refer [CSE 3.0 installation](CSE_SERVER_MANAGEMENT.html#cse30-greenfield).
 

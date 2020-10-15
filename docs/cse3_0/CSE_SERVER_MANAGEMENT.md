@@ -336,7 +336,7 @@ Upgrading CSE server is no different than installing it for the first time.
 `cse ...` commands are used by system administrators to:
 
 * Install CSE Server
-* Upgrade CSE Server to make older environments forward compatible with CSE version >= 3.0
+* Upgrade CSE Server to make older environments forward compatible with CSE version > 3.0
 * Create/Update templates
 * Run CSE Server manually
 
