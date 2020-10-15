@@ -174,6 +174,10 @@ The following table summarizes key parameters.
 
 <a name="templte_rules"></a>
 ### `template_rules` Section
+
+Note that `template_rules` section is not applicable when CSE 3.0 is configured 
+with vCD 10.2. Refer [Template management for CSE 3.0](TEMPLATE_MANAGEMENT.html#cse30-restrict_templates)
+
 #### (Added in CSE 2.5.0)
 
 Rules can be created to override some of the default attributes of templates

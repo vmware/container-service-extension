@@ -77,10 +77,10 @@ deployments, by running the command: `vcd cse ovdc enable`.
 
 CSE 3.0 leverages VCD's feature of placement policies to restrict native K8 
 deployments to specific organization virtual datacenters (ovdcs).
-During CSE install or upgrade, it creates an provider Vdc level placement 
+During CSE install or upgrade, it creates a provider Vdc level placement 
 policy **cse----native** and tags the native templates with the same. In 
-effect, one can instantiate cluster VM(s) from **cse----native** tagged templates, 
-only in those ovdc(s) with the placement policy **cse----native** published.
+effect, one can instantiate native clusters from these tagged templates, 
+only onto org VDC(s) that have the corresponding placement policy published.
 
 1. (provider command) `cse install` or `cse upgrade` creates native 
 placement policy **cse----native** and tags the relevant templates with
