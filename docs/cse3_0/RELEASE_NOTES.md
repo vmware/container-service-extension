@@ -8,6 +8,8 @@ title: Release Notes
 ## CSE 3.0
 Release Date: 2020-10-15
 
+**Supported (and Tested) VCD versions** : 10.2, 10.1.2, 10.0.0.3
+
 **Compatibility matrix and relevant features**
 
 | CSE Server | CSE CLI | CSE UI | Cloud Director | Ent-PKS with NSX-T | Features offered                                                                                    |
@@ -19,8 +21,7 @@ Release Date: 2020-10-15
 2.0* -> Kubernetes clusters UI plug-in 2.0 ships with VCD 10.2
 
 1. Refer to [What's new in CSE 3.0?](CSE30.html) for more details.
-2. Supported (and tested) VCD versions with CSE 3.0 are 10.2, 10.1.2, 10.0.3.
-3. Newer versions of native kubernetes templates are available. Refer 
+2. Newer versions of native kubernetes templates are available. Refer to
 [Template Announcements](TEMPLATE_ANNOUNCEMENTS.html)
 
 ## CSE 2.6.1 GA(2.6.1)

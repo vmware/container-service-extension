@@ -1,4 +1,4 @@
-- name: Work In Progress
+- name: CSE 3.0
   subdir: cse3_0
   link: CSE30.html
   default: false
@@ -74,7 +74,7 @@
     subtoc:
     - name: CSE 3.0 with vCD 10.2
       sublink: DEF-RBAC
-    - name: CSE < 3.0 with vCD < 10.2
+    - name: CSE 3.0 with vCD < 10.2
       sublink: old-RBAC
   - name: "Kubernetes Cluster Management"
     link: CLUSTER_MANAGEMENT.html

@@ -8,7 +8,7 @@ title: Role Based Access Control
 ## CSE 3.0 with VCD 10.2
 
 CSE 3.0, when connected to VCD 10.2, leverages the RBAC that comes with VCD's feature
-[Defined Entity framework](https://docs-staging.vmware.com/en/draft/VMware-Cloud-Director/10.2/VMware-Cloud-Director-Service-Provider-Admin-Portal-Guide/GUID-0749DEA0-08A2-4F32-BDD7-D16869578F96.html) 
+[Defined Entity framework](https://docs.vmware.com/en/VMware-Cloud-Director/10.2/VMware-Cloud-Director-Service-Provider-Admin-Portal-Guide/GUID-0749DEA0-08A2-4F32-BDD7-D16869578F96.html) 
 for Native and Tkg clusters. [RBAC for Enterprise PKS clusters](#old RBAC) remain as-is.
 
 _Note: The RBAC in this section refers to the roles and rights required for the tenants
@@ -28,7 +28,7 @@ to the desired organizations and then grant the admin-level defined entity type
 rights to the Tenant Administrator role. This will enable the tenant administrator 
 to grant the relevant cluster management rights to the desired tenant users. 
 Users cannot view or deploy clusters unless they have one of the rights in the 
-below-mentioned right bundles. Refer [How to manage runtime defined entities](https://docs-staging.vmware.com/en/draft/VMware-Cloud-Director/10.2/VMware-Cloud-Director-Service-Provider-Admin-Portal-Guide/GUID-0749DEA0-08A2-4F32-BDD7-D16869578F96.html) for more details.
+below-mentioned right bundles. Refer [How to manage runtime defined entities](https://docs.vmware.com/en/VMware-Cloud-Director/10.2/VMware-Cloud-Director-Service-Provider-Admin-Portal-Guide/GUID-0749DEA0-08A2-4F32-BDD7-D16869578F96.html) for more details.
 
    * Right bundle for Tkg Cluster → `vmware:tkgcluster entitlement`
    * Right bundle for Native cluster → `cse:nativeCluster entitlement`
@@ -41,7 +41,7 @@ Tenant user need to perform below steps to share a native cluster to another
 user of the same organization.
 1. Share the cluster vApp to the desired user with the desired ACL grant.
 2. Share the corresponding defined entity to the desired user with the same 
-level of ACL grant mentioned in step-1. Refer [Sharing runtime defined entities](https://docs-staging.vmware.com/en/draft/VMware-Cloud-Director/10.2/VMware-Cloud-Director-Service-Provider-Admin-Portal-Guide/GUID-DAFF4CE9-B276-4A0B-99D9-22B985153236.html) for more details.
+level of ACL grant mentioned in step-1. Refer [Sharing runtime defined entities](https://docs.vmware.com/en/VMware-Cloud-Director/10.2/VMware-Cloud-Director-Service-Provider-Admin-Portal-Guide/GUID-DAFF4CE9-B276-4A0B-99D9-22B985153236.html) for more details.
 
 <a name="old RBAC"></a>
 ## CSE 3.0 with VCD < 10.2
