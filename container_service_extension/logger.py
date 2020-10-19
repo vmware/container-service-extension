@@ -7,8 +7,8 @@ import datetime
 import logging
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
-import threading
 
+from container_service_extension.init_utils import run_once
 from container_service_extension.security import RedactingFilter
 
 # max size for log files (8MB)
@@ -32,16 +32,6 @@ DEBUG_LOG_FORMATTER = logging.Formatter(fmt='%(asctime)s | '
 
 # create directory for all cse logs
 LOGS_DIR_NAME = Path.home() / '.cse-logs'
-
-
-def run_once(f):
-    """Ensure that a function is only run once using this decorator."""
-    def wrapper(*args, **kwargs):
-        if not wrapper.has_run:
-            wrapper.has_run = True
-            return f(*args, **kwargs)
-    wrapper.has_run = False
-    return wrapper
 
 
 # cse install logger and config
@@ -116,10 +106,6 @@ SERVER_CLOUDAPI_WIRE_LOGGER = logging.getLogger(SERVER_CLOUDAPI_WIRE_LOGGER_NAME
 NULL_LOGGER = logging.getLogger('container_service_extension.null-logger')
 
 
-# Thread data to be initialized once. This data is specific to each thread.
-THREAD_DATA = None
-
-
 @run_once
 def setup_log_file_directory():
     """Create directory for log files."""
@@ -127,29 +113,8 @@ def setup_log_file_directory():
 
 
 @run_once
-def init_thread_local_data():
-    global THREAD_DATA
-    THREAD_DATA = threading.local()
-
-
-def set_thread_request_id(request_id):
-    global THREAD_DATA
-    THREAD_DATA.request_id = request_id
-
-
-def get_thread_request_id():
-    global THREAD_DATA
-    try:
-        request_id = THREAD_DATA.request_id
-    except AttributeError:
-        request_id = None
-    return request_id
-
-
-@run_once
 def configure_all_file_loggers():
     """Configure all loggers if not configured."""
-    init_thread_local_data()
     setup_log_file_directory()
     LoggerConfig = namedtuple('LoggerConfig', 'name filepath formatter logger')
     configs = [

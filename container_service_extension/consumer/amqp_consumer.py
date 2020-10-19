@@ -14,8 +14,8 @@ from container_service_extension.consumer.consumer_thread_pool_executor \
     import ConsumerThreadPoolExecutor
 import container_service_extension.consumer.utils as utils
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
-from container_service_extension.logger import set_thread_request_id
 from container_service_extension.server_constants import EXCHANGE_TYPE
+from container_service_extension.thread_local_data import set_thread_request_id
 
 
 class AMQPConsumer(object):
