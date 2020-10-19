@@ -17,10 +17,10 @@ import pkg_resources
 import requests
 import semantic_version
 
-from container_service_extension.logger import get_thread_request_id
 from container_service_extension.logger import NULL_LOGGER
-from container_service_extension.logger import set_thread_request_id
 from container_service_extension.server_constants import MQTT_MIN_API_VERSION
+from container_service_extension.thread_local_data import get_thread_request_id
+from container_service_extension.thread_local_data import set_thread_request_id
 
 
 # chunk size in bytes for file reading
