@@ -76,6 +76,9 @@ PBKDF2_OUTPUT_SIZE = 32
 MESSAGE_CONSUMER_THREAD = 'MessageConsumer'
 WATCHDOG_THREAD = 'ConsumerWatchdog'
 
+# Request Id format for logging
+REQUEST_ID_FORMAT = 'Request Id: %(requestId)s | '
+
 
 @unique
 class NodeType(str, Enum):

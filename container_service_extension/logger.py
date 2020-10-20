@@ -9,7 +9,9 @@ from logging.handlers import RotatingFileHandler
 from pathlib import Path
 
 from container_service_extension.init_utils import run_once
+from container_service_extension.request_id_formatter import RequestIdFormatter
 from container_service_extension.security import RedactingFilter
+from container_service_extension.server_constants import REQUEST_ID_FORMAT
 
 # max size for log files (8MB)
 _MAX_BYTES = 2**23
@@ -21,17 +23,17 @@ _TIMESTAMP = _TIME.replace(' ', '_').replace(':', '-')
 
 
 # standard formatters used by handlers
-INFO_LOG_FORMATTER = logging.Formatter(fmt='%(asctime)s | '
-                                       'Request Id: %(requestId)s | '
-                                       '%(levelname)s :: '
-                                       '%(message)s',
-                                       datefmt='%y-%m-%d %H:%M:%S')
-DEBUG_LOG_FORMATTER = logging.Formatter(fmt='%(asctime)s | '
-                                        '%(module)s:%(lineno)s - %(funcName)s | '  # noqa: E501
-                                        'Request Id: %(requestId)s | '
+INFO_LOG_FORMATTER = RequestIdFormatter(fmt='%(asctime)s | '
+                                        f'{REQUEST_ID_FORMAT}'
                                         '%(levelname)s :: '
                                         '%(message)s',
                                         datefmt='%y-%m-%d %H:%M:%S')
+DEBUG_LOG_FORMATTER = RequestIdFormatter(fmt='%(asctime)s | '
+                                         '%(module)s:%(lineno)s - %(funcName)s | '  # noqa: E501
+                                         f'{REQUEST_ID_FORMAT}'
+                                         '%(levelname)s :: '
+                                         '%(message)s',
+                                         datefmt='%y-%m-%d %H:%M:%S')
 
 # create directory for all cse logs
 LOGS_DIR_NAME = Path.home() / '.cse-logs'
