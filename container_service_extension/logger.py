@@ -30,7 +30,7 @@ class RequestIdFormatter(logging.Formatter):
 
         request_id = get_thread_request_id()
         if request_id is not None:
-            result = f"Request_id: {request_id} {result}"
+            result = f"Request_id: {request_id} | {result}"
         return result
 
 
