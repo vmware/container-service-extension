@@ -826,8 +826,10 @@ def _setup_placement_policies(client,
     pvdc_compute_policy = None
     try:
         try:
-            pvdc_compute_policy = cpm.get_pvdc_compute_policy(
-                server_constants.CSE_GLOBAL_PVDC_COMPUTE_POLICY_NAME)
+            pvdc_compute_policy = \
+                compute_policy_manager.get_cse_pvdc_compute_policy(
+                    cpm,
+                    server_constants.CSE_GLOBAL_PVDC_COMPUTE_POLICY_NAME)
             msg = "Skipping creation of global PVDC compute policy. Policy already exists" # noqa: E501
             msg_update_callback.general(msg)
             INSTALL_LOGGER.info(msg)
@@ -835,25 +837,32 @@ def _setup_placement_policies(client,
             msg = "Creating global PVDC compute policy"
             msg_update_callback.general(msg)
             INSTALL_LOGGER.info(msg)
-            pvdc_compute_policy = cpm.add_pvdc_compute_policy(
-                server_constants.CSE_GLOBAL_PVDC_COMPUTE_POLICY_NAME,
-                server_constants.CSE_GLOBAL_PVDC_COMPUTE_POLICY_DESCRIPTION)
+            pvdc_compute_policy = \
+                compute_policy_manager.add_cse_pvdc_compute_policy(
+                    cpm,
+                    server_constants.CSE_GLOBAL_PVDC_COMPUTE_POLICY_NAME,
+                    server_constants.CSE_GLOBAL_PVDC_COMPUTE_POLICY_DESCRIPTION)  # noqa: E501
 
-        for policy in policy_list:
+        for policy_name in policy_list:
             if not is_tkg_plus_enabled and \
-                    policy == shared_constants.TKG_PLUS_CLUSTER_RUNTIME_INTERNAL_NAME:  # noqa: E501
+                    policy_name == shared_constants.TKG_PLUS_CLUSTER_RUNTIME_INTERNAL_NAME:  # noqa: E501
                 continue
             try:
-                cpm.get_vdc_compute_policy(policy, is_placement_policy=True)
-                msg = f"Skipping creation of VDC placement policy '{policy}'. Policy already exists" # noqa: E501
+                compute_policy_manager.get_cse_vdc_compute_policy(
+                    cpm,
+                    policy_name,
+                    is_placement_policy=True)
+                msg = f"Skipping creation of VDC placement policy '{policy_name}'. Policy already exists" # noqa: E501
                 msg_update_callback.general(msg)
                 INSTALL_LOGGER.info(msg)
             except EntityNotFoundException:
-                msg = f"Creating placement policy '{policy}'"
+                msg = f"Creating placement policy '{policy_name}'"
                 msg_update_callback.general(msg)
                 INSTALL_LOGGER.info(msg)
-                cpm.add_vdc_compute_policy(
-                    policy, pvdc_compute_policy_id=pvdc_compute_policy['id'])
+                compute_policy_manager.add_cse_vdc_compute_policy(
+                    cpm,
+                    policy_name,
+                    pvdc_compute_policy_id=pvdc_compute_policy['id'])
     except cse_exception.GlobalPvdcComputePolicyNotSupported:
         msg = "Global PVDC compute policies are not supported." \
               "Skipping creation of placement policy."
@@ -2031,8 +2040,9 @@ def _assign_placement_policy_to_vdc_and_right_bundle_to_org(
         msg = f"Found {len(native_ovdcs)} vDC(s) hosting NATIVE CSE custers."
         msg_update_callback.info(msg)
         INSTALL_LOGGER.info(msg)
-        native_policy = cpm.get_vdc_compute_policy(
-            policy_name=shared_constants.NATIVE_CLUSTER_RUNTIME_INTERNAL_NAME,
+        native_policy = compute_policy_manager.get_cse_vdc_compute_policy(
+            cpm,
+            shared_constants.NATIVE_CLUSTER_RUNTIME_INTERNAL_NAME,
             is_placement_policy=True)
         for vdc_id in native_ovdcs:
             cpm.add_compute_policy_to_vdc(
@@ -2057,9 +2067,11 @@ def _assign_placement_policy_to_vdc_and_right_bundle_to_org(
         INSTALL_LOGGER.info(msg)
 
         if is_tkg_plus_enabled:
-            tkg_plus_policy = cpm.get_vdc_compute_policy(
-                policy_name=shared_constants.TKG_PLUS_CLUSTER_RUNTIME_INTERNAL_NAME,  # noqa: E501
-                is_placement_policy=True)
+            tkg_plus_policy = \
+                compute_policy_manager.get_cse_vdc_compute_policy(
+                    cpm,
+                    shared_constants.TKG_PLUS_CLUSTER_RUNTIME_INTERNAL_NAME,
+                    is_placement_policy=True)
             for vdc_id in tkg_plus_ovdcs:
                 cpm.add_compute_policy_to_vdc(
                     vdc_id=vdc_id,
@@ -2123,7 +2135,7 @@ def _remove_old_cse_sizing_compute_policies(
 
             vdc = vcd_utils.get_vdc(client, vdc_name=vdc_name, org_name=org_name) # noqa: E501
             vdc_id = pyvcloud_vcd_utils.extract_id(vdc.get_resource().get('id')) # noqa: E501
-            vdc_sizing_policies = cpm.list_vdc_sizing_policies_on_vdc(vdc_id)
+            vdc_sizing_policies = compute_policy_manager.list_cse_sizing_policies_on_vdc(cpm, vdc_id)  # noqa: E501
             if vdc_sizing_policies:
                 for policy in vdc_sizing_policies:
                     msg = f"Processing Policy : '{policy['display_name']}' on Org VDC : '{vdc_name}'" # noqa: E501
@@ -2156,7 +2168,8 @@ def _remove_old_cse_sizing_compute_policies(
             msg_update_callback.info(msg)
             INSTALL_LOGGER.info(msg)
 
-            cpm.delete_vdc_compute_policy(policy_name=policy_name)
+            compute_policy_manager.delete_cse_vdc_compute_policy(cpm,
+                                                                 policy_name)
 
             msg = f"Deleted  Policy : '{policy_name}'"
             msg_update_callback.general(msg)

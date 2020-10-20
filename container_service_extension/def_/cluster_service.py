@@ -1377,7 +1377,7 @@ def _get_nodes_details(sysadmin_client, vapp):
                                                         'VmSizingPolicy'):
                 policy_name = vm.ComputePolicy.VmSizingPolicy.get('name')
                 sizing_class = compute_policy_manager.\
-                    ComputePolicyManager.get_policy_display_name(policy_name)
+                    get_cse_policy_display_name(policy_name)
             if vm_name.startswith(NodeType.CONTROL_PLANE):
                 control_plane = def_models.Node(name=vm_name, ip=ip,
                                                 sizing_class=sizing_class)

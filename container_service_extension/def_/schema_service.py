@@ -9,7 +9,7 @@ import json
 from requests.exceptions import HTTPError
 
 from container_service_extension.cloudapi.cloudapi_client import CloudApiClient
-from container_service_extension.cloudapi.constants import CLOUDAPI_VERSION_1_0_0 # noqa: E501
+from container_service_extension.cloudapi.constants import CloudApiVersion
 from container_service_extension.cloudapi.constants import CloudApiResource
 import container_service_extension.def_.models as def_models
 from container_service_extension.def_.utils import raise_error_if_def_not_supported # noqa: E501
@@ -69,7 +69,7 @@ class DefSchemaService():
             page_num += 1
             response_body = self._cloudapi_client.do_request(
                 method=cse_shared_constants.RequestMethod.GET,
-                cloudapi_version=CLOUDAPI_VERSION_1_0_0,
+                cloudapi_version=CloudApiVersion.VERSION_1_0_0,
                 resource_url_relative_path=f"{CloudApiResource.INTERFACES}?"
                 f"page={page_num}")
             if len(response_body['values']) > 0:
@@ -88,7 +88,7 @@ class DefSchemaService():
         """
         response_body = self._cloudapi_client.do_request(
             method=cse_shared_constants.RequestMethod.GET,
-            cloudapi_version=CLOUDAPI_VERSION_1_0_0,
+            cloudapi_version=CloudApiVersion.VERSION_1_0_0,
             resource_url_relative_path=f"{CloudApiResource.INTERFACES}/{id}")
         return def_models.DefInterface(**response_body)
 
@@ -104,7 +104,7 @@ class DefSchemaService():
             raise ValueError("Cloud API Client should be sysadmin.")
         response_body = self._cloudapi_client.do_request(
             method=cse_shared_constants.RequestMethod.POST,
-            cloudapi_version=CLOUDAPI_VERSION_1_0_0,
+            cloudapi_version=CloudApiVersion.VERSION_1_0_0,
             resource_url_relative_path=f"{CloudApiResource.INTERFACES}",
             payload=asdict(interface))
         return def_models.DefInterface(**response_body)
@@ -123,7 +123,7 @@ class DefSchemaService():
             raise ValueError("Cloud API Client should be sysadmin.")
         response_body = self._cloudapi_client.do_request(
             method=cse_shared_constants.RequestMethod.PUT,
-            cloudapi_version=CLOUDAPI_VERSION_1_0_0,
+            cloudapi_version=CloudApiVersion.VERSION_1_0_0,
             resource_url_relative_path=f"{CloudApiResource.INTERFACES}/"
             f"{interface.id}",
             payload=asdict(interface))
@@ -140,7 +140,7 @@ class DefSchemaService():
             raise ValueError("Cloud API Client should be sysadmin.")
         return self._cloudapi_client.do_request(
             method=cse_shared_constants.RequestMethod.DELETE,
-            cloudapi_version=CLOUDAPI_VERSION_1_0_0,
+            cloudapi_version=CloudApiVersion.VERSION_1_0_0,
             resource_url_relative_path=f"{CloudApiResource.INTERFACES}/{id}")
 
     @handle_schema_service_exception
@@ -155,7 +155,7 @@ class DefSchemaService():
             raise ValueError("Cloud API Client should be sysadmin.")
         response_body = self._cloudapi_client.do_request(
             method=cse_shared_constants.RequestMethod.POST,
-            cloudapi_version=CLOUDAPI_VERSION_1_0_0,
+            cloudapi_version=CloudApiVersion.VERSION_1_0_0,
             resource_url_relative_path=f"{CloudApiResource.ENTITY_TYPES}",
             payload=asdict(entity_type))
         return def_models.DefEntityType(**response_body)
@@ -170,7 +170,7 @@ class DefSchemaService():
         """
         response_body = self._cloudapi_client.do_request(
             method=cse_shared_constants.RequestMethod.GET,
-            cloudapi_version=CLOUDAPI_VERSION_1_0_0,
+            cloudapi_version=CloudApiVersion.VERSION_1_0_0,
             resource_url_relative_path=f"{CloudApiResource.ENTITY_TYPES}/{id}")
         return def_models.DefEntityType(**response_body)
 
@@ -186,7 +186,7 @@ class DefSchemaService():
             page_num += 1
             response_body = self._cloudapi_client.do_request(
                 method=cse_shared_constants.RequestMethod.GET,
-                cloudapi_version=CLOUDAPI_VERSION_1_0_0,
+                cloudapi_version=CloudApiVersion.VERSION_1_0_0,
                 resource_url_relative_path=f"{CloudApiResource.ENTITY_TYPES}?"
                 f"page={page_num}")
             if len(response_body['values']) > 0:
@@ -210,7 +210,7 @@ class DefSchemaService():
             raise ValueError("Cloud API Client should be sysadmin.")
         response_body = self._cloudapi_client.do_request(
             method=cse_shared_constants.RequestMethod.PUT,
-            cloudapi_version=CLOUDAPI_VERSION_1_0_0,
+            cloudapi_version=CloudApiVersion.VERSION_1_0_0,
             resource_url_relative_path=f"{CloudApiResource.ENTITY_TYPES}/"
             f"{entity_type.id}",
             payload=asdict(entity_type))
@@ -227,5 +227,5 @@ class DefSchemaService():
             raise ValueError("Cloud API Client should be sysadmin.")
         self._cloudapi_client.do_request(
             method=cse_shared_constants.RequestMethod.DELETE,
-            cloudapi_version=CLOUDAPI_VERSION_1_0_0,
+            cloudapi_version=CloudApiVersion.VERSION_1_0_0,
             resource_url_relative_path=f"{CloudApiResource.ENTITY_TYPES}/{id}")
