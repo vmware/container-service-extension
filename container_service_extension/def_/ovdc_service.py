@@ -172,8 +172,9 @@ def get_ovdc_k8s_runtime_details(sysadmin_client: vcd_client.Client,
     ovdc_id = vcd_utils.extract_id(ovdc.get_resource().get('id'))
     ovdc_name = ovdc.get_resource().get('name')
     policies = []
-    for policy in cpm.list_vdc_placement_policies_on_vdc(ovdc_id):
-        policies.append(RUNTIME_INTERNAL_NAME_TO_DISPLAY_NAME_MAP[policy['display_name']])  # noqa: E501
+    for cse_policy in \
+            compute_policy_manager.list_cse_placement_policies_on_vdc(cpm, ovdc_id):  # noqa: E501
+        policies.append(RUNTIME_INTERNAL_NAME_TO_DISPLAY_NAME_MAP[cse_policy['display_name']])  # noqa: E501
     return def_models.Ovdc(ovdc_name=ovdc_name, ovdc_id=ovdc_id, k8s_runtime=policies) # noqa: E501
 
 
@@ -208,8 +209,9 @@ def _update_ovdc_using_placement_policy_async(operation_context: ctx.OperationCo
         cpm = compute_policy_manager.ComputePolicyManager(
             operation_context.sysadmin_client, log_wire=log_wire)
         existing_policies = []
-        for policy in cpm.list_vdc_placement_policies_on_vdc(ovdc_id):
-            existing_policies.append(policy['display_name'])
+        for cse_policy in \
+                compute_policy_manager.list_cse_placement_policies_on_vdc(cpm, ovdc_id):  # noqa: E501
+            existing_policies.append(cse_policy['display_name'])
 
         logger.SERVER_LOGGER.debug(policy_list)
         logger.SERVER_LOGGER.debug(existing_policies)
@@ -255,7 +257,10 @@ def _update_ovdc_using_placement_policy_async(operation_context: ctx.OperationCo
                         user_name=operation_context.user.name,
                         task_href=task_href,
                         org_href=operation_context.user.org_href)
-            policy = cpm.get_vdc_compute_policy(cp_name, is_placement_policy=True)  # noqa: E501
+            policy = compute_policy_manager.get_cse_vdc_compute_policy(
+                cpm,
+                cp_name,
+                is_placement_policy=True)
             cpm.add_compute_policy_to_vdc(vdc_id=ovdc_id,
                                           compute_policy_href=policy['href'])
 
@@ -276,7 +281,9 @@ def _update_ovdc_using_placement_policy_async(operation_context: ctx.OperationCo
                             user_name=operation_context.user.name,
                             task_href=task_href,
                             org_href=operation_context.user.org_href)
-            policy = cpm.get_vdc_compute_policy(cp_name, is_placement_policy=True)  # noqa: E501
+            policy = compute_policy_manager.get_cse_vdc_compute_policy(cpm,
+                                                                       cp_name,
+                                                                       is_placement_policy=True)  # noqa: E501
             cpm.remove_compute_policy_from_vdc_sync(vdc=vdc,
                                                     compute_policy_href=policy['href'],  # noqa: E501
                                                     force=remove_cp_from_vms_on_disable, # noqa: E501

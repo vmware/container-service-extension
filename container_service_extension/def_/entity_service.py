@@ -11,7 +11,7 @@ from requests.exceptions import HTTPError
 
 
 from container_service_extension.cloudapi.cloudapi_client import CloudApiClient
-from container_service_extension.cloudapi.constants import CLOUDAPI_VERSION_1_0_0  # noqa: E501
+from container_service_extension.cloudapi.constants import CloudApiVersion
 from container_service_extension.cloudapi.constants import CloudApiResource
 from container_service_extension.def_.models import DefEntity, DefEntityType
 import container_service_extension.def_.schema_service as def_schema_svc
@@ -79,7 +79,7 @@ class DefEntityService():
             additional_headers['x-vmware-vcloud-tenant-context'] = tenant_org_context  # noqa: E501
         self._cloudapi_client.do_request(
             method=RequestMethod.POST,
-            cloudapi_version=CLOUDAPI_VERSION_1_0_0,
+            cloudapi_version=CloudApiVersion.VERSION_1_0_0,
             resource_url_relative_path=f"{CloudApiResource.ENTITY_TYPES}/"
                                        f"{entity_type_id}",
             payload=asdict(entity),
@@ -112,7 +112,7 @@ class DefEntityService():
                 query_string = f"filter={filter_string}&{query_string}"
             response_body = self._cloudapi_client.do_request(
                 method=RequestMethod.GET,
-                cloudapi_version=CLOUDAPI_VERSION_1_0_0,
+                cloudapi_version=CloudApiVersion.VERSION_1_0_0,
                 resource_url_relative_path=f"{CloudApiResource.ENTITIES}/"
                                            f"{CloudApiResource.ENTITY_TYPES_TOKEN}/"  # noqa: E501
                                            f"{vendor}/{nss}/{version}?{query_string}")  # noqa: E501
@@ -141,7 +141,7 @@ class DefEntityService():
             page_num += 1
             response_body = self._cloudapi_client.do_request(
                 method=RequestMethod.GET,
-                cloudapi_version=CLOUDAPI_VERSION_1_0_0,
+                cloudapi_version=CloudApiVersion.VERSION_1_0_0,
                 resource_url_relative_path=f"{CloudApiResource.ENTITIES}/"
                                            f"{CloudApiResource.INTERFACES}/{vendor}/{nss}/{version}?"  # noqa: E501
                                            f"page={page_num}")
@@ -161,7 +161,7 @@ class DefEntityService():
         """
         response_body = self._cloudapi_client.do_request(
             method=RequestMethod.PUT,
-            cloudapi_version=CLOUDAPI_VERSION_1_0_0,
+            cloudapi_version=CloudApiVersion.VERSION_1_0_0,
             resource_url_relative_path=f"{CloudApiResource.ENTITIES}/"
                                        f"{entity_id}",
             payload=asdict(entity))
@@ -177,7 +177,7 @@ class DefEntityService():
         """
         response_body = self._cloudapi_client.do_request(
             method=RequestMethod.GET,
-            cloudapi_version=CLOUDAPI_VERSION_1_0_0,
+            cloudapi_version=CloudApiVersion.VERSION_1_0_0,
             resource_url_relative_path=f"{CloudApiResource.ENTITIES}/"
                                        f"{entity_id}")
         return DefEntity(**response_body)
@@ -208,7 +208,7 @@ class DefEntityService():
         """
         self._cloudapi_client.do_request(
             method=RequestMethod.DELETE,
-            cloudapi_version=CLOUDAPI_VERSION_1_0_0,
+            cloudapi_version=CloudApiVersion.VERSION_1_0_0,
             resource_url_relative_path=f"{CloudApiResource.ENTITIES}/"
                                        f"{entity_id}")
 
@@ -224,7 +224,7 @@ class DefEntityService():
         """
         response_body = self._cloudapi_client.do_request(
             method=RequestMethod.POST,
-            cloudapi_version=CLOUDAPI_VERSION_1_0_0,
+            cloudapi_version=CloudApiVersion.VERSION_1_0_0,
             resource_url_relative_path=f"{CloudApiResource.ENTITIES}/"
                                        f"{entity_id}/{CloudApiResource.ENTITY_RESOLVE}")  # noqa: E501
         msg = response_body[def_utils.DEF_ERROR_MESSAGE_KEY]
@@ -258,7 +258,7 @@ class DefEntityService():
         """."""
         response_body = self._cloudapi_client.do_request(
             method=RequestMethod.GET,
-            cloudapi_version=CLOUDAPI_VERSION_1_0_0,
+            cloudapi_version=CloudApiVersion.VERSION_1_0_0,
             resource_url_relative_path=f"{CloudApiResource.ENTITIES}/"
                                        f"{entity_id}")
         return def_utils.DEF_NATIVE_ENTITY_TYPE_NSS in response_body['entityType']  # noqa: E501
