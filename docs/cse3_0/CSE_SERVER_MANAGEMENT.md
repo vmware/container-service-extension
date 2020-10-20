@@ -296,9 +296,6 @@ version               2.6.0
 
 ## Server Upgrade and Removal
 
-Upgrading CSE server is no different than installing it for the first time.
-
-
 ### Upgrading CSE Server Software
 
 1. Gracefully stop CSE Server.
