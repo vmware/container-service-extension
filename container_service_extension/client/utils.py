@@ -11,8 +11,8 @@ from container_service_extension.client import system as syst
 from container_service_extension.client.constants import CSE_SERVER_RUNNING
 import container_service_extension.def_.utils as def_utils
 from container_service_extension.exceptions import CseResponseError
-from container_service_extension.server_constants import CSE_SERVER_BUSY_KEY
 from container_service_extension.shared_constants import CSE_SERVER_API_VERSION
+from container_service_extension.shared_constants import CSE_SERVER_BUSY_KEY
 
 _RESTRICT_CLI_TO_TKG_OPERATIONS = False
 
@@ -191,7 +191,8 @@ def filter_columns(result, value_field_to_display_field):
             filtered_result.append(filtered_record)
         return filtered_result
     elif isinstance(result, dict):
-        # Check if result is CSE Server busy message
+        # If the server result is the CSE Server busy message, there is no
+        # result to filter, so the CSE Server busy message is returned as is
         if result.get(CSE_SERVER_BUSY_KEY) is not None:
             return result
 

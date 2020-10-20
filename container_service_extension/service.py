@@ -77,10 +77,12 @@ def consumer_thread_run(c):
 def watchdog_thread_run(service_obj, num_processors):
     logger.SERVER_LOGGER.info("Starting watchdog thread")
     while True:
-        if service_obj.get_status() != ServerState.RUNNING.value:
+        service_state = service_obj.get_status()
+        if service_state == ServerState.STOPPED.value:
             break
 
-        if service_obj.consumer_thread is not None and \
+        if service_state == ServerState.RUNNING.value and \
+                service_obj.consumer_thread is not None and \
                 not service_obj.consumer_thread.is_alive():
             service_obj.consumer = MessageConsumer(service_obj.config,
                                                    num_processors)
@@ -90,6 +92,10 @@ def watchdog_thread_run(service_obj, num_processors):
             consumer_thread.daemon = True
             consumer_thread.start()
             service_obj.consumer_thread = consumer_thread
+
+            msg = 'Watchdog has restarted consumer thread'
+            click.echo(msg)
+            logger.SERVER_LOGGER.info(msg)
         time.sleep(60)
 
 

@@ -2,7 +2,7 @@
 # Copyright (c) 2020 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 
-from container_service_extension.server_constants import CSE_SERVER_BUSY_KEY
+from container_service_extension.shared_constants import CSE_SERVER_BUSY_KEY
 
 # Shared bewteen AMQP and MQTT consumers
 TOO_MANY_REQUESTS_BODY = f'{{"{CSE_SERVER_BUSY_KEY}":' \
