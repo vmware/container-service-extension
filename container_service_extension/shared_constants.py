@@ -42,6 +42,10 @@ RUNTIME_INTERNAL_NAME_TO_DISPLAY_NAME_MAP = {
 }
 
 
+# CSE Server Busy strings
+CSE_SERVER_BUSY_KEY = 'CSE Server Busy'
+
+
 @unique
 class OperationType(str, Enum):
     CLUSTER = 'cluster'

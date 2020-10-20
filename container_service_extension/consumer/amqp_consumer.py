@@ -198,11 +198,15 @@ class AMQPConsumer(object):
             reply_msg = self.form_response_json(
                 request_id=body_json['id'],
                 status_code=requests.codes.too_many_requests,
-                reply_body=constants.TOO_MANY_REQUESTS_BODY)
+                reply_body_str=constants.TOO_MANY_REQUESTS_BODY)
             LOGGER.debug(f"reply: {constants.TOO_MANY_REQUESTS_BODY}")
             self.send_response(reply_msg, properties)
 
     def on_message(self, unused_channel, basic_deliver, properties, body):
+        # If consumer is closing, no longer adding messages to thread pool
+        if self._closing:
+            return
+
         self.acknowledge_message(basic_deliver.delivery_tag)
         if self._ctpe.max_threads_busy():
             self.send_too_many_requests_response(properties, body)
@@ -235,10 +239,10 @@ class AMQPConsumer(object):
     def stop(self):
         LOGGER.info("Stopping")
         self._closing = True
-        self.stop_consuming()
         self._ctpe.shutdown(wait=True)
+        self.stop_consuming()
         if self._connection:
-            self._connection.ioloop.start()
+            self._connection.ioloop.stop()
         LOGGER.info("Stopped")
 
     def close_connection(self):

@@ -12,6 +12,7 @@ from container_service_extension.client.constants import CSE_SERVER_RUNNING
 import container_service_extension.def_.utils as def_utils
 from container_service_extension.exceptions import CseResponseError
 from container_service_extension.shared_constants import CSE_SERVER_API_VERSION
+from container_service_extension.shared_constants import CSE_SERVER_BUSY_KEY
 
 _RESTRICT_CLI_TO_TKG_OPERATIONS = False
 
@@ -190,6 +191,11 @@ def filter_columns(result, value_field_to_display_field):
             filtered_result.append(filtered_record)
         return filtered_result
     elif isinstance(result, dict):
+        # If the server result is the CSE Server busy message, there is no
+        # result to filter, so the CSE Server busy message is returned as is
+        if result.get(CSE_SERVER_BUSY_KEY) is not None:
+            return result
+
         filtered_result = {
             display_field: result.get(value_field, '')
             for value_field, display_field in value_field_to_display_field.items()  # noqa: E501
