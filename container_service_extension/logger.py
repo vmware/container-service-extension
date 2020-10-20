@@ -10,6 +10,7 @@ from pathlib import Path
 
 from container_service_extension.init_utils import run_once
 from container_service_extension.security import RedactingFilter
+from container_service_extension.thread_local_data import get_thread_request_id
 
 # max size for log files (8MB)
 _MAX_BYTES = 2**23
@@ -19,16 +20,30 @@ _BACKUP_COUNT = 10
 _TIME = str(datetime.datetime.now()).split('.')[0]
 _TIMESTAMP = _TIME.replace(' ', '_').replace(':', '-')
 
+
+class RequestIdFormatter(logging.Formatter):
+    def __init__(self, fmt=None, datefmt=None, style='%'):
+        super().__init__(fmt=fmt, datefmt=datefmt, style=style)
+
+    def format(self, record):
+        result = logging.Formatter.format(self, record)
+
+        request_id = get_thread_request_id()
+        if request_id is not None:
+            result = f"Request_id: {request_id} {result}"
+        return result
+
+
 # standard formatters used by handlers
-INFO_LOG_FORMATTER = logging.Formatter(fmt='%(asctime)s | '
-                                       '%(levelname)s :: '
-                                       '%(message)s',
-                                       datefmt='%y-%m-%d %H:%M:%S')
-DEBUG_LOG_FORMATTER = logging.Formatter(fmt='%(asctime)s | '
-                                        '%(module)s:%(lineno)s - %(funcName)s '
-                                        '| %(levelname)s :: '
+INFO_LOG_FORMATTER = RequestIdFormatter(fmt='%(asctime)s | '
+                                        '%(levelname)s :: '
                                         '%(message)s',
                                         datefmt='%y-%m-%d %H:%M:%S')
+DEBUG_LOG_FORMATTER = RequestIdFormatter(fmt='%(asctime)s | '
+                                         '%(module)s:%(lineno)s - %(funcName)s '  # noqa: E501
+                                         '| %(levelname)s :: '
+                                         '%(message)s',
+                                         datefmt='%y-%m-%d %H:%M:%S')
 
 # create directory for all cse logs
 LOGS_DIR_NAME = Path.home() / '.cse-logs'
