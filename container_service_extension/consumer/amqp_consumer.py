@@ -15,7 +15,6 @@ from container_service_extension.consumer.consumer_thread_pool_executor \
 import container_service_extension.consumer.utils as utils
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
 from container_service_extension.server_constants import EXCHANGE_TYPE
-from container_service_extension.thread_local_data import set_thread_request_id
 
 
 class AMQPConsumer(object):
@@ -169,7 +168,6 @@ class AMQPConsumer(object):
             request_msg=body,
             fsencoding=self.fsencoding,
             is_mqtt=False)
-        set_thread_request_id(req_id)
 
         if properties.reply_to is not None:
             reply_body_str = json.dumps(reply_body)

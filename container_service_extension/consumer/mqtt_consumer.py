@@ -15,7 +15,6 @@ from container_service_extension.consumer.consumer_thread_pool_executor \
     import ConsumerThreadPoolExecutor
 import container_service_extension.consumer.utils as utils
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
-from container_service_extension.thread_local_data import set_thread_request_id
 
 
 class MQTTConsumer:
@@ -72,7 +71,6 @@ class MQTTConsumer:
             request_msg=msg,
             fsencoding=self.fsencoding,
             is_mqtt=True)
-        set_thread_request_id(req_id)
 
         LOGGER.debug(f"Received message with request_id: {req_id}, mid: "
                      f"{msg.mid}, and msg json: {msg_json}")
