@@ -77,6 +77,9 @@ PBKDF2_OUTPUT_SIZE = 32
 # Thread Pool Executor
 MESSAGE_CONSUMER_THREAD = 'MessageConsumer'
 
+# Request Id format for logging
+REQUEST_ID_FORMAT = 'Request Id: %(requestId)s | '
+
 
 @unique
 class NodeType(str, Enum):
