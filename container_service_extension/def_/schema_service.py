@@ -9,8 +9,8 @@ import json
 from requests.exceptions import HTTPError
 
 from container_service_extension.cloudapi.cloudapi_client import CloudApiClient
-from container_service_extension.cloudapi.constants import CloudApiVersion
 from container_service_extension.cloudapi.constants import CloudApiResource
+from container_service_extension.cloudapi.constants import CloudApiVersion
 import container_service_extension.def_.models as def_models
 from container_service_extension.def_.utils import raise_error_if_def_not_supported # noqa: E501
 import container_service_extension.exceptions as cse_exceptions

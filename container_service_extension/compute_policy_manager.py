@@ -264,7 +264,8 @@ class ComputePolicyManager:
         policy_info = {}
         resource = cloudapi_constants.CloudApiResource
         policy_info['name'] = policy_name
-        if self._cloudapi_version == cloudapi_constants.CloudApiVersion.VERSION_2_0_0:
+        if self._cloudapi_version == \
+                cloudapi_constants.CloudApiVersion.VERSION_2_0_0:
             policy_info['policyType'] = VDC_POLICY_TYPE_VM
         if description:
             policy_info['description'] = description
@@ -325,7 +326,8 @@ class ComputePolicyManager:
         if new_policy_info.get('name'):
             payload = {}
             payload['name'] = new_policy_info['name']
-            if self._cloudapi_version == cloudapi_constants.CloudApiVersion.VERSION_2_0_0:
+            if self._cloudapi_version == \
+                    cloudapi_constants.CloudApiVersion.VERSION_2_0_0:
                 payload['policyType'] = VDC_POLICY_TYPE_VM
             if 'description' in new_policy_info:
                 payload['description'] = new_policy_info['description']
@@ -927,24 +929,28 @@ def get_cse_policy_display_name(policy_name):
     :rtype: str
     """
     if policy_name and \
-        policy_name.startswith(CSE_COMPUTE_POLICY_PREFIX): # noqa: E501
-        return policy_name.replace(CSE_COMPUTE_POLICY_PREFIX, '', 1) # noqa: E501
+            policy_name.startswith(CSE_COMPUTE_POLICY_PREFIX):
+        return policy_name.replace(CSE_COMPUTE_POLICY_PREFIX, '', 1)
     return policy_name
 
+
 def get_cse_policy_name(policy_name):
-    """Adds a prefix to the compute policy name."""
+    """Add a prefix to the compute policy name."""
     return f"{CSE_COMPUTE_POLICY_PREFIX}{policy_name}"
+
 
 def get_cse_pvdc_compute_policy(cpm: ComputePolicyManager,
                                 unprefixed_policy_name: str):
     policy_name = get_cse_policy_name(unprefixed_policy_name)
     return cpm.get_pvdc_compute_policy(policy_name)
 
+
 def add_cse_pvdc_compute_policy(cpm: ComputePolicyManager,
                                 unprefixed_policy_name: str,
                                 policy_description: str):
     policy_name = get_cse_policy_name(unprefixed_policy_name)
     return cpm.add_pvdc_compute_policy(policy_name, policy_description)
+
 
 def add_cse_vdc_compute_policy(cpm: ComputePolicyManager,
                                unprefixed_policy_name: str,
@@ -955,11 +961,13 @@ def add_cse_vdc_compute_policy(cpm: ComputePolicyManager,
                                       description=policy_description,
                                       pvdc_compute_policy_id=pvdc_compute_policy_id)  # noqa: E501
 
+
 def get_cse_vdc_compute_policy(cpm: ComputePolicyManager,
                                unprefixed_policy_name: str,
                                is_placement_policy: bool = False):
     policy_name = get_cse_policy_name(unprefixed_policy_name)
     return cpm.get_vdc_compute_policy(policy_name, is_placement_policy=is_placement_policy)  # noqa: E501
+
 
 def delete_cse_vdc_compute_policy(cpm: ComputePolicyManager,
                                   unprefixed_policy_name: str,
@@ -967,15 +975,16 @@ def delete_cse_vdc_compute_policy(cpm: ComputePolicyManager,
     policy_name = get_cse_policy_name(unprefixed_policy_name)
     return cpm.delete_vdc_compute_policy(policy_name, is_placement_policy=is_placement_policy)  # noqa: E501
 
+
 def list_cse_sizing_policies_on_vdc(cpm: ComputePolicyManager, vdc_id: str):
     cse_policy_name_filter = \
         {'name': f'{cloudapi_constants.CSE_COMPUTE_POLICY_PREFIX}*'}
     return cpm.list_vdc_sizing_policies_on_vdc(vdc_id,
                                                filters=cse_policy_name_filter)
 
+
 def list_cse_placement_policies_on_vdc(cpm: ComputePolicyManager, vdc_id: str):
     cse_policy_name_filter = \
         {'name': f'{cloudapi_constants.CSE_COMPUTE_POLICY_PREFIX}*'}
     return cpm.list_vdc_placement_policies_on_vdc(vdc_id,
                                                   filters=cse_policy_name_filter)  # noqa: E501
-
