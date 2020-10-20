@@ -52,15 +52,6 @@ vCD follows particular order of precedence to pick the storage-profile for any V
 **Workaround:**
 1. Disable the storage-profile with which the template is created on the ovdc.
 2. Set the desired storage-profile as default on the ovdc.
-    
-### Never ending CSE tasks in VCD UI / Failed CSE tasks without proper error message
-If CSE server encounters any error during cluster/node creation, users may see
-CSE tasks in VCD never reach to completion, or the tasks may show up as failed
-without a proper error message. Currently, UI lacks the ability to properly
-express error messages upon operation failures. Some examples might be - A user
-input parameter was invalid, or an unexpected error (network connection/outage)
-occurred. Please inspect CSE server logs in these cases, or file a github
-[issue](https://github.com/vmware/container-service-extension/issues).
 
 ### Failures during template creation or installation
 
