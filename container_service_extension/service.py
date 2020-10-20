@@ -492,7 +492,11 @@ class Service(object, metaclass=Singleton):
             for runtime_policy in shared_constants.CLUSTER_RUNTIME_PLACEMENT_POLICIES:  # noqa: E501
                 k8_runtime = shared_constants.RUNTIME_INTERNAL_NAME_TO_DISPLAY_NAME_MAP[runtime_policy]  # noqa: E501
                 try:
-                    placement_policy_name_to_href[k8_runtime] = cpm.get_vdc_compute_policy(runtime_policy, is_placement_policy=True)['href']  # noqa: E501
+                    placement_policy_name_to_href[k8_runtime] = \
+                        compute_policy_manager.get_cse_vdc_compute_policy(
+                            cpm,
+                            runtime_policy,
+                            is_placement_policy=True)['href']
                 except EntityNotFoundException:
                     pass
             self.config['placement_policy_hrefs'] = placement_policy_name_to_href  # noqa: E501
@@ -640,14 +644,19 @@ class Service(object, metaclass=Singleton):
                 # if policy name is not empty, stamp it on the template
                 if policy_name:
                     try:
-                        policy = cpm.get_vdc_compute_policy(policy_name=policy_name) # noqa: E501
+                        policy = \
+                            compute_policy_manager.get_cse_vdc_compute_policy(
+                                cpm, policy_name) # noqa: E501
                     except EntityNotFoundException:
                         # create the policy if it does not exist
                         msg = f"Creating missing compute policy " \
                               f"'{policy_name}'."
                         msg_update_callback.info(msg)
                         logger.SERVER_LOGGER.debug(msg)
-                        policy = cpm.add_vdc_compute_policy(policy_name=policy_name) # noqa: E501
+                        policy = \
+                            compute_policy_manager.add_cse_vdc_compute_policy(
+                                cpm,
+                                policy_name)
 
                     msg = f"Assigning compute policy '{policy_name}' to " \
                           f"template '{catalog_item_name}'."

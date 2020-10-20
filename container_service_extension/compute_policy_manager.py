@@ -17,9 +17,12 @@ import container_service_extension.pyvcloud_utils as vcd_utils
 from container_service_extension.shared_constants import RequestMethod
 import container_service_extension.utils as utils
 
-
+# cse compute policy prefix
+CSE_COMPUTE_POLICY_PREFIX = 'cse----'
 _SYSTEM_DEFAULT_COMPUTE_POLICY = 'System Default'
 GLOBAL_PVDC_COMPUTE_POLICY_MIN_VERSION = 35.0
+PVDC_POLICY_TYPE_VM = "PvdcVmPolicy"
+VDC_POLICY_TYPE_VM = "VdcVmPolicy"
 
 
 class ComputePolicyManager:
@@ -40,6 +43,8 @@ class ComputePolicyManager:
         self._cloudapi_client = None
         self._session = self._sysadmin_client.get_vcloud_session()
         self._is_operation_supported = True
+        self._cloudapi_version = \
+            cloudapi_constants.CloudApiVersion.VERSION_2_0_0
 
         try:
             wire_logger = logger.NULL_LOGGER
@@ -49,13 +54,18 @@ class ComputePolicyManager:
                 vcd_utils.get_cloudapi_client_from_vcd_client(self._sysadmin_client, # noqa: E501
                                                               logger.SERVER_LOGGER, # noqa: E501
                                                               wire_logger)
+            if float(self._cloudapi_client.get_api_version()) < \
+                    GLOBAL_PVDC_COMPUTE_POLICY_MIN_VERSION:
+                self._cloudapi_version = \
+                    cloudapi_constants.CloudApiVersion.VERSION_1_0_0
+
             # Since the /cloudapi endpoint was added before the compute policy
             # endpoint. Mere presence of the /cloudapi uri is not enough, we
             # need to make sure that this cloud api client will be of actual
             # use to us.
             self._cloudapi_client.do_request(
                 method=RequestMethod.GET,
-                cloudapi_version=cloudapi_constants.CLOUDAPI_VERSION_1_0_0,
+                cloudapi_version=self._cloudapi_version,
                 resource_url_relative_path=f"{cloudapi_constants.CloudApiResource.VDC_COMPUTE_POLICIES}") # noqa: E501
         except requests.exceptions.HTTPError as err:
             logger.SERVER_LOGGER.error(err)
@@ -63,9 +73,6 @@ class ComputePolicyManager:
 
     def get_all_pvdc_compute_policies(self, filters=None):
         """Get all pvdc compute policies in vCD.
-
-        Note: This function returns PVDC compute policies
-            not created by CSE as well.
 
         Returns a generator that when iterated over will yield all pvdc compute
         policies in VCD according to the filter if provided or else returns all
@@ -91,21 +98,18 @@ class ComputePolicyManager:
                 query_string = f"filter={filter_string}&{query_string}"
             response_body = self._cloudapi_client.do_request(
                 method=RequestMethod.GET,
-                cloudapi_version=cloudapi_constants.CLOUDAPI_VERSION_1_0_0,
+                cloudapi_version=self._cloudapi_version,
                 resource_url_relative_path=f"{cloudapiResource.PVDC_COMPUTE_POLICIES}?{query_string}") # noqa: E501
 
             if len(response_body['values']) == 0:
                 break
             for policy in response_body['values']:
                 cp_name = policy['name']
-                policy['display_name'] = self.get_policy_display_name(cp_name)
+                policy['display_name'] = get_cse_policy_display_name(cp_name)
                 yield policy
 
     def get_all_vdc_compute_policies(self, filters=None):
         """Get all compute policies in vCD.
-
-        Note: This function also returns VDC compute policies not created
-            by CSE as well.
 
         Returns a generator that when iterated over will yield all compute
         policies in vCD, making multiple requests when necessary.
@@ -130,21 +134,18 @@ class ComputePolicyManager:
             # without the &sortAsc parameter, vCD returns unpredictable results
             response_body = self._cloudapi_client.do_request(
                 method=RequestMethod.GET,
-                cloudapi_version=cloudapi_constants.CLOUDAPI_VERSION_1_0_0,
+                cloudapi_version=self._cloudapi_version,
                 resource_url_relative_path=f"{cloudapiResource.VDC_COMPUTE_POLICIES}?{query_string}") # noqa: E501
 
             if len(response_body['values']) == 0:
                 break
             for policy in response_body['values']:
                 cp_name = policy['name']
-                policy['display_name'] = self.get_policy_display_name(cp_name)
+                policy['display_name'] = get_cse_policy_display_name(cp_name)
                 yield policy
 
     def get_pvdc_compute_policy(self, policy_name):
         """Get the CSE created PVDC compute policy by name.
-
-        Note: This function can only be used to fetch PVDC compute policies
-            created by CSE.
 
         :param str policy_name: name of the pvdc compute policy
 
@@ -156,9 +157,9 @@ class ComputePolicyManager:
         # the first one found.
         self._raise_error_if_not_supported()
         # CSE created policy will have a prefix
-        filters = {'name': self._get_cse_policy_name(policy_name)}
+        filters = {'name': policy_name}
         for policy_dict in self.get_all_pvdc_compute_policies(filters=filters):
-            if policy_dict.get('display_name') == policy_name:
+            if policy_dict.get('name') == policy_name:
                 policy_dict['href'] = self._get_policy_href(policy_dict['id'],
                                                             is_pvdc_compute_policy=True) # noqa: E501
                 return policy_dict
@@ -168,9 +169,6 @@ class ComputePolicyManager:
 
     def get_vdc_compute_policy(self, policy_name, is_placement_policy=False):
         """Get CSE created VDC compute policy by name.
-
-        Note: This function can only be used to fetch VDC compute policies
-            created by CSE.
 
         :param str policy_name: name of the compute policy
         :param boolean is_placement_policy: True if the VDC compute policy is a
@@ -188,11 +186,11 @@ class ComputePolicyManager:
         filters = \
             {
                 # CSE created policy will have a prefix
-                'name': self._get_cse_policy_name(policy_name),
+                'name': policy_name,
                 'isSizingOnly': str(not is_placement_policy).lower()
             }
         for policy_dict in self.get_all_vdc_compute_policies(filters=filters):
-            if policy_dict.get('display_name') == policy_name:
+            if policy_dict.get('name') == policy_name:
                 policy_dict['href'] = self._get_policy_href(policy_dict['id'])
                 return policy_dict
 
@@ -201,8 +199,6 @@ class ComputePolicyManager:
 
     def add_pvdc_compute_policy(self, name, description):
         """Add PVDC compute policy with given name and description.
-
-        Note: The created PVDC compute policy will have a CSE specific prefix.
 
         :param str name: name of the PVDC compute policy
         :param str description: description for the PVDC compute policy
@@ -214,17 +210,19 @@ class ComputePolicyManager:
         self._raise_error_if_not_supported()
         self._raise_error_if_global_pvdc_compute_policy_not_supported()
         policy_info = {}
-        # add cse related prefix to the policy name
-        policy_info['name'] = self._get_cse_policy_name(name)
+        policy_info['name'] = name
         policy_info['description'] = description
         resource = cloudapi_constants.CloudApiResource
 
+        if self._cloudapi_version == \
+                cloudapi_constants.CloudApiVersion.VERSION_2_0_0:
+            policy_info['policyType'] = PVDC_POLICY_TYPE_VM
+
         pvdc_policy = self._cloudapi_client.do_request(
             method=RequestMethod.POST,
-            cloudapi_version=cloudapi_constants.CLOUDAPI_VERSION_1_0_0,
+            cloudapi_version=self._cloudapi_version,
             resource_url_relative_path=resource.PVDC_COMPUTE_POLICIES,
             payload=policy_info)
-        pvdc_policy['display_name'] = self.get_policy_display_name(pvdc_policy['name']) # noqa: E501
         pvdc_policy['href'] = self._get_policy_href(pvdc_policy['id'],
                                                     is_pvdc_compute_policy=True) # noqa: E501
         return pvdc_policy
@@ -245,14 +243,12 @@ class ComputePolicyManager:
             f"{policy_info['id']}"
         return self._cloudapi_client.do_request(
             method=RequestMethod.DELETE,
-            cloudapi_version=cloudapi_constants.CLOUDAPI_VERSION_1_0_0,
+            cloudapi_version=cloudapi_constants.CloudApiVersion.VERSION_1_0_0,
             resource_url_relative_path=resource_url_relative_path)
 
     def add_vdc_compute_policy(self, policy_name,
                                description=None, pvdc_compute_policy_id=None):
         """Add vdc compute policy with the given name and description.
-
-        Note: The created VDC compute policy will have a CSE related prefix.
 
         :param str policy_name: name of the vdc compute policy
         :param str description: description about the vdc compute policy
@@ -267,31 +263,27 @@ class ComputePolicyManager:
         self._raise_error_if_not_supported()
         policy_info = {}
         resource = cloudapi_constants.CloudApiResource
-        # add cse related prefix to the policy name
-        policy_info['name'] = self._get_cse_policy_name(policy_name)
+        policy_info['name'] = policy_name
+        if self._cloudapi_version == cloudapi_constants.CloudApiVersion.VERSION_2_0_0:
+            policy_info['policyType'] = VDC_POLICY_TYPE_VM
         if description:
             policy_info['description'] = description
         if pvdc_compute_policy_id:
             policy_info['pvdcComputePolicy'] = {
                 'id': pvdc_compute_policy_id
             }
-
         created_policy = self._cloudapi_client.do_request(
             method=RequestMethod.POST,
-            cloudapi_version=cloudapi_constants.CLOUDAPI_VERSION_1_0_0,
+            cloudapi_version=self._cloudapi_version,
             resource_url_relative_path=resource.VDC_COMPUTE_POLICIES,
             payload=policy_info)
 
-        created_policy['display_name'] = self.get_policy_display_name(created_policy['name']) # noqa: E501
         created_policy['href'] = self._get_policy_href(created_policy['id'])
         return created_policy
 
     def delete_vdc_compute_policy(self, policy_name,
                                   is_placement_policy=False):
         """Delete the vdc compute policy created by CSE with the given name.
-
-        Note: This function can only be used to fetch PVDC compute policies
-            created by CSE.
 
         :param str policy_name: name of the compute policy
         :param boolean is_placement_policy: True if the compute policy is a
@@ -309,15 +301,12 @@ class ComputePolicyManager:
             f"{policy_info['id']}"
         return self._cloudapi_client.do_request(
             method=RequestMethod.DELETE,
-            cloudapi_version=cloudapi_constants.CLOUDAPI_VERSION_1_0_0,
+            cloudapi_version=self._cloudapi_version,
             resource_url_relative_path=resource_url_relative_path)
 
     def update_vdc_compute_policy(self, policy_name, new_policy_info,
                                   is_placement_policy=False):
         """Update the existing vdc compute policy with new policy information.
-
-        Note: This function can only be used to update VDC compute policies
-            created by CSE.
 
         :param str policy_name: existing policy name
         :param dict new_policy_info: updated policy information with name and
@@ -335,9 +324,9 @@ class ComputePolicyManager:
                                                   is_placement_policy=is_placement_policy) # noqa: E501
         if new_policy_info.get('name'):
             payload = {}
-            # add cse related prefix to the policy name
-            payload['name'] = \
-                self._get_cse_policy_name(new_policy_info['name'])
+            payload['name'] = new_policy_info['name']
+            if self._cloudapi_version == cloudapi_constants.CloudApiVersion.VERSION_2_0_0:
+                payload['policyType'] = VDC_POLICY_TYPE_VM
             if 'description' in new_policy_info:
                 payload['description'] = new_policy_info['description']
             resource_url_relative_path = \
@@ -346,19 +335,15 @@ class ComputePolicyManager:
 
             updated_policy = self._cloudapi_client.do_request(
                 method=RequestMethod.PUT,
-                cloudapi_version=cloudapi_constants.CLOUDAPI_VERSION_1_0_0,
+                cloudapi_version=cloudapi_constants.CloudApiVersion.VERSION_1_0_0,  # noqa: E501
                 resource_url_relative_path=resource_url_relative_path,
                 payload=payload)
 
-            updated_policy['display_name'] = \
-                self.get_policy_display_name(updated_policy['name'])
             updated_policy['href'] = policy_info['href']
             return updated_policy
 
     def add_compute_policy_to_vdc(self, vdc_id, compute_policy_href):
         """Add compute policy to the given vdc.
-
-        Note: The VDC compute policy need not be created by CSE.
 
         :param str vdc_id: id of the vdc to assign the policy
         :param compute_policy_href: policy href that is created using cloudapi
@@ -373,10 +358,8 @@ class ComputePolicyManager:
                                 is_admin_operation=True)
         return vdc.add_compute_policy(compute_policy_href)
 
-    def list_vdc_placement_policies_on_vdc(self, vdc_id):
+    def list_vdc_placement_policies_on_vdc(self, vdc_id, filters={}):
         """List all placement policies assigned to a given vdc.
-
-        Note: This function returns only the policies which are created by CSE.
 
         :param str vdc_id: id of the vdc for which policies need to be
          retrieved.
@@ -385,17 +368,12 @@ class ComputePolicyManager:
             the vdc
         :rtype: Generator[Dict, None, None]
         """
-        # CSE created compute policies will be prefixed
-        filters = {
-            'isSizingOnly': 'false',
-            'name': f'{cloudapi_constants.CSE_COMPUTE_POLICY_PREFIX}*'
-        }
+        sizing_filter = {'isSizingOnly': 'false'}
+        filters.update(sizing_filter)
         return self.list_compute_policies_on_vdc(vdc_id, filters=filters)
 
-    def list_vdc_sizing_policies_on_vdc(self, vdc_id):
+    def list_vdc_sizing_policies_on_vdc(self, vdc_id, filters={}):
         """List all sizing policies created by CSE and assigned to a given vdc.
-
-        Note: This function returns only the policies which are created by CSE.
 
         :param str vdc_id: id of the vdc for which policies need to be
          retrieved
@@ -404,11 +382,8 @@ class ComputePolicyManager:
             the vdc
         :rtpe: Generator[Dict, None, None]
         """
-        # CSE created compute policies will be prefixed
-        filters = {
-            'isSizingOnly': 'true',
-            'name': f'{cloudapi_constants.CSE_COMPUTE_POLICY_PREFIX}*'
-        }
+        sizing_filter = {'isSizingOnly': 'true'}
+        filters.update(sizing_filter)
         return self.list_compute_policies_on_vdc(vdc_id, filters=filters)
 
     def list_compute_policies_on_vdc(self, vdc_id, filters=None):
@@ -435,14 +410,14 @@ class ComputePolicyManager:
                 query_string = f"filter={filter_string}&{query_string}"
             response_body = self._cloudapi_client.do_request(
                 method=RequestMethod.GET,
-                cloudapi_version=cloudapi_constants.CLOUDAPI_VERSION_1_0_0,
+                cloudapi_version=self._cloudapi_version,
                 resource_url_relative_path=f"{relative_path}?{query_string}") # noqa: E501
 
             if len(response_body['values']) == 0:
                 break
             for cp in response_body['values']:
                 policy = {
-                    'display_name': self.get_policy_display_name(cp.get('name')),  # noqa: E501
+                    'display_name': get_cse_policy_display_name(cp.get('name')),  # noqa: E501
                     'name': cp.get('name'),
                     'href': self._get_policy_href(cp.get('id')),
                     'id': cp.get('id')
@@ -455,8 +430,6 @@ class ComputePolicyManager:
                                                          catalog_name,
                                                          catalog_item_name):
         """Assign the compute policy to vms of given vapp template.
-
-        Note: The VDC placement policy need not be created by CSE.
 
         :param str compute_policy_href: compute policy to be removed
         :param str org_name: name of the organization that has the catalog
@@ -483,8 +456,6 @@ class ComputePolicyManager:
                                                       catalog_item_name):
         """Assign the compute policy to vms of given vapp template.
 
-        Note: The VDC sizing policy need not be created by CSE.
-
         :param str compute_policy_href: compute policy to be removed
         :param str org_name: name of the organization that has the catalog
         :param str catalog_name: name of the catalog
@@ -509,8 +480,6 @@ class ComputePolicyManager:
                                                          catalog_name,
                                                          catalog_item_name):
         """Remove the compute policy from vms of given vapp template.
-
-        Note: The VDC compute policy need not be created by CSE.
 
         :param str compute_policy_href: compute policy to be removed.
         :param str org_name: name of the organization that has the catalog.
@@ -567,30 +536,6 @@ class ComputePolicyManager:
             logger.SERVER_LOGGER.debug(msg)
             raise cse_exceptions.GlobalPvdcComputePolicyNotSupported(msg)
 
-    def _get_cse_policy_name(self, policy_name):
-        """Add cse specific prefix to the policy name.
-
-        :param str policy_name: name of the compute policy
-
-        :return: policy name unique to cse
-        :rtype: str
-        """
-        return f"{cloudapi_constants.CSE_COMPUTE_POLICY_PREFIX}{policy_name}"
-
-    @staticmethod
-    def get_policy_display_name(policy_name):
-        """Remove cse specific prefix from the given policy name.
-
-        :param str policy_name: name of the policy
-
-        :return: policy name after removing cse specific prefix
-        :rtype: str
-        """
-        if policy_name and \
-           policy_name.startswith(cloudapi_constants.CSE_COMPUTE_POLICY_PREFIX): # noqa: E501
-            return policy_name.replace(cloudapi_constants.CSE_COMPUTE_POLICY_PREFIX, '', 1) # noqa: E501
-        return policy_name
-
     def _get_policy_href(self, policy_id, is_pvdc_compute_policy=False):
         """Construct policy href from given policy id.
 
@@ -602,7 +547,7 @@ class ComputePolicyManager:
         :rtype: str
         """
         href_prefix = f"{self._cloudapi_client.get_base_url()}" \
-                      f"{cloudapi_constants.CLOUDAPI_VERSION_1_0_0}/"
+                      f"{self._cloudapi_version}/"
         cloudApiResource = cloudapi_constants.CloudApiResource
         if is_pvdc_compute_policy:
             return f"{href_prefix}" \
@@ -654,8 +599,6 @@ class ComputePolicyManager:
                                            compute_policy_href,
                                            force=False): # noqa: E501
         """Delete the compute policy from the specified vdc.
-
-        Note: The VDC compute policy need not be created by CSE.
 
         :param str ovdc_id: id of the vdc to assign the policy
         :param compute_policy_href: policy href to remove
@@ -972,3 +915,67 @@ class ComputePolicyManager:
                     error_message=f"{err}",
                     stack_trace='')
             raise err
+
+
+# cse utility methods
+def get_cse_policy_display_name(policy_name):
+    """Remove cse specific prefix from the given policy name.
+
+    :param str policy_name: name of the policy
+
+    :return: policy name after removing cse specific prefix
+    :rtype: str
+    """
+    if policy_name and \
+        policy_name.startswith(CSE_COMPUTE_POLICY_PREFIX): # noqa: E501
+        return policy_name.replace(CSE_COMPUTE_POLICY_PREFIX, '', 1) # noqa: E501
+    return policy_name
+
+def get_cse_policy_name(policy_name):
+    """Adds a prefix to the compute policy name."""
+    return f"{CSE_COMPUTE_POLICY_PREFIX}{policy_name}"
+
+def get_cse_pvdc_compute_policy(cpm: ComputePolicyManager,
+                                unprefixed_policy_name: str):
+    policy_name = get_cse_policy_name(unprefixed_policy_name)
+    return cpm.get_pvdc_compute_policy(policy_name)
+
+def add_cse_pvdc_compute_policy(cpm: ComputePolicyManager,
+                                unprefixed_policy_name: str,
+                                policy_description: str):
+    policy_name = get_cse_policy_name(unprefixed_policy_name)
+    return cpm.add_pvdc_compute_policy(policy_name, policy_description)
+
+def add_cse_vdc_compute_policy(cpm: ComputePolicyManager,
+                               unprefixed_policy_name: str,
+                               policy_description: str = None,
+                               pvdc_compute_policy_id: str = None):
+    policy_name = get_cse_policy_name(unprefixed_policy_name)
+    return cpm.add_vdc_compute_policy(policy_name,
+                                      description=policy_description,
+                                      pvdc_compute_policy_id=pvdc_compute_policy_id)  # noqa: E501
+
+def get_cse_vdc_compute_policy(cpm: ComputePolicyManager,
+                               unprefixed_policy_name: str,
+                               is_placement_policy: bool = False):
+    policy_name = get_cse_policy_name(unprefixed_policy_name)
+    return cpm.get_vdc_compute_policy(policy_name, is_placement_policy=is_placement_policy)  # noqa: E501
+
+def delete_cse_vdc_compute_policy(cpm: ComputePolicyManager,
+                                  unprefixed_policy_name: str,
+                                  is_placement_policy: bool = False):
+    policy_name = get_cse_policy_name(unprefixed_policy_name)
+    return cpm.delete_vdc_compute_policy(policy_name, is_placement_policy=is_placement_policy)  # noqa: E501
+
+def list_cse_sizing_policies_on_vdc(cpm: ComputePolicyManager, vdc_id: str):
+    cse_policy_name_filter = \
+        {'name': f'{cloudapi_constants.CSE_COMPUTE_POLICY_PREFIX}*'}
+    return cpm.list_vdc_sizing_policies_on_vdc(vdc_id,
+                                               filters=cse_policy_name_filter)
+
+def list_cse_placement_policies_on_vdc(cpm: ComputePolicyManager, vdc_id: str):
+    cse_policy_name_filter = \
+        {'name': f'{cloudapi_constants.CSE_COMPUTE_POLICY_PREFIX}*'}
+    return cpm.list_vdc_placement_policies_on_vdc(vdc_id,
+                                                  filters=cse_policy_name_filter)  # noqa: E501
+
