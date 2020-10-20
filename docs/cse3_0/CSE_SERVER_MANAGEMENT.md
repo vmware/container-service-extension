@@ -209,7 +209,7 @@ property in the `service` section. The default value is 10.
 
 ### Running CSE Server Manually
 
-To start the manually run the command shown below.
+To start the server manually, run the command shown below.
 
 ```sh
 # Run server in foreground.
@@ -219,9 +219,7 @@ cse run --config config.yaml
 nohup cse run --config config.yaml > nohup.out 2>&1 &
 ```
 
-Server output log can be found in `cse-server-debug.log` and `cse-server-info.log`
-under the folder `cse-logs`. If wire logs are truned on via config file, another file
-viz. `cse-server-wire-debug.log` will also show up under the log folder.
+Refer to [Log bundles](CSE_SERVER_MANAGEMENT.html#log-bundles) to see server-side logs
 
 ### Running CSE Server as a Service
 
