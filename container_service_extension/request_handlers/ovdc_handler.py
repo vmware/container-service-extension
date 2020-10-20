@@ -296,7 +296,7 @@ def ovdc_compute_policy_update(request_data,
                     cp_id = _cp['id']
         else:
             try:
-                _cp = cpm.get_vdc_compute_policy(utils.get_cse_policy_name(cp_name))  # noqa: E501
+                _cp = compute_policy_manager.get_cse_vdc_compute_policy(cpm, cp_name)  # noqa: E501
                 cp_href = _cp['href']
                 cp_id = _cp['id']
             except vcd_e.EntityNotFoundException:

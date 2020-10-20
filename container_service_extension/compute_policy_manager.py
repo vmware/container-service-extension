@@ -243,7 +243,7 @@ class ComputePolicyManager:
             f"{policy_info['id']}"
         return self._cloudapi_client.do_request(
             method=RequestMethod.DELETE,
-            cloudapi_version=cloudapi_constants.CloudApiVersion.VERSION_1_0_0,
+            cloudapi_version=self._cloudapi_version,
             resource_url_relative_path=resource_url_relative_path)
 
     def add_vdc_compute_policy(self, policy_name,
