@@ -383,6 +383,7 @@ def transfer_request_id_wrapper(func):
     def wrapper(*args, **kwargs):
         set_thread_request_id(cur_thread_req_id)
         func(*args, **kwargs)
+        set_thread_request_id(None)  # Reset request id
     return wrapper
 
 
