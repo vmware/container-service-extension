@@ -17,6 +17,7 @@ from container_service_extension.client.native_cluster_api import NativeClusterA
 from container_service_extension.client.ovdc import Ovdc
 import container_service_extension.client.sample_generator as client_sample_generator  # noqa: E501
 from container_service_extension.client.system import System
+from container_service_extension.client.template import Template
 import container_service_extension.client.utils as client_utils
 from container_service_extension.exceptions import CseResponseError
 from container_service_extension.exceptions import CseServerNotRunningError
@@ -82,8 +83,8 @@ def list_templates(ctx):
     try:
         client_utils.cse_restore_session(ctx)
         client = ctx.obj['client']
-        cluster = Cluster(client)
-        result = cluster.get_templates()
+        template = Template(client)
+        result = template.get_templates()
         CLIENT_LOGGER.debug(result)
         value_field_to_display_field = {
             'name': 'Name',

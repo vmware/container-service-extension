@@ -10,7 +10,6 @@ import yaml
 
 import container_service_extension.client.constants as cli_constants
 from container_service_extension.client.native_cluster_api import NativeClusterApi  # noqa: E501
-import container_service_extension.client.response_processor as response_processor  # noqa: E501
 import container_service_extension.client.tkg_cluster_api as tkg_cli_api
 import container_service_extension.client.tkgclient.rest as tkg_rest
 import container_service_extension.client.utils as client_utils
@@ -21,7 +20,6 @@ from container_service_extension.def_.utils import DEF_NATIVE_ENTITY_TYPE_VERSIO
 import container_service_extension.exceptions as cse_exceptions
 import container_service_extension.logger as logger
 import container_service_extension.pyvcloud_utils as vcd_utils
-import container_service_extension.shared_constants as shared_constants
 
 DUPLICATE_CLUSTER_ERROR_MSG = "Duplicate clusters found. Please use --k8-runtime for the unique identification"  # noqa: E501
 
@@ -327,19 +325,3 @@ class DefEntityClusterApi:
             cluster_dict = asdict(cluster)
             return self._nativeCluster.upgrade_cluster_by_cluster_id(cluster.id, cluster_def_entity=cluster_dict)  # noqa: E501
         self._tkgCluster.upgrade_cluster(cluster_name, template_name, template_revision)  # noqa: E501
-
-    def get_templates(self):
-        """Get the template information that are supported by api version 35.
-
-        :return: decoded response content, if status code is 2xx.
-        :rtype: dict
-        :raises CseResponseError: if response http status code is not 2xx
-        """
-        method = shared_constants.RequestMethod.GET
-        uri = f"{self._client.get_api_uri()}/{shared_constants.CSE_URL_FRAGMENT}/{shared_constants.CSE_3_0_URL_FRAGMENT}/templates"  # noqa: E501
-        response = self._client._do_request_prim(
-            method,
-            uri,
-            self._client._session,
-            accept_type='application/json')
-        return response_processor.process_response(response)
