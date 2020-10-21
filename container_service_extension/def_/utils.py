@@ -19,6 +19,7 @@ DEF_INTERFACE_ID_PREFIX = 'urn:vcloud:interface'
 DEF_NATIVE_ENTITY_TYPE_NSS = 'nativeCluster'
 DEF_NATIVE_ENTITY_TYPE_VERSION = '1.0.0'
 DEF_NATIVE_ENTITY_TYPE_NAME = 'nativeClusterEntityType'
+DEF_NATIVE_ENTITY_TYPE_RIGHT_BUNDLE = 'cse:nativeCluster Entitlement'
 DEF_ENTITY_TYPE_ID_PREFIX = 'urn:vcloud:type'
 DEF_API_MIN_VERSION = 35.0
 DEF_SCHEMA_DIRECTORY = 'cse_def_schema'

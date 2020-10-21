@@ -54,3 +54,13 @@ class RightBundleManager():
             cloudapi_version=CLOUDAPI_VERSION_1_0_0,
             resource_url_relative_path=relative_url,
             payload=payload)
+
+    def get_rights_for_right_bundle(self, right_bundle_name):
+        right_bundle_info = self.get_right_bundle_by_name(right_bundle_name)
+        right_bundle_id = right_bundle_info['id']
+        rights = self.cloudapi_client.do_request(
+            method=RequestMethod.GET,
+            cloudapi_version=CLOUDAPI_VERSION_1_0_0,
+            resource_url_relative_path=f"{CloudApiResource.RIGHT_BUNDLES}/{right_bundle_id}/rights")  # noqa: E501
+
+        return rights
