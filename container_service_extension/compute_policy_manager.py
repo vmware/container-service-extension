@@ -43,8 +43,6 @@ class ComputePolicyManager:
         self._cloudapi_client = None
         self._session = self._sysadmin_client.get_vcloud_session()
         self._is_operation_supported = True
-        self._cloudapi_version = \
-            cloudapi_constants.CloudApiVersion.VERSION_2_0_0
 
         try:
             wire_logger = logger.NULL_LOGGER
@@ -54,6 +52,8 @@ class ComputePolicyManager:
                 vcd_utils.get_cloudapi_client_from_vcd_client(self._sysadmin_client, # noqa: E501
                                                               logger.SERVER_LOGGER, # noqa: E501
                                                               wire_logger)
+            self._cloudapi_version = \
+                cloudapi_constants.CloudApiVersion.VERSION_2_0_0
             if float(self._cloudapi_client.get_api_version()) < \
                     GLOBAL_PVDC_COMPUTE_POLICY_MIN_VERSION:
                 self._cloudapi_version = \
@@ -337,7 +337,7 @@ class ComputePolicyManager:
 
             updated_policy = self._cloudapi_client.do_request(
                 method=RequestMethod.PUT,
-                cloudapi_version=cloudapi_constants.CloudApiVersion.VERSION_1_0_0,  # noqa: E501
+                cloudapi_version=self._cloudapi_version,
                 resource_url_relative_path=resource_url_relative_path,
                 payload=payload)
 
