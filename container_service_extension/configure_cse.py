@@ -18,6 +18,7 @@ from pyvcloud.vcd.org import Org
 import pyvcloud.vcd.utils as pyvcloud_vcd_utils
 from pyvcloud.vcd.vapp import VApp
 from pyvcloud.vcd.vm import VM
+from pyvcloud.vcd.role import Role
 import requests
 import semantic_version
 
@@ -59,6 +60,8 @@ import container_service_extension.template_builder as template_builder
 import container_service_extension.utils as utils
 from container_service_extension.vcdbroker import get_all_clusters as get_all_cse_clusters # noqa: E501
 from container_service_extension.vsphere_utils import populate_vsphere_list
+from container_service_extension.right_bundle_manager import RightBundleManager
+from container_service_extension.user_context import UserContext
 
 API_FILTER_PATTERNS = [
     f'/api/{shared_constants.CSE_URL_FRAGMENT}',
@@ -651,6 +654,74 @@ def _register_cse_as_amqp_extension(client, routing_key, exchange,
     INSTALL_LOGGER.info(msg)
 
 
+def _update_user_role_with_native_def_rights(defined_entity_right_bundle_name,
+                                             client: Client,
+                                             msg_update_callback=utils.NullPrinter(),
+                                             log_wire=False):
+    """
+    Method to add defined entity rights to user's role.
+    In order to call this function, caller has to make sure that the contexual
+    defined entity is already created inside VCD and corresppnding right-bundle
+    exists in VCD.
+    The defined entity right bundle is created by VCD at the time of defined
+    entity creation, dynamically. Hence, it doesn't exist before-hand (when user
+    initiated the opetation).
+
+    :param str : defined_entity_right_bundle_name
+    :param pyvcloud.vcd.client.Client  : client
+    :param utils.ConsoleMessagePrinter msg_update_callback: Callback object.
+    :param bool log_wire: wire logging enabled
+    """
+
+    # Currently this function should only be called during CSE install/upgrade
+    # procedure; these operations are only supported by sysadmin user.
+    vcd_utils.raise_error_if_not_sysadmin(client)
+
+    logger_wire = SERVER_CLOUDAPI_WIRE_LOGGER if log_wire else NULL_LOGGER
+    cloudapi_client = \
+            vcd_utils.get_cloudapi_client_from_vcd_client(client=client,
+                                                    logger_debug=INSTALL_LOGGER,
+                                                    logger_wire=logger_wire)
+
+    # Determine role name for the user
+    user_context = UserContext(client,cloudapi_client)
+    role_name = user_context.role
+
+    # Given that this user is sysadmin, Org must be System
+    # If its not, we should receive an exception during one of the below
+    # operations
+    system_org = Org(client, resource=client.get_org())
+
+    # Using the Org, determine Role object (using Role-name we identified)
+    role_resource = Role(client,
+                         resource=system_org.get_role_resource(role_name))
+
+    # Determine the rights necessary from rights bundle
+    # It is assumed that user already has "View Rights Bundle" Right
+    rbm = RightBundleManager(client, log_wire, msg_update_callback)
+    native_def_rights = \
+            rbm.get_rights_for_right_bundle(defined_entity_right_bundle_name)
+
+    # Get rights as a list of right-name strings
+    rights = []
+    for right_record in native_def_rights.get("values"):
+        rights.append(right_record["name"])
+
+    # Add rights to the Role
+    role_resource.add_rights(rights, system_org)
+
+    msg = "Updated user-role: " + str(role_name) + " with Rights-bundle: " + \
+            str(defined_entity_right_bundle_name)
+    msg_update_callback.info(msg)
+    INSTALL_LOGGER.info(msg)
+
+    # VCD has a concept called: SecurityContext, which determines rights owned
+    # by a user. This is determined only once during the lifetime of an HTTP
+    # session. In order to make above rights effective, we will need to logout
+    # and login the user again.
+
+    return
+
 def _register_def_schema(client: Client,
                          msg_update_callback=utils.NullPrinter(),
                          log_wire=False):
@@ -714,6 +785,15 @@ def _register_def_schema(client: Client,
             # TODO handle this part only if the entity type was not found
             native_entity_type = schema_svc.create_entity_type(native_entity_type)  # noqa: E501
             msg = "Successfully registered defined entity type"
+
+        # Update user's role with right bundle associated with native defined
+        # entity
+        _update_user_role_with_native_def_rights(
+                                def_utils.DEF_NATIVE_ENTITY_TYPE_RIGHT_BUNDLE,
+                                client=client,
+                                msg_update_callback=msg_update_callback,
+                                log_wire=log_wire)
+
         msg_update_callback.general(msg)
         INSTALL_LOGGER.info(msg)
     except cse_exception.DefNotSupportedException:
