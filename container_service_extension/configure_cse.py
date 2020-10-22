@@ -22,7 +22,6 @@ import requests
 import semantic_version
 
 import container_service_extension.compute_policy_manager as compute_policy_manager # noqa: E501
-from container_service_extension.config_validator import get_validated_config
 import container_service_extension.def_.entity_service as def_entity_svc
 import container_service_extension.def_.models as def_models
 import container_service_extension.def_.schema_service as def_schema_svc
@@ -946,7 +945,7 @@ def _install_all_templates(
 
 
 def install_template(template_name, template_revision, config_file_name,
-                     force_create, retain_temp_vapp, ssh_key,
+                     config, force_create, retain_temp_vapp, ssh_key,
                      skip_config_decryption=False, decryption_password=None,
                      msg_update_callback=utils.NullPrinter()):
     """Install a particular template in CSE.
@@ -957,6 +956,7 @@ def install_template(template_name, template_revision, config_file_name,
     :param str template_name:
     :param str template_revision:
     :param str config_file_name: config file name.
+    :param dict config: content of the CSE config file.
     :param bool force_create: if True and template already exists in vCD,
         overwrites existing template.
     :param str ssh_key: public ssh key to place into template vApp(s).
@@ -966,13 +966,6 @@ def install_template(template_name, template_revision, config_file_name,
     :param str decryption_password: password to decrypt the config file.
     :param utils.ConsoleMessagePrinter msg_update_callback: Callback object.
     """
-    config = get_validated_config(
-        config_file_name, skip_config_decryption=skip_config_decryption,
-        decryption_password=decryption_password,
-        log_wire_file=INSTALL_WIRELOG_FILEPATH,
-        logger_debug=INSTALL_LOGGER,
-        msg_update_callback=msg_update_callback)
-
     populate_vsphere_list(config['vcs'])
 
     msg = f"Installing template '{template_name}' at revision " \

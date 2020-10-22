@@ -576,15 +576,16 @@ def install(ctx, config_file_path, pks_config_file_path,
             color='green', hide_input=True)
 
     try:
-        config = get_validated_config(
-            config_file_name=config_file_path,
-            pks_config_file_name=pks_config_file_path,
-            skip_config_decryption=skip_config_decryption,
-            decryption_password=password,
-            log_wire_file=INSTALL_WIRELOG_FILEPATH,
-            logger_debug=INSTALL_LOGGER,
-            msg_update_callback=console_message_printer)
         try:
+            config = get_validated_config(
+                config_file_name=config_file_path,
+                pks_config_file_name=pks_config_file_path,
+                skip_config_decryption=skip_config_decryption,
+                decryption_password=password,
+                log_wire_file=INSTALL_WIRELOG_FILEPATH,
+                logger_debug=INSTALL_LOGGER,
+                msg_update_callback=console_message_printer)
+
             configure_cse.install_cse(
                 config_file_name=config_file_path,
                 config=config,
@@ -1139,10 +1140,19 @@ def install_cse_template(ctx, template_name, template_revision,
 
     try:
         try:
+            config = get_validated_config(
+                config_file_name=config_file_path,
+                skip_config_decryption=skip_config_decryption,
+                decryption_password=password,
+                log_wire_file=INSTALL_WIRELOG_FILEPATH,
+                logger_debug=INSTALL_LOGGER,
+                msg_update_callback=console_message_printer)
+
             configure_cse.install_template(
                 template_name=template_name,
                 template_revision=template_revision,
                 config_file_name=config_file_path,
+                config=config,
                 force_create=force_create,
                 retain_temp_vapp=retain_temp_vapp,
                 ssh_key=ssh_key,
