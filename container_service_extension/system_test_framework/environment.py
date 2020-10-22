@@ -150,7 +150,21 @@ def init_environment(config_filepath=BASE_CONFIG_FILEPATH):
         TEARDOWN_INSTALLATION = test_config.get('teardown_installation', True)
         TEARDOWN_CLUSTERS = test_config.get('teardown_clusters', True)
         TEST_ALL_TEMPLATES = test_config.get('test_all_templates', False)
-
+        if not TEST_ALL_TEMPLATES:
+            specified_templates_str = test_config.get('test_templates', "")
+            specified_templates = specified_templates_str.split(",")
+            specified_templates_def = []
+            for template in specified_templates:
+                tokens = template.split(":")
+                # ToDo: log missing/bad specified templates
+                if len(tokens) == 2:
+                    template_name = tokens[0]
+                    template_revision = tokens[1]
+                    for template_def in TEMPLATE_DEFINITIONS:
+                        if (template_name, int(template_revision)) == (template_def['name'], int(template_def['revision'])):  # noqa: E501
+                            specified_templates_def.append(template_def)
+                            break
+            TEMPLATE_DEFINITIONS = specified_templates_def
 
 def cleanup_environment():
     if CLIENT is not None:
