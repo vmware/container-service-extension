@@ -592,6 +592,14 @@ def install(ctx, config_file_path, pks_config_file_path,
             color='green', hide_input=True)
 
     try:
+        config = get_validated_config(
+            config_file_name=config_file_path,
+            pks_config_file_name=pks_config_file_path,
+            skip_config_decryption=skip_config_decryption,
+            decryption_password=password,
+            log_wire_file=INSTALL_WIRELOG_FILEPATH,
+            logger_debug=INSTALL_LOGGER,
+            msg_update_callback=console_message_printer)
         try:
             config = get_validated_config(
                 config_file_name=config_file_path,
