@@ -291,16 +291,16 @@ def test_0080_install_skip_template_creation(config,
             'k8s templates exist when they should not.'
 
         # check that temp vapp does not exists
-        temp_vapp_name = testutils.get_temp_vapp_name(template_config['name'])  # noqa: E501
+        temp_vapp_name = testutils.get_temp_vapp_name(template_config['name'])
         assert not env.vapp_exists(temp_vapp_name), \
             'vApp exists when it should not.'
 
 
-def test_0090_install_retain_temp_vapp(config, unregister_cse_before_test):
+def test_0090_install_all_templates(config, unregister_cse_before_test):
     """Test install.
 
-    Installation options: '--template', '--ssh-key',
-        '--retain-temp-vapp', '--skip-config-decryption'.
+    Installation options: '--ssh-key', '--retain-temp-vapp',
+        '--skip-config-decryption'.
 
     Tests that installation:
     - downloads/uploads ova file,
@@ -369,7 +369,7 @@ def test_0100_install_select_templates(config, unregister_cse_before_test):
         return
 
     cmd = f"install --config {env.ACTIVE_CONFIG_FILEPATH} --ssh-key " \
-          f"{env.SSH_KEY_FILEPATH} --skip-template-creation --force-update " \
+          f"{env.SSH_KEY_FILEPATH} --skip-template-creation " \
           f"--skip-config-decryption"
     result = env.CLI_RUNNER.invoke(cli, cmd.split(), catch_exceptions=False)
     assert result.exit_code == 0,\
@@ -403,11 +403,14 @@ def test_0100_install_select_templates(config, unregister_cse_before_test):
         assert env.catalog_item_exists(catalog_item_name), \
             'k8s template does not exist when it should.'
 
-        # check that temp vapp does not exists
+        # check that temp vapp exists
         temp_vapp_name = testutils.get_temp_vapp_name(
             template_config['name'])
-        assert not env.vapp_exists(temp_vapp_name), \
-            'vApp exists when it should not.'
+        try:
+            vdc.reload()
+            vdc.get_vapp(temp_vapp_name)
+        except EntityNotFoundException:
+            assert False, 'vApp does not exist when it should.'
 
 
 def test_0110_cse_check_valid_installation(config):
