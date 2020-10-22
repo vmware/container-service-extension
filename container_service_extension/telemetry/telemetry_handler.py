@@ -108,9 +108,11 @@ def record_user_action(cse_operation, status=OperationStatus.SUCCESS,
     """
     try:
         if not telemetry_settings:
-            telemetry_settings = get_server_runtime_config()['service']['telemetry']  # noqa: E501
+            server_config = get_server_runtime_config()
+            telemetry_settings = None if not server_config else \
+                server_config.get('service', {}).get('telemetry')
 
-        if telemetry_settings['enable']:
+        if telemetry_settings and telemetry_settings.get('enable'):
             payload = get_payload_for_user_action(cse_operation, status, message)  # noqa: E501
             _send_data_to_telemetry_server(payload, telemetry_settings)
     except Exception as err:

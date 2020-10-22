@@ -34,6 +34,7 @@ from container_service_extension.logger import SERVER_CLI_LOGGER
 from container_service_extension.logger import SERVER_CLI_WIRELOG_FILEPATH
 from container_service_extension.logger import SERVER_CLOUDAPI_WIRE_LOGGER
 from container_service_extension.logger import SERVER_DEBUG_WIRELOG_FILEPATH
+from container_service_extension.logger import SERVER_LOGGER
 import container_service_extension.pyvcloud_utils as vcd_utils
 from container_service_extension.remote_template_manager import RemoteTemplateManager # noqa: E501
 from container_service_extension.sample_generator import generate_sample_config
@@ -713,12 +714,21 @@ def run(ctx, config_file_path, pks_config_file_path, skip_check,
     try:
         try:
             cse_run_complete = False
+            config = get_validated_config(
+                config_file_name=config_file_path,
+                pks_config_file_name=pks_config_file_path,
+                skip_config_decryption=skip_config_decryption,
+                decryption_password=password,
+                log_wire_file=SERVER_DEBUG_WIRELOG_FILEPATH,
+                logger_debug=SERVER_LOGGER,
+                msg_update_callback=console_message_printer)
+
             service = cse_service.Service(
-                config_file_path,
+                config_file=config_file_path,
+                config=config,
                 pks_config_file=pks_config_file_path,
                 should_check_config=not skip_check,
-                skip_config_decryption=skip_config_decryption,
-                decryption_password=password)
+                skip_config_decryption=skip_config_decryption)
             service.run(msg_update_callback=console_message_printer)
             cse_run_complete = True
         except requests.exceptions.SSLError as err:
@@ -736,16 +746,11 @@ def run(ctx, config_file_path, pks_config_file_path, skip_check,
         sys.exit(1)
     finally:
         if not cse_run_complete:
-            config_dict = _get_config_dict(
-                config_file_path=config_file_path,
-                pks_config_file_path=None,
-                skip_config_decryption=skip_config_decryption,
-                validate=False,
-                log_wire_file=SERVER_CLI_WIRELOG_FILEPATH,
-                logger_debug=SERVER_CLI_LOGGER)
+            telemetry_settings = config['service']['telemetry'] \
+                if 'config' in locals() else None
             record_user_action(cse_operation=CseOperation.SERVICE_RUN,
                                status=OperationStatus.FAILED,
-                               telemetry_settings=config_dict['service']['telemetry'])  # noqa: E501
+                               telemetry_settings=telemetry_settings)  # noqa: E501
             # block the process to let telemetry handler to finish posting
             # data to VAC. HACK!!!
             time.sleep(3)
