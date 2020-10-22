@@ -296,6 +296,8 @@ def test_0080_install_skip_template_creation(config,
             'vApp exists when it should not.'
 
 
+@pytest.mark.skipif(not env.TEST_ALL_TEMPLATES,
+                    reason="Configuration specifies 'test_all_templates' as False")  # noqa: E501
 def test_0090_install_all_templates(config, unregister_cse_before_test):
     """Test install.
 
@@ -315,8 +317,6 @@ def test_0090_install_all_templates(config, unregister_cse_before_test):
     expected: cse registered, catalog exists, source ovas exist,
         temp vapps exist, k8s templates exist.
     """
-    if not env.TEST_ALL_TEMPLATES:
-        return
     cmd = f"install --config {env.ACTIVE_CONFIG_FILEPATH} --ssh-key " \
           f"{env.SSH_KEY_FILEPATH} --retain-temp-vapp --skip-config-decryption"
     result = env.CLI_RUNNER.invoke(cli, cmd.split(),
@@ -352,6 +352,8 @@ def test_0090_install_all_templates(config, unregister_cse_before_test):
             assert False, 'vApp does not exist when it should.'
 
 
+@pytest.mark.skipif(env.TEST_ALL_TEMPLATES,
+                    reason="Configuration specifies 'test_all_templates' as True")  # noqa: E501
 def test_0100_install_select_templates(config, unregister_cse_before_test):
     """Tests template installation.
 
@@ -365,9 +367,6 @@ def test_0100_install_select_templates(config, unregister_cse_before_test):
     expected: cse registered, source ovas exist, k8s templates exist and
         temp vapps exist.
     """
-    if env.TEST_ALL_TEMPLATES:
-        return
-
     cmd = f"install --config {env.ACTIVE_CONFIG_FILEPATH} --ssh-key " \
           f"{env.SSH_KEY_FILEPATH} --skip-template-creation " \
           f"--skip-config-decryption"
