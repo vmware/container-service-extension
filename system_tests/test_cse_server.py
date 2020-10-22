@@ -380,6 +380,7 @@ def test_0100_install_select_templates(config, unregister_cse_before_test):
     env.check_cse_registration(config['amqp']['routing_key'],
                                config['amqp']['exchange'])
 
+    vdc = VDC(env.CLIENT, href=env.VDC_HREF)
     for template_config in env.TEMPLATE_DEFINITIONS:
         # install the template
         cmd = f"template install {template_config['name']} " \
