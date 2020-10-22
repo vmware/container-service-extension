@@ -292,10 +292,9 @@ def parse_cse_extension_description(sys_admin_client, is_mqtt_extension):
     return (cse_version, vcd_api_version)
 
 
-def install_cse(config_file_name, skip_template_creation,
+def install_cse(config_file_name, config, skip_template_creation,
                 ssh_key, retain_temp_vapp, pks_config_file_name=None,
                 skip_config_decryption=False,
-                decryption_password=None,
                 msg_update_callback=utils.NullPrinter()):
     """Handle logistics for CSE installation.
 
@@ -306,13 +305,13 @@ def install_cse(config_file_name, skip_template_creation,
     Also records telemetry data on installation details.
 
     :param str config_file_name: config file name.
+    :param dict config: content of the CSE config file.
     :param bool skip_template_creation: If True, skip creating the templates.
     :param str ssh_key: public ssh key to place into template vApp(s).
     :param bool retain_temp_vapp: if True, temporary vApp will not destroyed,
         so the user can ssh into and debug the vm.
     :param str pks_config_file_name: pks config file name.
     :param bool skip_config_decryption: do not decrypt the config file.
-    :param str decryption_password: password to decrypt the config file.
     :param utils.ConsoleMessagePrinter msg_update_callback: Callback object.
 
     :raises cse_exception.AmqpError: (when using AMQP) if AMQP exchange
@@ -320,14 +319,6 @@ def install_cse(config_file_name, skip_template_creation,
     :raises requests.exceptions.HTTPError: (when using MQTT) if there is an
         issue in retrieiving MQTT info or in setting up the MQTT components
     """
-    config = get_validated_config(
-        config_file_name, pks_config_file_name=pks_config_file_name,
-        skip_config_decryption=skip_config_decryption,
-        decryption_password=decryption_password,
-        log_wire_file=INSTALL_WIRELOG_FILEPATH,
-        logger_debug=INSTALL_LOGGER,
-        msg_update_callback=msg_update_callback)
-
     populate_vsphere_list(config['vcs'])
 
     msg = f"Installing CSE on vCloud Director using config file " \
@@ -871,7 +862,7 @@ def _assign_placement_policies_to_existing_templates(client, config,
     assign the respective placement policy to the template.
 
     :param vcdClient.Client client:
-    :param dict config:
+    :param dict config: content of the CSE config file.
     :param bool is_tkg_plus_enable:
     :param bool log_wire:
     :param utils.ConsoleMessagePrinter msg_update_callback:

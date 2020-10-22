@@ -576,15 +576,23 @@ def install(ctx, config_file_path, pks_config_file_path,
             color='green', hide_input=True)
 
     try:
+        config = get_validated_config(
+            config_file_name=config_file_path,
+            pks_config_file_name=pks_config_file_path,
+            skip_config_decryption=skip_config_decryption,
+            decryption_password=password,
+            log_wire_file=INSTALL_WIRELOG_FILEPATH,
+            logger_debug=INSTALL_LOGGER,
+            msg_update_callback=console_message_printer)
         try:
             configure_cse.install_cse(
                 config_file_name=config_file_path,
+                config=config,
                 pks_config_file_name=pks_config_file_path,
                 skip_template_creation=skip_template_creation,
                 ssh_key=ssh_key,
                 retain_temp_vapp=retain_temp_vapp,
                 skip_config_decryption=skip_config_decryption,
-                decryption_password=password,
                 msg_update_callback=console_message_printer)
         except requests.exceptions.SSLError as err:
             raise Exception(f"SSL verification failed: {str(err)}")
