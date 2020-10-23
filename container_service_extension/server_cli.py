@@ -376,16 +376,31 @@ def check(ctx, config_file_path, pks_config_file_path, skip_config_decryption,
     console_message_printer = ConsoleMessagePrinter()
     check_python_version(console_message_printer)
 
+    password = None
+    if not skip_config_decryption:
+        password = os.getenv('CSE_CONFIG_PASSWORD') or prompt_text(
+            PASSWORD_FOR_CONFIG_DECRYPTION_MSG,
+            color='green', hide_input=True)
+
     config_dict = None
     try:
-        config_dict = _get_config_dict(
-            config_file_path=config_file_path,
-            pks_config_file_path=pks_config_file_path,
-            skip_config_decryption=skip_config_decryption,
-            msg_update_callback=console_message_printer,
-            validate=True,
-            log_wire_file=SERVER_CLI_WIRELOG_FILEPATH,
-            logger_debug=SERVER_CLI_LOGGER)
+        try:
+            config_dict = get_validated_config(
+                config_file_name=config_file_path,
+                pks_config_file_name=pks_config_file_path,
+                skip_config_decryption=skip_config_decryption,
+                decryption_password=password,
+                log_wire_file=SERVER_CLI_WIRELOG_FILEPATH,
+                logger_debug=SERVER_CLI_LOGGER,
+                msg_update_callback=console_message_printer)
+        except requests.exceptions.SSLError as err:
+            raise Exception(f"SSL verification failed: {str(err)}")
+        except requests.exceptions.ConnectionError as err:
+            raise Exception(f"Cannot connect to {err.request.url}.")
+        except cryptography.fernet.InvalidToken:
+            raise Exception(CONFIG_DECRYPTION_ERROR_MSG)
+        except vim.fault.InvalidLogin:
+            raise Exception(VCENTER_LOGIN_ERROR_MSG)
 
         if check_install:
             try:
@@ -711,6 +726,7 @@ def run(ctx, config_file_path, pks_config_file_path, skip_check,
             PASSWORD_FOR_CONFIG_DECRYPTION_MSG,
             color='green', hide_input=True)
 
+    config = None
     try:
         try:
             cse_run_complete = False
@@ -746,8 +762,7 @@ def run(ctx, config_file_path, pks_config_file_path, skip_check,
         sys.exit(1)
     finally:
         if not cse_run_complete:
-            telemetry_settings = config['service']['telemetry'] \
-                if 'config' in locals() else None
+            telemetry_settings = config['service']['telemetry'] if config else None  # noqa: E501
             record_user_action(cse_operation=CseOperation.SERVICE_RUN,
                                status=OperationStatus.FAILED,
                                telemetry_settings=telemetry_settings)  # noqa: E501
@@ -840,15 +855,30 @@ def upgrade(ctx, config_file_path, skip_config_decryption,
     if ssh_key_file is not None:
         ssh_key = ssh_key_file.read()
 
+    password = None
+    if not skip_config_decryption:
+        password = os.getenv('CSE_CONFIG_PASSWORD') or prompt_text(
+            PASSWORD_FOR_CONFIG_DECRYPTION_MSG,
+            color='green', hide_input=True)
+
     try:
-        config = _get_config_dict(
-            config_file_path=config_file_path,
-            pks_config_file_path=None,
-            skip_config_decryption=skip_config_decryption,
-            msg_update_callback=console_message_printer,
-            validate=True,
-            log_wire_file=INSTALL_WIRELOG_FILEPATH,
-            logger_debug=INSTALL_LOGGER)
+        try:
+            config = get_validated_config(
+                config_file_name=config_file_path,
+                pks_config_file_name=None,
+                skip_config_decryption=skip_config_decryption,
+                decryption_password=password,
+                log_wire_file=INSTALL_WIRELOG_FILEPATH,
+                logger_debug=INSTALL_LOGGER,
+                msg_update_callback=console_message_printer)
+        except requests.exceptions.SSLError as err:
+            raise Exception(f"SSL verification failed: {str(err)}")
+        except requests.exceptions.ConnectionError as err:
+            raise Exception(f"Cannot connect to {err.request.url}.")
+        except cryptography.fernet.InvalidToken:
+            raise Exception(CONFIG_DECRYPTION_ERROR_MSG)
+        except vim.fault.InvalidLogin:
+            raise Exception(VCENTER_LOGIN_ERROR_MSG)
 
         configure_cse.upgrade_cse(
             config_file_name=config_file_path,
