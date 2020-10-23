@@ -1247,10 +1247,7 @@ def register_ui_plugin(ctx, plugin_file_path, config_file_path,
         config_dict = _get_unvalidated_config(
             config_file_path=config_file_path,
             skip_config_decryption=skip_config_decryption,
-            msg_update_callback=console_message_printer,
-            validate=False,
-            log_wire_file=SERVER_CLI_WIRELOG_FILEPATH,
-            logger_debug=SERVER_CLI_LOGGER)
+            msg_update_callback=console_message_printer)
 
         tempdir = tempfile.mkdtemp(dir='.')
         plugin_zip = ZipFile(plugin_file_path, 'r')
