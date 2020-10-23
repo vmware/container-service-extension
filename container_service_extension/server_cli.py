@@ -935,17 +935,17 @@ def list_template(ctx, config_file_path, skip_config_decryption,
     # the python version check messages from being printed onto console.
     check_python_version()
 
+    config_dict = None
     try:
         # We don't want to validate config file, because server startup or
         # installation is not being performed. If values in config file are
         # missing or bad, appropriate exception will be raised while accessing
         # or using them.
-        config_dict = _get_config_dict(
+        config_dict = _get_unvalidated_config(
             config_file_path=config_file_path,
             pks_config_file_path=None,
             skip_config_decryption=skip_config_decryption,
             msg_update_callback=console_message_printer,
-            validate=False,
             log_wire_file=SERVER_CLI_WIRELOG_FILEPATH,
             logger_debug=SERVER_CLI_LOGGER)
 
@@ -1086,9 +1086,10 @@ def list_template(ctx, config_file_path, skip_config_decryption,
     except Exception as err:
         SERVER_CLI_LOGGER.error(str(err))
         console_message_printer.error(str(err))
+        telemetry_settings = config_dict['service']['telemetry'] if config_dict else None  # noqa: E501
         record_user_action(cse_operation=CseOperation.TEMPLATE_LIST,
                            status=OperationStatus.FAILED,
-                           telemetry_settings=config_dict['service']['telemetry'])  # noqa: E501
+                           telemetry_settings=telemetry_settings)
         sys.exit(1)
     finally:
         # block the process to let telemetry handler to finish posting data to
@@ -1246,7 +1247,7 @@ def register_ui_plugin(ctx, plugin_file_path, config_file_path,
         # installation is not being performed. If values in config file are
         # missing or bad, appropriate exception will be raised while accessing
         # or using them.
-        config_dict = _get_config_dict(
+        config_dict = _get_unvalidated_config(
             config_file_path=config_file_path,
             pks_config_file_path=None,
             skip_config_decryption=skip_config_decryption,
@@ -1400,7 +1401,7 @@ def deregister_ui_plugin(ctx, plugin_id, config_file_path,
         # installation is not being performed. If values in config file are
         # missing or bad, appropriate exception will be raised while accessing
         # or using them.
-        config_dict = _get_config_dict(
+        config_dict = _get_unvalidated_config(
             config_file_path=config_file_path,
             pks_config_file_path=None,
             skip_config_decryption=skip_config_decryption,
@@ -1465,7 +1466,7 @@ def list_ui_plugin(ctx, config_file_path, skip_config_decryption):
         # installation is not being performed. If values in config file are
         # missing or bad, appropriate exception will be raised while accessing
         # or using them.
-        config_dict = _get_config_dict(
+        config_dict = _get_unvalidated_config(
             config_file_path=config_file_path,
             pks_config_file_path=None,
             skip_config_decryption=skip_config_decryption,
@@ -1506,13 +1507,13 @@ def list_ui_plugin(ctx, config_file_path, skip_config_decryption):
             client.logout()
 
 
-def _get_config_dict(config_file_path,
-                     pks_config_file_path,
-                     skip_config_decryption,
-                     msg_update_callback=NullPrinter(),
-                     validate=True,
-                     log_wire_file=None,
-                     logger_debug=NULL_LOGGER):
+def _get_unvalidated_config(config_file_path,
+                            pks_config_file_path,
+                            skip_config_decryption,
+                            msg_update_callback=NullPrinter(),
+                            validate=True,
+                            log_wire_file=None,
+                            logger_debug=NULL_LOGGER):
     password = None
     if not skip_config_decryption:
         password = os.getenv('CSE_CONFIG_PASSWORD') or prompt_text(
@@ -1520,24 +1521,15 @@ def _get_config_dict(config_file_path,
             color='green', hide_input=True)
 
     try:
-        if validate:
-            config_dict = get_validated_config(
-                config_file_path, pks_config_file_name=pks_config_file_path,
-                skip_config_decryption=skip_config_decryption,
-                decryption_password=password,
-                log_wire_file=log_wire_file,
-                logger_debug=logger_debug,
-                msg_update_callback=msg_update_callback)
+        if skip_config_decryption:
+            with open(config_file_path) as config_file:
+                config_dict = yaml.safe_load(config_file) or {}
         else:
-            if skip_config_decryption:
-                with open(config_file_path) as config_file:
-                    config_dict = yaml.safe_load(config_file) or {}
-            else:
-                msg_update_callback.info(
-                    f"Decrypting '{config_file_path}'")
-                config_dict = yaml.safe_load(
-                    get_decrypted_file_contents(
-                        config_file_path, password)) or {}
+            msg_update_callback.info(
+                f"Decrypting '{config_file_path}'")
+            config_dict = yaml.safe_load(
+                get_decrypted_file_contents(
+                    config_file_path, password)) or {}
 
         # To suppress the warning message that pyvcloud prints if
         # ssl_cert verification is skipped.
