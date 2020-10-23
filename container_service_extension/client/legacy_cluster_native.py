@@ -7,7 +7,7 @@ from container_service_extension.logger import CLIENT_LOGGER
 import container_service_extension.shared_constants as shared_constants
 
 
-class LegacyNativeClusterApi:
+class LegacyClusterNative:
     def __init__(self, client):
         self.client = client
         self._uri = f"{self.client.get_api_uri()}/{shared_constants.CSE_URL_FRAGMENT}"  # noqa: E501

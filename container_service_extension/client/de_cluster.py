@@ -9,8 +9,8 @@ import requests
 import yaml
 
 import container_service_extension.client.constants as cli_constants
-from container_service_extension.client.native_cluster_api import NativeClusterApi  # noqa: E501
-import container_service_extension.client.tkg_cluster_api as tkg_cli_api
+from container_service_extension.client.de_cluster_native import DENativeCluster  # noqa: E501
+from container_service_extension.client.de_cluster_tkg import DEClusterTKG
 import container_service_extension.client.tkgclient.rest as tkg_rest
 import container_service_extension.client.utils as client_utils
 import container_service_extension.def_.entity_service as def_entity_svc
@@ -24,7 +24,7 @@ import container_service_extension.pyvcloud_utils as vcd_utils
 DUPLICATE_CLUSTER_ERROR_MSG = "Duplicate clusters found. Please use --k8-runtime for the unique identification"  # noqa: E501
 
 
-class DefEntityClusterApi:
+class DECluster:
     """Handle operations common to DefNative and TKG kubernetes clusters.
 
     Also any operation where cluster kind is not supplied should be handled here.  # noqa: E501
@@ -45,8 +45,8 @@ class DefEntityClusterApi:
             vcd_utils.get_cloudapi_client_from_vcd_client(
                 client=client, logger_debug=logger.CLIENT_LOGGER,
                 logger_wire=logger_wire)
-        self._nativeCluster = NativeClusterApi(client)
-        self._tkgCluster = tkg_cli_api.TKGClusterApi(client)
+        self._nativeCluster = DENativeCluster(client)
+        self._tkgCluster = DEClusterTKG(client)
 
     def list_clusters(self, vdc=None, org=None, **kwargs):
         """Get collection of clusters using DEF API.

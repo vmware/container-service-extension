@@ -13,7 +13,7 @@ from container_service_extension.client import pks
 from container_service_extension.client.cluster import Cluster
 import container_service_extension.client.command_filter as cmd_filter
 import container_service_extension.client.constants as cli_constants
-from container_service_extension.client.native_cluster_api import NativeClusterApi  # noqa: E501
+from container_service_extension.client.de_cluster_native import DENativeCluster  # noqa: E501
 from container_service_extension.client.ovdc import Ovdc
 import container_service_extension.client.sample_generator as client_sample_generator  # noqa: E501
 from container_service_extension.client.system import System
@@ -732,7 +732,7 @@ def delete_nfs(ctx, cluster_name, node_name, vdc, org):
         client = ctx.obj['client']
         if not client.is_sysadmin() and org is None:
             org = ctx.obj['profiles'].get('org_in_use')
-        cluster = NativeClusterApi(client)
+        cluster = DENativeCluster(client)
         result = cluster.delete_nfs_node(cluster_name, node_name, org=org, vdc=vdc)  # noqa: E501
         stdout(result, ctx)
         CLIENT_LOGGER.debug(result)
