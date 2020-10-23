@@ -4,10 +4,10 @@
 
 import pyvcloud.vcd.client as vcd_client
 
-from container_service_extension.client.def_entity_cluster_api import DefEntityClusterApi # noqa: E501
-from container_service_extension.client.legacy_native_cluster_api import LegacyNativeClusterApi  # noqa: E501
-from container_service_extension.client.native_cluster_api import NativeClusterApi  # noqa: E501
-from container_service_extension.client.tkg_cluster_api import TKGClusterApi
+from container_service_extension.client.de_cluster import DECluster
+from container_service_extension.client.legacy_cluster_native import LegacyClusterNative  # noqa: E501
+from container_service_extension.client.de_cluster_native import DENativeCluster  # noqa: E501
+from container_service_extension.client.de_cluster_tkg import DEClusterTKG
 from container_service_extension.shared_constants import ClusterEntityKind
 
 
@@ -30,11 +30,11 @@ class Cluster:
         """
         api_version = client.get_api_version()
         if float(api_version) < float(vcd_client.ApiVersion.VERSION_35.value):   # noqa: E501
-            return LegacyNativeClusterApi(client)
+            return LegacyClusterNative(client)
         elif float(api_version) >= float(vcd_client.ApiVersion.VERSION_35.value):  # noqa: E501
             if k8_runtime == ClusterEntityKind.NATIVE.value or k8_runtime == ClusterEntityKind.TKG_PLUS.value:  # noqa: E501
-                return NativeClusterApi(client)
+                return DENativeCluster(client)
             elif k8_runtime == ClusterEntityKind.TKG.value:
-                return TKGClusterApi(client)
+                return DEClusterTKG(client)
             else:
-                return DefEntityClusterApi(client)
+                return DECluster(client)
