@@ -943,11 +943,8 @@ def list_template(ctx, config_file_path, skip_config_decryption,
         # or using them.
         config_dict = _get_unvalidated_config(
             config_file_path=config_file_path,
-            pks_config_file_path=None,
             skip_config_decryption=skip_config_decryption,
-            msg_update_callback=console_message_printer,
-            log_wire_file=SERVER_CLI_WIRELOG_FILEPATH,
-            logger_debug=SERVER_CLI_LOGGER)
+            msg_update_callback=console_message_printer)
 
         # Record telemetry details
         cse_params = {
@@ -1249,7 +1246,6 @@ def register_ui_plugin(ctx, plugin_file_path, config_file_path,
         # or using them.
         config_dict = _get_unvalidated_config(
             config_file_path=config_file_path,
-            pks_config_file_path=None,
             skip_config_decryption=skip_config_decryption,
             msg_update_callback=console_message_printer,
             validate=False,
@@ -1403,12 +1399,8 @@ def deregister_ui_plugin(ctx, plugin_id, config_file_path,
         # or using them.
         config_dict = _get_unvalidated_config(
             config_file_path=config_file_path,
-            pks_config_file_path=None,
             skip_config_decryption=skip_config_decryption,
-            msg_update_callback=console_message_printer,
-            validate=False,
-            log_wire_file=SERVER_CLI_WIRELOG_FILEPATH,
-            logger_debug=SERVER_CLI_LOGGER)
+            msg_update_callback=console_message_printer)
 
         log_filename = None
         log_wire = str_to_bool(config_dict['service'].get('log_wire'))
@@ -1468,12 +1460,8 @@ def list_ui_plugin(ctx, config_file_path, skip_config_decryption):
         # or using them.
         config_dict = _get_unvalidated_config(
             config_file_path=config_file_path,
-            pks_config_file_path=None,
             skip_config_decryption=skip_config_decryption,
-            msg_update_callback=console_message_printer,
-            validate=False,
-            log_wire_file=SERVER_CLI_WIRELOG_FILEPATH,
-            logger_debug=SERVER_CLI_LOGGER)
+            msg_update_callback=console_message_printer)
 
         log_filename = None
         log_wire = str_to_bool(config_dict['service'].get('log_wire'))
@@ -1508,12 +1496,8 @@ def list_ui_plugin(ctx, config_file_path, skip_config_decryption):
 
 
 def _get_unvalidated_config(config_file_path,
-                            pks_config_file_path,
                             skip_config_decryption,
-                            msg_update_callback=NullPrinter(),
-                            validate=True,
-                            log_wire_file=None,
-                            logger_debug=NULL_LOGGER):
+                            msg_update_callback=NullPrinter()):
     password = None
     if not skip_config_decryption:
         password = os.getenv('CSE_CONFIG_PASSWORD') or prompt_text(
@@ -1530,6 +1514,8 @@ def _get_unvalidated_config(config_file_path,
             config_dict = yaml.safe_load(
                 get_decrypted_file_contents(
                     config_file_path, password)) or {}
+        msg_update_callback.general(f"Retrieved config from "
+                                    f"'{config_file_path}'")
 
         # To suppress the warning message that pyvcloud prints if
         # ssl_cert verification is skipped.
