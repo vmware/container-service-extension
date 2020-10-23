@@ -978,13 +978,13 @@ def delete_cse_vdc_compute_policy(cpm: ComputePolicyManager,
 
 def list_cse_sizing_policies_on_vdc(cpm: ComputePolicyManager, vdc_id: str):
     cse_policy_name_filter = \
-        {'name': f'{cloudapi_constants.CSE_COMPUTE_POLICY_PREFIX}*'}
+        {'name': f'{CSE_COMPUTE_POLICY_PREFIX}*'}
     return cpm.list_vdc_sizing_policies_on_vdc(vdc_id,
                                                filters=cse_policy_name_filter)
 
 
 def list_cse_placement_policies_on_vdc(cpm: ComputePolicyManager, vdc_id: str):
     cse_policy_name_filter = \
-        {'name': f'{cloudapi_constants.CSE_COMPUTE_POLICY_PREFIX}*'}
+        {'name': f'{CSE_COMPUTE_POLICY_PREFIX}*'}
     return cpm.list_vdc_placement_policies_on_vdc(vdc_id,
                                                   filters=cse_policy_name_filter)  # noqa: E501
