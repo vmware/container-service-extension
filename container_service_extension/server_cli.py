@@ -1083,7 +1083,8 @@ def list_template(ctx, config_file_path, skip_config_decryption,
     except Exception as err:
         SERVER_CLI_LOGGER.error(str(err))
         console_message_printer.error(str(err))
-        telemetry_settings = config_dict['service']['telemetry'] if config_dict else None  # noqa: E501
+        telemetry_settings = config_dict.get('service', {}).get('telemetry') \
+            if config_dict else None
         record_user_action(cse_operation=CseOperation.TEMPLATE_LIST,
                            status=OperationStatus.FAILED,
                            telemetry_settings=telemetry_settings)
