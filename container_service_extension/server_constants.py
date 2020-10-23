@@ -63,10 +63,6 @@ MQTT_MIN_API_VERSION = 35.0
 MQTT_TOKEN_NAME = "mqttCseToken"
 TOKEN_PATH = 'tokens'
 
-# Name of single Message Consumer Thread, which passes jobs to a
-# Thread Pool Executor
-MESSAGE_CONSUMER_THREAD = 'MessageConsumer'
-
 
 # Encryption constants
 PBKDF2_ITERATIONS = 100000
