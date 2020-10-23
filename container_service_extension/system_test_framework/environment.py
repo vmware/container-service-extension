@@ -166,6 +166,7 @@ def init_environment(config_filepath=BASE_CONFIG_FILEPATH):
                             break
             TEMPLATE_DEFINITIONS = specified_templates_def
 
+
 def cleanup_environment():
     if CLIENT is not None:
         CLIENT.logout()
