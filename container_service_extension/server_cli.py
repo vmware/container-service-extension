@@ -1543,14 +1543,8 @@ def _get_unvalidated_config(config_file_path,
         store_telemetry_settings(config_dict)
 
         return config_dict
-    except requests.exceptions.SSLError as err:
-        raise Exception(f"SSL verification failed: {str(err)}")
-    except requests.exceptions.ConnectionError as err:
-        raise Exception(f"Cannot connect to {err.request.url}.")
     except cryptography.fernet.InvalidToken:
         raise Exception(CONFIG_DECRYPTION_ERROR_MSG)
-    except vim.fault.InvalidLogin:
-        raise Exception(VCENTER_LOGIN_ERROR_MSG)
 
 
 def _get_clients_from_config(config, log_wire_file, log_wire):
