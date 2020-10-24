@@ -38,6 +38,8 @@ class DENativeCluster:
             vcd_utils.get_cloudapi_client_from_vcd_client(
                 client=client, logger_debug=logger.CLIENT_LOGGER,
                 logger_wire=logger_wire)
+        from container_service_extension.client.cse_client.api_35.native_cluster_api import NativeClusterApi
+        self._native_cluster_api = NativeClusterApi(self._client)
 
     def create_cluster(self, cluster_entity: def_models.ClusterEntity):
         """Create a new Kubernetes cluster.
@@ -121,14 +123,8 @@ class DENativeCluster:
         :return: string containing the task for delete operation
         :rtype: str
         """
-        uri = f"{self._uri}/cluster/{cluster_id}"
-        response = self._client._do_request_prim(
-            shared_constants.RequestMethod.DELETE,
-            uri,
-            self._client._session,
-            media_type='application/json',
-            accept_type='application/json')
-        cluster_entity = def_models.DefEntity(**response_processor.process_response(response))  # noqa: E501
+        cluster_entity = \
+            self._native_cluster_api.delete_cluster_by_cluster_id(cluster_id)
         return client_utils.construct_task_console_message(cluster_entity.entity.status.task_href)  # noqa: E501
 
     def delete_nfs_node(self, cluster_name, node_name, org=None, vdc=None):
@@ -157,14 +153,8 @@ class DENativeCluster:
         :return: string containing the task for delete operation
         :rtype: str
         """
-        uri = f"{self._uri}/cluster/{cluster_id}/nfs/{node_name}"
-        response = self._client._do_request_prim(
-            shared_constants.RequestMethod.DELETE,
-            uri,
-            self._client._session,
-            media_type='application/json',
-            accept_type='application/json')
-        cluster_entity = def_models.DefEntity(**response_processor.process_response(response))  # noqa: E501
+        cluster_entity = \
+            self._native_cluster_api.delete_nfs_node_by_node_name(cluster_id, node_name)
         return client_utils.construct_task_console_message(cluster_entity.entity.status.task_href)  # noqa: E501
 
     def get_cluster_config(self, cluster_name, cluster_id=None,
@@ -195,14 +185,7 @@ class DENativeCluster:
         :return: decoded response content
         :rtype: dict
         """
-        uri = f"{self._uri}/cluster/{cluster_id}/config"
-        response = self._client._do_request_prim(
-            shared_constants.RequestMethod.GET,
-            uri,
-            self._client._session,
-            media_type='application/json',
-            accept_type='application/json')
-        return response_processor.process_response(response)
+        return self._native_cluster_api.get_cluster_config_by_cluster_id(cluster_id)  # noqa: E501
 
     def get_upgrade_plan(self, cluster_name, org=None, vdc=None):
         """Get the upgrade plan for given cluster.
@@ -227,13 +210,7 @@ class DENativeCluster:
         :return: decoded response content
         :rtype: list
         """
-        uri = f'{self._uri}/cluster/{cluster_id}/upgrade-plan'
-        response = self._client._do_request_prim(
-            shared_constants.RequestMethod.GET,
-            uri,
-            self._client._session,
-            accept_type='application/json')
-        return response_processor.process_response(response)
+        return self._native_cluster_api.get_upgrade_plan_by_cluster_id(cluster_id)  # noqa: E501
 
     def upgrade_cluster(self, cluster_name, template_name,
                         template_revision, org_name=None, ovdc_name=None):
@@ -266,15 +243,9 @@ class DENativeCluster:
         :return: string containing upgrade cluster task href
         :rtype: str
         """
-        uri = f'{self._uri}/cluster/{cluster_id}/action/upgrade'
-        response = self._client._do_request_prim(
-            shared_constants.RequestMethod.POST,
-            uri,
-            self._client._session,
-            contents=cluster_def_entity['entity'],
-            media_type='application/json',
-            accept_type='application/json')
-        cluster_def_entity = def_models.DefEntity(**response_processor.process_response(response))  # noqa: E501
+        # TODO: check if we really need to decode-encode-decode-encode
+        cluster_upgrade_definition = def_models.DefEntity(**cluster_def_entity)
+        cluster_def_entity = self._native_cluster_api.upgrade_cluster_by_cluster_id(cluster_id, cluster_upgrade_definition)
         return client_utils.construct_task_console_message(cluster_def_entity.entity.status.task_href)  # noqa: E501
 
     def apply(self, cluster_config, cluster_id=None, **kwargs):
@@ -294,22 +265,9 @@ class DENativeCluster:
         else:
             def_entity = entity_svc.get_native_entity_by_name(cluster_name)
         if not def_entity:
-            response = self._client._do_request_prim(
-                shared_constants.RequestMethod.POST,
-                uri,
-                self._client._session,
-                contents=cluster_config,
-                media_type='application/json',
-                accept_type='application/json')
+            cluster_entity = self._native_cluster_api.create_cluster(cluster_spec)  # noqa: E501
         else:
             cluster_id = def_entity.id
-            uri = f"{self._uri}/cluster/{cluster_id}"
-            response = self._client._do_request_prim(
-                shared_constants.RequestMethod.PUT,
-                uri,
-                self._client._session,
-                contents=cluster_config,
-                media_type='application/json',
-                accept_type='application/json')
-        cluster_entity = def_models.DefEntity(**response_processor.process_response(response))  # noqa: E501
+            cluster_entity = \
+                self._native_cluster_api.update_cluster_by_cluster_id(cluster_id, cluster_spec)  # noqa: E501
         return client_utils.construct_task_console_message(cluster_entity.entity.status.task_href)  # noqa: E501
