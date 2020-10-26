@@ -14,6 +14,7 @@ from container_service_extension.exceptions import CseRequestError
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
 import container_service_extension.request_processor as request_processor
 from container_service_extension.shared_constants import RESPONSE_MESSAGE_KEY
+from container_service_extension.thread_local_data import set_thread_request_id
 
 
 def get_response_fields(request_msg, fsencoding, is_mqtt):
@@ -36,6 +37,7 @@ def get_response_fields(request_msg, fsencoding, is_mqtt):
             msg_json = json.loads(request_msg.decode(fsencoding))[0]
             request_id = msg_json['id']
 
+        set_thread_request_id(request_id)
         result = request_processor.process_request(msg_json)
         status_code = result['status_code']
         reply_body = result['body']
