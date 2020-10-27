@@ -1,3 +1,6 @@
+# container-service-extension
+# Copyright (c) 2020 VMware, Inc. All Rights Reserved.
+# SPDX-License-Identifier: BSD-2-Clause
 
 import pyvcloud.vcd.client as vcd_client
 
