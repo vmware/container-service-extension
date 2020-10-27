@@ -325,7 +325,17 @@ def version(ctx):
     '--pks-config',
     is_flag=True,
     help='Generate only sample PKS config')
-def sample(ctx, output, pks_config):
+@click.option(
+    '-v',
+    '--api-version',
+    'api_version',
+    required=False,
+    default='35.0',
+    show_default=True,
+    metavar='API_VERSION',
+    help='Specify vCD API version: (33.0, 34.0, 35.0). '
+         'Note: Not needed if only generating PKS config.')
+def sample(ctx, output, pks_config, api_version):
     """Display sample CSE config file contents."""
     SERVER_CLI_LOGGER.debug(f"Executing command: {ctx.command_path}")
     console_message_printer = ConsoleMessagePrinter()
@@ -333,8 +343,22 @@ def sample(ctx, output, pks_config):
     # check, because we want to suppress the version check messages from being
     # printed onto console, and pollute the sample config.
     check_python_version()
-    sample_config = generate_sample_config(output=output,
-                                           generate_pks_config=pks_config)
+
+    try:
+        api_version = float(api_version)
+    except ValueError as err:
+        console_message_printer.error(str(err))
+        SERVER_CLI_LOGGER.error(str(err))
+        sys.exit(1)
+
+    try:
+        sample_config = generate_sample_config(output=output,
+                                               generate_pks_config=pks_config,
+                                               api_version=api_version)
+    except Exception as err:
+        console_message_printer.error(str(err))
+        SERVER_CLI_LOGGER.error(str(err))
+        sys.exit(1)
 
     console_message_printer.general_no_color(sample_config)
     SERVER_CLI_LOGGER.debug(sample_config)

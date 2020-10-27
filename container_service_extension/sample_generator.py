@@ -4,6 +4,9 @@
 
 import yaml
 
+from container_service_extension.server_constants import MQTT_MIN_API_VERSION
+from container_service_extension.server_constants import SUPPORTED_VCD_API_VERSIONS  # noqa: E501
+
 
 INSTRUCTIONS_FOR_PKS_CONFIG_FILE = "\
 # Enterprise PKS config file to enable Enterprise PKS functionality on CSE\n\
@@ -168,6 +171,22 @@ TEMPLATE_RULE_NOTE = """# [Optional] Template rule section
 #    mem: 1024
 """  # noqa: E501
 
+COMMENTED_AMQP_SECTION = """\
+# Only one of the amqp of mqtt sections should be present.
+
+#amqp:
+#  exchange: cse-ext
+#  host: amqp.vmware.com
+#  password: guest
+#  port: 5672
+#  prefix: vcd
+#  routing_key: cse
+#  ssl: false
+#  ssl_accept_all: false
+#  username: guest
+#  vhost: /
+"""
+
 
 PKS_SERVERS_SECTION_KEY = 'pks_api_servers'
 SAMPLE_PKS_SERVERS_SECTION = {
@@ -284,7 +303,8 @@ SAMPLE_PKS_NSXT_SERVERS_SECTION = {
 }
 
 
-def generate_sample_config(output=None, generate_pks_config=False):
+def generate_sample_config(output=None, generate_pks_config=False,
+                           api_version=MQTT_MIN_API_VERSION):
     """Generate sample configs for cse.
 
     If config file names are
@@ -293,15 +313,29 @@ def generate_sample_config(output=None, generate_pks_config=False):
     :param str output: name of the config file to dump the CSE configs.
     :param bool generate_pks_config: Flag to generate sample of PKS specific
     configuration file instead of sample regular CSE configuration file.
+    :param float api_version: the desired api version for the config file.
 
     :return: sample config
 
     :rtype: dict
     """
+    if str(api_version) not in SUPPORTED_VCD_API_VERSIONS:
+        raise Exception(f'vCD API version {api_version} is not supported. '
+                        f'Please pick one of the following API versions: '
+                        f'{SUPPORTED_VCD_API_VERSIONS}')
+
     if not generate_pks_config:
-        sample_config = yaml.safe_dump(SAMPLE_AMQP_CONFIG,
-                                       default_flow_style=False) + '\n'
-        sample_config += yaml.safe_dump(SAMPLE_VCD_CONFIG,
+        # Select message protocol section
+        if api_version >= MQTT_MIN_API_VERSION:
+            sample_config = COMMENTED_AMQP_SECTION + '\n'
+            sample_config += yaml.safe_dump(SAMPLE_MQTT_CONFIG) + '\n'
+        else:
+            sample_config = yaml.safe_dump(SAMPLE_AMQP_CONFIG,
+                                           default_flow_style=False) + '\n'
+
+        api_version_vcd_config = dict(SAMPLE_VCD_CONFIG)
+        api_version_vcd_config['vcd']['api_version'] = str(api_version)
+        sample_config += yaml.safe_dump(api_version_vcd_config,
                                         default_flow_style=False) + '\n'
         sample_config += yaml.safe_dump(SAMPLE_VCS_CONFIG,
                                         default_flow_style=False) + '\n'
@@ -309,7 +343,8 @@ def generate_sample_config(output=None, generate_pks_config=False):
                                         default_flow_style=False) + '\n'
         sample_config += yaml.safe_dump(SAMPLE_BROKER_CONFIG,
                                         default_flow_style=False) + '\n'
-        sample_config += TEMPLATE_RULE_NOTE + '\n'
+        if api_version < MQTT_MIN_API_VERSION:
+            sample_config += TEMPLATE_RULE_NOTE + '\n'
     else:
         sample_config = yaml.safe_dump(
             SAMPLE_PKS_SERVERS_SECTION, default_flow_style=False) + '\n'
