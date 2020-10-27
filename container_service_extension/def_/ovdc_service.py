@@ -130,21 +130,20 @@ def list_ovdc(operation_context: ctx.OperationContext) -> List[dict]:
     else:
         org_resource_list = list(operation_context.client.get_org())
     ovdcs = []
-    for org_resource in org_resource_list:
-        org = vcd_org.Org(operation_context.client, resource=org_resource)
-        for vdc_sparse in org.list_vdcs():
-            ovdc_name = vdc_sparse['name']
-            org_name = org.get_name()
-            ovdc_details = asdict(
-                get_ovdc_k8s_runtime_details(operation_context.sysadmin_client,
-                                             org_name=org_name,
-                                             ovdc_name=ovdc_name))
-            if ClusterEntityKind.TKG_PLUS.value in ovdc_details['k8s_runtime'] \
-                    and not utils.is_tkg_plus_enabled():  # noqa: E501
-                ovdc_details['k8s_runtime'].remove(ClusterEntityKind.TKG_PLUS.value)  # noqa: E501
-            # TODO: Find a better way to remove remove_cp_from_vms_on_disable
-            del ovdc_details['remove_cp_from_vms_on_disable']
-            ovdcs.append(ovdc_details)
+    org_vdcs = vcd_utils.get_all_ovdcs(operation_context.client)
+    for ovdc in org_vdcs:
+        ovdc_name = ovdc.get('name')
+        org_name = ovdc.get('orgName')
+        ovdc_details = asdict(
+            get_ovdc_k8s_runtime_details(operation_context.sysadmin_client,
+                                            org_name=org_name,
+                                            ovdc_name=ovdc_name))
+        if ClusterEntityKind.TKG_PLUS.value in ovdc_details['k8s_runtime'] \
+                and not utils.is_tkg_plus_enabled():  # noqa: E501
+            ovdc_details['k8s_runtime'].remove(ClusterEntityKind.TKG_PLUS.value)  # noqa: E501
+        # TODO: Find a better way to remove remove_cp_from_vms_on_disable
+        del ovdc_details['remove_cp_from_vms_on_disable']
+        ovdcs.append(ovdc_details)
     return ovdcs
 
 
