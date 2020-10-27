@@ -8,7 +8,7 @@ import pyvcloud.vcd.exceptions as vcd_exceptions
 import yaml
 
 import container_service_extension.client.constants as cli_constants
-import container_service_extension.client.response_processor as response_processor  # noqa: E501
+from container_service_extension.client.cse_client.api_35.native_cluster_api import NativeClusterApi  # noqa: E501
 import container_service_extension.client.utils as client_utils
 from container_service_extension.def_ import models as def_models
 import container_service_extension.def_.entity_service as def_entity_svc
@@ -38,7 +38,6 @@ class DENativeCluster:
             vcd_utils.get_cloudapi_client_from_vcd_client(
                 client=client, logger_debug=logger.CLIENT_LOGGER,
                 logger_wire=logger_wire)
-        from container_service_extension.client.cse_client.api_35.native_cluster_api import NativeClusterApi
         self._native_cluster_api = NativeClusterApi(self._client)
 
     def create_cluster(self, cluster_entity: def_models.ClusterEntity):
@@ -154,7 +153,8 @@ class DENativeCluster:
         :rtype: str
         """
         cluster_entity = \
-            self._native_cluster_api.delete_nfs_node_by_node_name(cluster_id, node_name)
+            self._native_cluster_api.delete_nfs_node_by_node_name(cluster_id,
+                                                                  node_name)
         return client_utils.construct_task_console_message(cluster_entity.entity.status.task_href)  # noqa: E501
 
     def get_cluster_config(self, cluster_name, cluster_id=None,
@@ -245,7 +245,9 @@ class DENativeCluster:
         """
         # TODO: check if we really need to decode-encode-decode-encode
         cluster_upgrade_definition = def_models.DefEntity(**cluster_def_entity)
-        cluster_def_entity = self._native_cluster_api.upgrade_cluster_by_cluster_id(cluster_id, cluster_upgrade_definition)
+        cluster_def_entity = \
+            self._native_cluster_api.upgrade_cluster_by_cluster_id(
+                cluster_id, cluster_upgrade_definition)
         return client_utils.construct_task_console_message(cluster_def_entity.entity.status.task_href)  # noqa: E501
 
     def apply(self, cluster_config, cluster_id=None, **kwargs):
@@ -255,7 +257,6 @@ class DENativeCluster:
         :return: dictionary containing the apply operation task
         :rtype: dict
         """
-        uri = f"{self._uri}/clusters"
         entity_svc = def_entity_svc.DefEntityService(self._cloudapi_client)
         cluster_spec = def_models.ClusterEntity(**cluster_config)
         cluster_name = cluster_spec.metadata.cluster_name

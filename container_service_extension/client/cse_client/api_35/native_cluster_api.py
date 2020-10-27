@@ -1,12 +1,17 @@
-import pyvcloud.vcd.client as vcd_client
-from container_service_extension.client.cse_client.api_35.client import \
-    CseClientV35
-import container_service_extension.def_.models as def_models
-import container_service_extension.client.response_processor as response_processor  # noqa: E501
+from dataclasses import asdict
 
-class NativeClusterApi(CseClientV35):
+import pyvcloud.vcd.client as vcd_client
+
+from container_service_extension.client.cse_client.cse_client import CseClient
+import container_service_extension.client.response_processor as response_processor  # noqa: E501
+import container_service_extension.def_.models as def_models
+import container_service_extension.shared_constants as shared_constants
+
+
+class NativeClusterApi(CseClient):
     def __init__(self, client: vcd_client.Client):
         super().__init__(client)
+        self._uri = f"{self._uri}/{shared_constants.CSE_URL_FRAGMENT}/{shared_constants.CSE_3_0_URL_FRAGMENT}"  # noqa: E501
         self._clusters_uri = f"{self._uri}/clusters"
         self._cluster_uri = f"{self._uri}/cluster"
 
@@ -14,12 +19,12 @@ class NativeClusterApi(CseClientV35):
         cluster_entity_dict = asdict(cluster_entity_definition)
         uri = self._clusters_uri
         response = self._client._do_request_prim(
-                shared_constants.RequestMethod.POST,
-                uri,
-                self._client._session,
-                contents=cluster_entity_dict,
-                media_type='application/json',
-                accept_type='application/json')
+            shared_constants.RequestMethod.POST,
+            uri,
+            self._client._session,
+            contents=cluster_entity_dict,
+            media_type='application/json',
+            accept_type='application/json')
         return def_models.DefEntity(
             **response_processor.process_response(response))
 
@@ -75,7 +80,8 @@ class NativeClusterApi(CseClientV35):
             self._client._session,
             accept_type='application/json')
 
-    def upgrade_cluster_by_cluster_id(self, cluster_id: str, cluster_upgrade_definition: def_models.DefEntity):
+    def upgrade_cluster_by_cluster_id(self, cluster_id: str,
+                                      cluster_upgrade_definition: def_models.DefEntity):  # noqa: E501
         uri = f'{self._uri}/cluster/{cluster_id}/action/upgrade'
         entity_dict = asdict(cluster_upgrade_definition.entity)
         response = self._client._do_request_prim(

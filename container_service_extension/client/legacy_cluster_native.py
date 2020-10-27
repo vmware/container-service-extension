@@ -2,6 +2,8 @@
 # Copyright (c) 2020 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 
+import container_service_extension.client.cse_client.api_33.native_cluster_api \
+    as native_cluster_api_v33  # noqa: E501
 from container_service_extension.client.response_processor import process_response # noqa: E501
 from container_service_extension.logger import CLIENT_LOGGER
 import container_service_extension.shared_constants as shared_constants
@@ -11,21 +13,17 @@ class LegacyClusterNative:
     def __init__(self, client):
         self.client = client
         self._uri = f"{self.client.get_api_uri()}/{shared_constants.CSE_URL_FRAGMENT}"  # noqa: E501
+        self._native_cluster_api = \
+            native_cluster_api_v33.NativeClusterApi(self.client)
 
     def list_clusters(self, vdc=None, org=None):
-        method = shared_constants.RequestMethod.GET
-        uri = f"{self._uri}/clusters"
-        response = self.client._do_request_prim(
-            method,
-            uri,
-            self.client._session,
-            accept_type='application/json',
-            params={shared_constants.RequestKey.ORG_NAME: org,
-                    shared_constants.RequestKey.OVDC_NAME: vdc})
-        result = process_response(response)
-        CLIENT_LOGGER.debug(result)
+        filters = {
+            shared_constants.RequestKey.ORG_NAME: org,
+            shared_constants.RequestKey.OVDC_NAME: vdc}
+        clusters_resp = self._native_cluster_api.list_clusters(filters=filters)
+        CLIENT_LOGGER.debug(clusters_resp)
         clusters = []
-        for c in result:
+        for c in clusters_resp:
             # TODO cluster api response keys need to be more well defined
             cluster = {
                 'Name': c.get('name', 'N/A'),
@@ -41,48 +39,23 @@ class LegacyClusterNative:
         return clusters
 
     def get_cluster_info(self, name, org=None, vdc=None, **kwargs):
-        method = shared_constants.RequestMethod.GET
-        uri = f'{self._uri}/cluster/{name}'
-        response = self.client._do_request_prim(
-            method,
-            uri,
-            self.client._session,
-            accept_type='application/json',
-            params={shared_constants.RequestKey.ORG_NAME: org,
-                    shared_constants.RequestKey.OVDC_NAME: vdc})
-        return process_response(response)
+        filters = {shared_constants.RequestKey.ORG_NAME: org,
+                   shared_constants.RequestKey.OVDC_NAME: vdc}
+        return self._native_cluster_api.get_cluster(name, filters=filters)
 
     def get_upgrade_plan(self, cluster_name, org=None, vdc=None):
-        method = shared_constants.RequestMethod.GET
-        uri = f'{self._uri}/cluster/{cluster_name}/upgrade-plan'
-        response = self.client._do_request_prim(
-            method,
-            uri,
-            self.client._session,
-            accept_type='application/json',
-            params={shared_constants.RequestKey.ORG_NAME: org,
-                    shared_constants.RequestKey.OVDC_NAME: vdc})
-        return process_response(response)
+        filters = {shared_constants.RequestKey.ORG_NAME: org,
+                   shared_constants.RequestKey.OVDC_NAME: vdc}
+        return self._native_cluster_api.get_cluster_upgrade_plan(cluster_name,
+                                                                 filters=filters)  # noqa: E501
 
     def upgrade_cluster(self, cluster_name, template_name, template_revision,
                         org_name=None, ovdc_name=None):
-        method = shared_constants.RequestMethod.POST
-        uri = f'{self._uri}/cluster/{cluster_name}/action/upgrade'
-        data = {
-            shared_constants.RequestKey.CLUSTER_NAME: cluster_name,
-            shared_constants.RequestKey.TEMPLATE_NAME: template_name,
-            shared_constants.RequestKey.TEMPLATE_REVISION: template_revision,
-            shared_constants.RequestKey.ORG_NAME: org_name,
-            shared_constants.RequestKey.OVDC_NAME: ovdc_name,
-        }
-        response = self.client._do_request_prim(
-            method,
-            uri,
-            self.client._session,
-            contents=data,
-            media_type='application/json',
-            accept_type='application/json')
-        return process_response(response)
+        return self._native_cluster_api.upgrade_cluster(cluster_name,
+                                                        template_name,
+                                                        template_revision,
+                                                        org_name=org_name,
+                                                        ovdc_name=ovdc_name)
 
     def create_cluster(self,
                        vdc,
@@ -131,31 +104,17 @@ class LegacyClusterNative:
 
         :return: (json) A parsed json object describing the requested cluster.
         """
-        method = shared_constants.RequestMethod.POST
-        uri = f"{self._uri}/clusters"
-        data = {
-            shared_constants.RequestKey.CLUSTER_NAME: name,
-            shared_constants.RequestKey.NUM_WORKERS: node_count,
-            shared_constants.RequestKey.OVDC_NAME: vdc,
-            shared_constants.RequestKey.NUM_CPU: cpu,
-            shared_constants.RequestKey.MB_MEMORY: memory,
-            shared_constants.RequestKey.NETWORK_NAME: network_name,
-            shared_constants.RequestKey.STORAGE_PROFILE_NAME: storage_profile,
-            shared_constants.RequestKey.SSH_KEY: ssh_key,
-            shared_constants.RequestKey.TEMPLATE_NAME: template_name,
-            shared_constants.RequestKey.TEMPLATE_REVISION: template_revision,
-            shared_constants.RequestKey.ENABLE_NFS: enable_nfs,
-            shared_constants.RequestKey.ROLLBACK: rollback,
-            shared_constants.RequestKey.ORG_NAME: org
-        }
-        response = self.client._do_request_prim(
-            method,
-            uri,
-            self.client._session,
-            contents=data,
-            media_type='application/json',
-            accept_type='application/json')
-        return process_response(response)
+        return self._native_cluster_api.create_cluster(name, vdc, network_name,
+                                                       node_count=node_count,
+                                                       org_name=org,
+                                                       cpu=cpu,
+                                                       memory=memory,
+                                                       storage_profile=storage_profile,  # noqa: E501
+                                                       ssh_key=ssh_key,
+                                                       template_name=template_name,  # noqa: E501
+                                                       template_revision=template_revision,  # noqa: E501
+                                                       enable_nfs=enable_nfs,
+                                                       rollback=rollback)
 
     def resize_cluster(self,
                        network_name,
@@ -169,69 +128,39 @@ class LegacyClusterNative:
                        cpu=None,
                        memory=None,
                        ssh_key=None):
-        method = shared_constants.RequestMethod.PUT
-        uri = f"{self._uri}/cluster/{cluster_name}"
-        data = {
-            shared_constants.RequestKey.CLUSTER_NAME: cluster_name,
-            shared_constants.RequestKey.NUM_WORKERS: node_count,
-            shared_constants.RequestKey.ORG_NAME: org,
-            shared_constants.RequestKey.OVDC_NAME: vdc,
-            shared_constants.RequestKey.NETWORK_NAME: network_name,
-            shared_constants.RequestKey.ROLLBACK: rollback,
-            shared_constants.RequestKey.TEMPLATE_NAME: template_name,
-            shared_constants.RequestKey.TEMPLATE_REVISION: template_revision,
-            shared_constants.RequestKey.NUM_CPU: cpu,
-            shared_constants.RequestKey.MB_MEMORY: memory,
-            shared_constants.RequestKey.SSH_KEY: ssh_key
-        }
-        response = self.client._do_request_prim(
-            method,
-            uri,
-            self.client._session,
-            contents=data,
-            media_type='application/json',
-            accept_type='application/json')
-        return process_response(response)
+        return self._native_cluster_api.update_cluster(cluster_name,
+                                                       network_name,
+                                                       node_count,
+                                                       org_name=org,
+                                                       ovdc_name=vdc,
+                                                       template_name=template_name,  # noqa: E501
+                                                       template_revision=template_revision,  # noqa: E501
+                                                       cpu=cpu,
+                                                       memory=memory,
+                                                       ssh_key=ssh_key,
+                                                       rollback=rollback)
 
     def delete_cluster(self, cluster_name, org=None, vdc=None, **kwargs):
-        method = shared_constants.RequestMethod.DELETE
-        uri = f"{self._uri}/cluster/{cluster_name}"
-        response = self.client._do_request_prim(
-            method,
-            uri,
-            self.client._session,
-            accept_type='application/json',
-            params={shared_constants.RequestKey.ORG_NAME: org,
-                    shared_constants.RequestKey.OVDC_NAME: vdc})
-        return process_response(response)
+        filters = {
+            shared_constants.RequestKey.ORG_NAME: org,
+            shared_constants.RequestKey.OVDC_NAME: vdc
+        }
+        return self._native_cluster_api.delete_cluster(cluster_name,
+                                                       filters=filters)
 
     def get_cluster_config(self, cluster_name, org=None, vdc=None, **kwargs):
-        method = shared_constants.RequestMethod.GET
-        uri = f"{self._uri}/cluster/{cluster_name}/config"
-        response = self.client._do_request_prim(
-            method,
-            uri,
-            self.client._session,
-            accept_type='application/json',
-            params={shared_constants.RequestKey.ORG_NAME: org,
-                    shared_constants.RequestKey.OVDC_NAME: vdc})
-
-        return process_response(response)
+        filters = {shared_constants.RequestKey.ORG_NAME: org,
+                   shared_constants.RequestKey.OVDC_NAME: vdc}
+        return self._native_cluster_api.get_cluster_config(cluster_name,
+                                                           filters=filters)
 
     def get_node_info(self, cluster_name, node_name, org=None, vdc=None):
-        method = shared_constants.RequestMethod.GET
-        uri = f"{self._uri}/node/{node_name}"
-        response = self.client._do_request_prim(
-            method,
-            uri,
-            self.client._session,
-            accept_type='application/json',
-            params={
-                shared_constants.RequestKey.ORG_NAME: org,
-                shared_constants.RequestKey.OVDC_NAME: vdc,
-                shared_constants.RequestKey.CLUSTER_NAME: cluster_name
-            })
-        return process_response(response)
+        filters = {
+            shared_constants.RequestKey.ORG_NAME: org,
+            shared_constants.RequestKey.OVDC_NAME: vdc,
+        }
+        return self._native_cluster_api.get_node_info(cluster_name, node_name,
+                                                      filters=filters)
 
     def add_node(self,
                  network_name,
@@ -273,31 +202,16 @@ class LegacyClusterNative:
 
         :return: (json) A parsed json object describing the requested cluster.
         """
-        method = shared_constants.RequestMethod.POST
-        uri = f'{self._uri}/nodes'
-        data = {
-            shared_constants.RequestKey.CLUSTER_NAME: cluster_name,
-            shared_constants.RequestKey.NUM_WORKERS: node_count,
-            shared_constants.RequestKey.ORG_NAME: org,
-            shared_constants.RequestKey.OVDC_NAME: vdc,
-            shared_constants.RequestKey.NUM_CPU: cpu,
-            shared_constants.RequestKey.MB_MEMORY: memory,
-            shared_constants.RequestKey.NETWORK_NAME: network_name,
-            shared_constants.RequestKey.STORAGE_PROFILE_NAME: storage_profile,
-            shared_constants.RequestKey.SSH_KEY: ssh_key,
-            shared_constants.RequestKey.TEMPLATE_NAME: template_name,
-            shared_constants.RequestKey.TEMPLATE_REVISION: template_revision,
-            shared_constants.RequestKey.ENABLE_NFS: enable_nfs,
-            shared_constants.RequestKey.ROLLBACK: rollback
-        }
-        response = self.client._do_request_prim(
-            method,
-            uri,
-            self.client._session,
-            contents=data,
-            media_type='application/json',
-            accept_type='application/json')
-        return process_response(response)
+        return self._native_cluster_api.add_node(cluster_name, network_name,
+                                                 node_count=node_count,
+                                                 org_name=org,
+                                                 ovdc_name=vdc,
+                                                 cpu=cpu,
+                                                 memory=memory,
+                                                 storage_profile=storage_profile,  # noqa: E501
+                                                 ssh_key=ssh_key,
+                                                 template_name=template_name,
+                                                 template_revision=template_revision)  # noqa: E501
 
     def delete_nodes(self, cluster_name, nodes, org=None, vdc=None):
         """Delete nodes from a Kubernetes cluster.
@@ -309,19 +223,7 @@ class LegacyClusterNative:
         :return: (json) A parsed json object describing the requested cluster
             operation.
         """
-        method = shared_constants.RequestMethod.DELETE
-        uri = f"{self._uri}/nodes"
-        data = {
-            shared_constants.RequestKey.CLUSTER_NAME: cluster_name,
-            shared_constants.RequestKey.ORG_NAME: org,
-            shared_constants.RequestKey.OVDC_NAME: vdc,
-            shared_constants.RequestKey.NODE_NAMES_LIST: nodes
-        }
-        response = self.client._do_request_prim(
-            method,
-            uri,
-            self.client._session,
-            contents=data,
-            media_type='application/json',
-            accept_type='application/json')
-        return process_response(response)
+        return self._native_cluster_api.delete_nodes(cluster_name,
+                                                     nodes,
+                                                     org_name=org,
+                                                     ovdc_name=vdc)

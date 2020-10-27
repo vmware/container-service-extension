@@ -5,9 +5,9 @@
 import pyvcloud.vcd.client as vcd_client
 
 from container_service_extension.client.de_cluster import DECluster
-from container_service_extension.client.legacy_cluster_native import LegacyClusterNative  # noqa: E501
 from container_service_extension.client.de_cluster_native import DENativeCluster  # noqa: E501
 from container_service_extension.client.de_cluster_tkg import DEClusterTKG
+from container_service_extension.client.legacy_cluster_native import LegacyClusterNative  # noqa: E501
 from container_service_extension.shared_constants import ClusterEntityKind
 
 

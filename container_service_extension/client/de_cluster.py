@@ -11,6 +11,7 @@ import yaml
 import container_service_extension.client.constants as cli_constants
 from container_service_extension.client.de_cluster_native import DENativeCluster  # noqa: E501
 from container_service_extension.client.de_cluster_tkg import DEClusterTKG
+import container_service_extension.client.response_processor as response_processor  # noqa: E501
 import container_service_extension.client.tkgclient.rest as tkg_rest
 import container_service_extension.client.utils as client_utils
 import container_service_extension.def_.entity_service as def_entity_svc
