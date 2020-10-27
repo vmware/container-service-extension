@@ -2,25 +2,27 @@
 # Fill in fields marked with '???'
 
 test:
-  teardown_installation: true       # Affects test_cse_server.py.
-                                    #   if true, delete all installation entities (even on test failure).
-                                    #   if false, do not delete installation entities (even on test success).
-                                    #   if this key is omitted, defaults to true.
-  teardown_clusters: true           # Affects test_cse_client.py.
-                                    #   if true, delete test cluster (env.TEST_CLUSTER_NAME) on test failure.
-                                    #   if false, do not delete test cluster on test failure.
-                                    #   if this key is omitted, defaults to true.
-                                    # Successful client tests will not leave clusters up.
-  test_all_templates: false         # Affects test_cse_client.py.
-                                    #   if true, tests cluster deployment on all templates found.
-                                    #   if false, tests cluster deployment only for first template found.
-                                    #   if this key is omitted, defaults to false.
-  upgrade_template_repo_url: '???'  #
-  network: '???'                    # org network within @vdc that will be used during testing
-                                    #   Should have outbound access to the public internet
-  org: '???'                        # vCD org where all the test will be run
-  storage_profile: '???'            # name of the storage profile to use while creating clusters on this org vdc
-  vdc: '???'                        # Org VDC powering the org
+  teardown_installation: true                              # Affects test_cse_server.py.
+                                                           #   if true, delete all installation entities (even on test failure).
+                                                           #   if false, do not delete installation entities (even on test success).
+                                                           #   if this key is omitted, defaults to true.
+  teardown_clusters: true                                  # Affects test_cse_client.py.
+                                                           #   if true, delete test cluster (env.TEST_CLUSTER_NAME) on test failure.
+                                                           #   if false, do not delete test cluster on test failure.
+                                                           #   if this key is omitted, defaults to true.
+                                                           # Successful client tests will not leave clusters up.
+  test_all_templates: true                                 # Affects test_cse_client.py.
+                                                           #   if true, tests cluster deployment on all templates found.
+                                                           #   if false, tests cluster deployment only for first template found.
+                                                           #   if this key is omitted, defaults to false.
+  test_templates: "???"                                    # Tests will only create these templates if test_all_templates is set to false
+                                                           #   format -> "template_1_name:template_1_revision,template_2_name:template_2_revision"
+  upgrade_template_repo_url: '???'                         #
+  network: '???'                                           # org network within @vdc that will be used during testing
+                                                           #   Should have outbound access to the public internet
+  org: '???'                                               # vCD org where all the test will be run
+  storage_profile: '???'                                   # name of the storage profile to use while creating clusters on this org vdc
+  vdc: '???'                                               # Org VDC powering the org
 
 amqp:
   exchange: test-exchange # cse exclusive exchange used by amqp server
@@ -35,7 +37,7 @@ amqp:
   vhost: /
 
 vcd:
-  api_version: '35.0'
+  api_version: '33.0'
   host: '???'
   log: true
   password: '???'
