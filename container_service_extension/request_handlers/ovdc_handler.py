@@ -6,7 +6,6 @@ import urllib
 
 import pyvcloud.vcd.client as vcd_client
 import pyvcloud.vcd.exceptions as vcd_e
-import pyvcloud.vcd.org as vcd_org
 import pyvcloud.vcd.task as vcd_task
 import pyvcloud.vcd.utils as pyvcd_utils
 
@@ -155,23 +154,15 @@ def ovdc_list(request_data, op_ctx: ctx.OperationContext):
             'Operation denied. Enterprise PKS plans visible only '
             'to System Administrators.')
 
-    # Ideally this should be extracted out to ovdc_utils, but the mandatory
-    # usage of sysadmin client along with a potentially non-sysadmin client
-    # means that the function signature require both tenant client and
-    # sysadmin client, which is very awkward
-    if op_ctx.client.is_sysadmin():
-        org_resource_list = op_ctx.client.get_org_list()
-    else:
-        org_resource_list = list(op_ctx.client.get_org())
     ovdcs = []
     org_vdcs = vcd_utils.get_all_ovdcs(op_ctx.client)
     for ovdc in org_vdcs:
         ovdc_name = ovdc.get('name')
         org_name = ovdc.get('orgName')
         k8s_metadata = ovdc_utils.get_ovdc_k8s_provider_metadata(
-                op_ctx.sysadmin_client,
-                ovdc_name=ovdc_name,
-                org_name=org_name)
+            op_ctx.sysadmin_client,
+            ovdc_name=ovdc_name,
+            org_name=org_name)
         k8s_provider = k8s_metadata[K8S_PROVIDER_KEY]
         ovdc_dict = {
             'name': ovdc_name,
@@ -185,7 +176,7 @@ def ovdc_list(request_data, op_ctx: ctx.OperationContext):
             if k8s_provider == K8sProvider.PKS:
                 # vc name for vdc can only be found using typed query
                 qfilter = f"name=={urllib.parse.quote(ovdc_name)};" \
-                            f"orgName=={urllib.parse.quote(org_name)}"
+                          f"orgName=={urllib.parse.quote(org_name)}"
                 q = op_ctx.client.get_typed_query(
                     vcd_client.ResourceType.ADMIN_ORG_VDC.value,
                     query_result_format=vcd_client.QueryResultFormat.RECORDS, # noqa: E501
@@ -208,7 +199,7 @@ def ovdc_list(request_data, op_ctx: ctx.OperationContext):
                     if pks_context['vc'] in vc_to_pks_plans_map:
                         continue
                     pks_broker = pksbroker.PksBroker(pks_context,
-                                                        op_ctx)
+                                                     op_ctx)
                     plans = pks_broker.list_plans()
                     plan_names = [plan.get('name') for plan in plans]
                     vc_to_pks_plans_map[pks_context['vc']] = \

@@ -6,7 +6,6 @@ from dataclasses import asdict
 from typing import List
 
 import pyvcloud.vcd.client as vcd_client
-import pyvcloud.vcd.org as vcd_org
 import pyvcloud.vcd.task as vcd_task
 
 import container_service_extension.compute_policy_manager as compute_policy_manager # noqa: E501
@@ -125,10 +124,6 @@ def list_ovdc(operation_context: ctx.OperationContext) -> List[dict]:
     telemetry_handler.record_user_action_details(cse_operation=CseOperation.OVDC_LIST, # noqa: E501
                                                  cse_params={})
 
-    if operation_context.client.is_sysadmin():
-        org_resource_list = operation_context.client.get_org_list()
-    else:
-        org_resource_list = list(operation_context.client.get_org())
     ovdcs = []
     org_vdcs = vcd_utils.get_all_ovdcs(operation_context.client)
     for ovdc in org_vdcs:
@@ -136,8 +131,8 @@ def list_ovdc(operation_context: ctx.OperationContext) -> List[dict]:
         org_name = ovdc.get('orgName')
         ovdc_details = asdict(
             get_ovdc_k8s_runtime_details(operation_context.sysadmin_client,
-                                            org_name=org_name,
-                                            ovdc_name=ovdc_name))
+                                         org_name=org_name,
+                                         ovdc_name=ovdc_name))
         if ClusterEntityKind.TKG_PLUS.value in ovdc_details['k8s_runtime'] \
                 and not utils.is_tkg_plus_enabled():  # noqa: E501
             ovdc_details['k8s_runtime'].remove(ClusterEntityKind.TKG_PLUS.value)  # noqa: E501
