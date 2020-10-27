@@ -5,8 +5,7 @@
 from pyvcloud.vcd import utils
 import pyvcloud.vcd.exceptions as vcd_exceptions
 
-from container_service_extension.client.response_processor import \
-    process_response
+import container_service_extension.client.cse_client.api_33.ovdc_api as ovdc_api_v33  # noqa: E501
 from container_service_extension.pyvcloud_utils import get_vdc
 import container_service_extension.shared_constants as shared_constants
 
@@ -15,18 +14,11 @@ class LegacyOvdc:
     def __init__(self, client):
         self.client = client
         self._uri = f"{self.client.get_api_uri()}/{shared_constants.CSE_URL_FRAGMENT}"  # noqa: E501
+        self._ovdc_api = ovdc_api_v33.OvdcApi(self.client)
 
     def list_ovdc(self, list_pks_plans=False):
-        method = shared_constants.RequestMethod.GET
-        uri = f'{self._uri}/ovdcs'
-        response = self.client._do_request_prim(
-            method,
-            uri,
-            self.client._session,
-            accept_type='application/json',
-            params={
-                shared_constants.RequestKey.LIST_PKS_PLANS: list_pks_plans})
-        return process_response(response)
+        filters = {shared_constants.RequestKey.LIST_PKS_PLANS: list_pks_plans}
+        return self._ovdc_api.list_ovdcs(filters=filters)
 
     # TODO(metadata based enablement for < v35): Revisit after decision
     # to support metadata way of enabling for native clusters
@@ -43,18 +35,10 @@ class LegacyOvdc:
 
         :rtype: dict
         """
-        method = shared_constants.RequestMethod.GET
         ovdc = get_vdc(self.client, vdc_name=ovdc_name, org_name=org_name,
                        is_admin_operation=True)
         ovdc_id = utils.extract_id(ovdc.get_resource().get('id'))
-        uri = f'{self._uri}/ovdc/{ovdc_id}'
-
-        response = self.client._do_request_prim(
-            method,
-            uri,
-            self.client._session,
-            accept_type='application/json')
-        return process_response(response)
+        return self._ovdc_api.get_ovdc(ovdc_id)
 
     def update_ovdc_compute_policies(self, ovdc_name, org_name,
                                      compute_policy_name, action,
@@ -68,27 +52,13 @@ class LegacyOvdc:
 
         :rtype: dict
         """
-        method = shared_constants.RequestMethod.PUT
         ovdc = get_vdc(self.client, vdc_name=ovdc_name, org_name=org_name,
                        is_admin_operation=True)
         ovdc_id = utils.extract_id(ovdc.get_resource().get('id'))
-        uri = f'{self._uri}/ovdc/{ovdc_id}/compute-policies'
-
-        data = {
-            shared_constants.RequestKey.OVDC_ID: ovdc_id, # also exists in url
-            shared_constants.RequestKey.COMPUTE_POLICY_NAME: compute_policy_name,  # noqa: E501
-            shared_constants.RequestKey.COMPUTE_POLICY_ACTION: action,
-            shared_constants.RequestKey.REMOVE_COMPUTE_POLICY_FROM_VMS: remove_compute_policy_from_vms  # noqa: E501
-        }
-
-        response = self.client._do_request_prim(
-            method,
-            uri,
-            self.client._session,
-            contents=data,
-            media_type='application/json',
-            accept_type='application/json')
-        return process_response(response)
+        return self._ovdc_api.update_ovdc_compute_policies(ovdc_id,
+                                                           compute_policy_name,
+                                                           action,
+                                                           force_remove=remove_compute_policy_from_vms)  # noqa: E501
 
     def list_ovdc_compute_policies(self, ovdc_name, org_name):
         """List an ovdc's compute policies.
@@ -98,15 +68,7 @@ class LegacyOvdc:
 
         :rtype: dict
         """
-        method = shared_constants.RequestMethod.GET
         ovdc = get_vdc(self.client, vdc_name=ovdc_name, org_name=org_name,
                        is_admin_operation=True)
         ovdc_id = utils.extract_id(ovdc.get_resource().get('id'))
-        uri = f'{self._uri}/ovdc/{ovdc_id}/compute-policies'
-
-        response = self.client._do_request_prim(
-            method,
-            uri,
-            self.client._session,
-            accept_type='application/json')
-        return process_response(response)
+        return self._ovdc_api.list_ovdc_compute_policies(ovdc_id)

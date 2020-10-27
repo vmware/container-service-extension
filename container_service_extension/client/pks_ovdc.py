@@ -4,8 +4,7 @@
 
 from pyvcloud.vcd import utils
 
-from container_service_extension.client.response_processor import \
-    process_response
+from container_service_extension.client.cse_client.pks_ovdc_api import PksOvdcApi  # noqa: E501
 from container_service_extension.pyvcloud_utils import get_vdc
 import container_service_extension.server_constants as server_constants
 import container_service_extension.shared_constants as shared_constants
@@ -15,18 +14,13 @@ class PksOvdc:
     def __init__(self, client):
         self.client = client
         self._uri = f"{self.client.get_api_uri()}/{shared_constants.PKS_URL_FRAGMENT}"  # noqa: E501
+        self._pks_ovdc_api = PksOvdcApi(client)
 
     def list_ovdc(self, list_pks_plans=False):
-        method = shared_constants.RequestMethod.GET
-        uri = f'{self._uri}/ovdcs'
-        response = self.client._do_request_prim(
-            method,
-            uri,
-            self.client._session,
-            accept_type='application/json',
-            params={
-                shared_constants.RequestKey.LIST_PKS_PLANS: list_pks_plans})
-        return process_response(response)
+        filters = {
+            shared_constants.RequestKey.LIST_PKS_PLANS: list_pks_plans
+        }
+        return self._pks_ovdc_api.list_ovdcs(filters=filters)
 
     def update_ovdc(self, enable, ovdc_name, org_name=None,
                     pks_plan=None, pks_cluster_domain=None):
@@ -43,11 +37,9 @@ class PksOvdc:
 
         :rtype: dict
         """
-        method = shared_constants.RequestMethod.PUT
         ovdc = get_vdc(self.client, vdc_name=ovdc_name, org_name=org_name,
                        is_admin_operation=True)
         ovdc_id = utils.extract_id(ovdc.get_resource().get('id'))
-        uri = f'{self._uri}/ovdc/{ovdc_id}'
 
         k8s_provider = server_constants.K8sProvider.PKS
         if not enable:
@@ -55,23 +47,12 @@ class PksOvdc:
             pks_plan = None
             pks_cluster_domain = None
 
-        data = {
-            shared_constants.RequestKey.OVDC_ID: ovdc_id,
-            shared_constants.RequestKey.OVDC_NAME: ovdc_name,
-            shared_constants.RequestKey.ORG_NAME: org_name,
-            shared_constants.RequestKey.K8S_PROVIDER: k8s_provider,
-            shared_constants.RequestKey.PKS_PLAN_NAME: pks_plan,
-            shared_constants.RequestKey.PKS_CLUSTER_DOMAIN: pks_cluster_domain
-        }
-
-        response = self.client._do_request_prim(
-            method,
-            uri,
-            self.client._session,
-            contents=data,
-            media_type='application/json',
-            accept_type='application/json')
-        return process_response(response)
+        return self._pks_ovdc_api.update_ovdc_by_ovdc_id(ovdc_id,
+                                                         k8s_provider,
+                                                         ovdc_name=ovdc_name,
+                                                         org_name=org_name,
+                                                         pks_plan=pks_plan,
+                                                         pks_cluster_domain=pks_cluster_domain)  # noqa: E501
 
     def info_ovdc(self, ovdc_name, org_name):
         """Disable ovdc for k8s for the given container provider.
@@ -81,15 +62,7 @@ class PksOvdc:
 
         :rtype: dict
         """
-        method = shared_constants.RequestMethod.GET
         ovdc = get_vdc(self.client, vdc_name=ovdc_name, org_name=org_name,
                        is_admin_operation=True)
         ovdc_id = utils.extract_id(ovdc.get_resource().get('id'))
-        uri = f'{self._uri}/ovdc/{ovdc_id}'
-
-        response = self.client._do_request_prim(
-            method,
-            uri,
-            self.client._session,
-            accept_type='application/json')
-        return process_response(response)
+        return self._pks_ovdc_api.get_ovdc(ovdc_id)
