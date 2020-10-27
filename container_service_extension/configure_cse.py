@@ -666,16 +666,17 @@ def _register_cse_as_amqp_extension(client, routing_key, exchange,
 
 def _update_user_role_with_native_def_rights(defined_entity_right_bundle_name,
                                              client: Client,
-                                             msg_update_callback=utils.NullPrinter(),
+                                             msg_update_callback=utils.NullPrinter(), # noqa: E501
                                              log_wire=False):
     """
     Method to add defined entity rights to user's role.
+    This method should only be called on valid configurations.
     In order to call this function, caller has to make sure that the contexual
     defined entity is already created inside VCD and corresppnding right-bundle
     exists in VCD.
     The defined entity right bundle is created by VCD at the time of defined
-    entity creation, dynamically. Hence, it doesn't exist before-hand (when user
-    initiated the opetation).
+    entity creation, dynamically. Hence, it doesn't exist before-hand
+    (when user initiated the opetation).
 
     :param str : defined_entity_right_bundle_name
     :param pyvcloud.vcd.client.Client  : client
@@ -685,16 +686,16 @@ def _update_user_role_with_native_def_rights(defined_entity_right_bundle_name,
 
     # Currently this function should only be called during CSE install/upgrade
     # procedure; these operations are only supported by sysadmin user.
-    vcd_utils.raise_error_if_not_sysadmin(client)
+    vcd_utils.raise_error_if_user_not_from_system_org(client)
 
     logger_wire = SERVER_CLOUDAPI_WIRE_LOGGER if log_wire else NULL_LOGGER
     cloudapi_client = \
-            vcd_utils.get_cloudapi_client_from_vcd_client(client=client,
-                                                    logger_debug=INSTALL_LOGGER,
-                                                    logger_wire=logger_wire)
+        vcd_utils.get_cloudapi_client_from_vcd_client(client=client,
+                                                      logger_debug=INSTALL_LOGGER, # noqa: E501
+                                                      logger_wire=logger_wire) # noqa: E501
 
     # Determine role name for the user
-    user_context = UserContext(client,cloudapi_client)
+    user_context = UserContext(client, cloudapi_client)
     role_name = user_context.role
 
     # Given that this user is sysadmin, Org must be System
@@ -710,7 +711,7 @@ def _update_user_role_with_native_def_rights(defined_entity_right_bundle_name,
     # It is assumed that user already has "View Rights Bundle" Right
     rbm = RightBundleManager(client, log_wire, msg_update_callback)
     native_def_rights = \
-            rbm.get_rights_for_right_bundle(defined_entity_right_bundle_name)
+        rbm.get_rights_for_right_bundle(defined_entity_right_bundle_name)
 
     # Get rights as a list of right-name strings
     rights = []
@@ -721,16 +722,19 @@ def _update_user_role_with_native_def_rights(defined_entity_right_bundle_name,
     role_resource.add_rights(rights, system_org)
 
     msg = "Updated user-role: " + str(role_name) + " with Rights-bundle: " + \
-            str(defined_entity_right_bundle_name)
+        str(defined_entity_right_bundle_name)
     msg_update_callback.info(msg)
     INSTALL_LOGGER.info(msg)
 
     # VCD has a concept called: SecurityContext, which determines rights owned
     # by a user. This is determined only once during the lifetime of an HTTP
-    # session. In order to make above rights effective, we will need to logout
-    # and login the user again.
-
+    # session; In order to make this rights effective in user's context, we
+    # need to create a new HTTP Session, which will create new Security Context
+    # for logged in user.
+    vcd_auth_token = client.get_xvcloud_authorization_token()
+    client.rehydrate_from_token(vcd_auth_token)
     return
+
 
 def _register_def_schema(client: Client,
                          msg_update_callback=utils.NullPrinter(),
@@ -799,10 +803,10 @@ def _register_def_schema(client: Client,
         # Update user's role with right bundle associated with native defined
         # entity
         _update_user_role_with_native_def_rights(
-                                def_utils.DEF_NATIVE_ENTITY_TYPE_RIGHT_BUNDLE,
-                                client=client,
-                                msg_update_callback=msg_update_callback,
-                                log_wire=log_wire)
+            def_utils.DEF_NATIVE_ENTITY_TYPE_RIGHT_BUNDLE,
+            client=client,
+            msg_update_callback=msg_update_callback,
+            log_wire=log_wire)
 
         msg_update_callback.general(msg)
         INSTALL_LOGGER.info(msg)
@@ -2159,8 +2163,8 @@ def _assign_placement_policy_to_vdc_and_right_bundle_to_org(
             rbm = right_bundle_manager.RightBundleManager(client,
                                                           log_wire=log_wire,
                                                           logger_debug=INSTALL_LOGGER)  # noqa: E501
-            cse_right_bundle = \
-                rbm.get_right_bundle_by_name(right_bundle_manager.CSE_NATIVE_RIGHT_BUNDLE_NAME)  # noqa: E501
+            cse_right_bundle = rbm.get_right_bundle_by_name(
+                def_utils.DEF_NATIVE_ENTITY_TYPE_RIGHT_BUNDLE)
             rbm.publish_cse_right_bundle_to_tenants(
                 right_bundle_id=cse_right_bundle['id'],
                 org_ids=list(org_ids))

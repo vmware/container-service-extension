@@ -6,21 +6,17 @@ import pyvcloud.vcd.client as vcd_client
 
 from container_service_extension.cloudapi.constants import CLOUDAPI_VERSION_1_0_0  # noqa: E501
 from container_service_extension.cloudapi.constants import CloudApiResource
-import container_service_extension.def_.utils as def_utils
 from container_service_extension.logger import NULL_LOGGER
 from container_service_extension.logger import SERVER_CLOUDAPI_WIRE_LOGGER
 import container_service_extension.pyvcloud_utils as vcd_utils
 from container_service_extension.shared_constants import RequestMethod
 import container_service_extension.utils as utils
 
-CSE_NATIVE_RIGHT_BUNDLE_NAME = \
-    f'{def_utils.DEF_CSE_VENDOR}:{def_utils.DEF_NATIVE_ENTITY_TYPE_NSS} Entitlement'  # noqa: E501
-
 
 class RightBundleManager():
     def __init__(self, sysadmin_client: vcd_client.Client,
                  log_wire=False, logger_debug=NULL_LOGGER):
-        vcd_utils.raise_error_if_not_sysadmin(sysadmin_client)
+        vcd_utils.raise_error_if_user_not_from_system_org(sysadmin_client)
         self.logger_wire = SERVER_CLOUDAPI_WIRE_LOGGER \
             if log_wire else NULL_LOGGER
         self.logger_debug = logger_debug
@@ -30,6 +26,11 @@ class RightBundleManager():
             logger_wire=self.logger_wire)
 
     def get_right_bundle_by_name(self, right_bundle_name):
+        """
+        Get Right bundle by name.
+        :param: right_bundle_name: string
+        :returns: right bundle json object
+        """
         filters = {'name': right_bundle_name}
         filter_string = utils.construct_filter_string(filters)
         query_string = ""
@@ -45,6 +46,14 @@ class RightBundleManager():
 
     def publish_cse_right_bundle_to_tenants(self, right_bundle_id,
                                             org_ids):
+        """
+        Publish the right-bundle to tenants.
+        Accepts the right-bundle-id as an argument, and publishes to the
+        organization indicated by org-id
+        :param: right_bundle_id: id of the right bundle, string
+        :param: id of the org, string
+        :returns: HTTP response of the request
+        """
         relative_url = \
             f"{CloudApiResource.RIGHT_BUNDLES}/{right_bundle_id}/tenants"
         payload = \
@@ -56,6 +65,13 @@ class RightBundleManager():
             payload=payload)
 
     def get_rights_for_right_bundle(self, right_bundle_name):
+        """
+        Get Rights for a right bundle.
+        Queries VCD for the list of rights associated with a right bundle.
+        :param: right_bundle_name: name of the right bundle, string
+        :returns: right bundle info json object, the "values" key for this json
+        object will have list of rights
+        """
         right_bundle_info = self.get_right_bundle_by_name(right_bundle_name)
         right_bundle_id = right_bundle_info['id']
         rights = self.cloudapi_client.do_request(
