@@ -14,7 +14,6 @@ import container_service_extension.shared_constants as shared_constants
 class PolicyBasedOvdc:
     def __init__(self, client):
         self.client = client
-        self._uri = f"{self.client.get_api_uri()}/{shared_constants.CSE_URL_FRAGMENT}/{shared_constants.CSE_3_0_URL_FRAGMENT}"  # noqa: E501
         self._ovdc_api = ovdc_api_v35.OvdcApi(self.client)
 
     def list_ovdc(self):

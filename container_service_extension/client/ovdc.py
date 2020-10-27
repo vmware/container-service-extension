@@ -4,8 +4,8 @@
 
 import pyvcloud.vcd.client as vcd_client
 
-from container_service_extension.client.legacy_ovdc import LegacyOvdc
-from container_service_extension.client.ovdc_policy import PolicyBasedOvdc
+from container_service_extension.client.metadata_based_ovdc import MetadataBasedOvdc  # noqa: E501
+from container_service_extension.client.policy_based_ovdc import PolicyBasedOvdc  # noqa: E501
 
 
 class Ovdc:
@@ -14,7 +14,7 @@ class Ovdc:
     def __new__(cls, client: vcd_client):
         """Create the right ovdc class for the negotiated API version.
 
-        For apiVersion < 35 return LegacyOvdc class
+        For apiVersion < 35 return MetadataBasedOvdc class
         For apiVersoin >= 35 return PolicyBasedOvdc class
 
         :param pyvcloud.vcd.client client: vcd client
@@ -22,6 +22,6 @@ class Ovdc:
         """
         api_version = client.get_api_version()
         if float(api_version) < float(vcd_client.ApiVersion.VERSION_35.value):
-            return LegacyOvdc(client)
+            return MetadataBasedOvdc(client)
         elif float(api_version) >= float(vcd_client.ApiVersion.VERSION_35.value):  # noqa: E501
             return PolicyBasedOvdc(client)
