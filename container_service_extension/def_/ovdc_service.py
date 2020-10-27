@@ -161,7 +161,7 @@ def get_ovdc_k8s_runtime_details(sysadmin_client: vcd_client.Client,
     :return: Ovdc object with k8s runtimes
     :rtype: def_models.Ovdc
     """
-    vcd_utils.raise_error_if_not_sysadmin(sysadmin_client)
+    vcd_utils.raise_error_if_user_not_from_system_org(sysadmin_client)
     cpm = compute_policy_manager.ComputePolicyManager(sysadmin_client,
                                                       log_wire=log_wire)
     ovdc = vcd_utils.get_vdc(client=sysadmin_client,

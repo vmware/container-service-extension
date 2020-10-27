@@ -38,7 +38,7 @@ class ComputePolicyManager:
     """
 
     def __init__(self, sysadmin_client: vcd_client.Client, log_wire=True):
-        vcd_utils.raise_error_if_not_sysadmin(sysadmin_client)
+        vcd_utils.raise_error_if_user_not_from_system_org(sysadmin_client)
         self._sysadmin_client: vcd_client.Client = sysadmin_client
         self._cloudapi_client = None
         self._session = self._sysadmin_client.get_vcloud_session()
