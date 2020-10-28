@@ -4,10 +4,12 @@
 
 from urllib.parse import urlparse
 
+import cryptography
 import pika
 from pyvcloud.vcd.client import BasicLoginCredentials
 from pyvcloud.vcd.client import Client
 from pyvcloud.vcd.platform import Platform
+from pyVmomi import vim
 import requests
 from requests.exceptions import HTTPError
 from vsphere_guest_run.vsphere import VSphere
@@ -35,8 +37,12 @@ from container_service_extension.sample_generator import \
     SAMPLE_PKS_SERVERS_SECTION, SAMPLE_SERVICE_CONFIG, SAMPLE_VCD_CONFIG, \
     SAMPLE_VCS_CONFIG
 from container_service_extension.server_constants import \
+    CONFIG_DECRYPTION_ERROR_MSG
+from container_service_extension.server_constants import \
     SUPPORTED_VCD_API_VERSIONS
 from container_service_extension.server_constants import SYSTEM_ORG_NAME
+from container_service_extension.server_constants import \
+    VCENTER_LOGIN_ERROR_MSG
 from container_service_extension.server_constants import VERSION_V1
 from container_service_extension.telemetry.telemetry_utils import\
     store_telemetry_settings
@@ -98,9 +104,12 @@ def get_validated_config(config_file_name,
     else:
         msg_update_callback.info(
             f"Decrypting '{config_file_name}'")
-        config = yaml.safe_load(
-            get_decrypted_file_contents(config_file_name,
-                                        decryption_password)) or {}
+        try:
+            config = yaml.safe_load(
+                get_decrypted_file_contents(config_file_name,
+                                            decryption_password)) or {}
+        except cryptography.fernet.InvalidToken:
+            raise Exception(CONFIG_DECRYPTION_ERROR_MSG)
 
     msg_update_callback.info(
         f"Validating config file '{config_file_name}'")
@@ -125,10 +134,18 @@ def get_validated_config(config_file_name,
     # registers the MQTT extension directly using server constants
     if not use_mqtt:
         _validate_amqp_config(config['amqp'], msg_update_callback)
-    _validate_vcd_and_vcs_config(config['vcd'], config['vcs'],
-                                 msg_update_callback,
-                                 log_file=log_wire_file,
-                                 log_wire=log_wire)
+    try:
+        _validate_vcd_and_vcs_config(config['vcd'], config['vcs'],
+                                     msg_update_callback,
+                                     log_file=log_wire_file,
+                                     log_wire=log_wire)
+    except vim.fault.InvalidLogin:
+        raise Exception(VCENTER_LOGIN_ERROR_MSG)
+    except requests.exceptions.ConnectionError as err:
+        raise Exception(f"Cannot connect to {err.request.url}.")
+    except requests.exceptions.SSLError as err:
+        raise Exception(f"SSL verification failed: {str(err)}")
+
     _validate_broker_config(config['broker'], msg_update_callback,
                             logger_debug)
     check_keys_and_value_types(config['service'],
@@ -158,10 +175,14 @@ def get_validated_config(config_file_name,
         msg_update_callback.info(
             f"Validating PKS config file '{pks_config_file_name}'")
         _validate_pks_config_structure(pks_config, msg_update_callback)
-        _validate_pks_config_data_integrity(pks_config,
-                                            msg_update_callback,
-                                            logger_debug=logger_debug,
-                                            logger_wire=nsxt_wire_logger)
+        try:
+            _validate_pks_config_data_integrity(pks_config,
+                                                msg_update_callback,
+                                                logger_debug=logger_debug,
+                                                logger_wire=nsxt_wire_logger)
+        except requests.exceptions.SSLError as err:
+            raise Exception(f"SSL verification failed: {str(err)}")
+
         msg_update_callback.general(
             f"PKS Config file '{pks_config_file_name}' is valid")
         config['pks_config'] = pks_config

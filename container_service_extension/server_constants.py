@@ -76,6 +76,12 @@ PBKDF2_OUTPUT_SIZE = 32
 MESSAGE_CONSUMER_THREAD = 'MessageConsumer'
 WATCHDOG_THREAD = 'ConsumerWatchdog'
 
+# Config file error messages
+CONFIG_DECRYPTION_ERROR_MSG = \
+    "Config file decryption failed: invalid decryption password"
+VCENTER_LOGIN_ERROR_MSG = "vCenter login failed (check config file for "\
+    "vCenter username/password)."
+
 
 @unique
 class NodeType(str, Enum):
