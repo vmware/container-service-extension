@@ -1620,10 +1620,7 @@ def _add_nodes(sysadmin_client, num_nodes, node_type, org, vdc, vapp,
             sizing_class_href = None
             if sizing_class_name:
                 vdc_resource = vdc.get_resource()
-                filters = {
-                    'isSizingOnly': True,
-                }
-                for policy in cpm.list_compute_policies_on_vdc(vdc_resource.get('id'), filters=filters):  # noqa: E501
+                for policy in cpm.list_vdc_sizing_policies_on_vdc(vdc_resource.get('id')):  # noqa: E501
                     if policy['name'] == sizing_class_name:
                         if not sizing_class_href:
                             sizing_class_href = policy['href']

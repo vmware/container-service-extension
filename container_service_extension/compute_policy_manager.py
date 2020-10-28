@@ -21,8 +21,8 @@ import container_service_extension.utils as utils
 CSE_COMPUTE_POLICY_PREFIX = 'cse----'
 _SYSTEM_DEFAULT_COMPUTE_POLICY = 'System Default'
 GLOBAL_PVDC_COMPUTE_POLICY_MIN_VERSION = 35.0
-PVDC_POLICY_TYPE_VM = "PvdcVmPolicy"
-VDC_POLICY_TYPE_VM = "VdcVmPolicy"
+PVDC_VM_POLICY_NAME = "PvdcVmPolicy"
+VDC_VM_POLICY_NAME = "VdcVmPolicy"
 
 
 class ComputePolicyManager:
@@ -105,7 +105,6 @@ class ComputePolicyManager:
                 break
             for policy in response_body['values']:
                 cp_name = policy['name']
-                policy['display_name'] = get_cse_policy_display_name(cp_name)
                 yield policy
 
     def get_all_vdc_compute_policies(self, filters=None):
@@ -141,7 +140,6 @@ class ComputePolicyManager:
                 break
             for policy in response_body['values']:
                 cp_name = policy['name']
-                policy['display_name'] = get_cse_policy_display_name(cp_name)
                 yield policy
 
     def get_pvdc_compute_policy(self, policy_name):
@@ -216,7 +214,7 @@ class ComputePolicyManager:
 
         if self._cloudapi_version == \
                 cloudapi_constants.CloudApiVersion.VERSION_2_0_0:
-            policy_info['policyType'] = PVDC_POLICY_TYPE_VM
+            policy_info['policyType'] = PVDC_VM_POLICY_NAME
 
         pvdc_policy = self._cloudapi_client.do_request(
             method=RequestMethod.POST,
@@ -266,7 +264,7 @@ class ComputePolicyManager:
         policy_info['name'] = policy_name
         if self._cloudapi_version == \
                 cloudapi_constants.CloudApiVersion.VERSION_2_0_0:
-            policy_info['policyType'] = VDC_POLICY_TYPE_VM
+            policy_info['policyType'] = VDC_VM_POLICY_NAME
         if description:
             policy_info['description'] = description
         if pvdc_compute_policy_id:
@@ -296,7 +294,7 @@ class ComputePolicyManager:
         """
         self._raise_error_if_not_supported()
         policy_info = self.get_vdc_compute_policy(policy_name,
-                                                  is_placement_policy=is_placement_policy) # noqa: E501
+                                                  is_placement_policy=is_placement_policy)  # noqa: E501
         resource_url_relative_path = \
             f"{cloudapi_constants.CloudApiResource.VDC_COMPUTE_POLICIES}/" \
             f"{policy_info['id']}"
@@ -328,7 +326,7 @@ class ComputePolicyManager:
             payload['name'] = new_policy_info['name']
             if self._cloudapi_version == \
                     cloudapi_constants.CloudApiVersion.VERSION_2_0_0:
-                payload['policyType'] = VDC_POLICY_TYPE_VM
+                payload['policyType'] = VDC_VM_POLICY_NAME
             if 'description' in new_policy_info:
                 payload['description'] = new_policy_info['description']
             resource_url_relative_path = \
@@ -419,7 +417,6 @@ class ComputePolicyManager:
                 break
             for cp in response_body['values']:
                 policy = {
-                    'display_name': get_cse_policy_display_name(cp.get('name')),  # noqa: E501
                     'name': cp.get('name'),
                     'href': self._get_policy_href(cp.get('id')),
                     'id': cp.get('id')
@@ -942,14 +939,19 @@ def get_cse_policy_name(policy_name):
 def get_cse_pvdc_compute_policy(cpm: ComputePolicyManager,
                                 unprefixed_policy_name: str):
     policy_name = get_cse_policy_name(unprefixed_policy_name)
-    return cpm.get_pvdc_compute_policy(policy_name)
+    policy = cpm.get_pvdc_compute_policy(policy_name)
+    policy['display_name'] = get_cse_policy_display_name(policy['name'])
+    return policy
 
 
 def add_cse_pvdc_compute_policy(cpm: ComputePolicyManager,
                                 unprefixed_policy_name: str,
                                 policy_description: str):
     policy_name = get_cse_policy_name(unprefixed_policy_name)
-    return cpm.add_pvdc_compute_policy(policy_name, policy_description)
+    created_policy = cpm.add_pvdc_compute_policy(policy_name, policy_description)
+    created_policy['display_name'] = \
+            get_cse_policy_display_name(pvdc_policy['name'])
+    return created_policy
 
 
 def add_cse_vdc_compute_policy(cpm: ComputePolicyManager,
@@ -957,16 +959,22 @@ def add_cse_vdc_compute_policy(cpm: ComputePolicyManager,
                                policy_description: str = None,
                                pvdc_compute_policy_id: str = None):
     policy_name = get_cse_policy_name(unprefixed_policy_name)
-    return cpm.add_vdc_compute_policy(policy_name,
-                                      description=policy_description,
-                                      pvdc_compute_policy_id=pvdc_compute_policy_id)  # noqa: E501
+    created_policy = cpm.add_vdc_compute_policy(
+        policy_name,
+        description=policy_description,
+        pvdc_compute_policy_id=pvdc_compute_policy_id)
+    created_policy['display_name'] = \
+            get_cse_policy_display_name(created_policy['name'])
+    return created_policy
 
 
 def get_cse_vdc_compute_policy(cpm: ComputePolicyManager,
                                unprefixed_policy_name: str,
                                is_placement_policy: bool = False):
     policy_name = get_cse_policy_name(unprefixed_policy_name)
-    return cpm.get_vdc_compute_policy(policy_name, is_placement_policy=is_placement_policy)  # noqa: E501
+    policy = cpm.get_vdc_compute_policy(policy_name, is_placement_policy=is_placement_policy)  # noqa: E501
+    policy['display_name'] = get_cse_policy_display_name(policy['name'])
+    return policy
 
 
 def delete_cse_vdc_compute_policy(cpm: ComputePolicyManager,
@@ -979,12 +987,18 @@ def delete_cse_vdc_compute_policy(cpm: ComputePolicyManager,
 def list_cse_sizing_policies_on_vdc(cpm: ComputePolicyManager, vdc_id: str):
     cse_policy_name_filter = \
         {'name': f'{CSE_COMPUTE_POLICY_PREFIX}*'}
-    return cpm.list_vdc_sizing_policies_on_vdc(vdc_id,
-                                               filters=cse_policy_name_filter)
+    policy_list = list(cpm.list_vdc_sizing_policies_on_vdc(vdc_id,
+                                               filters=cse_policy_name_filter))
+    for policy in policy_list:
+        policy['display_name'] = get_cse_policy_display_name(policy['name'])
+    return policy_list
 
 
 def list_cse_placement_policies_on_vdc(cpm: ComputePolicyManager, vdc_id: str):
     cse_policy_name_filter = \
         {'name': f'{CSE_COMPUTE_POLICY_PREFIX}*'}
-    return cpm.list_vdc_placement_policies_on_vdc(vdc_id,
-                                                  filters=cse_policy_name_filter)  # noqa: E501
+    policy_list = list(cpm.list_vdc_placement_policies_on_vdc(vdc_id,
+                                                  filters=cse_policy_name_filter))  # noqa: E501
+    for policy in policy_list:
+        policy['display_name'] = get_cse_policy_display_name(policy['name'])
+    return policy_list
