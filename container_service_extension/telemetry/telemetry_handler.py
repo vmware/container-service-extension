@@ -112,9 +112,12 @@ def record_user_action(cse_operation, status=OperationStatus.SUCCESS,
             telemetry_settings = None if not server_config else \
                 server_config.get('service', {}).get('telemetry')
 
-        if telemetry_settings and telemetry_settings.get('enable'):
-            payload = get_payload_for_user_action(cse_operation, status, message)  # noqa: E501
-            _send_data_to_telemetry_server(payload, telemetry_settings)
+        if telemetry_settings:
+            if telemetry_settings.get('enable'):
+                payload = get_payload_for_user_action(cse_operation, status, message)  # noqa: E501
+                _send_data_to_telemetry_server(payload, telemetry_settings)
+        else:
+            LOGGER.debug('No telemetry settings found.')
     except Exception as err:
         LOGGER.warning(f"Error in recording user action information:{str(err)}")  # noqa: E501
 
