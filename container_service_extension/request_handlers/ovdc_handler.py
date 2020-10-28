@@ -249,7 +249,9 @@ def ovdc_compute_policy_list(request_data,
         op_ctx.sysadmin_client,
         log_wire=utils.str_to_bool(config['service'].get('log_wire')))
     compute_policies = []
-    for cp in cpm.list_compute_policies_on_vdc(request_data[RequestKey.OVDC_ID]): # noqa: E501
+    for cp in \
+            compute_policy_manager.list_cse_sizing_policies_on_vdc(
+                request_data[RequestKey.OVDC_ID]):
         policy = {
             'name': cp['display_name'],
             'id': cp['id'],
