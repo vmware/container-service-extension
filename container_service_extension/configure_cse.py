@@ -15,10 +15,10 @@ from pyvcloud.vcd.client import NSMAP
 from pyvcloud.vcd.exceptions import EntityNotFoundException
 from pyvcloud.vcd.exceptions import MissingRecordException
 from pyvcloud.vcd.org import Org
+from pyvcloud.vcd.role import Role
 import pyvcloud.vcd.utils as pyvcloud_vcd_utils
 from pyvcloud.vcd.vapp import VApp
 from pyvcloud.vcd.vm import VM
-from pyvcloud.vcd.role import Role
 import requests
 import semantic_version
 
@@ -44,7 +44,7 @@ from container_service_extension.nsxt.nsxt_client import NSXTClient
 import container_service_extension.pyvcloud_utils as vcd_utils
 from container_service_extension.remote_template_manager import \
     RemoteTemplateManager
-import container_service_extension.right_bundle_manager as right_bundle_manager
+from container_service_extension.right_bundle_manager import RightBundleManager
 import container_service_extension.server_constants as server_constants
 import container_service_extension.shared_constants as shared_constants
 from container_service_extension.telemetry.constants import CseOperation
@@ -57,11 +57,10 @@ from container_service_extension.telemetry.telemetry_handler import \
 from container_service_extension.telemetry.telemetry_utils import \
     store_telemetry_settings
 import container_service_extension.template_builder as template_builder
+from container_service_extension.user_context import UserContext
 import container_service_extension.utils as utils
 from container_service_extension.vcdbroker import get_all_clusters as get_all_cse_clusters # noqa: E501
 from container_service_extension.vsphere_utils import populate_vsphere_list
-from container_service_extension.right_bundle_manager import RightBundleManager
-from container_service_extension.user_context import UserContext
 
 API_FILTER_PATTERNS = [
     f'/api/{shared_constants.CSE_URL_FRAGMENT}',
@@ -658,8 +657,8 @@ def _update_user_role_with_native_def_rights(defined_entity_right_bundle_name,
                                              client: Client,
                                              msg_update_callback=utils.NullPrinter(), # noqa: E501
                                              log_wire=False):
-    """
-    Method to add defined entity rights to user's role.
+    """Add defined entity rights to user's role.
+
     This method should only be called on valid configurations.
     In order to call this function, caller has to make sure that the contexual
     defined entity is already created inside VCD and corresppnding right-bundle
@@ -667,15 +666,12 @@ def _update_user_role_with_native_def_rights(defined_entity_right_bundle_name,
     The defined entity right bundle is created by VCD at the time of defined
     entity creation, dynamically. Hence, it doesn't exist before-hand
     (when user initiated the opetation).
-
     :param str : defined_entity_right_bundle_name
     :param pyvcloud.vcd.client.Client  : client
     :param utils.ConsoleMessagePrinter msg_update_callback: Callback object.
     :param bool log_wire: wire logging enabled
     """
-
-    # Currently this function should only be called during CSE install/upgrade
-    # procedure; these operations are only supported by sysadmin user.
+    # Only a user from System Org can execute this function
     vcd_utils.raise_error_if_user_not_from_system_org(client)
 
     logger_wire = SERVER_CLOUDAPI_WIRE_LOGGER if log_wire else NULL_LOGGER
@@ -2156,9 +2152,7 @@ def _assign_placement_policy_to_vdc_and_right_bundle_to_org(
         INSTALL_LOGGER.info(msg)
         msg_update_callback.info(msg)
         try:
-            rbm = right_bundle_manager.RightBundleManager(client,
-                                                          log_wire=log_wire,
-                                                          logger_debug=INSTALL_LOGGER)  # noqa: E501
+            rbm = RightBundleManager(client, log_wire=log_wire, logger_debug=INSTALL_LOGGER)  # noqa: E501
             cse_right_bundle = rbm.get_right_bundle_by_name(
                 def_utils.DEF_NATIVE_ENTITY_TYPE_RIGHT_BUNDLE)
             rbm.publish_cse_right_bundle_to_tenants(
