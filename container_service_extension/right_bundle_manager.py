@@ -26,8 +26,8 @@ class RightBundleManager():
             logger_wire=self.logger_wire)
 
     def get_right_bundle_by_name(self, right_bundle_name):
-        """
-        Get Right bundle by name.
+        """Get Right bundle by name.
+
         :param: right_bundle_name: string
         :returns: right bundle json object
         """
@@ -46,8 +46,8 @@ class RightBundleManager():
 
     def publish_cse_right_bundle_to_tenants(self, right_bundle_id,
                                             org_ids):
-        """
-        Publish the right-bundle to tenants.
+        """Publish the right-bundle to tenants.
+
         Accepts the right-bundle-id as an argument, and publishes to the
         organization indicated by org-id
         :param: right_bundle_id: id of the right bundle, string
@@ -65,8 +65,8 @@ class RightBundleManager():
             payload=payload)
 
     def get_rights_for_right_bundle(self, right_bundle_name):
-        """
-        Get Rights for a right bundle.
+        """Get Rights for a right bundle.
+
         Queries VCD for the list of rights associated with a right bundle.
         :param: right_bundle_name: name of the right bundle, string
         :returns: right bundle info json object, the "values" key for this json
