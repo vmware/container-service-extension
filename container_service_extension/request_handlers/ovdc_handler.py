@@ -251,6 +251,7 @@ def ovdc_compute_policy_list(request_data,
     compute_policies = []
     for cp in \
             compute_policy_manager.list_cse_sizing_policies_on_vdc(
+                cpm,
                 request_data[RequestKey.OVDC_ID]):
         policy = {
             'name': cp['display_name'],

@@ -104,7 +104,6 @@ class ComputePolicyManager:
             if len(response_body['values']) == 0:
                 break
             for policy in response_body['values']:
-                cp_name = policy['name']
                 yield policy
 
     def get_all_vdc_compute_policies(self, filters=None):
@@ -139,7 +138,6 @@ class ComputePolicyManager:
             if len(response_body['values']) == 0:
                 break
             for policy in response_body['values']:
-                cp_name = policy['name']
                 yield policy
 
     def get_pvdc_compute_policy(self, policy_name):
@@ -948,9 +946,9 @@ def add_cse_pvdc_compute_policy(cpm: ComputePolicyManager,
                                 unprefixed_policy_name: str,
                                 policy_description: str):
     policy_name = get_cse_policy_name(unprefixed_policy_name)
-    created_policy = cpm.add_pvdc_compute_policy(policy_name, policy_description)
+    created_policy = cpm.add_pvdc_compute_policy(policy_name, policy_description)  # noqa: E501
     created_policy['display_name'] = \
-            get_cse_policy_display_name(pvdc_policy['name'])
+        get_cse_policy_display_name(created_policy['name'])
     return created_policy
 
 
@@ -964,7 +962,7 @@ def add_cse_vdc_compute_policy(cpm: ComputePolicyManager,
         description=policy_description,
         pvdc_compute_policy_id=pvdc_compute_policy_id)
     created_policy['display_name'] = \
-            get_cse_policy_display_name(created_policy['name'])
+        get_cse_policy_display_name(created_policy['name'])
     return created_policy
 
 
@@ -987,8 +985,7 @@ def delete_cse_vdc_compute_policy(cpm: ComputePolicyManager,
 def list_cse_sizing_policies_on_vdc(cpm: ComputePolicyManager, vdc_id: str):
     cse_policy_name_filter = \
         {'name': f'{CSE_COMPUTE_POLICY_PREFIX}*'}
-    policy_list = list(cpm.list_vdc_sizing_policies_on_vdc(vdc_id,
-                                               filters=cse_policy_name_filter))
+    policy_list = list(cpm.list_vdc_sizing_policies_on_vdc(vdc_id, filters=cse_policy_name_filter))  # noqa: E501
     for policy in policy_list:
         policy['display_name'] = get_cse_policy_display_name(policy['name'])
     return policy_list
@@ -997,8 +994,7 @@ def list_cse_sizing_policies_on_vdc(cpm: ComputePolicyManager, vdc_id: str):
 def list_cse_placement_policies_on_vdc(cpm: ComputePolicyManager, vdc_id: str):
     cse_policy_name_filter = \
         {'name': f'{CSE_COMPUTE_POLICY_PREFIX}*'}
-    policy_list = list(cpm.list_vdc_placement_policies_on_vdc(vdc_id,
-                                                  filters=cse_policy_name_filter))  # noqa: E501
+    policy_list = list(cpm.list_vdc_placement_policies_on_vdc(vdc_id, filters=cse_policy_name_filter))  # noqa: E501
     for policy in policy_list:
         policy['display_name'] = get_cse_policy_display_name(policy['name'])
     return policy_list
