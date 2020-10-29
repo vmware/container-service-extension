@@ -63,9 +63,6 @@ MQTT_MIN_API_VERSION = 35.0
 MQTT_TOKEN_NAME = "mqttCseToken"
 TOKEN_PATH = 'tokens'
 
-# Name of single Message Consumer Thread, which passes jobs to a
-# Thread Pool Executor
-MESSAGE_CONSUMER_THREAD = 'MessageConsumer'
 
 # Encryption constants
 PBKDF2_ITERATIONS = 100000
@@ -76,11 +73,16 @@ PBKDF2_OUTPUT_SIZE = 32
 MESSAGE_CONSUMER_THREAD = 'MessageConsumer'
 WATCHDOG_THREAD = 'ConsumerWatchdog'
 
+
 # Config file error messages
 CONFIG_DECRYPTION_ERROR_MSG = \
     "Config file decryption failed: invalid decryption password"
 VCENTER_LOGIN_ERROR_MSG = "vCenter login failed (check config file for "\
     "vCenter username/password)."
+
+# Request Id format for logging
+REQUEST_ID_FORMAT = 'Request Id: %(requestId)s | '
+
 
 
 @unique
