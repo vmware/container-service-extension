@@ -41,8 +41,10 @@ def assign_placement_policy_to_template(client, cse_placement_policy,
     cpm = compute_policy_manager.ComputePolicyManager(client,
                                                       log_wire=log_wire)
     try:
-        policy = cpm.get_vdc_compute_policy(cse_placement_policy,
-                                            is_placement_policy=True)
+        policy = compute_policy_manager.get_cse_vdc_compute_policy(
+            cpm,
+            cse_placement_policy,
+            is_placement_policy=True)
         task = cpm.assign_vdc_placement_policy_to_vapp_template_vms(
             policy['href'],
             org_name,

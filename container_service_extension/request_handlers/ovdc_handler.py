@@ -249,7 +249,10 @@ def ovdc_compute_policy_list(request_data,
         op_ctx.sysadmin_client,
         log_wire=utils.str_to_bool(config['service'].get('log_wire')))
     compute_policies = []
-    for cp in cpm.list_compute_policies_on_vdc(request_data[RequestKey.OVDC_ID]): # noqa: E501
+    for cp in \
+            compute_policy_manager.list_cse_sizing_policies_on_vdc(
+                cpm,
+                request_data[RequestKey.OVDC_ID]):
         policy = {
             'name': cp['display_name'],
             'id': cp['id'],
@@ -291,12 +294,12 @@ def ovdc_compute_policy_update(request_data,
         cp_id = None
         if cp_name == SYSTEM_DEFAULT_COMPUTE_POLICY_NAME:
             for _cp in cpm.list_compute_policies_on_vdc(ovdc_id):
-                if _cp['display_name'] == cp_name:
+                if _cp['name'] == cp_name:
                     cp_href = _cp['href']
                     cp_id = _cp['id']
         else:
             try:
-                _cp = cpm.get_vdc_compute_policy(cp_name)
+                _cp = compute_policy_manager.get_cse_vdc_compute_policy(cpm, cp_name)  # noqa: E501
                 cp_href = _cp['href']
                 cp_id = _cp['id']
             except vcd_e.EntityNotFoundException:
