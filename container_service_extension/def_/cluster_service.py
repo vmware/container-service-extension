@@ -1632,6 +1632,7 @@ def _add_nodes(sysadmin_client, num_nodes, node_type, org, vdc, vapp,
                     msg = f"No sizing policy with the name {sizing_class_name} exists on the VDC"  # noqa: E501
                     LOGGER.error(msg)
                     raise Exception(msg)
+                LOGGER.debug(f"Found sizing policy with name {sizing_class_name} on the VDC {vdc_resource.get('name')}")  # noqa: E501
 
             cust_script = None
             if ssh_key is not None:

@@ -322,7 +322,7 @@ def _update_ovdc_using_placement_policy_async(operation_context: ctx.OperationCo
         logger.SERVER_LOGGER.error(err)
         task.update(status=vcd_client.TaskStatus.ERROR.value,
                     namespace='vcloud.cse',
-                    operation='',
+                    operation='Failed to update OVDC',
                     operation_name=operation_name,
                     details=f'Failed with error: {err}',
                     progress=None,
