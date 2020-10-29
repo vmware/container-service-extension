@@ -1,0 +1,85 @@
+# container-service-extension
+# Copyright (c) 2017 VMware, Inc. All Rights Reserved.
+# SPDX-License-Identifier: BSD-2-Clause
+import importlib
+import importlib.resources as pkg_resources
+import json
+import time
+
+from container_service_extension.logger import SERVER_CLI_LOGGER
+import container_service_extension.server_constants as server_constants
+import container_service_extension.pyvcloud_utils as vcd_utils
+
+import pyvcloud.vcd.api_extension as api_extension
+from pyvcloud.vcd.client import ApiVersion as vCDApiVersion
+from pyvcloud.vcd.client import BasicLoginCredentials
+from pyvcloud.vcd.client import Client
+from pyvcloud.vcd.client import NSMAP
+from pyvcloud.vcd.exceptions import BadRequestException
+from pyvcloud.vcd.exceptions import EntityNotFoundException
+from pyvcloud.vcd.org import Org
+import pyvcloud.vcd.utils as pyvcloud_vcd_utils
+from pyvcloud.vcd.vapp import VApp
+from pyvcloud.vcd.vm import VM
+
+import container_service_extension.utils as utils
+
+
+def create_cse_service_role(client,
+                        msg_update_callback=utils.NullPrinter()):
+    """Create Service Role for CSE operations.
+
+    The method can only be called by System Administrator user
+    :param client: pyvcloud.vcd.client to interact with VCD HOST
+    :param utils.ConsoleMessagePrinter msg_update_callback: Callback object.
+
+    :raises pyvcloud.vcd.exceptions.BadRequestException when Role already exists
+    :raises pyvcloud.vcd.exceptions.EntityNotFoundException when Right doesn't
+    exist
+    """
+    #We can't check if the user is Sysadmin or some other user in system org, as
+    # the values will need to be hardcoded.
+    # For now just check if its system org or not.
+    vcd_utils.raise_error_if_not_sysadmin(client)
+
+    system_org = Org(client, resource=client.get_org())
+    system_org.create_role(server_constants.CSE_SERVICE_ROLE_NAME,
+                server_constants.CSE_SERVICE_ROLE_DESC,
+                server_constants.CSE_SERVICE_ROLE_RIGHTS)
+
+    msg= f"Successfully created {server_constants.CSE_SERVICE_ROLE_NAME}"
+    msg_update_callback.general(msg)
+    SERVER_CLI_LOGGER.info(msg)
+    return
+
+def create_user_for_cse_service_role(client,
+                                    username,
+                                    password,
+                                    msg_update_callback=utils.NullPrinter()):
+    """Create a User in System Org based on CSE Service Role.
+
+    The method can only be called by System Administrator user
+    :param client: pyvcloud.vcd.client to interact with VCD HOST
+    :param username: string, username to create
+    :param password: string, password for the user
+    :param utils.ConsoleMessagePrinter msg_update_callback: Callback object.
+
+    :raises pyvcloud.vcd.exceptions.EntityNotFoundException when Incorrect Role
+    is specified
+    """
+    #We can't check if the user is Sysadmin or some other user in system org, as
+    # the values will need to be hardcoded.
+    # For now just check if its system org or not.
+    vcd_utils.raise_error_if_not_sysadmin(client)
+
+    system_org = Org(client, resource=client.get_org())
+    role_record=system_org.get_role_record(server_constants.CSE_SERVICE_ROLE_NAME)
+    system_org.create_user(username,
+                          password,
+                          role_record.get('href'),
+                          is_enabled=True)
+
+    msg = f"Successfully created {username} using {server_constants.CSE_SERVICE_ROLE_NAME} Role"
+    msg_update_callback.general(msg)
+    SERVER_CLI_LOGGER.info(msg)
+    return
