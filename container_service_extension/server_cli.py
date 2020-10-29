@@ -40,6 +40,7 @@ from container_service_extension.sample_generator import generate_sample_config
 from container_service_extension.server_constants import CONFIG_DECRYPTION_ERROR_MSG  # noqa: E501
 from container_service_extension.server_constants import LocalTemplateKey
 from container_service_extension.server_constants import RemoteTemplateKey
+from container_service_extension.server_constants import SUPPORTED_VCD_API_VERSIONS  # noqa: E501
 from container_service_extension.server_constants import SYSTEM_ORG_NAME
 import container_service_extension.service as cse_service
 from container_service_extension.shared_constants import ClusterEntityKind
@@ -320,7 +321,17 @@ def version(ctx):
     '--pks-config',
     is_flag=True,
     help='Generate only sample PKS config')
-def sample(ctx, output, pks_config):
+@click.option(
+    '-v',
+    '--api-version',
+    'api_version',
+    required=False,
+    default=vcd_client.ApiVersion.VERSION_35.value,
+    show_default=True,
+    metavar='API_VERSION',
+    help=f'vCD API version: {SUPPORTED_VCD_API_VERSIONS}. '
+         f'Not needed if only generating PKS config.')
+def sample(ctx, output, pks_config, api_version):
     """Display sample CSE config file contents."""
     SERVER_CLI_LOGGER.debug(f"Executing command: {ctx.command_path}")
     console_message_printer = ConsoleMessagePrinter()
@@ -328,8 +339,16 @@ def sample(ctx, output, pks_config):
     # check, because we want to suppress the version check messages from being
     # printed onto console, and pollute the sample config.
     check_python_version()
-    sample_config = generate_sample_config(output=output,
-                                           generate_pks_config=pks_config)
+
+    try:
+        api_version = float(api_version)
+        sample_config = generate_sample_config(output=output,
+                                               generate_pks_config=pks_config,
+                                               api_version=api_version)
+    except Exception as err:
+        console_message_printer.error(str(err))
+        SERVER_CLI_LOGGER.error(str(err))
+        sys.exit(1)
 
     console_message_printer.general_no_color(sample_config)
     SERVER_CLI_LOGGER.debug(sample_config)
