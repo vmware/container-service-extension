@@ -20,7 +20,6 @@ from pyvcloud.vcd.exceptions import OperationNotSupportedException
 
 import container_service_extension.compute_policy_manager \
     as compute_policy_manager
-from container_service_extension.config_validator import get_validated_config
 import container_service_extension.configure_cse as configure_cse
 from container_service_extension.consumer.consumer import MessageConsumer
 import container_service_extension.def_.models as def_models
@@ -174,15 +173,14 @@ class ServerState(Enum):
 # 1. reject all TKG+ related OVDC updates
 # 2. Skip showing TKG+ in the output for list and get
 class Service(object, metaclass=Singleton):
-    def __init__(self, config_file, pks_config_file=None,
+    def __init__(self, config_file=None, config=None, pks_config_file=None,
                  should_check_config=True,
-                 skip_config_decryption=False, decryption_password=None):
+                 skip_config_decryption=False):
         self.config_file = config_file
+        self.config = config
         self.pks_config_file = pks_config_file
-        self.config = None
         self.should_check_config = should_check_config
         self.skip_config_decryption = skip_config_decryption
-        self.decryption_password = decryption_password
         self.pks_cache = None
         self._state = ServerState.STOPPED
         self._kubernetesInterface: def_models.DefInterface = None
@@ -278,14 +276,6 @@ class Service(object, metaclass=Singleton):
         raise cse_exception.CseServerError(f"Invalid server state: '{self._state}'")  # noqa: E501
 
     def run(self, msg_update_callback=utils.NullPrinter()):
-        self.config = get_validated_config(
-            self.config_file,
-            pks_config_file_name=self.pks_config_file,
-            skip_config_decryption=self.skip_config_decryption,
-            decryption_password=self.decryption_password,
-            log_wire_file=logger.SERVER_DEBUG_WIRELOG_FILEPATH,
-            logger_debug=logger.SERVER_LOGGER,
-            msg_update_callback=msg_update_callback)
 
         sysadmin_client = None
         try:
