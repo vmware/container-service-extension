@@ -317,7 +317,8 @@ def generate_sample_config(output=None, generate_pks_config=False,
 
     :rtype: dict
     """
-    if str(api_version) not in SUPPORTED_VCD_API_VERSIONS:
+    api_version_str = str(api_version)
+    if api_version_str not in SUPPORTED_VCD_API_VERSIONS:
         raise Exception(f'vCD API version {api_version} is not supported. '
                         f'Please pick one of the following API versions: '
                         f'{SUPPORTED_VCD_API_VERSIONS}')
@@ -332,7 +333,7 @@ def generate_sample_config(output=None, generate_pks_config=False,
                                            default_flow_style=False) + '\n'
 
         api_version_vcd_config = dict(SAMPLE_VCD_CONFIG)
-        api_version_vcd_config['vcd']['api_version'] = str(api_version)
+        api_version_vcd_config['vcd']['api_version'] = api_version_str
         sample_config += yaml.safe_dump(api_version_vcd_config,
                                         default_flow_style=False) + '\n'
         sample_config += yaml.safe_dump(SAMPLE_VCS_CONFIG,
