@@ -524,10 +524,10 @@ def get_all_ovdcs(client: vcd_client.Client):
         # use adminOrgVdc in typed query
         query = client.get_typed_query(
             vcd_client.ResourceType.ADMIN_ORG_VDC.value,
-            query_result_format=vcd_client.QueryResultFormat.RECORDS)
+            query_result_format=vcd_client.QueryResultFormat.ID_RECORDS)
     else:
         # use orgVdc in typed query
         query = client.get_typed_query(
             vcd_client.ResourceType.ORG_VDC.value,
-            query_result_format=vcd_client.QueryResultFormat.RECORDS)
+            query_result_format=vcd_client.QueryResultFormat.ID_RECORDS)
     return list(query.execute())

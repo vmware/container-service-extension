@@ -128,11 +128,14 @@ def list_ovdc(operation_context: ctx.OperationContext) -> List[dict]:
     org_vdcs = vcd_utils.get_all_ovdcs(operation_context.client)
     for ovdc in org_vdcs:
         ovdc_name = ovdc.get('name')
-        org_name = ovdc.get('orgName')
+        config = utils.get_server_runtime_config()
+        log_wire = utils.str_to_bool(config.get('service', {}).get('log_wire'))
+        ovdc_id = vcd_utils.extract_id(ovdc.get('id'))
         ovdc_details = asdict(
             get_ovdc_k8s_runtime_details(operation_context.sysadmin_client,
-                                         org_name=org_name,
-                                         ovdc_name=ovdc_name))
+                                         ovdc_id=ovdc_id,
+                                         ovdc_name=ovdc_name,
+                                         log_wire=log_wire))
         if ClusterEntityKind.TKG_PLUS.value in ovdc_details['k8s_runtime'] \
                 and not utils.is_tkg_plus_enabled():  # noqa: E501
             ovdc_details['k8s_runtime'].remove(ClusterEntityKind.TKG_PLUS.value)  # noqa: E501
@@ -143,9 +146,15 @@ def list_ovdc(operation_context: ctx.OperationContext) -> List[dict]:
 
 
 def get_ovdc_k8s_runtime_details(sysadmin_client: vcd_client.Client,
-                                 org_name=None, ovdc_name=None,
-                                 ovdc_id=None, log_wire=False) -> def_models.Ovdc: # noqa: E501
+                                 ovdc_id=None,
+                                 ovdc_name=None,
+                                 org_name=None,
+                                 log_wire=False) -> def_models.Ovdc:
     """Get k8s runtime details for an ovdc.
+
+    Atleast ovdc_id and ovdc_name or org_name and ovdc_name should be provided.
+    Additional call to get ovdc details can be avoided by providing ovdc_id and
+    ovdc_name.
 
     :param sysadmin_client vcd_client.Client: vcd sysadmin client
     :param str org_name:
@@ -158,13 +167,20 @@ def get_ovdc_k8s_runtime_details(sysadmin_client: vcd_client.Client,
     vcd_utils.raise_error_if_not_sysadmin(sysadmin_client)
     cpm = compute_policy_manager.ComputePolicyManager(sysadmin_client,
                                                       log_wire=log_wire)
-    ovdc = vcd_utils.get_vdc(client=sysadmin_client,
-                             vdc_name=ovdc_name,
-                             org_name=org_name,
-                             vdc_id=ovdc_id,
-                             is_admin_operation=True)
-    ovdc_id = vcd_utils.extract_id(ovdc.get_resource().get('id'))
-    ovdc_name = ovdc.get_resource().get('name')
+    if not (org_name and ovdc_name) and not ovdc_id:
+        msg = "Unable to fetch OVDC k8 runtime details with the " \
+              "provided parameters"
+        logger.SERVER_LOGGER.error(msg)
+        raise Exception(msg)
+    if not ovdc_id or not ovdc_name:
+        # populate ovdc_id and ovdc_name
+        ovdc = vcd_utils.get_vdc(client=sysadmin_client,
+                                 vdc_id=ovdc_id,
+                                 vdc_name=ovdc_name,
+                                 org_name=org_name,
+                                 is_admin_operation=True)
+        ovdc_id = vcd_utils.extract_id(ovdc.get_resource().get('id'))
+        ovdc_name = ovdc.get_resource().get('name')
     policies = []
     for policy in cpm.list_vdc_placement_policies_on_vdc(ovdc_id):
         policies.append(RUNTIME_INTERNAL_NAME_TO_DISPLAY_NAME_MAP[policy['display_name']])  # noqa: E501
