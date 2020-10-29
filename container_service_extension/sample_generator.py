@@ -2,6 +2,7 @@
 # Copyright (c) 2019 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 
+from pyvcloud.vcd.client import ApiVersion
 import yaml
 
 from container_service_extension.server_constants import MQTT_MIN_API_VERSION
@@ -87,7 +88,7 @@ SAMPLE_VCD_CONFIG = {
         'port': 443,
         'username': 'administrator',
         'password': 'my_secret_password',
-        'api_version': '35.0',
+        'api_version': ApiVersion.VERSION_35.value,
         'verify': True,
         'log': True
     }
@@ -340,7 +341,7 @@ def generate_sample_config(output=None, generate_pks_config=False,
                                         default_flow_style=False) + '\n'
         sample_config += yaml.safe_dump(SAMPLE_BROKER_CONFIG,
                                         default_flow_style=False) + '\n'
-        if api_version < 35.0:
+        if api_version < float(ApiVersion.VERSION_35.value):
             sample_config += TEMPLATE_RULE_NOTE + '\n'
     else:
         sample_config = yaml.safe_dump(
