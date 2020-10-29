@@ -84,7 +84,6 @@ VCENTER_LOGIN_ERROR_MSG = "vCenter login failed (check config file for "\
 REQUEST_ID_FORMAT = 'Request Id: %(requestId)s | '
 
 
-
 @unique
 class NodeType(str, Enum):
     CONTROL_PLANE = 'mstr'
