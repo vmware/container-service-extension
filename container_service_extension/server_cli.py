@@ -39,6 +39,7 @@ from container_service_extension.remote_template_manager import RemoteTemplateMa
 from container_service_extension.sample_generator import generate_sample_config
 from container_service_extension.server_constants import LocalTemplateKey
 from container_service_extension.server_constants import RemoteTemplateKey
+from container_service_extension.server_constants import SUPPORTED_VCD_API_VERSIONS  # noqa: E501
 from container_service_extension.server_constants import SYSTEM_ORG_NAME
 import container_service_extension.service as cse_service
 from container_service_extension.shared_constants import ClusterEntityKind
@@ -330,11 +331,11 @@ def version(ctx):
     '--api-version',
     'api_version',
     required=False,
-    default='35.0',
+    default=vcd_client.ApiVersion.VERSION_35.value,
     show_default=True,
     metavar='API_VERSION',
-    help='Specify vCD API version: (33.0, 34.0, 35.0). '
-         'Note: Not needed if only generating PKS config.')
+    help=f'vCD API version: {SUPPORTED_VCD_API_VERSIONS}. '
+         f'Not needed if only generating PKS config.')
 def sample(ctx, output, pks_config, api_version):
     """Display sample CSE config file contents."""
     SERVER_CLI_LOGGER.debug(f"Executing command: {ctx.command_path}")
@@ -346,12 +347,6 @@ def sample(ctx, output, pks_config, api_version):
 
     try:
         api_version = float(api_version)
-    except ValueError as err:
-        console_message_printer.error(str(err))
-        SERVER_CLI_LOGGER.error(str(err))
-        sys.exit(1)
-
-    try:
         sample_config = generate_sample_config(output=output,
                                                generate_pks_config=pks_config,
                                                api_version=api_version)

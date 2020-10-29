@@ -137,9 +137,6 @@ SAMPLE_BROKER_CONFIG = {
 }
 
 TEMPLATE_RULE_NOTE = """# [Optional] Template rule section
-# Note : Template rules are only supported when CSE server is started with
-# vCD api v33.0 or v34.0.
-#
 # Rules can be defined to override template definitions as defined by remote
 # template cookbook.
 # Any rule defined in this section can match exactly one template.
@@ -172,7 +169,7 @@ TEMPLATE_RULE_NOTE = """# [Optional] Template rule section
 """  # noqa: E501
 
 COMMENTED_AMQP_SECTION = """\
-# Only one of the amqp of mqtt sections should be present.
+# Only one of the amqp or mqtt sections should be present.
 
 #amqp:
 #  exchange: cse-ext
@@ -343,7 +340,7 @@ def generate_sample_config(output=None, generate_pks_config=False,
                                         default_flow_style=False) + '\n'
         sample_config += yaml.safe_dump(SAMPLE_BROKER_CONFIG,
                                         default_flow_style=False) + '\n'
-        if api_version < MQTT_MIN_API_VERSION:
+        if api_version < 35.0:
             sample_config += TEMPLATE_RULE_NOTE + '\n'
     else:
         sample_config = yaml.safe_dump(
