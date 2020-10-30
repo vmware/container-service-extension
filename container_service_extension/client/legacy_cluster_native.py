@@ -4,7 +4,6 @@
 
 import container_service_extension.client.cse_client.api_33.native_cluster_api \
     as native_cluster_api_v33  # noqa: E501
-from container_service_extension.client.response_processor import process_response # noqa: E501
 from container_service_extension.logger import CLIENT_LOGGER
 import container_service_extension.shared_constants as shared_constants
 

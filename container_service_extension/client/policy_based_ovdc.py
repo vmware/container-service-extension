@@ -8,7 +8,6 @@ import container_service_extension.client.cse_client.api_35.ovdc_api as ovdc_api
 import container_service_extension.client.utils as client_utils
 import container_service_extension.def_.models as def_models
 from container_service_extension.pyvcloud_utils import get_vdc
-import container_service_extension.shared_constants as shared_constants
 
 
 class PolicyBasedOvdc:
