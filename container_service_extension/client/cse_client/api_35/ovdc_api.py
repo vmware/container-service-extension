@@ -30,10 +30,10 @@ class OvdcApi(CseClient):
 
     def get_ovdc(self, ovdc_id):
         uri = f"{self._ovdc_uri}/{ovdc_id}"
-        response = self.client._do_request_prim(
+        response = self._client._do_request_prim(
             shared_constants.RequestMethod.GET,
             uri,
-            self.client._session,
+            self._client._session,
             accept_type='application/json')
         return def_models.Ovdc(**process_response(response))
 
