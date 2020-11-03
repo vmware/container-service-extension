@@ -159,8 +159,10 @@ def ovdc_list(request_data, op_ctx: ctx.OperationContext):
     for ovdc in org_vdcs:
         ovdc_name = ovdc.get('name')
         org_name = ovdc.get('orgName')
+        ovdc_id = vcd_utils.extract_id(ovdc.get('id'))
         k8s_metadata = ovdc_utils.get_ovdc_k8s_provider_metadata(
             op_ctx.sysadmin_client,
+            ovdc_id=ovdc_id,
             ovdc_name=ovdc_name,
             org_name=org_name)
         k8s_provider = k8s_metadata[K8S_PROVIDER_KEY]
