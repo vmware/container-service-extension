@@ -78,11 +78,12 @@ class NativeClusterApi(CseClient):
 
     def get_upgrade_plan_by_cluster_id(self, cluster_id: str):
         uri = f'{self._cluster_uri}/{cluster_id}/upgrade-plan'
-        return self._client._do_request_prim(
+        response = self._client._do_request_prim(
             shared_constants.RequestMethod.GET,
             uri,
             self._client._session,
             accept_type='application/json')
+        return response_processor.process_response(response)
 
     def upgrade_cluster_by_cluster_id(self, cluster_id: str,
                                       cluster_upgrade_definition: def_models.DefEntity):  # noqa: E501

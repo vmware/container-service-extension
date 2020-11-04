@@ -7,8 +7,7 @@ from container_service_extension.client.cse_client.system_api import SystemApi
 
 class System:
     def __init__(self, client):
-        self.client = client
-        self._system_api = SystemApi(self.client)
+        self._system_api = SystemApi(client)
 
     def get_info(self):
         return self._system_api.get_system_details()

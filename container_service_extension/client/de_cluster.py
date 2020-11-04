@@ -38,7 +38,6 @@ class DECluster:
     """
 
     def __init__(self, client):
-        self._client = client
         logger_wire = logger.NULL_LOGGER
         if os.getenv(cli_constants.ENV_CSE_CLIENT_WIRE_LOGGING):
             logger_wire = logger.CLIENT_WIRE_LOGGER

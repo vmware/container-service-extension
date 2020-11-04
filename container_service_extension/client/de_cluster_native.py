@@ -16,7 +16,6 @@ import container_service_extension.def_.entity_service as def_entity_svc
 import container_service_extension.exceptions as cse_exceptions
 import container_service_extension.logger as logger
 import container_service_extension.pyvcloud_utils as vcd_utils
-import container_service_extension.shared_constants as shared_constants
 
 
 class DEClusterNative:
@@ -30,8 +29,6 @@ class DEClusterNative:
     """
 
     def __init__(self, client):
-        self._client = client
-        self._uri = f"{self._client.get_api_uri()}/{shared_constants.CSE_URL_FRAGMENT}/{shared_constants.CSE_3_0_URL_FRAGMENT}"  # noqa: E501
         logger_wire = logger.NULL_LOGGER
         if os.getenv(cli_constants.ENV_CSE_CLIENT_WIRE_LOGGING):
             logger_wire = logger.CLIENT_WIRE_LOGGER
@@ -39,7 +36,7 @@ class DEClusterNative:
             vcd_utils.get_cloudapi_client_from_vcd_client(
                 client=client, logger_debug=logger.CLIENT_LOGGER,
                 logger_wire=logger_wire)
-        self._native_cluster_api = NativeClusterApi(self._client)
+        self._native_cluster_api = NativeClusterApi(client)
 
     def create_cluster(self, cluster_entity: def_models.ClusterEntity):
         """Create a new Kubernetes cluster.

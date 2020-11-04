@@ -8,9 +8,7 @@ import container_service_extension.shared_constants as shared_constants
 
 class PksCluster:
     def __init__(self, client):
-        self.client = client
-        self._uri = f"{self.client.get_api_uri()}/{shared_constants.PKS_URL_FRAGMENT}"  # noqa: E501
-        self._pks_cluster_api = PksClusterApi(self.client)
+        self._pks_cluster_api = PksClusterApi(client)
 
     def get_clusters(self, vdc=None, org=None):
         filters = {

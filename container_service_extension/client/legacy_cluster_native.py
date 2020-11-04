@@ -10,10 +10,8 @@ import container_service_extension.shared_constants as shared_constants
 
 class LegacyClusterNative:
     def __init__(self, client):
-        self.client = client
-        self._uri = f"{self.client.get_api_uri()}/{shared_constants.CSE_URL_FRAGMENT}"  # noqa: E501
         self._native_cluster_api = \
-            native_cluster_api_v33.NativeClusterApi(self.client)
+            native_cluster_api_v33.NativeClusterApi(client)
 
     def list_clusters(self, vdc=None, org=None):
         filters = {
