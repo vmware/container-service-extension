@@ -516,3 +516,18 @@ def get_cloudapi_client_from_vcd_client(client: vcd_client.Client,
                                          logger_wire=logger_wire,
                                          verify_ssl=client._verify_ssl_certs,
                                          is_sys_admin=client.is_sysadmin())
+
+
+def get_all_ovdcs(client: vcd_client.Client):
+    query = None
+    if client.is_sysadmin():
+        # use adminOrgVdc in typed query
+        query = client.get_typed_query(
+            vcd_client.ResourceType.ADMIN_ORG_VDC.value,
+            query_result_format=vcd_client.QueryResultFormat.ID_RECORDS)
+    else:
+        # use orgVdc in typed query
+        query = client.get_typed_query(
+            vcd_client.ResourceType.ORG_VDC.value,
+            query_result_format=vcd_client.QueryResultFormat.ID_RECORDS)
+    return list(query.execute())
