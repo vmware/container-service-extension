@@ -6,7 +6,6 @@ from dataclasses import asdict
 from typing import List
 
 import pyvcloud.vcd.client as vcd_client
-import pyvcloud.vcd.org as vcd_org
 import pyvcloud.vcd.task as vcd_task
 
 import container_service_extension.compute_policy_manager as compute_policy_manager # noqa: E501
@@ -125,33 +124,37 @@ def list_ovdc(operation_context: ctx.OperationContext) -> List[dict]:
     telemetry_handler.record_user_action_details(cse_operation=CseOperation.OVDC_LIST, # noqa: E501
                                                  cse_params={})
 
-    if operation_context.client.is_sysadmin():
-        org_resource_list = operation_context.client.get_org_list()
-    else:
-        org_resource_list = list(operation_context.client.get_org())
     ovdcs = []
-    for org_resource in org_resource_list:
-        org = vcd_org.Org(operation_context.client, resource=org_resource)
-        for vdc_sparse in org.list_vdcs():
-            ovdc_name = vdc_sparse['name']
-            org_name = org.get_name()
-            ovdc_details = asdict(
-                get_ovdc_k8s_runtime_details(operation_context.sysadmin_client,
-                                             org_name=org_name,
-                                             ovdc_name=ovdc_name))
-            if ClusterEntityKind.TKG_PLUS.value in ovdc_details['k8s_runtime'] \
-                    and not utils.is_tkg_plus_enabled():  # noqa: E501
-                ovdc_details['k8s_runtime'].remove(ClusterEntityKind.TKG_PLUS.value)  # noqa: E501
-            # TODO: Find a better way to remove remove_cp_from_vms_on_disable
-            del ovdc_details['remove_cp_from_vms_on_disable']
-            ovdcs.append(ovdc_details)
+    org_vdcs = vcd_utils.get_all_ovdcs(operation_context.client)
+    for ovdc in org_vdcs:
+        ovdc_name = ovdc.get('name')
+        config = utils.get_server_runtime_config()
+        log_wire = utils.str_to_bool(config.get('service', {}).get('log_wire'))
+        ovdc_id = vcd_utils.extract_id(ovdc.get('id'))
+        ovdc_details = asdict(
+            get_ovdc_k8s_runtime_details(operation_context.sysadmin_client,
+                                         ovdc_id=ovdc_id,
+                                         ovdc_name=ovdc_name,
+                                         log_wire=log_wire))
+        if ClusterEntityKind.TKG_PLUS.value in ovdc_details['k8s_runtime'] \
+                and not utils.is_tkg_plus_enabled():  # noqa: E501
+            ovdc_details['k8s_runtime'].remove(ClusterEntityKind.TKG_PLUS.value)  # noqa: E501
+        # TODO: Find a better way to remove remove_cp_from_vms_on_disable
+        del ovdc_details['remove_cp_from_vms_on_disable']
+        ovdcs.append(ovdc_details)
     return ovdcs
 
 
 def get_ovdc_k8s_runtime_details(sysadmin_client: vcd_client.Client,
-                                 org_name=None, ovdc_name=None,
-                                 ovdc_id=None, log_wire=False) -> def_models.Ovdc: # noqa: E501
+                                 ovdc_id=None,
+                                 ovdc_name=None,
+                                 org_name=None,
+                                 log_wire=False) -> def_models.Ovdc:
     """Get k8s runtime details for an ovdc.
+
+    Atleast ovdc_id and ovdc_name or org_name and ovdc_name should be provided.
+    Additional call to get ovdc details can be avoided by providing ovdc_id and
+    ovdc_name.
 
     :param sysadmin_client vcd_client.Client: vcd sysadmin client
     :param str org_name:
@@ -164,13 +167,20 @@ def get_ovdc_k8s_runtime_details(sysadmin_client: vcd_client.Client,
     vcd_utils.raise_error_if_user_not_from_system_org(sysadmin_client)
     cpm = compute_policy_manager.ComputePolicyManager(sysadmin_client,
                                                       log_wire=log_wire)
-    ovdc = vcd_utils.get_vdc(client=sysadmin_client,
-                             vdc_name=ovdc_name,
-                             org_name=org_name,
-                             vdc_id=ovdc_id,
-                             is_admin_operation=True)
-    ovdc_id = vcd_utils.extract_id(ovdc.get_resource().get('id'))
-    ovdc_name = ovdc.get_resource().get('name')
+    if not (org_name and ovdc_name) and not ovdc_id:
+        msg = "Unable to fetch OVDC k8 runtime details with the " \
+              "provided parameters"
+        logger.SERVER_LOGGER.error(msg)
+        raise Exception(msg)
+    if not ovdc_id or not ovdc_name:
+        # populate ovdc_id and ovdc_name
+        ovdc = vcd_utils.get_vdc(client=sysadmin_client,
+                                 vdc_id=ovdc_id,
+                                 vdc_name=ovdc_name,
+                                 org_name=org_name,
+                                 is_admin_operation=True)
+        ovdc_id = vcd_utils.extract_id(ovdc.get_resource().get('id'))
+        ovdc_name = ovdc.get_resource().get('name')
     policies = []
     for cse_policy in \
             compute_policy_manager.list_cse_placement_policies_on_vdc(cpm, ovdc_id):  # noqa: E501
