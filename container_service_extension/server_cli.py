@@ -355,15 +355,19 @@ def cse_service_role(ctx, vcd_host, ssl_verify):
         client.set_credentials(credentials)
     except requests.exceptions.ConnectionError as err:
         msg = f"Invalid parameter {vcd_host}"
-        ConsoleMessagePrinter.error(str(err))
+        console_message_printer.error(msg)
+        SERVER_CLI_LOGGER.error(msg)
+        SERVER_CLI_LOGGER.error(str(err))
         return
     except VcdException as err:
-        msg = f"Invalid parameters for System Org {admin_username} or "
-        "{admin_password}"
-        ConsoleMessagePrinter.error(str(err))
+        msg = f"Invalid parameters for System Org {admin_username} or {admin_password}"
+        console_message_printer.error(msg)
+        SERVER_CLI_LOGGER.error(msg)
+        SERVER_CLI_LOGGER.error(str(err))
         return
     except Exception as err:
-        ConsoleMessagePrinter.error(str(err))
+        console_message_printer.error(str(err))
+        SERVER_CLI_LOGGER.error(str(err))
         return
 
     msg = f"Connected to vCD as system administrator: {admin_username}"
