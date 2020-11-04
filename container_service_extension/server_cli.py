@@ -321,8 +321,8 @@ def version(ctx):
     default=None,
     help="VCD host URL")
 @click.option(
-    '-ssl_verify',
-    '--ssl_verify',
+    '-s',
+    '--ssl-verify',
     required=False,
     is_flag=True,
     default=True,
@@ -336,8 +336,6 @@ def cse_service_role(ctx, vcd_host, ssl_verify):
     # check, because we want to suppress the version check messages from being
     # printed onto console.
     check_python_version()
-
-    # Check if URL is valid
 
     # Prompt user for administrator username/password
     admin_username = click.prompt('Please enter System Administrator\'s '
