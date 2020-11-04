@@ -26,8 +26,7 @@ from container_service_extension.cloudapi.constants import CloudApiResource
 from container_service_extension.config_validator import get_validated_config
 import container_service_extension.configure_cse as configure_cse
 from container_service_extension.create_cse_service_role import (
-    create_cse_service_role,
-    create_user_for_cse_service_role
+    create_cse_service_role
 )
 from container_service_extension.encryption_engine import decrypt_file
 from container_service_extension.encryption_engine import encrypt_file
@@ -360,7 +359,8 @@ def cse_service_role(ctx, vcd_host, ssl_verify):
         SERVER_CLI_LOGGER.error(str(err))
         return
     except VcdException as err:
-        msg = f"Invalid parameters for System Org {admin_username} or {admin_password}"
+        msg = f"Invalid parameters for System Org {admin_username} "
+        "or {admin_password}"
         console_message_printer.error(msg)
         SERVER_CLI_LOGGER.error(msg)
         SERVER_CLI_LOGGER.error(str(err))
@@ -375,14 +375,6 @@ def cse_service_role(ctx, vcd_host, ssl_verify):
 
     try:
         create_cse_service_role(client, console_message_printer)
-        if click.confirm('Do you want to create a user for CSE Service'
-                         ' Role?'):
-            username = click.prompt("Please enter username")
-            password = click.prompt("Please enter password")
-            create_user_for_cse_service_role(client,
-                                             username,
-                                             password,
-                                             console_message_printer)
     except EntityNotFoundException as err:
         msg = "CSE Internal Error, Please contact support"
         console_message_printer.error(msg)
@@ -390,7 +382,7 @@ def cse_service_role(ctx, vcd_host, ssl_verify):
         SERVER_CLI_LOGGER.error(str(err))
         return
     except BadRequestException as err:
-        msg = "CSE Service Role already exist, Please contact System Admin"
+        msg = "CSE Internal Error, Please contact support"
         console_message_printer.error(msg)
         SERVER_CLI_LOGGER.error(msg)
         SERVER_CLI_LOGGER.error(str(err))
