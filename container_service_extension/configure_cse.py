@@ -665,10 +665,10 @@ def _register_cse_as_amqp_extension(client, routing_key, exchange,
     INSTALL_LOGGER.info(msg)
 
 
-def _update_user_role_with_native_def_rights(defined_entity_right_bundle_name,
-                                             client: Client,
-                                             msg_update_callback=utils.NullPrinter(), # noqa: E501
-                                             log_wire=False):
+def _update_user_role_with_right_bundle(right_bundle_name,
+                                        client: Client,
+                                        msg_update_callback=utils.NullPrinter(), # noqa: E501
+                                        log_wire=False):
     """Add defined entity rights to user's role.
 
     This method should only be called on valid configurations.
@@ -678,7 +678,7 @@ def _update_user_role_with_native_def_rights(defined_entity_right_bundle_name,
     The defined entity right bundle is created by VCD at the time of defined
     entity creation, dynamically. Hence, it doesn't exist before-hand
     (when user initiated the opetation).
-    :param str : defined_entity_right_bundle_name
+    :param str : right_bundle_name
     :param pyvcloud.vcd.client.Client  : client
     :param utils.ConsoleMessagePrinter msg_update_callback: Callback object.
     :param bool log_wire: wire logging enabled
@@ -707,7 +707,7 @@ def _update_user_role_with_native_def_rights(defined_entity_right_bundle_name,
     role_record = system_org.get_role_record(role_name)
     role_record_read_only = role_record.get("isReadOnly").lower() in ["true"]
     if (role_record_read_only):
-        msg = "User is created using predefined role in System Org; no need to add Rights to it" # noqa: E501
+        msg = "User has predefined non editable role. Not adding native entitlement rights." # noqa: E501
         msg_update_callback.general(msg)
         return False
 
@@ -715,7 +715,7 @@ def _update_user_role_with_native_def_rights(defined_entity_right_bundle_name,
     # It is assumed that user already has "View Rights Bundle" Right
     rbm = RightBundleManager(client, log_wire, msg_update_callback)
     native_def_rights = \
-        rbm.get_rights_for_right_bundle(defined_entity_right_bundle_name)
+        rbm.get_rights_for_right_bundle(right_bundle_name)
 
     # Get rights as a list of right-name strings
     rights = []
@@ -727,13 +727,13 @@ def _update_user_role_with_native_def_rights(defined_entity_right_bundle_name,
         role_obj = Role(client, resource=system_org.get_role_resource(role_name)) # noqa: E501
         role_obj.add_rights(rights, system_org)
     except AccessForbiddenException as err:
-        msg = "User doesn't have right to edit its Role. Please try with user who has this right." # noqa: E501
+        msg = "User doesn't have permission to edit Roles."
         msg_update_callback.error(msg)
         msg_update_callback.error(str(err))
-        return False
+        raise err
 
     msg = "Updated user-role: " + str(role_name) + " with Rights-bundle: " + \
-        str(defined_entity_right_bundle_name)
+        str(right_bundle_name)
     msg_update_callback.info(msg)
     INSTALL_LOGGER.info(msg)
 
@@ -808,7 +808,7 @@ def _register_def_schema(client: Client,
 
         # Update user's role with right bundle associated with native defined
         # entity
-        if(_update_user_role_with_native_def_rights(
+        if(_update_user_role_with_right_bundle(
                 def_utils.DEF_NATIVE_ENTITY_TYPE_RIGHT_BUNDLE,
                 client=client,
                 msg_update_callback=msg_update_callback,
