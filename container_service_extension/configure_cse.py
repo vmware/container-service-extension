@@ -12,9 +12,11 @@ from pyvcloud.vcd.client import ApiVersion as vCDApiVersion
 from pyvcloud.vcd.client import BasicLoginCredentials
 from pyvcloud.vcd.client import Client
 from pyvcloud.vcd.client import NSMAP
+from pyvcloud.vcd.exceptions import AccessForbiddenException
 from pyvcloud.vcd.exceptions import EntityNotFoundException
 from pyvcloud.vcd.exceptions import MissingRecordException
 from pyvcloud.vcd.org import Org
+from pyvcloud.vcd.role import Role
 import pyvcloud.vcd.utils as pyvcloud_vcd_utils
 from pyvcloud.vcd.vapp import VApp
 from pyvcloud.vcd.vm import VM
@@ -43,7 +45,7 @@ from container_service_extension.nsxt.nsxt_client import NSXTClient
 import container_service_extension.pyvcloud_utils as vcd_utils
 from container_service_extension.remote_template_manager import \
     RemoteTemplateManager
-import container_service_extension.right_bundle_manager as right_bundle_manager
+from container_service_extension.right_bundle_manager import RightBundleManager
 import container_service_extension.server_constants as server_constants
 import container_service_extension.shared_constants as shared_constants
 from container_service_extension.telemetry.constants import CseOperation
@@ -56,6 +58,7 @@ from container_service_extension.telemetry.telemetry_handler import \
 from container_service_extension.telemetry.telemetry_utils import \
     store_telemetry_settings
 import container_service_extension.template_builder as template_builder
+from container_service_extension.user_context import UserContext
 import container_service_extension.utils as utils
 from container_service_extension.vcdbroker import get_all_clusters as get_all_cse_clusters # noqa: E501
 from container_service_extension.vsphere_utils import populate_vsphere_list
@@ -413,7 +416,8 @@ def install_cse(config_file_name, config, skip_template_creation,
             store_telemetry_settings(config)
 
         # register cse def schema on VCD
-        _register_def_schema(client, msg_update_callback=msg_update_callback,
+        _register_def_schema(client=client, config=config,
+                             msg_update_callback=msg_update_callback,
                              log_wire=log_wire)
 
         # set up placement policies for all types of clusters
@@ -651,7 +655,83 @@ def _register_cse_as_amqp_extension(client, routing_key, exchange,
     INSTALL_LOGGER.info(msg)
 
 
+def _update_user_role_with_right_bundle(right_bundle_name,
+                                        client: Client,
+                                        msg_update_callback=utils.NullPrinter(), # noqa: E501
+                                        log_wire=False):
+    """Add defined entity rights to user's role.
+
+    This method should only be called on valid configurations.
+    In order to call this function, caller has to make sure that the contexual
+    defined entity is already created inside VCD and corresppnding right-bundle
+    exists in VCD.
+    The defined entity right bundle is created by VCD at the time of defined
+    entity creation, dynamically. Hence, it doesn't exist before-hand
+    (when user initiated the opetation).
+    :param str : right_bundle_name
+    :param pyvcloud.vcd.client.Client  : client
+    :param utils.ConsoleMessagePrinter msg_update_callback: Callback object.
+    :param bool log_wire: wire logging enabled
+    :rtype bool: result of operation. If the rights were added to user's role
+    or not
+    """
+    # Only a user from System Org can execute this function
+    vcd_utils.raise_error_if_user_not_from_system_org(client)
+
+    logger_wire = SERVER_CLOUDAPI_WIRE_LOGGER if log_wire else NULL_LOGGER
+    cloudapi_client = \
+        vcd_utils.get_cloudapi_client_from_vcd_client(client=client,
+                                                      logger_debug=INSTALL_LOGGER, # noqa: E501
+                                                      logger_wire=logger_wire) # noqa: E501
+
+    # Determine role name for the user
+    user_context = UserContext(client, cloudapi_client)
+    role_name = user_context.role
+
+    # Given that this user is sysadmin, Org must be System
+    # If its not, we should receive an exception during one of the below
+    # operations
+    system_org = Org(client, resource=client.get_org())
+
+    # Using the Org, determine Role object (using Role-name we identified)
+    role_record = system_org.get_role_record(role_name)
+    role_record_read_only = role_record.get("isReadOnly").lower() in ["true"]
+    if (role_record_read_only):
+        msg = "User has predefined non editable role. Not adding native entitlement rights." # noqa: E501
+        msg_update_callback.general(msg)
+        return False
+
+    # Determine the rights necessary from rights bundle
+    # It is assumed that user already has "View Rights Bundle" Right
+    rbm = RightBundleManager(client, log_wire, msg_update_callback)
+    native_def_rights = \
+        rbm.get_rights_for_right_bundle(right_bundle_name)
+
+    # Get rights as a list of right-name strings
+    rights = []
+    for right_record in native_def_rights.get("values"):
+        rights.append(right_record["name"])
+
+    try:
+        # Add rights to the Role
+        role_obj = Role(client, resource=system_org.get_role_resource(role_name)) # noqa: E501
+        role_obj.add_rights(rights, system_org)
+    except AccessForbiddenException as err:
+        msg = "User doesn't have permission to edit Roles."
+        msg_update_callback.error(msg)
+        msg_update_callback.error(str(err))
+        raise err
+
+    msg = "Updated user-role: " + str(role_name) + " with Rights-bundle: " + \
+        str(right_bundle_name)
+    msg_update_callback.info(msg)
+    INSTALL_LOGGER.info(msg)
+
+    return True
+
+
 def _register_def_schema(client: Client,
+                         config=[],
                          msg_update_callback=utils.NullPrinter(),
                          log_wire=False):
     """Register defined entity interface and defined entity type.
@@ -706,6 +786,7 @@ def _register_def_schema(client: Client,
                           schema=json.load(schema_file),
                           interfaces=[kubernetes_interface.get_id()],
                           readonly=False)
+
         msg = ""
         try:
             schema_svc.get_entity_type(native_entity_type.get_id())
@@ -714,6 +795,24 @@ def _register_def_schema(client: Client,
             # TODO handle this part only if the entity type was not found
             native_entity_type = schema_svc.create_entity_type(native_entity_type)  # noqa: E501
             msg = "Successfully registered defined entity type"
+
+        # Update user's role with right bundle associated with native defined
+        # entity
+        if(_update_user_role_with_right_bundle(
+                def_utils.DEF_NATIVE_ENTITY_TYPE_RIGHT_BUNDLE,
+                client=client,
+                msg_update_callback=msg_update_callback,
+                log_wire=log_wire)):
+            # Given that Rights for the current user have been updated, CSE
+            # should logout the user and login again.
+            # This will make sure that SecurityContext object in VCD is
+            # recreated and newly added rights are effective for the user.
+            client.logout()
+            credentials = BasicLoginCredentials(config['vcd']['username'],
+                                                server_constants.SYSTEM_ORG_NAME, # noqa: E501
+                                                config['vcd']['password'])
+            client.set_credentials(credentials)
+
         msg_update_callback.general(msg)
         INSTALL_LOGGER.info(msg)
     except cse_exception.DefNotSupportedException:
@@ -1472,6 +1571,7 @@ def _upgrade_to_35(client, config, ext_vcd_api_version,
     # Register def schema
     _register_def_schema(
         client=client,
+        config=config,
         msg_update_callback=msg_update_callback,
         log_wire=log_wire)
 
@@ -2072,11 +2172,9 @@ def _assign_placement_policy_to_vdc_and_right_bundle_to_org(
         INSTALL_LOGGER.info(msg)
         msg_update_callback.info(msg)
         try:
-            rbm = right_bundle_manager.RightBundleManager(client,
-                                                          log_wire=log_wire,
-                                                          logger_debug=INSTALL_LOGGER)  # noqa: E501
-            cse_right_bundle = \
-                rbm.get_right_bundle_by_name(right_bundle_manager.CSE_NATIVE_RIGHT_BUNDLE_NAME)  # noqa: E501
+            rbm = RightBundleManager(client, log_wire=log_wire, logger_debug=INSTALL_LOGGER)  # noqa: E501
+            cse_right_bundle = rbm.get_right_bundle_by_name(
+                def_utils.DEF_NATIVE_ENTITY_TYPE_RIGHT_BUNDLE)
             rbm.publish_cse_right_bundle_to_tenants(
                 right_bundle_id=cse_right_bundle['id'],
                 org_ids=list(org_ids))

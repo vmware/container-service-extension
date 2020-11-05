@@ -1389,7 +1389,7 @@ def _drain_nodes(sysadmin_client: vcd_client.Client, vapp_href, node_names,
 
 def _uncordon_nodes(sysadmin_client: vcd_client.Client, vapp_href, node_names,
                     cluster_name=''):
-    vcd_utils.raise_error_if_not_sysadmin(sysadmin_client)
+    vcd_utils.raise_error_if_user_not_from_system_org(sysadmin_client)
 
     LOGGER.debug(f"Uncordoning nodes {node_names} in cluster '{cluster_name}' "
                  f"(vapp: {vapp_href})")
@@ -1431,7 +1431,7 @@ def _delete_vapp(client, vdc_href, vapp_name):
 
 def _delete_nodes(sysadmin_client: vcd_client.Client, vapp_href, node_names,
                   cluster_name=''):
-    vcd_utils.raise_error_if_not_sysadmin(sysadmin_client)
+    vcd_utils.raise_error_if_user_not_from_system_org(sysadmin_client)
 
     LOGGER.debug(f"Deleting node(s) {node_names} from cluster '{cluster_name}'"
                  f" (vapp: {vapp_href})")
@@ -1695,7 +1695,7 @@ def _get_template(name=None, revision=None):
 def _add_nodes(sysadmin_client, num_nodes, node_type, org, vdc, vapp,
                catalog_name, template, network_name, num_cpu=None,
                memory_in_mb=None, storage_profile=None, ssh_key=None):
-    vcd_utils.raise_error_if_not_sysadmin(sysadmin_client)
+    vcd_utils.raise_error_if_user_not_from_system_org(sysadmin_client)
     if num_nodes > 0:
         specs = []
         try:
@@ -1825,7 +1825,7 @@ def _wait_for_guest_execution_callback(message, exception=None):
 
 
 def _get_control_plane_ip(sysadmin_client: vcd_client.Client, vapp):
-    vcd_utils.raise_error_if_not_sysadmin(sysadmin_client)
+    vcd_utils.raise_error_if_user_not_from_system_org(sysadmin_client)
 
     LOGGER.debug(f"Getting control plane IP for vapp: "
                  f"{vapp.get_resource().get('name')}")
@@ -1849,7 +1849,7 @@ def _get_control_plane_ip(sysadmin_client: vcd_client.Client, vapp):
 
 def _init_cluster(sysadmin_client: vcd_client.Client, vapp, template_name,
                   template_revision):
-    vcd_utils.raise_error_if_not_sysadmin(sysadmin_client)
+    vcd_utils.raise_error_if_user_not_from_system_org(sysadmin_client)
 
     try:
         script_filepath = ltm.get_script_filepath(template_name,
@@ -1874,7 +1874,7 @@ def _init_cluster(sysadmin_client: vcd_client.Client, vapp, template_name,
 
 def _join_cluster(sysadmin_client: vcd_client.Client, vapp, template_name,
                   template_revision, target_nodes=None):
-    vcd_utils.raise_error_if_not_sysadmin(sysadmin_client)
+    vcd_utils.raise_error_if_user_not_from_system_org(sysadmin_client)
     try:
         script = "#!/usr/bin/env bash\n" \
                  "kubeadm token create\n" \
@@ -1943,7 +1943,7 @@ def _wait_until_ready_to_exec(vs, vm, password, tries=30):
 def _execute_script_in_nodes(sysadmin_client: vcd_client.Client,
                              vapp, node_names, script,
                              check_tools=True, wait=True):
-    vcd_utils.raise_error_if_not_sysadmin(sysadmin_client)
+    vcd_utils.raise_error_if_user_not_from_system_org(sysadmin_client)
     all_results = []
     for node_name in node_names:
         try:
@@ -2005,7 +2005,7 @@ def _run_script_in_nodes(sysadmin_client: vcd_client.Client, vapp_href,
     :param List[str] node_names:
     :param str script:
     """
-    vcd_utils.raise_error_if_not_sysadmin(sysadmin_client)
+    vcd_utils.raise_error_if_user_not_from_system_org(sysadmin_client)
 
     # when is tools checking necessary?
     vapp = vcd_vapp.VApp(sysadmin_client, href=vapp_href)

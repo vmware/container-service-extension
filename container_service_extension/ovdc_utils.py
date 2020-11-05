@@ -38,7 +38,7 @@ def get_ovdc_k8s_provider_metadata(sysadmin_client: vcd_client.Client,
     :param include_nsxt_info:
     :return:  Dictionary with k8s provider metadata
     """
-    vcd_utils.raise_error_if_not_sysadmin(sysadmin_client)
+    vcd_utils.raise_error_if_user_not_from_system_org(sysadmin_client)
 
     ovdc = vcd_utils.get_vdc(client=sysadmin_client, vdc_name=ovdc_name,
                              vdc_id=ovdc_id, org_name=org_name,
@@ -99,7 +99,7 @@ def update_ovdc_k8s_provider_metadata(sysadmin_client: vcd_client.Client,
     :param K8sProvider k8s_provider:
     :return:
     """
-    vcd_utils.raise_error_if_not_sysadmin(sysadmin_client)
+    vcd_utils.raise_error_if_user_not_from_system_org(sysadmin_client)
 
     ovdc = vcd_utils.get_vdc(sysadmin_client, vdc_id=ovdc_id)
     ovdc_name = ovdc.get_resource().get('name')
@@ -163,7 +163,7 @@ def construct_k8s_metadata_from_pks_cache(sysadmin_client: vcd_client.Client,
                                           ovdc_id, org_name, pks_plans,
                                           pks_cluster_domain,
                                           k8s_provider):
-    vcd_utils.raise_error_if_not_sysadmin(sysadmin_client)
+    vcd_utils.raise_error_if_user_not_from_system_org(sysadmin_client)
 
     ctr_prov_context = {
         K8S_PROVIDER_KEY: k8s_provider,
@@ -211,7 +211,7 @@ def _construct_pks_compute_profile_name(sysadmin_client: vcd_client.Client,
 
     :rtype: str
     """
-    vcd_utils.raise_error_if_not_sysadmin(sysadmin_client)
+    vcd_utils.raise_error_if_user_not_from_system_org(sysadmin_client)
 
     vdc = vcd_utils.get_vdc(client=sysadmin_client, vdc_id=vdc_id)
     return f"cp--{vdc_id}--{vdc.name}"
