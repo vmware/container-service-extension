@@ -15,6 +15,9 @@ from zipfile import ZipFile
 import click
 import cryptography
 import pyvcloud.vcd.client as vcd_client
+from pyvcloud.vcd.exceptions import BadRequestException
+from pyvcloud.vcd.exceptions import EntityNotFoundException
+from pyvcloud.vcd.exceptions import VcdException
 import requests
 from vcd_cli.utils import stdout
 import yaml
@@ -22,6 +25,7 @@ import yaml
 from container_service_extension.cloudapi.constants import CloudApiResource
 from container_service_extension.config_validator import get_validated_config
 import container_service_extension.configure_cse as configure_cse
+from container_service_extension.cse_service_role_mgr import create_cse_service_role # noqa : E501
 from container_service_extension.encryption_engine import decrypt_file
 from container_service_extension.encryption_engine import encrypt_file
 from container_service_extension.encryption_engine import get_decrypted_file_contents # noqa: E501
@@ -304,6 +308,78 @@ def version(ctx):
                                       cse_info['description'],
                                       cse_info['version'])
     stdout(cse_info, ctx, ver_str)
+
+
+@cli.command(short_help='Create CSE service role for CSE install/upgrade/run')
+@click.pass_context
+@click.option(
+    '-vcd-host',
+    metavar='VCD_HOST',
+    required=True,
+    help="VCD host URL")
+@click.option(
+    '-s',
+    '--skip-ssl-verify',
+    required=False,
+    is_flag=True,
+    help="Skip SSL Verification for VCD Host")
+def cse_service_role(ctx, vcd_host, skip_ssl_verify):
+    """Create CSE service Role."""
+    SERVER_CLI_LOGGER.debug(f"Executing command: {ctx.command_path}")
+    console_message_printer = ConsoleMessagePrinter()
+
+    # The console_message_printer is not being passed to the python version
+    # check, because we want to suppress the version check messages from being
+    # printed onto console.
+    check_python_version()
+
+    # Prompt user for administrator username/password
+    admin_username = click.prompt('Please enter System Administrator\'s '
+                                  'username', type=str)
+    admin_password = click.prompt('Please enter System Administrator\'s '
+                                  'password', type=str)
+    ssl_verify = not skip_ssl_verify
+
+    try:
+        client = vcd_client.Client(vcd_host, verify_ssl_certs=ssl_verify)
+        credentials = vcd_client.BasicLoginCredentials(
+            admin_username,
+            SYSTEM_ORG_NAME,
+            admin_password)
+        client.set_credentials(credentials)
+
+        msg = f"Connected to vCD as system administrator: {admin_username}"
+        console_message_printer.general_no_color(msg)
+
+        try:
+            create_cse_service_role(client, console_message_printer)
+        except EntityNotFoundException as err:
+            msg = "CSE Internal Error, Please contact support"
+            console_message_printer.error(msg)
+            SERVER_CLI_LOGGER.error(msg)
+            raise err
+        except BadRequestException as err:
+            msg = "CSE Internal Error, Please contact support"
+            console_message_printer.error(msg)
+            SERVER_CLI_LOGGER.error(msg)
+            raise err
+    except requests.exceptions.ConnectionError as err:
+        msg = f"Invalid parameter {vcd_host}"
+        console_message_printer.error(msg)
+        SERVER_CLI_LOGGER.error(msg)
+        SERVER_CLI_LOGGER.error(str(err))
+    except VcdException as err:
+        msg = f"Invalid parameters for System Org {admin_username} "
+        "or {admin_password}"
+        console_message_printer.error(msg)
+        SERVER_CLI_LOGGER.error(msg)
+        SERVER_CLI_LOGGER.error(str(err))
+    except Exception as err:
+        console_message_printer.error(str(err))
+        SERVER_CLI_LOGGER.error(str(err))
+    finally:
+        if client is not None:
+            client.logout()
 
 
 @cli.command(short_help='Generate sample CSE/PKS configuration')
