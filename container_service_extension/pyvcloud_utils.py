@@ -30,7 +30,7 @@ ORG_ADMIN_RIGHTS = ['General: Administrator Control',
                     'General: Administrator View']
 
 
-def raise_error_if_not_sysadmin(client: vcd_client.Client):
+def raise_error_if_user_not_from_system_org(client: vcd_client.Client):
     if not client.is_sysadmin():
         raise ValueError("Client should be sysadmin.")
 
@@ -164,7 +164,7 @@ def get_org_name_href_from_ovdc_id(sysadmin_client: vcd_client.Client, vdc_id):
 
     :rtype: dict
     """
-    raise_error_if_not_sysadmin(sysadmin_client)
+    raise_error_if_user_not_from_system_org(sysadmin_client)
 
     if vdc_id in OVDC_TO_ORG_MAP:
         return OVDC_TO_ORG_MAP.get(vdc_id)
@@ -203,7 +203,7 @@ def get_pvdc_id(sysadmin_client: vcd_client.Client, ovdc: VDC):
 
     :rtype: str
     """
-    raise_error_if_not_sysadmin(sysadmin_client)
+    raise_error_if_user_not_from_system_org(sysadmin_client)
 
     pvdc_element = ovdc.get_resource().ProviderVdcReference
     # To support <= VCD 9.1 where no 'id' is present in pvdc
