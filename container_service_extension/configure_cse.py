@@ -12,6 +12,7 @@ from pyvcloud.vcd.client import ApiVersion as vCDApiVersion
 from pyvcloud.vcd.client import BasicLoginCredentials
 from pyvcloud.vcd.client import Client
 from pyvcloud.vcd.client import NSMAP
+from pyvcloud.vcd.exceptions import AccessForbiddenException
 from pyvcloud.vcd.exceptions import EntityNotFoundException
 from pyvcloud.vcd.exceptions import MissingRecordException
 from pyvcloud.vcd.org import Org
@@ -415,7 +416,8 @@ def install_cse(config_file_name, config, skip_template_creation,
             store_telemetry_settings(config)
 
         # register cse def schema on VCD
-        _register_def_schema(client, msg_update_callback=msg_update_callback,
+        _register_def_schema(client=client, config=config,
+                             msg_update_callback=msg_update_callback,
                              log_wire=log_wire)
 
         # set up placement policies for all types of clusters
@@ -670,6 +672,8 @@ def _update_user_role_with_native_def_rights(defined_entity_right_bundle_name,
     :param pyvcloud.vcd.client.Client  : client
     :param utils.ConsoleMessagePrinter msg_update_callback: Callback object.
     :param bool log_wire: wire logging enabled
+    :rtype bool: result of operation. If the rights were added to user's role
+    or not
     """
     # Only a user from System Org can execute this function
     vcd_utils.raise_error_if_user_not_from_system_org(client)
@@ -690,8 +694,12 @@ def _update_user_role_with_native_def_rights(defined_entity_right_bundle_name,
     system_org = Org(client, resource=client.get_org())
 
     # Using the Org, determine Role object (using Role-name we identified)
-    role_resource = Role(client,
-                         resource=system_org.get_role_resource(role_name))
+    role_record = system_org.get_role_record(role_name)
+    role_record_read_only = role_record.get("isReadOnly").lower() in ["true"]
+    if (role_record_read_only):
+        msg = "User is created using predefined role in System Org; no need to add Rights to it" # noqa: E501
+        msg_update_callback.general(msg)
+        return False
 
     # Determine the rights necessary from rights bundle
     # It is assumed that user already has "View Rights Bundle" Right
@@ -704,25 +712,26 @@ def _update_user_role_with_native_def_rights(defined_entity_right_bundle_name,
     for right_record in native_def_rights.get("values"):
         rights.append(right_record["name"])
 
-    # Add rights to the Role
-    role_resource.add_rights(rights, system_org)
+    try:
+        # Add rights to the Role
+        role_obj = Role(client, resource=system_org.get_role_resource(role_name)) # noqa: E501
+        role_obj.add_rights(rights, system_org)
+    except AccessForbiddenException as err:
+        msg = "User doesn't have right to edit its Role. Please try with user who has this right." # noqa: E501
+        msg_update_callback.error(msg)
+        msg_update_callback.error(str(err))
+        return False
 
     msg = "Updated user-role: " + str(role_name) + " with Rights-bundle: " + \
         str(defined_entity_right_bundle_name)
     msg_update_callback.info(msg)
     INSTALL_LOGGER.info(msg)
 
-    # VCD has a concept called: SecurityContext, which determines rights owned
-    # by a user. This is determined only once during the lifetime of an HTTP
-    # session; In order to make this rights effective in user's context, we
-    # need to create a new HTTP Session, which will create new Security Context
-    # for logged in user.
-    vcd_auth_token = client.get_xvcloud_authorization_token()
-    client.rehydrate_from_token(vcd_auth_token)
-    return
+    return True
 
 
 def _register_def_schema(client: Client,
+                         config=[],
                          msg_update_callback=utils.NullPrinter(),
                          log_wire=False):
     """Register defined entity interface and defined entity type.
@@ -777,6 +786,7 @@ def _register_def_schema(client: Client,
                           schema=json.load(schema_file),
                           interfaces=[kubernetes_interface.get_id()],
                           readonly=False)
+
         msg = ""
         try:
             schema_svc.get_entity_type(native_entity_type.get_id())
@@ -788,11 +798,20 @@ def _register_def_schema(client: Client,
 
         # Update user's role with right bundle associated with native defined
         # entity
-        _update_user_role_with_native_def_rights(
-            def_utils.DEF_NATIVE_ENTITY_TYPE_RIGHT_BUNDLE,
-            client=client,
-            msg_update_callback=msg_update_callback,
-            log_wire=log_wire)
+        if(_update_user_role_with_native_def_rights(
+                def_utils.DEF_NATIVE_ENTITY_TYPE_RIGHT_BUNDLE,
+                client=client,
+                msg_update_callback=msg_update_callback,
+                log_wire=log_wire)):
+            # Given that Rights for the current user have been updated, CSE
+            # should logout the user and login again.
+            # This will make sure that SecurityContext object in VCD is
+            # recreated and newly added rights are effective for the user.
+            client.logout()
+            credentials = BasicLoginCredentials(config['vcd']['username'],
+                                                server_constants.SYSTEM_ORG_NAME, # noqa: E501
+                                                config['vcd']['password'])
+            client.set_credentials(credentials)
 
         msg_update_callback.general(msg)
         INSTALL_LOGGER.info(msg)
@@ -1552,6 +1571,7 @@ def _upgrade_to_35(client, config, ext_vcd_api_version,
     # Register def schema
     _register_def_schema(
         client=client,
+        config=config,
         msg_update_callback=msg_update_callback,
         log_wire=log_wire)
 
