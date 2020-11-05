@@ -154,7 +154,7 @@ def cse_server():
     #     testutils.format_command_info('vcd', cmd, result.exit_code,
     #                                   result.output)
     cmd = f"catalog acl add {config['broker']['catalog']} " \
-          f"\'org:{config['broker']['org']}:ReadOnly\'"
+        f"\'org:{env.TEST_ORG}:ReadOnly\'"
     result = env.CLI_RUNNER.invoke(vcd, cmd.split(), catch_exceptions=False)
     assert result.exit_code == 0, \
         testutils.format_command_info('vcd', cmd, result.exit_code,
@@ -199,13 +199,13 @@ def vcd_sys_admin():
         testutils.format_command_info('vcd', cmd, result.exit_code,
                                       result.output)
 
-    cmd = f"org use {config['broker']['org']}"
+    cmd = f"org use {env.TEST_ORG}"
     result = env.CLI_RUNNER.invoke(vcd, cmd.split(), catch_exceptions=False)
     assert result.exit_code == 0,\
         testutils.format_command_info('vcd', cmd, result.exit_code,
                                       result.output)
     # ovdc context may be nondeterministic when there's multiple ovdcs
-    cmd = f"vdc use {config['broker']['vdc']}"
+    cmd = f"vdc use {env.TEST_VDC}"
     result = env.CLI_RUNNER.invoke(vcd, cmd.split(), catch_exceptions=False)
     assert result.exit_code == 0,\
         testutils.format_command_info('vcd', cmd, result.exit_code,
@@ -229,16 +229,16 @@ def vcd_org_admin():
     user can be logged in at a time.
     """
     config = testutils.yaml_to_dict(env.BASE_CONFIG_FILEPATH)
-    cmd = f"login {config['vcd']['host']} {config['broker']['org']} " \
-          f"{env.ORG_ADMIN_NAME} -iwp {env.ORG_ADMIN_PASSWORD} " \
-          f"-V {config['vcd']['api_version']}"
+    cmd = f"login {config['vcd']['host']} {env.TEST_ORG} " \
+        f"{env.ORG_ADMIN_NAME} -iwp {env.ORG_ADMIN_PASSWORD} " \
+        f"-V {config['vcd']['api_version']}"
     result = env.CLI_RUNNER.invoke(vcd, cmd.split(), catch_exceptions=False)
-    assert result.exit_code == 0,\
+    assert result.exit_code == 0, \
         testutils.format_command_info('vcd', cmd, result.exit_code,
                                       result.output)
 
     # ovdc context may be nondeterministic when there's multiple ovdcs
-    cmd = f"vdc use {config['broker']['vdc']}"
+    cmd = f"vdc use {env.TEST_VDC}"
     result = env.CLI_RUNNER.invoke(vcd, cmd.split(), catch_exceptions=False)
     assert result.exit_code == 0,\
         testutils.format_command_info('vcd', cmd, result.exit_code,
@@ -262,16 +262,16 @@ def vcd_vapp_author():
     user can be logged in at a time.
     """
     config = testutils.yaml_to_dict(env.BASE_CONFIG_FILEPATH)
-    cmd = f"login {config['vcd']['host']} {config['broker']['org']} " \
-          f"{env.VAPP_AUTHOR_NAME} -iwp {env.VAPP_AUTHOR_PASSWORD} " \
-          f"-V {config['vcd']['api_version']}"
+    cmd = f"login {config['vcd']['host']} {env.TEST_ORG} " \
+        f"{env.VAPP_AUTHOR_NAME} -iwp {env.VAPP_AUTHOR_PASSWORD} " \
+        f"-V {config['vcd']['api_version']}"
     result = env.CLI_RUNNER.invoke(vcd, cmd.split(), catch_exceptions=False)
     assert result.exit_code == 0,\
         testutils.format_command_info('vcd', cmd, result.exit_code,
                                       result.output)
 
     # ovdc context may be nondeterministic when there's multiple ovdcs
-    cmd = f"vdc use {config['broker']['vdc']}"
+    cmd = f"vdc use {env.TEST_VDC}"
     result = env.CLI_RUNNER.invoke(vcd, cmd.split(), catch_exceptions=False)
     assert result.exit_code == 0,\
         testutils.format_command_info('vcd', cmd, result.exit_code,
@@ -336,7 +336,7 @@ def test_0030_vcd_cse_cluster_create_rollback(config, vcd_org_admin,
     cmd = f"cse cluster create {env.SYS_ADMIN_TEST_CLUSTER_NAME} -n " \
           f"{config['broker']['network']} -N 1 -c 1000"
     result = env.CLI_RUNNER.invoke(vcd, cmd.split(), catch_exceptions=False)
-    assert result.exit_code == 0,\
+    assert result.exit_code == 0, \
         testutils.format_command_info('vcd', cmd, result.exit_code,
                                       result.output)
     # TODO: Make cluster rollback delete call blocking
@@ -386,7 +386,7 @@ def test_0050_vcd_cse_system_toggle(config, test_runner_username,
         cmd_binder(cmd=env.USERNAME_TO_LOGIN_CMD[test_runner_username],
                    exit_code=0, validate_output_func=None,
                    test_user=test_runner_username),
-        cmd_binder(cmd=f"org use {config['broker']['org']}", exit_code=0,
+        cmd_binder(cmd=f"org use {env.TEST_ORG}", exit_code=0,
                    validate_output_func=None, test_user=test_runner_username),
         cmd_binder(cmd=f"cse cluster create {env.SYS_ADMIN_TEST_CLUSTER_NAME} "
                        f"-n {config['broker']['network']} -N 1", exit_code=2,
@@ -434,9 +434,9 @@ def test_0070_vcd_cse_cluster_create(config, test_runner_username):
                    exit_code=0,
                    validate_output_func=None, test_user=test_runner_username),
 
-        cmd_binder(cmd=f"org use {config['broker']['org']}", exit_code=0,
+        cmd_binder(cmd=f"org use {env.TEST_ORG}", exit_code=0,
                    validate_output_func=None, test_user=test_runner_username),
-        cmd_binder(cmd=f"vdc use {config['broker']['vdc']}", exit_code=0,
+        cmd_binder(cmd=f"vdc use {env.TEST_VDC}", exit_code=0,
                    validate_output_func=None, test_user=test_runner_username),
         cmd_binder(cmd=f"cse cluster create "
                        f"{env.USERNAME_TO_CLUSTER_NAME[test_runner_username]}"
@@ -568,9 +568,9 @@ def test_0110_vcd_cse_cluster_resize(test_runner_username, config):
         cmd_binder(cmd=env.USERNAME_TO_LOGIN_CMD[test_runner_username],
                    exit_code=0,
                    validate_output_func=None, test_user=test_runner_username),
-        cmd_binder(cmd=f"org use {config['broker']['org']}", exit_code=0,
+        cmd_binder(cmd=f"org use {env.TEST_ORG}", exit_code=0,
                    validate_output_func=None, test_user=test_runner_username),
-        cmd_binder(cmd=f"vdc use {config['broker']['vdc']}", exit_code=0,
+        cmd_binder(cmd=f"vdc use {env.TEST_VDC}", exit_code=0,
                    validate_output_func=None, test_user=test_runner_username),
         cmd_binder(cmd=f"cse cluster info {env.USERNAME_TO_CLUSTER_NAME[test_runner_username]}",   # noqa
                    exit_code=0,
@@ -622,9 +622,9 @@ def test_0120_vcd_cse_node_operation(test_runner_username, config):
         cmd_binder(cmd=env.USERNAME_TO_LOGIN_CMD[test_runner_username],
                    exit_code=0,
                    validate_output_func=None, test_user=test_runner_username),
-        cmd_binder(cmd=f"org use {config['broker']['org']}", exit_code=0,
+        cmd_binder(cmd=f"org use {env.TEST_ORG}", exit_code=0,
                    validate_output_func=None, test_user=test_runner_username),
-        cmd_binder(cmd=f"vdc use {config['broker']['vdc']}", exit_code=0,
+        cmd_binder(cmd=f"vdc use {env.TEST_VDC}", exit_code=0,
                    validate_output_func=None, test_user=test_runner_username),
         cmd_binder(cmd=f"cse node create {env.USERNAME_TO_CLUSTER_NAME[test_runner_username]}"  # noqa
                        f" -n {config['broker']['network']}", exit_code=0,
@@ -725,7 +725,7 @@ def test_0130_vcd_cse_cluster_delete(config):
         cmd_binder(cmd=env.ORG_ADMIN_LOGIN_CMD,
                    exit_code=0,
                    validate_output_func=None, test_user=env.ORG_ADMIN_NAME),
-        cmd_binder(cmd=f"org use {config['broker']['org']}", exit_code=0,
+        cmd_binder(cmd=f"org use {env.TEST_ORG}", exit_code=0,
                    validate_output_func=None, test_user='org_admin'),
         cmd_binder(cmd=f"cse cluster delete "
                        f"{env.USERNAME_TO_CLUSTER_NAME[env.SYS_ADMIN_NAME]}",  # noqa

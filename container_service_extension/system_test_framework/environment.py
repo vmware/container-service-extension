@@ -65,6 +65,8 @@ VAPP_AUTHOR_ROLE_NAME = 'vApp Author'
 TEARDOWN_INSTALLATION = None
 TEARDOWN_CLUSTERS = None
 TEST_ALL_TEMPLATES = None
+TEST_ORG = None
+TEST_VDC = None
 
 # Persona login cmd
 SYS_ADMIN_LOGIN_CMD = None
@@ -103,6 +105,8 @@ def init_environment(config_filepath=BASE_CONFIG_FILEPATH):
     TEMPLATE_DEFINITIONS = template_cookbook['templates']
     rtm.download_all_template_scripts(force_overwrite=True)
 
+    init_test_vars(config.get('test'))
+
     CLIENT = Client(config['vcd']['host'],
                     api_version=config['vcd']['api_version'],
                     verify_ssl_certs=config['vcd']['verify'])
@@ -111,9 +115,10 @@ def init_environment(config_filepath=BASE_CONFIG_FILEPATH):
                                         config['vcd']['password'])
     CLIENT.set_credentials(credentials)
 
-    org = pyvcloud_utils.get_org(CLIENT, org_name=config['broker']['org'])
-    vdc = pyvcloud_utils.get_vdc(
-        CLIENT, vdc_name=config['broker']['vdc'], org=org)
+    create_org(TEST_ORG)
+    create_vdc(TEST_VDC, TEST_ORG)
+    org = pyvcloud_utils.get_org(CLIENT, org_name=TEST_ORG)
+    vdc = pyvcloud_utils.get_vdc(CLIENT, vdc_name=TEST_VDC, org=org)
     ORG_HREF = org.href
     VDC_HREF = vdc.href
     CATALOG_NAME = config['broker']['catalog']
@@ -125,11 +130,11 @@ def init_environment(config_filepath=BASE_CONFIG_FILEPATH):
                           f"-iwp {config['vcd']['password']} " \
                           f"-V {config['vcd']['api_version']}"
     ORG_ADMIN_LOGIN_CMD = f"login {config['vcd']['host']} " \
-                          f"{config['broker']['org']}" \
+                          f"{TEST_ORG}" \
                           f" {ORG_ADMIN_NAME} -iwp {ORG_ADMIN_PASSWORD} " \
                           f"-V {config['vcd']['api_version']}"
     VAPP_AUTHOR_LOGIN_CMD = f"login {config['vcd']['host']} " \
-                            f"{config['broker']['org']} " \
+                            f"{TEST_ORG} " \
                             f"{VAPP_AUTHOR_NAME} -iwp {VAPP_AUTHOR_PASSWORD}" \
                             f" -V {config['vcd']['api_version']}"
 
@@ -145,11 +150,21 @@ def init_environment(config_filepath=BASE_CONFIG_FILEPATH):
         'vapp_author': VAPP_AUTHOR_TEST_CLUSTER_NAME
     }
 
-    test_config = config.get('test')
+
+def init_test_vars(test_config):
+    """Initialize all the environment variables that are used for test.
+
+    :param dict test_config: test section of config.yaml
+    """
+    global TEMPLATE_DEFINITIONS, TEARDOWN_INSTALLATION, TEARDOWN_CLUSTERS, \
+        TEST_ALL_TEMPLATES, TEST_ORG, TEST_VDC
+
     if test_config is not None:
         TEARDOWN_INSTALLATION = test_config.get('teardown_installation', True)
         TEARDOWN_CLUSTERS = test_config.get('teardown_clusters', True)
         TEST_ALL_TEMPLATES = test_config.get('test_all_templates', False)
+        TEST_ORG = test_config.get('org', 'test-org')
+        TEST_VDC = test_config.get('vdc', 'test-vdc')
         if not TEST_ALL_TEMPLATES:
             specified_templates_str = test_config.get('test_templates', "")
             specified_templates = specified_templates_str.split(",")
@@ -198,6 +213,53 @@ def teardown_active_config():
         os.remove(ACTIVE_CONFIG_FILEPATH)
 
 
+def create_org(org_name):
+    """Create the given org.
+
+    :param str org_name:  name of the org
+    """
+    config = testutils.yaml_to_dict(BASE_CONFIG_FILEPATH)
+    cmd = f"login {config['vcd']['host']} {SYSTEM_ORG_NAME} " \
+          f"{config['vcd']['username']} -iwp {config['vcd']['password']} " \
+          f"-V {config['vcd']['api_version']}"
+    result = CLI_RUNNER.invoke(vcd, cmd.split(), catch_exceptions=False)
+    assert result.exit_code == 0
+    cmd = f"org create --enabled {org_name} {org_name}"
+    result = CLI_RUNNER.invoke(vcd, cmd.split(), catch_exceptions=False)
+    assert result.exit_code == 0
+
+
+def create_vdc(vdc_name, org_name):
+    """Create the given vdc for given org.
+
+    :param str vdc_name: name of vdc that provides resources
+    :param str org_name: name of the org
+    """
+    config = testutils.yaml_to_dict(BASE_CONFIG_FILEPATH)
+    cmd = f"login {config['vcd']['host']} {SYSTEM_ORG_NAME} " \
+        f"{config['vcd']['username']} -iwp {config['vcd']['password']} " \
+        f"-V {config['vcd']['api_version']}"
+    result = CLI_RUNNER.invoke(vcd, cmd.split(), catch_exceptions=False)
+    assert result.exit_code == 0
+    org = pyvcloud_utils.get_org(CLIENT, org_name=config['broker']['org'])
+    ovdc = pyvcloud_utils.get_vdc(
+        CLIENT, vdc_name=config['broker']['vdc'], org=org, is_admin_operation=True)  # noqa: E501
+    pvdc_element = ovdc.get_resource().ProviderVdcReference
+    pvdc_name = pvdc_element.get('name')
+    cmd = f"org use {org_name}"
+    result = CLI_RUNNER.invoke(vcd, cmd.split(), catch_exceptions=False)
+    assert result.exit_code == 0
+    cmd = f"vdc create {vdc_name} -p {pvdc_name}"
+    result = CLI_RUNNER.invoke(vcd, cmd.split(), catch_exceptions=False)
+    assert result.exit_code == 0
+    cmd = f"vdc use {vdc_name}"
+    result = CLI_RUNNER.invoke(vcd, cmd.split(), catch_exceptions=False)
+    assert result.exit_code == 0
+    cmd = f"network direct create -p {config['broker']['network']} {config['broker']['network']}"  # noqa: E501
+    result = CLI_RUNNER.invoke(vcd, cmd.split(), catch_exceptions=False)
+    assert result.exit_code == 0
+
+
 def create_user(username, password, role):
     config = testutils.yaml_to_dict(BASE_CONFIG_FILEPATH)
     cmd = f"login {config['vcd']['host']} {SYSTEM_ORG_NAME} " \
@@ -205,7 +267,7 @@ def create_user(username, password, role):
           f"-V {config['vcd']['api_version']}"
     result = CLI_RUNNER.invoke(vcd, cmd.split(), catch_exceptions=False)
     assert result.exit_code == 0
-    cmd = f"org use {config['broker']['org']}"
+    cmd = f"org use {TEST_ORG}"
     result = CLI_RUNNER.invoke(vcd, cmd.split(), catch_exceptions=False)
     assert result.exit_code == 0
 
