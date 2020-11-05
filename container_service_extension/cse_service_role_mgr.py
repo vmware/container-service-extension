@@ -24,7 +24,7 @@ def create_cse_service_role(client,
     # We can't check if the user is Sysadmin or some other user in system org,
     # as the values will need to be hardcoded.
     # For now just check if its system org or not.
-    vcd_utils.raise_error_if_not_sysadmin(client)
+    vcd_utils.raise_error_if_user_not_from_system_org(client)
 
     system_org = Org(client, resource=client.get_org())
     system_org.create_role(server_constants.CSE_SERVICE_ROLE_NAME,
