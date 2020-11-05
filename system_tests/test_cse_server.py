@@ -248,59 +248,61 @@ def test_0070_check_invalid_installation(config):
     except Exception:
         pass
 
-# TODO() This will be fixed once upgrade command is implemented
-# def test_0080_install_skip_template_creation(config,
-#                                              unregister_cse_before_test):
-#     """Test install.
-#
-#     Installation options: '--ssh-key', '--skip-create-templates',
-#     '--skip-config-decryption'
-#
-#     Tests that installation:
-#     - registers CSE, without installing the templates
-#
-#     command: cse install --config cse_test_config.yaml
-#         --ssh-key ~/.ssh/id_rsa.pub --skip-config-decryption
-#         --skip-create-templates
-#     required files: ~/.ssh/id_rsa.pub, cse_test_config.yaml,
-#     expected: cse registered, catalog exists, source ovas do not exist,
-#         temp vapps do not exist, k8s templates do not exist.
-#     """
-#     cmd = f"install --config {env.ACTIVE_CONFIG_FILEPATH} --ssh-key " \
-#           f"{env.SSH_KEY_FILEPATH} --skip-template-creation " \
-#           f"--skip-config-decryption"
-#     result = env.CLI_RUNNER.invoke(cli, cmd.split(), catch_exceptions=False)
-#     assert result.exit_code == 0,\
-#         testutils.format_command_info('cse', cmd, result.exit_code,
-#                                       result.output)
-#
-#     # check that cse was registered correctly
-#     env.check_cse_registration(config['amqp']['routing_key'],
-#                                config['amqp']['exchange'])
-#
-#     for template_config in env.TEMPLATE_DEFINITIONS:
-#         # check that source ova file does not exist in catalog
-#         assert not env.catalog_item_exists(
-#             template_config['source_ova_name']), \
-#             'Source ova file exists when it should not.'
-#
-#         # check that k8s templates does not exist
-#         catalog_item_name = ltm.get_revisioned_template_name(
-#             template_config['name'], template_config['revision'])
-#         assert not env.catalog_item_exists(catalog_item_name), \
-#             'k8s templates exist when they should not.'
-#
-#         # check that temp vapp does not exists
-#         temp_vapp_name = testutils.get_temp_vapp_name(template_config['name'])  # noqa: E501
-#         assert not env.vapp_exists(temp_vapp_name), \
-#             'vApp exists when it should not.'
 
-
-def test_0090_install_retain_temp_vapp(config, unregister_cse_before_test):
+def test_0080_install_skip_template_creation(config,
+                                             unregister_cse_before_test):
     """Test install.
 
-    Installation options: '--template', '--ssh-key',
-        '--retain-temp-vapp', '--skip-config-decryption'.
+    Installation options: '--ssh-key', '--skip-template-creation',
+    '--skip-config-decryption'
+
+    Tests that installation:
+    - registers CSE, without installing the templates
+
+    command: cse install --config cse_test_config.yaml
+        --ssh-key ~/.ssh/id_rsa.pub --skip-config-decryption
+        --skip-create-templates
+    required files: ~/.ssh/id_rsa.pub, cse_test_config.yaml,
+    expected: cse registered, catalog exists, source ovas do not exist,
+        temp vapps do not exist, k8s templates do not exist.
+    """
+    cmd = f"install --config {env.ACTIVE_CONFIG_FILEPATH} --ssh-key " \
+          f"{env.SSH_KEY_FILEPATH} --skip-template-creation " \
+          f"--skip-config-decryption"
+    result = env.CLI_RUNNER.invoke(cli, cmd.split(), catch_exceptions=False)
+    assert result.exit_code == 0,\
+        testutils.format_command_info('cse', cmd, result.exit_code,
+                                      result.output)
+
+    # check that cse was registered correctly
+    env.check_cse_registration(config['amqp']['routing_key'],
+                               config['amqp']['exchange'])
+
+    for template_config in env.TEMPLATE_DEFINITIONS:
+        # check that source ova file does not exist in catalog
+        assert not env.catalog_item_exists(
+            template_config['source_ova_name']), \
+            'Source ova file exists when it should not.'
+
+        # check that k8s templates does not exist
+        catalog_item_name = ltm.get_revisioned_template_name(
+            template_config['name'], template_config['revision'])
+        assert not env.catalog_item_exists(catalog_item_name), \
+            'k8s templates exist when they should not.'
+
+        # check that temp vapp does not exists
+        temp_vapp_name = testutils.get_temp_vapp_name(template_config['name'])
+        assert not env.vapp_exists(temp_vapp_name), \
+            'vApp exists when it should not.'
+
+
+@pytest.mark.skipif(not env.TEST_ALL_TEMPLATES,
+                    reason="Configuration specifies 'test_all_templates' as False")  # noqa: E501
+def test_0090_install_all_templates(config, unregister_cse_before_test):
+    """Test install.
+
+    Installation options: '--ssh-key', '--retain-temp-vapp',
+        '--skip-config-decryption'.
 
     Tests that installation:
     - downloads/uploads ova file,
@@ -349,50 +351,66 @@ def test_0090_install_retain_temp_vapp(config, unregister_cse_before_test):
         except EntityNotFoundException:
             assert False, 'vApp does not exist when it should.'
 
-# TODO() This will be fixed once upgrade command is implemented
-# def test_0100_install_force_update(config, unregister_cse_before_test):
-#     """Tests installation option: '--force-update'.
-#
-#     Tests that installation:
-#     - creates all templates correctly,
-#     - customizes temp vapps correctly.
-#
-#     command: cse install --config cse_test_config.yaml
-#         --ssh-key ~/.ssh/id_rsa.pub --force-update --skip-config-decryption
-#     required files: cse_test_config.yaml, ~/.ssh/id_rsa.pub,
-#         ubuntu/photon init/cust scripts
-#     expected: cse registered, source ovas exist, k8s templates exist and
-#         temp vapps don't exist.
-#     """
-#     cmd = f"install --config {env.ACTIVE_CONFIG_FILEPATH} --ssh-key " \
-#           f"{env.SSH_KEY_FILEPATH} --force-update --skip-config-decryption"
-#     result = env.CLI_RUNNER.invoke(
-#         cli, cmd.split(), catch_exceptions=False)
-#     assert result.exit_code == 0,\
-#         testutils.format_command_info('cse', cmd, result.exit_code,
-#                                       result.output)
-#
-#     # check that cse was registered correctly
-#     env.check_cse_registration(config['amqp']['routing_key'],
-#                                config['amqp']['exchange'])
-#
-#     for template_config in env.TEMPLATE_DEFINITIONS:
-#         # check that source ova file exists in catalog
-#         assert env.catalog_item_exists(
-#             template_config['source_ova_name']), \
-#             'Source ova file does not exists when it should.'
-#
-#         # check that k8s templates exist
-#         catalog_item_name = ltm.get_revisioned_template_name(
-#             template_config['name'], template_config['revision'])
-#         assert env.catalog_item_exists(catalog_item_name), \
-#             'k8s template does not exist when it should.'
-#
-#         # check that temp vapp does not exists
-#         temp_vapp_name = testutils.get_temp_vapp_name(
-#             template_config['name'])
-#         assert not env.vapp_exists(temp_vapp_name), \
-#             'vApp exists when it should not.'
+
+@pytest.mark.skipif(env.TEST_ALL_TEMPLATES,
+                    reason="Configuration specifies 'test_all_templates' as True")  # noqa: E501
+def test_0100_install_select_templates(config, unregister_cse_before_test):
+    """Tests template installation.
+
+    Tests that selected template installation is done correctly
+
+    command: cse template install template_name template_revision
+        --config cse_test_config.yaml --ssh-key ~/.ssh/id_rsa.pub
+        --skip-config-decryption --retain-temp-vapp
+    required files: cse_test_config.yaml, ~/.ssh/id_rsa.pub,
+        ubuntu/photon init/cust scripts
+    expected: cse registered, source ovas exist, k8s templates exist and
+        temp vapps exist.
+    """
+    cmd = f"install --config {env.ACTIVE_CONFIG_FILEPATH} --ssh-key " \
+          f"{env.SSH_KEY_FILEPATH} --skip-template-creation " \
+          f"--skip-config-decryption"
+    result = env.CLI_RUNNER.invoke(cli, cmd.split(), catch_exceptions=False)
+    assert result.exit_code == 0,\
+        testutils.format_command_info('cse', cmd, result.exit_code,
+                                      result.output)
+
+    # check that cse was registered correctly
+    env.check_cse_registration(config['amqp']['routing_key'],
+                               config['amqp']['exchange'])
+
+    vdc = VDC(env.CLIENT, href=env.VDC_HREF)
+    for template_config in env.TEMPLATE_DEFINITIONS:
+        # install the template
+        cmd = f"template install {template_config['name']} " \
+              f"{template_config['revision']} " \
+              f"--config {env.ACTIVE_CONFIG_FILEPATH} " \
+              f"--ssh-key {env.SSH_KEY_FILEPATH} " \
+              f"--skip-config-decryption --force --retain-temp-vapp"
+        result = env.CLI_RUNNER.invoke(
+            cli, cmd.split(), catch_exceptions=False)
+        assert result.exit_code == 0,\
+            testutils.format_command_info('cse', cmd, result.exit_code,
+                                          result.output)
+        # check that source ova file exists in catalog
+        assert env.catalog_item_exists(
+            template_config['source_ova_name']), \
+            'Source ova file does not exists when it should.'
+
+        # check that k8s templates exist
+        catalog_item_name = ltm.get_revisioned_template_name(
+            template_config['name'], template_config['revision'])
+        assert env.catalog_item_exists(catalog_item_name), \
+            'k8s template does not exist when it should.'
+
+        # check that temp vapp exists
+        temp_vapp_name = testutils.get_temp_vapp_name(
+            template_config['name'])
+        try:
+            vdc.reload()
+            vdc.get_vapp(temp_vapp_name)
+        except EntityNotFoundException:
+            assert False, 'vApp does not exist when it should.'
 
 
 def test_0110_cse_check_valid_installation(config):

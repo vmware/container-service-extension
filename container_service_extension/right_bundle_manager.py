@@ -4,8 +4,8 @@
 
 import pyvcloud.vcd.client as vcd_client
 
-from container_service_extension.cloudapi.constants import CLOUDAPI_VERSION_1_0_0  # noqa: E501
 from container_service_extension.cloudapi.constants import CloudApiResource
+import container_service_extension.def_.utils as def_utils
 from container_service_extension.logger import NULL_LOGGER
 from container_service_extension.logger import SERVER_CLOUDAPI_WIRE_LOGGER
 import container_service_extension.pyvcloud_utils as vcd_utils
@@ -38,7 +38,7 @@ class RightBundleManager():
             query_string = f"filter={filter_string}"
         response_body = self.cloudapi_client.do_request(
             method=RequestMethod.GET,
-            cloudapi_version=CLOUDAPI_VERSION_1_0_0,
+            cloudapi_version=CloudApiVersion.VERSION_1_0_0,
             resource_url_relative_path=f"{CloudApiResource.RIGHT_BUNDLES}?{query_string}")  # noqa: E501
         right_bundles = response_body['values']
         if right_bundles and len(right_bundles) > 0:
@@ -60,7 +60,7 @@ class RightBundleManager():
             {"values": [{"id": self.cloudapi_client.get_org_urn_from_id(org_id)} for org_id in org_ids]}  # noqa: E501
         return self.cloudapi_client.do_request(
             method=RequestMethod.PUT,
-            cloudapi_version=CLOUDAPI_VERSION_1_0_0,
+            cloudapi_version=CloudApiVersion.VERSION_1_0_0,
             resource_url_relative_path=relative_url,
             payload=payload)
 

@@ -20,7 +20,6 @@ from pyvcloud.vcd.exceptions import OperationNotSupportedException
 
 import container_service_extension.compute_policy_manager \
     as compute_policy_manager
-from container_service_extension.config_validator import get_validated_config
 import container_service_extension.configure_cse as configure_cse
 from container_service_extension.consumer.consumer import MessageConsumer
 import container_service_extension.def_.models as def_models
@@ -59,18 +58,44 @@ class Singleton(type):
 
 
 def signal_handler(signal, frame):
-    print('\nCrtl+C detected, exiting')
+    print('\nCtrl+C detected, exiting')
     raise KeyboardInterrupt()
 
 
-def consumer_thread(c):
+def consumer_thread_run(c):
     try:
         logger.SERVER_LOGGER.info(f"About to start consumer_thread {c}.")
         c.run()
-    except Exception:
-        click.echo("About to stop consumer_thread.")
+    except Exception as e:
+        click.echo(f"Exception in MessageConsumer thread. "
+                   f"About to stop thread due to: {e}")
         logger.SERVER_LOGGER.error(traceback.format_exc())
         c.stop()
+
+
+def watchdog_thread_run(service_obj, num_processors):
+    logger.SERVER_LOGGER.info("Starting watchdog thread")
+    while True:
+        service_state = service_obj.get_status()
+        if service_state == ServerState.STOPPED.value:
+            break
+
+        if service_state == ServerState.RUNNING.value and \
+                service_obj.consumer_thread is not None and \
+                not service_obj.consumer_thread.is_alive():
+            service_obj.consumer = MessageConsumer(service_obj.config,
+                                                   num_processors)
+            consumer_thread = Thread(name=server_constants.MESSAGE_CONSUMER_THREAD,  # noqa: E501
+                                     target=consumer_thread_run,
+                                     args=(service_obj.consumer, ))
+            consumer_thread.daemon = True
+            consumer_thread.start()
+            service_obj.consumer_thread = consumer_thread
+
+            msg = 'Watchdog has restarted consumer thread'
+            click.echo(msg)
+            logger.SERVER_LOGGER.info(msg)
+        time.sleep(60)
 
 
 def verify_version_compatibility(sysadmin_client: Client,
@@ -148,21 +173,21 @@ class ServerState(Enum):
 # 1. reject all TKG+ related OVDC updates
 # 2. Skip showing TKG+ in the output for list and get
 class Service(object, metaclass=Singleton):
-    def __init__(self, config_file, pks_config_file=None,
+    def __init__(self, config_file=None, config=None, pks_config_file=None,
                  should_check_config=True,
-                 skip_config_decryption=False, decryption_password=None):
+                 skip_config_decryption=False):
         self.config_file = config_file
+        self.config = config
         self.pks_config_file = pks_config_file
-        self.config = None
         self.should_check_config = should_check_config
         self.skip_config_decryption = skip_config_decryption
-        self.decryption_password = decryption_password
-        self.consumers = []
-        self.threads = []
         self.pks_cache = None
         self._state = ServerState.STOPPED
         self._kubernetesInterface: def_models.DefInterface = None
         self._nativeEntityType: def_models.DefEntityType = None
+        self.consumer = None
+        self.consumer_thread = None
+        self._consumer_watchdog = None
 
     def get_service_config(self):
         return self.config
@@ -174,13 +199,11 @@ class Service(object, metaclass=Singleton):
         return bool(self.pks_cache)
 
     def active_requests_count(self):
-        n = 0
         # TODO(request_count) Add support for PksBroker - VCDA-938
-        for t in threading.enumerate():
-            from container_service_extension.vcdbroker import VcdBroker
-            if type(t) == VcdBroker:
-                n += 1
-        return n
+        if self.consumer is None:
+            return 0
+        else:
+            return self.consumer.get_num_active_threads()
 
     def get_status(self):
         return self._state.value
@@ -192,7 +215,8 @@ class Service(object, metaclass=Singleton):
         result = utils.get_cse_info()
         result[shared_constants.CSE_SERVER_API_VERSION] = utils.get_server_api_version()  # noqa: E501
         if get_sysadmin_info:
-            result['consumer_threads'] = len(self.threads)
+            result['all_consumer_threads'] = 0 if self.consumer is None else \
+                self.consumer.get_num_total_threads()
             result['all_threads'] = threading.activeCount()
             result['requests_in_progress'] = self.active_requests_count()
             result['config_file'] = self.config_file
@@ -252,14 +276,6 @@ class Service(object, metaclass=Singleton):
         raise cse_exception.CseServerError(f"Invalid server state: '{self._state}'")  # noqa: E501
 
     def run(self, msg_update_callback=utils.NullPrinter()):
-        self.config = get_validated_config(
-            self.config_file,
-            pks_config_file_name=self.pks_config_file,
-            skip_config_decryption=self.skip_config_decryption,
-            decryption_password=self.decryption_password,
-            log_wire_file=logger.SERVER_DEBUG_WIRELOG_FILEPATH,
-            logger_debug=logger.SERVER_LOGGER,
-            msg_update_callback=msg_update_callback)
 
         sysadmin_client = None
         try:
@@ -291,6 +307,7 @@ class Service(object, metaclass=Singleton):
                     msg = 'MQTT Api filter is not set up'
                     logger.SERVER_LOGGER.error(msg)
                     raise cse_exception.MQTTExtensionError(msg)
+
                 token_info = mqtt_ext_manager.create_extension_token(
                     token_name=server_constants.MQTT_TOKEN_NAME,
                     ext_urn_id=ext_urn_id)
@@ -350,28 +367,45 @@ class Service(object, metaclass=Singleton):
                 orgs=pks_config.get('orgs', []),
                 nsxt_servers=pks_config.get('nsxt_servers', []))
 
-        num_consumers = self.config['service']['listeners']
-        for n in range(num_consumers):
-            try:
-                c = MessageConsumer(self.config)
-                name = 'MessageConsumer-%s' % n
-                t = Thread(name=name, target=consumer_thread, args=(c, ))
-                t.daemon = True
-                t.start()
-                msg = f"Started thread '{name} ({t.ident})'"
-                msg_update_callback.general(msg)
-                logger.SERVER_LOGGER.info(msg)
-                self.threads.append(t)
-                self.consumers.append(c)
-                time.sleep(0.25)
-            except KeyboardInterrupt:
-                break
-            except Exception:
-                logger.SERVER_LOGGER.error(traceback.format_exc())
+        num_processors = self.config['service']['processors']
+        try:
+            self.consumer = MessageConsumer(self.config, num_processors)
+            name = server_constants.MESSAGE_CONSUMER_THREAD
+            consumer_thread = Thread(name=name, target=consumer_thread_run,
+                                     args=(self.consumer, ))
+            consumer_thread.daemon = True
+            consumer_thread.start()
+            self.consumer_thread = consumer_thread
+            msg = f"Started thread '{name}' ({consumer_thread.ident})"
+            msg_update_callback.general(msg)
+            logger.SERVER_LOGGER.info(msg)
+        except KeyboardInterrupt:
+            if self.consumer:
+                self.consumer.stop()
+            interrupt_msg = f"\nKeyboard interrupt when starting thread " \
+                            f"'{name}'"
+            logger.SERVER_LOGGER.debug(interrupt_msg)
+            raise Exception(interrupt_msg)
+        except Exception:
+            if self.consumer:
+                self.consumer.stop()
+            logger.SERVER_LOGGER.error(traceback.format_exc())
 
-        logger.SERVER_LOGGER.info(f"Number of threads started: {len(self.threads)}")  # noqa: E501
-
+        # Updating state to Running before starting watchdog because watchdog
+        # exits when server is not Running
         self._state = ServerState.RUNNING
+
+        # Start consumer watchdog
+        name = server_constants.WATCHDOG_THREAD
+        consumer_watchdog = Thread(name=name,
+                                   target=watchdog_thread_run,
+                                   args=(self, num_processors))
+        consumer_watchdog.daemon = True
+        consumer_watchdog.start()
+        self._consumer_watchdog = consumer_watchdog
+        msg = f"Started thread '{name}' ({consumer_watchdog.ident})"
+        msg_update_callback.general(msg)
+        logger.SERVER_LOGGER.info(msg)
 
         message = f"Container Service Extension for vCloud Director" \
                   f"\nServer running using config file: {self.config_file}" \
@@ -409,11 +443,11 @@ class Service(object, metaclass=Singleton):
 
         logger.SERVER_LOGGER.info("Stop detected")
         logger.SERVER_LOGGER.info("Closing connections...")
-        for c in self.consumers:
-            try:
-                c.stop()
-            except Exception:
-                logger.SERVER_LOGGER.error(traceback.format_exc())
+        self._state = ServerState.STOPPING
+        try:
+            self.consumer.stop()
+        except Exception:
+            logger.SERVER_LOGGER.error(traceback.format_exc())
 
         self._state = ServerState.STOPPED
         logger.SERVER_LOGGER.info("Done")
@@ -492,7 +526,11 @@ class Service(object, metaclass=Singleton):
             for runtime_policy in shared_constants.CLUSTER_RUNTIME_PLACEMENT_POLICIES:  # noqa: E501
                 k8_runtime = shared_constants.RUNTIME_INTERNAL_NAME_TO_DISPLAY_NAME_MAP[runtime_policy]  # noqa: E501
                 try:
-                    placement_policy_name_to_href[k8_runtime] = cpm.get_vdc_compute_policy(runtime_policy, is_placement_policy=True)['href']  # noqa: E501
+                    placement_policy_name_to_href[k8_runtime] = \
+                        compute_policy_manager.get_cse_vdc_compute_policy(
+                            cpm,
+                            runtime_policy,
+                            is_placement_policy=True)['href']
                 except EntityNotFoundException:
                     pass
             self.config['placement_policy_hrefs'] = placement_policy_name_to_href  # noqa: E501
@@ -640,14 +678,19 @@ class Service(object, metaclass=Singleton):
                 # if policy name is not empty, stamp it on the template
                 if policy_name:
                     try:
-                        policy = cpm.get_vdc_compute_policy(policy_name=policy_name) # noqa: E501
+                        policy = \
+                            compute_policy_manager.get_cse_vdc_compute_policy(
+                                cpm, policy_name) # noqa: E501
                     except EntityNotFoundException:
                         # create the policy if it does not exist
                         msg = f"Creating missing compute policy " \
                               f"'{policy_name}'."
                         msg_update_callback.info(msg)
                         logger.SERVER_LOGGER.debug(msg)
-                        policy = cpm.add_vdc_compute_policy(policy_name=policy_name) # noqa: E501
+                        policy = \
+                            compute_policy_manager.add_cse_vdc_compute_policy(
+                                cpm,
+                                policy_name)
 
                     msg = f"Assigning compute policy '{policy_name}' to " \
                           f"template '{catalog_item_name}'."

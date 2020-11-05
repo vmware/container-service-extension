@@ -6,7 +6,6 @@ from dataclasses import asdict
 from typing import List
 
 import pyvcloud.vcd.client as vcd_client
-import pyvcloud.vcd.org as vcd_org
 import pyvcloud.vcd.task as vcd_task
 
 import container_service_extension.compute_policy_manager as compute_policy_manager # noqa: E501
@@ -125,33 +124,37 @@ def list_ovdc(operation_context: ctx.OperationContext) -> List[dict]:
     telemetry_handler.record_user_action_details(cse_operation=CseOperation.OVDC_LIST, # noqa: E501
                                                  cse_params={})
 
-    if operation_context.client.is_sysadmin():
-        org_resource_list = operation_context.client.get_org_list()
-    else:
-        org_resource_list = list(operation_context.client.get_org())
     ovdcs = []
-    for org_resource in org_resource_list:
-        org = vcd_org.Org(operation_context.client, resource=org_resource)
-        for vdc_sparse in org.list_vdcs():
-            ovdc_name = vdc_sparse['name']
-            org_name = org.get_name()
-            ovdc_details = asdict(
-                get_ovdc_k8s_runtime_details(operation_context.sysadmin_client,
-                                             org_name=org_name,
-                                             ovdc_name=ovdc_name))
-            if ClusterEntityKind.TKG_PLUS.value in ovdc_details['k8s_runtime'] \
-                    and not utils.is_tkg_plus_enabled():  # noqa: E501
-                ovdc_details['k8s_runtime'].remove(ClusterEntityKind.TKG_PLUS.value)  # noqa: E501
-            # TODO: Find a better way to remove remove_cp_from_vms_on_disable
-            del ovdc_details['remove_cp_from_vms_on_disable']
-            ovdcs.append(ovdc_details)
+    org_vdcs = vcd_utils.get_all_ovdcs(operation_context.client)
+    for ovdc in org_vdcs:
+        ovdc_name = ovdc.get('name')
+        config = utils.get_server_runtime_config()
+        log_wire = utils.str_to_bool(config.get('service', {}).get('log_wire'))
+        ovdc_id = vcd_utils.extract_id(ovdc.get('id'))
+        ovdc_details = asdict(
+            get_ovdc_k8s_runtime_details(operation_context.sysadmin_client,
+                                         ovdc_id=ovdc_id,
+                                         ovdc_name=ovdc_name,
+                                         log_wire=log_wire))
+        if ClusterEntityKind.TKG_PLUS.value in ovdc_details['k8s_runtime'] \
+                and not utils.is_tkg_plus_enabled():  # noqa: E501
+            ovdc_details['k8s_runtime'].remove(ClusterEntityKind.TKG_PLUS.value)  # noqa: E501
+        # TODO: Find a better way to remove remove_cp_from_vms_on_disable
+        del ovdc_details['remove_cp_from_vms_on_disable']
+        ovdcs.append(ovdc_details)
     return ovdcs
 
 
 def get_ovdc_k8s_runtime_details(sysadmin_client: vcd_client.Client,
-                                 org_name=None, ovdc_name=None,
-                                 ovdc_id=None, log_wire=False) -> def_models.Ovdc: # noqa: E501
+                                 ovdc_id=None,
+                                 ovdc_name=None,
+                                 org_name=None,
+                                 log_wire=False) -> def_models.Ovdc:
     """Get k8s runtime details for an ovdc.
+
+    Atleast ovdc_id and ovdc_name or org_name and ovdc_name should be provided.
+    Additional call to get ovdc details can be avoided by providing ovdc_id and
+    ovdc_name.
 
     :param sysadmin_client vcd_client.Client: vcd sysadmin client
     :param str org_name:
@@ -164,16 +167,24 @@ def get_ovdc_k8s_runtime_details(sysadmin_client: vcd_client.Client,
     vcd_utils.raise_error_if_user_not_from_system_org(sysadmin_client)
     cpm = compute_policy_manager.ComputePolicyManager(sysadmin_client,
                                                       log_wire=log_wire)
-    ovdc = vcd_utils.get_vdc(client=sysadmin_client,
-                             vdc_name=ovdc_name,
-                             org_name=org_name,
-                             vdc_id=ovdc_id,
-                             is_admin_operation=True)
-    ovdc_id = vcd_utils.extract_id(ovdc.get_resource().get('id'))
-    ovdc_name = ovdc.get_resource().get('name')
+    if not (org_name and ovdc_name) and not ovdc_id:
+        msg = "Unable to fetch OVDC k8 runtime details with the " \
+              "provided parameters"
+        logger.SERVER_LOGGER.error(msg)
+        raise Exception(msg)
+    if not ovdc_id or not ovdc_name:
+        # populate ovdc_id and ovdc_name
+        ovdc = vcd_utils.get_vdc(client=sysadmin_client,
+                                 vdc_id=ovdc_id,
+                                 vdc_name=ovdc_name,
+                                 org_name=org_name,
+                                 is_admin_operation=True)
+        ovdc_id = vcd_utils.extract_id(ovdc.get_resource().get('id'))
+        ovdc_name = ovdc.get_resource().get('name')
     policies = []
-    for policy in cpm.list_vdc_placement_policies_on_vdc(ovdc_id):
-        policies.append(RUNTIME_INTERNAL_NAME_TO_DISPLAY_NAME_MAP[policy['display_name']])  # noqa: E501
+    for cse_policy in \
+            compute_policy_manager.list_cse_placement_policies_on_vdc(cpm, ovdc_id):  # noqa: E501
+        policies.append(RUNTIME_INTERNAL_NAME_TO_DISPLAY_NAME_MAP[cse_policy['display_name']])  # noqa: E501
     return def_models.Ovdc(ovdc_name=ovdc_name, ovdc_id=ovdc_id, k8s_runtime=policies) # noqa: E501
 
 
@@ -208,8 +219,9 @@ def _update_ovdc_using_placement_policy_async(operation_context: ctx.OperationCo
         cpm = compute_policy_manager.ComputePolicyManager(
             operation_context.sysadmin_client, log_wire=log_wire)
         existing_policies = []
-        for policy in cpm.list_vdc_placement_policies_on_vdc(ovdc_id):
-            existing_policies.append(policy['display_name'])
+        for cse_policy in \
+                compute_policy_manager.list_cse_placement_policies_on_vdc(cpm, ovdc_id):  # noqa: E501
+            existing_policies.append(cse_policy['display_name'])
 
         logger.SERVER_LOGGER.debug(policy_list)
         logger.SERVER_LOGGER.debug(existing_policies)
@@ -255,7 +267,10 @@ def _update_ovdc_using_placement_policy_async(operation_context: ctx.OperationCo
                         user_name=operation_context.user.name,
                         task_href=task_href,
                         org_href=operation_context.user.org_href)
-            policy = cpm.get_vdc_compute_policy(cp_name, is_placement_policy=True)  # noqa: E501
+            policy = compute_policy_manager.get_cse_vdc_compute_policy(
+                cpm,
+                cp_name,
+                is_placement_policy=True)
             cpm.add_compute_policy_to_vdc(vdc_id=ovdc_id,
                                           compute_policy_href=policy['href'])
 
@@ -276,7 +291,9 @@ def _update_ovdc_using_placement_policy_async(operation_context: ctx.OperationCo
                             user_name=operation_context.user.name,
                             task_href=task_href,
                             org_href=operation_context.user.org_href)
-            policy = cpm.get_vdc_compute_policy(cp_name, is_placement_policy=True)  # noqa: E501
+            policy = compute_policy_manager.get_cse_vdc_compute_policy(cpm,
+                                                                       cp_name,
+                                                                       is_placement_policy=True)  # noqa: E501
             cpm.remove_compute_policy_from_vdc_sync(vdc=vdc,
                                                     compute_policy_href=policy['href'],  # noqa: E501
                                                     force=remove_cp_from_vms_on_disable, # noqa: E501
@@ -315,7 +332,7 @@ def _update_ovdc_using_placement_policy_async(operation_context: ctx.OperationCo
         logger.SERVER_LOGGER.error(err)
         task.update(status=vcd_client.TaskStatus.ERROR.value,
                     namespace='vcloud.cse',
-                    operation='',
+                    operation='Failed to update OVDC',
                     operation_name=operation_name,
                     details=f'Failed with error: {err}',
                     progress=None,

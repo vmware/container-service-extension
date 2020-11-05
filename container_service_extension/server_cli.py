@@ -15,7 +15,6 @@ from zipfile import ZipFile
 import click
 import cryptography
 import pyvcloud.vcd.client as vcd_client
-from pyVmomi import vim
 import requests
 from vcd_cli.utils import stdout
 import yaml
@@ -34,11 +33,14 @@ from container_service_extension.logger import SERVER_CLI_LOGGER
 from container_service_extension.logger import SERVER_CLI_WIRELOG_FILEPATH
 from container_service_extension.logger import SERVER_CLOUDAPI_WIRE_LOGGER
 from container_service_extension.logger import SERVER_DEBUG_WIRELOG_FILEPATH
+from container_service_extension.logger import SERVER_LOGGER
 import container_service_extension.pyvcloud_utils as vcd_utils
 from container_service_extension.remote_template_manager import RemoteTemplateManager # noqa: E501
 from container_service_extension.sample_generator import generate_sample_config
+from container_service_extension.server_constants import CONFIG_DECRYPTION_ERROR_MSG  # noqa: E501
 from container_service_extension.server_constants import LocalTemplateKey
 from container_service_extension.server_constants import RemoteTemplateKey
+from container_service_extension.server_constants import SUPPORTED_VCD_API_VERSIONS  # noqa: E501
 from container_service_extension.server_constants import SYSTEM_ORG_NAME
 import container_service_extension.service as cse_service
 from container_service_extension.shared_constants import ClusterEntityKind
@@ -71,12 +73,6 @@ DISPLAY_REMOTE = "remote"
 # Prompt messages
 PASSWORD_FOR_CONFIG_ENCRYPTION_MSG = "Password for config file encryption"
 PASSWORD_FOR_CONFIG_DECRYPTION_MSG = "Password for config file decryption"
-
-# Error messages
-CONFIG_DECRYPTION_ERROR_MSG = \
-    "Config file decryption failed: invalid decryption password"
-VCENTER_LOGIN_ERROR_MSG = "vCenter login failed (check config file for "\
-    "vCenter username/password)."
 
 
 @click.group(context_settings=CONTEXT_SETTINGS, invoke_without_command=True)
@@ -325,7 +321,17 @@ def version(ctx):
     '--pks-config',
     is_flag=True,
     help='Generate only sample PKS config')
-def sample(ctx, output, pks_config):
+@click.option(
+    '-v',
+    '--api-version',
+    'api_version',
+    required=False,
+    default=vcd_client.ApiVersion.VERSION_35.value,
+    show_default=True,
+    metavar='API_VERSION',
+    help=f'vCD API version: {SUPPORTED_VCD_API_VERSIONS}. '
+         f'Not needed if only generating PKS config.')
+def sample(ctx, output, pks_config, api_version):
     """Display sample CSE config file contents."""
     SERVER_CLI_LOGGER.debug(f"Executing command: {ctx.command_path}")
     console_message_printer = ConsoleMessagePrinter()
@@ -333,8 +339,16 @@ def sample(ctx, output, pks_config):
     # check, because we want to suppress the version check messages from being
     # printed onto console, and pollute the sample config.
     check_python_version()
-    sample_config = generate_sample_config(output=output,
-                                           generate_pks_config=pks_config)
+
+    try:
+        api_version = float(api_version)
+        sample_config = generate_sample_config(output=output,
+                                               generate_pks_config=pks_config,
+                                               api_version=api_version)
+    except Exception as err:
+        console_message_printer.error(str(err))
+        SERVER_CLI_LOGGER.error(str(err))
+        sys.exit(1)
 
     console_message_printer.general_no_color(sample_config)
     SERVER_CLI_LOGGER.debug(sample_config)
@@ -375,16 +389,22 @@ def check(ctx, config_file_path, pks_config_file_path, skip_config_decryption,
     console_message_printer = ConsoleMessagePrinter()
     check_python_version(console_message_printer)
 
+    password = None
+    if not skip_config_decryption:
+        password = os.getenv('CSE_CONFIG_PASSWORD') or prompt_text(
+            PASSWORD_FOR_CONFIG_DECRYPTION_MSG,
+            color='green', hide_input=True)
+
     config_dict = None
     try:
-        config_dict = _get_config_dict(
-            config_file_path=config_file_path,
-            pks_config_file_path=pks_config_file_path,
+        config_dict = get_validated_config(
+            config_file_name=config_file_path,
+            pks_config_file_name=pks_config_file_path,
             skip_config_decryption=skip_config_decryption,
-            msg_update_callback=console_message_printer,
-            validate=True,
+            decryption_password=password,
             log_wire_file=SERVER_CLI_WIRELOG_FILEPATH,
-            logger_debug=SERVER_CLI_LOGGER)
+            logger_debug=SERVER_CLI_LOGGER,
+            msg_update_callback=console_message_printer)
 
         if check_install:
             try:
@@ -576,24 +596,24 @@ def install(ctx, config_file_path, pks_config_file_path,
             color='green', hide_input=True)
 
     try:
-        try:
-            configure_cse.install_cse(
-                config_file_name=config_file_path,
-                pks_config_file_name=pks_config_file_path,
-                skip_template_creation=skip_template_creation,
-                ssh_key=ssh_key,
-                retain_temp_vapp=retain_temp_vapp,
-                skip_config_decryption=skip_config_decryption,
-                decryption_password=password,
-                msg_update_callback=console_message_printer)
-        except requests.exceptions.SSLError as err:
-            raise Exception(f"SSL verification failed: {str(err)}")
-        except requests.exceptions.ConnectionError as err:
-            raise Exception(f"Cannot connect to {err.request.url}.")
-        except vim.fault.InvalidLogin:
-            raise Exception(VCENTER_LOGIN_ERROR_MSG)
-        except cryptography.fernet.InvalidToken:
-            raise Exception(CONFIG_DECRYPTION_ERROR_MSG)
+        config = get_validated_config(
+            config_file_name=config_file_path,
+            pks_config_file_name=pks_config_file_path,
+            skip_config_decryption=skip_config_decryption,
+            decryption_password=password,
+            log_wire_file=INSTALL_WIRELOG_FILEPATH,
+            logger_debug=INSTALL_LOGGER,
+            msg_update_callback=console_message_printer)
+
+        configure_cse.install_cse(
+            config_file_name=config_file_path,
+            config=config,
+            pks_config_file_name=pks_config_file_path,
+            skip_template_creation=skip_template_creation,
+            ssh_key=ssh_key,
+            retain_temp_vapp=retain_temp_vapp,
+            skip_config_decryption=skip_config_decryption,
+            msg_update_callback=console_message_printer)
     except Exception as err:
         SERVER_CLI_LOGGER.error(str(err))
         console_message_printer.error(str(err))
@@ -701,25 +721,26 @@ def run(ctx, config_file_path, pks_config_file_path, skip_check,
             PASSWORD_FOR_CONFIG_DECRYPTION_MSG,
             color='green', hide_input=True)
 
+    config = None
+    cse_run_complete = False
     try:
-        try:
-            cse_run_complete = False
-            service = cse_service.Service(
-                config_file_path,
-                pks_config_file=pks_config_file_path,
-                should_check_config=not skip_check,
-                skip_config_decryption=skip_config_decryption,
-                decryption_password=password)
-            service.run(msg_update_callback=console_message_printer)
-            cse_run_complete = True
-        except requests.exceptions.SSLError as err:
-            raise Exception(f"SSL verification failed: {str(err)}")
-        except requests.exceptions.ConnectionError as err:
-            raise Exception(f"Cannot connect to {err.request.url}.")
-        except vim.fault.InvalidLogin:
-            raise Exception(VCENTER_LOGIN_ERROR_MSG)
-        except cryptography.fernet.InvalidToken:
-            raise Exception(CONFIG_DECRYPTION_ERROR_MSG)
+        config = get_validated_config(
+            config_file_name=config_file_path,
+            pks_config_file_name=pks_config_file_path,
+            skip_config_decryption=skip_config_decryption,
+            decryption_password=password,
+            log_wire_file=SERVER_DEBUG_WIRELOG_FILEPATH,
+            logger_debug=SERVER_LOGGER,
+            msg_update_callback=console_message_printer)
+
+        service = cse_service.Service(
+            config_file=config_file_path,
+            config=config,
+            pks_config_file=pks_config_file_path,
+            should_check_config=not skip_check,
+            skip_config_decryption=skip_config_decryption)
+        service.run(msg_update_callback=console_message_printer)
+        cse_run_complete = True
     except Exception as err:
         SERVER_CLI_LOGGER.error(str(err))
         console_message_printer.error(str(err))
@@ -727,16 +748,10 @@ def run(ctx, config_file_path, pks_config_file_path, skip_check,
         sys.exit(1)
     finally:
         if not cse_run_complete:
-            config_dict = _get_config_dict(
-                config_file_path=config_file_path,
-                pks_config_file_path=None,
-                skip_config_decryption=skip_config_decryption,
-                validate=False,
-                log_wire_file=SERVER_CLI_WIRELOG_FILEPATH,
-                logger_debug=SERVER_CLI_LOGGER)
+            telemetry_settings = config['service']['telemetry'] if config else None  # noqa: E501
             record_user_action(cse_operation=CseOperation.SERVICE_RUN,
                                status=OperationStatus.FAILED,
-                               telemetry_settings=config_dict['service']['telemetry'])  # noqa: E501
+                               telemetry_settings=telemetry_settings)  # noqa: E501
             # block the process to let telemetry handler to finish posting
             # data to VAC. HACK!!!
             time.sleep(3)
@@ -826,15 +841,21 @@ def upgrade(ctx, config_file_path, skip_config_decryption,
     if ssh_key_file is not None:
         ssh_key = ssh_key_file.read()
 
+    password = None
+    if not skip_config_decryption:
+        password = os.getenv('CSE_CONFIG_PASSWORD') or prompt_text(
+            PASSWORD_FOR_CONFIG_DECRYPTION_MSG,
+            color='green', hide_input=True)
+
     try:
-        config = _get_config_dict(
-            config_file_path=config_file_path,
-            pks_config_file_path=None,
+        config = get_validated_config(
+            config_file_name=config_file_path,
+            pks_config_file_name=None,
             skip_config_decryption=skip_config_decryption,
-            msg_update_callback=console_message_printer,
-            validate=True,
+            decryption_password=password,
             log_wire_file=INSTALL_WIRELOG_FILEPATH,
-            logger_debug=INSTALL_LOGGER)
+            logger_debug=INSTALL_LOGGER,
+            msg_update_callback=console_message_printer)
 
         configure_cse.upgrade_cse(
             config_file_name=config_file_path,
@@ -891,19 +912,16 @@ def list_template(ctx, config_file_path, skip_config_decryption,
     # the python version check messages from being printed onto console.
     check_python_version()
 
+    config_dict = None
     try:
         # We don't want to validate config file, because server startup or
         # installation is not being performed. If values in config file are
         # missing or bad, appropriate exception will be raised while accessing
         # or using them.
-        config_dict = _get_config_dict(
+        config_dict = _get_unvalidated_config(
             config_file_path=config_file_path,
-            pks_config_file_path=None,
             skip_config_decryption=skip_config_decryption,
-            msg_update_callback=console_message_printer,
-            validate=False,
-            log_wire_file=SERVER_CLI_WIRELOG_FILEPATH,
-            logger_debug=SERVER_CLI_LOGGER)
+            msg_update_callback=console_message_printer)
 
         # Record telemetry details
         cse_params = {
@@ -1042,9 +1060,11 @@ def list_template(ctx, config_file_path, skip_config_decryption,
     except Exception as err:
         SERVER_CLI_LOGGER.error(str(err))
         console_message_printer.error(str(err))
+        telemetry_settings = config_dict.get('service', {}).get('telemetry') \
+            if config_dict else None
         record_user_action(cse_operation=CseOperation.TEMPLATE_LIST,
                            status=OperationStatus.FAILED,
-                           telemetry_settings=config_dict['service']['telemetry'])  # noqa: E501
+                           telemetry_settings=telemetry_settings)
         sys.exit(1)
     finally:
         # block the process to let telemetry handler to finish posting data to
@@ -1130,25 +1150,25 @@ def install_cse_template(ctx, template_name, template_revision,
         ssh_key = ssh_key_file.read()
 
     try:
-        try:
-            configure_cse.install_template(
-                template_name=template_name,
-                template_revision=template_revision,
-                config_file_name=config_file_path,
-                force_create=force_create,
-                retain_temp_vapp=retain_temp_vapp,
-                ssh_key=ssh_key,
-                skip_config_decryption=skip_config_decryption,
-                decryption_password=password,
-                msg_update_callback=console_message_printer)
-        except requests.exceptions.SSLError as err:
-            raise Exception(f"SSL verification failed: {str(err)}")
-        except requests.exceptions.ConnectionError as err:
-            raise Exception(f"Cannot connect to {err.request.url}.")
-        except vim.fault.InvalidLogin:
-            raise Exception(VCENTER_LOGIN_ERROR_MSG)
-        except cryptography.fernet.InvalidToken:
-            raise Exception(CONFIG_DECRYPTION_ERROR_MSG)
+        config = get_validated_config(
+            config_file_name=config_file_path,
+            skip_config_decryption=skip_config_decryption,
+            decryption_password=password,
+            log_wire_file=INSTALL_WIRELOG_FILEPATH,
+            logger_debug=INSTALL_LOGGER,
+            msg_update_callback=console_message_printer)
+
+        configure_cse.install_template(
+            template_name=template_name,
+            template_revision=template_revision,
+            config_file_name=config_file_path,
+            config=config,
+            force_create=force_create,
+            retain_temp_vapp=retain_temp_vapp,
+            ssh_key=ssh_key,
+            skip_config_decryption=skip_config_decryption,
+            decryption_password=password,
+            msg_update_callback=console_message_printer)
     except Exception as err:
         SERVER_CLI_LOGGER.error(str(err))
         console_message_printer.error(str(err))
@@ -1193,14 +1213,10 @@ def register_ui_plugin(ctx, plugin_file_path, config_file_path,
         # installation is not being performed. If values in config file are
         # missing or bad, appropriate exception will be raised while accessing
         # or using them.
-        config_dict = _get_config_dict(
+        config_dict = _get_unvalidated_config(
             config_file_path=config_file_path,
-            pks_config_file_path=None,
             skip_config_decryption=skip_config_decryption,
-            msg_update_callback=console_message_printer,
-            validate=False,
-            log_wire_file=SERVER_CLI_WIRELOG_FILEPATH,
-            logger_debug=SERVER_CLI_LOGGER)
+            msg_update_callback=console_message_printer)
 
         tempdir = tempfile.mkdtemp(dir='.')
         plugin_zip = ZipFile(plugin_file_path, 'r')
@@ -1347,14 +1363,10 @@ def deregister_ui_plugin(ctx, plugin_id, config_file_path,
         # installation is not being performed. If values in config file are
         # missing or bad, appropriate exception will be raised while accessing
         # or using them.
-        config_dict = _get_config_dict(
+        config_dict = _get_unvalidated_config(
             config_file_path=config_file_path,
-            pks_config_file_path=None,
             skip_config_decryption=skip_config_decryption,
-            msg_update_callback=console_message_printer,
-            validate=False,
-            log_wire_file=SERVER_CLI_WIRELOG_FILEPATH,
-            logger_debug=SERVER_CLI_LOGGER)
+            msg_update_callback=console_message_printer)
 
         log_filename = None
         log_wire = str_to_bool(config_dict['service'].get('log_wire'))
@@ -1412,14 +1424,10 @@ def list_ui_plugin(ctx, config_file_path, skip_config_decryption):
         # installation is not being performed. If values in config file are
         # missing or bad, appropriate exception will be raised while accessing
         # or using them.
-        config_dict = _get_config_dict(
+        config_dict = _get_unvalidated_config(
             config_file_path=config_file_path,
-            pks_config_file_path=None,
             skip_config_decryption=skip_config_decryption,
-            msg_update_callback=console_message_printer,
-            validate=False,
-            log_wire_file=SERVER_CLI_WIRELOG_FILEPATH,
-            logger_debug=SERVER_CLI_LOGGER)
+            msg_update_callback=console_message_printer)
 
         log_filename = None
         log_wire = str_to_bool(config_dict['service'].get('log_wire'))
@@ -1453,13 +1461,9 @@ def list_ui_plugin(ctx, config_file_path, skip_config_decryption):
             client.logout()
 
 
-def _get_config_dict(config_file_path,
-                     pks_config_file_path,
-                     skip_config_decryption,
-                     msg_update_callback=NullPrinter(),
-                     validate=True,
-                     log_wire_file=None,
-                     logger_debug=NULL_LOGGER):
+def _get_unvalidated_config(config_file_path,
+                            skip_config_decryption,
+                            msg_update_callback=NullPrinter()):
     password = None
     if not skip_config_decryption:
         password = os.getenv('CSE_CONFIG_PASSWORD') or prompt_text(
@@ -1467,24 +1471,17 @@ def _get_config_dict(config_file_path,
             color='green', hide_input=True)
 
     try:
-        if validate:
-            config_dict = get_validated_config(
-                config_file_path, pks_config_file_name=pks_config_file_path,
-                skip_config_decryption=skip_config_decryption,
-                decryption_password=password,
-                log_wire_file=log_wire_file,
-                logger_debug=logger_debug,
-                msg_update_callback=msg_update_callback)
+        if skip_config_decryption:
+            with open(config_file_path) as config_file:
+                config_dict = yaml.safe_load(config_file) or {}
         else:
-            if skip_config_decryption:
-                with open(config_file_path) as config_file:
-                    config_dict = yaml.safe_load(config_file) or {}
-            else:
-                msg_update_callback.info(
-                    f"Decrypting '{config_file_path}'")
-                config_dict = yaml.safe_load(
-                    get_decrypted_file_contents(
-                        config_file_path, password)) or {}
+            msg_update_callback.info(
+                f"Decrypting '{config_file_path}'")
+            config_dict = yaml.safe_load(
+                get_decrypted_file_contents(
+                    config_file_path, password)) or {}
+        msg_update_callback.general(f"Retrieved config from "
+                                    f"'{config_file_path}'")
 
         # To suppress the warning message that pyvcloud prints if
         # ssl_cert verification is skipped.
@@ -1498,14 +1495,8 @@ def _get_config_dict(config_file_path,
         store_telemetry_settings(config_dict)
 
         return config_dict
-    except requests.exceptions.SSLError as err:
-        raise Exception(f"SSL verification failed: {str(err)}")
-    except requests.exceptions.ConnectionError as err:
-        raise Exception(f"Cannot connect to {err.request.url}.")
     except cryptography.fernet.InvalidToken:
         raise Exception(CONFIG_DECRYPTION_ERROR_MSG)
-    except vim.fault.InvalidLogin:
-        raise Exception(VCENTER_LOGIN_ERROR_MSG)
 
 
 def _get_clients_from_config(config, log_wire_file, log_wire):

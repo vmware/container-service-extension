@@ -5,6 +5,8 @@
 import logging
 import re
 
+from container_service_extension.thread_local_data import get_thread_request_id
+
 
 class RedactingFilter(logging.Filter):
     """Filter class to redact sensitive infomarion in logs.
@@ -68,6 +70,7 @@ class RedactingFilter(logging.Filter):
         :rtype: boolean
         """
         record.msg = self.redact(record.msg)
+        record.requestId = get_thread_request_id()
         if len(record.args) != 0:
             record.args = self.redact(record.args)
         return True

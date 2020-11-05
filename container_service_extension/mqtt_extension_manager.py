@@ -354,7 +354,7 @@ class MQTTExtensionManager:
         }
         response_body = self._cloudapi_client.do_request(
             method=RequestMethod.POST,
-            cloudapi_version=cloudapi_constants.CLOUDAPI_VERSION_1_0_0,
+            cloudapi_version=cloudapi_constants.CloudApiVersion.VERSION_1_0_0,
             resource_url_relative_path=constants.TOKEN_PATH,
             payload=payload)
         token_info = {
@@ -377,7 +377,7 @@ class MQTTExtensionManager:
         token_ids = []
         response_body = self._cloudapi_client.do_request(
             method=RequestMethod.GET,
-            cloudapi_version=cloudapi_constants.CLOUDAPI_VERSION_1_0_0,
+            cloudapi_version=cloudapi_constants.CloudApiVersion.VERSION_1_0_0,
             resource_url_relative_path=constants.TOKEN_PATH)
         ext_combine_name = f"{ext_vendor}/{ext_name}/{ext_version}"
         for token_info in response_body['values']:
@@ -394,7 +394,7 @@ class MQTTExtensionManager:
         """
         self._cloudapi_client.do_request(
             method=RequestMethod.DELETE,
-            cloudapi_version=cloudapi_constants.CLOUDAPI_VERSION_1_0_0,
+            cloudapi_version=cloudapi_constants.CloudApiVersion.VERSION_1_0_0,
             resource_url_relative_path=f"{constants.TOKEN_PATH}/"
                                        f"{token_id}")
 
@@ -422,7 +422,7 @@ class MQTTExtensionManager:
         try:
             self._cloudapi_client.do_request(
                 method=RequestMethod.GET,
-                cloudapi_version=cloudapi_constants.CLOUDAPI_VERSION_1_0_0,
+                cloudapi_version=cloudapi_constants.CloudApiVersion.VERSION_1_0_0,  # noqa: E501
                 resource_url_relative_path=f"{constants.TOKEN_PATH}/"
                                            f"{token_id}")
         except requests.exceptions.HTTPError:

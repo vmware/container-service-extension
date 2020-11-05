@@ -1,6 +1,7 @@
 # container-service-extension
 # Copyright (c) 2020 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
+
 from dataclasses import asdict
 import json
 import os
@@ -9,9 +10,8 @@ import requests
 import yaml
 
 import container_service_extension.client.constants as cli_constants
-from container_service_extension.client.native_cluster_api import NativeClusterApi  # noqa: E501
-import container_service_extension.client.response_processor as response_processor  # noqa: E501
-import container_service_extension.client.tkg_cluster_api as tkg_cli_api
+from container_service_extension.client.de_cluster_native import DEClusterNative  # noqa: E501
+from container_service_extension.client.de_cluster_tkg import DEClusterTKG
 import container_service_extension.client.tkgclient.rest as tkg_rest
 import container_service_extension.client.utils as client_utils
 import container_service_extension.def_.entity_service as def_entity_svc
@@ -21,12 +21,11 @@ from container_service_extension.def_.utils import DEF_NATIVE_ENTITY_TYPE_VERSIO
 import container_service_extension.exceptions as cse_exceptions
 import container_service_extension.logger as logger
 import container_service_extension.pyvcloud_utils as vcd_utils
-import container_service_extension.shared_constants as shared_constants
 
 DUPLICATE_CLUSTER_ERROR_MSG = "Duplicate clusters found. Please use --k8-runtime for the unique identification"  # noqa: E501
 
 
-class DefEntityClusterApi:
+class DECluster:
     """Handle operations common to DefNative and TKG kubernetes clusters.
 
     Also any operation where cluster kind is not supplied should be handled here.  # noqa: E501
@@ -39,7 +38,6 @@ class DefEntityClusterApi:
     """
 
     def __init__(self, client):
-        self._client = client
         logger_wire = logger.NULL_LOGGER
         if os.getenv(cli_constants.ENV_CSE_CLIENT_WIRE_LOGGING):
             logger_wire = logger.CLIENT_WIRE_LOGGER
@@ -47,8 +45,8 @@ class DefEntityClusterApi:
             vcd_utils.get_cloudapi_client_from_vcd_client(
                 client=client, logger_debug=logger.CLIENT_LOGGER,
                 logger_wire=logger_wire)
-        self._nativeCluster = NativeClusterApi(client)
-        self._tkgCluster = tkg_cli_api.TKGClusterApi(client)
+        self._nativeCluster = DEClusterNative(client)
+        self._tkgCluster = DEClusterTKG(client)
 
     def list_clusters(self, vdc=None, org=None, **kwargs):
         """Get collection of clusters using DEF API.
@@ -327,19 +325,3 @@ class DefEntityClusterApi:
             cluster_dict = asdict(cluster)
             return self._nativeCluster.upgrade_cluster_by_cluster_id(cluster.id, cluster_def_entity=cluster_dict)  # noqa: E501
         self._tkgCluster.upgrade_cluster(cluster_name, template_name, template_revision)  # noqa: E501
-
-    def get_templates(self):
-        """Get the template information that are supported by api version 35.
-
-        :return: decoded response content, if status code is 2xx.
-        :rtype: dict
-        :raises CseResponseError: if response http status code is not 2xx
-        """
-        method = shared_constants.RequestMethod.GET
-        uri = f"{self._client.get_api_uri()}/{shared_constants.CSE_URL_FRAGMENT}/{shared_constants.CSE_3_0_URL_FRAGMENT}/templates"  # noqa: E501
-        response = self._client._do_request_prim(
-            method,
-            uri,
-            self._client._session,
-            accept_type='application/json')
-        return response_processor.process_response(response)

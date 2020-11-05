@@ -226,6 +226,22 @@ Starting CSE 3.0, separate command group has been dedicated to Ent-PKS
     * Increase the VCD extension timeout to a higher value. Refer to
       [Setting the API Extension Timeout](CSE_SERVER_MANAGEMENT.html#extension-timeout)
 
+<a name="ent-pks"></a>
+## Enterprise PKS Limitations
+
+* When attaching an NSX-T-backed vCenter (such as Enterprise PKS vCenter) to a
+MicrosoftSQL-backed VCD, the vCenter can fail to connect. Refer to this
+[work around](https://docs.vmware.com/en/vCloud-Director/9.7/rn/vmware-vcloud-director-for-service-providers-97-release-notes.html)
+* Once `vcd cse pks cluster resize` is run on Enterprise PKS based clusters,
+organization administrator's attempts to view and perform CRUD operations on those
+clusters will begin to fail with errors.
+* Once `vcd cse pks cluster resize` is run on Enterprise PKS based clusters, commands
+`vcd cse cluster info` and `vcd cse cluster list` on those resized clusters will begin to display
+incomplete results.
+* Once a given OrgVDC is enabled for Enterprise PKS,
+renaming that OrgVDC in VCD will cause further K8 cluster deployment
+failures in that OrgVDC.
+
 <a name="compatibility-matrix"></a>
 ## Compatibility matrix
 

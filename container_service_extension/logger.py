@@ -8,7 +8,10 @@ import logging
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 
+from container_service_extension.init_utils import run_once
+from container_service_extension.request_id_formatter import RequestIdFormatter
 from container_service_extension.security import RedactingFilter
+from container_service_extension.server_constants import REQUEST_ID_FORMAT
 
 # max size for log files (8MB)
 _MAX_BYTES = 2**23
@@ -18,29 +21,22 @@ _BACKUP_COUNT = 10
 _TIME = str(datetime.datetime.now()).split('.')[0]
 _TIMESTAMP = _TIME.replace(' ', '_').replace(':', '-')
 
+
 # standard formatters used by handlers
-INFO_LOG_FORMATTER = logging.Formatter(fmt='%(asctime)s | '
-                                       '%(levelname)s :: '
-                                       '%(message)s',
-                                       datefmt='%y-%m-%d %H:%M:%S')
-DEBUG_LOG_FORMATTER = logging.Formatter(fmt='%(asctime)s | '
-                                        '%(module)s:%(lineno)s - %(funcName)s '
-                                        '| %(levelname)s :: '
+INFO_LOG_FORMATTER = RequestIdFormatter(fmt='%(asctime)s | '
+                                        f'{REQUEST_ID_FORMAT}'
+                                        '%(levelname)s :: '
                                         '%(message)s',
                                         datefmt='%y-%m-%d %H:%M:%S')
+DEBUG_LOG_FORMATTER = RequestIdFormatter(fmt='%(asctime)s | '
+                                         '%(module)s:%(lineno)s - %(funcName)s | '  # noqa: E501
+                                         f'{REQUEST_ID_FORMAT}'
+                                         '%(levelname)s :: '
+                                         '%(message)s',
+                                         datefmt='%y-%m-%d %H:%M:%S')
 
 # create directory for all cse logs
 LOGS_DIR_NAME = Path.home() / '.cse-logs'
-
-
-def run_once(f):
-    """Ensure that a function is only run once using this decorator."""
-    def wrapper(*args, **kwargs):
-        if not wrapper.has_run:
-            wrapper.has_run = True
-            return f(*args, **kwargs)
-    wrapper.has_run = False
-    return wrapper
 
 
 # cse install logger and config

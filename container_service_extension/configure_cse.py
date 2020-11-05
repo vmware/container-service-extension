@@ -24,7 +24,6 @@ import requests
 import semantic_version
 
 import container_service_extension.compute_policy_manager as compute_policy_manager # noqa: E501
-from container_service_extension.config_validator import get_validated_config
 import container_service_extension.def_.entity_service as def_entity_svc
 import container_service_extension.def_.models as def_models
 import container_service_extension.def_.schema_service as def_schema_svc
@@ -236,7 +235,7 @@ def _check_mqtt_extension_installation(client, msg_update_callback, err_msgs):
             SERVER_CLI_LOGGER.error(msg)
             err_msgs.append(msg)
         else:
-            msg = "MQTT extension and API filter found"
+            msg = "MQTT extension and API filters found"
             msg_update_callback.general(msg)
             SERVER_CLI_LOGGER.info(msg)
     else:
@@ -295,10 +294,9 @@ def parse_cse_extension_description(sys_admin_client, is_mqtt_extension):
     return (cse_version, vcd_api_version)
 
 
-def install_cse(config_file_name, skip_template_creation,
+def install_cse(config_file_name, config, skip_template_creation,
                 ssh_key, retain_temp_vapp, pks_config_file_name=None,
                 skip_config_decryption=False,
-                decryption_password=None,
                 msg_update_callback=utils.NullPrinter()):
     """Handle logistics for CSE installation.
 
@@ -309,13 +307,13 @@ def install_cse(config_file_name, skip_template_creation,
     Also records telemetry data on installation details.
 
     :param str config_file_name: config file name.
+    :param dict config: content of the CSE config file.
     :param bool skip_template_creation: If True, skip creating the templates.
     :param str ssh_key: public ssh key to place into template vApp(s).
     :param bool retain_temp_vapp: if True, temporary vApp will not destroyed,
         so the user can ssh into and debug the vm.
     :param str pks_config_file_name: pks config file name.
     :param bool skip_config_decryption: do not decrypt the config file.
-    :param str decryption_password: password to decrypt the config file.
     :param utils.ConsoleMessagePrinter msg_update_callback: Callback object.
 
     :raises cse_exception.AmqpError: (when using AMQP) if AMQP exchange
@@ -323,14 +321,6 @@ def install_cse(config_file_name, skip_template_creation,
     :raises requests.exceptions.HTTPError: (when using MQTT) if there is an
         issue in retrieiving MQTT info or in setting up the MQTT components
     """
-    config = get_validated_config(
-        config_file_name, pks_config_file_name=pks_config_file_name,
-        skip_config_decryption=skip_config_decryption,
-        decryption_password=decryption_password,
-        log_wire_file=INSTALL_WIRELOG_FILEPATH,
-        logger_debug=INSTALL_LOGGER,
-        msg_update_callback=msg_update_callback)
-
     populate_vsphere_list(config['vcs'])
 
     msg = f"Installing CSE on vCloud Director using config file " \
@@ -925,8 +915,10 @@ def _setup_placement_policies(client,
     pvdc_compute_policy = None
     try:
         try:
-            pvdc_compute_policy = cpm.get_pvdc_compute_policy(
-                server_constants.CSE_GLOBAL_PVDC_COMPUTE_POLICY_NAME)
+            pvdc_compute_policy = \
+                compute_policy_manager.get_cse_pvdc_compute_policy(
+                    cpm,
+                    server_constants.CSE_GLOBAL_PVDC_COMPUTE_POLICY_NAME)
             msg = "Skipping creation of global PVDC compute policy. Policy already exists" # noqa: E501
             msg_update_callback.general(msg)
             INSTALL_LOGGER.info(msg)
@@ -934,25 +926,32 @@ def _setup_placement_policies(client,
             msg = "Creating global PVDC compute policy"
             msg_update_callback.general(msg)
             INSTALL_LOGGER.info(msg)
-            pvdc_compute_policy = cpm.add_pvdc_compute_policy(
-                server_constants.CSE_GLOBAL_PVDC_COMPUTE_POLICY_NAME,
-                server_constants.CSE_GLOBAL_PVDC_COMPUTE_POLICY_DESCRIPTION)
+            pvdc_compute_policy = \
+                compute_policy_manager.add_cse_pvdc_compute_policy(
+                    cpm,
+                    server_constants.CSE_GLOBAL_PVDC_COMPUTE_POLICY_NAME,
+                    server_constants.CSE_GLOBAL_PVDC_COMPUTE_POLICY_DESCRIPTION)  # noqa: E501
 
-        for policy in policy_list:
+        for policy_name in policy_list:
             if not is_tkg_plus_enabled and \
-                    policy == shared_constants.TKG_PLUS_CLUSTER_RUNTIME_INTERNAL_NAME:  # noqa: E501
+                    policy_name == shared_constants.TKG_PLUS_CLUSTER_RUNTIME_INTERNAL_NAME:  # noqa: E501
                 continue
             try:
-                cpm.get_vdc_compute_policy(policy, is_placement_policy=True)
-                msg = f"Skipping creation of VDC placement policy '{policy}'. Policy already exists" # noqa: E501
+                compute_policy_manager.get_cse_vdc_compute_policy(
+                    cpm,
+                    policy_name,
+                    is_placement_policy=True)
+                msg = f"Skipping creation of VDC placement policy '{policy_name}'. Policy already exists" # noqa: E501
                 msg_update_callback.general(msg)
                 INSTALL_LOGGER.info(msg)
             except EntityNotFoundException:
-                msg = f"Creating placement policy '{policy}'"
+                msg = f"Creating placement policy '{policy_name}'"
                 msg_update_callback.general(msg)
                 INSTALL_LOGGER.info(msg)
-                cpm.add_vdc_compute_policy(
-                    policy, pvdc_compute_policy_id=pvdc_compute_policy['id'])
+                compute_policy_manager.add_cse_vdc_compute_policy(
+                    cpm,
+                    policy_name,
+                    pvdc_compute_policy_id=pvdc_compute_policy['id'])
     except cse_exception.GlobalPvdcComputePolicyNotSupported:
         msg = "Global PVDC compute policies are not supported." \
               "Skipping creation of placement policy."
@@ -970,7 +969,7 @@ def _assign_placement_policies_to_existing_templates(client, config,
     assign the respective placement policy to the template.
 
     :param vcdClient.Client client:
-    :param dict config:
+    :param dict config: content of the CSE config file.
     :param bool is_tkg_plus_enable:
     :param bool log_wire:
     :param utils.ConsoleMessagePrinter msg_update_callback:
@@ -1054,7 +1053,7 @@ def _install_all_templates(
 
 
 def install_template(template_name, template_revision, config_file_name,
-                     force_create, retain_temp_vapp, ssh_key,
+                     config, force_create, retain_temp_vapp, ssh_key,
                      skip_config_decryption=False, decryption_password=None,
                      msg_update_callback=utils.NullPrinter()):
     """Install a particular template in CSE.
@@ -1065,6 +1064,7 @@ def install_template(template_name, template_revision, config_file_name,
     :param str template_name:
     :param str template_revision:
     :param str config_file_name: config file name.
+    :param dict config: content of the CSE config file.
     :param bool force_create: if True and template already exists in vCD,
         overwrites existing template.
     :param str ssh_key: public ssh key to place into template vApp(s).
@@ -1074,13 +1074,6 @@ def install_template(template_name, template_revision, config_file_name,
     :param str decryption_password: password to decrypt the config file.
     :param utils.ConsoleMessagePrinter msg_update_callback: Callback object.
     """
-    config = get_validated_config(
-        config_file_name, skip_config_decryption=skip_config_decryption,
-        decryption_password=decryption_password,
-        log_wire_file=INSTALL_WIRELOG_FILEPATH,
-        logger_debug=INSTALL_LOGGER,
-        msg_update_callback=msg_update_callback)
-
     populate_vsphere_list(config['vcs'])
 
     msg = f"Installing template '{template_name}' at revision " \
@@ -1395,11 +1388,11 @@ def upgrade_cse(config_file_name, config, skip_template_creation,
         # CSE version info in extension description is only applicable for
         # CSE 2.6.02b.dev and CSE 3.0.0+ versions.
         cse_2_6_any_patch = semantic_version.SimpleSpec('>=2.6.0,<2.7.0')
-        cse_3_0_0 = semantic_version.Version('3.0.0')
+        cse_3_0_any_previous_patch = semantic_version.SimpleSpec('>=3.0.0,<=3.0.1')  # noqa: E501
         allow_upgrade = \
             ext_cse_version == server_constants.UNKNOWN_CSE_VERSION or \
             cse_2_6_any_patch.match(ext_cse_version) or \
-            ext_cse_version == cse_3_0_0
+            cse_3_0_any_previous_patch.match(ext_cse_version)
 
         if not allow_upgrade:
             raise Exception(update_path_not_valid_msg)
@@ -2131,8 +2124,9 @@ def _assign_placement_policy_to_vdc_and_right_bundle_to_org(
         msg = f"Found {len(native_ovdcs)} vDC(s) hosting NATIVE CSE custers."
         msg_update_callback.info(msg)
         INSTALL_LOGGER.info(msg)
-        native_policy = cpm.get_vdc_compute_policy(
-            policy_name=shared_constants.NATIVE_CLUSTER_RUNTIME_INTERNAL_NAME,
+        native_policy = compute_policy_manager.get_cse_vdc_compute_policy(
+            cpm,
+            shared_constants.NATIVE_CLUSTER_RUNTIME_INTERNAL_NAME,
             is_placement_policy=True)
         for vdc_id in native_ovdcs:
             cpm.add_compute_policy_to_vdc(
@@ -2157,9 +2151,11 @@ def _assign_placement_policy_to_vdc_and_right_bundle_to_org(
         INSTALL_LOGGER.info(msg)
 
         if is_tkg_plus_enabled:
-            tkg_plus_policy = cpm.get_vdc_compute_policy(
-                policy_name=shared_constants.TKG_PLUS_CLUSTER_RUNTIME_INTERNAL_NAME,  # noqa: E501
-                is_placement_policy=True)
+            tkg_plus_policy = \
+                compute_policy_manager.get_cse_vdc_compute_policy(
+                    cpm,
+                    shared_constants.TKG_PLUS_CLUSTER_RUNTIME_INTERNAL_NAME,
+                    is_placement_policy=True)
             for vdc_id in tkg_plus_ovdcs:
                 cpm.add_compute_policy_to_vdc(
                     vdc_id=vdc_id,
@@ -2221,7 +2217,7 @@ def _remove_old_cse_sizing_compute_policies(
 
             vdc = vcd_utils.get_vdc(client, vdc_name=vdc_name, org_name=org_name) # noqa: E501
             vdc_id = pyvcloud_vcd_utils.extract_id(vdc.get_resource().get('id')) # noqa: E501
-            vdc_sizing_policies = cpm.list_vdc_sizing_policies_on_vdc(vdc_id)
+            vdc_sizing_policies = compute_policy_manager.list_cse_sizing_policies_on_vdc(cpm, vdc_id)  # noqa: E501
             if vdc_sizing_policies:
                 for policy in vdc_sizing_policies:
                     msg = f"Processing Policy : '{policy['display_name']}' on Org VDC : '{vdc_name}'" # noqa: E501
@@ -2254,7 +2250,8 @@ def _remove_old_cse_sizing_compute_policies(
             msg_update_callback.info(msg)
             INSTALL_LOGGER.info(msg)
 
-            cpm.delete_vdc_compute_policy(policy_name=policy_name)
+            compute_policy_manager.delete_cse_vdc_compute_policy(cpm,
+                                                                 policy_name)
 
             msg = f"Deleted  Policy : '{policy_name}'"
             msg_update_callback.general(msg)

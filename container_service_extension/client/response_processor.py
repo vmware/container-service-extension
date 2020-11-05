@@ -36,22 +36,28 @@ def process_response(response):
         status_code: http status code
         content: response result as string
 
-    :return: decoded response content, if status code is 2xx.
+    :return: decoded response content, if status code is 2xx or 429.
 
     :rtype: dict
 
-    :raises CseResponseError: if response http status code is not 2xx
+    :raises CseResponseError: if response http status code is not 2xx or 429
     """
-    wire_logger.debug(f"Made request to: {response.request.method} {response.request.path_url}") # noqa: E501
+    wire_logger.debug(f"Made request to: {response.request.method} {response.request.path_url}")  # noqa: E501
+    wire_logger.debug(f"Request headers: {response.request.headers}")
     wire_logger.debug(f"Request body: {response.request.body}")
+    wire_logger.debug(f"Response status code: {response.status_code}")
+    wire_logger.debug(f"Response headers: {response.headers}")
+
+    response_content = deserialize_response_content(response)
+    wire_logger.debug(f"Response content: {response_content}")
+
     if response.status_code in [
         requests.codes.ok,
         requests.codes.created,
-        requests.codes.accepted
+        requests.codes.accepted,
+        requests.codes.too_many_requests
     ]:
-        response = deserialize_response_content(response)
-        wire_logger.debug(f"Response received: {response}")
-        return response
+        return response_content
 
     raise response_to_exception(response)
 

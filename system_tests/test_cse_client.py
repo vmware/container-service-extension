@@ -84,30 +84,36 @@ def cse_server():
     - Stop CSE server
     """
     config = testutils.yaml_to_dict(env.BASE_CONFIG_FILEPATH)
-    install_cmd = ['install',
-                   '--config', env.ACTIVE_CONFIG_FILEPATH,
-                   '--ssh-key', env.SSH_KEY_FILEPATH,
-                   '--skip-config-decryption']
     config = env.setup_active_config()
-    result = env.CLI_RUNNER.invoke(cli, install_cmd,
-                                   input='y',
-                                   catch_exceptions=False)
-
-    # TODO(): Temporary fix(96-105) to handle CTOT install failure.
-    # TODO() Revisit again.
-    if result.exit_code != 0:
-        install_cmd = ['upgrade',
-                       '--config', env.ACTIVE_CONFIG_FILEPATH,
-                       '--ssh-key', env.SSH_KEY_FILEPATH,
-                       '--skip-config-decryption']
-        config = env.setup_active_config()
-        result = env.CLI_RUNNER.invoke(cli, install_cmd,
-                                       input='y',
-                                       catch_exceptions=False)
-
+    if env.is_cse_registered():
+        cmd = ['upgrade',
+               '--config', env.ACTIVE_CONFIG_FILEPATH,
+               '--ssh-key', env.SSH_KEY_FILEPATH,
+               '--skip-config-decryption',
+               '--skip-template-creation']
+    else:
+        cmd = ['install',
+               '--config', env.ACTIVE_CONFIG_FILEPATH,
+               '--ssh-key', env.SSH_KEY_FILEPATH,
+               '--skip-config-decryption',
+               '--skip-template-creation']
+    result = env.CLI_RUNNER.invoke(cli, cmd, input='y', catch_exceptions=False)
     assert result.exit_code == 0,\
-        testutils.format_command_info('cse', install_cmd, result.exit_code,
+        testutils.format_command_info('cse', cmd, result.exit_code,
                                       result.output)
+
+    # Create missing templates
+    for template_config in env.TEMPLATE_DEFINITIONS:
+        cmd = f"template install {template_config['name']} " \
+              f"{template_config['revision']} " \
+              f"--config {env.ACTIVE_CONFIG_FILEPATH} " \
+              f"--ssh-key {env.SSH_KEY_FILEPATH} " \
+              f"--skip-config-decryption"
+        result = env.CLI_RUNNER.invoke(
+            cli, cmd.split(), catch_exceptions=False)
+        assert result.exit_code == 0,\
+            testutils.format_command_info('cse', cmd, result.exit_code,
+                                          result.output)
 
     # start cse server as subprocess
     cmd = f"cse run -c {env.ACTIVE_CONFIG_FILEPATH} --skip-config-decryption"
@@ -120,7 +126,7 @@ def cse_server():
                              stderr=subprocess.STDOUT)
     time.sleep(env.WAIT_INTERVAL * 3)  # server takes a little while to set up
 
-    # enable kubernetes functionality on our ovdc
+    # Enable kubernetes functionality on our ovdc
     # by default, an ovdc cannot deploy kubernetes clusters
     # TODO() this should be removed once this behavior is changed
     cmd = f"login {config['vcd']['host']} {constants.SYSTEM_ORG_NAME} " \

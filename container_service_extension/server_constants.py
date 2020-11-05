@@ -51,9 +51,6 @@ CSE_GLOBAL_PVDC_COMPUTE_POLICY_DESCRIPTION = \
 CSE_CLUSTER_KUBECONFIG_PATH = '/root/.kube/config'
 
 # MQTT constants
-# TODO: version should be major.minor.patch
-#  Also, patch change doesn't mean version needs to be updated,
-#  but major upgrade with api changes should lead to updating the version
 ADMIN_EXT_SERVICE_PATH = 'admin/extension/service'
 API_FILTER_PATH = 'apifilter'
 API_FILTERS_PATH = 'apifilters'
@@ -66,10 +63,25 @@ MQTT_MIN_API_VERSION = 35.0
 MQTT_TOKEN_NAME = "mqttCseToken"
 TOKEN_PATH = 'tokens'
 
+
 # Encryption constants
 PBKDF2_ITERATIONS = 100000
 SALT_SIZE = 32
 PBKDF2_OUTPUT_SIZE = 32
+
+# Names of Message Consumer Thread and Watchdog Thread
+MESSAGE_CONSUMER_THREAD = 'MessageConsumer'
+WATCHDOG_THREAD = 'ConsumerWatchdog'
+
+
+# Config file error messages
+CONFIG_DECRYPTION_ERROR_MSG = \
+    "Config file decryption failed: invalid decryption password"
+VCENTER_LOGIN_ERROR_MSG = "vCenter login failed (check config file for "\
+    "vCenter username/password)."
+
+# Request Id format for logging
+REQUEST_ID_FORMAT = 'Request Id: %(requestId)s | '
 
 
 @unique

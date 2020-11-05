@@ -19,6 +19,8 @@ import semantic_version
 
 from container_service_extension.logger import NULL_LOGGER
 from container_service_extension.server_constants import MQTT_MIN_API_VERSION
+from container_service_extension.thread_local_data import get_thread_request_id
+from container_service_extension.thread_local_data import set_thread_request_id
 
 
 # chunk size in bytes for file reading
@@ -374,11 +376,24 @@ def read_data_file(filepath, logger=NULL_LOGGER,
     return contents
 
 
+def transfer_request_id_wrapper(func):
+    cur_thread_req_id = get_thread_request_id()
+
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        set_thread_request_id(cur_thread_req_id)
+        func(*args, **kwargs)
+        set_thread_request_id(None)  # Reset request id
+    return wrapper
+
+
 def run_async(func):
     @functools.wraps(func)
     def wrapper(*args, **kwargs):
+        req_id_wrapper = transfer_request_id_wrapper(func)
         t = threading.Thread(name=generate_thread_name(func.__name__),
-                             target=func, args=args, kwargs=kwargs, daemon=True)  # noqa: E501
+                             target=req_id_wrapper, args=args, kwargs=kwargs,
+                             daemon=True)
         t.start()
         return t
     return wrapper

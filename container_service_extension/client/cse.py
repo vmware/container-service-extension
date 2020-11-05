@@ -13,10 +13,11 @@ from container_service_extension.client import pks
 from container_service_extension.client.cluster import Cluster
 import container_service_extension.client.command_filter as cmd_filter
 import container_service_extension.client.constants as cli_constants
-from container_service_extension.client.native_cluster_api import NativeClusterApi  # noqa: E501
+from container_service_extension.client.de_cluster_native import DEClusterNative  # noqa: E501
 from container_service_extension.client.ovdc import Ovdc
 import container_service_extension.client.sample_generator as client_sample_generator  # noqa: E501
 from container_service_extension.client.system import System
+from container_service_extension.client.template import Template
 import container_service_extension.client.utils as client_utils
 from container_service_extension.exceptions import CseResponseError
 from container_service_extension.exceptions import CseServerNotRunningError
@@ -82,8 +83,8 @@ def list_templates(ctx):
     try:
         client_utils.cse_restore_session(ctx)
         client = ctx.obj['client']
-        cluster = Cluster(client)
-        result = cluster.get_templates()
+        template = Template(client)
+        result = template.get_templates()
         CLIENT_LOGGER.debug(result)
         value_field_to_display_field = {
             'name': 'Name',
@@ -731,7 +732,7 @@ def delete_nfs(ctx, cluster_name, node_name, vdc, org):
         client = ctx.obj['client']
         if not client.is_sysadmin() and org is None:
             org = ctx.obj['profiles'].get('org_in_use')
-        cluster = NativeClusterApi(client)
+        cluster = DEClusterNative(client)
         result = cluster.delete_nfs_node(cluster_name, node_name, org=org, vdc=vdc)  # noqa: E501
         stdout(result, ctx)
         CLIENT_LOGGER.debug(result)

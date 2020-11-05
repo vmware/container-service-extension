@@ -1377,7 +1377,7 @@ def _get_nodes_details(sysadmin_client, vapp):
                                                         'VmSizingPolicy'):
                 policy_name = vm.ComputePolicy.VmSizingPolicy.get('name')
                 sizing_class = compute_policy_manager.\
-                    ComputePolicyManager.get_policy_display_name(policy_name)
+                    get_cse_policy_display_name(policy_name)
             if vm_name.startswith(NodeType.CONTROL_PLANE):
                 control_plane = def_models.Node(name=vm_name, ip=ip,
                                                 sizing_class=sizing_class)
@@ -1620,10 +1620,7 @@ def _add_nodes(sysadmin_client, num_nodes, node_type, org, vdc, vapp,
             sizing_class_href = None
             if sizing_class_name:
                 vdc_resource = vdc.get_resource()
-                filters = {
-                    'isSizingOnly': True,
-                }
-                for policy in cpm.list_compute_policies_on_vdc(vdc_resource.get('id'), filters=filters):  # noqa: E501
+                for policy in cpm.list_vdc_sizing_policies_on_vdc(vdc_resource.get('id')):  # noqa: E501
                     if policy['name'] == sizing_class_name:
                         if not sizing_class_href:
                             sizing_class_href = policy['href']
@@ -1635,6 +1632,7 @@ def _add_nodes(sysadmin_client, num_nodes, node_type, org, vdc, vapp,
                     msg = f"No sizing policy with the name {sizing_class_name} exists on the VDC"  # noqa: E501
                     LOGGER.error(msg)
                     raise Exception(msg)
+                LOGGER.debug(f"Found sizing policy with name {sizing_class_name} on the VDC {vdc_resource.get('name')}")  # noqa: E501
 
             cust_script = None
             if ssh_key is not None:
