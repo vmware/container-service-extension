@@ -1,37 +1,22 @@
 # container-service-extension
 # Copyright (c) 2017 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
-import os
-
 import click
 from vcd_cli.utils import stderr
 from vcd_cli.utils import stdout
-from vcd_cli.vcd import vcd
 import yaml
 
-from container_service_extension.client import pks
-from container_service_extension.client.cluster import Cluster
 import container_service_extension.client.command_filter as cmd_filter
 import container_service_extension.client.constants as cli_constants
-from container_service_extension.client.de_cluster_native import DEClusterNative  # noqa: E501
 from container_service_extension.client.ovdc import Ovdc
-import container_service_extension.client.sample_generator as client_sample_generator  # noqa: E501
-from container_service_extension.client.system import System
-from container_service_extension.client.template import Template
 import container_service_extension.client.utils as client_utils
-from container_service_extension.exceptions import CseResponseError
-from container_service_extension.exceptions import CseServerNotRunningError
 from container_service_extension.logger import CLIENT_LOGGER
-from container_service_extension.minor_error_codes import MinorErrorCode
-from container_service_extension.server_constants import K8S_PROVIDER_KEY
-from container_service_extension.server_constants import K8sProvider
-from container_service_extension.server_constants import LocalTemplateKey
 import container_service_extension.shared_constants as shared_constants
 import container_service_extension.utils as utils
 
 
 @click.group(name='ovdc', cls=cmd_filter.GroupCommandFilter,
-           short_help='Manage ovdc enablement for native clusters')
+             short_help='Manage ovdc enablement for native clusters')
 @click.pass_context
 def ovdc_group(ctx):
     """Manage ovdc enablement for native clusters.

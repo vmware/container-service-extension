@@ -6,28 +6,22 @@ import os
 import click
 from vcd_cli.utils import stderr
 from vcd_cli.utils import stdout
-from vcd_cli.vcd import vcd
 import yaml
 
-from container_service_extension.client import pks
 from container_service_extension.client.cluster import Cluster
 import container_service_extension.client.command_filter as cmd_filter
 import container_service_extension.client.constants as cli_constants
 from container_service_extension.client.de_cluster_native import DEClusterNative  # noqa: E501
-from container_service_extension.client.ovdc import Ovdc
 import container_service_extension.client.sample_generator as client_sample_generator  # noqa: E501
-from container_service_extension.client.system import System
-from container_service_extension.client.template import Template
 import container_service_extension.client.utils as client_utils
 from container_service_extension.exceptions import CseResponseError
 from container_service_extension.exceptions import CseServerNotRunningError
 from container_service_extension.logger import CLIENT_LOGGER
 from container_service_extension.minor_error_codes import MinorErrorCode
-from container_service_extension.server_constants import K8S_PROVIDER_KEY
-from container_service_extension.server_constants import K8sProvider
 from container_service_extension.server_constants import LocalTemplateKey
 import container_service_extension.shared_constants as shared_constants
 import container_service_extension.utils as utils
+
 
 @click.group(name='cluster', cls=cmd_filter.GroupCommandFilter,
              short_help='Manage Kubernetes clusters (native and vSphere with '
@@ -35,12 +29,14 @@ import container_service_extension.utils as utils
 @click.pass_context
 def cluster_group(ctx):
     """Manage Kubernetes clusters (Native, vSphere with Tanzu and Ent-PKS).
+
 \b
 Cluster names should follow the syntax for valid hostnames and can have
 up to 25 characters .`system`, `template` and `swagger*` are reserved
 words and cannot be used to name a cluster.
     """
     pass
+
 
 @cluster_group.command('list',
                        short_help='Display clusters in vCD that are visible '
@@ -501,6 +497,7 @@ Examples
         stderr(e, ctx)
         CLIENT_LOGGER.error(str(e))
 
+
 @cluster_group.command('apply',
                        short_help='apply a configuration to a cluster resource'
                                   ' by filename. The resource will be created '
@@ -626,6 +623,7 @@ def apply(ctx, cluster_config_file_path, generate_sample_config, k8_runtime, out
         stderr(e, ctx)
         CLIENT_LOGGER.error(str(e))
 
+
 @cluster_group.command('delete-nfs',
                        help="Examples:\n\nvcd cse cluster delete-nfs mycluster nfs-uitj",  # noqa: E501
                        short_help='Delete nfs node from Native Kubernetes cluster')  # noqa: E501
@@ -663,6 +661,7 @@ def delete_nfs(ctx, cluster_name, node_name, vdc, org):
     except Exception as e:
         stderr(e, ctx)
         CLIENT_LOGGER.error(str(e))
+
 
 @cluster_group.command('upgrade-plan',
                        short_help='Display templates that the specified '
@@ -810,6 +809,7 @@ Example
         stderr(e, ctx)
         CLIENT_LOGGER.error(str(e))
 
+
 @cluster_group.command('config',
                        short_help='Retrieve cluster configuration details')
 @click.pass_context
@@ -893,6 +893,7 @@ Examples:
     except Exception as e:
         stderr(e, ctx)
         CLIENT_LOGGER.error(str(e))
+
 
 @cluster_group.command('info',
                        short_help='Display info about a cluster')
