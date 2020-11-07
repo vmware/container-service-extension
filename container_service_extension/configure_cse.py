@@ -803,7 +803,7 @@ def _register_def_schema(client: Client,
                 grant_type=server_constants.AclGrantType.MembershipACLGrant,
                 access_level_id=server_constants.AclAccessLevelId.AccessLevelReadWrite, # noqa: E501
                 member_id=server_constants.AclMemberId.SystemOrgId)
-            msg += "Successfully added ReadWrite ACL for native defined entity"
+            msg += "Successfully added ReadWrite ACL for native defined entity to System Org" # noqa: E501
 
         msg_update_callback.general(msg)
         INSTALL_LOGGER.info(msg)
