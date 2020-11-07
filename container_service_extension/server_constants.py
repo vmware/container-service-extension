@@ -306,11 +306,28 @@ class ExtensionType(str, Enum):
     NONE = 'None'
 
 
+@unique
+class AclGrantType(str, Enum):
+    MembershipACLGrant = "MembershipAccessControlGrant"
+
+
+@unique
+class AclAccessLevelId(str, Enum):
+    AccessLevelReadWrite = "urn:vcloud:accessLevel:ReadWrite"
+
+
+@unique
+class AclMemberId(str, Enum):
+    SystemOrgId = "urn:vcloud:org:a93c9db9-7471-3192-8d09-a8f7eeda85f9"
+
+
 # CSE Service Role Name
 CSE_SERVICE_ROLE_NAME = 'CSE Service Role'
 CSE_SERVICE_ROLE_DESC = "CSE Service Role has all the rights necessary for \
         CSE to operate"
 CSE_SERVICE_ROLE_RIGHTS = [
+    "Access Control List: View",
+    "Access Control List: Manage",
     "AMQP Settings: View",
     "Catalog: Add vApp from My Cloud",
     "Catalog: Create / Delete a Catalog",
