@@ -7,7 +7,7 @@ title: Kubernetes Clusters UI Plugin for VCD
 
 Starting CSE 3.0 and VCD 10.2, Kubernetes Clusters UI Plugin 2.0 is available out of the box with VCD 10.2
 
-*Refer to [Compatibility Matrix](CSE30.html#cse30-compatibility-matrix) and 
+*Refer to [Compatibility Matrix](CSE30.html#cse30-compatibility-matrix) and
 [Kubernetes Clusters UI Plugin 2.0.0](https://docs.vmware.com/en/VMware-Cloud-Director/10.2/VMware-Cloud-Director-Service-Provider-Admin-Portal-Guide/GUID-A1910FF9-B2CF-49DD-B031-D1245E8740AE.html) documentation*
 
 ## Overview
@@ -115,7 +115,49 @@ This info page contains the following functionalities:
 
 ## Known Issues
 
-**Re-registering Kubernetes Clusters UI Plugin with VCD fails**
+**Network datagrid will show error if a visible network is owned by a data center group (as opposed to an ovdc)**
+
+Affected UI versions: 2.0.0
+
+If an ovdc network is owned by a data center group (as opposed to an ovdc), UI's API response processing will fail due to receiving an orgVdc property value of "null". The datagrid will reflect this, and show an error message.
+
+Workaround: Use CSE CLI to deploy the Native cluster. CLI does not have this problem because CLI only requires you to input the network name, and doesn't check for the orgVdc property value.
+
+---
+
+**Cluster create wizard datagrids with more than 1 page of items will keep refreshing the first page instead of moving to next page**
+
+Affected UI versions: 2.0.0
+
+Container UI Plugin has a bug where datagrid pagination property is updated incorrectly, causing the datagrid to refresh the first page
+instead of loading the requested page.
+
+---
+**Clarity datagrids in wizards that have more than 9 items do not render** ([github issue](https://github.com/vmware/container-service-extension/issues/648))
+
+Fixed in: 1.0.2
+Affected UI versions: 1.0.0, 1.0.1
+
+Clarity has a bug where datagrids in wizards that have > 9 items have their height set to 0
+Detailed here: https://github.com/vmware/clarity/issues/2364
+This affects displaying networks, ovdcs, templates in cluster creation wizard.
+UI plugin has implemented a workaround where we force set datagrid height to auto
+
+---
+
+**Networks are not displayed if the org vdc name has space(s)** ([github issue](https://github.com/vmware/container-service-extension/issues/625))
+
+Fixed in: 1.0.2
+Affected UI versions: 1.0.0, 1.0.1
+
+Fixed in 1.0.2 by manually encoding the affected URLs before making the vcd api call
+
+* Fix bug where plugin could not display networks from ovdcs with space(s) in the name
+* Fix clarity bug where datagrids that have several items in them got their height set to 0
+
+---
+
+**Re-registering 2.6.0 GA CSE UI plugin with VCD fails**
 
 If the beta version of CSE UI plugin is already registered with VCD, trying to
 upgrade it via CSE cli or VCD UI will fail. Right now, the only way to update
