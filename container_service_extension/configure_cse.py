@@ -658,6 +658,7 @@ def _register_cse_as_amqp_extension(client, routing_key, exchange,
 def _update_user_role_with_right_bundle(right_bundle_name,
                                         client: Client,
                                         msg_update_callback=utils.NullPrinter(), # noqa: E501
+                                        logger_debug=NULL_LOGGER,
                                         log_wire=False):
     """Add defined entity rights to user's role.
 
@@ -681,7 +682,7 @@ def _update_user_role_with_right_bundle(right_bundle_name,
     logger_wire = SERVER_CLOUDAPI_WIRE_LOGGER if log_wire else NULL_LOGGER
     cloudapi_client = \
         vcd_utils.get_cloudapi_client_from_vcd_client(client=client,
-                                                      logger_debug=INSTALL_LOGGER, # noqa: E501
+                                                      logger_debug=logger_debug, # noqa: E501
                                                       logger_wire=logger_wire) # noqa: E501
 
     # Determine role name for the user
@@ -724,8 +725,8 @@ def _update_user_role_with_right_bundle(right_bundle_name,
 
     msg = "Updated user-role: " + str(role_name) + " with Rights-bundle: " + \
         str(right_bundle_name)
-    msg_update_callback.info(msg)
-    INSTALL_LOGGER.info(msg)
+    msg_update_callback.general(msg)
+    logger_debug.info(msg)
 
     return True
 
@@ -794,7 +795,18 @@ def _register_def_schema(client: Client,
         except cse_exception.DefSchemaServiceError:
             # TODO handle this part only if the entity type was not found
             native_entity_type = schema_svc.create_entity_type(native_entity_type)  # noqa: E501
-            msg = "Successfully registered defined entity type"
+            msg = "Successfully registered defined entity type\n"
+
+            entity_svc = def_entity_svc.DefEntityService(cloudapi_client)
+            entity_svc.create_acl_for_entity(
+                native_entity_type.get_id(),
+                grant_type=server_constants.AclGrantType.MembershipACLGrant,
+                access_level_id=server_constants.AclAccessLevelId.AccessLevelReadWrite, # noqa: E501
+                member_id=server_constants.AclMemberId.SystemOrgId)
+            msg += "Successfully added ReadWrite ACL for native defined entity to System Org" # noqa: E501
+
+        msg_update_callback.general(msg)
+        INSTALL_LOGGER.info(msg)
 
         # Update user's role with right bundle associated with native defined
         # entity
@@ -802,6 +814,7 @@ def _register_def_schema(client: Client,
                 def_utils.DEF_NATIVE_ENTITY_TYPE_RIGHT_BUNDLE,
                 client=client,
                 msg_update_callback=msg_update_callback,
+                logger_debug=INSTALL_LOGGER,
                 log_wire=log_wire)):
             # Given that Rights for the current user have been updated, CSE
             # should logout the user and login again.
@@ -812,9 +825,6 @@ def _register_def_schema(client: Client,
                                                 server_constants.SYSTEM_ORG_NAME, # noqa: E501
                                                 config['vcd']['password'])
             client.set_credentials(credentials)
-
-        msg_update_callback.general(msg)
-        INSTALL_LOGGER.info(msg)
     except cse_exception.DefNotSupportedException:
         msg = "Skipping defined entity type and defined entity interface" \
               " registration"
