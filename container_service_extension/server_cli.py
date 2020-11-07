@@ -364,7 +364,9 @@ def create_service_role(ctx, vcd_host, skip_ssl_verify):
         SERVER_CLI_LOGGER.info(msg)
 
         try:
-            create_cse_service_role(client, console_message_printer)
+            create_cse_service_role(client,
+                                    msg_update_callback=console_message_printer,
+                                    logger_debug=SERVER_CLI_LOGGER)
         except EntityNotFoundException as err:
             msg = "CSE Internal Error, Please contact support"
             console_message_printer.error(msg)
