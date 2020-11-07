@@ -7,6 +7,29 @@ title: Known Issues
 <a name="general"></a>
 ## General Issues
 ---
+### In CSE 3.0 users of System organization are unable to create clusters
+If a user from System org who didn't install CSE 3.0 attempts to create clusters,
+the operation fails with an error message "Access denied". The reason behind the
+failure is that, the CSE native defined entity schema is not visible to users
+of System organization, except the user who installed CSE.
+
+**Workaround**
+1. Grant all members of System organization, read-write permission to the
+    CSE native defined entity type.
+    * POST \`https://<vcd\-fqdn>/cloudapi/1.0.0/entities/urn:vcloud:type:cse:nativeCluster:1.0.0/accessControls`\
+        {\
+        "grantType" : "MembershipAccessControlGrant",\
+        "accessLevelId" : "urn:vcloud:accessLevel:ReadWrite",\
+        "memberId" : "urn:vcloud:org:[System organization uuid]"\
+        }
+
+### In CSE 3.0 `cse upgrade` fails with RDE_TYPE_ALREADY_EXISTS if the user account is switched in the configuration file
+If `cse upgrade` is run on an existing CSE 3.0 installation, and the vCD account
+details are different from what was used during the initial CSE installation, the
+upgrade process will fail with the above mentioned error message. The root cause
+and workaround for this issue is exactly the same as covered by the known issue
+above.
+
 ### In CSE 3.0 configured with vCD 10.2, Cluster list operation may fail to retrieve results
 Listing clusters either by CLI (`vcd cse cluster list`) or UI will fail if any of 
 the clusters' representing defined entities are corrupted. For example, if the defined entity 
