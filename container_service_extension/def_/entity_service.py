@@ -183,6 +183,35 @@ class DefEntityService():
         return DefEntity(**response_body)
 
     @handle_entity_service_exception
+    def create_acl_for_entity(self,
+                              id: str,
+                              grant_type: str,
+                              access_level_id: str,
+                              member_id: str):
+        """Create ACL Rule for the Entity.
+
+        :param str id: Id of the Entity
+        :param str grant_type: if acl grant is based on memberships or
+        entitlements
+        :param str access_level_id: level of access which the
+        subject will be granted.
+        param str member_id: member id, this access control grant applies to
+        """
+        acl_details = {}
+        acl_details['grantType'] = grant_type
+        acl_details['accessLevelId'] = access_level_id
+        acl_details['memberId'] = member_id
+
+        self._cloudapi_client.do_request(
+            method=RequestMethod.POST,
+            cloudapi_version=CloudApiVersion.VERSION_1_0_0,
+            resource_url_relative_path=f"{CloudApiResource.ENTITIES}/"
+                                       f"{id}/"
+                                       f"{CloudApiResource.ACL}/",
+            payload=acl_details)
+        return
+
+    @handle_entity_service_exception
     def get_native_entity_by_name(self, name: str, filters: dict = {}) -> DefEntity:  # noqa: E501
         """Get Native cluster defined entity by its name.
 
