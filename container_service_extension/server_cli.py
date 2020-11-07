@@ -344,6 +344,9 @@ def create_service_role(ctx, vcd_host, skip_ssl_verify):
                                  color='green', hide_input=True)
 
     ssl_verify = not skip_ssl_verify
+    msg = f"Connecting to vCD: {vcd_host}"
+    console_message_printer.general_no_color(msg)
+    SERVER_CLI_LOGGER.info(msg)
 
     try:
         client = vcd_client.Client(vcd_host, verify_ssl_certs=ssl_verify)
@@ -355,8 +358,10 @@ def create_service_role(ctx, vcd_host, skip_ssl_verify):
 
         msg = f"Connected to vCD as system administrator: {admin_username}"
         console_message_printer.general_no_color(msg)
-        msg = f"Creating CSE Service Role..."
+        SERVER_CLI_LOGGER.info(msg)
+        msg = "Creating CSE Service Role..."
         console_message_printer.general_no_color(msg)
+        SERVER_CLI_LOGGER.info(msg)
 
         try:
             create_cse_service_role(client, console_message_printer)
