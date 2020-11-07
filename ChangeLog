@@ -1,6 +1,28 @@
 CHANGES
 =======
 
+* [VCDA-1917] CSE Service Role creation cosmetic issues (#821)
+* [VCDA-1919] Add ACL to the System Org while registering the defined entity schema (#823)
+* [VCDA-1890] Implement CSE server CLI command to create service account role (#819)
+* VCDA-1878] Add native def rights for CSE non sys-admin role during CSE install/upgrade (#818)
+* [Docs] Remove old content from CSE 3.0 docs (#799)
+* [VCDA-1897] sample generator with  MQTT section (#810)
+* [VCDA-1696] Upgrade cloudapi endpoints and refactor compute policy manager (#801)
+* [VCDA-1838] CLI pass in config to functions (#806)
+* Allow upgrade from 3.0.x to 3.0.1 (#811)
+* [VCDA-1619] - Fix system tests, Add support for specifying selective templates to r… (#805)
+* [VCDA-1711] Logger with request Id (#800)
+* [VCDA-1883] Improve client wire logging (#802)
+* removed duplicate code on template list cli (#804)
+* [VCDA-1877] Consumer watchdog (#785)
+* [VCDA-1847] Update mqtt to use api access token instead of authorization token  (#770)
+* [VCDA-1705 ] New consumer model for AMQP and MQTT consumers (#727)
+* [Docs] Push CSE 3.0 documentation live (#797)
+
+3.0.0
+-----
+
+* Update Authors and ChangeLog for CSE 3.0.0
 * [Docs] Work in progress docs (#796)
 * [VCDA-1825] Consume latest pyvcloud and vcd-cli (#789)
 * [Docs] More edits to the CSE 3.0 documentation (#795)
