@@ -77,6 +77,8 @@ DISPLAY_REMOTE = "remote"
 # Prompt messages
 PASSWORD_FOR_CONFIG_ENCRYPTION_MSG = "Password for config file encryption"
 PASSWORD_FOR_CONFIG_DECRYPTION_MSG = "Password for config file decryption"
+USERNAME_FOR_SYSTEM_ADMINISTRATOR = "Username for System Administrator"
+PASSWORD_FOR_SYSTEM_ADMINISTRATOR = "Password for "
 
 
 @click.group(context_settings=CONTEXT_SETTINGS, invoke_without_command=True)
@@ -313,7 +315,8 @@ def version(ctx):
 @cli.command(short_help='Create CSE service role for CSE install/upgrade/run')
 @click.pass_context
 @click.option(
-    '-vcd-host',
+    '-v',
+    '--vcd-host',
     metavar='VCD_HOST',
     required=True,
     help="VCD host URL")
@@ -323,10 +326,11 @@ def version(ctx):
     required=False,
     is_flag=True,
     help="Skip SSL Verification for VCD Host")
-def cse_service_role(ctx, vcd_host, skip_ssl_verify):
+def create_service_role(ctx, vcd_host, skip_ssl_verify):
     """Create CSE service Role."""
     SERVER_CLI_LOGGER.debug(f"Executing command: {ctx.command_path}")
     console_message_printer = ConsoleMessagePrinter()
+    requests.packages.urllib3.disable_warnings()
 
     # The console_message_printer is not being passed to the python version
     # check, because we want to suppress the version check messages from being
@@ -334,11 +338,15 @@ def cse_service_role(ctx, vcd_host, skip_ssl_verify):
     check_python_version()
 
     # Prompt user for administrator username/password
-    admin_username = click.prompt('Please enter System Administrator\'s '
-                                  'username', type=str)
-    admin_password = click.prompt('Please enter System Administrator\'s '
-                                  'password', type=str)
+    admin_username = prompt_text(USERNAME_FOR_SYSTEM_ADMINISTRATOR,
+                                 color='green', hide_input=False)
+    admin_password = prompt_text(PASSWORD_FOR_SYSTEM_ADMINISTRATOR + str(admin_username), # noqa: E501
+                                 color='green', hide_input=True)
+
     ssl_verify = not skip_ssl_verify
+    msg = f"Connecting to vCD: {vcd_host}"
+    console_message_printer.general_no_color(msg)
+    SERVER_CLI_LOGGER.info(msg)
 
     try:
         client = vcd_client.Client(vcd_host, verify_ssl_certs=ssl_verify)
@@ -350,9 +358,16 @@ def cse_service_role(ctx, vcd_host, skip_ssl_verify):
 
         msg = f"Connected to vCD as system administrator: {admin_username}"
         console_message_printer.general_no_color(msg)
+        SERVER_CLI_LOGGER.info(msg)
+        msg = "Creating CSE Service Role..."
+        console_message_printer.general_no_color(msg)
+        SERVER_CLI_LOGGER.info(msg)
 
         try:
-            create_cse_service_role(client, console_message_printer)
+            create_cse_service_role(
+                client,
+                msg_update_callback=console_message_printer,
+                logger_debug=SERVER_CLI_LOGGER)
         except EntityNotFoundException as err:
             msg = "CSE Internal Error, Please contact support"
             console_message_printer.error(msg)
