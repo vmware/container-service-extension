@@ -10,7 +10,8 @@ import container_service_extension.utils as utils
 
 
 def create_cse_service_role(client,
-                            msg_update_callback=utils.NullPrinter()):
+                            msg_update_callback=utils.NullPrinter(),
+                            logger_debug=SERVER_CLI_LOGGER):
     """Create Service Role for CSE operations.
 
     The method can only be called by System Administrator user
@@ -33,5 +34,5 @@ def create_cse_service_role(client,
 
     msg = f"Successfully created {server_constants.CSE_SERVICE_ROLE_NAME}"
     msg_update_callback.general(msg)
-    SERVER_CLI_LOGGER.info(msg)
+    logger_debug.info(msg)
     return
