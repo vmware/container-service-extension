@@ -84,6 +84,8 @@ VDC_HREF = None
 CATALOG_NAME = None
 
 WAIT_INTERVAL = 30
+DUPLICATE_NAME = "DUPLICATE_NAME"
+ALREADY_EXISTS = "already exists"
 
 
 def init_environment(config_filepath=BASE_CONFIG_FILEPATH):
@@ -226,7 +228,10 @@ def create_org(org_name):
     assert result.exit_code == 0
     cmd = f"org create --enabled {org_name} {org_name}"
     result = CLI_RUNNER.invoke(vcd, cmd.split(), catch_exceptions=False)
-    assert result.exit_code == 0
+    # If the organization already exists, exit successfully
+    assert DUPLICATE_NAME in result.stdout or result.exit_code == 0, \
+        testutils.format_command_info('vcd', cmd, result.exit_code,
+                                      result.output)
 
 
 def create_vdc(vdc_name, org_name):
@@ -251,13 +256,21 @@ def create_vdc(vdc_name, org_name):
     assert result.exit_code == 0
     cmd = f"vdc create {vdc_name} -p {pvdc_name}"
     result = CLI_RUNNER.invoke(vcd, cmd.split(), catch_exceptions=False)
-    assert result.exit_code == 0
-    cmd = f"vdc use {vdc_name}"
-    result = CLI_RUNNER.invoke(vcd, cmd.split(), catch_exceptions=False)
-    assert result.exit_code == 0
-    cmd = f"network direct create -p {config['broker']['network']} {config['broker']['network']}"  # noqa: E501
-    result = CLI_RUNNER.invoke(vcd, cmd.split(), catch_exceptions=False)
-    assert result.exit_code == 0
+    # If the vdc already exists, skip rest of the steps and exit successfully
+    if ALREADY_EXISTS in result.stdout:
+        assert True
+    else:
+        assert result.exit_code == 0, \
+            testutils.format_command_info('vcd', cmd, result.exit_code,
+                                          result.output)
+        cmd = f"vdc use {vdc_name}"
+        result = CLI_RUNNER.invoke(vcd, cmd.split(), catch_exceptions=False)
+        assert result.exit_code == 0
+        cmd = f"network direct create -p {config['broker']['network']} {config['broker']['network']}"  # noqa: E501
+        result = CLI_RUNNER.invoke(vcd, cmd.split(), catch_exceptions=False)
+        assert result.exit_code == 0, \
+            testutils.format_command_info('vcd', cmd, result.exit_code,
+                                          result.output)
 
 
 def create_user(username, password, role):
