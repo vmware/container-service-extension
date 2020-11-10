@@ -28,9 +28,11 @@ diagram illustrates the interactions between the components.
 <a name="cseusers"></a>
 ## CSE User Types
 
-**Cloud administrators** handle setting up VCD, CSE config
-file, CSE Server, and Kubernetes templates. Cloud administrators are expected to
-posses `sysadmin` privileges and as well as experience in VCD administration.
+**Cloud administrators** handle setting up VCD, CSE config file, CSE Server,
+and Kubernetes templates. Cloud administrators are expected to posses
+`CSE Service Role` privileges and as well as experience in VCD administration.
+Note: If the role `CSE SErvice Role` is not available, then cloud administrator
+needs `System Administrator` privileges.
 
 Once CSE Server is running and Kubernetes templates are available, **tenant
 organization administrators and users** can use CSE client (``vcd-cli``)

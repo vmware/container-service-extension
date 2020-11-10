@@ -171,13 +171,13 @@ If `~/.vcd-cli/profiles.yaml` doesn't exist, logging in to VCD via **vcd-cli** w
 > cse -h
 
 ### Most 'vcd cse ...' commands require you to be logged in to VCD
-# login as system administrator
+# login as cloud administrator
 > vcd login ip system USERNAME -iwp PASSWORD
 
 # login as org user
 > vcd login ip ORGNAME USERNAME -iwp PASSWORD
 
-# use a target org while logged in as system administrator
+# use a target org while logged in as cloud administrator
 > vcd org use ORGNAME
 
 # see current login info

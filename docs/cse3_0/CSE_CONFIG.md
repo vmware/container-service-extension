@@ -14,21 +14,32 @@ generate a skeleton file as follows.
 cse sample -o config.yaml
 ```
 
+The output of the command varies slightly depending on the target VCD server api
+version that CSE will be using to talk to VCD (controlled by the flag -v).
+Only supported bus type for api version 33.0 and 34.0 is AMQP. For api version
+35.0, the default bus type is MQTT, but AMQP is supported too.
+
+
 Edit this file to add values from your vCloud Director installation. The
 following example shows a file with sample values filled out.
 
 ```yaml
-amqp:
-  exchange: cse-ext
-  host: amqp.vmware.com
-  password: guest
-  port: 5672
-  prefix: vcd
-  routing_key: cse
-  ssl: false
-  ssl_accept_all: false
-  username: guest
-  vhost: /
+# Only one of the amqp or mqtt sections should be present.
+
+#amqp:
+#  exchange: cse-ext
+#  host: amqp.vmware.com
+#  password: guest
+#  port: 5672
+#  prefix: vcd
+#  routing_key: cse
+#  ssl: false
+#  ssl_accept_all: false
+#  username: guest
+#  vhost: /
+
+mqtt:
+  verify_ssl: true
 
 vcd:
   api_version: '35.0'
@@ -51,7 +62,8 @@ vcs:
 
 service:
   enforce_authorization: false
-  listeners: 10
+  processors : 15
+  # listeners: 10
   log_wire: false
   telemetry:
     enable: true
@@ -99,10 +111,10 @@ broker:
 #    mem: 1024
 ```
 
-The config file has 5 mandatory sections (`amqp`, `vcd`, `vcs`, `service`,
-and, `broker`) and 1 optional section (`template_rules`). The following
-sub-sections explain the configuration properties for each section as well as
-how they are used.
+The config file has 5 mandatory sections ( [`amqp` | `mqtt`], `vcd`, `vcs`,
+`service`, and, `broker`) and 1 optional section(`template_rules`). The
+following sub-sections explain the configuration properties for each section
+as well as how they are used.
 
 ### `amqp` Section
 
@@ -121,6 +133,18 @@ properties will need to be set for all deployments.
 Other properties may be left as is or edited to match site conventions.
 
 For more information on AMQP settings, see the [VCD API documentation on AMQP](https://code.vmware.com/apis/442/vcloud#/doc/doc/types/AmqpSettingsType.html).
+
+<a name="mqtt_section"></a>
+### `mqtt` Section
+
+Staring CSE 3.0.1, CSE will support MQTT message buses for communication with
+vCD. The minimum VCD api version required is `35.0`. During CSE installation phase,
+CSE will setup the MQTT exchange. During CSE upgrades, CSE can switch over from
+AMQP to MQTT, however the reverse is not permitted.
+
+| Property   | Value                                                              |
+|------------|--------------------------------------------------------------------|
+| verify_ssl | verify ssl certificates while communicating with the MQTT exchange |
 
 ### `vcs` Section
 
@@ -148,10 +172,14 @@ The service section contains properties that define CSE server behavior.
 
 | Property              | Value                                                                                                                                                      |
 |-----------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| listeners             | Number of threads that CSE server should use                                                                                                               |
+| listeners             | Number of threads that CSE server should use to communicate with AMQP bus and process requests (Removed in CSE 3.0.1)                                      |
+| processors            | Number of threads that CSE server should use for processing requests (Added in CSE 3.0.1)                                                                  |
 | enforce_authorization | If True, CSE server will use role-based access control, where users without the correct CSE right will not be able to deploy clusters (Added in CSE 1.2.6) |
 | log_wire              | If True, will log all REST calls initiated by CSE to VCD. (Added in CSE 2.5.0)                                                                             |
 | telemetry             | If enabled, will send back anonymized usage data back to VMware (Added in CSE 2.6.0)                                                                       |
+
+Note:
+Staring CSE 3.0.1, the `listeners` field has been renamed to `processors`.
 
 <a name="broker"></a>
 ### `broker` Section
@@ -178,7 +206,7 @@ The following table summarizes key parameters.
 Note that `template_rules` section is not applicable when CSE 3.0 is configured 
 with vCD 10.2. Refer [Template management for CSE 3.0](TEMPLATE_MANAGEMENT.html#cse30-restrict_templates)
 
-#### (Added in CSE 2.5.0)
+#### (Added in CSE 2.5.0, Deprecated in CSE 3.0.0)
 
 Rules can be created to override some of the default attributes of templates
 defined by the remote template repository.
