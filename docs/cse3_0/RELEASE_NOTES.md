@@ -21,22 +21,20 @@ the same will be fixed in a future CSE release.
 | 3.0.1      | 3.0.1   | 1.0.3  | 10.1, 10.0     | 1.7 with 2.5.1     | Native and Ent-PKS cluster management                                                               |
 | NA         | 3.0.1   | 2.0*   | 10.2           | NA                 | Tkg cluster management only                                                                         |
 
+2.0* -> Kubernetes clusters UI plug-in 2.0 ships with VCD 10.2
+
 **What's New**
-* Support for MQTT message bus for communication between VCD and CSE server (Supported only for VCD 10.2)
+* Support for MQTT message bus for communication between VCD (10.2 and above) and CSE server
     * Improved message bus connection management (applies to MQTT as well as AMQP)
     * More details at [CSE Server Configuration File](CSE_CONFIG.html#mqtt_section)
-* Support and tools for CSE service account
-    * VCD System Administrator credential is no longer required to run the CSE Server (Supported only for VCD 10.2)
+* Support and tools for CSE service account (vCD 10.2 and above) 
+    * VCD System Administrator credential is no longer required to run the CSE Server
     * More details at [CSE Server Installation Prerequisites](CSE_INSTALL_PREREQUISITES.html#service_account)
 
 **Notes to System Administrator**
 
 If you are upgrading from an existing CSE 3.0.0 installation please be aware of
-the following issue listed in [Known Issues](KNOWN_ISSUES.html).
-* In CSE 3.0 users of System organization are unable to create clusters
-* In CSE 3.0 `cse upgrade` fails with RDE_TYPE_ALREADY_EXISTS if the user
-account is switched in the configuration file
-
+the issue related to runtime defined entities listed in [Known Issues](KNOWN_ISSUES.html).
 
 ## CSE 3.0
 Release Date: 2020-10-15
