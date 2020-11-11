@@ -334,7 +334,7 @@ def test_0030_vcd_cse_cluster_create_rollback(config, vcd_org_admin,
         --disable-rollback
     """
     cmd = f"cse cluster create {env.SYS_ADMIN_TEST_CLUSTER_NAME} -n " \
-          f"{config['broker']['network']} -N 1 -c 1000"
+          f"{env.TEST_NETWORK} -N 1 -c 1000"
     result = env.CLI_RUNNER.invoke(vcd, cmd.split(), catch_exceptions=False)
     assert result.exit_code == 0, \
         testutils.format_command_info('vcd', cmd, result.exit_code,
@@ -389,7 +389,7 @@ def test_0050_vcd_cse_system_toggle(config, test_runner_username,
         cmd_binder(cmd=f"org use {env.TEST_ORG}", exit_code=0,
                    validate_output_func=None, test_user=test_runner_username),
         cmd_binder(cmd=f"cse cluster create {env.SYS_ADMIN_TEST_CLUSTER_NAME} "
-                       f"-n {config['broker']['network']} -N 1", exit_code=2,
+                       f"-n {env.TEST_NETWORK} -N 1", exit_code=2,
                    validate_output_func=None, test_user=test_runner_username),
         cmd_binder(cmd=env.USER_LOGOUT_CMD, exit_code=0,
                    validate_output_func=None, test_user=test_runner_username),
@@ -398,7 +398,7 @@ def test_0050_vcd_cse_system_toggle(config, test_runner_username,
         cmd_binder(cmd="cse system enable", exit_code=0,
                    validate_output_func=None, test_user='sys_admin'),
         cmd_binder(cmd=f"cse cluster create {env.SYS_ADMIN_TEST_CLUSTER_NAME} "
-                       f"-n {config['broker']['network']} -N 1 -c 1000 "
+                       f"-n {env.TEST_NETWORK} -N 1 -c 1000 "
                        f"--disable-rollback", exit_code=2,
                    validate_output_func=None, test_user='sys_admin'),
         cmd_binder(cmd=env.USER_LOGOUT_CMD, exit_code=0,
@@ -440,7 +440,7 @@ def test_0070_vcd_cse_cluster_create(config, test_runner_username):
                    validate_output_func=None, test_user=test_runner_username),
         cmd_binder(cmd=f"cse cluster create "
                        f"{env.USERNAME_TO_CLUSTER_NAME[test_runner_username]}"
-                       f" -n {config['broker']['network']} -N 0 ", exit_code=0,
+                       f" -n {env.TEST_NETWORK} -N 0 ", exit_code=0,
                    validate_output_func=None, test_user=test_runner_username),
         cmd_binder(cmd=env.USER_LOGOUT_CMD, exit_code=0,
                    validate_output_func=None, test_user=test_runner_username)
@@ -584,11 +584,11 @@ def test_0110_vcd_cse_cluster_resize(test_runner_username, config):
     print(f"Running cluster resize operation for {test_runner_username}")
 
     cmd_list = [
-        cmd_binder(cmd=f"cse cluster resize -N {num_nodes+1} -n {config['broker']['network']}"  # noqa
+        cmd_binder(cmd=f"cse cluster resize -N {num_nodes+1} -n {env.TEST_NETWORK}"  # noqa
                        f" {env.USERNAME_TO_CLUSTER_NAME[test_runner_username]}", # noqa: E501
                    exit_code=0, validate_output_func=generate_validate_node_count_func(num_nodes+1), # noqa
                    test_user=test_runner_username),
-        cmd_binder(cmd=f"cse cluster resize -N 0 -n {config['broker']['network']}" # noqa
+        cmd_binder(cmd=f"cse cluster resize -N 0 -n {env.TEST_NETWORK}" # noqa
                        f" {env.USERNAME_TO_CLUSTER_NAME[test_runner_username]}", # noqa: E501
                    exit_code=0, validate_output_func=generate_validate_node_count_func(0), # noqa
                    test_user=test_runner_username)
@@ -627,7 +627,7 @@ def test_0120_vcd_cse_node_operation(test_runner_username, config):
         cmd_binder(cmd=f"vdc use {env.TEST_VDC}", exit_code=0,
                    validate_output_func=None, test_user=test_runner_username),
         cmd_binder(cmd=f"cse node create {env.USERNAME_TO_CLUSTER_NAME[test_runner_username]}"  # noqa
-                       f" -n {config['broker']['network']}", exit_code=0,
+                       f" -n {env.TEST_NETWORK}", exit_code=0,
                    validate_output_func=None, test_user=test_runner_username)
     ]
     execute_commands(cmd_list)
