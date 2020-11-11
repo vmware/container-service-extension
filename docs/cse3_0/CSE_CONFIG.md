@@ -16,8 +16,8 @@ cse sample -o config.yaml
 
 The output of the command varies slightly depending on the target VCD server api
 version that CSE will be using to talk to VCD (controlled by the flag -v).
-Only supported bus type for api version 33.0 and 34.0 is AMQP. For api version
-35.0, the default bus type is MQTT, but AMQP is supported too.
+Only supported message bus type for api version 33.0 and 34.0 is AMQP. For api
+version 35.0, the default message bus type is MQTT, but AMQP is supported too.
 
 
 Edit this file to add values from your vCloud Director installation. The
@@ -137,7 +137,7 @@ For more information on AMQP settings, see the [VCD API documentation on AMQP](h
 <a name="mqtt_section"></a>
 ### `mqtt` Section
 
-Staring CSE 3.0.1, CSE will support MQTT message buses for communication with
+Starting CSE 3.0.1, CSE will support MQTT message buses for communication with
 vCD. The minimum VCD api version required is `35.0`. During CSE installation phase,
 CSE will setup the MQTT exchange. During CSE upgrades, CSE can switch over from
 AMQP to MQTT, however the reverse is not permitted.
@@ -179,7 +179,7 @@ The service section contains properties that define CSE server behavior.
 | telemetry             | If enabled, will send back anonymized usage data back to VMware (Added in CSE 2.6.0)                                                                       |
 
 Note:
-Staring CSE 3.0.1, the `listeners` field has been renamed to `processors`.
+Starting CSE 3.0.1, the `listeners` field has been renamed to `processors`.
 
 <a name="broker"></a>
 ### `broker` Section

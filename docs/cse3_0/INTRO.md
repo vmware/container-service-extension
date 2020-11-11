@@ -32,8 +32,10 @@ diagram illustrates the interactions between the components.
 and Kubernetes templates. Till CSE 3.0.0, the only VCD role that Cloud
 administrators were expected to posses was `System Administrator`. However,
 with CSE 3.0.1 and onwards, CSE provides a way to create a CSE specific service
-role viz. `CSE Service Role`, and cloud administrators are expected to posses
-this role and be experienced in VCD administration.
+role viz. [`CSE Service Role`](CSE_INSTALL_PREREQUISITES.html#service_account),
+and cloud administrators are expected to posses this role and be experienced
+in VCD administration.
+
 Note: If the role `CSE Service Role` is not available (viz. in VCD 10.1 and
 below), then cloud administrators can still be assigned the
 `System Administrator` VCD role.

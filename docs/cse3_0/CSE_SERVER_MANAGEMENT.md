@@ -11,7 +11,7 @@ title: CSE Server Management
 This page contains procedures to install and manage Container Service
 Extension (CSE) on vCloud Director (VCD). Users who perform these procedures
 are termed as `Cloud Administrators`, they must have at least the role of
-`CSE Service Role` (if the role is not present then the user need to have
+[`CSE Service Role`](CSE_INSTALL_PREREQUISITES.html#service_account) (if the role is not present then the user need to have
 `sysadmin` access) and a solid understanding of VCD server management.
 
 Procedures on this page make regular use of vcd-cli commands to
