@@ -117,12 +117,6 @@ def init_environment(config_filepath=BASE_CONFIG_FILEPATH):
                                         config['vcd']['password'])
     CLIENT.set_credentials(credentials)
 
-    create_org(TEST_ORG)
-    create_vdc(TEST_VDC, TEST_ORG)
-    org = pyvcloud_utils.get_org(CLIENT, org_name=TEST_ORG)
-    vdc = pyvcloud_utils.get_vdc(CLIENT, vdc_name=TEST_VDC, org=org)
-    ORG_HREF = org.href
-    VDC_HREF = vdc.href
     CATALOG_NAME = config['broker']['catalog']
     AMQP_USERNAME = config['amqp']['username']
     AMQP_PASSWORD = config['amqp']['password']
@@ -151,6 +145,13 @@ def init_environment(config_filepath=BASE_CONFIG_FILEPATH):
         'org_admin': ORG_ADMIN_TEST_CLUSTER_NAME,
         'vapp_author': VAPP_AUTHOR_TEST_CLUSTER_NAME
     }
+
+    create_org(TEST_ORG)
+    create_vdc(TEST_VDC, TEST_ORG)
+    org = pyvcloud_utils.get_org(CLIENT, org_name=TEST_ORG)
+    vdc = pyvcloud_utils.get_vdc(CLIENT, vdc_name=TEST_VDC, org=org)
+    ORG_HREF = org.href
+    VDC_HREF = vdc.href
 
 
 def init_test_vars(test_config):
@@ -220,11 +221,7 @@ def create_org(org_name):
 
     :param str org_name:  name of the org
     """
-    config = testutils.yaml_to_dict(BASE_CONFIG_FILEPATH)
-    cmd = f"login {config['vcd']['host']} {SYSTEM_ORG_NAME} " \
-          f"{config['vcd']['username']} -iwp {config['vcd']['password']} " \
-          f"-V {config['vcd']['api_version']}"
-    result = CLI_RUNNER.invoke(vcd, cmd.split(), catch_exceptions=False)
+    result = CLI_RUNNER.invoke(vcd, SYS_ADMIN_LOGIN_CMD.split(), catch_exceptions=False)   # noqa: E501
     assert result.exit_code == 0
     cmd = f"org create --enabled {org_name} {org_name}"
     result = CLI_RUNNER.invoke(vcd, cmd.split(), catch_exceptions=False)
@@ -241,10 +238,7 @@ def create_vdc(vdc_name, org_name):
     :param str org_name: name of the org
     """
     config = testutils.yaml_to_dict(BASE_CONFIG_FILEPATH)
-    cmd = f"login {config['vcd']['host']} {SYSTEM_ORG_NAME} " \
-        f"{config['vcd']['username']} -iwp {config['vcd']['password']} " \
-        f"-V {config['vcd']['api_version']}"
-    result = CLI_RUNNER.invoke(vcd, cmd.split(), catch_exceptions=False)
+    result = CLI_RUNNER.invoke(vcd, SYS_ADMIN_LOGIN_CMD.split(), catch_exceptions=False)  # noqa: E501
     assert result.exit_code == 0
     org = pyvcloud_utils.get_org(CLIENT, org_name=config['broker']['org'])
     ovdc = pyvcloud_utils.get_vdc(
