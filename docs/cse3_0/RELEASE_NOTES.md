@@ -30,6 +30,7 @@ the same will be fixed in a future CSE release.
 * Support and tools for CSE service account (vCD 10.2 and above) 
     * VCD System Administrator credential is no longer required to run the CSE Server
     * More details at [CSE Server Installation Prerequisites](CSE_INSTALL_PREREQUISITES.html#service_account)
+* CSE 3.0.1 can be used with the VMware Cloud Director service for Native Clusters
 
 **Notes to System Administrator**
 
