@@ -67,6 +67,7 @@ TEARDOWN_CLUSTERS = None
 TEST_ALL_TEMPLATES = None
 TEST_ORG = None
 TEST_VDC = None
+TEST_NETWORK = None
 
 # Persona login cmd
 SYS_ADMIN_LOGIN_CMD = None
@@ -117,12 +118,6 @@ def init_environment(config_filepath=BASE_CONFIG_FILEPATH):
                                         config['vcd']['password'])
     CLIENT.set_credentials(credentials)
 
-    create_org(TEST_ORG)
-    create_vdc(TEST_VDC, TEST_ORG)
-    org = pyvcloud_utils.get_org(CLIENT, org_name=TEST_ORG)
-    vdc = pyvcloud_utils.get_vdc(CLIENT, vdc_name=TEST_VDC, org=org)
-    ORG_HREF = org.href
-    VDC_HREF = vdc.href
     CATALOG_NAME = config['broker']['catalog']
     AMQP_USERNAME = config['amqp']['username']
     AMQP_PASSWORD = config['amqp']['password']
@@ -152,6 +147,13 @@ def init_environment(config_filepath=BASE_CONFIG_FILEPATH):
         'vapp_author': VAPP_AUTHOR_TEST_CLUSTER_NAME
     }
 
+    create_org(TEST_ORG)
+    create_vdc(TEST_VDC, TEST_ORG, TEST_NETWORK)
+    org = pyvcloud_utils.get_org(CLIENT, org_name=TEST_ORG)
+    vdc = pyvcloud_utils.get_vdc(CLIENT, vdc_name=TEST_VDC, org=org)
+    ORG_HREF = org.href
+    VDC_HREF = vdc.href
+
 
 def init_test_vars(test_config):
     """Initialize all the environment variables that are used for test.
@@ -159,7 +161,7 @@ def init_test_vars(test_config):
     :param dict test_config: test section of config.yaml
     """
     global TEMPLATE_DEFINITIONS, TEARDOWN_INSTALLATION, TEARDOWN_CLUSTERS, \
-        TEST_ALL_TEMPLATES, TEST_ORG, TEST_VDC
+        TEST_ALL_TEMPLATES, TEST_ORG, TEST_VDC, TEST_NETWORK
 
     if test_config is not None:
         TEARDOWN_INSTALLATION = test_config.get('teardown_installation', True)
@@ -167,6 +169,7 @@ def init_test_vars(test_config):
         TEST_ALL_TEMPLATES = test_config.get('test_all_templates', False)
         TEST_ORG = test_config.get('org', 'test-org')
         TEST_VDC = test_config.get('vdc', 'test-vdc')
+        TEST_NETWORK = test_config.get('network', 'test-network')
         if not TEST_ALL_TEMPLATES:
             specified_templates_str = test_config.get('test_templates', "")
             specified_templates = specified_templates_str.split(",")
@@ -220,11 +223,7 @@ def create_org(org_name):
 
     :param str org_name:  name of the org
     """
-    config = testutils.yaml_to_dict(BASE_CONFIG_FILEPATH)
-    cmd = f"login {config['vcd']['host']} {SYSTEM_ORG_NAME} " \
-          f"{config['vcd']['username']} -iwp {config['vcd']['password']} " \
-          f"-V {config['vcd']['api_version']}"
-    result = CLI_RUNNER.invoke(vcd, cmd.split(), catch_exceptions=False)
+    result = CLI_RUNNER.invoke(vcd, SYS_ADMIN_LOGIN_CMD.split(), catch_exceptions=False)   # noqa: E501
     assert result.exit_code == 0
     cmd = f"org create --enabled {org_name} {org_name}"
     result = CLI_RUNNER.invoke(vcd, cmd.split(), catch_exceptions=False)
@@ -234,21 +233,21 @@ def create_org(org_name):
                                       result.output)
 
 
-def create_vdc(vdc_name, org_name):
+def create_vdc(vdc_name, org_name, network_name):
     """Create the given vdc for given org.
 
     :param str vdc_name: name of vdc that provides resources
     :param str org_name: name of the org
+    :param str network_name: org vdc network
     """
     config = testutils.yaml_to_dict(BASE_CONFIG_FILEPATH)
-    cmd = f"login {config['vcd']['host']} {SYSTEM_ORG_NAME} " \
-        f"{config['vcd']['username']} -iwp {config['vcd']['password']} " \
-        f"-V {config['vcd']['api_version']}"
-    result = CLI_RUNNER.invoke(vcd, cmd.split(), catch_exceptions=False)
+    result = CLI_RUNNER.invoke(vcd, SYS_ADMIN_LOGIN_CMD.split(), catch_exceptions=False)  # noqa: E501
     assert result.exit_code == 0
     org = pyvcloud_utils.get_org(CLIENT, org_name=config['broker']['org'])
     ovdc = pyvcloud_utils.get_vdc(
         CLIENT, vdc_name=config['broker']['vdc'], org=org, is_admin_operation=True)  # noqa: E501
+    # Test framework will try to create the new ovdc from the same pvdc that
+    # the catalog org is being powered by.
     pvdc_element = ovdc.get_resource().ProviderVdcReference
     pvdc_name = pvdc_element.get('name')
     cmd = f"org use {org_name}"
@@ -258,7 +257,7 @@ def create_vdc(vdc_name, org_name):
     result = CLI_RUNNER.invoke(vcd, cmd.split(), catch_exceptions=False)
     # If the vdc already exists, skip rest of the steps and exit successfully
     if ALREADY_EXISTS in result.stdout:
-        assert True
+        return
     else:
         assert result.exit_code == 0, \
             testutils.format_command_info('vcd', cmd, result.exit_code,
@@ -266,7 +265,11 @@ def create_vdc(vdc_name, org_name):
         cmd = f"vdc use {vdc_name}"
         result = CLI_RUNNER.invoke(vcd, cmd.split(), catch_exceptions=False)
         assert result.exit_code == 0
-        cmd = f"network direct create -p {config['broker']['network']} {config['broker']['network']}"  # noqa: E501
+        # Create the test network; choose the same parent network
+        # used by broker network
+        network = ovdc.get_direct_orgvdc_network(config['broker']['network'])
+        parent_network_name = network.Configuration.ParentNetwork.get('name')
+        cmd = f"network direct create -p {parent_network_name} {network_name}"  # noqa: E501
         result = CLI_RUNNER.invoke(vcd, cmd.split(), catch_exceptions=False)
         assert result.exit_code == 0, \
             testutils.format_command_info('vcd', cmd, result.exit_code,
