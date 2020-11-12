@@ -6,12 +6,12 @@ from vcd_cli.utils import stdout
 from vcd_cli.vcd import vcd
 
 from container_service_extension.client import pks
-from container_service_extension.client.cluster_command_group import cluster_group  # noqa: E501
+from container_service_extension.client.cluster_commands import cluster_group
 import container_service_extension.client.command_filter as cmd_filter
-from container_service_extension.client.node_command_group import node_group
-from container_service_extension.client.ovdc_command_group import ovdc_group
-from container_service_extension.client.system_command_group import system_group  # noqa: E501
-from container_service_extension.client.template_command_group import template_group  # noqa: E501
+from container_service_extension.client.node_commands import node_group
+from container_service_extension.client.ovdc_commands import ovdc_group
+from container_service_extension.client.system_commands import system_group
+from container_service_extension.client.template_commands import template_group
 from container_service_extension.logger import CLIENT_LOGGER
 import container_service_extension.utils as utils
 
