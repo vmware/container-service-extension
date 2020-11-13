@@ -5,6 +5,38 @@ title: Release Notes
 
 # Release Notes
 
+## CSE 3.0.1 GA (3.0.1)
+Release Date: 2020-11-06
+
+**Supported (and Tested) VCD versions** : 10.2, 10.1.2, 10.0.0.3
+
+Note : Future update/patch releases of these vCD versions will be supported by CSE but
+they won't be tested individually. If a bug is found in their interoperability
+with CSE, please file a github [issue](https://github.com/vmware/container-service-extension/issues),
+the same will be fixed in a future CSE release.
+
+| CSE Server | CSE CLI | CSE UI | Cloud Director | Ent-PKS with NSX-T | Features offered                                                                                    |
+|------------|---------|--------|----------------|--------------------|-----------------------------------------------------------------------------------------------------|
+| 3.0.1      | 3.0.1   | 2.0*   | 10.2           | 1.7 with 2.5.1     | Native, Tkg, and Ent-PKS Cluster management; Defined entity representation for both native and tkg. |
+| 3.0.1      | 3.0.1   | 1.0.3  | 10.1, 10.0     | 1.7 with 2.5.1     | Native and Ent-PKS cluster management                                                               |
+| NA         | 3.0.1   | 2.0*   | 10.2           | NA                 | Tkg cluster management only                                                                         |
+
+2.0* -> Kubernetes clusters UI plug-in 2.0 ships with VCD 10.2
+
+**What's New**
+* Support for MQTT message bus for communication between VCD (10.2 and above) and CSE server
+    * Improved message bus connection management (applies to MQTT as well as AMQP)
+    * More details at [CSE Server Configuration File](CSE_CONFIG.html#mqtt_section)
+* Support and tools for CSE service account (vCD 10.2 and above) 
+    * VCD System Administrator credential is no longer required to run the CSE Server
+    * More details at [CSE Server Installation Prerequisites](CSE_INSTALL_PREREQUISITES.html#service_account)
+* CSE 3.0.1 can be used with the VMware Cloud Director service for Native Clusters
+
+**Notes to System Administrator**
+
+If you are upgrading from an existing CSE 3.0.0 installation please be aware of
+the issue related to runtime defined entities listed in [Known Issues](KNOWN_ISSUES.html).
+
 ## CSE 3.0
 Release Date: 2020-10-15
 

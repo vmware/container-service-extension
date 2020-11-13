@@ -53,6 +53,23 @@ vcd network direct create CSE_org_vdc_network \
   --shared
 ```
 
-### CSE User
+<a name="service_account"></a>
+### CSE Service Account
 
-We recommend using a VCD System admin account for CSE server management.
+We recommend using a user with `CSE Service Role` for CSE server management.
+The role comes with all the VCD rights that CSE needs to function. The role
+can be created in System organization using the following command.
+
+```sh
+cse create-service-role -v [VCD host fqdn]
+```
+The command currently supports only VCD 10.2 and later. The command will raise
+an error if invoked against an older VCD build. For older vCD builds a user with
+`System Administrator` role should be used instead to manage CSE.
+
+Notes: 
+* The command will prompt for sys admin credentials, and use it to create the Role.
+* The command if run more than once will raise an error, since the role already
+exists. There is nothing to be concerned about this error though.
+* The command will fail with cryptic error message if the VCD server is using
+self signed certificates and -s flag is not specified.

@@ -5,7 +5,7 @@
 import pyvcloud.vcd.client as vcd_client
 
 from container_service_extension.cloudapi.constants import CloudApiResource
-import container_service_extension.def_.utils as def_utils
+from container_service_extension.cloudapi.constants import CloudApiVersion
 from container_service_extension.logger import NULL_LOGGER
 from container_service_extension.logger import SERVER_CLOUDAPI_WIRE_LOGGER
 import container_service_extension.pyvcloud_utils as vcd_utils
@@ -76,7 +76,7 @@ class RightBundleManager():
         right_bundle_id = right_bundle_info['id']
         rights = self.cloudapi_client.do_request(
             method=RequestMethod.GET,
-            cloudapi_version=CLOUDAPI_VERSION_1_0_0,
+            cloudapi_version=CloudApiVersion.VERSION_1_0_0,
             resource_url_relative_path=f"{CloudApiResource.RIGHT_BUNDLES}/{right_bundle_id}/rights")  # noqa: E501
 
         return rights

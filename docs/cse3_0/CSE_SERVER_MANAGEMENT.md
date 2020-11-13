@@ -10,8 +10,9 @@ title: CSE Server Management
 
 This page contains procedures to install and manage Container Service
 Extension (CSE) on vCloud Director (VCD). Users who perform these procedures
-are cloud administrators with `sysadmin` access and a solid understanding
-of VCD management.
+are termed as `Cloud Administrators`, they must have at least the role of
+[`CSE Service Role`](CSE_INSTALL_PREREQUISITES.html#service_account) (if the role is not present then the user need to have
+`sysadmin` access) and a solid understanding of VCD server management.
 
 Procedures on this page make regular use of vcd-cli commands to
 perform administrative operations. Please refer to the [vcd-cli
@@ -25,9 +26,9 @@ yourself with vcd-cli.
 
 ### Installing CSE Server
 
-`CSE` Server should be installed by the VCD System/Cloud Administrator on a
-new VM or one of the existing servers that are part of VCD. This CSE VM is the
-**CSE appliance**.
+`CSE` Server should be installed by the Cloud Administrator on a new VM or one
+of the existing servers that are part of VCD installation. This CSE VM is
+the **CSE appliance**.
 
 The CSE appliance requires network access to the VCD cell, vCenter(s),
 and AMQP server. It does not require access to the network(s) that powers the
@@ -132,7 +133,7 @@ The `cse check` command supports the following options:
 
 Validate that CSE has been registered with VCD as an extension, via vcd-cli:
 ```sh
-# login as system administrator
+# login as cloud administrator
 vcd login vcd.serviceprovider.com system <administrator user name> --password <password> -w -i
 
 # list extensions
@@ -179,7 +180,7 @@ that has the above mentioned right. The following set of commands can be used to
 achieve the desired outcome.
 
 ```sh
-# login as system administrator
+# login as system/cloud administrator
 vcd login vcd.serviceprovider.com system administrator --password passw0rd -w -i
 
 # switch over to the tenant organization
@@ -274,7 +275,7 @@ KillUserProcesses=no
 
 ### Monitoring CSE
 
-VCD System Administrators can monitor CSE service status via CSE client:
+Cloud Administrators can monitor CSE service status via CSE client:
 
 ```sh
 $ vcd cse system info
@@ -315,7 +316,7 @@ version               2.6.0
 ### Uninstalling CSE Server
 
 1. Gracefully stop CSE Server
-2. As System Administrator, unregister CSE from VCD:
+2. As Cloud Administrator, unregister CSE from VCD:
    * `vcd system extension delete cse`
 3. Review VCD AMQP settings. Generally no modifications are necessary in AMQP.
    * `vcd system amqp info`
@@ -327,14 +328,14 @@ version               2.6.0
 
 ## Useful Commands
 
-`cse ...` commands are used by system administrators to:
+`cse ...` commands are used by cloud administrators to:
 
 * Install CSE Server
 * Upgrade CSE Server to make older environments forward compatible with CSE version > 3.0
 * Create/Update templates
 * Run CSE Server manually
 
-`vcd cse ...` commands are used by system administrators to:
+`vcd cse ...` commands are used by cloud administrators to:
 
 * Monitor status of CSE Server and clusters
 * Operate CSE as a service
