@@ -17,8 +17,10 @@ import pkg_resources
 import requests
 import semantic_version
 
+import container_service_extension.cloudapi.constants as cloudapi_constants
 from container_service_extension.logger import NULL_LOGGER
 from container_service_extension.server_constants import MQTT_MIN_API_VERSION
+import container_service_extension.shared_constants as shared_constants
 from container_service_extension.thread_local_data import get_thread_request_id
 from container_service_extension.thread_local_data import set_thread_request_id
 
@@ -466,3 +468,34 @@ def construct_filter_string(filters: dict):
                 filter_expressions.append(filter_exp)
         filter_string = ";".join(filter_expressions)
     return filter_string
+
+
+def get_user_ids(cloudapi_client, users):
+    """Get a dictionary of users to user ids from a list of user names.
+
+    :param cloudApiClient.CloudApiClient cloudapi_client: The current client
+    :param list users: list of user names
+
+    :return: dict of user keys and user id values
+    :rtype: dict
+    """
+    response_body = cloudapi_client.do_request(
+        method=shared_constants.RequestMethod.GET,
+        cloudapi_version=cloudapi_constants.CloudApiVersion.VERSION_1_0_0,
+        resource_url_relative_path='users')
+    if not response_body:
+        return None
+
+    # Retrieve user ids
+    users_dict = {}
+    users_set = set(users)
+    for user_data in response_body['values']:
+        user_name = user_data['username']
+        if user_name in users_set:
+            users_dict[user_name] = user_data['id']
+            users_set.remove(user_name)
+
+    # Ensure all user ids were found
+    if len(users_set) != 0:
+        raise Exception(f'Could not find user id(s): {users_set}')
+    return users_dict

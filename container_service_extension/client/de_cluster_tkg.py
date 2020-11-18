@@ -13,6 +13,7 @@ from container_service_extension.client.tkgclient.configuration import Configura
 from container_service_extension.client.tkgclient.models.tkg_cluster import TkgCluster  # noqa: E501
 import container_service_extension.client.tkgclient.rest as tkg_rest
 import container_service_extension.client.utils as client_utils
+import container_service_extension.cloudapi.constants as cloudapi_constants
 from container_service_extension.def_.utils import DEF_TKG_ENTITY_TYPE_NSS
 from container_service_extension.def_.utils import DEF_TKG_ENTITY_TYPE_VERSION
 from container_service_extension.def_.utils import DEF_VMWARE_VENDOR
@@ -360,3 +361,23 @@ class DEClusterTKG:
         """Upgrade TKG cluster to the given distribution."""
         raise NotImplementedError(
             "Cluster upgrade not supported for TKG clusters")
+
+    def share_cluster(self, cluster_id, users: list, access_level_id):
+        cloudapi_client = \
+            vcd_utils.get_cloudapi_client_from_vcd_client(self._client)
+        user_ids = utils.get_user_ids(cloudapi_client, users)
+
+        payload = {
+            shared_constants.AccessControlKey.GRANT_TYPE:
+                shared_constants.MEMBERSHIP_GRANT_TYPE,
+            shared_constants.AccessControlKey.ACCESS_LEVEL_ID:
+                access_level_id,
+            shared_constants.AccessControlKey.MEMBER_ID: None
+        }
+        for _, user_id in user_ids.items():
+            payload[shared_constants.AccessControlKey.MEMBER_ID] = user_id
+            cloudapi_client.do_request(
+                method=shared_constants.RequestMethod.POST,
+                cloudapi_version=cloudapi_constants.CloudApiVersion.VERSION_1_0_0,  # noqa: E501
+                resource_url_relative_path=f'entities/{cluster_id}/accessControls',  # noqa: E501
+                payload=payload)

@@ -42,8 +42,25 @@ RUNTIME_INTERNAL_NAME_TO_DISPLAY_NAME_MAP = {
 }
 
 
-# CSE Server Busy strings
+# CSE Server Busy string
 CSE_SERVER_BUSY_KEY = 'CSE Server Busy'
+
+
+# Access control constants
+READ_ONLY = 'ReadOnly'
+READ_WRITE = 'ReadWrite'
+FULL_CONTROL = 'FullControl'
+URN_VCLOUD_ACCESS = 'urn:vcloud:accessLevel'
+READ_ONLY_ACCESS_LEVEL_ID = f'{URN_VCLOUD_ACCESS}:{READ_ONLY}'
+READ_WRITE_ACCESS_LEVEL_ID = f'{URN_VCLOUD_ACCESS}:{READ_WRITE}'
+FULL_CONTROL_ACCESS_LEVEL_ID = f'{URN_VCLOUD_ACCESS}:{FULL_CONTROL}'
+MEMBERSHIP_GRANT_TYPE = 'MembershipAccessControlGrant'
+ACTION_CONTROL_ACCESS_PATH = '/action/controlAccess/'
+
+# User ID parsing
+USER_PATH = '/user/'
+USER_URN_START = 'urn:vcloud:user:'
+ADMIN_USER_PATH = '/admin/user/'
 
 
 @unique
@@ -154,6 +171,20 @@ class FlattenedClusterSpecKey(Enum):
     NFS_COUNT = 'nfs.count'
     TEMPLATE_NAME = 'k8_distribution.template_name'
     TEMPLATE_REVISION = 'k8_distribution.template_revision'
+
+
+@unique
+class AccessControlKey(str, Enum):
+    """Keys for access control requests."""
+
+    GRANT_TYPE = 'grantType'
+    ACCESS_LEVEL_ID = 'accessLevelId'
+    MEMBER_ID = 'memberId'
+    NAME = 'name'
+    ACCESS_LEVEL = 'accessLevel'
+    ID = 'id'
+    HREF = 'href'
+    SUBJECT = 'subject'
 
 
 @dataclass

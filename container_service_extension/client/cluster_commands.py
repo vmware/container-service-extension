@@ -4,6 +4,7 @@
 import os
 
 import click
+import pyvcloud.vcd.client as vcd_client
 from vcd_cli.utils import stderr
 from vcd_cli.utils import stdout
 import yaml
@@ -12,12 +13,15 @@ from container_service_extension.client.cluster import Cluster
 import container_service_extension.client.command_filter as cmd_filter
 import container_service_extension.client.constants as cli_constants
 from container_service_extension.client.de_cluster_native import DEClusterNative  # noqa: E501
+import container_service_extension.client.de_cluster_tkg as de_cluster_tkg
 import container_service_extension.client.sample_generator as client_sample_generator  # noqa: E501
 import container_service_extension.client.utils as client_utils
+import container_service_extension.def_.entity_service as entity_svc
 from container_service_extension.exceptions import CseResponseError
 from container_service_extension.exceptions import CseServerNotRunningError
 from container_service_extension.logger import CLIENT_LOGGER
 from container_service_extension.minor_error_codes import MinorErrorCode
+import container_service_extension.pyvcloud_utils as vcd_utils
 from container_service_extension.server_constants import LocalTemplateKey
 import container_service_extension.shared_constants as shared_constants
 import container_service_extension.utils as utils
@@ -968,6 +972,204 @@ Example
                                           org=org, vdc=vdc)
         stdout(result, ctx)
         CLIENT_LOGGER.debug(result)
+    except Exception as e:
+        stderr(e, ctx)
+        CLIENT_LOGGER.error(str(e))
+
+
+@cluster_group.command('share',
+                       short_help='Share a cluster with at least one user')
+@click.pass_context
+@click.argument('users', nargs=-1, required=True)
+@click.option(
+    '-n',
+    '--name',
+    'name',
+    required=False,
+    default=None,
+    metavar='CLUSTER_NAME',
+    help='Name of the cluster to share')
+@click.option(
+    '--acl',
+    'acl',
+    required=True,
+    default=None,
+    metavar='ACL',
+    help=f'access control: {shared_constants.READ_ONLY}, '
+         f'{shared_constants.READ_WRITE}, or {shared_constants.FULL_CONTROL}')
+@click.option(
+    '-v',
+    '--vdc',
+    'vdc',
+    required=False,
+    default=None,
+    metavar='VDC_NAME',
+    help='Restrict cluster search to specified org VDC')
+@click.option(
+    '-o',
+    '--org',
+    'org',
+    default=None,
+    required=False,
+    metavar='ORG_NAME',
+    help='Restrict cluster search to specified org')
+@click.option(
+    '-k',
+    '--k8-runtime',
+    'k8_runtime',
+    default=None,
+    required=False,
+    metavar='K8-RUNTIME',
+    help='Restrict cluster search to cluster kind')
+@click.option(
+    '--id',
+    'cluster_id',
+    default=None,
+    required=False,
+    metavar='CLUSTER_ID',
+    help="ID of the cluster to share; "
+         "ID gets precedence over cluster name.")
+def cluster_share(ctx, name, acl, users, vdc, org, k8_runtime, cluster_id):
+    """Share cluster access with other users.
+
+Either the cluster name or cluster id is required.
+
+\b
+Examples:
+    vcd cse cluster share --name mycluster --acl FullControl user1 user2
+        Share cluster 'mycluster' with FullControl access with 'user1' and 'user2'
+\b
+    vcd cse cluster share --id urn:vcloud:entity:cse:nativeCluster:1.0.0:0632c7c7-a613-427c-b4fc-9f1247da5561 --acl ReadOnly user1
+        Share cluster with cluster ID 'urn:vcloud:entity:cse:nativeCluster:1.0.0:0632c7c7-a613-427c-b4fc-9f1247da5561'
+        with ReadOnly access with 'user1'
+    """  # noqa: E501
+    try:
+        access_level_id = cli_constants.ACCESS_LEVEL_TYPE_TO_ID.get(acl.lower())  # noqa: E501
+        if not access_level_id:
+            raise Exception(f'Please enter a valid access control type: '
+                            f'{shared_constants.READ_ONLY}, '
+                            f'{shared_constants.READ_WRITE}, or '
+                            f'{shared_constants.FULL_CONTROL}')
+        if not (cluster_id or name):
+            # --id is not required when working with api version 33 and 34
+            raise Exception("Please specify cluster name (or) cluster Id. "
+                            "Note that '--id' flag is applicable for API versions >= 35 only.")  # noqa: E501
+        client_utils.cse_restore_session(ctx)
+        if client_utils.is_cli_for_tkg_only():
+            if k8_runtime in [shared_constants.ClusterEntityKind.NATIVE.value,
+                              shared_constants.ClusterEntityKind.TKG_PLUS.value]:  # noqa: E501
+                # Cannot run the command as cse cli is enabled only for native
+                raise CseServerNotRunningError()
+            k8_runtime = shared_constants.ClusterEntityKind.TKG.value
+        client = ctx.obj['client']
+
+        # Check api version >= 35
+        # TODO: see how commands can be hidden
+        api_version = client.get_api_version()
+        if float(api_version) < float(vcd_client.ApiVersion.VERSION_35.value):
+            raise Exception(f'vcd cse cluster share only supported for vcd api'
+                            f'version >= '
+                            f'{vcd_client.ApiVersion.VERSION_35.value}')
+
+        cloudapi_client = \
+            vcd_utils.get_cloudapi_client_from_vcd_client(
+                client, logger_debug=CLIENT_LOGGER)
+        if cluster_id:
+            de_svc = entity_svc.DefEntityService(cloudapi_client)
+            is_native_cluster = de_svc.is_native_entity(cluster_id)
+        else:
+            cluster = Cluster(client, k8_runtime=k8_runtime)
+            _, entity_properties, is_native_cluster = \
+                cluster._get_tkg_native_clusters_by_name(name)
+            cluster_id = entity_properties['id']
+
+        # Use cloud api client to share access with each user
+        if is_native_cluster:
+            # TODO: hit cluster share endpoint
+            pass
+        else:
+            users_list = list(users)
+            tkg_cluster = de_cluster_tkg.DEClusterTKG(client)
+            tkg_cluster.share_cluster(cluster_id, users_list, access_level_id)
+
+        # cluster_obj = Cluster(client, k8_runtime=k8_runtime)
+        # de_svc = entity_svc.DefEntityService(cloudapi_client)
+        # filters = client_utils.construct_filters(org=org, vdc=vdc)
+        # is_native_cluster = True
+        # if cluster_id:
+        #     is_native_entity = de_svc.is_native_entity(cluster_id)
+        #     if is_native_entity:
+        #         de = de_svc.get_entity(entity_id=cluster_id)
+        #     else:
+        #         tkg_cluster, de = cluster_obj._tkgCluster.get_tkg_cluster(cluster_id)  # noqa: E501
+
+        '''
+        try:
+            if name:
+                de = de_svc.get_native_entity_by_name(name=name,
+                                                      filters=filters)
+            else:
+                de = de_svc.get_entity(entity_id=cluster_id)
+        except DefSchemaServiceError:
+            # NOTE: 500 status code is returned which is not ideal
+            # when user doesn't have native rights
+            is_native_cluster = False
+            if name:
+                filters[def_utils.ClusterEntityFilterKey.CLUSTER_NAME.value] = name  # noqa: E501
+                tkg_entities = de_svc.list_entities_by_entity_type(
+                    vendor=def_utils.DEF_VMWARE_VENDOR,
+                    nss=def_utils.DEF_TKG_ENTITY_TYPE_NSS,
+                    version=def_utils.DEF_TKG_ENTITY_TYPE_VERSION,
+                    filters=None)
+                for tkg_ent in tkg_entities:
+                    de = tkg_ent
+                    break
+            else:
+                de = de_svc.get_entity(cluster_id)
+        '''
+
+        '''
+        # Share vApp
+        vapp_href = native_de.externalId
+        cluster_vapp = vcd_vapp.VApp(client, href=vapp_href)
+        vapp_access_settings = cluster_vapp.get_access_settings()
+        access_setting_list = []
+        if hasattr(vapp_access_settings, 'AccessSettings'):
+            access_settings = vapp_access_settings.AccessSettings
+            for child_obj in access_settings.getchildren():
+                child_str_elem = child_obj.getchildren()[0]
+                child_attrib = child_str_elem.attrib
+                shared_href = child_attrib.get('href')
+                curr_setting = client_utils.form_vapp_access_setting(
+                    access_level=str(child_obj.AccessLevel),
+                    name=child_attrib.get('name'),
+                    href=shared_href,
+                    id=client_utils.get_id_from_user_href(shared_href))
+                access_setting_list.append(curr_setting)
+        # Add the updated access settings
+        api_uri = client.get_api_uri()
+        for user_name, urn_id in user_ids.items():
+            user_id = client_utils.get_id_from_user_urn(urn_id)
+            user_setting = client_utils.form_vapp_access_setting(
+                access_level=cli_constants.FULL_CONTROL_ACCESS_LEVEL,
+                name=user_name,
+                href=f'{api_uri}{cli_constants.ADMIN_USER_PATH}{user_id}',
+                id=user_id)
+            access_setting_list.append(user_setting)
+        vapp_request_contents = {
+            cli_constants.VappAccessKey.IS_SHARED_TO_EVERYONE:
+                bool(vapp_access_settings.IsSharedToEveryone),
+            cli_constants.VappAccessKey.ACCESS_SETTINGS:
+                {cli_constants.VappAccessKey.ACCESS_SETTING: access_setting_list}  # noqa: E501
+        }
+        client.post_resource(
+            uri=f'{vapp_href}{cli_constants.ACTION_CONTROL_ACCESS_PATH}',
+            contents=vapp_request_contents,
+            media_type='application/*+json')
+        '''
+        stdout(f'Cluster {cluster_id or name} successfully shared with: '
+               f'{users_list}')
+
     except Exception as e:
         stderr(e, ctx)
         CLIENT_LOGGER.error(str(e))
