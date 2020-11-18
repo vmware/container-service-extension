@@ -60,6 +60,7 @@ ORG_ADMIN_ROLE_NAME = 'Organization Administrator'
 VAPP_AUTHOR_NAME = 'vapp_author'
 VAPP_AUTHOR_PASSWORD = 'password'  # nosec: test environment
 VAPP_AUTHOR_ROLE_NAME = 'vApp Author'
+K8_AUTHOR_ROLE_NAME = 'k8 Author'
 
 # config file 'test' section flags
 TEARDOWN_INSTALLATION = None
@@ -149,6 +150,7 @@ def init_environment(config_filepath=BASE_CONFIG_FILEPATH):
 
     create_org(TEST_ORG)
     create_vdc(TEST_VDC, TEST_ORG, TEST_NETWORK)
+    create_k8_author_role()
     org = pyvcloud_utils.get_org(CLIENT, org_name=TEST_ORG)
     vdc = pyvcloud_utils.get_vdc(CLIENT, vdc_name=TEST_VDC, org=org)
     ORG_HREF = org.href
@@ -274,6 +276,32 @@ def create_vdc(vdc_name, org_name, network_name):
         assert result.exit_code == 0, \
             testutils.format_command_info('vcd', cmd, result.exit_code,
                                           result.output)
+
+
+def create_k8_author_role():
+    config = testutils.yaml_to_dict(BASE_CONFIG_FILEPATH)
+    cmd = f"login {config['vcd']['host']} {SYSTEM_ORG_NAME} " \
+        f"{config['vcd']['username']} -iwp {config['vcd']['password']} " \
+        f"-V {config['vcd']['api_version']}"
+    result = CLI_RUNNER.invoke(vcd, cmd.split(), catch_exceptions=False)
+    assert result.exit_code == 0
+    cmd = f"org use {TEST_ORG}"
+    result = CLI_RUNNER.invoke(vcd, cmd.split(), catch_exceptions=False)
+    assert result.exit_code == 0
+    result = CLI_RUNNER.invoke(
+        vcd, ['role', 'clone', VAPP_AUTHOR_ROLE_NAME, K8_AUTHOR_ROLE_NAME],
+        catch_exceptions=False)
+    assert DUPLICATE_NAME in result.stdout or result.exit_code == 0, \
+        testutils.format_command_info('vcd', cmd, result.exit_code,
+                                      result.output)
+    # Add View right for other published catalogs
+    result = CLI_RUNNER.invoke(
+        vcd, ['role', 'add-right', K8_AUTHOR_ROLE_NAME,
+              'Catalog: View Published Catalogs'],
+        catch_exceptions=False)
+    assert result.exit_code == 0, \
+        testutils.format_command_info('vcd', cmd, result.exit_code,
+                                      result.output)
 
 
 def create_user(username, password, role):
