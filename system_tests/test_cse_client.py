@@ -59,7 +59,6 @@ import pytest
 from vcd_cli.vcd import vcd
 
 from container_service_extension.server_cli import cli
-import container_service_extension.server_constants as constants
 import container_service_extension.system_test_framework.environment as env
 import container_service_extension.system_test_framework.utils as testutils
 from container_service_extension.system_test_framework.utils import \
@@ -83,8 +82,7 @@ def cse_server():
     Teardown tasks:
     - Stop CSE server
     """
-    config = testutils.yaml_to_dict(env.BASE_CONFIG_FILEPATH)
-    config = env.setup_active_config()
+    env.setup_active_config()
     if env.is_cse_registered():
         cmd = ['upgrade',
                '--config', env.ACTIVE_CONFIG_FILEPATH,
@@ -125,44 +123,6 @@ def cse_server():
                              stdout=subprocess.DEVNULL,
                              stderr=subprocess.STDOUT)
     time.sleep(env.WAIT_INTERVAL * 3)  # server takes a little while to set up
-
-    # Enable kubernetes functionality on our ovdc
-    # by default, an ovdc cannot deploy kubernetes clusters
-    # TODO() this should be removed once this behavior is changed
-    cmd = f"login {config['vcd']['host']} {constants.SYSTEM_ORG_NAME} " \
-          f"{config['vcd']['username']} -iwp {config['vcd']['password']} " \
-          f"-V {config['vcd']['api_version']}"
-    result = env.CLI_RUNNER.invoke(vcd, cmd.split(), catch_exceptions=False)
-    assert result.exit_code == 0,\
-        testutils.format_command_info('vcd', cmd, result.exit_code,
-                                      result.output)
-    cmd = f"org use {config['broker']['org']}"
-    result = env.CLI_RUNNER.invoke(vcd, cmd.split(), catch_exceptions=False)
-    assert result.exit_code == 0,\
-        testutils.format_command_info('vcd', cmd, result.exit_code,
-                                      result.output)
-    cmd = f"vdc use {config['broker']['vdc']}"
-    result = env.CLI_RUNNER.invoke(vcd, cmd.split(), catch_exceptions=False)
-    assert result.exit_code == 0,\
-        testutils.format_command_info('vcd', cmd, result.exit_code,
-                                      result.output)
-    # TODO (metadata based enablement for < v35): Commenting this for now
-    # Should revisit after decision
-    # cmd = f"cse ovdc enable {config['broker']['vdc']}"
-    # result = env.CLI_RUNNER.invoke(vcd, cmd.split(), catch_exceptions=False)
-    # assert result.exit_code == 0,\
-    #     testutils.format_command_info('vcd', cmd, result.exit_code,
-    #                                   result.output)
-    cmd = f"catalog acl add {config['broker']['catalog']} " \
-        f"\'org:{env.TEST_ORG}:ReadOnly\'"
-    result = env.CLI_RUNNER.invoke(vcd, cmd.split(), catch_exceptions=False)
-    assert result.exit_code == 0, \
-        testutils.format_command_info('vcd', cmd, result.exit_code,
-                                      result.output)
-    result = env.CLI_RUNNER.invoke(vcd, 'logout', catch_exceptions=False)
-    assert result.exit_code == 0,\
-        testutils.format_command_info('vcd', cmd, result.exit_code,
-                                      result.output)
 
     yield
 

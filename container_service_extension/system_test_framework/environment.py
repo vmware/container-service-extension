@@ -60,6 +60,9 @@ ORG_ADMIN_ROLE_NAME = 'Organization Administrator'
 VAPP_AUTHOR_NAME = 'vapp_author'
 VAPP_AUTHOR_PASSWORD = 'password'  # nosec: test environment
 VAPP_AUTHOR_ROLE_NAME = 'vApp Author'
+K8_AUTHOR_NAME = 'k8_author'
+K8_AUTHOR_PASSWORD = 'password'  # nosec: test environment
+K8_AUTHOR_ROLE_NAME = 'k8 Author'
 
 # config file 'test' section flags
 TEARDOWN_INSTALLATION = None
@@ -89,6 +92,7 @@ CATALOG_NAME = None
 WAIT_INTERVAL = 30
 DUPLICATE_NAME = "DUPLICATE_NAME"
 ALREADY_EXISTS = "already exists"
+VIEW_PUBLISHED_CATALOG_RIGHT = 'Catalog: View Published Catalogs'
 
 
 def init_environment(config_filepath=BASE_CONFIG_FILEPATH):
@@ -156,12 +160,11 @@ def init_environment(config_filepath=BASE_CONFIG_FILEPATH):
     VDC_HREF = vdc.href
 
     # hrefs for Org and VDC that tests cluster operations
-    create_org(TEST_ORG)
-    create_vdc(TEST_VDC, TEST_ORG, TEST_NETWORK)
     test_org = pyvcloud_utils.get_org(CLIENT, org_name=TEST_ORG)
     test_vdc = pyvcloud_utils.get_vdc(CLIENT, vdc_name=TEST_VDC, org=test_org)
     TEST_ORG_HREF = test_org.href
     TEST_VDC_HREF = test_vdc.href
+    create_k8_author_role(config['vcd'])
 
 
 def init_test_vars(test_config):
@@ -227,62 +230,29 @@ def teardown_active_config():
         os.remove(ACTIVE_CONFIG_FILEPATH)
 
 
-def create_org(org_name):
-    """Create the given org.
-
-    :param str org_name:  name of the org
-    """
-    result = CLI_RUNNER.invoke(vcd, SYS_ADMIN_LOGIN_CMD.split(), catch_exceptions=False)   # noqa: E501
-    assert result.exit_code == 0
-    cmd = f"org create --enabled {org_name} {org_name}"
+def create_k8_author_role(vcd_config: dict):
+    cmd = f"login {vcd_config['host']} {SYSTEM_ORG_NAME} " \
+        f"{vcd_config['username']} -iwp {vcd_config['password']} " \
+        f"-V {vcd_config['api_version']}"
     result = CLI_RUNNER.invoke(vcd, cmd.split(), catch_exceptions=False)
-    # If the organization already exists, exit successfully
+    assert result.exit_code == 0
+    cmd = f"org use {TEST_ORG}"
+    result = CLI_RUNNER.invoke(vcd, cmd.split(), catch_exceptions=False)
+    assert result.exit_code == 0
+    result = CLI_RUNNER.invoke(
+        vcd, ['role', 'clone', VAPP_AUTHOR_ROLE_NAME, K8_AUTHOR_ROLE_NAME],
+        catch_exceptions=False)
     assert DUPLICATE_NAME in result.stdout or result.exit_code == 0, \
         testutils.format_command_info('vcd', cmd, result.exit_code,
                                       result.output)
-
-
-def create_vdc(vdc_name, org_name, network_name):
-    """Create the given vdc for given org.
-
-    :param str vdc_name: name of vdc that provides resources
-    :param str org_name: name of the org
-    :param str network_name: org vdc network
-    """
-    config = testutils.yaml_to_dict(BASE_CONFIG_FILEPATH)
-    result = CLI_RUNNER.invoke(vcd, SYS_ADMIN_LOGIN_CMD.split(), catch_exceptions=False)  # noqa: E501
-    assert result.exit_code == 0
-    org = pyvcloud_utils.get_org(CLIENT, org_name=config['broker']['org'])
-    ovdc = pyvcloud_utils.get_vdc(
-        CLIENT, vdc_name=config['broker']['vdc'], org=org, is_admin_operation=True)  # noqa: E501
-    # Test framework will try to create the new ovdc from the same pvdc that
-    # the catalog org is being powered by.
-    pvdc_element = ovdc.get_resource().ProviderVdcReference
-    pvdc_name = pvdc_element.get('name')
-    cmd = f"org use {org_name}"
-    result = CLI_RUNNER.invoke(vcd, cmd.split(), catch_exceptions=False)
-    assert result.exit_code == 0
-    cmd = f"vdc create {vdc_name} -p {pvdc_name}"
-    result = CLI_RUNNER.invoke(vcd, cmd.split(), catch_exceptions=False)
-    # If the vdc already exists, skip rest of the steps and exit successfully
-    if ALREADY_EXISTS in result.stdout:
-        return
-    else:
-        assert result.exit_code == 0, \
-            testutils.format_command_info('vcd', cmd, result.exit_code,
-                                          result.output)
-        cmd = f"vdc use {vdc_name}"
-        result = CLI_RUNNER.invoke(vcd, cmd.split(), catch_exceptions=False)
-        assert result.exit_code == 0
-        # Create the test network; choose the same parent network
-        # used by broker network
-        network = ovdc.get_direct_orgvdc_network(config['broker']['network'])
-        parent_network_name = network.Configuration.ParentNetwork.get('name')
-        cmd = f"network direct create -p {parent_network_name} {network_name}"  # noqa: E501
-        result = CLI_RUNNER.invoke(vcd, cmd.split(), catch_exceptions=False)
-        assert result.exit_code == 0, \
-            testutils.format_command_info('vcd', cmd, result.exit_code,
-                                          result.output)
+    # Add View right for other published catalogs
+    result = CLI_RUNNER.invoke(
+        vcd, ['role', 'add-right', K8_AUTHOR_ROLE_NAME,
+              VIEW_PUBLISHED_CATALOG_RIGHT],
+        catch_exceptions=False)
+    assert result.exit_code == 0, \
+        testutils.format_command_info('vcd', cmd, result.exit_code,
+                                      result.output)
 
 
 def create_user(username, password, role):
