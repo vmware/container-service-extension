@@ -234,6 +234,8 @@ def _get_api_version_from_accept_header(api_version_header: str):
                 api_version = tokens[1]
     return api_version
 
+REQUEST_HOST = None
+REQUEST_URL = None
 
 @handle_exception
 def process_request(message):
@@ -244,7 +246,9 @@ def process_request(message):
         accept_header=message['headers'].get('Accept'))
     api_version = _get_api_version_from_accept_header(
         api_version_header=api_version_header)
-
+    global REQUEST_HOST, REQUEST_URL
+    REQUEST_HOST = message['headers']['Host']
+    REQUEST_URL = message['requestUri']
     url_data = _get_url_data(method=message['method'],
                              url=message['requestUri'],
                              api_version=api_version)  # noqa: E501

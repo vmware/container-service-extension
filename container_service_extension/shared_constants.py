@@ -130,6 +130,10 @@ class RequestKey(str, Enum):
     # keys that are only used internally at server side
     PKS_EXT_HOST = 'pks_ext_host'
 
+    # keys related to paging parameters
+    PAGE_NUMBER = 'page'
+    PAGE_SIZE = 'pageSize'
+
 
 @unique
 class DefEntityOperation(str, Enum):

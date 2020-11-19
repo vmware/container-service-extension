@@ -9,6 +9,7 @@ import pyvcloud.vcd.client as vcd_client
 import pyvcloud.vcd.task as vcd_task
 
 import container_service_extension.compute_policy_manager as compute_policy_manager # noqa: E501
+import container_service_extension.cloudapi_utils as cloudapi_utils
 import container_service_extension.def_.models as def_models
 import container_service_extension.logger as logger
 import container_service_extension.operation_context as ctx
@@ -111,7 +112,7 @@ def get_ovdc(operation_context: ctx.OperationContext, ovdc_id: str) -> dict:
     return result
 
 
-def list_ovdc(operation_context: ctx.OperationContext) -> List[dict]:
+def list_ovdc(filters: dict, operation_context: ctx.OperationContext) -> List[dict]:  # noqa: E501
     """List all ovdc and their k8s runtimes.
 
     :param ctx.OperationContext operation_context: context for the request
@@ -125,7 +126,11 @@ def list_ovdc(operation_context: ctx.OperationContext) -> List[dict]:
                                                  cse_params={})
 
     ovdcs = []
-    org_vdcs = vcd_utils.get_all_ovdcs(operation_context.client)
+    page = int(filters.get(RequestKey.PAGE_NUMBER, 1))
+    page_size = int(filters.get(RequestKey.PAGE_SIZE, 25))
+    num_results, org_vdcs = cloudapi_utils.get_vdcs(
+        operation_context.cloudapi_client,
+        page=page, page_size=page_size)
     for ovdc in org_vdcs:
         ovdc_name = ovdc.get('name')
         config = utils.get_server_runtime_config()
@@ -142,7 +147,8 @@ def list_ovdc(operation_context: ctx.OperationContext) -> List[dict]:
         # TODO: Find a better way to remove remove_cp_from_vms_on_disable
         del ovdc_details['remove_cp_from_vms_on_disable']
         ovdcs.append(ovdc_details)
-    return ovdcs
+    return utils.get_paginated_response(ovdcs, num_results,
+                                        page=page, page_size=page_size)
 
 
 def get_ovdc_k8s_runtime_details(sysadmin_client: vcd_client.Client,

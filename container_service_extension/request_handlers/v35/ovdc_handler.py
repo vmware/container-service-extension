@@ -47,4 +47,5 @@ def ovdc_list(data, operation_context: ctx.OperationContext):
 
     :return: List of dictionaries with org VDC k8s runtimes.
     """
-    return ovdc_service.list_ovdc(operation_context)
+    return ovdc_service.list_ovdc(data.get(RequestKey.V35_QUERY, {}),
+                                  operation_context)

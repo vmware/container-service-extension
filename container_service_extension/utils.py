@@ -466,3 +466,19 @@ def construct_filter_string(filters: dict):
                 filter_expressions.append(filter_exp)
         filter_string = ";".join(filter_expressions)
     return filter_string
+
+
+def get_paginated_response(values, result_total, page=1, page_size=25):
+    from container_service_extension.request_processor import REQUEST_HOST, REQUEST_URL
+    paginated_response = {
+        'values': values,
+        'resultTotal': result_total,
+        'page': page,
+        'pageSize': page_size
+    }
+    if page*page_size < result_total:
+        # TODO find a way to get the initial url part
+        # ideally the request details should be passed down to each of the
+        # handler funcions as request context
+        paginated_response['nextPageUrl'] = f"https://{REQUEST_HOST}{REQUEST_URL}?page={page+1}&pageSize={page_size}"  # noqa: E501
+    return paginated_response
