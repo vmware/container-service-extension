@@ -68,6 +68,8 @@ TEST_ALL_TEMPLATES = None
 TEST_ORG = None
 TEST_VDC = None
 TEST_NETWORK = None
+TEST_ORG_HREF = None
+TEST_VDC_HREF = None
 
 # Persona login cmd
 SYS_ADMIN_LOGIN_CMD = None
@@ -98,7 +100,7 @@ def init_environment(config_filepath=BASE_CONFIG_FILEPATH):
         CATALOG_NAME, TEARDOWN_INSTALLATION, TEARDOWN_CLUSTERS, \
         TEMPLATE_DEFINITIONS, TEST_ALL_TEMPLATES, SYS_ADMIN_LOGIN_CMD, \
         ORG_ADMIN_LOGIN_CMD, VAPP_AUTHOR_LOGIN_CMD, USERNAME_TO_LOGIN_CMD, \
-        USERNAME_TO_CLUSTER_NAME
+        USERNAME_TO_CLUSTER_NAME, TEST_ORG_HREF, TEST_VDC_HREF
 
     config = testutils.yaml_to_dict(config_filepath)
 
@@ -146,13 +148,20 @@ def init_environment(config_filepath=BASE_CONFIG_FILEPATH):
         'org_admin': ORG_ADMIN_TEST_CLUSTER_NAME,
         'vapp_author': VAPP_AUTHOR_TEST_CLUSTER_NAME
     }
-
-    create_org(TEST_ORG)
-    create_vdc(TEST_VDC, TEST_ORG, TEST_NETWORK)
-    org = pyvcloud_utils.get_org(CLIENT, org_name=TEST_ORG)
-    vdc = pyvcloud_utils.get_vdc(CLIENT, vdc_name=TEST_VDC, org=org)
+    # hrefs for Org and VDC that hosts the catalog
+    org = pyvcloud_utils.get_org(CLIENT, org_name=config['broker']['org'])
+    vdc = pyvcloud_utils.get_vdc(CLIENT, vdc_name=config['broker']['vdc'],
+                                 org=org)
     ORG_HREF = org.href
     VDC_HREF = vdc.href
+
+    # hrefs for Org and VDC that tests cluster operations
+    create_org(TEST_ORG)
+    create_vdc(TEST_VDC, TEST_ORG, TEST_NETWORK)
+    test_org = pyvcloud_utils.get_org(CLIENT, org_name=TEST_ORG)
+    test_vdc = pyvcloud_utils.get_vdc(CLIENT, vdc_name=TEST_VDC, org=test_org)
+    TEST_ORG_HREF = test_org.href
+    TEST_VDC_HREF = test_vdc.href
 
 
 def init_test_vars(test_config):
@@ -314,8 +323,8 @@ def delete_catalog_item(item_name):
         pass
 
 
-def delete_vapp(vapp_name):
-    vdc = VDC(CLIENT, href=VDC_HREF)
+def delete_vapp(vapp_name, vdc_href):
+    vdc = VDC(CLIENT, href=vdc_href)
     try:
         task = vdc.delete_vapp(vapp_name, force=True)
         CLIENT.get_task_monitor().wait_for_success(task)
@@ -362,8 +371,8 @@ def catalog_item_exists(catalog_item, catalog_name=None):
         return False
 
 
-def vapp_exists(vapp_name):
-    vdc = VDC(CLIENT, href=VDC_HREF)
+def vapp_exists(vapp_name, vdc_href):
+    vdc = VDC(CLIENT, href=vdc_href)
     try:
         vdc.get_vapp(vapp_name)
         return True

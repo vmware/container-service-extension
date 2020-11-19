@@ -71,7 +71,7 @@ def _remove_cse_artifacts():
             template['name'], template['revision'])
         env.delete_catalog_item(catalog_item_name)
         temp_vapp_name = testutils.get_temp_vapp_name(template['name'])
-        env.delete_vapp(temp_vapp_name)
+        env.delete_vapp(temp_vapp_name, vdc_href=env.VDC_HREF)
     env.delete_catalog()
     env.unregister_cse()
 
@@ -292,7 +292,7 @@ def test_0080_install_skip_template_creation(config,
 
         # check that temp vapp does not exists
         temp_vapp_name = testutils.get_temp_vapp_name(template_config['name'])
-        assert not env.vapp_exists(temp_vapp_name), \
+        assert not env.vapp_exists(temp_vapp_name, vdc_href=env.VDC_HREF), \
             'vApp exists when it should not.'
 
 
