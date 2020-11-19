@@ -9,10 +9,12 @@ from vcd_cli.profiles import Profiles
 
 from container_service_extension.client import system as syst
 from container_service_extension.client.constants import CSE_SERVER_RUNNING
+import container_service_extension.cloudapi.constants as cloudapi_constants
 import container_service_extension.def_.utils as def_utils
 from container_service_extension.exceptions import CseResponseError
 from container_service_extension.shared_constants import CSE_SERVER_API_VERSION
 from container_service_extension.shared_constants import CSE_SERVER_BUSY_KEY
+from container_service_extension.shared_constants import RequestMethod
 
 _RESTRICT_CLI_TO_TKG_OPERATIONS = False
 
@@ -201,3 +203,34 @@ def filter_columns(result, value_field_to_display_field):
             for value_field, display_field in value_field_to_display_field.items()  # noqa: E501
         }
         return filtered_result
+
+
+def get_user_ids(cloudapi_client, users):
+    """Get a dictionary of users to user ids from a list of user names.
+
+    :param cloudApiClient.CloudApiClient cloudapi_client: The current client
+    :param list users: list of user names
+
+    :return: dict of user keys and user id values
+    :rtype: dict
+    """
+    response_body = cloudapi_client.do_request(
+        method=RequestMethod.GET,
+        cloudapi_version=cloudapi_constants.CloudApiVersion.VERSION_1_0_0,
+        resource_url_relative_path='users')
+    if not response_body:
+        return None
+
+    # Retrieve user ids
+    users_dict = {}
+    users_set = set(users)
+    for user_data in response_body['values']:
+        user_name = user_data['username']
+        if user_name in users_set:
+            users_dict[user_name] = user_data['id']
+            users_set.remove(user_name)
+
+    # Ensure all user ids were found
+    if len(users_set) != 0:
+        raise Exception(f'Could not find user id(s): {users_set}')
+    return users_dict

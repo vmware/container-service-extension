@@ -365,7 +365,7 @@ class DEClusterTKG:
     def share_cluster(self, cluster_id, users: list, access_level_id):
         cloudapi_client = \
             vcd_utils.get_cloudapi_client_from_vcd_client(self._client)
-        user_ids = utils.get_user_ids(cloudapi_client, users)
+        user_ids = client_utils.get_user_ids(cloudapi_client, users)
 
         payload = {
             shared_constants.AccessControlKey.GRANT_TYPE:

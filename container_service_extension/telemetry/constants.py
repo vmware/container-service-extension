@@ -60,6 +60,7 @@ class CseOperation(Enum):
     CLUSTER_RESIZE = ('cluster resize', 'CLUSTER', 'RESIZE', 'CSE_CLUSTER_RESIZE')  # noqa: E501
     CLUSTER_UPGRADE = ('cluster upgrade', 'CLUSTER', 'UPGRADE', 'CSE_CLUSTER_UPGRADE')  # noqa: E501
     CLUSTER_UPGRADE_PLAN = ('cluster upgrade plan', 'CLUSTER', 'UPGRADE_PLAN', 'CSE_CLUSTER_UPGRADE_PLAN')  # noqa: E501
+    CLUSTER_ACL_LIST = ('cluster acl list', 'CLUSTER', 'ACL_LIST', 'CSE_CLUSTER_ACL_LIST')  # noqa: E501
     NODE_CREATE = ('node create', 'NODE', 'CREATE', 'CSE_NODE_CREATE')
     NODE_DELETE = ('node delete', 'NODE', 'DELETE', 'CSE_NODE_DELETE')
     NODE_INFO = ('node info', 'NODE', 'INFO', 'CSE_NODE_INFO')

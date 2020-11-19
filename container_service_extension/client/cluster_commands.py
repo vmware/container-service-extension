@@ -1044,7 +1044,7 @@ Examples:
         with ReadOnly access with 'user1'
     """  # noqa: E501
     try:
-        access_level_id = cli_constants.ACCESS_LEVEL_TYPE_TO_ID.get(acl.lower())  # noqa: E501
+        access_level_id = shared_constants.ACCESS_LEVEL_TYPE_TO_ID.get(acl.lower())  # noqa: E501
         if not access_level_id:
             raise Exception(f'Please enter a valid access control type: '
                             f'{shared_constants.READ_ONLY}, '
@@ -1084,11 +1084,13 @@ Examples:
             cluster_id = entity_properties['id']
 
         # Use cloud api client to share access with each user
+        users_list = list(users)
         if is_native_cluster:
             # TODO: hit cluster share endpoint
-            pass
+            native_cluster = DEClusterNative(client)
+            native_cluster.share_cluster(cluster_id, users_list,
+                                         access_level_id)
         else:
-            users_list = list(users)
             tkg_cluster = de_cluster_tkg.DEClusterTKG(client)
             tkg_cluster.share_cluster(cluster_id, users_list, access_level_id)
 

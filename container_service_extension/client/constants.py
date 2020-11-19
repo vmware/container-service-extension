@@ -6,7 +6,6 @@ from enum import Enum
 from enum import unique
 
 import container_service_extension.def_.utils as def_utils
-import container_service_extension.shared_constants as shared_constants
 
 # Client environment variables
 ENV_CSE_CLIENT_WIRE_LOGGING = 'CSE_CLIENT_WIRE_LOGGING'
@@ -29,16 +28,6 @@ CSE_SERVER_RUNNING = 'cse_server_running'
 TKG_RESPONSE_MESSAGES_BY_STATUS_CODE = {
     403: "User doesn't have required rights to perform the operation",
     500: "Unexpected error occurred"
-}
-
-# Access level dictionary
-ACCESS_LEVEL_TYPE_TO_ID = {
-    shared_constants.READ_ONLY.lower():
-        shared_constants.READ_ONLY_ACCESS_LEVEL_ID,
-    shared_constants.READ_WRITE.lower():
-        shared_constants.READ_WRITE_ACCESS_LEVEL_ID,
-    shared_constants.FULL_CONTROL.lower():
-        shared_constants.FULL_CONTROL_ACCESS_LEVEL_ID
 }
 
 

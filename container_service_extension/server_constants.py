@@ -84,6 +84,21 @@ VCENTER_LOGIN_ERROR_MSG = "vCenter login failed (check config file for "\
 REQUEST_ID_FORMAT = 'Request Id: %(requestId)s | '
 
 
+# User ID parsing
+USER_PATH = '/user/'
+USER_URN_BEGIN = 'urn:vcloud:user'
+
+# Access control path and ID constants
+ACCESS_CONTROLS_PATH = 'accessControls'
+ENTITIES_PATH = 'entities'
+ACCESS_LEVEL_URN_BEGIN = 'urn:vcloud:accessLevel'
+
+# Access level inconsistent message
+INCONSISTENT_CLUSTER_ACCESS = 'inconsistent RDE and vApp access levels'
+VAPP_ONLY_ACCESS = 'only access to vApp'
+RDE_ONLY_ACCESS = 'only access to RDE'
+
+
 @unique
 class NodeType(str, Enum):
     CONTROL_PLANE = 'mstr'
@@ -198,6 +213,7 @@ class CseOperation(Enum):
     CLUSTER_RESIZE = ('resize cluster', requests.codes.accepted)
     CLUSTER_UPGRADE_PLAN = ('get supported cluster upgrade paths')
     CLUSTER_UPGRADE = ('upgrade cluster software', requests.codes.accepted)
+    CLUSTER_ACL_LIST = ('list cluster acl')
     NODE_CREATE = ('create node', requests.codes.accepted)
     NODE_DELETE = ('delete node', requests.codes.accepted)
     NODE_INFO = ('get info of node')

@@ -146,6 +146,18 @@ def cluster_list(request_data, op_ctx: ctx.OperationContext):
     return result
 
 
+@record_user_action_telemetry(cse_operation=CseOperation.CLUSTER_ACL_LIST)
+def cluster_acl_list(request_data, op_ctx: ctx.OperationContext):
+    """Request handler for cluster acl list operation.
+
+    return: list of user and acl type tuples
+    rtype: List[Tuple(str, str)]
+    """
+    vcd_broker = VcdBroker(op_ctx)
+    acl_dict = vcd_broker.get_cluster_acl_list(data=request_data)
+    return acl_dict
+
+
 @record_user_action_telemetry(cse_operation=CseOperation.NODE_CREATE)
 def node_create(request_data, op_ctx: ctx.OperationContext):
     """Request handler for node create operation.
