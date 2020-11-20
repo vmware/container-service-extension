@@ -210,10 +210,10 @@ def vcd_org_admin():
 
 
 @pytest.fixture
-def vcd_vapp_author():
+def vcd_k8_author():
     """Fixture to ensure that we are logged in to vcd-cli as vapp author.
 
-    Usage: add the parameter 'vcd_vapp_author' to the test function.
+    Usage: add the parameter 'vcd_k8_author' to the test function.
 
     User will have the credentials specified in
     'system_test_framework/environment.py'
@@ -223,17 +223,17 @@ def vcd_vapp_author():
     """
     config = testutils.yaml_to_dict(env.BASE_CONFIG_FILEPATH)
     cmd = f"login {config['vcd']['host']} {env.TEST_ORG} " \
-        f"{env.VAPP_AUTHOR_NAME} -iwp {env.VAPP_AUTHOR_PASSWORD} " \
+        f"{env.K8_AUTHOR_NAME} -iwp {env.K8_AUTHOR_PASSWORD} " \
         f"-V {config['vcd']['api_version']}"
     result = env.CLI_RUNNER.invoke(vcd, cmd.split(), catch_exceptions=False)
-    assert result.exit_code == 0,\
+    assert result.exit_code == 0, \
         testutils.format_command_info('vcd', cmd, result.exit_code,
                                       result.output)
 
     # ovdc context may be nondeterministic when there's multiple ovdcs
     cmd = f"vdc use {env.TEST_VDC}"
     result = env.CLI_RUNNER.invoke(vcd, cmd.split(), catch_exceptions=False)
-    assert result.exit_code == 0,\
+    assert result.exit_code == 0, \
         testutils.format_command_info('vcd', cmd, result.exit_code,
                                       result.output)
 
@@ -256,14 +256,14 @@ def delete_test_clusters():
     """
     env.delete_vapp(env.SYS_ADMIN_TEST_CLUSTER_NAME, vdc_href=env.TEST_VDC_HREF)  # noqa
     env.delete_vapp(env.ORG_ADMIN_TEST_CLUSTER_NAME, vdc_href=env.TEST_VDC_HREF)  # noqa
-    env.delete_vapp(env.VAPP_AUTHOR_TEST_CLUSTER_NAME, vdc_href=env.TEST_VDC_HREF)  # noqa
+    env.delete_vapp(env.K8_AUTHOR_TEST_CLUSTER_NAME, vdc_href=env.TEST_VDC_HREF)  # noqa
 
     yield
 
     if env.TEARDOWN_CLUSTERS:
         env.delete_vapp(env.SYS_ADMIN_TEST_CLUSTER_NAME, vdc_href=env.TEST_VDC_HREF)  # noqa
         env.delete_vapp(env.ORG_ADMIN_TEST_CLUSTER_NAME, vdc_href=env.TEST_VDC_HREF)  # noqa
-        env.delete_vapp(env.VAPP_AUTHOR_TEST_CLUSTER_NAME, vdc_href=env.TEST_VDC_HREF)  # noqa
+        env.delete_vapp(env.K8_AUTHOR_TEST_CLUSTER_NAME, vdc_href=env.TEST_VDC_HREF)  # noqa
 
 
 def test_0010_vcd_cse_version():
@@ -317,7 +317,7 @@ def test_0030_vcd_cse_cluster_create_rollback(config, vcd_org_admin,
 
 @pytest.mark.parametrize('test_runner_username', [env.SYS_ADMIN_NAME,
                                                   env.ORG_ADMIN_NAME,
-                                                  env.VAPP_AUTHOR_NAME])
+                                                  env.K8_AUTHOR_NAME])
 def test_0050_vcd_cse_system_toggle(config, test_runner_username,
                                     delete_test_clusters):
     """Test `vcd cse system ...` commands.
@@ -376,12 +376,12 @@ def test_0050_vcd_cse_system_toggle(config, test_runner_username,
 
 @pytest.mark.parametrize('test_runner_username', [env.SYS_ADMIN_NAME,
                                                   env.ORG_ADMIN_NAME,
-                                                  env.VAPP_AUTHOR_NAME])
+                                                  env.K8_AUTHOR_NAME])
 def test_0070_vcd_cse_cluster_create(config, test_runner_username):
     """Test 'vcd cse cluster create ...' command for various cse users.
 
     Test cluster creation from different persona's- sys_admin, org_admin
-    and vapp_author. Created clusters will remain in the system for further
+    and k8_author. Created clusters will remain in the system for further
     command tests - list, resize and delete.
 
     :param config: cse config file for vcd configuration
@@ -421,7 +421,7 @@ def test_0070_vcd_cse_cluster_create(config, test_runner_username):
 
 @pytest.mark.parametrize('test_runner_username', [env.SYS_ADMIN_NAME,
                                                   env.ORG_ADMIN_NAME,
-                                                  env.VAPP_AUTHOR_NAME])
+                                                  env.K8_AUTHOR_NAME])
 def test_0080_vcd_cse_cluster_list(test_runner_username):
     cmd_binder = collections.namedtuple('UserCmdBinder',
                                         'cmd exit_code validate_output_func '
@@ -444,7 +444,7 @@ def test_0080_vcd_cse_cluster_list(test_runner_username):
 
 @pytest.mark.parametrize('test_runner_username', [env.SYS_ADMIN_NAME,
                                                   env.ORG_ADMIN_NAME,
-                                                  env.VAPP_AUTHOR_NAME])
+                                                  env.K8_AUTHOR_NAME])
 def test_0090_vcd_cse_cluster_info(test_runner_username):
     cmd_binder = collections.namedtuple('UserCmdBinder',
                                         'cmd exit_code validate_output_func '
@@ -468,7 +468,7 @@ def test_0090_vcd_cse_cluster_info(test_runner_username):
 
 @pytest.mark.parametrize('test_runner_username', [env.SYS_ADMIN_NAME,
                                                   env.ORG_ADMIN_NAME,
-                                                  env.VAPP_AUTHOR_NAME])
+                                                  env.K8_AUTHOR_NAME])
 def test_0100_vcd_cse_cluster_config(test_runner_username):
     cmd_binder = collections.namedtuple('UserCmdBinder',
                                         'cmd exit_code validate_output_func '
@@ -519,7 +519,7 @@ def generate_validate_node_count_func(expected_nodes):
 
 @pytest.mark.parametrize('test_runner_username', [env.SYS_ADMIN_NAME,
                                                   env.ORG_ADMIN_NAME,
-                                                  env.VAPP_AUTHOR_NAME])
+                                                  env.K8_AUTHOR_NAME])
 def test_0110_vcd_cse_cluster_resize(test_runner_username, config):
     """Test 'vcd cse cluster resize ...' commands."""
     node_pattern = r'(node-\S+)'
@@ -563,12 +563,12 @@ def test_0110_vcd_cse_cluster_resize(test_runner_username, config):
 
 @pytest.mark.parametrize('test_runner_username', [env.SYS_ADMIN_NAME,
                                                   env.ORG_ADMIN_NAME,
-                                                  env.VAPP_AUTHOR_NAME])
+                                                  env.K8_AUTHOR_NAME])
 def test_0120_vcd_cse_node_operation(test_runner_username, config):
     """Test 'vcd cse node create/list/info/delete ...' commands.
 
     Test node creation from different persona's- sys_admin, org_admin
-    and vapp_author. Created nodes will remain in the system for further
+    and k8_author. Created nodes will remain in the system for further
     command tests - list and delete.
 
     :param config: cse config file for vcd configuration
@@ -659,7 +659,7 @@ def test_0130_vcd_cse_cluster_delete(config):
     """Test 'vcd cse cluster delete ...' command for various cse users.
 
     Cluster delete operation on the above create clusters operations-
-    Vapp Author can only delete self created clusters.
+    K8 Author can only delete self created clusters.
     Org admin can delete all cluster in the organization.
 
     :param config: cse config file for vcd configuration
@@ -669,23 +669,23 @@ def test_0130_vcd_cse_cluster_delete(config):
                                         'test_user')
     print("Running cluster delete operations")
     cmd_list = [
-        cmd_binder(cmd=env.VAPP_AUTHOR_LOGIN_CMD,
+        cmd_binder(cmd=env.K8_AUTHOR_LOGIN_CMD,
                    exit_code=0,
-                   validate_output_func=None, test_user=env.VAPP_AUTHOR_NAME),
+                   validate_output_func=None, test_user=env.K8_AUTHOR_NAME),
         cmd_binder(cmd=f"cse cluster delete "
                        f"{env.USERNAME_TO_CLUSTER_NAME[env.SYS_ADMIN_NAME]}",  # noqa
                    exit_code=2,
-                   validate_output_func=None, test_user=env.VAPP_AUTHOR_NAME),
+                   validate_output_func=None, test_user=env.K8_AUTHOR_NAME),
         cmd_binder(cmd=f"cse cluster delete "
                        f"{env.USERNAME_TO_CLUSTER_NAME[env.ORG_ADMIN_NAME]}",  # noqa
                    exit_code=2,
-                   validate_output_func=None, test_user=env.VAPP_AUTHOR_NAME),
+                   validate_output_func=None, test_user=env.K8_AUTHOR_NAME),
         cmd_binder(cmd=f"cse cluster delete "
-                       f"{env.USERNAME_TO_CLUSTER_NAME[env.VAPP_AUTHOR_NAME]}",  # noqa
+                       f"{env.USERNAME_TO_CLUSTER_NAME[env.K8_AUTHOR_NAME]}",  # noqa
                    exit_code=0,
-                   validate_output_func=None, test_user=env.VAPP_AUTHOR_NAME),
+                   validate_output_func=None, test_user=env.K8_AUTHOR_NAME),
         cmd_binder(cmd=env.USER_LOGOUT_CMD, exit_code=0,
-                   validate_output_func=None, test_user=env.VAPP_AUTHOR_NAME),
+                   validate_output_func=None, test_user=env.K8_AUTHOR_NAME),
         cmd_binder(cmd=env.ORG_ADMIN_LOGIN_CMD,
                    exit_code=0,
                    validate_output_func=None, test_user=env.ORG_ADMIN_NAME),

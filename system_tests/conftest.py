@@ -45,7 +45,7 @@ def vcd_users():
     """
     env.create_user(env.ORG_ADMIN_NAME, env.ORG_ADMIN_PASSWORD,
                     env.ORG_ADMIN_ROLE_NAME)
-    env.create_user(env.VAPP_AUTHOR_NAME, env.VAPP_AUTHOR_PASSWORD,
+    env.create_user(env.K8_AUTHOR_NAME, env.K8_AUTHOR_PASSWORD,
                     env.K8_AUTHOR_ROLE_NAME)
     yield
 

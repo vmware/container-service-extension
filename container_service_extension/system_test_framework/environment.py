@@ -50,15 +50,13 @@ SSH_KEY_FILEPATH = str(Path.home() / '.ssh' / 'id_rsa.pub')
 CLI_RUNNER = CliRunner()
 SYS_ADMIN_TEST_CLUSTER_NAME = 'testclustersystem'
 ORG_ADMIN_TEST_CLUSTER_NAME = 'testclusteradmin'
-VAPP_AUTHOR_TEST_CLUSTER_NAME = 'testclustervapp'
+K8_AUTHOR_TEST_CLUSTER_NAME = 'testclusterk8'
 
 # required user info
 SYS_ADMIN_NAME = 'sys_admin'
 ORG_ADMIN_NAME = 'org_admin'
 ORG_ADMIN_PASSWORD = 'password'  # nosec: test environment
 ORG_ADMIN_ROLE_NAME = 'Organization Administrator'
-VAPP_AUTHOR_NAME = 'vapp_author'
-VAPP_AUTHOR_PASSWORD = 'password'  # nosec: test environment
 VAPP_AUTHOR_ROLE_NAME = 'vApp Author'
 K8_AUTHOR_NAME = 'k8_author'
 K8_AUTHOR_PASSWORD = 'password'  # nosec: test environment
@@ -77,7 +75,7 @@ TEST_VDC_HREF = None
 # Persona login cmd
 SYS_ADMIN_LOGIN_CMD = None
 ORG_ADMIN_LOGIN_CMD = None
-VAPP_AUTHOR_LOGIN_CMD = None
+K8_AUTHOR_LOGIN_CMD = None
 USER_LOGOUT_CMD = "logout"
 USERNAME_TO_LOGIN_CMD = {}
 USERNAME_TO_CLUSTER_NAME = {}
@@ -91,7 +89,6 @@ CATALOG_NAME = None
 
 WAIT_INTERVAL = 30
 DUPLICATE_NAME = "DUPLICATE_NAME"
-ALREADY_EXISTS = "already exists"
 VIEW_PUBLISHED_CATALOG_RIGHT = 'Catalog: View Published Catalogs'
 
 
@@ -103,7 +100,7 @@ def init_environment(config_filepath=BASE_CONFIG_FILEPATH):
     global AMQP_USERNAME, AMQP_PASSWORD, CLIENT, ORG_HREF, VDC_HREF, \
         CATALOG_NAME, TEARDOWN_INSTALLATION, TEARDOWN_CLUSTERS, \
         TEMPLATE_DEFINITIONS, TEST_ALL_TEMPLATES, SYS_ADMIN_LOGIN_CMD, \
-        ORG_ADMIN_LOGIN_CMD, VAPP_AUTHOR_LOGIN_CMD, USERNAME_TO_LOGIN_CMD, \
+        ORG_ADMIN_LOGIN_CMD, K8_AUTHOR_LOGIN_CMD, USERNAME_TO_LOGIN_CMD, \
         USERNAME_TO_CLUSTER_NAME, TEST_ORG_HREF, TEST_VDC_HREF
 
     config = testutils.yaml_to_dict(config_filepath)
@@ -136,21 +133,21 @@ def init_environment(config_filepath=BASE_CONFIG_FILEPATH):
                           f"{TEST_ORG}" \
                           f" {ORG_ADMIN_NAME} -iwp {ORG_ADMIN_PASSWORD} " \
                           f"-V {config['vcd']['api_version']}"
-    VAPP_AUTHOR_LOGIN_CMD = f"login {config['vcd']['host']} " \
-                            f"{TEST_ORG} " \
-                            f"{VAPP_AUTHOR_NAME} -iwp {VAPP_AUTHOR_PASSWORD}" \
-                            f" -V {config['vcd']['api_version']}"
+    K8_AUTHOR_LOGIN_CMD = f"login {config['vcd']['host']} " \
+        f"{TEST_ORG} " \
+        f"{K8_AUTHOR_NAME} -iwp {K8_AUTHOR_PASSWORD}" \
+        f" -V {config['vcd']['api_version']}"
 
     USERNAME_TO_LOGIN_CMD = {
         'sys_admin': SYS_ADMIN_LOGIN_CMD,
         'org_admin': ORG_ADMIN_LOGIN_CMD,
-        'vapp_author': VAPP_AUTHOR_LOGIN_CMD
+        'k8_author': K8_AUTHOR_LOGIN_CMD
     }
 
     USERNAME_TO_CLUSTER_NAME = {
         'sys_admin': SYS_ADMIN_TEST_CLUSTER_NAME,
         'org_admin': ORG_ADMIN_TEST_CLUSTER_NAME,
-        'vapp_author': VAPP_AUTHOR_TEST_CLUSTER_NAME
+        'k8_author': K8_AUTHOR_TEST_CLUSTER_NAME
     }
     # hrefs for Org and VDC that hosts the catalog
     org = pyvcloud_utils.get_org(CLIENT, org_name=config['broker']['org'])
