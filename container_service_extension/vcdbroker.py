@@ -571,7 +571,8 @@ class VcdBroker(abstract_broker.AbstractBroker):
             'task_href': self.task_resource.get('href')
         }
 
-    def get_cluster_acl_list(self, **kwargs):
+    def get_cluster_acl_info(self, **kwargs):
+        """Get cluster ACL info based on the defined entity ACL."""
         data = kwargs.get(KwargKey.DATA, {})
         required = [RequestKey.CLUSTER_ID]
         req_utils.validate_payload(data, required)
@@ -582,59 +583,86 @@ class VcdBroker(abstract_broker.AbstractBroker):
                 cse_operation=CseOperation.CLUSTER_ACL_LIST,
                 cse_params=copy.deepcopy(data))
 
+        # Get request values from data dict
         cluster_id = data[RequestKey.CLUSTER_ID]
+        query = data.get(RequestKey.V35_QUERY)
+        page = query['page'] if query and query.get('page')else server_constants.DEFAULT_PAGE  # noqa: E501
+        page_sz = query['pageSize'] if query and query.get('pageSize') else \
+            server_constants.DEFAULT_PAGE_SZ
+
+        # Retrieve defined entity
         cloudapi_client = vcd_utils.get_cloudapi_client_from_vcd_client(
             self.context.client)
         de_svc = entity_svc.DefEntityService(cloudapi_client)
         de = de_svc.get_entity(cluster_id)
 
-        # Get vApp acl
-        vapp_href = de.externalId
-        vapp = vcd_vapp.VApp(self.context.client, href=vapp_href)
-        vapp_access_settings = vapp.get_access_settings()
-        vapp_user_acl_dict = {}
-        if hasattr(vapp_access_settings, 'AccessSettings'):
-            access_settings = vapp_access_settings.AccessSettings
-            for child_obj in access_settings.getchildren():
-                child_str_elem = child_obj.getchildren()[0]
-                child_attrib = child_str_elem.attrib
-                shared_href = child_attrib.get('href')
-                user_id = utils.get_id_from_user_href(shared_href)
-                user_urn = f'{server_constants.USER_URN_BEGIN}:{user_id}'
-                access_level_urn = \
-                    f'{server_constants.ACCESS_LEVEL_URN_BEGIN}:' \
-                    f'{str(child_obj.AccessLevel)}'
-                vapp_user_acl_dict[user_urn] = access_level_urn
-
-        # verify defined entity acl
-        de_acl_response_body = cloudapi_client.do_request(
+        # Retrieve defined entity ACL
+        acl_path = f'{server_constants.ENTITIES_PATH}/' \
+                   f'{de.id}/{server_constants.ACCESS_CONTROLS_PATH}' \
+                   f'?{shared_constants.PAGE}={page}&' \
+                   f'{shared_constants.PAGE_SIZE}={page_sz}'
+        de_acl_response = cloudapi_client.do_request(
             method=shared_constants.RequestMethod.GET,
             cloudapi_version=cloudapi_constants.CLOUDAPI_VERSION_1_0_0,
-            resource_url_relative_path=f'{server_constants.ENTITIES_PATH}/'
-                                       f'{de.id}/{server_constants.ACCESS_CONTROLS_PATH}')  # noqa: E501
-        verified_acl_dict = {}
-        de_acl_values = de_acl_response_body['values']
+            resource_url_relative_path=acl_path)
+
+        # Parse RDE ACL
+        de_acl_values = de_acl_response['values']
+        member_acl_list = []
         for de_acl_setting in de_acl_values:
             user_id = de_acl_setting[shared_constants.AccessControlKey.MEMBER_ID]  # noqa: E501
-            de_acl_id = de_acl_setting[shared_constants.AccessControlKey.ACCESS_LEVEL_ID]  # noqa: E501
-            vapp_acl_id = vapp_user_acl_dict.get(user_id)
-            if vapp_acl_id:
-                # User has access to vApp
-                if vapp_acl_id == de_acl_id:
-                    verified_acl_dict[user_id] = de_acl_id
-                else:
-                    verified_acl_dict[user_id] = server_constants.INCONSISTENT_CLUSTER_ACCESS   # noqa: E501
-                del vapp_user_acl_dict[user_id]
-            else:
-                # User only has access to RDE
-                verified_acl_dict[user_id] = \
-                    f'{server_constants.RDE_ONLY_ACCESS}: {de_acl_id}'
+            acl_level_id = de_acl_setting[shared_constants.AccessControlKey.ACCESS_LEVEL_ID]  # noqa: E501
+            member_acl_entry = utils.form_acl_entry(user_id, acl_level_id)
+            member_acl_list.append(member_acl_entry)
 
-        # Handle if user only has access to vApp
-        for user_id, vapp_acl_id in vapp_user_acl_dict.items():
-            verified_acl_dict[user_id] = \
-                f'{server_constants.VAPP_ONLY_ACCESS}: {vapp_acl_id}'
-        return verified_acl_dict
+        # Form GET response body
+        acl_list_response_body = {
+            shared_constants.PaginatedDataKeys.RESULT_TOTAL:
+                de_acl_response[shared_constants.PaginatedDataKeys.RESULT_TOTAL],  # noqa: E501
+            shared_constants.PaginatedDataKeys.PAGE_COUNT:
+                de_acl_response[shared_constants.PaginatedDataKeys.PAGE_COUNT],
+            shared_constants.PaginatedDataKeys.PAGE:
+                de_acl_response[shared_constants.PaginatedDataKeys.PAGE],
+            shared_constants.PaginatedDataKeys.PAGE_SIZE:
+                de_acl_response[shared_constants.PaginatedDataKeys.PAGE_SIZE],
+            shared_constants.PaginatedDataKeys.VALUES: member_acl_list
+        }
+        return acl_list_response_body
+
+        # # Get vApp acl
+        # vapp_href = de.externalId
+        # vapp = vcd_vapp.VApp(self.context.client, href=vapp_href)
+        # vapp_access_settings = vapp.get_access_settings()
+        # vapp_user_acl_dict = {}
+        # verified_member_acl_list = []
+        # if hasattr(vapp_access_settings, 'AccessSettings'):
+        #     access_settings = vapp_access_settings.AccessSettings
+        #     for child_obj in access_settings.getchildren():
+        #         child_obj_attrib = child_obj.getchildren()[0].attrib
+        #         shared_href = child_obj_attrib.get('href')
+        #         user_id = utils.get_id_from_user_href(shared_href)
+        #         user_urn = f'{server_constants.USER_URN_BEGIN}:{user_id}'
+        #         de_user_acl_level = de_user_acl_dict.get(user_urn)
+        #         if de_user_acl_level:
+        #             cluster_acl_entry = utils.form_acl_entry(user_urn,
+        #                                                      de_user_acl_level)
+        #             verified_member_acl_list.append(cluster_acl_entry)
+        #             del de_user_acl_dict[user_urn]
+        #         else:
+        #             # User only has access to vApp
+        #             # access_level_urn = \
+        #             #     f'{server_constants.ACCESS_LEVEL_URN_BEGIN}:' \
+        #             #     f'{str(child_obj.AccessLevel)}'
+        #
+        #         vapp_user_acl_dict[user_urn] = access_level_urn
+        #
+        # # TODO: handle detecting more than one page
+        #
+        # # Handle if user only has access to vApp
+        # for user_id, vapp_acl_id in vapp_user_acl_dict.items():
+        #     verified_acl_dict[user_id] = \
+        #         f'{server_constants.VAPP_ONLY_ACCESS}: {vapp_acl_id}'
+        # return verified_acl_dict
 
     def get_node_info(self, **kwargs):
         """Get node metadata as dictionary.

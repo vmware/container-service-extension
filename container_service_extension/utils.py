@@ -19,6 +19,7 @@ import semantic_version
 
 from container_service_extension.logger import NULL_LOGGER
 import container_service_extension.server_constants as server_constants
+import container_service_extension.shared_constants as shared_constants
 from container_service_extension.thread_local_data import get_thread_request_id
 from container_service_extension.thread_local_data import set_thread_request_id
 
@@ -472,3 +473,18 @@ def get_id_from_user_href(user_href):
     if server_constants.USER_PATH in user_href:
         return user_href.split(server_constants.USER_PATH)[-1]
     return None
+
+
+def form_acl_entry(user_urn, access_level_urn):
+    """Form ACL entry.
+
+    :param str user_urn: user URN id, e.g., 'urn:vcloud:user:1234567'
+    :param str access_level_urn: access level URN id, e.g.,
+        'urn:vcloud:accessLevel:FullControl'
+
+    :return acl entry
+    """
+    return {
+        shared_constants.AccessControlKey.MEMBER_ID: user_urn,
+        shared_constants.AccessControlKey.ACCESS_LEVEL_ID: access_level_urn
+    }

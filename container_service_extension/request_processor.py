@@ -98,7 +98,7 @@ OPERATION_TO_HANDLER = {
     CseOperation.CLUSTER_RESIZE: native_cluster_handler.cluster_resize,
     CseOperation.CLUSTER_UPGRADE_PLAN: native_cluster_handler.cluster_upgrade_plan,  # noqa: E501
     CseOperation.CLUSTER_UPGRADE: native_cluster_handler.cluster_upgrade,
-    CseOperation.CLUSTER_ACL_LIST: native_cluster_handler.cluster_acl_list,
+    CseOperation.CLUSTER_ACL_LIST: native_cluster_handler.cluster_acl_info,
     CseOperation.NODE_CREATE: native_cluster_handler.node_create,
     CseOperation.NODE_DELETE: native_cluster_handler.node_delete,
     CseOperation.NODE_INFO: native_cluster_handler.node_info,

@@ -147,15 +147,11 @@ def cluster_list(request_data, op_ctx: ctx.OperationContext):
 
 
 @record_user_action_telemetry(cse_operation=CseOperation.CLUSTER_ACL_LIST)
-def cluster_acl_list(request_data, op_ctx: ctx.OperationContext):
-    """Request handler for cluster acl list operation.
-
-    return: list of user and acl type tuples
-    rtype: List[Tuple(str, str)]
-    """
+def cluster_acl_info(request_data, op_ctx: ctx.OperationContext):
+    """Request handler for cluster acl list operation."""
     vcd_broker = VcdBroker(op_ctx)
-    acl_dict = vcd_broker.get_cluster_acl_list(data=request_data)
-    return acl_dict
+    acl_info_response = vcd_broker.get_cluster_acl_info(data=request_data)
+    return acl_info_response
 
 
 @record_user_action_telemetry(cse_operation=CseOperation.NODE_CREATE)

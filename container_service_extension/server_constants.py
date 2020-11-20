@@ -98,6 +98,10 @@ INCONSISTENT_CLUSTER_ACCESS = 'inconsistent RDE and vApp access levels'
 VAPP_ONLY_ACCESS = 'only access to vApp'
 RDE_ONLY_ACCESS = 'only access to RDE'
 
+# Pagination constants
+DEFAULT_PAGE = 1
+DEFAULT_PAGE_SZ = 25
+
 
 @unique
 class NodeType(str, Enum):

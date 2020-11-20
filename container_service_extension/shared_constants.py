@@ -61,6 +61,10 @@ ACCESS_LEVEL_TYPE_TO_ID = {
     FULL_CONTROL.lower(): FULL_CONTROL_ACCESS_LEVEL_ID
 }
 
+# Page parameters
+PAGE = 'page'
+PAGE_SIZE = 'pageSize'
+
 
 @unique
 class OperationType(str, Enum):
@@ -184,6 +188,17 @@ class AccessControlKey(str, Enum):
     ID = 'id'
     HREF = 'href'
     SUBJECT = 'subject'
+
+
+@unique
+class PaginatedDataKeys(str, Enum):
+    """Keys for paginated data."""
+
+    RESULT_TOTAL = 'resultTotal'
+    PAGE_COUNT = 'pageCount'
+    PAGE = 'page'
+    PAGE_SIZE = 'pageSize'
+    VALUES = 'values'
 
 
 @dataclass
