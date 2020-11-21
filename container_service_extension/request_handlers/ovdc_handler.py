@@ -21,6 +21,9 @@ import container_service_extension.request_handlers.request_utils as req_utils
 from container_service_extension.server_constants import K8S_PROVIDER_KEY
 from container_service_extension.server_constants import K8sProvider
 from container_service_extension.shared_constants import ComputePolicyAction
+from container_service_extension.shared_constants import CSE_PAGINATION_DEFAULT_PAGE_SIZE  # noqa: E501
+from container_service_extension.shared_constants import CSE_PAGINATION_FIRST_PAGE_NUMBER  # noqa: E501
+from container_service_extension.shared_constants import PaginationKeys
 from container_service_extension.shared_constants import RequestKey
 from container_service_extension.telemetry.constants import CseOperation
 from container_service_extension.telemetry.constants import OperationStatus
@@ -137,10 +140,14 @@ def ovdc_list(request_data, op_ctx: ctx.OperationContext):
     :return: List of dictionaries with org VDC k8s provider metadata.
     """
     defaults = {
-        RequestKey.LIST_PKS_PLANS: False
+        RequestKey.LIST_PKS_PLANS: False,
+        PaginationKeys.PAGE_NUMBER: CSE_PAGINATION_FIRST_PAGE_NUMBER,
+        PaginationKeys.PAGE_SIZE: CSE_PAGINATION_DEFAULT_PAGE_SIZE
     }
     validated_data = {**defaults, **request_data}
 
+    page_number = int(validated_data[PaginationKeys.PAGE_NUMBER])
+    page_size = int(validated_data[PaginationKeys.PAGE_SIZE])
     list_pks_plans = utils.str_to_bool(validated_data[RequestKey.LIST_PKS_PLANS]) # noqa: E501
 
     # Record telemetry data
@@ -155,7 +162,9 @@ def ovdc_list(request_data, op_ctx: ctx.OperationContext):
             'to System Administrators.')
 
     ovdcs = []
-    org_vdcs = vcd_utils.get_all_ovdcs(op_ctx.client)
+    org_vdcs, result_total = vcd_utils.get_ovdcs_by_page(op_ctx.client,
+                                                         page=page_number,
+                                                         page_size=page_size)
     for ovdc in org_vdcs:
         ovdc_name = ovdc.get('name')
         org_name = ovdc.get('orgName')
@@ -217,7 +226,9 @@ def ovdc_list(request_data, op_ctx: ctx.OperationContext):
             ovdc_dict['available pks plans'] = pks_plans
         ovdcs.append(ovdc_dict)
 
-    return ovdcs
+    return utils.get_paginated_response(ovdcs, result_total,
+                                        page_number=page_number,
+                                        page_size=page_size)
 
 
 @record_user_action_telemetry(cse_operation=CseOperation.OVDC_COMPUTE_POLICY_LIST)  # noqa: E501

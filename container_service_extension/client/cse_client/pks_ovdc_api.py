@@ -25,6 +25,19 @@ class PksOvdcApi(CseClient):
             params=filters)
         return process_response(response)
 
+    def get_all_ovdcs(self, filters={}):
+        url = f"{self._ovdcs_uri}?pageSize=3"
+        while url:
+            response = self._client._do_request_prim(
+                shared_constants.RequestMethod.GET,
+                url,
+                self._client._session,
+                accept_type='application/json',
+                params=filters)
+            processed_response = process_response(response)
+            url = processed_response.get('nextPageUrl')
+            yield processed_response['values']
+
     def get_ovdc(self, ovdc_id):
         uri = f"{self._ovdc_uri}/{ovdc_id}"
         response = self._client._do_request_prim(

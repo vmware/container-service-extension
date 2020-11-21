@@ -45,9 +45,12 @@ Example
         client_utils.cse_restore_session(ctx)
         client = ctx.obj['client']
         ovdc = Ovdc(client)
-        result = ovdc.list_ovdc()
-        stdout(result, ctx, sort_headers=False)
-        CLIENT_LOGGER.debug(result)
+        client_utils.print_paginated_result(ovdc.list_ovdc(), logger=CLIENT_LOGGER)  # noqa: E501
+        # for ovdc_list in ovdc.list_ovdc():
+        #     stdout(ovdc_list, ctx, sort_headers=False)
+        #     CLIENT_LOGGER.debug(ovdc_list)
+        #     if not click.confirm('Do you want more results?'):
+        #         break
     except Exception as e:
         stderr(e, ctx)
         CLIENT_LOGGER.error(str(e))

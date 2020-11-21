@@ -234,8 +234,10 @@ def _get_api_version_from_accept_header(api_version_header: str):
                 api_version = tokens[1]
     return api_version
 
+
 REQUEST_HOST = None
 REQUEST_URL = None
+
 
 @handle_exception
 def process_request(message):

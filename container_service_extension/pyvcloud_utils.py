@@ -533,7 +533,7 @@ def get_all_ovdcs(client: vcd_client.Client):
     return list(query.execute())
 
 
-def get_ovdcs(client: vcd_client.Client, page=1, page_size=25):
+def get_ovdcs_by_page(client: vcd_client.Client, page=1, page_size=25):
     query = None
     if client.is_sysadmin():
         # use adminOrgVdc in typed query
@@ -545,5 +545,5 @@ def get_ovdcs(client: vcd_client.Client, page=1, page_size=25):
         query = client.get_typed_query(
             vcd_client.ResourceType.ORG_VDC.value,
             query_result_format=vcd_client.QueryResultFormat.ID_RECORDS)
-    result_total, vdc_list = query.get_page_data(page, page_size=25)
-    return result_total, vdc_list
+    vdc_list, result_total = query.get_single_page(page=page, page_size=page_size)  # noqa: E501
+    return vdc_list, result_total

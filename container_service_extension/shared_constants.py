@@ -46,6 +46,11 @@ RUNTIME_INTERNAL_NAME_TO_DISPLAY_NAME_MAP = {
 CSE_SERVER_BUSY_KEY = 'CSE Server Busy'
 
 
+# CSE Pagination default values
+CSE_PAGINATION_FIRST_PAGE_NUMBER = 1
+CSE_PAGINATION_DEFAULT_PAGE_SIZE = 25
+
+
 @unique
 class OperationType(str, Enum):
     CLUSTER = 'cluster'
@@ -130,7 +135,9 @@ class RequestKey(str, Enum):
     # keys that are only used internally at server side
     PKS_EXT_HOST = 'pks_ext_host'
 
-    # keys related to paging parameters
+
+@unique
+class PaginationKeys(str, Enum):
     PAGE_NUMBER = 'page'
     PAGE_SIZE = 'pageSize'
 

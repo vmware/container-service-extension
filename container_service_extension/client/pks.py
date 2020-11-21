@@ -405,9 +405,7 @@ def list_ovdcs(ctx, list_pks_plans):
         client_utils.cse_restore_session(ctx)
         client = ctx.obj['client']
         ovdc = PksOvdc(client)
-        result = ovdc.list_ovdc(list_pks_plans=list_pks_plans)
-        stdout(result, ctx, sort_headers=False)
-        CLIENT_LOGGER.debug(result)
+        client_utils.print_paginated_result(ovdc.list_ovdc())
     except Exception as e:
         stderr(e, ctx)
         CLIENT_LOGGER.error(str(e))

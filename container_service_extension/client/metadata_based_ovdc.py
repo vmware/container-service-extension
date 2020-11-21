@@ -18,7 +18,11 @@ class MetadataBasedOvdc:
 
     def list_ovdc(self, list_pks_plans=False):
         filters = {shared_constants.RequestKey.LIST_PKS_PLANS: list_pks_plans}
-        return self._ovdc_api.list_ovdcs(filters=filters)
+        while True:
+            ovdc_list = self._ovdc_api.get_all_ovdcs(filters=filters)
+            if not ovdc_list:
+                break
+            yield ovdc_list
 
     # TODO(metadata based enablement for < v35): Revisit after decision
     # to support metadata way of enabling for native clusters

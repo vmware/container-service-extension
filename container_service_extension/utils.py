@@ -19,6 +19,8 @@ import semantic_version
 
 from container_service_extension.logger import NULL_LOGGER
 from container_service_extension.server_constants import MQTT_MIN_API_VERSION
+from container_service_extension.shared_constants import CSE_PAGINATION_DEFAULT_PAGE_SIZE  # noqa: E501
+from container_service_extension.shared_constants import CSE_PAGINATION_FIRST_PAGE_NUMBER  # noqa: E501
 from container_service_extension.thread_local_data import get_thread_request_id
 from container_service_extension.thread_local_data import set_thread_request_id
 
@@ -468,17 +470,19 @@ def construct_filter_string(filters: dict):
     return filter_string
 
 
-def get_paginated_response(values, result_total, page=1, page_size=25):
-    from container_service_extension.request_processor import REQUEST_HOST, REQUEST_URL
+def get_paginated_response(values, result_total,
+                           page_number=CSE_PAGINATION_FIRST_PAGE_NUMBER,
+                           page_size=CSE_PAGINATION_DEFAULT_PAGE_SIZE):
+    from container_service_extension.request_processor import REQUEST_HOST, REQUEST_URL  # noqa: E501
     paginated_response = {
         'values': values,
         'resultTotal': result_total,
-        'page': page,
+        'page': page_number,
         'pageSize': page_size
     }
-    if page*page_size < result_total:
+    if page_number * page_size < result_total:
         # TODO find a way to get the initial url part
         # ideally the request details should be passed down to each of the
         # handler funcions as request context
-        paginated_response['nextPageUrl'] = f"https://{REQUEST_HOST}{REQUEST_URL}?page={page+1}&pageSize={page_size}"  # noqa: E501
+        paginated_response['nextPageUrl'] = f"https://{REQUEST_HOST}{REQUEST_URL}?page={page_number+1}&pageSize={page_size}"  # noqa: E501
     return paginated_response
