@@ -182,7 +182,7 @@ class RemoteTemplateKey(str, Enum):
 # CSE requests
 @unique
 class CseOperation(Enum):
-    def __init__(self, description, api_path_format, ideal_response_code=requests.codes.ok):
+    def __init__(self, description, api_path_format, ideal_response_code=requests.codes.ok):  # noqa: E501
         self._description = description
         self._ideal_response_code = ideal_response_code
         self._api_path_format = api_path_format
@@ -196,34 +196,34 @@ class CseOperation(Enum):
         return self._api_path_format
 
     CLUSTER_CONFIG = ('get config of cluster', '/cse/cluster/%s/config')
-    CLUSTER_CREATE = ('create cluster', '/cse/clusters', requests.codes.accepted)
-    CLUSTER_DELETE = ('delete cluster', '/cse/cluster/%s', requests.codes.accepted)
+    CLUSTER_CREATE = ('create cluster', '/cse/clusters', requests.codes.accepted)  # noqa: E501
+    CLUSTER_DELETE = ('delete cluster', '/cse/cluster/%s', requests.codes.accepted)  # noqa: E501
     CLUSTER_INFO = ('get info of cluster', '/cse/cluster/%s')
     CLUSTER_LIST = ('list clusters', '/cse/clusters')
-    CLUSTER_RESIZE = ('resize cluster', '/cse/cluster/%s', requests.codes.accepted)
-    CLUSTER_UPGRADE_PLAN = ('get supported cluster upgrade paths', '/cse/cluster/%s/upgrade-plan')
-    CLUSTER_UPGRADE = ('upgrade cluster software', '/cse/cluster/%s/action/upgrade', requests.codes.accepted)
+    CLUSTER_RESIZE = ('resize cluster', '/cse/cluster/%s', requests.codes.accepted)  # noqa: E501
+    CLUSTER_UPGRADE_PLAN = ('get supported cluster upgrade paths', '/cse/cluster/%s/upgrade-plan')  # noqa: E501
+    CLUSTER_UPGRADE = ('upgrade cluster software', '/cse/cluster/%s/action/upgrade', requests.codes.accepted)  # noqa: E501
     NODE_CREATE = ('create node', '/cse/nodes', requests.codes.accepted)
     NODE_DELETE = ('delete node', '/cse/nodes/%s', requests.codes.accepted)
     NODE_INFO = ('get info of node', '/cse/nodes/%s')
 
-    V35_CLUSTER_CONFIG = ('get config of DEF cluster', '/cse/3.0/cluster/%s/config')
-    V35_CLUSTER_CREATE = ('create DEF cluster', '/cse/3.0/clusters', requests.codes.accepted)
-    V35_CLUSTER_DELETE = ('delete DEF cluster', '/cse/3.0/cluster/%s', requests.codes.accepted)
+    V35_CLUSTER_CONFIG = ('get config of DEF cluster', '/cse/3.0/cluster/%s/config')  # noqa: E501
+    V35_CLUSTER_CREATE = ('create DEF cluster', '/cse/3.0/clusters', requests.codes.accepted)  # noqa: E501
+    V35_CLUSTER_DELETE = ('delete DEF cluster', '/cse/3.0/cluster/%s', requests.codes.accepted)  # noqa: E501
     V35_CLUSTER_INFO = ('get info of DEF cluster', '/cse/3.0/cluster/%s')
     V35_CLUSTER_LIST = ('list DEF clusters', '/cse/3.0/clusters')
-    V35_CLUSTER_RESIZE = ('resize DEF cluster', '/cse/3.0/cluster/%s', requests.codes.accepted)
-    V35_CLUSTER_UPGRADE_PLAN = ('get supported DEF cluster upgrade paths', '/cse/3.0/cluster/%s/upgrade-plan')
+    V35_CLUSTER_RESIZE = ('resize DEF cluster', '/cse/3.0/cluster/%s', requests.codes.accepted)  # noqa: E501
+    V35_CLUSTER_UPGRADE_PLAN = ('get supported DEF cluster upgrade paths', '/cse/3.0/cluster/%s/upgrade-plan')  # noqa: E501
     V35_CLUSTER_UPGRADE = ('upgrade DEF cluster software', '/cse/3.0/cluster/%s/action/upgrade', requests.codes.accepted)  # noqa: E501
-    V35_NODE_CREATE = ('create DEF node', 'NOT IMPLEMENTED', requests.codes.accepted)
-    V35_NODE_DELETE = ('delete DEF node', '/cse/3.0/cluster/%s/nfs/%s', requests.codes.accepted)
+    V35_NODE_CREATE = ('create DEF node', 'NOT IMPLEMENTED', requests.codes.accepted)  # noqa: E501
+    V35_NODE_DELETE = ('delete DEF node', '/cse/3.0/cluster/%s/nfs/%s', requests.codes.accepted)  # noqa: E501
     V35_NODE_INFO = ('get info of DEF node', 'NOT IMPLEMENTED')
 
-    OVDC_UPDATE = ('enable or disable ovdc for k8s', '/cse/ovdc/%s', requests.codes.accepted)
+    OVDC_UPDATE = ('enable or disable ovdc for k8s', '/cse/ovdc/%s', requests.codes.accepted)  # noqa: E501
     OVDC_INFO = ('get info of ovdc', '/cse/ovdc/%s')
     OVDC_LIST = ('list ovdcs', '/cse/ovdcs')
-    OVDC_COMPUTE_POLICY_LIST = ('list ovdc compute policies', '/cse/ovdc/%s/compute-policies')
-    OVDC_COMPUTE_POLICY_UPDATE = ('update ovdc compute policies', '/cse/ovdc/%s/compute-policies')
+    OVDC_COMPUTE_POLICY_LIST = ('list ovdc compute policies', '/cse/ovdc/%s/compute-policies')  # noqa: E501
+    OVDC_COMPUTE_POLICY_UPDATE = ('update ovdc compute policies', '/cse/ovdc/%s/compute-policies')  # noqa: E501
     SYSTEM_INFO = ('get info of system', '/cse/system')
     SYSTEM_UPDATE = ('update system status', '/cse/system')
     TEMPLATE_LIST = ('list all templates', '/cse/templates')
@@ -233,15 +233,16 @@ class CseOperation(Enum):
     V35_OVDC_UPDATE = ('enable or disable ovdc for a cluster kind for v35', '/cse/3.0/ovdc/%s', requests.codes.accepted)  # noqa: E501
     V35_TEMPLATE_LIST = ('list all v35 templates', '/cse/templates')
 
-    PKS_CLUSTER_CONFIG = ('get config of PKS cluster', '/pks/clusters/%s/config')
-    PKS_CLUSTER_CREATE = ('create PKS cluster', '/pks/clusters', requests.codes.accepted)
-    PKS_CLUSTER_DELETE = ('delete PKS cluster', '/pks/cluster/%s', requests.codes.accepted)
+    PKS_CLUSTER_CONFIG = ('get config of PKS cluster', '/pks/clusters/%s/config')  # noqa: E501
+    PKS_CLUSTER_CREATE = ('create PKS cluster', '/pks/clusters', requests.codes.accepted)  # noqa: E501
+    PKS_CLUSTER_DELETE = ('delete PKS cluster', '/pks/cluster/%s', requests.codes.accepted)  # noqa: E501
     PKS_CLUSTER_INFO = ('get info of PKS cluster', '/pks/cluster/%s')
     PKS_CLUSTER_LIST = ('list PKS clusters', '/pks/clusters')
-    PKS_CLUSTER_RESIZE = ('resize PKS cluster', '/pks/cluster/%s', requests.codes.accepted)
+    PKS_CLUSTER_RESIZE = ('resize PKS cluster', '/pks/cluster/%s', requests.codes.accepted)  # noqa: E501
     PKS_OVDC_LIST = ('list all ovdcs', '/pks/ovdcs')
     PKS_OVDC_INFO = ('get info of the ovdc', '/pks/ovdc/%s')
-    PKS_OVDC_UPDATE = ('enable or disable ovdc for pks', '/pks/ovdc/%s', requests.codes.accepted)
+    PKS_OVDC_UPDATE = ('enable or disable ovdc for pks', '/pks/ovdc/%s', requests.codes.accepted)  # noqa: E501
+
 
 @unique
 class ClusterMetadataKey(str, Enum):

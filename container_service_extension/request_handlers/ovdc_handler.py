@@ -226,7 +226,7 @@ def ovdc_list(request_data, op_ctx: ctx.OperationContext):
             ovdc_dict['available pks plans'] = pks_plans
         ovdcs.append(ovdc_dict)
 
-    uri = f"{op_ctx.client.get_api_uri().strip('/')}{op_ctx.operation.api_path_format}"
+    uri = f"{op_ctx.client.get_api_uri().strip('/')}{op_ctx.operation.api_path_format}"  # noqa: E501
     return utils.get_paginated_response(uri, ovdcs, result_total,
                                         page_number=page_number, page_size=page_size)  # noqa: E501
 

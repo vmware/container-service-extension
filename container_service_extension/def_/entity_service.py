@@ -128,7 +128,7 @@ class DefEntityService():
                                              filters: dict = None, page_number: int = CSE_PAGINATION_FIRST_PAGE_NUMBER,  # noqa: E501
                                              page_size: int = CSE_PAGINATION_DEFAULT_PAGE_SIZE):  # noqa: E501
         """List all the entities per page and entity type.
-        
+
         :param str vendor: entity type vendor name
         :param str nss: entity type namespace
         :param str version: entity type version
@@ -137,7 +137,6 @@ class DefEntityService():
         :param int page_size: number of records per page
         :rtype: Generator[(List[DefEntity], int), None, None]
         """
-
         filter_string = utils.construct_filter_string(filters)
         query_string = f"page={page_number}&pageSize={page_size}"
         if filter_string:
