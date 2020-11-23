@@ -1535,14 +1535,7 @@ def _legacy_upgrade_to_33_34(client, config, ext_vcd_api_version,
             msg_update_callback=msg_update_callback)
 
     # Fix cluster metadata and admin password
-    clusters = []
-    page_number = shared_constants.CSE_PAGINATION_FIRST_PAGE_NUMBER
-    while True:
-        result, _ = get_all_cse_clusters(client, page_number=page_number)
-        if not clusters:
-            break
-        clusters += result
-        page_number += 1
+    clusters = get_all_cse_clusters(client)
 
     _fix_cluster_metadata(
         client=client,
@@ -1616,15 +1609,7 @@ def _upgrade_to_35(client, config, ext_vcd_api_version,
     msg = "Loading all CSE clusters for processing..."
     INSTALL_LOGGER.info(msg)
     msg_update_callback.info(msg)
-    clusters = []
-    page_number = shared_constants.CSE_PAGINATION_FIRST_PAGE_NUMBER
-    while True:
-        result, _ = get_all_cse_clusters(client, page_number=page_number,
-                                         fetch_details=False)
-        if not clusters:
-            break
-        clusters += result
-        page_number += 1
+    clusters = get_all_cse_clusters(client)
 
     # Update clusters to have auto generated password and fix their metadata
     _fix_cluster_metadata(
@@ -1644,15 +1629,7 @@ def _upgrade_to_35(client, config, ext_vcd_api_version,
     msg = "Loading all CSE clusters for processing..."
     INSTALL_LOGGER.info(msg)
     msg_update_callback.info(msg)
-    clusters = []
-    page_number = shared_constants.CSE_PAGINATION_FIRST_PAGE_NUMBER
-    while True:
-        result, _ = get_all_cse_clusters(client, page_number=page_number,
-                                         fetch_details=True)
-        if not clusters:
-            break
-        clusters += result
-        page_number += 1
+    clusters = get_all_cse_clusters(client)
 
     # Add new vdc (placement) compute policy to ovdc with existing CSE clusters
     _assign_placement_policy_to_vdc_and_right_bundle_to_org(

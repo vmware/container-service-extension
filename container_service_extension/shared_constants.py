@@ -137,9 +137,12 @@ class RequestKey(str, Enum):
 
 
 @unique
-class PaginationKeys(str, Enum):
+class PaginationKey(str, Enum):
     PAGE_NUMBER = 'page'
     PAGE_SIZE = 'pageSize'
+    NEXT_PAGE_URI = 'nextPageUri'
+    RESULT_TOTAL = 'resultTotal'
+    VALUES = 'values'
 
 
 @unique

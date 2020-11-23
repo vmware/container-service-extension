@@ -21,6 +21,7 @@ from container_service_extension.logger import NULL_LOGGER
 from container_service_extension.server_constants import MQTT_MIN_API_VERSION
 from container_service_extension.shared_constants import CSE_PAGINATION_DEFAULT_PAGE_SIZE  # noqa: E501
 from container_service_extension.shared_constants import CSE_PAGINATION_FIRST_PAGE_NUMBER  # noqa: E501
+from container_service_extension.shared_constants import PaginationKey
 from container_service_extension.thread_local_data import get_thread_request_id
 from container_service_extension.thread_local_data import set_thread_request_id
 
@@ -475,10 +476,10 @@ def get_paginated_response(base_uri, values, result_total,
                            page_size=CSE_PAGINATION_DEFAULT_PAGE_SIZE,
                            query_params={}):
     paginated_response = {
-        'values': values,
-        'resultTotal': result_total,
-        'page': page_number,
-        'pageSize': page_size
+        PaginationKey.VALUES: values,
+        PaginationKey.RESULT_TOTAL: result_total,
+        PaginationKey.PAGE_NUMBER: page_number,
+        PaginationKey.PAGE_SIZE: page_size
     }
     if page_number * page_size < result_total:
         # TODO find a way to get the initial url part
@@ -487,5 +488,5 @@ def get_paginated_response(base_uri, values, result_total,
         next_page_uri = f"{base_uri}?page={page_number+1}&pageSize={page_size}"  # noqa: E501
         for q in query_params.keys():
             next_page_uri += f"&{q}={query_params[q]}"
-        paginated_response['nextPageUri'] = next_page_uri
+        paginated_response[PaginationKey.NEXT_PAGE_URI] = next_page_uri
     return paginated_response

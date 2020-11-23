@@ -23,7 +23,7 @@ from container_service_extension.server_constants import K8sProvider
 from container_service_extension.shared_constants import ComputePolicyAction
 from container_service_extension.shared_constants import CSE_PAGINATION_DEFAULT_PAGE_SIZE  # noqa: E501
 from container_service_extension.shared_constants import CSE_PAGINATION_FIRST_PAGE_NUMBER  # noqa: E501
-from container_service_extension.shared_constants import PaginationKeys
+from container_service_extension.shared_constants import PaginationKey
 from container_service_extension.shared_constants import RequestKey
 from container_service_extension.telemetry.constants import CseOperation
 from container_service_extension.telemetry.constants import OperationStatus
@@ -141,13 +141,13 @@ def ovdc_list(request_data, op_ctx: ctx.OperationContext):
     """
     defaults = {
         RequestKey.LIST_PKS_PLANS: False,
-        PaginationKeys.PAGE_NUMBER: CSE_PAGINATION_FIRST_PAGE_NUMBER,
-        PaginationKeys.PAGE_SIZE: CSE_PAGINATION_DEFAULT_PAGE_SIZE
+        PaginationKey.PAGE_NUMBER: CSE_PAGINATION_FIRST_PAGE_NUMBER,
+        PaginationKey.PAGE_SIZE: CSE_PAGINATION_DEFAULT_PAGE_SIZE
     }
     validated_data = {**defaults, **request_data}
 
-    page_number = int(validated_data[PaginationKeys.PAGE_NUMBER])
-    page_size = int(validated_data[PaginationKeys.PAGE_SIZE])
+    page_number = int(validated_data[PaginationKey.PAGE_NUMBER])
+    page_size = int(validated_data[PaginationKey.PAGE_SIZE])
     list_pks_plans = utils.str_to_bool(validated_data[RequestKey.LIST_PKS_PLANS]) # noqa: E501
 
     # Record telemetry data

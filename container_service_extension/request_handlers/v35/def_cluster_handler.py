@@ -10,7 +10,7 @@ import container_service_extension.request_handlers.request_utils as request_uti
 from container_service_extension.shared_constants import CSE_PAGINATION_DEFAULT_PAGE_SIZE  # noqa: E501
 from container_service_extension.shared_constants import CSE_PAGINATION_FIRST_PAGE_NUMBER  # noqa: E501
 from container_service_extension.shared_constants import FlattenedClusterSpecKey  # noqa: E501
-from container_service_extension.shared_constants import PaginationKeys
+from container_service_extension.shared_constants import PaginationKey
 from container_service_extension.shared_constants import RequestKey
 import container_service_extension.telemetry.constants as telemetry_constants
 import container_service_extension.telemetry.telemetry_handler as telemetry_handler  # noqa: E501
@@ -143,14 +143,14 @@ def cluster_list(data: dict, op_ctx: ctx.OperationContext):
     svc = cluster_svc.ClusterService(op_ctx)
     filters = data.get(RequestKey.V35_QUERY, {})
     # TODO create default constants for PAGE_NUMBER and PAGE_SIZE
-    page_number = int(filters.get(PaginationKeys.PAGE_NUMBER, CSE_PAGINATION_FIRST_PAGE_NUMBER))  # noqa: E501
-    page_size = int(filters.get(PaginationKeys.PAGE_SIZE, CSE_PAGINATION_DEFAULT_PAGE_SIZE))  # noqa: E501
+    page_number = int(filters.get(PaginationKey.PAGE_NUMBER, CSE_PAGINATION_FIRST_PAGE_NUMBER))  # noqa: E501
+    page_size = int(filters.get(PaginationKey.PAGE_SIZE, CSE_PAGINATION_DEFAULT_PAGE_SIZE))  # noqa: E501
     # remove page number and page size from the filters as it is treated
     # differently to other filters
-    if PaginationKeys.PAGE_NUMBER in filters:
-        del filters[PaginationKeys.PAGE_NUMBER]
-    if PaginationKeys.PAGE_SIZE in filters:
-        del filters[PaginationKeys.PAGE_SIZE]
+    if PaginationKey.PAGE_NUMBER in filters:
+        del filters[PaginationKey.PAGE_NUMBER]
+    if PaginationKey.PAGE_SIZE in filters:
+        del filters[PaginationKey.PAGE_SIZE]
     cluster_entities, result_total = svc.list_clusters(filters=filters,
                                                        page_number=page_number,
                                                        page_size=page_size)

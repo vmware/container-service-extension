@@ -330,8 +330,8 @@ class Service(object, metaclass=Singleton):
 
         # Read k8s catalog definition from catalog item metadata and append
         # the same to to server run-time config
-        self._load_template_definition_from_catalog(
-            msg_update_callback=msg_update_callback)
+        # self._load_template_definition_from_catalog(
+        #     msg_update_callback=msg_update_callback)
 
         self._load_placement_policy_details(
             msg_update_callback=msg_update_callback)
@@ -345,8 +345,8 @@ class Service(object, metaclass=Singleton):
             # Make sure that all vms in templates are compliant with the
             # compute policy specified in template definition (can be affected
             # by rules).
-            self._process_template_compute_policy_compliance(
-                msg_update_callback=msg_update_callback)
+            # self._process_template_compute_policy_compliance(
+            #     msg_update_callback=msg_update_callback)
         else:
             msg = "Template rules are not supported by CSE for vCD api " \
                   "version 35.0 or above. Skipping template rule processing."

@@ -15,7 +15,7 @@ import container_service_extension.logger as logger
 import container_service_extension.operation_context as ctx
 import container_service_extension.pyvcloud_utils as vcd_utils
 from container_service_extension.shared_constants import ClusterEntityKind
-from container_service_extension.shared_constants import PaginationKeys
+from container_service_extension.shared_constants import PaginationKey
 from container_service_extension.shared_constants import RequestKey
 from container_service_extension.shared_constants import RUNTIME_DISPLAY_NAME_TO_INTERNAL_NAME_MAP  # noqa: E501
 from container_service_extension.shared_constants import RUNTIME_INTERNAL_NAME_TO_DISPLAY_NAME_MAP  # noqa: E501
@@ -127,11 +127,11 @@ def list_ovdc(filters: dict, operation_context: ctx.OperationContext) -> List[di
                                                  cse_params={})
 
     ovdcs = []
-    page = int(filters.get(PaginationKeys.PAGE_NUMBER, 1))
-    page_size = int(filters.get(PaginationKeys.PAGE_SIZE, 25))
-    num_results, org_vdcs = cloudapi_utils.get_vdcs(
+    page_number = int(filters.get(PaginationKey.PAGE_NUMBER, 1))
+    page_size = int(filters.get(PaginationKey.PAGE_SIZE, 25))
+    num_results, org_vdcs = cloudapi_utils.get_vdcs_by_page(
         operation_context.cloudapi_client,
-        page=page, page_size=page_size)
+        page_number=page_number, page_size=page_size)
     for ovdc in org_vdcs:
         ovdc_name = ovdc.get('name')
         config = utils.get_server_runtime_config()
@@ -150,7 +150,7 @@ def list_ovdc(filters: dict, operation_context: ctx.OperationContext) -> List[di
         ovdcs.append(ovdc_details)
     base_uri = f"{operation_context.client.get_api_uri().strip('/')}{operation_context.operation.api_path_format}"  # noqa: E501
     return utils.get_paginated_response(base_uri, ovdcs, num_results,
-                                        page_number=page, page_size=page_size)
+                                        page_number=page_number, page_size=page_size)  # noqa: E501
 
 
 def get_ovdc_k8s_runtime_details(sysadmin_client: vcd_client.Client,
