@@ -8,7 +8,7 @@ import container_service_extension.utils as utils
 
 
 class OperationContext:
-    def __init__(self, auth_token, is_jwt=True, request_id=None):
+    def __init__(self, auth_token, is_jwt=True, request_id=None, operation=None):
         self._auth_token: str = auth_token
         self._is_jwt: bool = is_jwt
 
@@ -27,6 +27,9 @@ class OperationContext:
         # Request ID; may be None if OperationContext is initialized outside of
         # request_processor.py
         self.request_id: str = request_id
+
+        # Operation details
+        self.operation = operation
 
     @property
     def client(self):

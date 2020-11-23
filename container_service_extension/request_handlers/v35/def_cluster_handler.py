@@ -155,10 +155,12 @@ def cluster_list(data: dict, op_ctx: ctx.OperationContext):
                                                        page_number=page_number,
                                                        page_size=page_size)
     cluster_list = [asdict(def_entity) for def_entity in cluster_entities]
-    return utils.get_paginated_response(cluster_list,
+    uri = f"{op_ctx.client.get_api_uri().stip('/')}{op_ctx.operation.api_path_format}"
+    return utils.get_paginated_response(uri, cluster_list,
                                         result_total=result_total,
                                         page_number=page_number,
-                                        page_size=page_size)
+                                        page_size=page_size,
+                                        query_params=filters)
 
 
 @request_utils.v35_api_exception_handler

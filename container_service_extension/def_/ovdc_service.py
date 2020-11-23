@@ -148,7 +148,8 @@ def list_ovdc(filters: dict, operation_context: ctx.OperationContext) -> List[di
         # TODO: Find a better way to remove remove_cp_from_vms_on_disable
         del ovdc_details['remove_cp_from_vms_on_disable']
         ovdcs.append(ovdc_details)
-    return utils.get_paginated_response(ovdcs, num_results,
+    base_uri = f"{operation_context.client.get_api_uri().strip('/')}{operation_context.operation.api_path_format}"  # noqa: E501
+    return utils.get_paginated_response(base_uri, ovdcs, num_results,
                                         page_number=page, page_size=page_size)
 
 

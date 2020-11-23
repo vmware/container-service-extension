@@ -9,3 +9,4 @@ class CseClient:
     def __init__(self, client: vcd_client.Client):
         self._client = client
         self._uri = self._client.get_api_uri()
+        self._request_page_size = 25

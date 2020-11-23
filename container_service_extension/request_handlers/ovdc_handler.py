@@ -226,9 +226,9 @@ def ovdc_list(request_data, op_ctx: ctx.OperationContext):
             ovdc_dict['available pks plans'] = pks_plans
         ovdcs.append(ovdc_dict)
 
-    return utils.get_paginated_response(ovdcs, result_total,
-                                        page_number=page_number,
-                                        page_size=page_size)
+    uri = f"{op_ctx.client.get_api_uri().strip('/')}{op_ctx.operation.api_path_format}"
+    return utils.get_paginated_response(uri, ovdcs, result_total,
+                                        page_number=page_number, page_size=page_size)  # noqa: E501
 
 
 @record_user_action_telemetry(cse_operation=CseOperation.OVDC_COMPUTE_POLICY_LIST)  # noqa: E501

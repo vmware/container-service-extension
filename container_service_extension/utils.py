@@ -470,10 +470,10 @@ def construct_filter_string(filters: dict):
     return filter_string
 
 
-def get_paginated_response(values, result_total,
+def get_paginated_response(base_uri, values, result_total,
                            page_number=CSE_PAGINATION_FIRST_PAGE_NUMBER,
-                           page_size=CSE_PAGINATION_DEFAULT_PAGE_SIZE):
-    from container_service_extension.request_processor import REQUEST_HOST, REQUEST_URL  # noqa: E501
+                           page_size=CSE_PAGINATION_DEFAULT_PAGE_SIZE,
+                           query_params={}):
     paginated_response = {
         'values': values,
         'resultTotal': result_total,
@@ -484,5 +484,8 @@ def get_paginated_response(values, result_total,
         # TODO find a way to get the initial url part
         # ideally the request details should be passed down to each of the
         # handler funcions as request context
-        paginated_response['nextPageUrl'] = f"https://{REQUEST_HOST}{REQUEST_URL}?page={page_number+1}&pageSize={page_size}"  # noqa: E501
+        next_page_uri = f"{base_uri}?page={page_number+1}&pageSize={page_size}"  # noqa: E501
+        for q in query_params.keys():
+            next_page_uri += f"&{q}={query_params[q]}"
+        paginated_response['nextPageUri'] = next_page_uri
     return paginated_response

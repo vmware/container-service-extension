@@ -29,7 +29,7 @@ class OvdcApi(CseClient):
         return process_response(response)
 
     def get_all_ovdcs(self):
-        url = f"{self._ovdcs_uri}?pageSize=3"
+        url = f"{self._ovdcs_uri}?pageSize={self._request_page_size}"
         while url:
             response = self._client._do_request_prim(
                 shared_constants.RequestMethod.GET,
@@ -37,7 +37,7 @@ class OvdcApi(CseClient):
                 self._client._session,
                 accept_type='application/json')
             processed_responser = process_response(response)
-            url = processed_responser.get('nextPageUrl')
+            url = processed_responser.get('nextPageUri')
             yield processed_responser['values']
 
     def get_ovdc(self, ovdc_id):
