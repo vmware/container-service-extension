@@ -21,16 +21,14 @@ class OvdcApi(CseClient):
         self._ovdc_uri = f"{self._uri}/ovdc"
 
     def get_all_ovdcs(self):
+        """Iterate over all the get ovdc response page by page.
+
+        :returns: Yields the list of values in the page and a boolean
+            indicating if there are more results.
+        :rtype: Generator[(List[dict], int), None, None]
+        """
         url = f"{self._ovdcs_uri}?pageSize={self._request_page_size}"
-        while url:
-            response = self._client._do_request_prim(
-                shared_constants.RequestMethod.GET,
-                url,
-                self._client._session,
-                accept_type='application/json')
-            processed_responser = process_response(response)
-            url = processed_responser.get(shared_constants.PaginationKey.NEXT_PAGE_URI)  # noqa: E501
-            yield processed_responser[shared_constants.PaginationKey.VALUES]
+        return self.iterate_results(url)
 
     def get_ovdc(self, ovdc_id):
         uri = f"{self._ovdc_uri}/{ovdc_id}"

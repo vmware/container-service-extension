@@ -18,8 +18,8 @@ class PksOvdc:
 
     def list_ovdc(self, list_pks_plans=False):
         filters = {shared_constants.RequestKey.LIST_PKS_PLANS: list_pks_plans}
-        for ovdc_list in self._pks_ovdc_api.get_all_ovdcs(filters=filters):
-            yield ovdc_list
+        for ovdc_list, has_more_results in self._pks_ovdc_api.get_all_ovdcs(filters=filters):  # noqa: E501
+            yield ovdc_list, has_more_results
 
     def update_ovdc(self, enable, ovdc_name, org_name=None,
                     pks_plan=None, pks_cluster_domain=None):
