@@ -1,3 +1,7 @@
+# container-service-extension
+# Copyright (c) 2020 VMware, Inc. All Rights Reserved.
+# SPDX-License-Identifier: BSD-2-Clause
+
 from container_service_extension.cloudapi.cloudapi_client import CloudApiClient
 from container_service_extension.cloudapi.constants import CloudApiResource
 from container_service_extension.cloudapi.constants import CloudApiVersion
@@ -20,4 +24,4 @@ def get_vdcs_by_page(cloudapi_client: CloudApiClient,
     resp = cloudapi_client.do_request(method=RequestMethod.GET,
                                       cloudapi_version=CloudApiVersion.VERSION_1_0_0,  # noqa: E501
                                       resource_url_relative_path=f"{CloudApiResource.VDCS}?{filter_string}")  # noqa: E501
-    return resp['resultTotal'], resp['values']
+    return resp['values'], resp['resultTotal']

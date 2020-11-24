@@ -47,7 +47,11 @@ def list_ovdcs(ctx, should_print_all=False):
 Example
     vcd cse ovdc list
         Display ovdcs in vCD that are visible to the logged in user.
-        vcd cse ovdc list
+        The user might be prompted if more results needs to be displayed
+\b
+    vcd cse ovdc list -A
+        Display ovdcs in vCD that are visible to the logged in user without
+        prompting the user.
     """
     CLIENT_LOGGER.debug(f'Executing command: {ctx.command_path}')
     try:

@@ -129,7 +129,7 @@ def list_ovdc(filters: dict, operation_context: ctx.OperationContext) -> List[di
     ovdcs = []
     page_number = int(filters.get(PaginationKey.PAGE_NUMBER, 1))
     page_size = int(filters.get(PaginationKey.PAGE_SIZE, 25))
-    num_results, org_vdcs = cloudapi_utils.get_vdcs_by_page(
+    org_vdcs, num_results = cloudapi_utils.get_vdcs_by_page(
         operation_context.cloudapi_client,
         page_number=page_number, page_size=page_size)
     for ovdc in org_vdcs:

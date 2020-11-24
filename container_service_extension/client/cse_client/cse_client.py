@@ -15,6 +15,14 @@ class CseClient:
         self._request_page_size = 3
 
     def iterate_results(self, base_url, filters={}):
+        """Iterate over paginated response until all the results are obtained.
+
+        :param str base_url: initial url
+        :param dict filters: filters for making the API call
+        :returns: Generator which yields values and a boolean indicating if
+            more results are present
+        :rtype: Generator[(List[dict], bool), None, None]
+        """
         url = base_url
         while url:
             response = self._client._do_request_prim(
@@ -25,7 +33,4 @@ class CseClient:
                 params=filters)
             processed_response = process_response(response)
             url = processed_response.get(shared_constants.PaginationKey.NEXT_PAGE_URI)  # noqa: E501
-            has_more_results = False
-            if url:
-                has_more_results = True
-            yield processed_response[shared_constants.PaginationKey.VALUES], has_more_results # noqa: E501
+            yield processed_response[shared_constants.PaginationKey.VALUES], bool(url) # noqa: E501
