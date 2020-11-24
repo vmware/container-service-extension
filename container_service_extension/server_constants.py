@@ -86,17 +86,14 @@ REQUEST_ID_FORMAT = 'Request Id: %(requestId)s | '
 
 # User ID parsing
 USER_PATH = '/user/'
-USER_URN_BEGIN = 'urn:vcloud:user'
+USER_URN_BEGIN = 'urn:vcloud:user:'
+ADMIN_USER_PATH = '/admin/user/'
 
 # Access control path and ID constants
 ACCESS_CONTROLS_PATH = 'accessControls'
 ENTITIES_PATH = 'entities'
-ACCESS_LEVEL_URN_BEGIN = 'urn:vcloud:accessLevel'
-
-# Access level inconsistent message
-INCONSISTENT_CLUSTER_ACCESS = 'inconsistent RDE and vApp access levels'
-VAPP_ONLY_ACCESS = 'only access to vApp'
-RDE_ONLY_ACCESS = 'only access to RDE'
+ACCESS_LEVEL_URN_BEGIN = 'urn:vcloud:accessLevel:'
+ACTION_CONTROL_ACCESS_PATH = '/action/controlAccess/'
 
 # Pagination constants
 DEFAULT_PAGE = 1
@@ -218,6 +215,7 @@ class CseOperation(Enum):
     CLUSTER_UPGRADE_PLAN = ('get supported cluster upgrade paths')
     CLUSTER_UPGRADE = ('upgrade cluster software', requests.codes.accepted)
     CLUSTER_ACL_LIST = ('list cluster acl')
+    CLUSTER_ACL_UPDATE = ('update cluster acl', requests.codes.no_content)
     NODE_CREATE = ('create node', requests.codes.accepted)
     NODE_DELETE = ('delete node', requests.codes.accepted)
     NODE_INFO = ('get info of node')
@@ -339,6 +337,15 @@ class AclAccessLevelId(str, Enum):
 @unique
 class AclMemberId(str, Enum):
     SystemOrgId = "urn:vcloud:org:a93c9db9-7471-3192-8d09-a8f7eeda85f9"
+
+
+@unique
+class VappAccessKey(str, Enum):
+    """Keys for VAPP access control."""
+
+    IS_SHARED_TO_EVERYONE = 'isSharedToEveryone'
+    ACCESS_SETTINGS = 'accessSettings'
+    ACCESS_SETTING = 'accessSetting'
 
 
 # CSE Service Role Name

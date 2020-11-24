@@ -65,6 +65,7 @@ GET /cse/3.0/cluster/{cluster id}/upgrade-plan
 POST /cse/3.0/cluster/{cluster id}/action/upgrade
 DELETE /cse/3.0/cluster/{cluster id}/nfs/{node-name}
 GET /cse/3.0/cluster/{cluster id}/acl
+PUT /cse/3.0/cluster/{cluster id}/acl
 
 GET /cse/3.0/ovdcs
 GET /cse/3.0/ovdc/{ovdc_id}
@@ -99,6 +100,7 @@ OPERATION_TO_HANDLER = {
     CseOperation.CLUSTER_UPGRADE_PLAN: native_cluster_handler.cluster_upgrade_plan,  # noqa: E501
     CseOperation.CLUSTER_UPGRADE: native_cluster_handler.cluster_upgrade,
     CseOperation.CLUSTER_ACL_LIST: native_cluster_handler.cluster_acl_info,
+    CseOperation.CLUSTER_ACL_UPDATE: native_cluster_handler.cluster_acl_update,
     CseOperation.NODE_CREATE: native_cluster_handler.node_create,
     CseOperation.NODE_DELETE: native_cluster_handler.node_delete,
     CseOperation.NODE_INFO: native_cluster_handler.node_info,
@@ -517,6 +519,12 @@ def _get_v35_cluster_url_data(method: str, tokens: list):
             if tokens[6] == 'acl':
                 return {
                     _OPERATION_KEY: CseOperation.CLUSTER_ACL_LIST,
+                    shared_constants.RequestKey.CLUSTER_ID: tokens[5]
+                }
+        if method == shared_constants.RequestMethod.PUT:
+            if tokens[6] == 'acl':
+                return {
+                    _OPERATION_KEY: CseOperation.CLUSTER_ACL_UPDATE,
                     shared_constants.RequestKey.CLUSTER_ID: tokens[5]
                 }
         raise cse_exception.MethodNotAllowedRequestError()

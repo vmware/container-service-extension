@@ -98,3 +98,9 @@ class NativeClusterApi(CseClient):
             accept_type='application/json')
         return def_models.DefEntity(
             **response_processor.process_response(response))
+
+    def get_cluster_acl(self, cluster_id):
+        raise NotImplementedError
+
+    def share_cluster(self, cluster_id: str, users: list):
+        raise NotImplementedError

@@ -154,6 +154,14 @@ def cluster_acl_info(request_data, op_ctx: ctx.OperationContext):
     return acl_info_response
 
 
+@record_user_action_telemetry(cse_operation=CseOperation.CLUSTER_ACL_UPDATE)
+def cluster_acl_update(request_data, op_ctx: ctx.OperationContext):
+    """Request handler for cluster acl update operation."""
+    vcd_broker = VcdBroker(op_ctx)
+    acl_update_response = vcd_broker.update_cluster_acl(data=request_data)
+    return acl_update_response
+
+
 @record_user_action_telemetry(cse_operation=CseOperation.NODE_CREATE)
 def node_create(request_data, op_ctx: ctx.OperationContext):
     """Request handler for node create operation.

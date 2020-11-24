@@ -188,6 +188,7 @@ class AccessControlKey(str, Enum):
     ID = 'id'
     HREF = 'href'
     SUBJECT = 'subject'
+    USER_NAME = 'username'
 
 
 @unique

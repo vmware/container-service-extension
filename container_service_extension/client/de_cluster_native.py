@@ -270,3 +270,8 @@ class DEClusterNative:
             cluster_entity = \
                 self._native_cluster_api.update_cluster_by_cluster_id(cluster_id, cluster_spec)  # noqa: E501
         return client_utils.construct_task_console_message(cluster_entity.entity.status.task_href)  # noqa: E501
+
+    def share_cluster(self, cluster_id, users: list, access_level_id):
+        # TODO need to GET the current acl, add the current users, and then
+        #  PUT the updated acl
+        raise NotImplementedError

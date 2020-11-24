@@ -469,12 +469,6 @@ def construct_filter_string(filters: dict):
     return filter_string
 
 
-def get_id_from_user_href(user_href):
-    if server_constants.USER_PATH in user_href:
-        return user_href.split(server_constants.USER_PATH)[-1]
-    return None
-
-
 def form_acl_entry(user_urn, access_level_urn):
     """Form ACL entry.
 
@@ -488,3 +482,67 @@ def form_acl_entry(user_urn, access_level_urn):
         shared_constants.AccessControlKey.MEMBER_ID: user_urn,
         shared_constants.AccessControlKey.ACCESS_LEVEL_ID: access_level_urn
     }
+
+
+def get_id_from_user_urn(user_urn_id):
+    if server_constants.USER_URN_BEGIN in user_urn_id:
+        return user_urn_id.split(server_constants.USER_URN_BEGIN)[-1]
+    return None
+
+
+def get_id_from_user_href(user_href):
+    if server_constants.USER_PATH in user_href:
+        return user_href.split(server_constants.USER_PATH)[-1]
+    return None
+
+
+def get_access_level_from_urn(access_level_urn):
+    if server_constants.ACCESS_LEVEL_URN_BEGIN in access_level_urn:
+        return access_level_urn.split(server_constants.ACCESS_LEVEL_URN_BEGIN)[-1]  # noqa: E501
+    return None
+
+
+def form_vapp_access_setting(access_level, name, href, user_id):
+    vapp_access_setting = {
+        shared_constants.AccessControlKey.ACCESS_LEVEL: access_level,
+        shared_constants.AccessControlKey.SUBJECT: {
+            shared_constants.AccessControlKey.NAME: name,
+            shared_constants.AccessControlKey.HREF: href,
+            shared_constants.AccessControlKey.ID: user_id
+        }
+    }
+    return vapp_access_setting
+
+
+def retrieve_all_page_values(cloudapi_client, relative_url_path,
+                             cloudapi_version=None):
+    """Retrieve all values of paginated data.
+
+    Note: The 'values' section of the response body must be a list.
+
+    :param cloudapi_client: cloudapi client
+    :param str relative_url_path: relative path for request
+    :param str cloudapi_version: cloudapi version
+
+    :return: list of all values
+    """
+    all_values = []
+    curr_page, page_cnt = 0, 1
+    while curr_page < page_cnt:
+        query_str = f'?{shared_constants.PAGE}={curr_page + 1}' \
+                    f'&{shared_constants.PAGE_SIZE}=' \
+                    f'{server_constants.DEFAULT_PAGE_SZ}'
+        response_body = cloudapi_client.do_request(
+            method=shared_constants.RequestMethod.GET,
+            cloudapi_version=cloudapi_version,
+            resource_url_relative_path=(relative_url_path + query_str))
+        curr_values = response_body.get('values')
+        if curr_values and type(curr_values) != list:
+            raise TypeError('Response body values is not of type list.')
+        if all_values:
+            all_values.extend(curr_values)
+        else:
+            all_values = curr_values
+        curr_page = int(response_body.get('page', 1))
+        page_cnt = int(response_body.get('pageCount', 1))
+    return all_values
