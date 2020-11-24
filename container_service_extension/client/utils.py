@@ -205,13 +205,15 @@ def filter_columns(result, value_field_to_display_field):
         return filtered_result
 
 
-def print_paginated_result(generator, logger=NULL_LOGGER):
+def print_paginated_result(generator, should_print_all=False, logger=NULL_LOGGER):
     """Print results by prompting the user for more results.
 
     :param Generator[(List[dict], int), None, None] generator: generator which
         yields a list of results and a boolean indicating if more results
-        are present
-    :param logger logger: logger to log the results or exceptions
+        are present.
+    :param bool should_print_all: print all the results without promting the
+        user.
+    :param logger logger: logger to log the results or exceptions.
     """
     try:
         headers_printed = False
@@ -221,8 +223,9 @@ def print_paginated_result(generator, logger=NULL_LOGGER):
             headers_printed = True
             logger.debug(result)
             if not more_results or \
-                    not click.confirm("Do you want more results?"):
+                    not (should_print_all or click.confirm("Do you want more results?")):  # noqa: E501
                 break
+
     except Exception as e:
         logger.error(f"Error while iterating over the paginated response: {e}")
         raise
