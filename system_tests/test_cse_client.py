@@ -294,16 +294,16 @@ def delete_test_clusters():
     Teardown tasks (only if config key 'teardown_clusters'=True):
     - Delete test cluster vApp
     """
-    env.delete_vapp(env.SYS_ADMIN_TEST_CLUSTER_NAME)
-    env.delete_vapp(env.ORG_ADMIN_TEST_CLUSTER_NAME)
-    env.delete_vapp(env.VAPP_AUTHOR_TEST_CLUSTER_NAME)
+    env.delete_vapp(env.SYS_ADMIN_TEST_CLUSTER_NAME, vdc_href=env.TEST_VDC_HREF)  # noqa
+    env.delete_vapp(env.ORG_ADMIN_TEST_CLUSTER_NAME, vdc_href=env.TEST_VDC_HREF)  # noqa
+    env.delete_vapp(env.VAPP_AUTHOR_TEST_CLUSTER_NAME, vdc_href=env.TEST_VDC_HREF)  # noqa
 
     yield
 
     if env.TEARDOWN_CLUSTERS:
-        env.delete_vapp(env.SYS_ADMIN_TEST_CLUSTER_NAME)
-        env.delete_vapp(env.ORG_ADMIN_TEST_CLUSTER_NAME)
-        env.delete_vapp(env.VAPP_AUTHOR_TEST_CLUSTER_NAME)
+        env.delete_vapp(env.SYS_ADMIN_TEST_CLUSTER_NAME, vdc_href=env.TEST_VDC_HREF)  # noqa
+        env.delete_vapp(env.ORG_ADMIN_TEST_CLUSTER_NAME, vdc_href=env.TEST_VDC_HREF)  # noqa
+        env.delete_vapp(env.VAPP_AUTHOR_TEST_CLUSTER_NAME, vdc_href=env.TEST_VDC_HREF)  # noqa
 
 
 def test_0010_vcd_cse_version():
@@ -341,7 +341,8 @@ def test_0030_vcd_cse_cluster_create_rollback(config, vcd_org_admin,
                                       result.output)
     # TODO: Make cluster rollback delete call blocking
     time.sleep(env.WAIT_INTERVAL * 2)  # wait for vApp to be deleted
-    assert not env.vapp_exists(env.SYS_ADMIN_TEST_CLUSTER_NAME), \
+    assert not env.vapp_exists(
+        env.SYS_ADMIN_TEST_CLUSTER_NAME, vdc_href=env.TEST_VDC_HREF), \
         "Cluster exists when it should not."
 
     cmd += " --disable-rollback"
@@ -349,7 +350,8 @@ def test_0030_vcd_cse_cluster_create_rollback(config, vcd_org_admin,
     assert result.exit_code == 0,\
         testutils.format_command_info('vcd', cmd, result.exit_code,
                                       result.output)
-    assert env.vapp_exists(env.SYS_ADMIN_TEST_CLUSTER_NAME), \
+    assert env.vapp_exists(env.SYS_ADMIN_TEST_CLUSTER_NAME,
+                           vdc_href=env.TEST_VDC_HREF), \
         "Cluster does not exist when it should."
 
 
@@ -407,7 +409,8 @@ def test_0050_vcd_cse_system_toggle(config, test_runner_username,
 
     execute_commands(cmd_list)
 
-    assert not env.vapp_exists(env.SYS_ADMIN_TEST_CLUSTER_NAME), \
+    assert not env.vapp_exists(env.SYS_ADMIN_TEST_CLUSTER_NAME,
+                               vdc_href=env.TEST_VDC_HREF), \
         "Cluster exists when it should not."
 
 
@@ -448,7 +451,8 @@ def test_0070_vcd_cse_cluster_create(config, test_runner_username):
     execute_commands(cmd_list)
 
     assert env.vapp_exists(
-        env.USERNAME_TO_CLUSTER_NAME[test_runner_username]),\
+        env.USERNAME_TO_CLUSTER_NAME[test_runner_username],
+        vdc_href=env.TEST_VDC_HREF), \
         f"Cluster {env.USERNAME_TO_CLUSTER_NAME[test_runner_username]} " \
         f"should exist"
     print(f"Successfully created cluster {env.USERNAME_TO_CLUSTER_NAME[test_runner_username]} "  # noqa
@@ -742,7 +746,7 @@ def test_0130_vcd_cse_cluster_delete(config):
     execute_commands(cmd_list)
 
     for cluster_name in env.USERNAME_TO_CLUSTER_NAME.values():
-        assert not env.vapp_exists(cluster_name), \
+        assert not env.vapp_exists(cluster_name, vdc_href=env.TEST_VDC_HREF), \
             f"Cluster {cluster_name} exists when it should not"
     print("Successfully deleted clusters.")
 
