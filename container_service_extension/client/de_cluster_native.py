@@ -16,6 +16,7 @@ import container_service_extension.def_.entity_service as def_entity_svc
 import container_service_extension.exceptions as cse_exceptions
 import container_service_extension.logger as logger
 import container_service_extension.pyvcloud_utils as vcd_utils
+import container_service_extension.shared_constants as shared_constants
 
 
 class DEClusterNative:
@@ -272,6 +273,24 @@ class DEClusterNative:
         return client_utils.construct_task_console_message(cluster_entity.entity.status.task_href)  # noqa: E501
 
     def share_cluster(self, cluster_id, users: list, access_level_id):
-        # TODO need to GET the current acl, add the current users, and then
-        #  PUT the updated acl
-        raise NotImplementedError
+        # parse user id info
+        users_to_ids = client_utils.get_user_ids(self._cloudapi_client, users)
+        updated_acl_values = []
+        for user, user_id in users_to_ids.items():
+            acl_entry = {
+                shared_constants.AccessControlKey.MEMBER_ID: user_id,
+                shared_constants.AccessControlKey.USERNAME: user,
+                shared_constants.AccessControlKey.ACCESS_LEVEL_ID:
+                    access_level_id
+            }
+            updated_acl_values.append(acl_entry)
+
+        # Only retain entries that are not updated
+        curr_acl_values = self._native_cluster_api.get_all_cluster_acl(cluster_id)  # noqa: E501
+        for entry in curr_acl_values:
+            if not users_to_ids.get(entry[shared_constants.AccessControlKey.USERNAME]):  # noqa: E501
+                updated_acl_values.append(entry)
+
+        put_response = self._native_cluster_api.put_cluster_acl(
+            cluster_id, updated_acl_values)
+        return put_response

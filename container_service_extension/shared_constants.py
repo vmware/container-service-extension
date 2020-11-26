@@ -64,6 +64,8 @@ ACCESS_LEVEL_TYPE_TO_ID = {
 # Page parameters
 PAGE = 'page'
 PAGE_SIZE = 'pageSize'
+DEFAULT_PAGE = 1
+DEFAULT_PAGE_SZ = 25
 
 
 @unique
@@ -188,11 +190,11 @@ class AccessControlKey(str, Enum):
     ID = 'id'
     HREF = 'href'
     SUBJECT = 'subject'
-    USER_NAME = 'username'
+    USERNAME = 'username'
 
 
 @unique
-class PaginatedDataKeys(str, Enum):
+class PaginatedDataKey(str, Enum):
     """Keys for paginated data."""
 
     RESULT_TOTAL = 'resultTotal'
@@ -200,6 +202,11 @@ class PaginatedDataKeys(str, Enum):
     PAGE = 'page'
     PAGE_SIZE = 'pageSize'
     VALUES = 'values'
+
+
+@unique
+class ClusterAclKey(str, Enum):
+    ACCESS_SETTING = 'accessSetting'
 
 
 @dataclass

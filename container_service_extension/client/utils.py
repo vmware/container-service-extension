@@ -232,5 +232,5 @@ def get_user_ids(cloudapi_client, users):
 
     # Ensure all user ids were found
     if len(users_set) != 0:
-        raise Exception(f'Could not find user id(s): {users_set}')
+        raise Exception(f'Could not find user id(s) for: {users_set}')
     return users_dict

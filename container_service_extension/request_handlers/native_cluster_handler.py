@@ -158,8 +158,7 @@ def cluster_acl_info(request_data, op_ctx: ctx.OperationContext):
 def cluster_acl_update(request_data, op_ctx: ctx.OperationContext):
     """Request handler for cluster acl update operation."""
     vcd_broker = VcdBroker(op_ctx)
-    acl_update_response = vcd_broker.update_cluster_acl(data=request_data)
-    return acl_update_response
+    vcd_broker.update_cluster_acl(data=request_data)
 
 
 @record_user_action_telemetry(cse_operation=CseOperation.NODE_CREATE)

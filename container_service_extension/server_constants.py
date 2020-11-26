@@ -95,10 +95,6 @@ ENTITIES_PATH = 'entities'
 ACCESS_LEVEL_URN_BEGIN = 'urn:vcloud:accessLevel:'
 ACTION_CONTROL_ACCESS_PATH = '/action/controlAccess/'
 
-# Pagination constants
-DEFAULT_PAGE = 1
-DEFAULT_PAGE_SZ = 25
-
 
 @unique
 class NodeType(str, Enum):

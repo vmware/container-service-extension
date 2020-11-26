@@ -99,8 +99,47 @@ class NativeClusterApi(CseClient):
         return def_models.DefEntity(
             **response_processor.process_response(response))
 
-    def get_cluster_acl(self, cluster_id):
-        raise NotImplementedError
+    def get_single_page_cluster_acl(self, cluster_id,
+                                    page=shared_constants.DEFAULT_PAGE,
+                                    page_size=shared_constants.DEFAULT_PAGE_SZ):  # noqa: E501
+        query_uri = f'{self._cluster_uri}/{cluster_id}/acl?' \
+                    f'{shared_constants.PAGE}={page}&' \
+                    f'{shared_constants.PAGE_SIZE}={page_size}'
+        response = self._client._do_request_prim(
+            shared_constants.RequestMethod.GET,
+            query_uri,
+            self._client._session,
+            accept_type='application/json')
+        processed_response = response_processor.process_response(response)
+        return processed_response
 
-    def share_cluster(self, cluster_id: str, users: list):
-        raise NotImplementedError
+    def get_all_cluster_acl(self, cluster_id):
+        acl_values = []
+        curr_page, page_cnt = 0, 1
+        while curr_page < page_cnt:
+            acl_response = self.get_single_page_cluster_acl(
+                cluster_id=cluster_id,
+                page=curr_page + 1,
+                page_size=shared_constants.DEFAULT_PAGE_SZ)
+
+            curr_acl_values = acl_response.get('values')
+            if acl_values:
+                acl_values.extend(curr_acl_values)
+            else:
+                acl_values = curr_acl_values
+            curr_page = int(acl_response.get('page', 1))
+            page_cnt = int(acl_response.get('pageCount', 1))
+        return acl_values
+
+    def put_cluster_acl(self, cluster_id: str, acl_entries: list):
+        uri = f'{self._cluster_uri}/{cluster_id}/acl'
+        put_content = {shared_constants.ClusterAclKey.ACCESS_SETTING:
+                       acl_entries}
+        response = self._client._do_request_prim(
+            shared_constants.RequestMethod.PUT,
+            uri,
+            self._client._session,
+            contents=put_content,
+            media_type='application/json',
+            accept_type='application/json')
+        return response

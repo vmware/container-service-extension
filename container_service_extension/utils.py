@@ -17,6 +17,7 @@ import pkg_resources
 import requests
 import semantic_version
 
+import container_service_extension.cloudapi.constants as cloudapi_constants
 from container_service_extension.logger import NULL_LOGGER
 import container_service_extension.server_constants as server_constants
 import container_service_extension.shared_constants as shared_constants
@@ -469,7 +470,7 @@ def construct_filter_string(filters: dict):
     return filter_string
 
 
-def form_acl_entry(user_urn, access_level_urn):
+def form_cluster_acl_entry(user_urn, username, access_level_urn):
     """Form ACL entry.
 
     :param str user_urn: user URN id, e.g., 'urn:vcloud:user:1234567'
@@ -480,6 +481,7 @@ def form_acl_entry(user_urn, access_level_urn):
     """
     return {
         shared_constants.AccessControlKey.MEMBER_ID: user_urn,
+        shared_constants.AccessControlKey.USERNAME: username,
         shared_constants.AccessControlKey.ACCESS_LEVEL_ID: access_level_urn
     }
 
@@ -514,35 +516,24 @@ def form_vapp_access_setting(access_level, name, href, user_id):
     return vapp_access_setting
 
 
-def retrieve_all_page_values(cloudapi_client, relative_url_path,
-                             cloudapi_version=None):
-    """Retrieve all values of paginated data.
+def get_user_id_names_dict(cloudapi_client):
+    """Get a dictionary of users ids to user names.
 
-    Note: The 'values' section of the response body must be a list.
+    :param cloudApiClient.CloudApiClient cloudapi_client: The current client
 
-    :param cloudapi_client: cloudapi client
-    :param str relative_url_path: relative path for request
-    :param str cloudapi_version: cloudapi version
-
-    :return: list of all values
+    :return: dict of user id keys and user name values
+    :rtype: dict
     """
-    all_values = []
-    curr_page, page_cnt = 0, 1
-    while curr_page < page_cnt:
-        query_str = f'?{shared_constants.PAGE}={curr_page + 1}' \
-                    f'&{shared_constants.PAGE_SIZE}=' \
-                    f'{server_constants.DEFAULT_PAGE_SZ}'
-        response_body = cloudapi_client.do_request(
-            method=shared_constants.RequestMethod.GET,
-            cloudapi_version=cloudapi_version,
-            resource_url_relative_path=(relative_url_path + query_str))
-        curr_values = response_body.get('values')
-        if curr_values and type(curr_values) != list:
-            raise TypeError('Response body values is not of type list.')
-        if all_values:
-            all_values.extend(curr_values)
-        else:
-            all_values = curr_values
-        curr_page = int(response_body.get('page', 1))
-        page_cnt = int(response_body.get('pageCount', 1))
-    return all_values
+    response_body = cloudapi_client.do_request(
+        method=shared_constants.RequestMethod.GET,
+        cloudapi_version=cloudapi_constants.CloudApiVersion.VERSION_1_0_0,
+        resource_url_relative_path='users')
+    if not response_body:
+        return None
+
+    # Retrieve user ids
+    user_id_names_dict = {}
+    for user_data in response_body['values']:
+        user_id_names_dict[user_data['id']] = user_data['username']
+
+    return user_id_names_dict
