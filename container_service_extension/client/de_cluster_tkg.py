@@ -365,7 +365,24 @@ class DEClusterTKG:
     def share_cluster(self, cluster_id, users: list, access_level_id):
         cloudapi_client = \
             vcd_utils.get_cloudapi_client_from_vcd_client(self._client)
-        user_ids = client_utils.get_user_ids(cloudapi_client, users)
+        user_to_id = client_utils.get_user_ids(cloudapi_client, users)
+        access_controls_path = f'entities/{cluster_id}/accessControls'
+
+        # Ensure current cluster user access level is not reduced
+        curr_access_control_body = cloudapi_client.do_request(
+            method=shared_constants.RequestMethod.GET,
+            cloudapi_version=cloudapi_constants.CloudApiVersion.VERSION_1_0_0,
+            resource_url_relative_path=access_controls_path)
+        id_to_user = utils.get_user_id_names_dict(cloudapi_client)
+        for curr_acl_info in curr_access_control_body.get('values'):
+            username = id_to_user.get(
+                curr_acl_info[shared_constants.AccessControlKey.MEMBER_ID])
+            if user_to_id.get(username):
+                curr_access_level = curr_acl_info[shared_constants.AccessControlKey.ACCESS_LEVEL_ID]  # noqa: E501
+                if client_utils.access_level_reduced(access_level_id,
+                                                     curr_access_level):
+                    raise Exception(f'{username} currently has higher access '
+                                    f'level: {curr_access_level}')
 
         payload = {
             shared_constants.AccessControlKey.GRANT_TYPE:
@@ -374,10 +391,10 @@ class DEClusterTKG:
                 access_level_id,
             shared_constants.AccessControlKey.MEMBER_ID: None
         }
-        for _, user_id in user_ids.items():
+        for _, user_id in user_to_id.items():
             payload[shared_constants.AccessControlKey.MEMBER_ID] = user_id
             cloudapi_client.do_request(
                 method=shared_constants.RequestMethod.POST,
                 cloudapi_version=cloudapi_constants.CloudApiVersion.VERSION_1_0_0,  # noqa: E501
-                resource_url_relative_path=f'entities/{cluster_id}/accessControls',  # noqa: E501
+                resource_url_relative_path=access_controls_path,
                 payload=payload)

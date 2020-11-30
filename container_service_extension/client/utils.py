@@ -12,6 +12,7 @@ from container_service_extension.client.constants import CSE_SERVER_RUNNING
 import container_service_extension.cloudapi.constants as cloudapi_constants
 import container_service_extension.def_.utils as def_utils
 from container_service_extension.exceptions import CseResponseError
+import container_service_extension.shared_constants as shared_constants
 from container_service_extension.shared_constants import CSE_SERVER_API_VERSION
 from container_service_extension.shared_constants import CSE_SERVER_BUSY_KEY
 from container_service_extension.shared_constants import RequestMethod
@@ -234,3 +235,19 @@ def get_user_ids(cloudapi_client, users):
     if len(users_set) != 0:
         raise Exception(f'Could not find user id(s) for: {users_set}')
     return users_dict
+
+
+def access_level_reduced(new_access_urn, curr_access_urn):
+    """Check if the access level is reduced.
+
+    Only true is the current access level is full-control and the new access
+    level is not full control, or is the current access level is read-write and
+    the new access level is read-only.
+    """
+    if curr_access_urn == shared_constants.FULL_CONTROL_ACCESS_LEVEL_ID and \
+            new_access_urn != shared_constants.FULL_CONTROL_ACCESS_LEVEL_ID:
+        return True
+    if curr_access_urn == shared_constants.READ_WRITE_ACCESS_LEVEL_ID and \
+            new_access_urn == shared_constants.READ_ONLY_ACCESS_LEVEL_ID:
+        return True
+    return False

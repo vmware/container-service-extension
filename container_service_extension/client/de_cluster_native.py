@@ -288,7 +288,14 @@ class DEClusterNative:
         # Only retain entries that are not updated
         curr_acl_values = self._native_cluster_api.get_all_cluster_acl(cluster_id)  # noqa: E501
         for entry in curr_acl_values:
-            if not users_to_ids.get(entry[shared_constants.AccessControlKey.USERNAME]):  # noqa: E501
+            if users_to_ids.get(entry[shared_constants.AccessControlKey.USERNAME]):  # noqa: E501
+                curr_access_level_id = entry[shared_constants.AccessControlKey.ACCESS_LEVEL_ID]  # noqa: E501
+                if client_utils.access_level_reduced(
+                        access_level_id, curr_access_level_id):
+                    raise Exception(f'{entry[shared_constants.AccessControlKey.USERNAME]} '  # noqa: E501
+                                    f'currently has higher access level: '
+                                    f'{curr_access_level_id}')
+            else:
                 updated_acl_values.append(entry)
 
         put_response = self._native_cluster_api.put_cluster_acl(

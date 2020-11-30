@@ -1080,12 +1080,13 @@ Examples:
             # Get cluster id
             cluster_obj = Cluster(client, k8_runtime=k8_runtime)
             cluster_ent, entity_properties, is_native_cluster = \
-                cluster_obj._get_tkg_native_clusters_by_name(name)
+                cluster_obj._get_tkg_native_clusters_by_name(name, org=org,
+                                                             vdc=vdc)
             cluster_id = cluster_ent.id if is_native_cluster else \
                 entity_properties['id']
 
         # Share based on cluster type
-        users_list = list(users)
+        users_list = list(set(users))  # Remove duplicates and make list
         if is_native_cluster:
             native_cluster = DEClusterNative(client)
             share_response = native_cluster.share_cluster(

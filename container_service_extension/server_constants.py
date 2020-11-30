@@ -94,6 +94,7 @@ ACCESS_CONTROLS_PATH = 'accessControls'
 ENTITIES_PATH = 'entities'
 ACCESS_LEVEL_URN_BEGIN = 'urn:vcloud:accessLevel:'
 ACTION_CONTROL_ACCESS_PATH = '/action/controlAccess/'
+CHANGE_ACCESS = 'Change'
 
 
 @unique

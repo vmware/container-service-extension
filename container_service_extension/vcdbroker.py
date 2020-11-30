@@ -693,8 +693,13 @@ class VcdBroker(abstract_broker.AbstractBroker):
                 user_urn = acl_entry[shared_constants.AccessControlKey.MEMBER_ID]  # noqa: E501
                 user_id = utils.get_id_from_user_urn(user_urn)
                 access_level_urn = acl_entry[shared_constants.AccessControlKey.ACCESS_LEVEL_ID]  # noqa: E501
+                access_level = utils.get_access_level_from_urn(access_level_urn)  # noqa: E501
+
+                # Use 'Change' instead of 'ReadWrite' for vApp access level
+                if access_level == shared_constants.READ_WRITE:
+                    access_level = server_constants.CHANGE_ACCESS
                 user_setting = utils.form_vapp_access_setting(
-                    access_level=utils.get_access_level_from_urn(access_level_urn),  # noqa: E501
+                    access_level=access_level,
                     name=acl_entry[shared_constants.AccessControlKey.USERNAME],  # noqa: E501
                     href=f'{api_uri}{server_constants.ADMIN_USER_PATH}{user_id}',  # noqa: E501
                     user_id=user_id)
