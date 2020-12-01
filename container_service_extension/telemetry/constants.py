@@ -156,6 +156,8 @@ class PayloadKey(str, Enum):
     WAS_TEMP_VAPP_RETAINED = 'was_temp_vapp_retained'
     WERE_TEMPLATES_FORCE_UPDATED = 'were_templates_force_updated'
     WERE_TEMPLATES_SKIPPED = 'were_templates_skipped'
+    QUERY = 'query_filter'
+    ACCESS_SETTING = 'access_setting'
 
 
 @unique

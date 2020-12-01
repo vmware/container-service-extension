@@ -321,6 +321,22 @@ def get_payload_for_cluster_upgrade_plan(params):
     }
 
 
+def get_payload_for_cluster_acl_list(params):
+    return {
+        PayloadKey.TYPE: CseOperation.CLUSTER_ACL_LIST.telemetry_table,
+        PayloadKey.CLUSTER_ID: uuid_hash(params.get(PayloadKey.CLUSTER_ID)),
+        PayloadKey.QUERY: params.get(PayloadKey.QUERY)
+    }
+
+
+def get_payload_for_cluster_acl_update(params):
+    return {
+        PayloadKey.TYPE: CseOperation.CLUSTER_ACL_UPDATE.telemetry_table,
+        PayloadKey.CLUSTER_ID: uuid_hash((params.get(PayloadKey.CLUSTER_ID))),
+        PayloadKey.ACCESS_SETTING: params.get(RequestKey.V35_SPEC, {}).get('accessSetting')  # noqa: E501
+    }
+
+
 def get_payload_for_node_create(params):
     """Construct telemetry payload of node create.
 
