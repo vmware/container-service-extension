@@ -95,7 +95,9 @@ def get_telemetry_instance_id(config_dict, logger_debug=NULL_LOGGER,
                 ext_version=MQTT_EXTENSION_VERSION,
                 ext_vendor=MQTT_EXTENSION_VENDOR)
             if not ext_info:
+                logger_debug.debug("Failed to retrieve telemetry instance id")
                 return None
+            logger_debug.debug("Retrieved telemetry instance id")
             return mqtt_ext_manager.get_extension_uuid(
                 ext_info[MQTTExtKey.EXT_URN_ID])
         else:
@@ -103,7 +105,7 @@ def get_telemetry_instance_id(config_dict, logger_debug=NULL_LOGGER,
             ext = APIExtension(client)
             cse_info = ext.get_extension_info(CSE_SERVICE_NAME,
                                               namespace=CSE_SERVICE_NAMESPACE)
-            logger_debug.info("Retrieved telemetry instance id")
+            logger_debug.debug("Retrieved telemetry instance id")
             return cse_info.get('id')
     except Exception as err:
         msg = f"Cannot retrieve telemetry instance id:{err}"
