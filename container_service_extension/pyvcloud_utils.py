@@ -19,6 +19,9 @@ from container_service_extension.logger import NULL_LOGGER
 from container_service_extension.logger import SERVER_DEBUG_WIRELOG_FILEPATH
 from container_service_extension.logger import SERVER_LOGGER
 from container_service_extension.server_constants import SYSTEM_ORG_NAME
+from container_service_extension.shared_constants import CSE_PAGINATION_DEFAULT_PAGE_SIZE  # noqa: E501
+from container_service_extension.shared_constants import CSE_PAGINATION_FIRST_PAGE_NUMBER  # noqa: E501
+from container_service_extension.shared_constants import PaginationKey
 from container_service_extension.utils import get_server_runtime_config
 from container_service_extension.utils import NullPrinter
 from container_service_extension.utils import str_to_bool
@@ -533,17 +536,44 @@ def get_all_ovdcs(client: vcd_client.Client):
     return list(query.execute())
 
 
-def get_ovdcs_by_page(client: vcd_client.Client, page=1, page_size=25):
+def create_cse_page_uri(client: vcd_client.Client, path: str, vcd_uri=None, query_params={}):  # noqa: E501
+    """Create a CSE URI equivalent to the VCD uri.
+
+    :param vcd_client.Client client:
+    :param str path:
+    :param str vcd_uri:
+    :param dict query_params
+    """
+    if vcd_uri:
+        base_uri = f"{client.get_api_uri().strip('/')}{path}"  # noqa: E501
+        query_dict = dict(urllib.parse.parse_qsl(urllib.parse.urlsplit(vcd_uri).query))  # noqa: E501
+        page_number = int(query_dict.get(PaginationKey.PAGE_NUMBER))
+        page_size = int(query_dict.get(PaginationKey.PAGE_SIZE))
+        cse_uri = f"{base_uri}?page={page_number}&pageSize={page_size}"
+        for q in query_params:
+            cse_uri += f"&{q}={query_params[q]}"
+        return cse_uri
+
+
+def get_ovdcs_by_page(client: vcd_client.Client,
+                      page=CSE_PAGINATION_FIRST_PAGE_NUMBER,
+                      page_size=CSE_PAGINATION_DEFAULT_PAGE_SIZE):
+    """Get the list of ovdcs in the page."""
     query = None
     if client.is_sysadmin():
         # use adminOrgVdc in typed query
         query = client.get_typed_query(
             vcd_client.ResourceType.ADMIN_ORG_VDC.value,
+            page=page,
+            page_size=page_size,
             query_result_format=vcd_client.QueryResultFormat.ID_RECORDS)
     else:
         # use orgVdc in typed query
         query = client.get_typed_query(
             vcd_client.ResourceType.ORG_VDC.value,
+            page=page,
+            page_size=page_size,
             query_result_format=vcd_client.QueryResultFormat.ID_RECORDS)
-    vdc_list, result_total = query.get_single_page(page=page, page_size=page_size)  # noqa: E501
-    return vdc_list, result_total
+    vdc_results = query.execute()
+    return vdc_results['values'], vdc_results['resultTotal'], \
+        vdc_results.get('nextPageUri'), vdc_results.get('previousPageUri')

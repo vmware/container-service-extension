@@ -162,9 +162,10 @@ def ovdc_list(request_data, op_ctx: ctx.OperationContext):
             'to System Administrators.')
 
     ovdcs = []
-    org_vdcs, result_total = vcd_utils.get_ovdcs_by_page(op_ctx.client,
-                                                         page=page_number,
-                                                         page_size=page_size)
+    org_vdcs, result_total, next_page_uri, prev_page_uri = \
+        vcd_utils.get_ovdcs_by_page(op_ctx.client,
+                                    page=page_number,
+                                    page_size=page_size)
     for ovdc in org_vdcs:
         ovdc_name = ovdc.get('name')
         org_name = ovdc.get('orgName')
@@ -180,7 +181,6 @@ def ovdc_list(request_data, op_ctx: ctx.OperationContext):
             'org': org_name,
             'k8s provider': k8s_provider
         }
-
         if list_pks_plans:
             pks_plans = ''
             pks_server = ''
@@ -225,10 +225,37 @@ def ovdc_list(request_data, op_ctx: ctx.OperationContext):
             ovdc_dict['pks api server'] = pks_server
             ovdc_dict['available pks plans'] = pks_plans
         ovdcs.append(ovdc_dict)
+    next_page_uri = vcd_utils.create_cse_page_uri(op_ctx.client,
+                                                  op_ctx.operation.api_path_format,  # noqa: E501
+                                                  vcd_uri=next_page_uri)  # noqa: E501
+    prev_page_uri = vcd_utils.create_cse_page_uri(op_ctx.client,
+                                                  op_ctx.operation.api_path_format,  # noqa: E501
+                                                  vcd_uri=prev_page_uri)  # noqa: E501
+    return utils.get_paginated_response_using_results(values=ovdcs,
+                                                      result_total=result_total,  # noqa: E501
+                                                      page_number=page_number,
+                                                      page_size=page_size,
+                                                      next_page_uri=next_page_uri,  # noqa: E501
+                                                      prev_page_uri=prev_page_uri)  # noqa: E501
 
-    uri = f"{op_ctx.client.get_api_uri().strip('/')}{op_ctx.operation.api_path_format}"  # noqa: E501
-    return utils.get_paginated_response(uri, ovdcs, result_total,
-                                        page_number=page_number, page_size=page_size)  # noqa: E501
+
+def create_cse_page_uri(client: vcd_client.Client, path: str, vcd_uri=None, query_params={}):  # noqa: E501
+    """Create a CSE URI equivalent to the VCD uri.
+
+    :param vcd_client.Client client:
+    :param str path:
+    :param str vcd_uri:
+    :param dict query_params
+    """
+    if vcd_uri:
+        base_uri = f"{client.get_api_uri().strip('/')}{path}"  # noqa: E501
+        query_dict = dict(urllib.parse.parse_qsl(urllib.parse.urlsplit(vcd_uri).query))  # noqa: E501
+        page_number = query_dict.get(PaginationKey.PAGE_NUMBER)
+        page_size = query_dict.get(PaginationKey.PAGE_SIZE)
+        cse_uri = f"{base_uri}?page={page_number+1}&pageSize={page_size}"
+        for q in query_params:
+            cse_uri += f"&{q}={query_params[q]}"
+        return cse_uri
 
 
 @record_user_action_telemetry(cse_operation=CseOperation.OVDC_COMPUTE_POLICY_LIST)  # noqa: E501

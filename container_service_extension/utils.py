@@ -471,6 +471,24 @@ def construct_filter_string(filters: dict):
     return filter_string
 
 
+def get_paginated_response_using_results(values, result_total,
+                                         page_number=CSE_PAGINATION_FIRST_PAGE_NUMBER,  # noqa: E501
+                                         page_size=CSE_PAGINATION_DEFAULT_PAGE_SIZE,  # noqa: E501
+                                         next_page_uri=None,
+                                         prev_page_uri=None):
+    resp = {
+        PaginationKey.VALUES: values,
+        PaginationKey.RESULT_TOTAL: result_total,
+        PaginationKey.PAGE_NUMBER: page_number,
+        PaginationKey.PAGE_SIZE: page_size
+    }
+    if next_page_uri:
+        resp[PaginationKey.NEXT_PAGE_URI] = next_page_uri
+    if prev_page_uri:
+        resp[PaginationKey.PREV_PAGE_URI] = prev_page_uri
+    return resp
+
+
 def get_paginated_response(base_uri, values, result_total,
                            page_number=CSE_PAGINATION_FIRST_PAGE_NUMBER,
                            page_size=CSE_PAGINATION_DEFAULT_PAGE_SIZE,
@@ -485,8 +503,14 @@ def get_paginated_response(base_uri, values, result_total,
         # TODO find a way to get the initial url part
         # ideally the request details should be passed down to each of the
         # handler funcions as request context
-        next_page_uri = f"{base_uri}?page={page_number+1}&pageSize={page_size}"  # noqa: E501
+        next_page_uri = f"{base_uri}?page={page_number+1}&pageSize={page_size}"
         for q in query_params.keys():
             next_page_uri += f"&{q}={query_params[q]}"
         paginated_response[PaginationKey.NEXT_PAGE_URI] = next_page_uri
+
+    if page_number > 1:
+        prev_page_uri = f"{base_uri}?page={page_number-1}&pageSize={page_size}"
+        for q in query_params.keys():
+            prev_page_uri += f"&{q}={query_params[q]}"
+        paginated_response[PaginationKey.PREV_PAGE_URI] = prev_page_uri
     return paginated_response
