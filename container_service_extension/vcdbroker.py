@@ -873,7 +873,7 @@ class VcdBroker(abstract_broker.AbstractBroker):
             server_config = utils.get_server_runtime_config()
             catalog_name = server_config['broker']['catalog']
             try:
-                _add_nodes(self.context.sysadmin_client,
+                _add_nodes(self.context.client,
                            num_nodes=1,
                            node_type=NodeType.CONTROL_PLANE,
                            org=org,
@@ -909,7 +909,7 @@ class VcdBroker(abstract_broker.AbstractBroker):
             LOGGER.debug(msg)
             self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
             try:
-                _add_nodes(self.context.sysadmin_client,
+                _add_nodes(self.context.client,
                            num_nodes=num_workers,
                            node_type=NodeType.WORKER,
                            org=org,
@@ -942,7 +942,7 @@ class VcdBroker(abstract_broker.AbstractBroker):
                 LOGGER.debug(msg)
                 self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
                 try:
-                    _add_nodes(self.context.sysadmin_client,
+                    _add_nodes(self.context.client,
                                num_nodes=1,
                                node_type=NodeType.NFS,
                                org=org,
@@ -1024,7 +1024,7 @@ class VcdBroker(abstract_broker.AbstractBroker):
             LOGGER.debug(msg)
             self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
 
-            new_nodes = _add_nodes(self.context.sysadmin_client,
+            new_nodes = _add_nodes(self.context.client,
                                    num_nodes=num_workers,
                                    node_type=node_type,
                                    org=org,
@@ -1692,33 +1692,21 @@ def _get_template(name=None, revision=None):
     raise Exception(f"Template '{name}' at revision {revision} not found.")
 
 
-def _add_nodes(sysadmin_client, num_nodes, node_type, org, vdc, vapp,
+def _add_nodes(client, num_nodes, node_type, org, vdc, vapp,
                catalog_name, template, network_name, num_cpu=None,
                memory_in_mb=None, storage_profile=None, ssh_key=None):
-    vcd_utils.raise_error_if_user_not_from_system_org(sysadmin_client)
     if num_nodes > 0:
         specs = []
         try:
-            # DEV NOTE: With api v33.0 and onwards, get_catalog operation will
-            # fail for non admin users of an an org which is not hosting the
-            # catalog, even if the catalog is explicitly shared with the org in
-            # question. This happens because for api v33.0 and onwards, the Org
-            # XML no longer returns the href to catalogs accessible to the org,
-            # and typed queries hide the catalog link from non admin users.
-            # As a workaround, we will use a sys admin client to get the href
-            # and pass it forward. Do note that the catalog itself can still be
-            # accessed by these non admin users, just that they can't find by
-            # the href on their own.
-
             org_name = org.get_name()
-            org_resource = sysadmin_client.get_org_by_name(org_name)
-            org_sa = vcd_org.Org(sysadmin_client, resource=org_resource)
+            org_resource = client.get_org_by_name(org_name)
+            org_sa = vcd_org.Org(client, resource=org_resource)
             catalog_item = org_sa.get_catalog_item(
                 catalog_name, template[LocalTemplateKey.CATALOG_ITEM_NAME])
             catalog_item_href = catalog_item.Entity.get('href')
 
             source_vapp = vcd_vapp.VApp(
-                sysadmin_client, href=catalog_item_href)
+                client, href=catalog_item_href)
             source_vm = source_vapp.get_all_vms()[0].get('name')
             if storage_profile is not None:
                 storage_profile = vdc.get_storage_profile(storage_profile)
@@ -1759,7 +1747,7 @@ def _add_nodes(sysadmin_client, num_nodes, node_type, org, vdc, vapp,
                 specs.append(spec)
 
             task = vapp.add_vms(specs, power_on=False)
-            sysadmin_client.get_task_monitor().wait_for_status(task)
+            client.get_task_monitor().wait_for_status(task)
             vapp.reload()
 
             if not num_cpu:
@@ -1770,16 +1758,16 @@ def _add_nodes(sysadmin_client, num_nodes, node_type, org, vdc, vapp,
             for spec in specs:
                 vm_name = spec['target_vm_name']
                 vm_resource = vapp.get_vm(vm_name)
-                vm = vcd_vm.VM(sysadmin_client, resource=vm_resource)
+                vm = vcd_vm.VM(client, resource=vm_resource)
 
                 task = vm.modify_cpu(num_cpu)
-                sysadmin_client.get_task_monitor().wait_for_status(task)
+                client.get_task_monitor().wait_for_status(task)
 
                 task = vm.modify_memory(memory_in_mb)
-                sysadmin_client.get_task_monitor().wait_for_status(task)
+                client.get_task_monitor().wait_for_status(task)
 
                 task = vm.power_on()
-                sysadmin_client.get_task_monitor().wait_for_status(task)
+                client.get_task_monitor().wait_for_status(task)
                 vapp.reload()
 
                 if node_type == NodeType.NFS:
@@ -1791,7 +1779,7 @@ def _add_nodes(sysadmin_client, num_nodes, node_type, org, vdc, vapp,
                     script = utils.read_data_file(
                         script_filepath, logger=LOGGER)
                     exec_results = _execute_script_in_nodes(
-                        sysadmin_client, vapp=vapp, node_names=[vm_name],
+                        client, vapp=vapp, node_names=[vm_name],
                         script=script)
                     errors = _get_script_execution_errors(exec_results)
                     if errors:

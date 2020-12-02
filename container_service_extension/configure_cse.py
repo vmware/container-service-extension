@@ -372,49 +372,6 @@ def install_cse(config_file_name, config, skip_template_creation,
             INSTALL_LOGGER.error(ext_found_msg)
             raise Exception(ext_found_msg)
 
-        # Setup extension message protocol
-        if utils.should_use_mqtt_protocol(config):
-            _register_cse_as_mqtt_extension(client,
-                                            config['vcd']['api_version'],
-                                            msg_update_callback)
-        else:
-            # create amqp exchange if it doesn't exist
-            amqp = config['amqp']
-            _create_amqp_exchange(amqp['exchange'], amqp['host'], amqp['port'],
-                                  amqp['vhost'], amqp['ssl'], amqp['username'],
-                                  amqp['password'],
-                                  msg_update_callback=msg_update_callback)
-
-            # register cse as an api extension to vCD
-            _register_cse_as_amqp_extension(
-                client=client,
-                routing_key=amqp['routing_key'],
-                exchange=amqp['exchange'],
-                target_vcd_api_version=config['vcd']['api_version'],
-                msg_update_callback=msg_update_callback)
-
-            # register rights to vCD
-            # TODO() should also remove rights when unregistering CSE
-            _register_right(client,
-                            right_name=server_constants.CSE_NATIVE_DEPLOY_RIGHT_NAME,  # noqa: E501
-                            description=server_constants.CSE_NATIVE_DEPLOY_RIGHT_DESCRIPTION,  # noqa: E501
-                            category=server_constants.CSE_NATIVE_DEPLOY_RIGHT_CATEGORY,  # noqa: E501
-                            bundle_key=server_constants.CSE_NATIVE_DEPLOY_RIGHT_BUNDLE_KEY,  # noqa: E501
-                            msg_update_callback=msg_update_callback)
-            _register_right(client,
-                            right_name=server_constants.CSE_PKS_DEPLOY_RIGHT_NAME,  # noqa: E501
-                            description=server_constants.CSE_PKS_DEPLOY_RIGHT_DESCRIPTION,  # noqa: E501
-                            category=server_constants.CSE_PKS_DEPLOY_RIGHT_CATEGORY,  # noqa: E501
-                            bundle_key=server_constants.CSE_PKS_DEPLOY_RIGHT_BUNDLE_KEY,  # noqa: E501
-                            msg_update_callback=msg_update_callback)
-
-        # Since we use CSE extension id as our telemetry instance_id, the
-        # validated config won't have the instance_id yet. Now that CSE has
-        # been registered as an extension, we should update the telemetry
-        # config with the correct instance_id
-        if config['service']['telemetry']['enable']:
-            store_telemetry_settings(config)
-
         # register cse def schema on VCD
         _register_def_schema(client=client, config=config,
                              msg_update_callback=msg_update_callback,
@@ -456,6 +413,53 @@ def install_cse(config_file_name, config, skip_template_creation,
                 log_wire=log_wire,
                 msg_update_callback=msg_update_callback
             )
+
+        # Setup extension based on message bus protocol
+        if utils.should_use_mqtt_protocol(config):
+            _register_cse_as_mqtt_extension(client,
+                                            config['vcd']['api_version'],
+                                            msg_update_callback)
+        else:
+            # create amqp exchange if it doesn't exist
+            amqp = config['amqp']
+            _create_amqp_exchange(amqp['exchange'], amqp['host'], amqp['port'],
+                                  amqp['vhost'], amqp['ssl'], amqp['username'],
+                                  amqp['password'],
+                                  msg_update_callback=msg_update_callback)
+
+            # register cse as an api extension to vCD
+            _register_cse_as_amqp_extension(
+                client=client,
+                routing_key=amqp['routing_key'],
+                exchange=amqp['exchange'],
+                target_vcd_api_version=config['vcd']['api_version'],
+                msg_update_callback=msg_update_callback)
+
+            # register rights to vCD
+            # TODO() should also remove rights when unregistering CSE
+            _register_right(client,
+                            right_name=server_constants.CSE_NATIVE_DEPLOY_RIGHT_NAME,  # noqa: E501
+                            description=server_constants.CSE_NATIVE_DEPLOY_RIGHT_DESCRIPTION,  # noqa: E501
+                            category=server_constants.CSE_NATIVE_DEPLOY_RIGHT_CATEGORY,  # noqa: E501
+                            bundle_key=server_constants.CSE_NATIVE_DEPLOY_RIGHT_BUNDLE_KEY,  # noqa: E501
+                            msg_update_callback=msg_update_callback)
+            _register_right(client,
+                            right_name=server_constants.CSE_PKS_DEPLOY_RIGHT_NAME,  # noqa: E501
+                            description=server_constants.CSE_PKS_DEPLOY_RIGHT_DESCRIPTION,  # noqa: E501
+                            category=server_constants.CSE_PKS_DEPLOY_RIGHT_CATEGORY,  # noqa: E501
+                            bundle_key=server_constants.CSE_PKS_DEPLOY_RIGHT_BUNDLE_KEY,  # noqa: E501
+                            msg_update_callback=msg_update_callback)
+
+        msg = "Installed CSE successfully."
+        msg_update_callback.general(msg)
+        INSTALL_LOGGER.info(msg)
+
+        # Since we use CSE extension id as our telemetry instance_id, the
+        # validated config won't have the instance_id yet. Now that CSE has
+        # been registered as an extension, we should update the telemetry
+        # config with the correct instance_id
+        if config['service']['telemetry']['enable']:
+            store_telemetry_settings(config)
 
         # Telemetry - Record successful install action
         record_user_action(CseOperation.SERVICE_INSTALL,
