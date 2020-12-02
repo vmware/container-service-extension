@@ -21,6 +21,7 @@ import semantic_version as semver
 import container_service_extension.abstract_broker as abstract_broker
 import container_service_extension.cloudapi.constants as cloudapi_constants
 import container_service_extension.compute_policy_manager as compute_policy_manager  # noqa: E501
+import container_service_extension.def_.acl_service as acl_service
 import container_service_extension.def_.entity_service as def_entity_svc
 import container_service_extension.def_.models as def_models
 import container_service_extension.def_.utils as def_utils
@@ -446,8 +447,8 @@ class ClusterService(abstract_broker.AbstractBroker):
         de = self.entity_svc.get_entity(cluster_id)
 
         # Retrieve defined entity ACL
-        acl_path = f'{server_constants.ENTITIES_PATH}/' \
-                   f'{de.id}/{server_constants.ACCESS_CONTROLS_PATH}' \
+        acl_path = f'{cloudapi_constants.CloudApiResource.ENTITIES}/' \
+                   f'{de.id}/{cloudapi_constants.CloudApiResource.ACL}' \
                    f'?{shared_constants.PAGE}={page}&' \
                    f'{shared_constants.PAGE_SIZE}={page_sz}'
         de_acl_response = cloudapi_client.do_request(
@@ -463,8 +464,8 @@ class ClusterService(abstract_broker.AbstractBroker):
             user_id = de_acl_setting[shared_constants.AccessControlKey.MEMBER_ID]  # noqa: E501
             acl_level_id = de_acl_setting[shared_constants.AccessControlKey.ACCESS_LEVEL_ID]  # noqa: E501
             username = user_id_names_dict[user_id]
-            member_acl_entry = utils.form_cluster_acl_entry(user_id, username,
-                                                            acl_level_id)
+            member_acl_entry = acl_service.form_cluster_acl_entry(
+                user_id, username, acl_level_id)
             member_acl_list.append(member_acl_entry)
 
         # Form GET response body
@@ -489,11 +490,11 @@ class ClusterService(abstract_broker.AbstractBroker):
         # Get previous def entity acl
         cloudapi_client = vcd_utils.get_cloudapi_client_from_vcd_client(
             self.context.client)
-        prev_user_acl_info = def_utils.get_all_def_ent_acl(cloudapi_client,
-                                                           cluster_id)
+        prev_user_acl_info = acl_service.get_all_def_ent_acl(cloudapi_client,
+                                                             cluster_id)
 
         try:
-            updated_user_acl_level_dict = def_utils.update_native_def_entity_acl(  # noqa: E501
+            updated_user_acl_level_dict = acl_service.update_native_def_entity_acl(  # noqa: E501
                 cloudapi_client=cloudapi_client,
                 de_id=cluster_id,
                 update_acl_entries=update_acl_entries,
@@ -512,14 +513,14 @@ class ClusterService(abstract_broker.AbstractBroker):
                 for child_obj in access_settings.getchildren():
                     child_obj_attrib = child_obj.getchildren()[0].attrib
                     shared_href = child_obj_attrib.get('href')
-                    user_id = utils.get_id_from_user_href(shared_href)
+                    user_id = acl_service.get_id_from_user_href(shared_href)
 
                     # Don't add current access setting if it will be updated
                     user_urn = f'{server_constants.USER_URN_BEGIN}{user_id}'
                     if not updated_user_acl_level_dict.get(user_urn):
                         user_name = child_obj_attrib.get('name')
 
-                        curr_setting = utils.form_vapp_access_setting(
+                        curr_setting = acl_service.form_vapp_access_setting(
                             access_level=str(child_obj.AccessLevel),
                             name=user_name,
                             href=shared_href,
@@ -530,14 +531,14 @@ class ClusterService(abstract_broker.AbstractBroker):
             api_uri = self.context.client.get_api_uri()
             for acl_entry in update_acl_entries:
                 user_urn = acl_entry[shared_constants.AccessControlKey.MEMBER_ID]  # noqa: E501
-                user_id = utils.get_id_from_user_urn(user_urn)
+                user_id = acl_service.get_id_from_user_urn(user_urn)
                 access_level_urn = acl_entry[shared_constants.AccessControlKey.ACCESS_LEVEL_ID]  # noqa: E501
-                access_level = utils.get_access_level_from_urn(access_level_urn)  # noqa: E501
+                access_level = acl_service.get_access_level_from_urn(access_level_urn)  # noqa: E501
 
                 # Use 'Change' instead of 'ReadWrite' for vApp access level
                 if access_level == shared_constants.READ_WRITE:
                     access_level = server_constants.CHANGE_ACCESS
-                user_setting = utils.form_vapp_access_setting(
+                user_setting = acl_service.form_vapp_access_setting(
                     access_level=access_level,
                     name=acl_entry[shared_constants.AccessControlKey.USERNAME],
                     href=f'{api_uri}{server_constants.ADMIN_USER_PATH}{user_id}',  # noqa: E501
@@ -552,7 +553,7 @@ class ClusterService(abstract_broker.AbstractBroker):
             }
 
             self.context.client.post_resource(
-                uri=f'{vapp_href}{server_constants.ACTION_CONTROL_ACCESS_PATH}',  # noqa: E501
+                uri=f'{vapp_href}{cloudapi_constants.CloudApiResource.ACTION_CONTROL_ACCESS_PATH}',  # noqa: E501
                 contents=vapp_share_contents,
                 media_type='application/*+json')
         except Exception as e:
@@ -567,9 +568,9 @@ class ClusterService(abstract_broker.AbstractBroker):
                 prev_acl_entries.append(prev_acl_entry)
 
             # Rolback defined entity
-            curr_user_acl_info = def_utils.get_all_def_ent_acl(cloudapi_client,
-                                                               cluster_id)
-            def_utils.update_native_def_entity_acl(
+            curr_user_acl_info = acl_service.get_all_def_ent_acl(cloudapi_client,  # noqa: E501
+                                                                 cluster_id)
+            acl_service.update_native_def_entity_acl(
                 cloudapi_client=cloudapi_client,
                 de_id=cluster_id,
                 update_acl_entries=prev_acl_entries,

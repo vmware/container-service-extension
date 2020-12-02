@@ -47,6 +47,7 @@ CSE_SERVER_BUSY_KEY = 'CSE Server Busy'
 
 
 # Access control constants
+# Note: these constants are only applicable for API version >= 35
 READ_ONLY = 'ReadOnly'
 READ_WRITE = 'ReadWrite'
 FULL_CONTROL = 'FullControl'

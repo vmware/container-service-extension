@@ -470,52 +470,6 @@ def construct_filter_string(filters: dict):
     return filter_string
 
 
-def form_cluster_acl_entry(user_urn, username, access_level_urn):
-    """Form ACL entry.
-
-    :param str user_urn: user URN id, e.g., 'urn:vcloud:user:1234567'
-    :param str access_level_urn: access level URN id, e.g.,
-        'urn:vcloud:accessLevel:FullControl'
-
-    :return acl entry
-    """
-    return {
-        shared_constants.AccessControlKey.MEMBER_ID: user_urn,
-        shared_constants.AccessControlKey.USERNAME: username,
-        shared_constants.AccessControlKey.ACCESS_LEVEL_ID: access_level_urn
-    }
-
-
-def get_id_from_user_urn(user_urn_id):
-    if server_constants.USER_URN_BEGIN in user_urn_id:
-        return user_urn_id.split(server_constants.USER_URN_BEGIN)[-1]
-    return None
-
-
-def get_id_from_user_href(user_href):
-    if server_constants.USER_PATH in user_href:
-        return user_href.split(server_constants.USER_PATH)[-1]
-    return None
-
-
-def get_access_level_from_urn(access_level_urn):
-    if server_constants.ACCESS_LEVEL_URN_BEGIN in access_level_urn:
-        return access_level_urn.split(server_constants.ACCESS_LEVEL_URN_BEGIN)[-1]  # noqa: E501
-    return None
-
-
-def form_vapp_access_setting(access_level, name, href, user_id):
-    vapp_access_setting = {
-        shared_constants.AccessControlKey.ACCESS_LEVEL: access_level,
-        shared_constants.AccessControlKey.SUBJECT: {
-            shared_constants.AccessControlKey.NAME: name,
-            shared_constants.AccessControlKey.HREF: href,
-            shared_constants.AccessControlKey.ID: user_id
-        }
-    }
-    return vapp_access_setting
-
-
 def get_user_id_names_dict(cloudapi_client):
     """Get a dictionary of users ids to user names.
 
@@ -527,7 +481,7 @@ def get_user_id_names_dict(cloudapi_client):
     response_body = cloudapi_client.do_request(
         method=shared_constants.RequestMethod.GET,
         cloudapi_version=cloudapi_constants.CloudApiVersion.VERSION_1_0_0,
-        resource_url_relative_path='users')
+        resource_url_relative_path=cloudapi_constants.CloudApiResource.USERS)
     if not response_body:
         return None
 

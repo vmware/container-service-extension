@@ -89,11 +89,7 @@ USER_PATH = '/user/'
 USER_URN_BEGIN = 'urn:vcloud:user:'
 ADMIN_USER_PATH = '/admin/user/'
 
-# Access control path and ID constants
-ACCESS_CONTROLS_PATH = 'accessControls'
-ENTITIES_PATH = 'entities'
-ACCESS_LEVEL_URN_BEGIN = 'urn:vcloud:accessLevel:'
-ACTION_CONTROL_ACCESS_PATH = '/action/controlAccess/'
+# vApp Access control type
 CHANGE_ACCESS = 'Change'
 
 
