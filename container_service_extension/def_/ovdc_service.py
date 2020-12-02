@@ -78,6 +78,7 @@ def update_ovdc(operation_context: ctx.OperationContext,
                                               policy_list=policy_list, # noqa:E501
                                               ovdc_id=ovdc_id,
                                               vdc=vdc,
+                                              org_name=ovdc_spec.org_name,
                                               remove_cp_from_vms_on_disable=ovdc_spec.remove_cp_from_vms_on_disable) # noqa:E501
     return {'task_href': task_href}
 
@@ -196,6 +197,7 @@ def _update_ovdc_using_placement_policy_async(operation_context: ctx.OperationCo
                                               policy_list,
                                               ovdc_id,
                                               vdc,
+                                              org_name,
                                               remove_cp_from_vms_on_disable=False):  # noqa: E501
     """Enable ovdc using placement policies.
 
@@ -207,6 +209,7 @@ def _update_ovdc_using_placement_policy_async(operation_context: ctx.OperationCo
         the ovdc
     :param str ovdc_id:
     :param pyvcloud.vcd.vdc.VDC vdc: VDC object
+    :param str org_name: name of the organization that vdc provides resource
     :param bool remove_cp_from_vms_on_disable: Set to true if placement
         policies need to be removed from the vms before removing from the VDC.
     """
@@ -235,6 +238,7 @@ def _update_ovdc_using_placement_policy_async(operation_context: ctx.OperationCo
             cse_params = {
                 RequestKey.K8S_PROVIDER: k8s_runtimes_added,
                 RequestKey.OVDC_ID: ovdc_id,
+                RequestKey.ORG_NAME: org_name
             }
             telemetry_handler.record_user_action_details(cse_operation=CseOperation.OVDC_ENABLE, # noqa: E501
                                                          cse_params=cse_params)
@@ -246,6 +250,7 @@ def _update_ovdc_using_placement_policy_async(operation_context: ctx.OperationCo
             cse_params = {
                 RequestKey.K8S_PROVIDER: k8s_runtimes_deleted,
                 RequestKey.OVDC_ID: ovdc_id,
+                RequestKey.ORG_NAME: org_name,
                 RequestKey.REMOVE_COMPUTE_POLICY_FROM_VMS: remove_cp_from_vms_on_disable # noqa: E501
             }
             telemetry_handler.record_user_action_details(cse_operation=CseOperation.OVDC_DISABLE, # noqa: E501
