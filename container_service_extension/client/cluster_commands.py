@@ -1092,7 +1092,7 @@ Examples:
             tkg_cluster = de_cluster_tkg.DEClusterTKG(client)
             tkg_cluster.share_cluster(cluster_id, users_list, access_level_id)
 
-        stdout(f'Cluster {cluster_id} successfully shared with: {users_list}')
+        stdout(f'Cluster {name or cluster_id} successfully shared with: {users_list}')  # noqa: E501
 
     except Exception as e:
         stderr(e, ctx)
