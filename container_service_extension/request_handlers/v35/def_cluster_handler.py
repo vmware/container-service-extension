@@ -7,11 +7,11 @@ import container_service_extension.def_.cluster_service as cluster_svc
 import container_service_extension.def_.models as def_models
 import container_service_extension.operation_context as ctx
 import container_service_extension.request_handlers.request_utils as request_utils  # noqa: E501
+from container_service_extension.shared_constants import ClusterAclKey
 from container_service_extension.shared_constants import FlattenedClusterSpecKey  # noqa: E501
 from container_service_extension.shared_constants import RequestKey
 import container_service_extension.telemetry.constants as telemetry_constants
 import container_service_extension.telemetry.telemetry_handler as telemetry_handler  # noqa: E501
-
 
 _OPERATION_KEY = 'operation'
 
@@ -139,6 +139,27 @@ def cluster_list(data: dict, op_ctx: ctx.OperationContext):
     svc = cluster_svc.ClusterService(op_ctx)
     return [asdict(def_entity) for def_entity in
             svc.list_clusters(data.get(RequestKey.V35_QUERY, {}))]
+
+
+@telemetry_handler.record_user_action_telemetry(cse_operation=telemetry_constants.CseOperation.V35_CLUSTER_ACL_LIST)  # noqa: E501
+@request_utils.v35_api_exception_handler
+def cluster_acl_info(data: dict, op_ctx: ctx.OperationContext):
+    """Request handler for cluster acl list operation."""
+    svc = cluster_svc.ClusterService(op_ctx)
+    cluster_id = data[RequestKey.CLUSTER_ID]
+    query = data.get(RequestKey.V35_QUERY, {})
+    acl_info_response = svc.get_cluster_acl_info(cluster_id, query)
+    return acl_info_response
+
+
+@telemetry_handler.record_user_action_telemetry(cse_operation=telemetry_constants.CseOperation.V35_CLUSTER_ACL_UPDATE)  # noqa: E501
+@request_utils.v35_api_exception_handler
+def cluster_acl_update(data: dict, op_ctx: ctx.OperationContext):
+    """Request handler for cluster acl update operation."""
+    svc = cluster_svc.ClusterService(op_ctx)
+    cluster_id = data[RequestKey.CLUSTER_ID]
+    update_acl_entries = data.get(RequestKey.V35_SPEC, {}).get(ClusterAclKey.ACCESS_SETTING)  # noqa: E501
+    svc.update_cluster_acl(cluster_id, update_acl_entries)
 
 
 @request_utils.v35_api_exception_handler

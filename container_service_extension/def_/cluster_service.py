@@ -19,6 +19,7 @@ import pyvcloud.vcd.vm as vcd_vm
 import semantic_version as semver
 
 import container_service_extension.abstract_broker as abstract_broker
+import container_service_extension.cloudapi.constants as cloudapi_constants
 import container_service_extension.compute_policy_manager as compute_policy_manager  # noqa: E501
 import container_service_extension.def_.entity_service as def_entity_svc
 import container_service_extension.def_.models as def_models
@@ -28,12 +29,14 @@ import container_service_extension.local_template_manager as ltm
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
 import container_service_extension.operation_context as ctx
 import container_service_extension.pyvcloud_utils as vcd_utils
+import container_service_extension.server_constants as server_constants
 from container_service_extension.server_constants import ClusterMetadataKey
 from container_service_extension.server_constants import CSE_CLUSTER_KUBECONFIG_PATH # noqa: E501
 from container_service_extension.server_constants import LocalTemplateKey
 from container_service_extension.server_constants import NodeType
 from container_service_extension.server_constants import ScriptFile
 from container_service_extension.server_constants import SYSTEM_ORG_NAME
+import container_service_extension.shared_constants as shared_constants
 from container_service_extension.shared_constants import DefEntityOperation
 from container_service_extension.shared_constants import DefEntityOperationStatus  # noqa: E501
 from container_service_extension.shared_constants import DefEntityPhase
@@ -426,6 +429,152 @@ class ClusterService(abstract_broker.AbstractBroker):
         self._upgrade_cluster_async(cluster_id=cluster_id,
                                     template=template)
         return curr_entity
+
+    def get_cluster_acl_info(self, cluster_id, query: dict):
+        """Get cluster ACL info based on the defined entity ACL."""
+        telemetry_handler.record_user_action_details(
+            telemetry_constants.CseOperation.V35_CLUSTER_ACL_LIST,
+            cse_params=cluster_id)
+
+        # Get page params
+        page = query.get('page', shared_constants.DEFAULT_PAGE)
+        page_sz = query.get('pageSize', shared_constants.DEFAULT_PAGE_SZ)
+
+        # Retrieve defined entity
+        cloudapi_client = vcd_utils.get_cloudapi_client_from_vcd_client(
+            self.context.client)
+        de = self.entity_svc.get_entity(cluster_id)
+
+        # Retrieve defined entity ACL
+        acl_path = f'{server_constants.ENTITIES_PATH}/' \
+                   f'{de.id}/{server_constants.ACCESS_CONTROLS_PATH}' \
+                   f'?{shared_constants.PAGE}={page}&' \
+                   f'{shared_constants.PAGE_SIZE}={page_sz}'
+        de_acl_response = cloudapi_client.do_request(
+            method=shared_constants.RequestMethod.GET,
+            cloudapi_version=cloudapi_constants.CLOUDAPI_VERSION_1_0_0,
+            resource_url_relative_path=acl_path)
+
+        # Parse RDE ACL
+        de_acl_values = de_acl_response['values']
+        member_acl_list = []
+        user_id_names_dict = utils.get_user_id_names_dict(cloudapi_client)
+        for de_acl_setting in de_acl_values:
+            user_id = de_acl_setting[shared_constants.AccessControlKey.MEMBER_ID]  # noqa: E501
+            acl_level_id = de_acl_setting[shared_constants.AccessControlKey.ACCESS_LEVEL_ID]  # noqa: E501
+            username = user_id_names_dict[user_id]
+            member_acl_entry = utils.form_cluster_acl_entry(user_id, username,
+                                                            acl_level_id)
+            member_acl_list.append(member_acl_entry)
+
+        # Form GET response body
+        acl_list_response_body = {
+            shared_constants.PaginatedDataKey.RESULT_TOTAL:
+                de_acl_response[shared_constants.PaginatedDataKey.RESULT_TOTAL],  # noqa: E501
+            shared_constants.PaginatedDataKey.PAGE_COUNT:
+                de_acl_response[shared_constants.PaginatedDataKey.PAGE_COUNT],
+            shared_constants.PaginatedDataKey.PAGE:
+                de_acl_response[shared_constants.PaginatedDataKey.PAGE],
+            shared_constants.PaginatedDataKey.PAGE_SIZE:
+                de_acl_response[shared_constants.PaginatedDataKey.PAGE_SIZE],
+            shared_constants.PaginatedDataKey.VALUES: member_acl_list
+        }
+        return acl_list_response_body
+
+    def update_cluster_acl(self, cluster_id, update_acl_entries: list):
+        telemetry_handler.record_user_action_details(
+            telemetry_constants.CseOperation.V35_CLUSTER_ACL_UPDATE,
+            cse_params=(cluster_id, update_acl_entries))
+
+        # Get previous def entity acl
+        cloudapi_client = vcd_utils.get_cloudapi_client_from_vcd_client(
+            self.context.client)
+        prev_user_acl_info = def_utils.get_all_def_ent_acl(cloudapi_client,
+                                                           cluster_id)
+
+        try:
+            updated_user_acl_level_dict = def_utils.update_native_def_entity_acl(  # noqa: E501
+                cloudapi_client=cloudapi_client,
+                de_id=cluster_id,
+                update_acl_entries=update_acl_entries,
+                prev_user_acl_info=prev_user_acl_info)
+
+            # Share vApp
+            de = self.entity_svc.get_entity(entity_id=cluster_id)
+            vapp_href = de.externalId
+            vapp = vcd_vapp.VApp(self.context.client, href=vapp_href)
+            vapp_access_settings = vapp.get_access_settings()
+
+            # Retain vApp settings
+            access_setting_list = []
+            if hasattr(vapp_access_settings, 'AccessSettings'):
+                access_settings = vapp_access_settings.AccessSettings
+                for child_obj in access_settings.getchildren():
+                    child_obj_attrib = child_obj.getchildren()[0].attrib
+                    shared_href = child_obj_attrib.get('href')
+                    user_id = utils.get_id_from_user_href(shared_href)
+
+                    # Don't add current access setting if it will be updated
+                    user_urn = f'{server_constants.USER_URN_BEGIN}{user_id}'
+                    if not updated_user_acl_level_dict.get(user_urn):
+                        user_name = child_obj_attrib.get('name')
+
+                        curr_setting = utils.form_vapp_access_setting(
+                            access_level=str(child_obj.AccessLevel),
+                            name=user_name,
+                            href=shared_href,
+                            user_id=user_id)
+                        access_setting_list.append(curr_setting)
+
+            # Add updated access settings
+            api_uri = self.context.client.get_api_uri()
+            for acl_entry in update_acl_entries:
+                user_urn = acl_entry[shared_constants.AccessControlKey.MEMBER_ID]  # noqa: E501
+                user_id = utils.get_id_from_user_urn(user_urn)
+                access_level_urn = acl_entry[shared_constants.AccessControlKey.ACCESS_LEVEL_ID]  # noqa: E501
+                access_level = utils.get_access_level_from_urn(access_level_urn)  # noqa: E501
+
+                # Use 'Change' instead of 'ReadWrite' for vApp access level
+                if access_level == shared_constants.READ_WRITE:
+                    access_level = server_constants.CHANGE_ACCESS
+                user_setting = utils.form_vapp_access_setting(
+                    access_level=access_level,
+                    name=acl_entry[shared_constants.AccessControlKey.USERNAME],
+                    href=f'{api_uri}{server_constants.ADMIN_USER_PATH}{user_id}',  # noqa: E501
+                    user_id=user_id)
+                access_setting_list.append(user_setting)
+
+            vapp_share_contents = {
+                server_constants.VappAccessKey.IS_SHARED_TO_EVERYONE:
+                    bool(vapp_access_settings.IsSharedToEveryone),
+                server_constants.VappAccessKey.ACCESS_SETTINGS:
+                    {server_constants.VappAccessKey.ACCESS_SETTING: access_setting_list}  # noqa: E501
+            }
+
+            self.context.client.post_resource(
+                uri=f'{vapp_href}{server_constants.ACTION_CONTROL_ACCESS_PATH}',  # noqa: E501
+                contents=vapp_share_contents,
+                media_type='application/*+json')
+        except Exception as e:
+            # Form list of previous acl entries for rollback
+            prev_acl_entries = []
+            for user, acl_info in prev_user_acl_info.items():
+                prev_acl_entry = {
+                    shared_constants.AccessControlKey.MEMBER_ID: user,
+                    shared_constants.AccessControlKey.ACCESS_LEVEL_ID:
+                        acl_info[shared_constants.AccessControlKey.ACCESS_LEVEL_ID]  # noqa: E501
+                }
+                prev_acl_entries.append(prev_acl_entry)
+
+            # Rolback defined entity
+            curr_user_acl_info = def_utils.get_all_def_ent_acl(cloudapi_client,
+                                                               cluster_id)
+            def_utils.update_native_def_entity_acl(
+                cloudapi_client=cloudapi_client,
+                de_id=cluster_id,
+                update_acl_entries=prev_acl_entries,
+                prev_user_acl_info=curr_user_acl_info)
+            raise e
 
     def delete_nodes(self, cluster_id: str, nodes_to_del=[]):
         """Start the delete nodes operation."""

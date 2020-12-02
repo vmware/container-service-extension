@@ -99,8 +99,6 @@ OPERATION_TO_HANDLER = {
     CseOperation.CLUSTER_RESIZE: native_cluster_handler.cluster_resize,
     CseOperation.CLUSTER_UPGRADE_PLAN: native_cluster_handler.cluster_upgrade_plan,  # noqa: E501
     CseOperation.CLUSTER_UPGRADE: native_cluster_handler.cluster_upgrade,
-    CseOperation.CLUSTER_ACL_LIST: native_cluster_handler.cluster_acl_info,
-    CseOperation.CLUSTER_ACL_UPDATE: native_cluster_handler.cluster_acl_update,
     CseOperation.NODE_CREATE: native_cluster_handler.node_create,
     CseOperation.NODE_DELETE: native_cluster_handler.node_delete,
     CseOperation.NODE_INFO: native_cluster_handler.node_info,
@@ -113,6 +111,8 @@ OPERATION_TO_HANDLER = {
     CseOperation.V35_CLUSTER_RESIZE: v35_cluster_handler.cluster_resize,
     CseOperation.V35_CLUSTER_UPGRADE_PLAN: v35_cluster_handler.cluster_upgrade_plan,  # noqa: E501
     CseOperation.V35_CLUSTER_UPGRADE: v35_cluster_handler.cluster_upgrade,
+    CseOperation.V35_CLUSTER_ACL_LIST: v35_cluster_handler.cluster_acl_info,
+    CseOperation.V35_CLUSTER_ACL_UPDATE: v35_cluster_handler.cluster_acl_update,  # noqa: E501
     CseOperation.V35_NODE_DELETE: v35_cluster_handler.nfs_node_delete,
     CseOperation.V35_NODE_CREATE: v35_cluster_handler.node_create,
     CseOperation.V35_NODE_INFO: v35_cluster_handler.node_info,
@@ -518,13 +518,13 @@ def _get_v35_cluster_url_data(method: str, tokens: list):
                 }
             if tokens[6] == 'acl':
                 return {
-                    _OPERATION_KEY: CseOperation.CLUSTER_ACL_LIST,
+                    _OPERATION_KEY: CseOperation.V35_CLUSTER_ACL_LIST,
                     shared_constants.RequestKey.CLUSTER_ID: tokens[5]
                 }
         if method == shared_constants.RequestMethod.PUT:
             if tokens[6] == 'acl':
                 return {
-                    _OPERATION_KEY: CseOperation.CLUSTER_ACL_UPDATE,
+                    _OPERATION_KEY: CseOperation.V35_CLUSTER_ACL_UPDATE,
                     shared_constants.RequestKey.CLUSTER_ID: tokens[5]
                 }
         raise cse_exception.MethodNotAllowedRequestError()

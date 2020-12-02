@@ -211,8 +211,6 @@ class CseOperation(Enum):
     CLUSTER_RESIZE = ('resize cluster', requests.codes.accepted)
     CLUSTER_UPGRADE_PLAN = ('get supported cluster upgrade paths')
     CLUSTER_UPGRADE = ('upgrade cluster software', requests.codes.accepted)
-    CLUSTER_ACL_LIST = ('list cluster acl')
-    CLUSTER_ACL_UPDATE = ('update cluster acl', requests.codes.no_content)
     NODE_CREATE = ('create node', requests.codes.accepted)
     NODE_DELETE = ('delete node', requests.codes.accepted)
     NODE_INFO = ('get info of node')
@@ -225,6 +223,8 @@ class CseOperation(Enum):
     V35_CLUSTER_RESIZE = ('resize DEF cluster', requests.codes.accepted)
     V35_CLUSTER_UPGRADE_PLAN = ('get supported DEF cluster upgrade paths')
     V35_CLUSTER_UPGRADE = ('upgrade DEF cluster software', requests.codes.accepted)  # noqa: E501
+    V35_CLUSTER_ACL_LIST = ('list cluster acl')
+    V35_CLUSTER_ACL_UPDATE = ('update cluster acl', requests.codes.no_content)
     V35_NODE_CREATE = ('create DEF node', requests.codes.accepted)
     V35_NODE_DELETE = ('delete DEF node', requests.codes.accepted)
     V35_NODE_INFO = ('get info of DEF node')

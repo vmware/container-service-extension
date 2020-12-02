@@ -4,7 +4,6 @@
 import os
 
 import click
-import pyvcloud.vcd.client as vcd_client
 import requests
 from vcd_cli.utils import stderr
 from vcd_cli.utils import stdout
@@ -1031,7 +1030,7 @@ Example
     help="ID of the cluster to share; "
          "ID gets precedence over cluster name.")
 def cluster_share(ctx, name, acl, users, vdc, org, k8_runtime, cluster_id):
-    """Share cluster with users (only supported for vCD api version >= 35).
+    """Share cluster with users.
 
 Either the cluster name or cluster id is required.
 
@@ -1063,13 +1062,6 @@ Examples:
             k8_runtime = shared_constants.ClusterEntityKind.TKG.value
         client = ctx.obj['client']
 
-        # Check api version >= 35
-        api_version = client.get_api_version()
-        if float(api_version) < float(vcd_client.ApiVersion.VERSION_35.value):
-            raise Exception(f'vcd cse cluster share only supported for vcd api'
-                            f'version >= '
-                            f'{vcd_client.ApiVersion.VERSION_35.value}')
-
         cloudapi_client = \
             vcd_utils.get_cloudapi_client_from_vcd_client(
                 client, logger_debug=CLIENT_LOGGER)
@@ -1100,8 +1092,7 @@ Examples:
             tkg_cluster = de_cluster_tkg.DEClusterTKG(client)
             tkg_cluster.share_cluster(cluster_id, users_list, access_level_id)
 
-        stdout(f'Cluster {cluster_id or name} successfully shared with: '
-               f'{users_list}')
+        stdout(f'Cluster {cluster_id} successfully shared with: {users_list}')
 
     except Exception as e:
         stderr(e, ctx)

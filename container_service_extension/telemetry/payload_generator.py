@@ -321,19 +321,19 @@ def get_payload_for_cluster_upgrade_plan(params):
     }
 
 
-def get_payload_for_cluster_acl_list(params):
+def get_payload_for_v35_cluster_acl_list(cluster_id):
     return {
-        PayloadKey.TYPE: CseOperation.CLUSTER_ACL_LIST.telemetry_table,
-        PayloadKey.CLUSTER_ID: uuid_hash(params.get(PayloadKey.CLUSTER_ID)),
-        PayloadKey.QUERY: params.get(PayloadKey.QUERY)
+        PayloadKey.TYPE: CseOperation.V35_CLUSTER_ACL_LIST.telemetry_table,
+        PayloadKey.CLUSTER_ID: uuid_hash(cluster_id),
     }
 
 
-def get_payload_for_cluster_acl_update(params):
+def get_payload_for_v35_cluster_acl_update(update_tuple):
+    cluster_id, update_acl_entries = update_tuple
     return {
-        PayloadKey.TYPE: CseOperation.CLUSTER_ACL_UPDATE.telemetry_table,
-        PayloadKey.CLUSTER_ID: uuid_hash((params.get(PayloadKey.CLUSTER_ID))),
-        PayloadKey.ACCESS_SETTING: params.get(RequestKey.V35_SPEC, {}).get('accessSetting')  # noqa: E501
+        PayloadKey.TYPE: CseOperation.V35_CLUSTER_ACL_UPDATE.telemetry_table,
+        PayloadKey.CLUSTER_ID: uuid_hash(cluster_id),
+        PayloadKey.ACCESS_SETTING: update_acl_entries
     }
 
 

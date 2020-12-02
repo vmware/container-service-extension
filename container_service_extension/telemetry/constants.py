@@ -60,8 +60,6 @@ class CseOperation(Enum):
     CLUSTER_RESIZE = ('cluster resize', 'CLUSTER', 'RESIZE', 'CSE_CLUSTER_RESIZE')  # noqa: E501
     CLUSTER_UPGRADE = ('cluster upgrade', 'CLUSTER', 'UPGRADE', 'CSE_CLUSTER_UPGRADE')  # noqa: E501
     CLUSTER_UPGRADE_PLAN = ('cluster upgrade plan', 'CLUSTER', 'UPGRADE_PLAN', 'CSE_CLUSTER_UPGRADE_PLAN')  # noqa: E501
-    CLUSTER_ACL_LIST = ('cluster acl list', 'CLUSTER', 'ACL_LIST', 'CSE_CLUSTER_ACL_LIST')  # noqa: E501
-    CLUSTER_ACL_UPDATE = ('cluster acl update', 'CLUSTER', 'ACL_UPDATE', 'CSE_CLUSTER_ACL_UPDATE')  # noqa: E501
     NODE_CREATE = ('node create', 'NODE', 'CREATE', 'CSE_NODE_CREATE')
     NODE_DELETE = ('node delete', 'NODE', 'DELETE', 'CSE_NODE_DELETE')
     NODE_INFO = ('node info', 'NODE', 'INFO', 'CSE_NODE_INFO')
@@ -83,6 +81,8 @@ class CseOperation(Enum):
     V35_CLUSTER_DELETE = ('DEF cluster delete', 'CLUSTER', 'V35_DELETE', 'CSE_V35_CLUSTER_DELETE')  # noqa: E501
     V35_CLUSTER_UPGRADE_PLAN = ('DEF cluster upgrade plan', 'CLUSTER', 'V35_UPGRADE_PLAN', 'CSE_V35_CLUSTER_UPGRADE_PLAN')  # noqa: E501
     V35_CLUSTER_UPGRADE = ('DEF cluster upgrade', 'CLUSTER', 'V35_UPGRADE', 'CSE_V35_CLUSTER_UPGRADE')  # noqa: E501
+    V35_CLUSTER_ACL_LIST = ('cluster acl list', 'CLUSTER', 'V35_ACL_LIST', 'CSE_V35_CLUSTER_ACL_LIST')  # noqa: E501
+    V35_CLUSTER_ACL_UPDATE = ('cluster acl update', 'CLUSTER', 'V35_ACL_UPDATE', 'CSE_V35_CLUSTER_ACL_UPDATE')  # noqa: E501
     V35_NODE_DELETE = ('DEF nfs node delete', 'NODE', 'V35_DELETE', 'CSE_V35_NODE_DELETE')  # noqa: E501
 
     # Following operations do not require telemetry details. Hence the VAC
