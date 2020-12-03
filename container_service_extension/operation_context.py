@@ -28,9 +28,6 @@ class OperationContext:
         # request_processor.py
         self.request_id: str = request_id
 
-        # Operation details
-        self.operation = operation
-
     @property
     def client(self):
         if self._client is None:

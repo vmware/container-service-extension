@@ -14,6 +14,7 @@ import container_service_extension.def_.models as def_models
 import container_service_extension.logger as logger
 import container_service_extension.operation_context as ctx
 import container_service_extension.pyvcloud_utils as vcd_utils
+from container_service_extension.server_constants import CseOperation as CseServerOperationInfo  # noqa: E501
 from container_service_extension.shared_constants import ClusterEntityKind
 from container_service_extension.shared_constants import PaginationKey
 from container_service_extension.shared_constants import RequestKey
@@ -148,7 +149,8 @@ def list_ovdc(filters: dict, operation_context: ctx.OperationContext) -> List[di
         # TODO: Find a better way to remove remove_cp_from_vms_on_disable
         del ovdc_details['remove_cp_from_vms_on_disable']
         ovdcs.append(ovdc_details)
-    base_uri = f"{operation_context.client.get_api_uri().strip('/')}{operation_context.operation.api_path_format}"  # noqa: E501
+    api_path = CseServerOperationInfo.V35_OVDC_LIST.api_path_format
+    base_uri = f"{operation_context.client.get_api_uri().strip('/')}{api_path}"
     return utils.get_paginated_response(base_uri, ovdcs, num_results,
                                         page_number=page_number, page_size=page_size)  # noqa: E501
 

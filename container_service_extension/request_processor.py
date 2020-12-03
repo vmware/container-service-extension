@@ -16,6 +16,7 @@ import container_service_extension.operation_context as ctx
 import container_service_extension.request_handlers.native_cluster_handler as native_cluster_handler  # noqa: E501
 import container_service_extension.request_handlers.ovdc_handler as ovdc_handler  # noqa: E501
 import container_service_extension.request_handlers.pks_cluster_handler as pks_cluster_handler  # noqa: E501
+import container_service_extension.request_handlers.pks_ovdc_handler as pks_ovdc_handler  # noqa: E501
 import container_service_extension.request_handlers.system_handler as system_handler  # noqa: E501
 import container_service_extension.request_handlers.template_handler as template_handler  # noqa: E501 E501
 import container_service_extension.request_handlers.v35.def_cluster_handler as v35_cluster_handler # noqa: E501
@@ -132,9 +133,9 @@ OPERATION_TO_HANDLER = {
     CseOperation.PKS_CLUSTER_INFO: pks_cluster_handler.cluster_info,
     CseOperation.PKS_CLUSTER_LIST: pks_cluster_handler.cluster_list,
     CseOperation.PKS_CLUSTER_RESIZE: pks_cluster_handler.cluster_resize,
-    CseOperation.PKS_OVDC_LIST: ovdc_handler.ovdc_list,
-    CseOperation.PKS_OVDC_INFO: ovdc_handler.ovdc_info,
-    CseOperation.PKS_OVDC_UPDATE: ovdc_handler.ovdc_update
+    CseOperation.PKS_OVDC_LIST: pks_ovdc_handler.ovdc_list,
+    CseOperation.PKS_OVDC_INFO: pks_ovdc_handler.ovdc_info,
+    CseOperation.PKS_OVDC_UPDATE: pks_ovdc_handler.ovdc_update
 }
 
 _OPERATION_KEY = 'operation'
@@ -302,8 +303,7 @@ def process_request(message):
     # create operation context
     operation_ctx = ctx.OperationContext(tenant_auth_token,
                                          is_jwt=is_jwt_token,
-                                         request_id=message['id'],
-                                         operation=operation)
+                                         request_id=message['id'])
 
     try:
         body_content = OPERATION_TO_HANDLER[operation](data, operation_ctx)

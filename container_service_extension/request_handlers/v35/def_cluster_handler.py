@@ -7,6 +7,7 @@ import container_service_extension.def_.cluster_service as cluster_svc
 import container_service_extension.def_.models as def_models
 import container_service_extension.operation_context as ctx
 import container_service_extension.request_handlers.request_utils as request_utils  # noqa: E501
+from container_service_extension.server_constants import CseOperation as CseServerOperationInfo  # noqa: E501
 from container_service_extension.shared_constants import CSE_PAGINATION_DEFAULT_PAGE_SIZE  # noqa: E501
 from container_service_extension.shared_constants import CSE_PAGINATION_FIRST_PAGE_NUMBER  # noqa: E501
 from container_service_extension.shared_constants import FlattenedClusterSpecKey  # noqa: E501
@@ -155,7 +156,8 @@ def cluster_list(data: dict, op_ctx: ctx.OperationContext):
                                                        page_number=page_number,
                                                        page_size=page_size)
     cluster_list = [asdict(def_entity) for def_entity in cluster_entities]
-    uri = f"{op_ctx.client.get_api_uri().strip('/')}{op_ctx.operation.api_path_format}"  # noqa: E501
+    api_path = CseServerOperationInfo.V35_CLUSTER_LIST.api_path_format
+    uri = f"{op_ctx.client.get_api_uri().strip('/')}{api_path}"
     return utils.get_paginated_response(uri, cluster_list,
                                         result_total=result_total,
                                         page_number=page_number,
