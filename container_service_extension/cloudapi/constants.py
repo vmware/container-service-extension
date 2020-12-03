@@ -27,5 +27,4 @@ class CloudApiResource(str, Enum):
     RIGHT_BUNDLES = 'rightsBundles'
     ACL = 'accessControls'
     ACTION_CONTROL_ACCESS_PATH = '/action/controlAccess/'
-    ACCESS_LEVEL_URN_BEGIN = 'urn:vcloud:accessLevel:'
     USERS = 'users'
