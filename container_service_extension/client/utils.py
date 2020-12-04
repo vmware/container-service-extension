@@ -3,19 +3,20 @@
 # SPDX-License-Identifier: BSD-2-Clause
 import click
 from pyvcloud.vcd.client import Client
+import pyvcloud.vcd.org as vcd_org
+import pyvcloud.vcd.utils as vcd_utils
 import requests
 import six
 from vcd_cli.profiles import Profiles
 
 from container_service_extension.client import system as syst
 from container_service_extension.client.constants import CSE_SERVER_RUNNING
-import container_service_extension.cloudapi.constants as cloudapi_constants
 import container_service_extension.def_.utils as def_utils
 from container_service_extension.exceptions import CseResponseError
 import container_service_extension.shared_constants as shared_constants
 from container_service_extension.shared_constants import CSE_SERVER_API_VERSION
 from container_service_extension.shared_constants import CSE_SERVER_BUSY_KEY
-from container_service_extension.shared_constants import RequestMethod
+from container_service_extension.utils import extract_id_from_href
 
 _RESTRICT_CLI_TO_TKG_OPERATIONS = False
 
@@ -206,35 +207,35 @@ def filter_columns(result, value_field_to_display_field):
         return filtered_result
 
 
-def get_user_ids(cloudapi_client, users):
+def create_user_name_to_id_dict(client: Client, users_set: set, org_href):
     """Get a dictionary of users to user ids from a list of user names.
 
-    :param cloudApiClient.CloudApiClient cloudapi_client: The current client
-    :param list users: list of user names
+    :param Client client: current client
+    :param set users_set: set of user names
+    :param str org_href: href of the org to search in
 
-    :return: dict of user keys and user id values
+    :return: dict of user name keys and user id values
     :rtype: dict
+    :raise Exception is not all id's are found for users
     """
-    response_body = cloudapi_client.do_request(
-        method=RequestMethod.GET,
-        cloudapi_version=cloudapi_constants.CloudApiVersion.VERSION_1_0_0,
-        resource_url_relative_path='users')
-    if not response_body:
-        return None
+    own_users_set = users_set.copy()
+    org = vcd_org.Org(client, org_href)
+    org_users = org.list_users()
+    user_name_to_id_dict = {}
+    for user_str_elem in org_users:
+        curr_user_dict = vcd_utils.to_dict(user_str_elem, exclude=[])
+        curr_user_name = curr_user_dict['name']
+        if curr_user_name in own_users_set:
+            user_id = extract_id_from_href(curr_user_dict['href'])
+            user_name_to_id_dict[curr_user_name] = shared_constants.USER_URN_BEGIN + user_id  # noqa: E501
+            own_users_set.remove(curr_user_name)
 
-    # Retrieve user ids
-    users_dict = {}
-    users_set = set(users)
-    for user_data in response_body['values']:
-        user_name = user_data['username']
-        if user_name in users_set:
-            users_dict[user_name] = user_data['id']
-            users_set.remove(user_name)
-
-    # Ensure all user ids were found
-    if len(users_set) != 0:
-        raise Exception(f'Could not find user id(s) for: {users_set}')
-    return users_dict
+        # Stop searching if all needed names and ids found
+        if len(own_users_set) == 0:
+            break
+    if len(own_users_set) > 0:
+        raise Exception(f"Not user id's found for: {own_users_set}")
+    return user_name_to_id_dict
 
 
 def access_level_reduced(new_access_urn, curr_access_urn):

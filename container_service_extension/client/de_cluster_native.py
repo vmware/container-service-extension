@@ -272,11 +272,10 @@ class DEClusterNative:
                 self._native_cluster_api.update_cluster_by_cluster_id(cluster_id, cluster_spec)  # noqa: E501
         return client_utils.construct_task_console_message(cluster_entity.entity.status.task_href)  # noqa: E501
 
-    def share_cluster(self, cluster_id, users: list, access_level_id):
-        # parse user id info
-        users_to_ids = client_utils.get_user_ids(self._cloudapi_client, users)
+    def share_cluster(self, cluster_id, user_name_to_id_dict, access_level_id):
+        # Parse user id info
         updated_acl_values = []
-        for user, user_id in users_to_ids.items():
+        for user, user_id in user_name_to_id_dict.items():
             acl_entry = {
                 shared_constants.AccessControlKey.MEMBER_ID: user_id,
                 shared_constants.AccessControlKey.USERNAME: user,
@@ -288,7 +287,7 @@ class DEClusterNative:
         # Only retain entries that are not updated
         curr_acl_values = self._native_cluster_api.get_all_cluster_acl(cluster_id)  # noqa: E501
         for entry in curr_acl_values:
-            if users_to_ids.get(entry[shared_constants.AccessControlKey.USERNAME]):  # noqa: E501
+            if user_name_to_id_dict.get(entry[shared_constants.AccessControlKey.USERNAME]):  # noqa: E501
                 curr_access_level_id = entry[shared_constants.AccessControlKey.ACCESS_LEVEL_ID]  # noqa: E501
                 if client_utils.access_level_reduced(
                         access_level_id, curr_access_level_id):

@@ -1071,18 +1071,32 @@ Examples:
         else:
             # Get cluster id
             cluster_obj = Cluster(client, k8_runtime=k8_runtime)
-            cluster_ent, entity_properties, is_native_cluster = \
-                cluster_obj._get_tkg_native_clusters_by_name(name, org=org,
-                                                             vdc=vdc)
-            cluster_id = cluster_ent.id if is_native_cluster else \
-                entity_properties['id']
+            if type(cluster_obj) == de_cluster_tkg.DEClusterTKG:
+                _, tkg_def_ent = cluster_obj.\
+                    get_tkg_clusters_by_name(name, vdc, org)
+                cluster_id = tkg_def_ent[0]['id']
+                is_native_cluster = False
+            else:
+                cluster_ent, entity_properties, is_native_cluster = \
+                    cluster_obj._get_tkg_native_clusters_by_name(name, org=org,
+                                                                 vdc=vdc)
+                cluster_id = cluster_ent.id if is_native_cluster else \
+                    entity_properties['id']
 
         # Share based on cluster type
-        users_list = list(set(users))  # Remove duplicates and make list
+        users_set = set(users)
+        if org:
+            org_href = client.get_org_by_name(org).get('href')
+        else:
+            ctx_profiles = ctx.obj['profiles']
+            org = ctx_profiles.get('org')
+            org_href = ctx_profiles.get('org_href')
+        user_name_to_id_dict = client_utils.create_user_name_to_id_dict(
+            client, users_set, org_href)
         if is_native_cluster:
             native_cluster = DEClusterNative(client)
             share_response = native_cluster.share_cluster(
-                cluster_id, users_list, access_level_id)
+                cluster_id, user_name_to_id_dict, access_level_id)
             if share_response.status_code != requests.codes.no_content:
                 stdout(f'Cluster sharing failed with response code '
                        f'{share_response.status_code} and reason: '
@@ -1090,9 +1104,10 @@ Examples:
                 return
         else:
             tkg_cluster = de_cluster_tkg.DEClusterTKG(client)
-            tkg_cluster.share_cluster(cluster_id, users_list, access_level_id)
+            tkg_cluster.share_cluster(cluster_id, org, user_name_to_id_dict,
+                                      access_level_id)
 
-        stdout(f'Cluster {name or cluster_id} successfully shared with: {users_list}')  # noqa: E501
+        stdout(f'Cluster {name or cluster_id} successfully shared with: {users_set}')  # noqa: E501
 
     except Exception as e:
         stderr(e, ctx)

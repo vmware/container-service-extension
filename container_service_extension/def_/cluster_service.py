@@ -29,7 +29,6 @@ import container_service_extension.local_template_manager as ltm
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
 import container_service_extension.operation_context as ctx
 import container_service_extension.pyvcloud_utils as vcd_utils
-import container_service_extension.server_constants as server_constants
 from container_service_extension.server_constants import ClusterMetadataKey
 from container_service_extension.server_constants import CSE_CLUSTER_KUBECONFIG_PATH # noqa: E501
 from container_service_extension.server_constants import LocalTemplateKey
@@ -440,10 +439,6 @@ class ClusterService(abstract_broker.AbstractBroker):
         page = query.get('page', shared_constants.DEFAULT_PAGE)
         page_size = query.get('pageSize', shared_constants.DEFAULT_PAGE_SZ)
 
-        # Retrieve defined entity
-        cloudapi_client = vcd_utils.get_cloudapi_client_from_vcd_client(
-            self.context.client)
-
         # Retrieve defined entity ACL
         acl_svc = acl_service.ClusterACLService(cluster_id,
                                                 self.context.client)
@@ -451,12 +446,15 @@ class ClusterService(abstract_broker.AbstractBroker):
             page, page_size)
 
         # Parse RDE ACL
+        curr_entity: def_models.DefEntity = acl_svc.get_cluster_entity()
         de_acl_values = curr_entity_acl_response['values']
         member_acl_list = []
-        user_id_names_dict = utils.get_user_id_names_dict(cloudapi_client)
+        user_id_names_dict = utils.create_org_user_id_to_name_dict(
+            client=self.context.client,
+            org_name=curr_entity.org.name)
         for de_acl_setting in de_acl_values:
             user_id = de_acl_setting[shared_constants.AccessControlKey.MEMBER_ID]  # noqa: E501
-            if not user_id.startswith(server_constants.USER_URN_BEGIN):
+            if not user_id.startswith(shared_constants.USER_URN_BEGIN):
                 continue
             acl_level_id = de_acl_setting[shared_constants.AccessControlKey.ACCESS_LEVEL_ID]  # noqa: E501
             username = user_id_names_dict[user_id]
@@ -480,9 +478,14 @@ class ClusterService(abstract_broker.AbstractBroker):
 
     def update_cluster_acl(self, cluster_id, update_acl_entries: list):
         """Update the cluster ACL by updating the defined entity and vApp ACL."""  # noqa: E501
+        telemetry_params = {
+            shared_constants.RequestKey.CLUSTER_ID: cluster_id,
+            shared_constants.ClusterAclKey.UPDATE_ACL_ENTRIES:
+                update_acl_entries
+        }
         telemetry_handler.record_user_action_details(
             telemetry_constants.CseOperation.V35_CLUSTER_ACL_UPDATE,
-            cse_params=(cluster_id, update_acl_entries))
+            cse_params=telemetry_params)
 
         # Get previous def entity acl
         acl_svc = acl_service.ClusterACLService(cluster_id,

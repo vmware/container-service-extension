@@ -52,6 +52,7 @@ READ_ONLY = 'ReadOnly'
 READ_WRITE = 'ReadWrite'
 FULL_CONTROL = 'FullControl'
 URN_VCLOUD_ACCESS = 'urn:vcloud:accessLevel'
+USER_URN_BEGIN = 'urn:vcloud:user:'
 READ_ONLY_ACCESS_LEVEL_ID = f'{URN_VCLOUD_ACCESS}:{READ_ONLY}'
 READ_WRITE_ACCESS_LEVEL_ID = f'{URN_VCLOUD_ACCESS}:{READ_WRITE}'
 FULL_CONTROL_ACCESS_LEVEL_ID = f'{URN_VCLOUD_ACCESS}:{FULL_CONTROL}'
@@ -208,6 +209,7 @@ class PaginatedDataKey(str, Enum):
 @unique
 class ClusterAclKey(str, Enum):
     ACCESS_SETTING = 'accessSetting'
+    UPDATE_ACL_ENTRIES = 'update_acl_entries'
 
 
 @dataclass

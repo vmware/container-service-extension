@@ -362,10 +362,17 @@ class DEClusterTKG:
         raise NotImplementedError(
             "Cluster upgrade not supported for TKG clusters")
 
-    def share_cluster(self, cluster_id, users: list, access_level_id):
+    def share_cluster(self, cluster_id, org, update_user_name_to_id_dict,
+                      access_level_id):
+        """Share the cluster with the users in user_name_to_id_dict.
+
+        :param str cluster_id: cluster_id
+        :param str org: name of the org where the users are
+        :param dict update_user_name_to_id_dict: dict mapping user names to ids
+        :param str access_level_id: access level id of shared users
+        """
         cloudapi_client = \
             vcd_utils.get_cloudapi_client_from_vcd_client(self._client)
-        user_to_id = client_utils.get_user_ids(cloudapi_client, users)
         access_controls_path = f'entities/{cluster_id}/accessControls'
 
         # Ensure current cluster user access level is not reduced
@@ -373,11 +380,12 @@ class DEClusterTKG:
             method=shared_constants.RequestMethod.GET,
             cloudapi_version=cloudapi_constants.CloudApiVersion.VERSION_1_0_0,
             resource_url_relative_path=access_controls_path)
-        id_to_user = utils.get_user_id_names_dict(cloudapi_client)
+        org_user_id_to_name_dict = utils.create_org_user_id_to_name_dict(
+            self._client, org)
         for curr_acl_info in curr_access_control_body.get('values'):
-            username = id_to_user.get(
+            username = org_user_id_to_name_dict.get(
                 curr_acl_info[shared_constants.AccessControlKey.MEMBER_ID])
-            if user_to_id.get(username):
+            if update_user_name_to_id_dict.get(username):
                 curr_access_level = curr_acl_info[shared_constants.AccessControlKey.ACCESS_LEVEL_ID]  # noqa: E501
                 if client_utils.access_level_reduced(access_level_id,
                                                      curr_access_level):
@@ -391,7 +399,7 @@ class DEClusterTKG:
                 access_level_id,
             shared_constants.AccessControlKey.MEMBER_ID: None
         }
-        for _, user_id in user_to_id.items():
+        for _, user_id in update_user_name_to_id_dict.items():
             payload[shared_constants.AccessControlKey.MEMBER_ID] = user_id
             cloudapi_client.do_request(
                 method=shared_constants.RequestMethod.POST,

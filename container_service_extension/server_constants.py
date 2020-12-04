@@ -86,7 +86,6 @@ REQUEST_ID_FORMAT = 'Request Id: %(requestId)s | '
 
 # User ID parsing
 USER_PATH = '/user/'
-USER_URN_BEGIN = 'urn:vcloud:user:'
 ADMIN_USER_PATH = '/admin/user/'
 
 # vApp Access control type

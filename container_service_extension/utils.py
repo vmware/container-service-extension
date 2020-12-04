@@ -14,10 +14,12 @@ import urllib
 
 import click
 import pkg_resources
+import pyvcloud.vcd.client as vcd_client
+import pyvcloud.vcd.org as vcd_org
+import pyvcloud.vcd.utils as vcd_utils
 import requests
 import semantic_version
 
-import container_service_extension.cloudapi.constants as cloudapi_constants
 from container_service_extension.logger import NULL_LOGGER
 import container_service_extension.server_constants as server_constants
 import container_service_extension.shared_constants as shared_constants
@@ -470,24 +472,40 @@ def construct_filter_string(filters: dict):
     return filter_string
 
 
-def get_user_id_names_dict(cloudapi_client):
+def create_org_user_id_to_name_dict(client: vcd_client.Client, org_name):
     """Get a dictionary of users ids to user names.
 
-    :param cloudApiClient.CloudApiClient cloudapi_client: The current client
+    :param vcd_client.Client client: current client
+    :param str org_name: org name to search for users
 
     :return: dict of user id keys and user name values
     :rtype: dict
     """
-    response_body = cloudapi_client.do_request(
-        method=shared_constants.RequestMethod.GET,
-        cloudapi_version=cloudapi_constants.CloudApiVersion.VERSION_1_0_0,
-        resource_url_relative_path=cloudapi_constants.CloudApiResource.USERS)
-    if not response_body:
+    org_href = client.get_org_by_name(org_name).get('href')
+    org = vcd_org.Org(client, org_href)
+    users: list = org.list_users()
+    user_id_to_name_dict = {}
+    for user_str_elem in users:
+        curr_user_dict = vcd_utils.to_dict(user_str_elem, exclude=[])
+        user_name = curr_user_dict['name']
+        user_urn = shared_constants.USER_URN_BEGIN + \
+            extract_id_from_href(curr_user_dict['href'])
+        user_id_to_name_dict[user_urn] = user_name
+
+    return user_id_to_name_dict
+
+
+def extract_id_from_href(href):
+    """Extract id from an href.
+
+    'https://vmware.com/api/admin/user/123456' will return 123456
+
+    :param str href: an href
+
+    :return: id
+    """
+    if not href:
         return None
-
-    # Retrieve user ids
-    user_id_names_dict = {}
-    for user_data in response_body['values']:
-        user_id_names_dict[user_data['id']] = user_data['username']
-
-    return user_id_names_dict
+    if '/' in href:
+        return href.split('/')[-1]
+    return href

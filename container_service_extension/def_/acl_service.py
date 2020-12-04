@@ -149,7 +149,7 @@ class ClusterACLService:
                 user_id = get_id_from_user_href(shared_href)
 
                 # Don't add current access setting if it will be updated
-                user_urn = f'{server_constants.USER_URN_BEGIN}{user_id}'
+                user_urn = f'{shared_constants.USER_URN_BEGIN}{user_id}'
                 if not updated_user_acl_level_dict.get(user_urn):
                     user_name = child_obj_attrib.get('name')
 
@@ -195,6 +195,9 @@ class ClusterACLService:
             uri=f'{self.vapp.href}{cloudapi_constants.CloudApiResource.ACTION_CONTROL_ACCESS_PATH}',  # noqa: E501
             contents=vapp_share_contents,
             media_type='application/*+json')
+
+    def get_cluster_entity(self):
+        return self.def_entity
 
 
 def form_cluster_acl_entry(user_urn, username, access_level_urn):

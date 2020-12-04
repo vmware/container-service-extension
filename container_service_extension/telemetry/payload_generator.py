@@ -5,6 +5,8 @@ import pyvcloud.vcd.utils as pyvcd_utils
 
 from container_service_extension.def_.models import DefEntity
 from container_service_extension.server_constants import LocalTemplateKey
+from container_service_extension.shared_constants import AccessControlKey
+from container_service_extension.shared_constants import ClusterAclKey
 from container_service_extension.shared_constants import RequestKey
 from container_service_extension.telemetry.constants import CseOperation
 from container_service_extension.telemetry.constants import PayloadKey
@@ -328,12 +330,22 @@ def get_payload_for_v35_cluster_acl_list(cluster_id):
     }
 
 
-def get_payload_for_v35_cluster_acl_update(update_tuple):
-    cluster_id, update_acl_entries = update_tuple
+def get_payload_for_v35_cluster_acl_update(cluster_update_info: dict):
+    cluster_id = cluster_update_info[RequestKey.CLUSTER_ID]
+    update_acl_entries: list = cluster_update_info[ClusterAclKey.UPDATE_ACL_ENTRIES]  # noqa: E501
+
+    # Remove username from being sent
+    filtered_acl_entries = []
+    for entry in update_acl_entries:
+        filtered_entry = {
+            AccessControlKey.MEMBER_ID: entry[AccessControlKey.MEMBER_ID],
+            AccessControlKey.ACCESS_LEVEL_ID: entry[AccessControlKey.ACCESS_LEVEL_ID]  # noqa: E501
+        }
+        filtered_acl_entries.append(filtered_entry)
     return {
         PayloadKey.TYPE: CseOperation.V35_CLUSTER_ACL_UPDATE.telemetry_table,
         PayloadKey.CLUSTER_ID: uuid_hash(cluster_id),
-        PayloadKey.ACCESS_SETTING: update_acl_entries
+        PayloadKey.ACCESS_SETTING: filtered_acl_entries
     }
 
 
