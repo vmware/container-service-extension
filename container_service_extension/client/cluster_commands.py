@@ -1033,6 +1033,9 @@ def cluster_share(ctx, name, acl, users, vdc, org, k8_runtime, cluster_id):
     """Share cluster with users.
 
 Either the cluster name or cluster id is required.
+By default, this command searches for the cluster in the currently logged in user's org.
+
+Note: this command does not remove an ACL entry.
 
 \b
 Examples:
@@ -1070,13 +1073,14 @@ Examples:
             is_native_cluster = de_svc.is_native_entity(cluster_id)
         else:
             # Get cluster id
-            cluster_obj = Cluster(client, k8_runtime=k8_runtime)
-            if type(cluster_obj) == de_cluster_tkg.DEClusterTKG:
-                _, tkg_def_ent = cluster_obj.\
+            if k8_runtime == shared_constants.ClusterEntityKind.TKG.value:
+                tkg_cluster_obj = de_cluster_tkg.DEClusterTKG(client)
+                _, tkg_def_ent = tkg_cluster_obj.\
                     get_tkg_clusters_by_name(name, vdc, org)
                 cluster_id = tkg_def_ent[0]['id']
                 is_native_cluster = False
             else:
+                cluster_obj = Cluster(client)
                 cluster_ent, entity_properties, is_native_cluster = \
                     cluster_obj._get_tkg_native_clusters_by_name(name, org=org,
                                                                  vdc=vdc)

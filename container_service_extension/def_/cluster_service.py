@@ -429,15 +429,16 @@ class ClusterService(abstract_broker.AbstractBroker):
                                     template=template)
         return curr_entity
 
-    def get_cluster_acl_info(self, cluster_id, query: dict):
+    def get_cluster_acl_info(self, cluster_id, page: str, page_size: str):
         """Get cluster ACL info based on the defined entity ACL."""
+        telemetry_params = {
+            shared_constants.RequestKey.CLUSTER_ID: cluster_id,
+            shared_constants.PAGE: page,
+            shared_constants.PAGE_SIZE: page_size
+        }
         telemetry_handler.record_user_action_details(
             telemetry_constants.CseOperation.V35_CLUSTER_ACL_LIST,
-            cse_params=cluster_id)
-
-        # Get page params
-        page = query.get('page', shared_constants.DEFAULT_PAGE)
-        page_size = query.get('pageSize', shared_constants.DEFAULT_PAGE_SZ)
+            cse_params=telemetry_params)
 
         # Retrieve defined entity ACL
         acl_svc = acl_service.ClusterACLService(cluster_id,

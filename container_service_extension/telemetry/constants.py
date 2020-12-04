@@ -158,6 +158,8 @@ class PayloadKey(str, Enum):
     WERE_TEMPLATES_SKIPPED = 'were_templates_skipped'
     QUERY = 'query_filter'
     ACCESS_SETTING = 'access_setting'
+    PAGE = 'page'
+    PAGE_SIZE = 'page_size'
 
 
 @unique

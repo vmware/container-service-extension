@@ -101,7 +101,7 @@ class NativeClusterApi(CseClient):
 
     def get_single_page_cluster_acl(self, cluster_id,
                                     page=shared_constants.DEFAULT_PAGE,
-                                    page_size=shared_constants.DEFAULT_PAGE_SZ):  # noqa: E501
+                                    page_size=shared_constants.DEFAULT_PAGE_SIZE):  # noqa: E501
         query_uri = f'{self._cluster_uri}/{cluster_id}/acl?' \
                     f'{shared_constants.PAGE}={page}&' \
                     f'{shared_constants.PAGE_SIZE}={page_size}'
@@ -120,7 +120,7 @@ class NativeClusterApi(CseClient):
             acl_response = self.get_single_page_cluster_acl(
                 cluster_id=cluster_id,
                 page=curr_page + 1,
-                page_size=shared_constants.DEFAULT_PAGE_SZ)
+                page_size=shared_constants.DEFAULT_PAGE_SIZE)
 
             curr_acl_values = acl_response.get('values')
             if acl_values:

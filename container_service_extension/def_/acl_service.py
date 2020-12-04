@@ -54,7 +54,7 @@ class ClusterACLService:
         while curr_page < page_cnt:
             query_str = f'?{shared_constants.PAGE}={curr_page + 1}' \
                         f'&{shared_constants.PAGE_SIZE}=' \
-                        f'{shared_constants.DEFAULT_PAGE_SZ}'
+                        f'{shared_constants.DEFAULT_PAGE_SIZE}'
             de_acl_response: dict = self._cloudapi_client.do_request(
                 method=shared_constants.RequestMethod.GET,
                 cloudapi_version=cloudapi_constants.CLOUDAPI_VERSION_1_0_0,

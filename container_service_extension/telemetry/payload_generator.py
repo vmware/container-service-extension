@@ -5,6 +5,7 @@ import pyvcloud.vcd.utils as pyvcd_utils
 
 from container_service_extension.def_.models import DefEntity
 from container_service_extension.server_constants import LocalTemplateKey
+import container_service_extension.shared_constants as shared_constants
 from container_service_extension.shared_constants import AccessControlKey
 from container_service_extension.shared_constants import ClusterAclKey
 from container_service_extension.shared_constants import RequestKey
@@ -323,16 +324,21 @@ def get_payload_for_cluster_upgrade_plan(params):
     }
 
 
-def get_payload_for_v35_cluster_acl_list(cluster_id):
+def get_payload_for_v35_cluster_acl_list(cluster_acl_list_info):
+    cluster_id = cluster_acl_list_info[RequestKey.CLUSTER_ID]
+    page = cluster_acl_list_info[shared_constants.PAGE]
+    page_size = cluster_acl_list_info[shared_constants.PAGE_SIZE]
     return {
         PayloadKey.TYPE: CseOperation.V35_CLUSTER_ACL_LIST.telemetry_table,
         PayloadKey.CLUSTER_ID: uuid_hash(cluster_id),
+        PayloadKey.PAGE: page,
+        PayloadKey.PAGE_SIZE: page_size
     }
 
 
-def get_payload_for_v35_cluster_acl_update(cluster_update_info: dict):
-    cluster_id = cluster_update_info[RequestKey.CLUSTER_ID]
-    update_acl_entries: list = cluster_update_info[ClusterAclKey.UPDATE_ACL_ENTRIES]  # noqa: E501
+def get_payload_for_v35_cluster_acl_update(cluster_acl_update_info: dict):
+    cluster_id = cluster_acl_update_info[RequestKey.CLUSTER_ID]
+    update_acl_entries: list = cluster_acl_update_info[ClusterAclKey.UPDATE_ACL_ENTRIES]  # noqa: E501
 
     # Remove username from being sent
     filtered_acl_entries = []

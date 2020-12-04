@@ -7,6 +7,7 @@ import container_service_extension.def_.cluster_service as cluster_svc
 import container_service_extension.def_.models as def_models
 import container_service_extension.operation_context as ctx
 import container_service_extension.request_handlers.request_utils as request_utils  # noqa: E501
+import container_service_extension.shared_constants as shared_constants
 from container_service_extension.shared_constants import ClusterAclKey
 from container_service_extension.shared_constants import FlattenedClusterSpecKey  # noqa: E501
 from container_service_extension.shared_constants import RequestKey
@@ -148,7 +149,9 @@ def cluster_acl_info(data: dict, op_ctx: ctx.OperationContext):
     svc = cluster_svc.ClusterService(op_ctx)
     cluster_id = data[RequestKey.CLUSTER_ID]
     query = data.get(RequestKey.V35_QUERY, {})
-    acl_info_response = svc.get_cluster_acl_info(cluster_id, query)
+    page = query.get('page', shared_constants.DEFAULT_PAGE)
+    page_size = query.get('pageSize', shared_constants.DEFAULT_PAGE_SIZE)
+    acl_info_response = svc.get_cluster_acl_info(cluster_id, page, page_size)
     return acl_info_response
 
 
