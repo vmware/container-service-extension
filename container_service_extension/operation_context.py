@@ -8,7 +8,7 @@ import container_service_extension.utils as utils
 
 
 class OperationContext:
-    def __init__(self, auth_token, is_jwt=True, request_id=None, operation=None):  # noqa: E501
+    def __init__(self, auth_token, is_jwt=True, request_id=None):  # noqa: E501
         self._auth_token: str = auth_token
         self._is_jwt: bool = is_jwt
 

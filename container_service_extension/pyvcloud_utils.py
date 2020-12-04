@@ -536,22 +536,29 @@ def get_all_ovdcs(client: vcd_client.Client):
     return list(query.execute())
 
 
-def create_cse_page_uri(client: vcd_client.Client, path: str, vcd_uri=None, query_params={}):  # noqa: E501
+def create_cse_page_uri(client: vcd_client.Client, cse_path: str, vcd_uri=None, query_params={}):  # noqa: E501
     """Create a CSE URI equivalent to the VCD uri.
 
     :param vcd_client.Client client:
     :param str path:
     :param str vcd_uri:
     :param dict query_params
-    """
+
+    Example: To convert a vCD generated Next page URI to CSE server next page
+        url:
+        create_cse_page_uri(client, cse_path="/cse/3.0/ovdcs",
+                            vcd_uri="https://vcd-ip/api/query?type=orgVdcs?page=2&pageSize=25)
+        Output:
+            https://vcd-ip/api/cse/3.0/ovdcs?page=2&pageSize=25
+    """  # noqa: E501
     if vcd_uri:
-        base_uri = f"{client.get_api_uri().strip('/')}{path}"  # noqa: E501
+        base_uri = f"{client.get_api_uri().strip('/')}{cse_path}"
         query_dict = dict(urllib.parse.parse_qsl(urllib.parse.urlsplit(vcd_uri).query))  # noqa: E501
         page_number = int(query_dict.get(PaginationKey.PAGE_NUMBER))
         page_size = int(query_dict.get(PaginationKey.PAGE_SIZE))
         cse_uri = f"{base_uri}?page={page_number}&pageSize={page_size}"
-        for q in query_params:
-            cse_uri += f"&{q}={query_params[q]}"
+        for key, value in query_params.items():
+            cse_uri += f"&{key}={value}"
         return cse_uri
 
 
