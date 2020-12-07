@@ -57,6 +57,7 @@ class PolicyBasedOvdc:
                 runtimes.remove(k)
         updated_ovdc = def_models.Ovdc(
             k8s_runtime=runtimes,
+            org_name=org_name,
             remove_cp_from_vms_on_disable=remove_cp_from_vms_on_disable)
         return self._ovdc_api.update_ovdc(ovdc_id, updated_ovdc)
 
