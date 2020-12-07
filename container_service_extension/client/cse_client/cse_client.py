@@ -12,7 +12,7 @@ class CseClient:
     def __init__(self, client: vcd_client.Client):
         self._client = client
         self._uri = self._client.get_api_uri()
-        self._request_page_size = 3
+        self._request_page_size = 25
 
     def iterate_results(self, base_url, filters={}):
         """Iterate over paginated response until all the results are obtained.
@@ -22,7 +22,20 @@ class CseClient:
         :returns: Generator which yields values and a boolean indicating if
             more results are present
         :rtype: Generator[(List[dict], bool), None, None]
-        """
+
+        page and pageSize is not needed if iteration should start from the
+        first page.
+
+        Example: Iterating through all the pages for get cluster
+            (/cse/3.0/clusters) response from CSE server:
+                self.iterate_results("https://vcd-api/api/cse/3.0/clusters")
+
+        Example: Iterating through all the pages for get cluster starting from
+            page 3:
+                self.iterate_results("https://vcd-ip/api/cse/3.0/clusters?page=3&pageSize=25")
+        """  # noqa: E501
+        # NOTE: This method is added here to reduce dependency between
+        # cse_client package and the rest of the code.
         url = base_url
         while url:
             response = self._client._do_request_prim(

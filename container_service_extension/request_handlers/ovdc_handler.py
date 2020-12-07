@@ -144,16 +144,16 @@ def ovdc_list(request_data, op_ctx: ctx.OperationContext):
     api_path = CseServerOperationInfo.OVDC_LIST.api_path_format
     next_page_uri = vcd_utils.create_cse_page_uri(op_ctx.client,
                                                   api_path,
-                                                  vcd_uri=next_page_uri)  # noqa: E501
+                                                  vcd_uri=next_page_uri)
     prev_page_uri = vcd_utils.create_cse_page_uri(op_ctx.client,
                                                   api_path,
-                                                  vcd_uri=prev_page_uri)  # noqa: E501
-    return utils.get_paginated_response_using_results(values=ovdcs,
-                                                      result_total=result_total,  # noqa: E501
-                                                      page_number=page_number,
-                                                      page_size=page_size,
-                                                      next_page_uri=next_page_uri,  # noqa: E501
-                                                      prev_page_uri=prev_page_uri)  # noqa: E501
+                                                  vcd_uri=prev_page_uri)
+    return utils.construct_paginated_response(values=ovdcs,
+                                              result_total=result_total,
+                                              page_number=page_number,
+                                              page_size=page_size,
+                                              next_page_uri=next_page_uri,
+                                              prev_page_uri=prev_page_uri)
 
 
 @record_user_action_telemetry(cse_operation=CseOperation.OVDC_COMPUTE_POLICY_LIST)  # noqa: E501

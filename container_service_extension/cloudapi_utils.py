@@ -7,6 +7,7 @@ from container_service_extension.cloudapi.constants import CloudApiResource
 from container_service_extension.cloudapi.constants import CloudApiVersion
 from container_service_extension.shared_constants import CSE_PAGINATION_DEFAULT_PAGE_SIZE  # noqa: E501
 from container_service_extension.shared_constants import CSE_PAGINATION_FIRST_PAGE_NUMBER  # noqa: E501
+from container_service_extension.shared_constants import PaginationKey
 from container_service_extension.shared_constants import RequestMethod
 
 
@@ -24,4 +25,7 @@ def get_vdcs_by_page(cloudapi_client: CloudApiClient,
     resp = cloudapi_client.do_request(method=RequestMethod.GET,
                                       cloudapi_version=CloudApiVersion.VERSION_1_0_0,  # noqa: E501
                                       resource_url_relative_path=f"{CloudApiResource.VDCS}?{filter_string}")  # noqa: E501
-    return resp['values'], resp['resultTotal']
+    result = {}
+    result[PaginationKey.VALUES] = resp['values']
+    result[PaginationKey.RESULT_TOTAL] = int(resp['resultTotal'])
+    return result

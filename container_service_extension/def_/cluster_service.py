@@ -78,7 +78,7 @@ class ClusterService(abstract_broker.AbstractBroker):
 
     def list_clusters(self, filters: dict = {},
                       page_number=CSE_PAGINATION_FIRST_PAGE_NUMBER,
-                      page_size=CSE_PAGINATION_DEFAULT_PAGE_SIZE):
+                      page_size=CSE_PAGINATION_DEFAULT_PAGE_SIZE) -> dict:
         """List corresponding defined entities of all native clusters."""
         telemetry_handler.record_user_action_details(
             cse_operation=telemetry_constants.CseOperation.V35_CLUSTER_LIST,

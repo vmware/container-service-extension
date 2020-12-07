@@ -231,9 +231,9 @@ def ovdc_list(request_data, op_ctx: ctx.OperationContext):
     prev_page_uri = vcd_utils.create_cse_page_uri(op_ctx.client,
                                                   api_path,
                                                   vcd_uri=prev_page_uri)
-    return utils.get_paginated_response_using_results(values=ovdcs,
-                                                      result_total=result_total,  # noqa: E501
-                                                      page_number=page_number,
-                                                      page_size=page_size,
-                                                      next_page_uri=next_page_uri,  # noqa: E501
-                                                      prev_page_uri=prev_page_uri)  # noqa: E501
+    return utils.construct_paginated_response(values=ovdcs,
+                                              result_total=result_total,
+                                              page_number=page_number,
+                                              page_size=page_size,
+                                              next_page_uri=next_page_uri,
+                                              prev_page_uri=prev_page_uri)

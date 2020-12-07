@@ -152,17 +152,19 @@ def cluster_list(data: dict, op_ctx: ctx.OperationContext):
         del filters[PaginationKey.PAGE_NUMBER]
     if PaginationKey.PAGE_SIZE in filters:
         del filters[PaginationKey.PAGE_SIZE]
-    cluster_entities, result_total = svc.list_clusters(filters=filters,
-                                                       page_number=page_number,
-                                                       page_size=page_size)
-    cluster_list = [asdict(def_entity) for def_entity in cluster_entities]
+    result = svc.list_clusters(filters=filters,
+                               page_number=page_number,
+                               page_size=page_size)
+    cluster_list = [asdict(def_entity) for def_entity in result[PaginationKey.VALUES]]  # noqa: E501
     api_path = CseServerOperationInfo.V35_CLUSTER_LIST.api_path_format
     uri = f"{op_ctx.client.get_api_uri().strip('/')}{api_path}"
-    return utils.get_paginated_response(uri, cluster_list,
-                                        result_total=result_total,
-                                        page_number=page_number,
-                                        page_size=page_size,
-                                        query_params=filters)
+    return utils.create_links_and_construct_paginated_result(
+        uri,
+        cluster_list,
+        result_total=result[PaginationKey.RESULT_TOTAL],
+        page_number=page_number,
+        page_size=page_size,
+        query_params=filters)
 
 
 @request_utils.v35_api_exception_handler

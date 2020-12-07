@@ -3,7 +3,6 @@
 # SPDX-License-Identifier: BSD-2-Clause
 # import copy
 from dataclasses import asdict
-from typing import List
 
 import pyvcloud.vcd.client as vcd_client
 import pyvcloud.vcd.task as vcd_task
@@ -14,8 +13,9 @@ import container_service_extension.def_.models as def_models
 import container_service_extension.logger as logger
 import container_service_extension.operation_context as ctx
 import container_service_extension.pyvcloud_utils as vcd_utils
-from container_service_extension.server_constants import CseOperation as CseServerOperationInfo  # noqa: E501
 from container_service_extension.shared_constants import ClusterEntityKind
+from container_service_extension.shared_constants import CSE_PAGINATION_DEFAULT_PAGE_SIZE  # noqa: E501
+from container_service_extension.shared_constants import CSE_PAGINATION_FIRST_PAGE_NUMBER  # noqa: E501
 from container_service_extension.shared_constants import PaginationKey
 from container_service_extension.shared_constants import RequestKey
 from container_service_extension.shared_constants import RUNTIME_DISPLAY_NAME_TO_INTERNAL_NAME_MAP  # noqa: E501
@@ -114,12 +114,14 @@ def get_ovdc(operation_context: ctx.OperationContext, ovdc_id: str) -> dict:
     return result
 
 
-def list_ovdc(filters: dict, operation_context: ctx.OperationContext) -> List[dict]:  # noqa: E501
+def list_ovdc(operation_context: ctx.OperationContext,
+              page_number=CSE_PAGINATION_FIRST_PAGE_NUMBER,
+              page_size=CSE_PAGINATION_DEFAULT_PAGE_SIZE) -> dict:
     """List all ovdc and their k8s runtimes.
 
     :param ctx.OperationContext operation_context: context for the request
-    :return: list of dictionary containing details about the ovdc
-    :rtype: List[dict]
+    :return: dictionary containing list of details about the ovdc
+    :rtype: dict
     """
     # NOTE: For CSE 3.0, if `enable_tkg_plus` flag in config is set to false,
     # Prevent showing information about TKG+ by skipping TKG+ from the result.
@@ -128,11 +130,11 @@ def list_ovdc(filters: dict, operation_context: ctx.OperationContext) -> List[di
                                                  cse_params={})
 
     ovdcs = []
-    page_number = int(filters.get(PaginationKey.PAGE_NUMBER, 1))
-    page_size = int(filters.get(PaginationKey.PAGE_SIZE, 25))
-    org_vdcs, num_results = cloudapi_utils.get_vdcs_by_page(
+    result = cloudapi_utils.get_vdcs_by_page(
         operation_context.cloudapi_client,
         page_number=page_number, page_size=page_size)
+    org_vdcs = result[PaginationKey.VALUES]
+    num_results = result[PaginationKey.RESULT_TOTAL]
     for ovdc in org_vdcs:
         ovdc_name = ovdc.get('name')
         config = utils.get_server_runtime_config()
@@ -149,10 +151,10 @@ def list_ovdc(filters: dict, operation_context: ctx.OperationContext) -> List[di
         # TODO: Find a better way to remove remove_cp_from_vms_on_disable
         del ovdc_details['remove_cp_from_vms_on_disable']
         ovdcs.append(ovdc_details)
-    api_path = CseServerOperationInfo.V35_OVDC_LIST.api_path_format
-    base_uri = f"{operation_context.client.get_api_uri().strip('/')}{api_path}"
-    return utils.get_paginated_response(base_uri, ovdcs, num_results,
-                                        page_number=page_number, page_size=page_size)  # noqa: E501
+    return {
+        PaginationKey.RESULT_TOTAL: num_results,
+        PaginationKey.VALUES: ovdcs
+    }
 
 
 def get_ovdc_k8s_runtime_details(sysadmin_client: vcd_client.Client,

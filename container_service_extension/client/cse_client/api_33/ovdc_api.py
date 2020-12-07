@@ -16,9 +16,9 @@ class OvdcApi(CseClient):
         self._ovdcs_uri = f"{self._uri}/ovdcs"
         self._ovdc_uri = f"{self._uri}/ovdc"
 
-    def get_all_ovdcs(self, filters={}):
+    def get_all_ovdcs(self):
         url = f"{self._ovdcs_uri}?pageSize={self._request_page_size}"
-        return self.iterate_results(url, filters=filters)
+        return self.iterate_results(url)
 
     def get_ovdc(self, ovdc_id):
         uri = f"{self._ovdc_uri}/{ovdc_id}"

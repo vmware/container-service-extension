@@ -471,11 +471,11 @@ def construct_filter_string(filters: dict):
     return filter_string
 
 
-def get_paginated_response_using_results(values, result_total,
-                                         page_number=CSE_PAGINATION_FIRST_PAGE_NUMBER,  # noqa: E501
-                                         page_size=CSE_PAGINATION_DEFAULT_PAGE_SIZE,  # noqa: E501
-                                         next_page_uri=None,
-                                         prev_page_uri=None):
+def construct_paginated_response(values, result_total,
+                                 page_number=CSE_PAGINATION_FIRST_PAGE_NUMBER,  # noqa: E501
+                                 page_size=CSE_PAGINATION_DEFAULT_PAGE_SIZE,  # noqa: E501
+                                 next_page_uri=None,
+                                 prev_page_uri=None):
     resp = {
         PaginationKey.VALUES: values,
         PaginationKey.RESULT_TOTAL: result_total,
@@ -489,10 +489,10 @@ def get_paginated_response_using_results(values, result_total,
     return resp
 
 
-def get_paginated_response(base_uri, values, result_total,
-                           page_number=CSE_PAGINATION_FIRST_PAGE_NUMBER,
-                           page_size=CSE_PAGINATION_DEFAULT_PAGE_SIZE,
-                           query_params={}):
+def create_links_and_construct_paginated_result(base_uri, values, result_total,
+                                                page_number=CSE_PAGINATION_FIRST_PAGE_NUMBER,  # noqa: E501
+                                                page_size=CSE_PAGINATION_DEFAULT_PAGE_SIZE,  # noqa: E501
+                                                query_params={}):
     next_page_uri: str = None
     if page_number * page_size < result_total:
         # TODO find a way to get the initial url part
@@ -511,9 +511,9 @@ def get_paginated_response(base_uri, values, result_total,
         next_page_uri += f"&{q}={query_params[q]}"
         prev_page_uri += f"&{q}={query_params[q]}"
 
-    return get_paginated_response_using_results(values=values,
-                                                result_total=result_total,
-                                                page_number=page_number,
-                                                page_size=page_size,
-                                                next_page_uri=next_page_uri,
-                                                prev_page_uri=prev_page_uri)
+    return construct_paginated_response(values=values,
+                                        result_total=result_total,
+                                        page_number=page_number,
+                                        page_size=page_size,
+                                        next_page_uri=next_page_uri,
+                                        prev_page_uri=prev_page_uri)

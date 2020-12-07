@@ -19,7 +19,7 @@ import container_service_extension.def_.utils as def_utils
 import container_service_extension.exceptions as cse_exception
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
 from container_service_extension.minor_error_codes import MinorErrorCode
-from container_service_extension.shared_constants import CSE_PAGINATION_DEFAULT_PAGE_SIZE  # noqa: E501
+from container_service_extension.shared_constants import CSE_PAGINATION_DEFAULT_PAGE_SIZE, PaginationKey  # noqa: E501
 from container_service_extension.shared_constants import CSE_PAGINATION_FIRST_PAGE_NUMBER  # noqa: E501
 from container_service_extension.shared_constants import RequestMethod
 import container_service_extension.utils as utils
@@ -147,11 +147,13 @@ class DefEntityService():
             resource_url_relative_path=f"{CloudApiResource.ENTITIES}/"
                                        f"{CloudApiResource.ENTITY_TYPES_TOKEN}/"  # noqa: E501
                                        f"{vendor}/{nss}/{version}?{query_string}")  # noqa: E501
-        result_total = int(response_body['resultTotal'])
+        result = {}
         entity_list = []
         for v in response_body['values']:
             entity_list.append(DefEntity(**v))
-        return entity_list, result_total
+        result[PaginationKey.RESULT_TOTAL] = int(response_body['resultTotal'])
+        result[PaginationKey.VALUES] = entity_list
+        return result
 
     @handle_entity_service_exception
     def list_entities_by_interface(self, vendor: str, nss: str, version: str):

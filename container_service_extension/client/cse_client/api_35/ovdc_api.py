@@ -19,6 +19,7 @@ class OvdcApi(CseClient):
                     f"{shared_constants.CSE_3_0_URL_FRAGMENT}"
         self._ovdcs_uri = f"{self._uri}/ovdcs"
         self._ovdc_uri = f"{self._uri}/ovdc"
+        self._request_page_size = 5
 
     def get_all_ovdcs(self):
         """Iterate over all the get ovdc response page by page.
