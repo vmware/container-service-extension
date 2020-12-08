@@ -13,7 +13,6 @@ from container_service_extension.client.tkgclient.configuration import Configura
 from container_service_extension.client.tkgclient.models.tkg_cluster import TkgCluster  # noqa: E501
 import container_service_extension.client.tkgclient.rest as tkg_rest
 import container_service_extension.client.utils as client_utils
-import container_service_extension.cloudapi.constants as cloudapi_constants
 import container_service_extension.def_.acl_service as cluster_acl_svc
 from container_service_extension.def_.utils import DEF_TKG_ENTITY_TYPE_NSS
 from container_service_extension.def_.utils import DEF_TKG_ENTITY_TYPE_VERSION
@@ -372,12 +371,6 @@ class DEClusterTKG:
         :param dict update_user_name_to_id_dict: dict mapping user names to ids
         :param str access_level_id: access level id of shared users
         """
-        cloudapi_client = \
-            vcd_utils.get_cloudapi_client_from_vcd_client(self._client)
-        access_controls_path = \
-            f'{cloudapi_constants.CloudApiResource.ENTITIES}/' \
-            f'{cluster_id}/{cloudapi_constants.CloudApiResource.ACL}'
-
         # Ensure current cluster user access level is not reduced
         org_user_id_to_name_dict = utils.create_org_user_id_to_name_dict(
             self._client, org)
@@ -391,6 +384,7 @@ class DEClusterTKG:
                     raise Exception(f'{username} currently has higher access '
                                     f'level: {curr_access_level}')
 
+        # share TKG def entity
         payload = {
             shared_constants.AccessControlKey.GRANT_TYPE:
                 shared_constants.MEMBERSHIP_GRANT_TYPE,
@@ -400,8 +394,4 @@ class DEClusterTKG:
         }
         for _, user_id in update_user_name_to_id_dict.items():
             payload[shared_constants.AccessControlKey.MEMBER_ID] = user_id
-            cloudapi_client.do_request(
-                method=shared_constants.RequestMethod.POST,
-                cloudapi_version=cloudapi_constants.CloudApiVersion.VERSION_1_0_0,  # noqa: E501
-                resource_url_relative_path=access_controls_path,
-                payload=payload)
+            acl_svc.share_def_entity(payload)

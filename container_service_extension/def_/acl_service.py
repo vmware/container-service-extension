@@ -9,11 +9,13 @@ import pyvcloud.vcd.utils as pyvcloud_utils
 import pyvcloud.vcd.vapp as vcd_vapp
 
 import container_service_extension.cloudapi.constants as cloudapi_constants
+import container_service_extension.def_.constants as def_constants
 import container_service_extension.def_.entity_service as def_entity_svc
 import container_service_extension.def_.models as def_models
 import container_service_extension.pyvcloud_utils as vcd_utils
 import container_service_extension.server_constants as server_constants
 import container_service_extension.shared_constants as shared_constants
+import container_service_extension.utils as utils
 
 
 class ClusterACLService:
@@ -80,6 +82,16 @@ class ClusterACLService:
             user_id_to_acl_entry[acl_entry.memberId] = acl_entry
         return user_id_to_acl_entry
 
+    def share_def_entity(self, payload):
+        access_controls_path = \
+            f'{cloudapi_constants.CloudApiResource.ENTITIES}/' \
+            f'{self._cluster_id}/{cloudapi_constants.CloudApiResource.ACL}'
+        self._cloudapi_client.do_request(
+            method=shared_constants.RequestMethod.POST,
+            cloudapi_version=cloudapi_constants.CLOUDAPI_VERSION_1_0_0,
+            resource_url_relative_path=access_controls_path,
+            payload=payload)
+
     def update_native_def_entity_acl(self, update_acl_entries: List[def_models.ClusterAclEntry],  # noqa: E501
                                      prev_user_acl_info: Dict[str, def_models.ClusterAclEntry]):  # noqa: E501
         """Update native defined entity acl.
@@ -109,11 +121,7 @@ class ClusterACLService:
             payload[shared_constants.AccessControlKey.MEMBER_ID] = user_id
             payload[shared_constants.AccessControlKey.ACCESS_LEVEL_ID] = acl_level  # noqa: E501
             user_acl_level_dict[user_id] = acl_level
-            self._cloudapi_client.do_request(
-                method=shared_constants.RequestMethod.POST,
-                cloudapi_version=cloudapi_constants.CLOUDAPI_VERSION_1_0_0,
-                resource_url_relative_path=access_controls_path,
-                payload=payload)
+            self.share_def_entity(payload)
 
             # Remove entry from previous user acl info
             if own_prev_user_acl_info.get(user_id):
@@ -138,7 +146,7 @@ class ClusterACLService:
             for child_obj in vapp_access_settings_attr.getchildren():
                 child_obj_attrib = child_obj.getchildren()[0].attrib
                 shared_href = child_obj_attrib.get('href')
-                user_id = get_id_from_user_href(shared_href)
+                user_id = utils.extract_id_from_href(shared_href)
 
                 # Don't add current access setting if it will be updated
                 user_urn = f'{shared_constants.USER_URN_BEGIN}{user_id}'
@@ -184,34 +192,12 @@ class ClusterACLService:
         }
 
         self._client.post_resource(
-            uri=f'{self.vapp.href}{cloudapi_constants.CloudApiResource.ACTION_CONTROL_ACCESS_PATH}',  # noqa: E501
+            uri=f'{self.vapp.href}{def_constants.ACTION_CONTROL_ACCESS_PATH}',
             contents=vapp_share_contents,
             media_type='application/*+json')
 
     def get_cluster_entity(self):
         return self.def_entity
-
-
-def form_cluster_acl_entry(user_urn, username, access_level_urn):
-    """Form ACL entry.
-
-    :param str user_urn: user URN id, e.g., 'urn:vcloud:user:1234567'
-    :param str access_level_urn: access level URN id, e.g.,
-        'urn:vcloud:accessLevel:FullControl'
-
-    :return acl entry
-    """
-    return {
-        shared_constants.AccessControlKey.MEMBER_ID: user_urn,
-        shared_constants.AccessControlKey.USERNAME: username,
-        shared_constants.AccessControlKey.ACCESS_LEVEL_ID: access_level_urn
-    }
-
-
-def get_id_from_user_href(user_href):
-    if user_href.startswith(server_constants.USER_PATH):
-        return user_href.split(server_constants.USER_PATH)[-1]
-    return None
 
 
 def form_vapp_access_setting_entry(access_level, name, href, user_id):

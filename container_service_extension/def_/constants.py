@@ -7,3 +7,6 @@ import container_service_extension.shared_constants as shared_constants
 CLUSTER_ACL_LIST_FIELDS = [shared_constants.AccessControlKey.ACCESS_LEVEL_ID,
                            shared_constants.AccessControlKey.MEMBER_ID,
                            shared_constants.AccessControlKey.USERNAME]
+
+# ACL Path
+ACTION_CONTROL_ACCESS_PATH = '/action/controlAccess/'
