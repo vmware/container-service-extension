@@ -16,14 +16,9 @@ class PksOvdcApi(CseClient):
         self._ovdcs_uri = f"{self._uri}/ovdcs"
         self._ovdc_uri = f"{self._uri}/ovdc"
 
-    def list_ovdcs(self, filters={}):
-        response = self._client._do_request_prim(
-            shared_constants.RequestMethod.GET,
-            self._ovdcs_uri,
-            self._client._session,
-            accept_type='application/json',
-            params=filters)
-        return process_response(response)
+    def get_all_ovdcs(self, filters={}):
+        url = f"{self._ovdcs_uri}?pageSize={self._request_page_size}"
+        return self.iterate_results(url, filters=filters)
 
     def get_ovdc(self, ovdc_id):
         uri = f"{self._ovdc_uri}/{ovdc_id}"
