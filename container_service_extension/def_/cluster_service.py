@@ -452,7 +452,7 @@ class ClusterService(abstract_broker.AbstractBroker):
         # Iterate all acl entries because not all results correspond to a user
         acl_values = []
         result_total = 0
-        for acl_entry in acl_svc.list_def_ent_acl_entries():
+        for acl_entry in acl_svc.list_def_entity_acl_entries():
             if acl_entry.memberId.startswith(shared_constants.USER_URN_BEGIN):
                 curr_page = result_total // page_size + 1
                 page_entry = result_total % page_size
@@ -513,8 +513,8 @@ class ClusterService(abstract_broker.AbstractBroker):
             updated_user_acl_level_dict = acl_svc.update_native_def_entity_acl(
                 update_acl_entries=update_acl_entries,
                 prev_user_acl_info=prev_user_acl_info_dict)
-            acl_svc.update_vapp_access_settings(updated_user_acl_level_dict,
-                                                update_acl_entries)
+            acl_svc.native_update_vapp_access_settings(
+                updated_user_acl_level_dict, update_acl_entries)
         except Exception as err:
             # Rolback defined entity
             prev_acl_entries = [acl_entry for _, acl_entry in prev_user_acl_info_dict.items()]  # noqa: E501

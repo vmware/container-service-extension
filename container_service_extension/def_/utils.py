@@ -143,5 +143,4 @@ class PaginatedResponse:
     pageSize: int
     nextPageUrl: str = None
     previousPageUrl: str = None
-    associations = None
     values: list = dataclasses.field(default_factory=list)

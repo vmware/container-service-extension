@@ -44,7 +44,7 @@ class ClusterACLService:
                                        href=self.def_entity.externalId)
         return self._vapp
 
-    def get_def_ent_acl_response(self, page, page_size):
+    def get_def_entity_acl_response(self, page, page_size):
         acl_path = f'{cloudapi_constants.CloudApiResource.ENTITIES}/' \
                    f'{self._cluster_id}/' \
                    f'{cloudapi_constants.CloudApiResource.ACL}' \
@@ -56,7 +56,7 @@ class ClusterACLService:
             resource_url_relative_path=acl_path)
         return de_acl_response
 
-    def list_def_ent_acl_entries(self):
+    def list_def_entity_acl_entries(self):
         """List def entity acl.
 
         :return: Generator of cluster acl entries
@@ -65,7 +65,7 @@ class ClusterACLService:
         page_num = 0
         while True:
             page_num += 1
-            response_body = self.get_def_ent_acl_response(
+            response_body = self.get_def_entity_acl_response(
                 page_num, shared_constants.DEFAULT_PAGE_SIZE)
             if len(response_body['values']) == 0:
                 break
@@ -78,7 +78,7 @@ class ClusterACLService:
         :return dict of user id keys and def_models.ClusterAclEntry values
         """
         user_id_to_acl_entry = {}
-        for acl_entry in self.list_def_ent_acl_entries():
+        for acl_entry in self.list_def_entity_acl_entries():
             user_id_to_acl_entry[acl_entry.memberId] = acl_entry
         return user_id_to_acl_entry
 
@@ -137,7 +137,8 @@ class ClusterACLService:
 
         return user_acl_level_dict
 
-    def get_non_updated_vapp_settings(self, updated_user_acl_level_dict):
+    def native_get_non_updated_vapp_settings(self,
+                                             updated_user_acl_level_dict):
         non_updated_access_settings = []
         vapp_access_settings: lxml.objectify.ObjectifiedElement = \
             self.vapp.get_access_settings()
@@ -161,10 +162,10 @@ class ClusterACLService:
                     non_updated_access_settings.append(curr_setting)
         return non_updated_access_settings
 
-    def update_vapp_access_settings(self, updated_user_acl_level_dict,
-                                    update_cluster_acl_entries: List[def_models.ClusterAclEntry]):  # noqa: E501
-        total_vapp_access_settings: list = self.get_non_updated_vapp_settings(
-            updated_user_acl_level_dict)
+    def native_update_vapp_access_settings(self, updated_user_acl_level_dict,
+                                           update_cluster_acl_entries: List[def_models.ClusterAclEntry]):  # noqa: E501
+        total_vapp_access_settings: list = self.\
+            native_get_non_updated_vapp_settings(updated_user_acl_level_dict)
 
         # Add updated access settings
         vapp_access_settings: lxml.objectify.ObjectifiedElement = \

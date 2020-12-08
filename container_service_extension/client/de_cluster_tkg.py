@@ -375,7 +375,7 @@ class DEClusterTKG:
         org_user_id_to_name_dict = utils.create_org_user_id_to_name_dict(
             self._client, org)
         acl_svc = cluster_acl_svc.ClusterACLService(cluster_id, self._client)
-        for acl_entry in acl_svc.list_def_ent_acl_entries():
+        for acl_entry in acl_svc.list_def_entity_acl_entries():
             username = org_user_id_to_name_dict.get(acl_entry.memberId)
             if update_user_name_to_id_dict.get(username):
                 curr_access_level = acl_entry.accessLevelId  # noqa: E501
