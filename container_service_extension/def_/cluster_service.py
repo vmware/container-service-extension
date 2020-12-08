@@ -7,7 +7,7 @@ import re
 import string
 import threading
 import time
-from typing import List
+from typing import Dict, List
 import urllib
 
 import pkg_resources
@@ -459,10 +459,10 @@ class ClusterService(abstract_broker.AbstractBroker):
                 # Check if entry is on desired page
                 if curr_page == page and page_entry < page_size:
                     # Add acl entry
+                    acl_entry.username = user_id_names_dict[acl_entry.memberId]
                     filter_acl_value: dict = acl_entry.get_filtered_dict(
                         include=def_constants.CLUSTER_ACL_LIST_FIELDS)
-                    curr_username = user_id_names_dict[acl_entry.memberId]
-                    filter_acl_value[shared_constants.AccessControlKey.USERNAME] = curr_username  # noqa: E501
+                    # filter_acl_value[shared_constants.AccessControlKey.USERNAME] = curr_username  # noqa: E501
                     acl_values.append(filter_acl_value)
                 result_total += 1
 
@@ -490,8 +490,10 @@ class ClusterService(abstract_broker.AbstractBroker):
             nextPageUrl=next_page_url)
         return dataclasses.asdict(list_response_page)
 
-    def update_cluster_acl(self, cluster_id, update_acl_entries: list):
+    def update_cluster_acl(self, cluster_id, update_acl_entry_dicts: list):
         """Update the cluster ACL by updating the defined entity and vApp ACL."""  # noqa: E501
+        update_acl_entries = [def_models.ClusterAclEntry(**entry_dict)
+                              for entry_dict in update_acl_entry_dicts]
         telemetry_params = {
             shared_constants.RequestKey.CLUSTER_ID: cluster_id,
             shared_constants.ClusterAclKey.UPDATE_ACL_ENTRIES:
@@ -504,31 +506,23 @@ class ClusterService(abstract_broker.AbstractBroker):
         # Get previous def entity acl
         acl_svc = acl_service.ClusterACLService(cluster_id,
                                                 self.context.client)
-        prev_user_acl_info = acl_svc.create_user_id_to_acl_entry_dict()
+        prev_user_acl_info_dict: Dict[str, def_models.ClusterAclEntry] = \
+            acl_svc.create_user_id_to_acl_entry_dict()
 
         try:
             updated_user_acl_level_dict = acl_svc.update_native_def_entity_acl(
                 update_acl_entries=update_acl_entries,
-                prev_user_acl_info=prev_user_acl_info)
+                prev_user_acl_info=prev_user_acl_info_dict)
             acl_svc.update_vapp_access_settings(updated_user_acl_level_dict,
                                                 update_acl_entries)
-        except Exception as e:
-            # Form list of previous acl entries for rollback
-            prev_acl_entries = []
-            for user, acl_info in prev_user_acl_info.items():
-                prev_acl_entry = {
-                    shared_constants.AccessControlKey.MEMBER_ID: user,
-                    shared_constants.AccessControlKey.ACCESS_LEVEL_ID:
-                        acl_info[shared_constants.AccessControlKey.ACCESS_LEVEL_ID]  # noqa: E501
-                }
-                prev_acl_entries.append(prev_acl_entry)
-
+        except Exception as err:
             # Rolback defined entity
+            prev_acl_entries = [acl_entry for _, acl_entry in prev_user_acl_info_dict.items()]  # noqa: E501
             curr_user_acl_info = acl_svc.create_user_id_to_acl_entry_dict()
             acl_svc.update_native_def_entity_acl(
                 update_acl_entries=prev_acl_entries,
                 prev_user_acl_info=curr_user_acl_info)
-            raise e
+            raise err
 
     def delete_nodes(self, cluster_id: str, nodes_to_del=[]):
         """Start the delete nodes operation."""

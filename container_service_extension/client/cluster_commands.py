@@ -1063,8 +1063,9 @@ Examples:
                 # Cannot run the command as cse cli is enabled only for native
                 raise CseServerNotRunningError()
             k8_runtime = shared_constants.ClusterEntityKind.TKG.value
-        client = ctx.obj['client']
 
+        # Determine cluster type and retrieve cluster id if needed
+        client = ctx.obj['client']
         cloudapi_client = \
             vcd_utils.get_cloudapi_client_from_vcd_client(
                 client, logger_debug=CLIENT_LOGGER)

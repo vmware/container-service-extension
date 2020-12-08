@@ -14,6 +14,7 @@ from container_service_extension.client.tkgclient.models.tkg_cluster import TkgC
 import container_service_extension.client.tkgclient.rest as tkg_rest
 import container_service_extension.client.utils as client_utils
 import container_service_extension.cloudapi.constants as cloudapi_constants
+import container_service_extension.def_.acl_service as cluster_acl_svc
 from container_service_extension.def_.utils import DEF_TKG_ENTITY_TYPE_NSS
 from container_service_extension.def_.utils import DEF_TKG_ENTITY_TYPE_VERSION
 from container_service_extension.def_.utils import DEF_VMWARE_VENDOR
@@ -373,20 +374,18 @@ class DEClusterTKG:
         """
         cloudapi_client = \
             vcd_utils.get_cloudapi_client_from_vcd_client(self._client)
-        access_controls_path = f'entities/{cluster_id}/accessControls'
+        access_controls_path = \
+            f'{cloudapi_constants.CloudApiResource.ENTITIES}/' \
+            f'{cluster_id}/{cloudapi_constants.CloudApiResource.ACL}'
 
         # Ensure current cluster user access level is not reduced
-        curr_access_control_body = cloudapi_client.do_request(
-            method=shared_constants.RequestMethod.GET,
-            cloudapi_version=cloudapi_constants.CloudApiVersion.VERSION_1_0_0,
-            resource_url_relative_path=access_controls_path)
         org_user_id_to_name_dict = utils.create_org_user_id_to_name_dict(
             self._client, org)
-        for curr_acl_info in curr_access_control_body.get('values'):
-            username = org_user_id_to_name_dict.get(
-                curr_acl_info[shared_constants.AccessControlKey.MEMBER_ID])
+        acl_svc = cluster_acl_svc.ClusterACLService(cluster_id, self._client)
+        for acl_entry in acl_svc.list_def_ent_acl_entries():
+            username = org_user_id_to_name_dict.get(acl_entry.memberId)
             if update_user_name_to_id_dict.get(username):
-                curr_access_level = curr_acl_info[shared_constants.AccessControlKey.ACCESS_LEVEL_ID]  # noqa: E501
+                curr_access_level = acl_entry.accessLevelId  # noqa: E501
                 if client_utils.access_level_reduced(access_level_id,
                                                      curr_access_level):
                     raise Exception(f'{username} currently has higher access '

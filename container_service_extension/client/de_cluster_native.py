@@ -16,7 +16,6 @@ import container_service_extension.def_.entity_service as def_entity_svc
 import container_service_extension.exceptions as cse_exceptions
 import container_service_extension.logger as logger
 import container_service_extension.pyvcloud_utils as vcd_utils
-import container_service_extension.shared_constants as shared_constants
 
 
 class DEClusterNative:
@@ -38,6 +37,7 @@ class DEClusterNative:
                 client=client, logger_debug=logger.CLIENT_LOGGER,
                 logger_wire=logger_wire)
         self._native_cluster_api = NativeClusterApi(client)
+        self._client = client
 
     def create_cluster(self, cluster_entity: def_models.ClusterEntity):
         """Create a new Kubernetes cluster.
@@ -273,30 +273,33 @@ class DEClusterNative:
         return client_utils.construct_task_console_message(cluster_entity.entity.status.task_href)  # noqa: E501
 
     def share_cluster(self, cluster_id, user_name_to_id_dict, access_level_id):
+        """Share cluster with users in user_name_to_id_dict."""
         # Parse user id info
-        updated_acl_values = []
-        for user, user_id in user_name_to_id_dict.items():
-            acl_entry = {
-                shared_constants.AccessControlKey.MEMBER_ID: user_id,
-                shared_constants.AccessControlKey.USERNAME: user,
-                shared_constants.AccessControlKey.ACCESS_LEVEL_ID:
-                    access_level_id
-            }
-            updated_acl_values.append(acl_entry)
+        update_acl_entries = []
+        for username, user_id in user_name_to_id_dict.items():
+            acl_entry = def_models.ClusterAclEntry(
+                memberId=user_id,
+                username=username,
+                accessLevelId=access_level_id)
+            update_acl_entries.append(acl_entry)
 
         # Only retain entries that are not updated
-        curr_acl_values = self._native_cluster_api.get_all_cluster_acl(cluster_id)  # noqa: E501
-        for entry in curr_acl_values:
-            if user_name_to_id_dict.get(entry[shared_constants.AccessControlKey.USERNAME]):  # noqa: E501
-                curr_access_level_id = entry[shared_constants.AccessControlKey.ACCESS_LEVEL_ID]  # noqa: E501
+        for acl_entry in self._native_cluster_api.\
+                list_native_cluster_acl_entries(cluster_id):
+            username = acl_entry.username
+            if user_name_to_id_dict.get(username):  # noqa: E501
+                # Check that access level is not reduced
+                curr_access_level_id = acl_entry.accessLevelId # noqa: E501
                 if client_utils.access_level_reduced(
                         access_level_id, curr_access_level_id):
-                    raise Exception(f'{entry[shared_constants.AccessControlKey.USERNAME]} '  # noqa: E501
-                                    f'currently has higher access level: '
-                                    f'{curr_access_level_id}')
+                    raise Exception(f'{username} currently has higher access '
+                                    f'level: {curr_access_level_id}')
             else:
-                updated_acl_values.append(entry)
+                update_acl_entries.append(acl_entry)
 
+        update_acl_values = \
+            [acl_entry.get_filtered_dict(include=cli_constants.CLUSTER_ACL_UPDATE_REQUEST_FIELDS)  # noqa: E501
+             for acl_entry in update_acl_entries]
         put_response = self._native_cluster_api.put_cluster_acl(
-            cluster_id, updated_acl_values)
+            cluster_id, update_acl_values)
         return put_response

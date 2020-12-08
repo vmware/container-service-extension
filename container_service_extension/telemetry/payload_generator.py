@@ -337,21 +337,28 @@ def get_payload_for_v35_cluster_acl_list(cluster_acl_list_info):
 
 
 def get_payload_for_v35_cluster_acl_update(cluster_acl_update_info: dict):
+    """Construct payload for v35 cluster acl update.
+
+    :param dict cluster_acl_update_info: a dict containing two entries:
+        1. "cluster_id" mapped to the cluster id
+        2. "update_acl_entries" mapped to a list of
+            def_models.ClusterAclEntry's
+    """
     cluster_id = cluster_acl_update_info[RequestKey.CLUSTER_ID]
     update_acl_entries: list = cluster_acl_update_info[ClusterAclKey.UPDATE_ACL_ENTRIES]  # noqa: E501
 
     # Remove username from being sent
-    filtered_acl_entries = []
+    filtered_acl_info = []
     for entry in update_acl_entries:
         filtered_entry = {
-            AccessControlKey.MEMBER_ID: entry[AccessControlKey.MEMBER_ID],
-            AccessControlKey.ACCESS_LEVEL_ID: entry[AccessControlKey.ACCESS_LEVEL_ID]  # noqa: E501
+            AccessControlKey.MEMBER_ID: entry.memberId,
+            AccessControlKey.ACCESS_LEVEL_ID: entry.accessLevelId  # noqa: E501
         }
-        filtered_acl_entries.append(filtered_entry)
+        filtered_acl_info.append(filtered_entry)
     return {
         PayloadKey.TYPE: CseOperation.V35_CLUSTER_ACL_UPDATE.telemetry_table,
         PayloadKey.CLUSTER_ID: uuid_hash(cluster_id),
-        PayloadKey.ACCESS_SETTING: filtered_acl_entries
+        PayloadKey.ACCESS_SETTING: filtered_acl_info
     }
 
 

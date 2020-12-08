@@ -308,6 +308,7 @@ class ClusterAclEntry:
     id: str = None
     grantType: str = None
     objectId: str = None
+    username: str = None
 
     def get_filtered_dict(self, include=[]):
         orig_dict = asdict(self)

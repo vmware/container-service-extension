@@ -113,23 +113,21 @@ class NativeClusterApi(CseClient):
         processed_response = response_processor.process_response(response)
         return processed_response
 
-    def get_all_cluster_acl(self, cluster_id):
+    def list_native_cluster_acl_entries(self, cluster_id):
         acl_values = []
-        curr_page, page_cnt = 0, 1
-        while curr_page < page_cnt:
+        # curr_page, page_cnt = 0, 1
+        page_num = 0
+        while True:
+            page_num += 1
             acl_response = self.get_single_page_cluster_acl(
                 cluster_id=cluster_id,
-                page=curr_page + 1,
+                page=page_num,
                 page_size=shared_constants.DEFAULT_PAGE_SIZE)
-
-            curr_acl_values = acl_response.get('values')
-            if acl_values:
-                acl_values.extend(curr_acl_values)
-            else:
-                acl_values = curr_acl_values
-            curr_page = int(acl_response.get('page', 1))
-            page_cnt = int(acl_response.get('pageCount', 1))
-        return acl_values
+            acl_values = acl_response['values']
+            if len(acl_values) == 0:
+                break
+            for acl_value in acl_values:
+                yield def_models.ClusterAclEntry(**acl_value)
 
     def put_cluster_acl(self, cluster_id: str, acl_entries: list):
         uri = f'{self._cluster_uri}/{cluster_id}/acl'

@@ -6,6 +6,7 @@ from enum import Enum
 from enum import unique
 
 import container_service_extension.def_.utils as def_utils
+import container_service_extension.shared_constants as shared_constants
 
 # Client environment variables
 ENV_CSE_CLIENT_WIRE_LOGGING = 'CSE_CLIENT_WIRE_LOGGING'
@@ -29,6 +30,12 @@ TKG_RESPONSE_MESSAGES_BY_STATUS_CODE = {
     403: "User doesn't have required rights to perform the operation",
     500: "Unexpected error occurred"
 }
+
+# Fields for cluster acl request
+CLUSTER_ACL_UPDATE_REQUEST_FIELDS = \
+    [shared_constants.AccessControlKey.ACCESS_LEVEL_ID,
+     shared_constants.AccessControlKey.MEMBER_ID,
+     shared_constants.AccessControlKey.USERNAME]
 
 
 @unique

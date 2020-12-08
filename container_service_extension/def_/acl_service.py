@@ -1,6 +1,8 @@
 # container-service-extension
 # Copyright (c) 2020 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
+from typing import Dict, List
+
 import lxml
 import pyvcloud.vcd.client as vcd_client
 import pyvcloud.vcd.utils as pyvcloud_utils
@@ -78,13 +80,12 @@ class ClusterACLService:
             user_id_to_acl_entry[acl_entry.memberId] = acl_entry
         return user_id_to_acl_entry
 
-    def update_native_def_entity_acl(self, update_acl_entries,
-                                     prev_user_acl_info):
+    def update_native_def_entity_acl(self, update_acl_entries: List[def_models.ClusterAclEntry],  # noqa: E501
+                                     prev_user_acl_info: Dict[str, def_models.ClusterAclEntry]):  # noqa: E501
         """Update native defined entity acl.
 
-        :param list update_acl_entries: list of dict entries containing the
-            'memberId' and 'accessLevelId' fields
-        :param list prev_user_acl_info: dict mapping user id to
+        :param list update_acl_entries: list of def_models.ClusterAclEntry
+        :param dict prev_user_acl_info: dict mapping user id to
             def_models.ClusterAclEntry
 
         :return: dictionary of memberId keys and access level values
@@ -103,12 +104,10 @@ class ClusterACLService:
             shared_constants.AccessControlKey.ACCESS_LEVEL_ID: None
         }
         for acl_entry in update_acl_entries:
-            user_id = acl_entry[shared_constants.AccessControlKey.MEMBER_ID]
-            acl_level = acl_entry[
-                shared_constants.AccessControlKey.ACCESS_LEVEL_ID]
+            user_id = acl_entry.memberId
+            acl_level = acl_entry.accessLevelId
             payload[shared_constants.AccessControlKey.MEMBER_ID] = user_id
-            payload[
-                shared_constants.AccessControlKey.ACCESS_LEVEL_ID] = acl_level
+            payload[shared_constants.AccessControlKey.ACCESS_LEVEL_ID] = acl_level  # noqa: E501
             user_acl_level_dict[user_id] = acl_level
             self._cloudapi_client.do_request(
                 method=shared_constants.RequestMethod.POST,
@@ -155,7 +154,7 @@ class ClusterACLService:
         return non_updated_access_settings
 
     def update_vapp_access_settings(self, updated_user_acl_level_dict,
-                                    update_cluster_acl_entries: list):
+                                    update_cluster_acl_entries: List[def_models.ClusterAclEntry]):  # noqa: E501
         total_vapp_access_settings: list = self.get_non_updated_vapp_settings(
             updated_user_acl_level_dict)
 
@@ -164,15 +163,15 @@ class ClusterACLService:
             self.vapp.get_access_settings()
         api_uri = self._client.get_api_uri()
         for acl_entry in update_cluster_acl_entries:
-            user_id = pyvcloud_utils.extract_id(acl_entry[shared_constants.AccessControlKey.MEMBER_ID])  # noqa: E501
-            access_level = pyvcloud_utils.extract_id(acl_entry[shared_constants.AccessControlKey.ACCESS_LEVEL_ID])  # noqa: E501
+            user_id = pyvcloud_utils.extract_id(acl_entry.memberId)
+            access_level = pyvcloud_utils.extract_id(acl_entry.accessLevelId)
 
             # Use 'Change' instead of 'ReadWrite' for vApp access level
             if access_level == shared_constants.READ_WRITE:
                 access_level = server_constants.CHANGE_ACCESS
             user_setting = form_vapp_access_setting_entry(
                 access_level=access_level,
-                name=acl_entry[shared_constants.AccessControlKey.USERNAME],
+                name=acl_entry.username,
                 href=f'{api_uri}{server_constants.ADMIN_USER_PATH}{user_id}',  # noqa: E501
                 user_id=user_id)
             total_vapp_access_settings.append(user_setting)
