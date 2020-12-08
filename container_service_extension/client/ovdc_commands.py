@@ -31,23 +31,36 @@ organization. Use a different organization by using the '--org' option.
                     short_help='Display org VDCs in vCD that are visible '
                                'to the logged in user')
 @click.pass_context
-def list_ovdcs(ctx):
+@click.option(
+    '-A',
+    '--all',
+    'should_print_all',
+    is_flag=True,
+    default=False,
+    required=False,
+    metavar='DISPLAY_ALL',
+    help='Display all the OVDCs non-interactively')
+def list_ovdcs(ctx, should_print_all=False):
     """Display org VDCs in vCD that are visible to the logged in user.
 
 \b
 Example
     vcd cse ovdc list
         Display ovdcs in vCD that are visible to the logged in user.
-        vcd cse ovdc list
+        The user might be prompted if more results needs to be displayed
+\b
+    vcd cse ovdc list -A
+        Display ovdcs in vCD that are visible to the logged in user without
+        prompting the user.
     """
     CLIENT_LOGGER.debug(f'Executing command: {ctx.command_path}')
     try:
         client_utils.cse_restore_session(ctx)
         client = ctx.obj['client']
         ovdc = Ovdc(client)
-        result = ovdc.list_ovdc()
-        stdout(result, ctx, sort_headers=False)
-        CLIENT_LOGGER.debug(result)
+        client_utils.print_paginated_result(ovdc.list_ovdc(),
+                                            should_print_all=should_print_all,
+                                            logger=CLIENT_LOGGER)
     except Exception as e:
         stderr(e, ctx)
         CLIENT_LOGGER.error(str(e))

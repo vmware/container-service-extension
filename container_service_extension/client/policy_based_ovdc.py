@@ -16,13 +16,13 @@ class PolicyBasedOvdc:
         self._ovdc_api = ovdc_api_v35.OvdcApi(self.client)
 
     def list_ovdc(self):
-        result = self._ovdc_api.list_ovdcs()
-        value_field_to_display_field = {
-            'ovdc_name': 'Name',
-            'ovdc_id': 'ID',
-            'k8s_runtime': 'K8s Runtime'
-        }
-        return client_utils.filter_columns(result, value_field_to_display_field)  # noqa: E501
+        for ovdc_list, has_more_results in self._ovdc_api.get_all_ovdcs():
+            value_field_to_display_field = {
+                'ovdc_name': 'Name',
+                'ovdc_id': 'ID',
+                'k8s_runtime': 'K8s Runtime'
+            }
+            yield client_utils.filter_columns(ovdc_list, value_field_to_display_field), has_more_results  # noqa: E501
 
     def update_ovdc(self, ovdc_name, k8s_runtime, enable=True, org_name=None,
                     remove_cp_from_vms_on_disable=False):
