@@ -6,11 +6,13 @@ from pyvcloud.vcd.client import Client
 import requests
 import six
 from vcd_cli.profiles import Profiles
+from vcd_cli.utils import stdout
 
 from container_service_extension.client import system as syst
 from container_service_extension.client.constants import CSE_SERVER_RUNNING
 import container_service_extension.def_.utils as def_utils
 from container_service_extension.exceptions import CseResponseError
+from container_service_extension.logger import NULL_LOGGER
 from container_service_extension.shared_constants import CSE_SERVER_API_VERSION
 from container_service_extension.shared_constants import CSE_SERVER_BUSY_KEY
 
@@ -201,3 +203,28 @@ def filter_columns(result, value_field_to_display_field):
             for value_field, display_field in value_field_to_display_field.items()  # noqa: E501
         }
         return filtered_result
+
+
+def print_paginated_result(generator, should_print_all=False, logger=NULL_LOGGER):  # noqa: E501
+    """Print results by prompting the user for more results.
+
+    :param Generator[(List[dict], int), None, None] generator: generator which
+        yields a list of results and a boolean indicating if more results
+        are present.
+    :param bool should_print_all: print all the results without promting the
+        user.
+    :param logger logger: logger to log the results or exceptions.
+    """
+    try:
+        headers_printed = False
+        for result, has_more_results in generator:
+            stdout(result, sort_headers=False,
+                   show_headers=not headers_printed)
+            headers_printed = True
+            logger.debug(result)
+            if not has_more_results or \
+                    not (should_print_all or click.confirm("Do you want more results?")):  # noqa: E501
+                break
+    except Exception as e:
+        logger.error(f"Error while iterating over the paginated response: {e}")
+        raise

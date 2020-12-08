@@ -16,6 +16,7 @@ import container_service_extension.operation_context as ctx
 import container_service_extension.request_handlers.native_cluster_handler as native_cluster_handler  # noqa: E501
 import container_service_extension.request_handlers.ovdc_handler as ovdc_handler  # noqa: E501
 import container_service_extension.request_handlers.pks_cluster_handler as pks_cluster_handler  # noqa: E501
+import container_service_extension.request_handlers.pks_ovdc_handler as pks_ovdc_handler  # noqa: E501
 import container_service_extension.request_handlers.system_handler as system_handler  # noqa: E501
 import container_service_extension.request_handlers.template_handler as template_handler  # noqa: E501 E501
 import container_service_extension.request_handlers.v35.def_cluster_handler as v35_cluster_handler # noqa: E501
@@ -131,7 +132,10 @@ OPERATION_TO_HANDLER = {
     CseOperation.PKS_CLUSTER_DELETE: pks_cluster_handler.cluster_delete,
     CseOperation.PKS_CLUSTER_INFO: pks_cluster_handler.cluster_info,
     CseOperation.PKS_CLUSTER_LIST: pks_cluster_handler.cluster_list,
-    CseOperation.PKS_CLUSTER_RESIZE: pks_cluster_handler.cluster_resize
+    CseOperation.PKS_CLUSTER_RESIZE: pks_cluster_handler.cluster_resize,
+    CseOperation.PKS_OVDC_LIST: pks_ovdc_handler.ovdc_list,
+    CseOperation.PKS_OVDC_INFO: pks_ovdc_handler.ovdc_info,
+    CseOperation.PKS_OVDC_UPDATE: pks_ovdc_handler.ovdc_update
 }
 
 _OPERATION_KEY = 'operation'
@@ -244,7 +248,6 @@ def process_request(message):
         accept_header=message['headers'].get('Accept'))
     api_version = _get_api_version_from_accept_header(
         api_version_header=api_version_header)
-
     url_data = _get_url_data(method=message['method'],
                              url=message['requestUri'],
                              api_version=api_version)  # noqa: E501
@@ -416,17 +419,17 @@ def _get_pks_url_data(method: str, url: str):
     elif operation_type == shared_constants.OperationType.OVDC:
         if num_tokens == 4:
             if method == shared_constants.RequestMethod.GET:
-                return {_OPERATION_KEY: CseOperation.OVDC_LIST}
+                return {_OPERATION_KEY: CseOperation.PKS_OVDC_LIST}
             raise cse_exception.MethodNotAllowedRequestError()
         if num_tokens == 5:
             if method == shared_constants.RequestMethod.GET:
                 return {
-                    _OPERATION_KEY: CseOperation.OVDC_INFO,
+                    _OPERATION_KEY: CseOperation.PKS_OVDC_INFO,
                     shared_constants.RequestKey.OVDC_ID: tokens[4]
                 }
             if method == shared_constants.RequestMethod.PUT:
                 return {
-                    _OPERATION_KEY: CseOperation.OVDC_UPDATE,
+                    _OPERATION_KEY: CseOperation.PKS_OVDC_UPDATE,
                     shared_constants.RequestKey.OVDC_ID: tokens[4]
                 }
             raise cse_exception.MethodNotAllowedRequestError()
