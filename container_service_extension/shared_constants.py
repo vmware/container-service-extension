@@ -155,6 +155,9 @@ class RequestKey(str, Enum):
     # keys that are only used internally at server side
     PKS_EXT_HOST = 'pks_ext_host'
 
+    # user agent
+    USER_AGENT = 'User-Agent'
+
 
 @unique
 class PaginationKey(str, Enum):

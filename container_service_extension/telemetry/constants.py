@@ -127,6 +127,8 @@ class PayloadKey(str, Enum):
     NUMBER_OF_NFS_NODES = 'number_of_nfs_nodes'
     OS = 'os'
     SOURCE_CSE_VERSION = 'source_cse_version'
+    SOURCE_DESCRIPTION = 'source_description'
+    SOURCE_ID = 'source_id'
     SOURCE_VCD_API_VERSION = 'source_vcd_api_version'
     STATUS = 'status'
     TARGET = 'target',
@@ -170,3 +172,24 @@ class PayloadValue(str, Enum):
 @unique
 class PayloadTable(str, Enum):
     USER_ACTIONS = 'CSE_USER_ACTIONS'
+
+
+@unique
+class SourceMap(str, Enum):
+    VCD_CLI = 'python'
+    CURL = 'curl'
+    EDGE = 'edg'
+    CHROME = 'chrome'
+    SAFARI = 'safari'
+    TERRAFORM = 'terraform'
+    POSTMAN = 'postman'
+    UNKNOWN = 'unknown'
+
+    @staticmethod
+    def get_source_id(user_agent: str):
+        if user_agent is None:
+            return SourceMap.UNKNOWN.name
+        for source_entry in SourceMap:
+            if source_entry.value in user_agent.lower():
+                return source_entry.name
+        return SourceMap.UNKNOWN.name
