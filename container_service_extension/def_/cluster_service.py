@@ -1277,8 +1277,9 @@ class ClusterService(abstract_broker.AbstractBroker):
             # and fail the operation.
             def_entity.entity.status.phase = \
                 str(DefEntityPhase(op, DefEntityOperationStatus.FAILED))
-            self._sync_def_entity(cluster_id, def_entity)
+            self.entity_svc.update_entity(cluster_id, def_entity)
             self.entity_svc.resolve_entity(cluster_id)
+            self._sync_def_entity(cluster_id, def_entity)
         except Exception as err:
             msg = f"Failed to resolve defined entity for cluster {cluster_id}"
             LOGGER.error(f"{msg}", exc_info=True)
