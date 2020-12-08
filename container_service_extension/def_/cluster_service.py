@@ -1,6 +1,7 @@
 # container-service-extension
 # Copyright (c) 2020 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
+import dataclasses
 import random
 import re
 import string
@@ -21,6 +22,7 @@ import semantic_version as semver
 import container_service_extension.abstract_broker as abstract_broker
 import container_service_extension.compute_policy_manager as compute_policy_manager  # noqa: E501
 import container_service_extension.def_.acl_service as acl_service
+import container_service_extension.def_.constants as def_constants
 import container_service_extension.def_.entity_service as def_entity_svc
 import container_service_extension.def_.models as def_models
 import container_service_extension.def_.utils as def_utils
@@ -429,7 +431,7 @@ class ClusterService(abstract_broker.AbstractBroker):
                                     template=template)
         return curr_entity
 
-    def get_cluster_acl_info(self, cluster_id, page: str, page_size: str):
+    def get_cluster_acl_info(self, cluster_id, page: int, page_size: int):
         """Get cluster ACL info based on the defined entity ACL."""
         telemetry_params = {
             shared_constants.RequestKey.CLUSTER_ID: cluster_id,
@@ -440,42 +442,53 @@ class ClusterService(abstract_broker.AbstractBroker):
             telemetry_constants.CseOperation.V35_CLUSTER_ACL_LIST,
             cse_params=telemetry_params)
 
-        # Retrieve defined entity ACL
         acl_svc = acl_service.ClusterACLService(cluster_id,
                                                 self.context.client)
-        curr_entity_acl_response: dict = acl_svc.get_def_ent_acl_response(
-            page, page_size)
-
-        # Parse RDE ACL
         curr_entity: def_models.DefEntity = acl_svc.get_cluster_entity()
-        de_acl_values = curr_entity_acl_response['values']
-        member_acl_list = []
         user_id_names_dict = utils.create_org_user_id_to_name_dict(
             client=self.context.client,
             org_name=curr_entity.org.name)
-        for de_acl_setting in de_acl_values:
-            user_id = de_acl_setting[shared_constants.AccessControlKey.MEMBER_ID]  # noqa: E501
-            if not user_id.startswith(shared_constants.USER_URN_BEGIN):
-                continue
-            acl_level_id = de_acl_setting[shared_constants.AccessControlKey.ACCESS_LEVEL_ID]  # noqa: E501
-            username = user_id_names_dict[user_id]
-            member_acl_entry = acl_service.form_cluster_acl_entry(
-                user_id, username, acl_level_id)
-            member_acl_list.append(member_acl_entry)
 
-        # Form GET response body
-        acl_list_response_body = {
-            shared_constants.PaginatedDataKey.RESULT_TOTAL:
-                curr_entity_acl_response[shared_constants.PaginatedDataKey.RESULT_TOTAL],  # noqa: E501
-            shared_constants.PaginatedDataKey.PAGE_COUNT:
-                curr_entity_acl_response[shared_constants.PaginatedDataKey.PAGE_COUNT],  # noqa: E501
-            shared_constants.PaginatedDataKey.PAGE:
-                curr_entity_acl_response[shared_constants.PaginatedDataKey.PAGE],  # noqa: E501
-            shared_constants.PaginatedDataKey.PAGE_SIZE:
-                curr_entity_acl_response[shared_constants.PaginatedDataKey.PAGE_SIZE],  # noqa: E501
-            shared_constants.PaginatedDataKey.VALUES: member_acl_list
-        }
-        return acl_list_response_body
+        # Iterate all acl entries because not all results correspond to a user
+        acl_values = []
+        result_total = 0
+        for acl_entry in acl_svc.list_def_ent_acl_entries():
+            if acl_entry.memberId.startswith(shared_constants.USER_URN_BEGIN):
+                curr_page = result_total // page_size + 1
+                page_entry = result_total % page_size
+                # Check if entry is on desired page
+                if curr_page == page and page_entry < page_size:
+                    # Add acl entry
+                    filter_acl_value: dict = acl_entry.get_filtered_dict(
+                        include=def_constants.CLUSTER_ACL_LIST_FIELDS)
+                    curr_username = user_id_names_dict[acl_entry.memberId]
+                    filter_acl_value[shared_constants.AccessControlKey.USERNAME] = curr_username  # noqa: E501
+                    acl_values.append(filter_acl_value)
+                result_total += 1
+
+        # Form final response fields
+        extra_page = 1 if bool(result_total % page_size) else 0
+        page_count = result_total // page_size + extra_page
+        page_url_fragment = f"{self.context.client.get_api_uri()}/" \
+                            f"{shared_constants.CSE_URL_FRAGMENT}/" \
+                            f"{shared_constants.CSE_3_0_URL_FRAGMENT}/" \
+                            f"{shared_constants.CLUSTER_URL_FRAGMENT}/" \
+                            f"{cluster_id}/" \
+                            f"{shared_constants.ACL_URL_FRAGMENT}" \
+                            f"?{shared_constants.PaginatedKey.PAGE_SIZE}=" \
+                            f"{page_size}&{shared_constants.PaginatedKey.PAGE}="  # noqa: E501
+        next_page_url = f"{page_url_fragment}{page + 1}" if 0 < page < page_count else None  # noqa: E501
+        prev_page_url = f"{page_url_fragment}{page - 1}" if page_count > page > 1 else None  # noqa: E501
+
+        list_response_page = def_utils.PaginatedResponse(
+            resultTotal=result_total,
+            pageCount=page_count,
+            page=page,
+            pageSize=page_size,
+            values=acl_values,
+            previousPageUrl=prev_page_url,
+            nextPageUrl=next_page_url)
+        return dataclasses.asdict(list_response_page)
 
     def update_cluster_acl(self, cluster_id, update_acl_entries: list):
         """Update the cluster ACL by updating the defined entity and vApp ACL."""  # noqa: E501
@@ -491,7 +504,7 @@ class ClusterService(abstract_broker.AbstractBroker):
         # Get previous def entity acl
         acl_svc = acl_service.ClusterACLService(cluster_id,
                                                 self.context.client)
-        prev_user_acl_info = acl_svc.get_all_def_ent_acl()
+        prev_user_acl_info = acl_svc.create_user_id_to_acl_entry_dict()
 
         try:
             updated_user_acl_level_dict = acl_svc.update_native_def_entity_acl(
@@ -511,7 +524,7 @@ class ClusterService(abstract_broker.AbstractBroker):
                 prev_acl_entries.append(prev_acl_entry)
 
             # Rolback defined entity
-            curr_user_acl_info = acl_svc.get_all_def_ent_acl()
+            curr_user_acl_info = acl_svc.create_user_id_to_acl_entry_dict()
             acl_svc.update_native_def_entity_acl(
                 update_acl_entries=prev_acl_entries,
                 prev_user_acl_info=curr_user_acl_info)

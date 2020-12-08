@@ -151,7 +151,8 @@ def cluster_acl_info(data: dict, op_ctx: ctx.OperationContext):
     query = data.get(RequestKey.V35_QUERY, {})
     page = query.get('page', shared_constants.DEFAULT_PAGE)
     page_size = query.get('pageSize', shared_constants.DEFAULT_PAGE_SIZE)
-    acl_info_response = svc.get_cluster_acl_info(cluster_id, page, page_size)
+    acl_info_response = svc.get_cluster_acl_info(cluster_id, int(page),
+                                                 int(page_size))
     return acl_info_response
 
 

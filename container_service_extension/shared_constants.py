@@ -10,6 +10,8 @@ from enum import unique
 CSE_URL_FRAGMENT = 'cse'
 PKS_URL_FRAGMENT = 'pks'
 CSE_3_0_URL_FRAGMENT = '3.0'
+CLUSTER_URL_FRAGMENT = 'cluster'
+ACL_URL_FRAGMENT = 'acl'
 
 ERROR_DESCRIPTION_KEY = "error description"
 ERROR_MINOR_CODE_KEY = "minor error code"
@@ -196,7 +198,7 @@ class AccessControlKey(str, Enum):
 
 
 @unique
-class PaginatedDataKey(str, Enum):
+class PaginatedKey(str, Enum):
     """Keys for paginated data."""
 
     RESULT_TOTAL = 'resultTotal'
@@ -204,6 +206,9 @@ class PaginatedDataKey(str, Enum):
     PAGE = 'page'
     PAGE_SIZE = 'pageSize'
     VALUES = 'values'
+    NEXT_PAGE_URL = 'nextPageUrl'
+    PREV_PAGE_URL = 'previoudPageUrl'
+    ASSOCIATIONS = 'associations'
 
 
 @unique

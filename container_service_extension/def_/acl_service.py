@@ -40,37 +40,43 @@ class ClusterACLService:
                                        href=self.def_entity.externalId)
         return self._vapp
 
-    def get_all_def_ent_acl(self):
+    def get_def_ent_acl_response(self, page, page_size):
+        acl_path = f'{cloudapi_constants.CloudApiResource.ENTITIES}/' \
+                   f'{self._cluster_id}/' \
+                   f'{cloudapi_constants.CloudApiResource.ACL}' \
+                   f'?{shared_constants.PAGE}={page}&' \
+                   f'{shared_constants.PAGE_SIZE}={page_size}'
+        de_acl_response = self._cloudapi_client.do_request(
+            method=shared_constants.RequestMethod.GET,
+            cloudapi_version=cloudapi_constants.CLOUDAPI_VERSION_1_0_0,
+            resource_url_relative_path=acl_path)
+        return de_acl_response
+
+    def list_def_ent_acl_entries(self):
+        """List def entity acl.
+
+        :return: Generator of cluster acl entries
+        :rtype: Generator[ClusterAclEntry]
+        """
+        page_num = 0
+        while True:
+            page_num += 1
+            response_body = self.get_def_ent_acl_response(
+                page_num, shared_constants.DEFAULT_PAGE_SIZE)
+            if len(response_body['values']) == 0:
+                break
+            for acl_entry in response_body['values']:
+                yield def_models.ClusterAclEntry(**acl_entry)
+
+    def create_user_id_to_acl_entry_dict(self):
         """Get all def entity acl values from all pages.
 
-        :return dict of user id keys and a dictionary values containing the
-            acl entry id and access level id
+        :return dict of user id keys and def_models.ClusterAclEntry values
         """
-        access_controls_path = \
-            f'{cloudapi_constants.CloudApiResource.ENTITIES}' \
-            f'/{self._cluster_id}/{cloudapi_constants.CloudApiResource.ACL}'
-        user_acl_info = {}
-        curr_page, page_cnt = 0, 1
-        while curr_page < page_cnt:
-            query_str = f'?{shared_constants.PAGE}={curr_page + 1}' \
-                        f'&{shared_constants.PAGE_SIZE}=' \
-                        f'{shared_constants.DEFAULT_PAGE_SIZE}'
-            de_acl_response: dict = self._cloudapi_client.do_request(
-                method=shared_constants.RequestMethod.GET,
-                cloudapi_version=cloudapi_constants.CLOUDAPI_VERSION_1_0_0,
-                resource_url_relative_path=(access_controls_path + query_str))
-            for acl_entry in de_acl_response.get('values'):
-                user_id = acl_entry[
-                    shared_constants.AccessControlKey.MEMBER_ID]  # noqa: E501
-                user_acl_info[user_id] = {
-                    shared_constants.AccessControlKey.ID:
-                        acl_entry[shared_constants.AccessControlKey.ID],
-                    shared_constants.AccessControlKey.ACCESS_LEVEL_ID:
-                        acl_entry[shared_constants.AccessControlKey.ACCESS_LEVEL_ID]  # noqa: E501
-                }
-            curr_page = int(de_acl_response.get('page', 1))
-            page_cnt = int(de_acl_response.get('pageCount', 1))
-        return user_acl_info
+        user_id_to_acl_entry = {}
+        for acl_entry in self.list_def_ent_acl_entries():
+            user_id_to_acl_entry[acl_entry.memberId] = acl_entry
+        return user_id_to_acl_entry
 
     def update_native_def_entity_acl(self, update_acl_entries,
                                      prev_user_acl_info):
@@ -78,8 +84,8 @@ class ClusterACLService:
 
         :param list update_acl_entries: list of dict entries containing the
             'memberId' and 'accessLevelId' fields
-        :param list prev_user_acl_info: dict mapping user id to dict of
-            acl entry id and acl level id
+        :param list prev_user_acl_info: dict mapping user id to
+            def_models.ClusterAclEntry
 
         :return: dictionary of memberId keys and access level values
         """
@@ -115,27 +121,14 @@ class ClusterACLService:
                 del own_prev_user_acl_info[user_id]
 
         # Delete def entity acl entries not in update_acl_entries
-        for _, acl_info in own_prev_user_acl_info.items():
-            delete_path = access_controls_path + \
-                f'/{acl_info[shared_constants.AccessControlKey.ID]}'
+        for _, acl_entry in own_prev_user_acl_info.items():
+            delete_path = access_controls_path + f'/{acl_entry.id}'
             self._cloudapi_client.do_request(
                 method=shared_constants.RequestMethod.DELETE,
                 cloudapi_version=cloudapi_constants.CLOUDAPI_VERSION_1_0_0,
                 resource_url_relative_path=delete_path)
 
         return user_acl_level_dict
-
-    def get_def_ent_acl_response(self, page, page_size):
-        acl_path = f'{cloudapi_constants.CloudApiResource.ENTITIES}/' \
-                   f'{self._cluster_id}/' \
-                   f'{cloudapi_constants.CloudApiResource.ACL}' \
-                   f'?{shared_constants.PAGE}={page}&' \
-                   f'{shared_constants.PAGE_SIZE}={page_size}'
-        de_acl_response = self._cloudapi_client.do_request(
-            method=shared_constants.RequestMethod.GET,
-            cloudapi_version=cloudapi_constants.CLOUDAPI_VERSION_1_0_0,
-            resource_url_relative_path=acl_path)
-        return de_acl_response
 
     def get_non_updated_vapp_settings(self, updated_user_acl_level_dict):
         non_updated_access_settings = []
