@@ -10,6 +10,7 @@ from container_service_extension.telemetry.constants import CseOperation
 from container_service_extension.telemetry.constants import PayloadKey
 from container_service_extension.telemetry.constants import PayloadTable
 from container_service_extension.telemetry.constants import PayloadValue
+from container_service_extension.telemetry.constants import SourceMap
 from container_service_extension.telemetry.telemetry_utils import uuid_hash
 
 
@@ -178,7 +179,9 @@ def get_payload_for_cluster_config(params):
         PayloadKey.TEMPLATE_NAME: params.get(RequestKey.TEMPLATE_NAME),
         PayloadKey.TEMPLATE_REVISION: params.get(RequestKey.TEMPLATE_REVISION),
         PayloadKey.WAS_OVDC_SPECIFIED: bool(params.get(RequestKey.OVDC_NAME)),
-        PayloadKey.WAS_ORG_SPECIFIED: bool(params.get(RequestKey.ORG_NAME))
+        PayloadKey.WAS_ORG_SPECIFIED: bool(params.get(RequestKey.ORG_NAME)),
+        PayloadKey.SOURCE_ID: SourceMap.get_source_id(params.get(RequestKey.USER_AGENT)),  # noqa: E501
+        PayloadKey.SOURCE_DESCRIPTION: params.get(RequestKey.USER_AGENT)
     }
 
 
@@ -208,7 +211,9 @@ def get_payload_for_create_cluster(params):
         PayloadKey.ADDED_NFS_NODE: params.get(RequestKey.ENABLE_NFS),
         PayloadKey.WAS_ROLLBACK_ENABLED: bool(params.get(RequestKey.ROLLBACK)),
         PayloadKey.WAS_OVDC_SPECIFIED: bool(params.get(RequestKey.OVDC_NAME)),
-        PayloadKey.WAS_ORG_SPECIFIED: bool(params.get(RequestKey.ORG_NAME))
+        PayloadKey.WAS_ORG_SPECIFIED: bool(params.get(RequestKey.ORG_NAME)),
+        PayloadKey.SOURCE_ID: SourceMap.get_source_id(params.get(RequestKey.USER_AGENT)),  # noqa: E501
+        PayloadKey.SOURCE_DESCRIPTION: params.get(RequestKey.USER_AGENT)
     }
 
 
@@ -225,7 +230,9 @@ def get_payload_for_cluster_delete(params):
         PayloadKey.TYPE: CseOperation.CLUSTER_DELETE.telemetry_table,
         PayloadKey.CLUSTER_ID: uuid_hash(params.get(PayloadKey.CLUSTER_ID)),
         PayloadKey.WAS_OVDC_SPECIFIED: bool(params.get(RequestKey.OVDC_NAME)),
-        PayloadKey.WAS_ORG_SPECIFIED: bool(params.get(RequestKey.ORG_NAME))
+        PayloadKey.WAS_ORG_SPECIFIED: bool(params.get(RequestKey.ORG_NAME)),
+        PayloadKey.SOURCE_ID: SourceMap.get_source_id(params.get(RequestKey.USER_AGENT)),  # noqa: E501
+        PayloadKey.SOURCE_DESCRIPTION: params.get(RequestKey.USER_AGENT)
     }
 
 
@@ -242,7 +249,9 @@ def get_payload_for_cluster_info(params):
         PayloadKey.TYPE: CseOperation.CLUSTER_INFO.telemetry_table,
         PayloadKey.CLUSTER_ID: uuid_hash(params.get(PayloadKey.CLUSTER_ID)),
         PayloadKey.WAS_OVDC_SPECIFIED: bool(params.get(RequestKey.OVDC_NAME)),
-        PayloadKey.WAS_ORG_SPECIFIED: bool(params.get(RequestKey.ORG_NAME))
+        PayloadKey.WAS_ORG_SPECIFIED: bool(params.get(RequestKey.ORG_NAME)),
+        PayloadKey.SOURCE_ID: SourceMap.get_source_id(params.get(RequestKey.USER_AGENT)),  # noqa: E501
+        PayloadKey.SOURCE_DESCRIPTION: params.get(RequestKey.USER_AGENT)
     }
 
 
@@ -258,7 +267,9 @@ def get_payload_for_list_clusters(params):
     return {
         PayloadKey.TYPE: CseOperation.CLUSTER_LIST.telemetry_table,
         PayloadKey.WAS_OVDC_SPECIFIED: bool(params.get(RequestKey.OVDC_NAME)),
-        PayloadKey.WAS_ORG_SPECIFIED: bool(params.get(RequestKey.ORG_NAME))
+        PayloadKey.WAS_ORG_SPECIFIED: bool(params.get(RequestKey.ORG_NAME)),
+        PayloadKey.SOURCE_ID: SourceMap.get_source_id(params.get(RequestKey.USER_AGENT)),  # noqa: E501
+        PayloadKey.SOURCE_DESCRIPTION: params.get(RequestKey.USER_AGENT)
     }
 
 
@@ -282,6 +293,9 @@ def get_payload_for_cluster_resize(params):
         PayloadKey.WAS_ROLLBACK_ENABLED: bool(params.get(RequestKey.ROLLBACK)),
         PayloadKey.WAS_OVDC_SPECIFIED: bool(params.get(RequestKey.OVDC_NAME)),
         PayloadKey.WAS_ORG_SPECIFIED: bool(params.get(RequestKey.ORG_NAME)),
+        PayloadKey.SOURCE_ID: SourceMap.get_source_id(params.get(RequestKey.USER_AGENT)),  # noqa: E501
+        PayloadKey.SOURCE_DESCRIPTION: params.get(RequestKey.USER_AGENT)
+
     }
 
 
@@ -300,7 +314,9 @@ def get_payload_for_cluster_upgrade(params):
         PayloadKey.TEMPLATE_NAME: params.get(RequestKey.TEMPLATE_NAME),
         PayloadKey.TEMPLATE_REVISION: params.get(RequestKey.TEMPLATE_REVISION),
         PayloadKey.WAS_OVDC_SPECIFIED: bool(params.get(RequestKey.OVDC_NAME)),
-        PayloadKey.WAS_ORG_SPECIFIED: bool(params.get(RequestKey.ORG_NAME))
+        PayloadKey.WAS_ORG_SPECIFIED: bool(params.get(RequestKey.ORG_NAME)),
+        PayloadKey.SOURCE_ID: SourceMap.get_source_id(params.get(RequestKey.USER_AGENT)),  # noqa: E501
+        PayloadKey.SOURCE_DESCRIPTION: params.get(RequestKey.USER_AGENT)
     }
 
 
@@ -317,7 +333,9 @@ def get_payload_for_cluster_upgrade_plan(params):
         PayloadKey.TYPE: CseOperation.CLUSTER_UPGRADE_PLAN.telemetry_table,
         PayloadKey.CLUSTER_ID: uuid_hash(params.get(PayloadKey.CLUSTER_ID)),
         PayloadKey.WAS_OVDC_SPECIFIED: bool(params.get(RequestKey.OVDC_NAME)),
-        PayloadKey.WAS_ORG_SPECIFIED: bool(params.get(RequestKey.ORG_NAME))
+        PayloadKey.WAS_ORG_SPECIFIED: bool(params.get(RequestKey.ORG_NAME)),
+        PayloadKey.SOURCE_ID: SourceMap.get_source_id(params.get(RequestKey.USER_AGENT)),  # noqa: E501
+        PayloadKey.SOURCE_DESCRIPTION: params.get(RequestKey.USER_AGENT)
     }
 
 
@@ -349,7 +367,9 @@ def get_payload_for_node_create(params):
         PayloadKey.WAS_NFS_ENABLED: bool(params.get(RequestKey.ENABLE_NFS)),
         PayloadKey.WAS_ROLLBACK_ENABLED: bool(params.get(RequestKey.ROLLBACK)),
         PayloadKey.WAS_OVDC_SPECIFIED: bool(params.get(RequestKey.OVDC_NAME)),
-        PayloadKey.WAS_ORG_SPECIFIED: bool(params.get(RequestKey.ORG_NAME))
+        PayloadKey.WAS_ORG_SPECIFIED: bool(params.get(RequestKey.ORG_NAME)),
+        PayloadKey.SOURCE_ID: SourceMap.get_source_id(params.get(RequestKey.USER_AGENT)),  # noqa: E501
+        PayloadKey.SOURCE_DESCRIPTION: params.get(RequestKey.USER_AGENT)
     }
 
 
@@ -367,7 +387,9 @@ def get_payload_for_node_delete(params):
         PayloadKey.CLUSTER_ID: uuid_hash(params.get(PayloadKey.CLUSTER_ID)),
         PayloadKey.NODE_NAME: params.get(RequestKey.NODE_NAME),
         PayloadKey.WAS_OVDC_SPECIFIED: bool(params.get(RequestKey.OVDC_NAME)),
-        PayloadKey.WAS_ORG_SPECIFIED: bool(params.get(RequestKey.ORG_NAME))
+        PayloadKey.WAS_ORG_SPECIFIED: bool(params.get(RequestKey.ORG_NAME)),
+        PayloadKey.SOURCE_ID: SourceMap.get_source_id(params.get(RequestKey.USER_AGENT)),  # noqa: E501
+        PayloadKey.SOURCE_DESCRIPTION: params.get(RequestKey.USER_AGENT)
     }
 
 
@@ -385,7 +407,9 @@ def get_payload_for_node_info(params):
         PayloadKey.CLUSTER_ID: uuid_hash(params.get(PayloadKey.CLUSTER_ID)),
         PayloadKey.NODE_NAME: params.get(RequestKey.NODE_NAME),
         PayloadKey.WAS_OVDC_SPECIFIED: bool(params.get(RequestKey.OVDC_NAME)),
-        PayloadKey.WAS_ORG_SPECIFIED: bool(params.get(RequestKey.ORG_NAME))
+        PayloadKey.WAS_ORG_SPECIFIED: bool(params.get(RequestKey.ORG_NAME)),
+        PayloadKey.SOURCE_ID: SourceMap.get_source_id(params.get(RequestKey.USER_AGENT)),  # noqa: E501
+        PayloadKey.SOURCE_DESCRIPTION: params.get(RequestKey.USER_AGENT)
     }
 
 
@@ -463,7 +487,9 @@ def get_payload_for_v35_cluster_list(params):
     """
     return {
         PayloadKey.TYPE: CseOperation.V35_CLUSTER_LIST.telemetry_table,
-        PayloadKey.FILTER_KEYS: params.get(PayloadKey.FILTER_KEYS)
+        PayloadKey.FILTER_KEYS: params.get(PayloadKey.FILTER_KEYS),
+        PayloadKey.SOURCE_ID: SourceMap.get_source_id(params.get(PayloadKey.SOURCE_DESCRIPTION)),  # noqa: E501
+        PayloadKey.SOURCE_DESCRIPTION: params.get(PayloadKey.SOURCE_DESCRIPTION)  # noqa: E501
     }
 
 
