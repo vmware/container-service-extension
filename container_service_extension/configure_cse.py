@@ -1609,7 +1609,7 @@ def _upgrade_to_35(client, config, ext_vcd_api_version,
     msg = "Loading all CSE clusters for processing..."
     INSTALL_LOGGER.info(msg)
     msg_update_callback.info(msg)
-    clusters = get_all_cse_clusters(client)
+    clusters = get_all_cse_clusters(client=client, fetch_details=False)
 
     # Update clusters to have auto generated password and fix their metadata
     _fix_cluster_metadata(
@@ -1629,7 +1629,7 @@ def _upgrade_to_35(client, config, ext_vcd_api_version,
     msg = "Loading all CSE clusters for processing..."
     INSTALL_LOGGER.info(msg)
     msg_update_callback.info(msg)
-    clusters = get_all_cse_clusters(client)
+    clusters = get_all_cse_clusters(client=client, fetch_details=True)
 
     # Add new vdc (placement) compute policy to ovdc with existing CSE clusters
     _assign_placement_policy_to_vdc_and_right_bundle_to_org(

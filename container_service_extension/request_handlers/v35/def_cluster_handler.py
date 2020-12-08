@@ -147,7 +147,7 @@ def cluster_list(data: dict, op_ctx: ctx.OperationContext):
     page_number = int(filters.get(PaginationKey.PAGE_NUMBER, CSE_PAGINATION_FIRST_PAGE_NUMBER))  # noqa: E501
     page_size = int(filters.get(PaginationKey.PAGE_SIZE, CSE_PAGINATION_DEFAULT_PAGE_SIZE))  # noqa: E501
     # remove page number and page size from the filters as it is treated
-    # differently to other filters
+    # differently from other filters
     if PaginationKey.PAGE_NUMBER in filters:
         del filters[PaginationKey.PAGE_NUMBER]
     if PaginationKey.PAGE_SIZE in filters:

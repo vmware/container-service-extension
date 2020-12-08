@@ -121,10 +121,14 @@ def ovdc_list(request_data, op_ctx: ctx.OperationContext):
                                cse_params=cse_params)
 
     ovdcs = []
-    org_vdcs, result_total, next_page_uri, prev_page_uri = \
+    result = \
         vcd_utils.get_ovdcs_by_page(op_ctx.client,
                                     page=page_number,
                                     page_size=page_size)
+    org_vdcs = result[PaginationKey.VALUES]
+    result_total = result[PaginationKey.RESULT_TOTAL]
+    next_page_uri = result.get(PaginationKey.NEXT_PAGE_URI)
+    prev_page_uri = result.get(PaginationKey.PREV_PAGE_URI)
     for ovdc in org_vdcs:
         ovdc_name = ovdc.get('name')
         org_name = ovdc.get('orgName')

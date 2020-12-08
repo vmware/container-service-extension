@@ -582,5 +582,4 @@ def get_ovdcs_by_page(client: vcd_client.Client,
             page_size=page_size,
             query_result_format=vcd_client.QueryResultFormat.ID_RECORDS)
     vdc_results = query.execute()
-    return vdc_results['values'], vdc_results['resultTotal'], \
-        vdc_results.get('nextPageUri'), vdc_results.get('previousPageUri')
+    return vdc_results
