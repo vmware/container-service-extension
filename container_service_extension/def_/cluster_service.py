@@ -37,6 +37,7 @@ from container_service_extension.server_constants import SYSTEM_ORG_NAME
 from container_service_extension.shared_constants import DefEntityOperation
 from container_service_extension.shared_constants import DefEntityOperationStatus  # noqa: E501
 from container_service_extension.shared_constants import DefEntityPhase
+from container_service_extension.shared_constants import RequestKey
 import container_service_extension.telemetry.constants as telemetry_constants
 import container_service_extension.telemetry.telemetry_handler as telemetry_handler  # noqa: E501
 import container_service_extension.utils as utils
@@ -74,11 +75,14 @@ class ClusterService(abstract_broker.AbstractBroker):
         )
         return self._sync_def_entity(cluster_id)
 
-    def list_clusters(self, filters: dict = {}) -> List[def_models.DefEntity]:
+    def list_clusters(self, filters: dict = {}, **kwargs) -> List[def_models.DefEntity]:  # noqa: E501
         """List corresponding defined entities of all native clusters."""
         telemetry_handler.record_user_action_details(
             cse_operation=telemetry_constants.CseOperation.V35_CLUSTER_LIST,
-            cse_params={telemetry_constants.PayloadKey.FILTER_KEYS: ','.join(filters.keys())}  # noqa: E501
+            cse_params={
+                telemetry_constants.PayloadKey.FILTER_KEYS: ','.join(filters.keys()),  # noqa: E501
+                telemetry_constants.PayloadKey.SOURCE_DESCRIPTION: kwargs.get(RequestKey.USER_AGENT)  # noqa: E501
+            }  # noqa: E501
         )
         ent_type: def_models.DefEntityType = def_utils.get_registered_def_entity_type()  # noqa: E501
         return self.entity_svc.list_entities_by_entity_type(

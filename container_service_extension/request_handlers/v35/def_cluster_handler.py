@@ -138,7 +138,10 @@ def cluster_list(data: dict, op_ctx: ctx.OperationContext):
     """
     svc = cluster_svc.ClusterService(op_ctx)
     return [asdict(def_entity) for def_entity in
-            svc.list_clusters(data.get(RequestKey.V35_QUERY, {}))]
+            svc.list_clusters(
+                data.get(RequestKey.V35_QUERY, {}),
+                **{RequestKey.USER_AGENT: data.get(RequestKey.USER_AGENT)})
+            ]
 
 
 @request_utils.v35_api_exception_handler
