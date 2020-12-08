@@ -7,12 +7,17 @@ import container_service_extension.def_.cluster_service as cluster_svc
 import container_service_extension.def_.models as def_models
 import container_service_extension.operation_context as ctx
 import container_service_extension.request_handlers.request_utils as request_utils  # noqa: E501
+from container_service_extension.server_constants import CseOperation as CseServerOperationInfo  # noqa: E501
 import container_service_extension.shared_constants as shared_constants
 from container_service_extension.shared_constants import ClusterAclKey
+from container_service_extension.shared_constants import CSE_PAGINATION_DEFAULT_PAGE_SIZE  # noqa: E501
+from container_service_extension.shared_constants import CSE_PAGINATION_FIRST_PAGE_NUMBER  # noqa: E501
 from container_service_extension.shared_constants import FlattenedClusterSpecKey  # noqa: E501
+from container_service_extension.shared_constants import PaginationKey
 from container_service_extension.shared_constants import RequestKey
 import container_service_extension.telemetry.constants as telemetry_constants
 import container_service_extension.telemetry.telemetry_handler as telemetry_handler  # noqa: E501
+import container_service_extension.utils as utils
 
 _OPERATION_KEY = 'operation'
 
@@ -138,8 +143,29 @@ def cluster_list(data: dict, op_ctx: ctx.OperationContext):
     :return: List
     """
     svc = cluster_svc.ClusterService(op_ctx)
-    return [asdict(def_entity) for def_entity in
-            svc.list_clusters(data.get(RequestKey.V35_QUERY, {}))]
+    filters = data.get(RequestKey.V35_QUERY, {})
+    # TODO create default constants for PAGE_NUMBER and PAGE_SIZE
+    page_number = int(filters.get(PaginationKey.PAGE_NUMBER, CSE_PAGINATION_FIRST_PAGE_NUMBER))  # noqa: E501
+    page_size = int(filters.get(PaginationKey.PAGE_SIZE, CSE_PAGINATION_DEFAULT_PAGE_SIZE))  # noqa: E501
+    # remove page number and page size from the filters as it is treated
+    # differently from other filters
+    if PaginationKey.PAGE_NUMBER in filters:
+        del filters[PaginationKey.PAGE_NUMBER]
+    if PaginationKey.PAGE_SIZE in filters:
+        del filters[PaginationKey.PAGE_SIZE]
+    result = svc.list_clusters(filters=filters,
+                               page_number=page_number,
+                               page_size=page_size)
+    cluster_list = [asdict(def_entity) for def_entity in result[PaginationKey.VALUES]]  # noqa: E501
+    api_path = CseServerOperationInfo.V35_CLUSTER_LIST.api_path_format
+    uri = f"{op_ctx.client.get_api_uri().strip('/')}{api_path}"
+    return utils.create_links_and_construct_paginated_result(
+        uri,
+        cluster_list,
+        result_total=result[PaginationKey.RESULT_TOTAL],
+        page_number=page_number,
+        page_size=page_size,
+        query_params=filters)
 
 
 @telemetry_handler.record_user_action_telemetry(cse_operation=telemetry_constants.CseOperation.V35_CLUSTER_ACL_LIST)  # noqa: E501

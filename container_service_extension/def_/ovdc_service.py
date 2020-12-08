@@ -3,17 +3,20 @@
 # SPDX-License-Identifier: BSD-2-Clause
 # import copy
 from dataclasses import asdict
-from typing import List
 
 import pyvcloud.vcd.client as vcd_client
 import pyvcloud.vcd.task as vcd_task
 
+import container_service_extension.cloudapi_utils as cloudapi_utils
 import container_service_extension.compute_policy_manager as compute_policy_manager # noqa: E501
 import container_service_extension.def_.models as def_models
 import container_service_extension.logger as logger
 import container_service_extension.operation_context as ctx
 import container_service_extension.pyvcloud_utils as vcd_utils
 from container_service_extension.shared_constants import ClusterEntityKind
+from container_service_extension.shared_constants import CSE_PAGINATION_DEFAULT_PAGE_SIZE  # noqa: E501
+from container_service_extension.shared_constants import CSE_PAGINATION_FIRST_PAGE_NUMBER  # noqa: E501
+from container_service_extension.shared_constants import PaginationKey
 from container_service_extension.shared_constants import RequestKey
 from container_service_extension.shared_constants import RUNTIME_DISPLAY_NAME_TO_INTERNAL_NAME_MAP  # noqa: E501
 from container_service_extension.shared_constants import RUNTIME_INTERNAL_NAME_TO_DISPLAY_NAME_MAP  # noqa: E501
@@ -78,6 +81,7 @@ def update_ovdc(operation_context: ctx.OperationContext,
                                               policy_list=policy_list, # noqa:E501
                                               ovdc_id=ovdc_id,
                                               vdc=vdc,
+                                              org_name=ovdc_spec.org_name,
                                               remove_cp_from_vms_on_disable=ovdc_spec.remove_cp_from_vms_on_disable) # noqa:E501
     return {'task_href': task_href}
 
@@ -111,12 +115,14 @@ def get_ovdc(operation_context: ctx.OperationContext, ovdc_id: str) -> dict:
     return result
 
 
-def list_ovdc(operation_context: ctx.OperationContext) -> List[dict]:
+def list_ovdc(operation_context: ctx.OperationContext,
+              page_number=CSE_PAGINATION_FIRST_PAGE_NUMBER,
+              page_size=CSE_PAGINATION_DEFAULT_PAGE_SIZE) -> dict:
     """List all ovdc and their k8s runtimes.
 
     :param ctx.OperationContext operation_context: context for the request
-    :return: list of dictionary containing details about the ovdc
-    :rtype: List[dict]
+    :return: dictionary containing list of details about the ovdc
+    :rtype: dict
     """
     # NOTE: For CSE 3.0, if `enable_tkg_plus` flag in config is set to false,
     # Prevent showing information about TKG+ by skipping TKG+ from the result.
@@ -125,7 +131,11 @@ def list_ovdc(operation_context: ctx.OperationContext) -> List[dict]:
                                                  cse_params={})
 
     ovdcs = []
-    org_vdcs = vcd_utils.get_all_ovdcs(operation_context.client)
+    result = cloudapi_utils.get_vdcs_by_page(
+        operation_context.cloudapi_client,
+        page_number=page_number, page_size=page_size)
+    org_vdcs = result[PaginationKey.VALUES]
+    num_results = result[PaginationKey.RESULT_TOTAL]
     for ovdc in org_vdcs:
         ovdc_name = ovdc.get('name')
         config = utils.get_server_runtime_config()
@@ -142,7 +152,10 @@ def list_ovdc(operation_context: ctx.OperationContext) -> List[dict]:
         # TODO: Find a better way to remove remove_cp_from_vms_on_disable
         del ovdc_details['remove_cp_from_vms_on_disable']
         ovdcs.append(ovdc_details)
-    return ovdcs
+    return {
+        PaginationKey.RESULT_TOTAL: num_results,
+        PaginationKey.VALUES: ovdcs
+    }
 
 
 def get_ovdc_k8s_runtime_details(sysadmin_client: vcd_client.Client,
@@ -196,6 +209,7 @@ def _update_ovdc_using_placement_policy_async(operation_context: ctx.OperationCo
                                               policy_list,
                                               ovdc_id,
                                               vdc,
+                                              org_name,
                                               remove_cp_from_vms_on_disable=False):  # noqa: E501
     """Enable ovdc using placement policies.
 
@@ -207,6 +221,7 @@ def _update_ovdc_using_placement_policy_async(operation_context: ctx.OperationCo
         the ovdc
     :param str ovdc_id:
     :param pyvcloud.vcd.vdc.VDC vdc: VDC object
+    :param str org_name: name of the organization that vdc provides resource
     :param bool remove_cp_from_vms_on_disable: Set to true if placement
         policies need to be removed from the vms before removing from the VDC.
     """
@@ -235,6 +250,7 @@ def _update_ovdc_using_placement_policy_async(operation_context: ctx.OperationCo
             cse_params = {
                 RequestKey.K8S_PROVIDER: k8s_runtimes_added,
                 RequestKey.OVDC_ID: ovdc_id,
+                RequestKey.ORG_NAME: org_name
             }
             telemetry_handler.record_user_action_details(cse_operation=CseOperation.OVDC_ENABLE, # noqa: E501
                                                          cse_params=cse_params)
@@ -246,6 +262,7 @@ def _update_ovdc_using_placement_policy_async(operation_context: ctx.OperationCo
             cse_params = {
                 RequestKey.K8S_PROVIDER: k8s_runtimes_deleted,
                 RequestKey.OVDC_ID: ovdc_id,
+                RequestKey.ORG_NAME: org_name,
                 RequestKey.REMOVE_COMPUTE_POLICY_FROM_VMS: remove_cp_from_vms_on_disable # noqa: E501
             }
             telemetry_handler.record_user_action_details(cse_operation=CseOperation.OVDC_DISABLE, # noqa: E501

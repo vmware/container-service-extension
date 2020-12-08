@@ -71,6 +71,10 @@ PAGE_SIZE = 'pageSize'
 DEFAULT_PAGE = 1
 DEFAULT_PAGE_SIZE = 25
 
+# CSE Pagination default values
+CSE_PAGINATION_FIRST_PAGE_NUMBER = 1
+CSE_PAGINATION_DEFAULT_PAGE_SIZE = 25
+
 
 @unique
 class OperationType(str, Enum):
@@ -155,6 +159,16 @@ class RequestKey(str, Enum):
 
     # keys that are only used internally at server side
     PKS_EXT_HOST = 'pks_ext_host'
+
+
+@unique
+class PaginationKey(str, Enum):
+    PAGE_NUMBER = 'page'
+    PAGE_SIZE = 'pageSize'
+    NEXT_PAGE_URI = 'nextPageUri'
+    PREV_PAGE_URI = 'previousPageUri'
+    RESULT_TOTAL = 'resultTotal'
+    VALUES = 'values'
 
 
 @unique

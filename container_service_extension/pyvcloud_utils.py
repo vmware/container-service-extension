@@ -19,6 +19,9 @@ from container_service_extension.logger import NULL_LOGGER
 from container_service_extension.logger import SERVER_DEBUG_WIRELOG_FILEPATH
 from container_service_extension.logger import SERVER_LOGGER
 from container_service_extension.server_constants import SYSTEM_ORG_NAME
+from container_service_extension.shared_constants import CSE_PAGINATION_DEFAULT_PAGE_SIZE  # noqa: E501
+from container_service_extension.shared_constants import CSE_PAGINATION_FIRST_PAGE_NUMBER  # noqa: E501
+from container_service_extension.shared_constants import PaginationKey
 from container_service_extension.utils import get_server_runtime_config
 from container_service_extension.utils import NullPrinter
 from container_service_extension.utils import str_to_bool
@@ -531,3 +534,52 @@ def get_all_ovdcs(client: vcd_client.Client):
             vcd_client.ResourceType.ORG_VDC.value,
             query_result_format=vcd_client.QueryResultFormat.ID_RECORDS)
     return list(query.execute())
+
+
+def create_cse_page_uri(client: vcd_client.Client, cse_path: str, vcd_uri=None, query_params={}):  # noqa: E501
+    """Create a CSE URI equivalent to the VCD uri.
+
+    :param vcd_client.Client client:
+    :param str path:
+    :param str vcd_uri:
+    :param dict query_params
+
+    Example: To convert a vCD generated Next page URI to CSE server next page
+        url:
+        create_cse_page_uri(client, cse_path="/cse/3.0/ovdcs",
+                            vcd_uri="https://vcd-ip/api/query?type=orgVdcs?page=2&pageSize=25)
+        Output:
+            https://vcd-ip/api/cse/3.0/ovdcs?page=2&pageSize=25
+    """  # noqa: E501
+    if vcd_uri:
+        base_uri = f"{client.get_api_uri().strip('/')}{cse_path}"
+        query_dict = dict(urllib.parse.parse_qsl(urllib.parse.urlsplit(vcd_uri).query))  # noqa: E501
+        page_number = int(query_dict.get(PaginationKey.PAGE_NUMBER))
+        page_size = int(query_dict.get(PaginationKey.PAGE_SIZE))
+        cse_uri = f"{base_uri}?page={page_number}&pageSize={page_size}"
+        for key, value in query_params.items():
+            cse_uri += f"&{key}={value}"
+        return cse_uri
+
+
+def get_ovdcs_by_page(client: vcd_client.Client,
+                      page=CSE_PAGINATION_FIRST_PAGE_NUMBER,
+                      page_size=CSE_PAGINATION_DEFAULT_PAGE_SIZE):
+    """Get the list of ovdcs in the page."""
+    query = None
+    if client.is_sysadmin():
+        # use adminOrgVdc in typed query
+        query = client.get_typed_query(
+            vcd_client.ResourceType.ADMIN_ORG_VDC.value,
+            page=page,
+            page_size=page_size,
+            query_result_format=vcd_client.QueryResultFormat.ID_RECORDS)
+    else:
+        # use orgVdc in typed query
+        query = client.get_typed_query(
+            vcd_client.ResourceType.ORG_VDC.value,
+            page=page,
+            page_size=page_size,
+            query_result_format=vcd_client.QueryResultFormat.ID_RECORDS)
+    vdc_results = query.execute()
+    return vdc_results

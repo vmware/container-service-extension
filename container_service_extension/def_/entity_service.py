@@ -19,6 +19,8 @@ import container_service_extension.def_.utils as def_utils
 import container_service_extension.exceptions as cse_exception
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
 from container_service_extension.minor_error_codes import MinorErrorCode
+from container_service_extension.shared_constants import CSE_PAGINATION_DEFAULT_PAGE_SIZE, PaginationKey  # noqa: E501
+from container_service_extension.shared_constants import CSE_PAGINATION_FIRST_PAGE_NUMBER  # noqa: E501
 from container_service_extension.shared_constants import RequestMethod
 import container_service_extension.utils as utils
 
@@ -120,6 +122,38 @@ class DefEntityService():
                 break
             for entity in response_body['values']:
                 yield DefEntity(**entity)
+
+    @handle_entity_service_exception
+    def get_entities_per_page_by_entity_type(self, vendor: str, nss: str, version: str,  # noqa: E501
+                                             filters: dict = None, page_number: int = CSE_PAGINATION_FIRST_PAGE_NUMBER,  # noqa: E501
+                                             page_size: int = CSE_PAGINATION_DEFAULT_PAGE_SIZE):  # noqa: E501
+        """List all the entities per page and entity type.
+
+        :param str vendor: entity type vendor name
+        :param str nss: entity type namespace
+        :param str version: entity type version
+        :param dict filters: additional filters
+        :param int page_number: page to return
+        :param int page_size: number of records per page
+        :rtype: Generator[(List[DefEntity], int), None, None]
+        """
+        filter_string = utils.construct_filter_string(filters)
+        query_string = f"page={page_number}&pageSize={page_size}"
+        if filter_string:
+            query_string = f"filter={filter_string}&{query_string}"
+        response_body = self._cloudapi_client.do_request(
+            method=RequestMethod.GET,
+            cloudapi_version=CloudApiVersion.VERSION_1_0_0,
+            resource_url_relative_path=f"{CloudApiResource.ENTITIES}/"
+                                       f"{CloudApiResource.ENTITY_TYPES_TOKEN}/"  # noqa: E501
+                                       f"{vendor}/{nss}/{version}?{query_string}")  # noqa: E501
+        result = {}
+        entity_list = []
+        for v in response_body['values']:
+            entity_list.append(DefEntity(**v))
+        result[PaginationKey.RESULT_TOTAL] = int(response_body['resultTotal'])
+        result[PaginationKey.VALUES] = entity_list
+        return result
 
     @handle_entity_service_exception
     def list_entities_by_interface(self, vendor: str, nss: str, version: str):
