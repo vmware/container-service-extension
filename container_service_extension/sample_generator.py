@@ -70,8 +70,6 @@ SAMPLE_AMQP_CONFIG = {
         'password': 'guest',
         'exchange': 'cse-ext',
         'routing_key': 'cse',
-        'ssl': False,
-        'ssl_accept_all': False,
         'vhost': '/'
     }
 }
@@ -179,8 +177,6 @@ COMMENTED_AMQP_SECTION = """\
 #  port: 5672
 #  prefix: vcd
 #  routing_key: cse
-#  ssl: false
-#  ssl_accept_all: false
 #  username: guest
 #  vhost: /
 """
