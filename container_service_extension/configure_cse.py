@@ -147,7 +147,6 @@ def _check_amqp_extension_installation(client, config, msg_update_callback,
                                         amqp['password'])
     parameters = pika.ConnectionParameters(amqp['host'], amqp['port'],
                                            amqp['vhost'], credentials,
-                                           ssl=amqp['ssl'],
                                            connection_attempts=3,
                                            retry_delay=2,
                                            socket_timeout=5)
@@ -381,7 +380,7 @@ def install_cse(config_file_name, config, skip_template_creation,
             # create amqp exchange if it doesn't exist
             amqp = config['amqp']
             _create_amqp_exchange(amqp['exchange'], amqp['host'], amqp['port'],
-                                  amqp['vhost'], amqp['ssl'], amqp['username'],
+                                  amqp['vhost'], amqp['username'],
                                   amqp['password'],
                                   msg_update_callback=msg_update_callback)
 
@@ -543,7 +542,7 @@ def _register_cse_as_mqtt_extension(client, target_vcd_api_version,
     INSTALL_LOGGER.info(mqtt_msg)
 
 
-def _create_amqp_exchange(exchange_name, host, port, vhost, use_ssl,
+def _create_amqp_exchange(exchange_name, host, port, vhost,
                           username, password,
                           msg_update_callback=utils.NullPrinter()):
     """Create the specified AMQP exchange if it does not exist.
@@ -554,7 +553,6 @@ def _create_amqp_exchange(exchange_name, host, port, vhost, use_ssl,
     :param str host: AMQP host name.
     :param str password: AMQP password.
     :param int port: AMQP port number.
-    :param bool use_ssl: Enable ssl.
     :param str username: AMQP username.
     :param str vhost: AMQP vhost.
     :param utils.ConsoleMessagePrinter msg_update_callback: Callback object.
@@ -566,7 +564,7 @@ def _create_amqp_exchange(exchange_name, host, port, vhost, use_ssl,
     INSTALL_LOGGER.info(msg)
     credentials = pika.PlainCredentials(username, password)
     parameters = pika.ConnectionParameters(host, port, vhost, credentials,
-                                           ssl=use_ssl, connection_attempts=3,
+                                           connection_attempts=3,
                                            retry_delay=2, socket_timeout=5)
     connection = None
     try:
@@ -1516,7 +1514,7 @@ def _legacy_upgrade_to_33_34(client, config, ext_vcd_api_version,
     # create amqp exchange if it doesn't exist
     amqp = config['amqp']
     _create_amqp_exchange(amqp['exchange'], amqp['host'], amqp['port'],
-                          amqp['vhost'], amqp['ssl'], amqp['username'],
+                          amqp['vhost'], amqp['username'],
                           amqp['password'],
                           msg_update_callback=msg_update_callback)
 
@@ -1684,7 +1682,6 @@ def _upgrade_to_35(client, config, ext_vcd_api_version,
             host=config['amqp']['host'],
             port=config['amqp']['port'],
             vhost=config['amqp']['vhost'],
-            use_ssl=config['amqp']['ssl'],
             username=config['amqp']['username'],
             password=config['amqp']['password'],
             msg_update_callback=msg_update_callback)
