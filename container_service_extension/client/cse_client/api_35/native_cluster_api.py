@@ -100,11 +100,11 @@ class NativeClusterApi(CseClient):
             **response_processor.process_response(response))
 
     def get_single_page_cluster_acl(self, cluster_id,
-                                    page=shared_constants.DEFAULT_PAGE,
-                                    page_size=shared_constants.DEFAULT_PAGE_SIZE):  # noqa: E501
+                                    page=shared_constants.CSE_PAGINATION_FIRST_PAGE_NUMBER,  # noqa: E501
+                                    page_size=shared_constants.CSE_PAGINATION_DEFAULT_PAGE_SIZE):  # noqa: E501
         query_uri = f'{self._cluster_uri}/{cluster_id}/acl?' \
-                    f'{shared_constants.PAGE}={page}&' \
-                    f'{shared_constants.PAGE_SIZE}={page_size}'
+                    f'{shared_constants.PaginationKey.PAGE_NUMBER}={page}&' \
+                    f'{shared_constants.PaginationKey.PAGE_SIZE}={page_size}'
         response = self._client._do_request_prim(
             shared_constants.RequestMethod.GET,
             query_uri,
@@ -122,7 +122,7 @@ class NativeClusterApi(CseClient):
             acl_response = self.get_single_page_cluster_acl(
                 cluster_id=cluster_id,
                 page=page_num,
-                page_size=shared_constants.DEFAULT_PAGE_SIZE)
+                page_size=shared_constants.CSE_PAGINATION_DEFAULT_PAGE_SIZE)
             acl_values = acl_response['values']
             if len(acl_values) == 0:
                 break

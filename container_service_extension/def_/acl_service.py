@@ -48,11 +48,11 @@ class ClusterACLService:
         acl_path = f'{cloudapi_constants.CloudApiResource.ENTITIES}/' \
                    f'{self._cluster_id}/' \
                    f'{cloudapi_constants.CloudApiResource.ACL}' \
-                   f'?{shared_constants.PAGE}={page}&' \
-                   f'{shared_constants.PAGE_SIZE}={page_size}'
+                   f'?{shared_constants.PaginationKey.PAGE_NUMBER}={page}&' \
+                   f'{shared_constants.PaginationKey.PAGE_SIZE}={page_size}'
         de_acl_response = self._cloudapi_client.do_request(
             method=shared_constants.RequestMethod.GET,
-            cloudapi_version=cloudapi_constants.CLOUDAPI_VERSION_1_0_0,
+            cloudapi_version=cloudapi_constants.CloudApiVersion.VERSION_1_0_0,
             resource_url_relative_path=acl_path)
         return de_acl_response
 
@@ -66,7 +66,7 @@ class ClusterACLService:
         while True:
             page_num += 1
             response_body = self.get_def_entity_acl_response(
-                page_num, shared_constants.DEFAULT_PAGE_SIZE)
+                page_num, shared_constants.CSE_PAGINATION_DEFAULT_PAGE_SIZE)
             if len(response_body['values']) == 0:
                 break
             for acl_entry in response_body['values']:
@@ -88,7 +88,7 @@ class ClusterACLService:
             f'{self._cluster_id}/{cloudapi_constants.CloudApiResource.ACL}'
         self._cloudapi_client.do_request(
             method=shared_constants.RequestMethod.POST,
-            cloudapi_version=cloudapi_constants.CLOUDAPI_VERSION_1_0_0,
+            cloudapi_version=cloudapi_constants.CloudApiVersion.VERSION_1_0_0,
             resource_url_relative_path=access_controls_path,
             payload=payload)
 
@@ -132,7 +132,7 @@ class ClusterACLService:
             delete_path = access_controls_path + f'/{acl_entry.id}'
             self._cloudapi_client.do_request(
                 method=shared_constants.RequestMethod.DELETE,
-                cloudapi_version=cloudapi_constants.CLOUDAPI_VERSION_1_0_0,
+                cloudapi_version=cloudapi_constants.CloudApiVersion.VERSION_1_0_0,  # noqa: E501
                 resource_url_relative_path=delete_path)
 
         return user_acl_level_dict

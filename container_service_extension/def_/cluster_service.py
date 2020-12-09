@@ -1,7 +1,6 @@
 # container-service-extension
 # Copyright (c) 2020 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
-import dataclasses
 import random
 import re
 import string
@@ -441,8 +440,8 @@ class ClusterService(abstract_broker.AbstractBroker):
         """Get cluster ACL info based on the defined entity ACL."""
         telemetry_params = {
             shared_constants.RequestKey.CLUSTER_ID: cluster_id,
-            shared_constants.PAGE: page,
-            shared_constants.PAGE_SIZE: page_size
+            shared_constants.PaginationKey.PAGE_NUMBER: page,
+            shared_constants.PaginationKey.PAGE_SIZE: page_size
         }
         telemetry_handler.record_user_action_details(
             telemetry_constants.CseOperation.V35_CLUSTER_ACL_LIST,
@@ -481,20 +480,20 @@ class ClusterService(abstract_broker.AbstractBroker):
                             f"{shared_constants.CLUSTER_URL_FRAGMENT}/" \
                             f"{cluster_id}/" \
                             f"{shared_constants.ACL_URL_FRAGMENT}" \
-                            f"?{shared_constants.PaginatedKey.PAGE_SIZE}=" \
-                            f"{page_size}&{shared_constants.PaginatedKey.PAGE}="  # noqa: E501
-        next_page_url = f"{page_url_fragment}{page + 1}" if 0 < page < page_count else None  # noqa: E501
-        prev_page_url = f"{page_url_fragment}{page - 1}" if page_count > page > 1 else None  # noqa: E501
+                            f"?{shared_constants.PaginationKey.PAGE_SIZE}=" \
+                            f"{page_size}&{shared_constants.PaginationKey.PAGE_NUMBER}="  # noqa: E501
+        next_page_uri = f"{page_url_fragment}{page + 1}" if 0 < page < page_count else None  # noqa: E501
+        prev_page_uri = f"{page_url_fragment}{page - 1}" if page_count > page > 1 else None  # noqa: E501
 
-        list_response_page = def_utils.PaginatedResponse(
-            resultTotal=result_total,
-            pageCount=page_count,
-            page=page,
-            pageSize=page_size,
+        list_paginated_response = utils.construct_paginated_response(
             values=acl_values,
-            previousPageUrl=prev_page_url,
-            nextPageUrl=next_page_url)
-        return dataclasses.asdict(list_response_page)
+            result_total=result_total,
+            page_number=page,
+            page_size=page_size,
+            page_count=page_count,
+            next_page_uri=next_page_uri,
+            prev_page_uri=prev_page_uri)
+        return list_paginated_response
 
     def update_cluster_acl(self, cluster_id, update_acl_entry_dicts: list):
         """Update the cluster ACL by updating the defined entity and vApp ACL."""  # noqa: E501

@@ -1,7 +1,6 @@
 # container-service-extension
 # Copyright (c) 2020 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
-import dataclasses
 from enum import Enum
 from enum import unique
 
@@ -133,14 +132,3 @@ def generate_entity_type_id(vendor, nss, version):
     :rtype str
     """
     return f"{DEF_ENTITY_TYPE_ID_PREFIX}:{vendor}:{nss}:{version}"
-
-
-@dataclasses.dataclass()
-class PaginatedResponse:
-    resultTotal: int
-    pageCount: int
-    page: int
-    pageSize: int
-    nextPageUrl: str = None
-    previousPageUrl: str = None
-    values: list = dataclasses.field(default_factory=list)

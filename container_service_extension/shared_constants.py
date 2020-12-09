@@ -65,11 +65,6 @@ ACCESS_LEVEL_TYPE_TO_ID = {
     FULL_CONTROL.lower(): FULL_CONTROL_ACCESS_LEVEL_ID
 }
 
-# Page parameters
-PAGE = 'page'
-PAGE_SIZE = 'pageSize'
-DEFAULT_PAGE = 1
-DEFAULT_PAGE_SIZE = 25
 
 # CSE Pagination default values
 CSE_PAGINATION_FIRST_PAGE_NUMBER = 1
@@ -165,6 +160,7 @@ class RequestKey(str, Enum):
 class PaginationKey(str, Enum):
     PAGE_NUMBER = 'page'
     PAGE_SIZE = 'pageSize'
+    PAGE_COUNT = 'pageCount'
     NEXT_PAGE_URI = 'nextPageUri'
     PREV_PAGE_URI = 'previousPageUri'
     RESULT_TOTAL = 'resultTotal'
@@ -209,20 +205,6 @@ class AccessControlKey(str, Enum):
     HREF = 'href'
     SUBJECT = 'subject'
     USERNAME = 'username'
-
-
-@unique
-class PaginatedKey(str, Enum):
-    """Keys for paginated data."""
-
-    RESULT_TOTAL = 'resultTotal'
-    PAGE_COUNT = 'pageCount'
-    PAGE = 'page'
-    PAGE_SIZE = 'pageSize'
-    VALUES = 'values'
-    NEXT_PAGE_URL = 'nextPageUrl'
-    PREV_PAGE_URL = 'previoudPageUrl'
-    ASSOCIATIONS = 'associations'
 
 
 @unique

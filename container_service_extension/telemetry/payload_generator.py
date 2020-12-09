@@ -326,8 +326,8 @@ def get_payload_for_cluster_upgrade_plan(params):
 
 def get_payload_for_v35_cluster_acl_list(cluster_acl_list_info):
     cluster_id = cluster_acl_list_info[RequestKey.CLUSTER_ID]
-    page = cluster_acl_list_info[shared_constants.PAGE]
-    page_size = cluster_acl_list_info[shared_constants.PAGE_SIZE]
+    page = cluster_acl_list_info[shared_constants.PaginationKey.PAGE_NUMBER]
+    page_size = cluster_acl_list_info[shared_constants.PaginationKey.PAGE_SIZE]
     return {
         PayloadKey.TYPE: CseOperation.V35_CLUSTER_ACL_LIST.telemetry_table,
         PayloadKey.CLUSTER_ID: uuid_hash(cluster_id),
