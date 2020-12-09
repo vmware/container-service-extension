@@ -25,8 +25,6 @@ amqp:
   port: 5672
   prefix: vcd
   routing_key: cse
-  ssl: false
-  ssl_accept_all: false
   username: guest
   vhost: /
 

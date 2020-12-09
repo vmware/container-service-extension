@@ -39,7 +39,6 @@ class MessageConsumer:
             return AMQPConsumer(
                 host=amqp['host'],
                 port=amqp['port'],
-                ssl=amqp['ssl'],
                 vhost=amqp['vhost'],
                 username=amqp['username'],
                 password=amqp['password'],

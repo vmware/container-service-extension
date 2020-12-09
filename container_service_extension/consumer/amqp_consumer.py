@@ -21,20 +21,18 @@ class AMQPConsumer(object):
     def __init__(self,
                  host,
                  port,
-                 ssl,
                  vhost,
                  username,
                  password,
                  exchange,
                  routing_key,
                  num_processors):
-        self._connection = None
-        self._channel = None
+        self._connection: pika.connection.Connection = None
+        self._channel: pika.channel.Channel = None
         self._closing = False
-        self._consumer_tag = None
+        self._consumer_tag: str = None
         self.host = host
         self.port = port
-        self.ssl = ssl
         self.vhost = vhost
         self.username = username
         self.password = password
@@ -46,7 +44,7 @@ class AMQPConsumer(object):
         self._ctpe = ConsumerThreadPoolExecutor(self.num_processors)
         self._publish_lock = Lock()
 
-    def connect(self):
+    def connect(self) -> pika.connection.Connection:
         LOGGER.info(f"Connecting to {self.host}:{self.port}")
         credentials = pika.PlainCredentials(self.username, self.password)
         parameters = pika.ConnectionParameters(
@@ -54,12 +52,11 @@ class AMQPConsumer(object):
             self.port,
             self.vhost,
             credentials,
-            ssl=self.ssl,
             connection_attempts=3,
             retry_delay=2,
-            socket_timeout=5)
-        return pika.SelectConnection(
-            parameters, self.on_connection_open, stop_ioloop_on_close=False)
+            socket_timeout=5,
+            blocked_connection_timeout=5)
+        return pika.SelectConnection(parameters, self.on_connection_open)
 
     def on_connection_open(self, unused_connection):
         LOGGER.debug("Connection opened")
@@ -70,14 +67,13 @@ class AMQPConsumer(object):
         LOGGER.debug("Adding connection close callback")
         self._connection.add_on_close_callback(self.on_connection_closed)
 
-    def on_connection_closed(self, connection, reply_code, reply_text):
+    def on_connection_closed(self, unused_connection, amqp_exception):
         self._channel = None
         if self._closing:
             self._connection.ioloop.stop()
         else:
             LOGGER.warning(f"Connection closed, reopening in 5 seconds: "
-                           f"({reply_code}) {reply_text}")
-            self._connection.add_timeout(5, self.reconnect)
+                           f"({str(amqp_exception)})")
 
     def reconnect(self):
         self._connection.ioloop.stop()
@@ -100,34 +96,39 @@ class AMQPConsumer(object):
         LOGGER.debug("Adding channel close callback")
         self._channel.add_on_close_callback(self.on_channel_closed)
 
-    def on_channel_closed(self, channel, reply_code, reply_text):
-        LOGGER.warning(f"Channel {channel} was closed: ({reply_code}) "
-                       f"{reply_text}")
-        self._connection.close()
+    def on_channel_closed(self, channel, amqp_exception):
+        LOGGER.warning(f"Closing channel ({channel}) due to exception: ({str(amqp_exception)})")
+        if self._channel.is_closed or self._channel.is_closing:
+            LOGGER.warning(f"Channel ({channel}) is already closed")
+            return
+        try:
+            self._connection.close()
+        except pika.exceptions.ConnectionWrongStateError as cwse:
+            LOGGER.warning(f"Connection is closed or closing: ({cwse})")
 
     def setup_exchange(self, exchange_name):
         LOGGER.debug(f"Declaring exchange {exchange_name}")
         self._channel.exchange_declare(
-            self.on_exchange_declareok,
-            exchange=exchange_name,
+            exchange_name,
             exchange_type=EXCHANGE_TYPE,
             passive=True,
             durable=True,
-            auto_delete=False)
+            auto_delete=False,
+            callback=self.on_exchange_declareok)
 
-    def on_exchange_declareok(self, unused_frame):
-        LOGGER.debug(f"Exchange declared: {unused_frame}")
+    def on_exchange_declareok(self, exchange_name):
+        LOGGER.debug(f"Exchange declared: ({exchange_name})")
         self.setup_queue(self.queue)
 
     def setup_queue(self, queue_name):
-        LOGGER.debug(f"Declaring queue {queue_name}")
-        self._channel.queue_declare(self.on_queue_declareok, queue_name)
+        LOGGER.debug(f"Declaring queue ({queue_name})")
+        self._channel.queue_declare(queue_name, callback=self.on_queue_declareok)
 
     def on_queue_declareok(self, method_frame):
-        LOGGER.debug(f"Binding {self.exchange} to {self.queue} with "
-                     f"{self.routing_key}")
-        self._channel.queue_bind(self.on_bindok, self.queue, self.exchange,
-                                 self.routing_key)
+        LOGGER.debug(f"Binding ({self.exchange}) to ({self.queue}) with "
+                     f"({self.routing_key})")
+        self._channel.queue_bind(self.queue, self.exchange,
+                                 routing_key=self.routing_key, callback=self.on_bindok)
 
     def on_bindok(self, unused_frame):
         LOGGER.debug("Queue bound")
@@ -136,8 +137,8 @@ class AMQPConsumer(object):
     def start_consuming(self):
         LOGGER.debug("Issuing consumer related RPC commands")
         self.add_on_cancel_callback()
-        self._consumer_tag = self._channel.basic_consume(
-            self.on_message, self.queue)
+        self._consumer_tag = self._channel.basic_consume(self.queue, self.on_message)
+        LOGGER.debug(f"Started consumer with tag ({self._consumer_tag})")
 
     def add_on_cancel_callback(self):
         LOGGER.debug("Adding consumer cancellation callback")
@@ -145,7 +146,7 @@ class AMQPConsumer(object):
 
     def on_consumer_cancelled(self, method_frame):
         LOGGER.debug(f"Consumer was cancelled remotely, shutting down: "
-                     f"{method_frame}")
+                     f"({method_frame})")
         if self._channel:
             self._channel.close()
 
@@ -199,12 +200,18 @@ class AMQPConsumer(object):
                 request_id=body_json['id'],
                 status_code=requests.codes.too_many_requests,
                 reply_body_str=constants.TOO_MANY_REQUESTS_BODY)
-            LOGGER.debug(f"reply: {constants.TOO_MANY_REQUESTS_BODY}")
+            LOGGER.debug(f"reply: ({constants.TOO_MANY_REQUESTS_BODY})")
             self.send_response(reply_msg, properties)
 
-    def on_message(self, unused_channel, basic_deliver, properties, body):
+    def on_message(
+        self,
+        channel: pika.channel.Channel,
+        basic_deliver: pika.spec.Basic.Deliver,
+        properties: pika.spec.BasicProperties,
+        body: bytes
+    ):
         # If consumer is closing, no longer adding messages to thread pool
-        if self._closing:
+        if channel.is_closed or channel.is_closing:
             return
 
         self.acknowledge_message(basic_deliver.delivery_tag)
@@ -216,12 +223,15 @@ class AMQPConsumer(object):
                                                                 basic_deliver))
 
     def acknowledge_message(self, delivery_tag):
-        LOGGER.debug(f"Acknowledging message {delivery_tag}")
-        self._channel.basic_ack(delivery_tag)
+        LOGGER.debug(f"Acknowledging message ({delivery_tag})")
+        self._channel.basic_ack(delivery_tag=delivery_tag)
 
     def stop_consuming(self):
         if self._channel:
-            LOGGER.info("Sending a Basic.Cancel RPC command to RabbitMQ")
+            if self._channel.is_closed or self._channel.is_closing:
+                LOGGER.info("Channel is already closed or is closing.")
+                return
+            LOGGER.info(f"Sending a Basic.Cancel RPC command to RabbitMQ for consumer ({self._consumer_tag})")
             self._channel.basic_cancel(self.on_cancelok, self._consumer_tag)
 
     def on_cancelok(self, unused_frame):
@@ -229,8 +239,14 @@ class AMQPConsumer(object):
         self.close_channel()
 
     def close_channel(self):
-        LOGGER.debug("Closing the channel")
-        self._channel.close()
+        LOGGER.debug(f"Closing channel ({self._channel})")
+        if self._channel.is_closed or self._channel.is_closing:
+            LOGGER.warning(f"Channel ({self._channel}) is already closed")
+            return
+        try:
+            self._channel.close()
+        except pika.exceptions.ConnectionWrongStateError as cwse:
+            LOGGER.warn("Trying to close channel with unexpected state: [{}]".format(cwse))
 
     def run(self):
         self._connection = self.connect()
