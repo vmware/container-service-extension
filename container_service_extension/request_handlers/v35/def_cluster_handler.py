@@ -31,7 +31,7 @@ def cluster_create(data: dict, op_ctx: ctx.OperationContext):
     """
     svc = cluster_svc.ClusterService(op_ctx)
     cluster_entity_spec = def_models.ClusterEntity(**data[RequestKey.V35_SPEC])
-    return asdict(svc.create_cluster(cluster_entity_spec))
+    return asdict(svc.create_cluster(cluster_entity_spec, **{RequestKey.USER_AGENT: data.get(RequestKey.USER_AGENT)}))  # noqa: E501
 
 
 @telemetry_handler.record_user_action_telemetry(cse_operation=telemetry_constants.CseOperation.V35_CLUSTER_APPLY)  # noqa: E501
@@ -52,7 +52,7 @@ def cluster_resize(data: dict, op_ctx: ctx.OperationContext):
         asdict(cluster_entity_spec.spec), asdict(curr_entity.entity.spec),
         exclude_fields=[FlattenedClusterSpecKey.WORKERS_COUNT.value,
                         FlattenedClusterSpecKey.NFS_COUNT.value])
-    return asdict(svc.resize_cluster(cluster_id, cluster_entity_spec))
+    return asdict(svc.resize_cluster(cluster_id, cluster_entity_spec, **{RequestKey.USER_AGENT: data.get(RequestKey.USER_AGENT)}))  # noqa: E501
 
 
 @telemetry_handler.record_user_action_telemetry(cse_operation=telemetry_constants.CseOperation.V35_CLUSTER_DELETE)  # noqa: E501
@@ -69,7 +69,7 @@ def cluster_delete(data: dict, op_ctx: ctx.OperationContext):
     """
     svc = cluster_svc.ClusterService(op_ctx)
     cluster_id = data[RequestKey.CLUSTER_ID]
-    return asdict(svc.delete_cluster(cluster_id))
+    return asdict(svc.delete_cluster(cluster_id, **{RequestKey.USER_AGENT: data.get(RequestKey.USER_AGENT)}))  # noqa: E501
 
 
 @telemetry_handler.record_user_action_telemetry(cse_operation=telemetry_constants.CseOperation.V35_CLUSTER_INFO)  # noqa: E501
@@ -86,7 +86,7 @@ def cluster_info(data: dict, op_ctx: ctx.OperationContext):
     """
     svc = cluster_svc.ClusterService(op_ctx)
     cluster_id = data[RequestKey.CLUSTER_ID]
-    return asdict(svc.get_cluster_info(cluster_id))
+    return asdict(svc.get_cluster_info(cluster_id, **{RequestKey.USER_AGENT: data.get(RequestKey.USER_AGENT)}))  # noqa: E501
 
 
 @telemetry_handler.record_user_action_telemetry(cse_operation=telemetry_constants.CseOperation.V35_CLUSTER_CONFIG)  # noqa: E501
@@ -100,7 +100,7 @@ def cluster_config(data: dict, op_ctx: ctx.OperationContext):
     """
     svc = cluster_svc.ClusterService(op_ctx)
     cluster_id = data[RequestKey.CLUSTER_ID]
-    return svc.get_cluster_config(cluster_id)
+    return svc.get_cluster_config(cluster_id, **{RequestKey.USER_AGENT: data.get(RequestKey.USER_AGENT)})  # noqa: E501)
 
 
 @telemetry_handler.record_user_action_telemetry(cse_operation=telemetry_constants.CseOperation.V35_CLUSTER_UPGRADE_PLAN)  # noqa: E501
@@ -111,7 +111,7 @@ def cluster_upgrade_plan(data, op_ctx: ctx.OperationContext):
     :return: List[Tuple(str, str)]
     """
     svc = cluster_svc.ClusterService(op_ctx)
-    return svc.get_cluster_upgrade_plan(data[RequestKey.CLUSTER_ID])
+    return svc.get_cluster_upgrade_plan(data[RequestKey.CLUSTER_ID], **{RequestKey.USER_AGENT: data.get(RequestKey.USER_AGENT)})  # noqa: E501
 
 
 @telemetry_handler.record_user_action_telemetry(cse_operation=telemetry_constants.CseOperation.V35_CLUSTER_UPGRADE)  # noqa: E501
@@ -131,7 +131,7 @@ def cluster_upgrade(data, op_ctx: ctx.OperationContext):
         asdict(cluster_entity_spec.spec), asdict(curr_entity.entity.spec),
         exclude_fields=[FlattenedClusterSpecKey.TEMPLATE_NAME.value,
                         FlattenedClusterSpecKey.TEMPLATE_REVISION.value])
-    return asdict(svc.upgrade_cluster(cluster_id, cluster_entity_spec))
+    return asdict(svc.upgrade_cluster(cluster_id, cluster_entity_spec, **{RequestKey.USER_AGENT: data.get(RequestKey.USER_AGENT)}))  # noqa: E501
 
 
 @telemetry_handler.record_user_action_telemetry(cse_operation=telemetry_constants.CseOperation.V35_CLUSTER_LIST)  # noqa: E501
@@ -234,7 +234,8 @@ def nfs_node_delete(data, op_ctx: ctx.OperationContext):
         cse_operation=telemetry_constants.CseOperation.V35_NODE_DELETE,
         cse_params={
             telemetry_constants.PayloadKey.CLUSTER_ID: cluster_id,
-            telemetry_constants.PayloadKey.NODE_NAME: node_name
+            telemetry_constants.PayloadKey.NODE_NAME: node_name,
+            telemetry_constants.PayloadKey.SOURCE_DESCRIPTION: data.get(RequestKey.USER_AGENT)  # noqa: E501
         }
     )
 
