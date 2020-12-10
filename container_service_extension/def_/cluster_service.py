@@ -62,7 +62,7 @@ class ClusterService(abstract_broker.AbstractBroker):
         self.sysadmin_entity_svc = def_entity_svc.DefEntityService(
             op_ctx.sysadmin_cloudapi_client)
 
-    def get_cluster_info(self, cluster_id: str) -> def_models.DefEntity:
+    def get_cluster_info(self, cluster_id: str, **kwargs) -> def_models.DefEntity:  # noqa: E501
         """Get the corresponding defined entity of the native cluster.
 
         This method ensures to return the latest state of the cluster vApp.
@@ -71,7 +71,10 @@ class ClusterService(abstract_broker.AbstractBroker):
         """
         telemetry_handler.record_user_action_details(
             cse_operation=telemetry_constants.CseOperation.V35_CLUSTER_INFO,
-            cse_params={telemetry_constants.PayloadKey.CLUSTER_ID: cluster_id}
+            cse_params={
+                telemetry_constants.PayloadKey.CLUSTER_ID: cluster_id,
+                telemetry_constants.PayloadKey.SOURCE_DESCRIPTION: kwargs.get(RequestKey.USER_AGENT)  # noqa: E501
+            }
         )
         return self._sync_def_entity(cluster_id)
 
@@ -82,7 +85,7 @@ class ClusterService(abstract_broker.AbstractBroker):
             cse_params={
                 telemetry_constants.PayloadKey.FILTER_KEYS: ','.join(filters.keys()),  # noqa: E501
                 telemetry_constants.PayloadKey.SOURCE_DESCRIPTION: kwargs.get(RequestKey.USER_AGENT)  # noqa: E501
-            }  # noqa: E501
+            }
         )
         ent_type: def_models.DefEntityType = def_utils.get_registered_def_entity_type()  # noqa: E501
         return self.entity_svc.list_entities_by_entity_type(
@@ -91,7 +94,7 @@ class ClusterService(abstract_broker.AbstractBroker):
             version=ent_type.version,
             filters=filters)
 
-    def get_cluster_config(self, cluster_id: str):
+    def get_cluster_config(self, cluster_id: str, **kwargs):
         """Get the cluster's kube config contents.
 
         :param str cluster_id:
@@ -106,7 +109,9 @@ class ClusterService(abstract_broker.AbstractBroker):
 
         telemetry_handler.record_user_action_details(
             cse_operation=telemetry_constants.CseOperation.V35_CLUSTER_CONFIG,
-            cse_params=curr_entity)
+            cse_params=curr_entity,
+            **{telemetry_constants.PayloadKey.SOURCE_DESCRIPTION: kwargs.get(RequestKey.USER_AGENT)}  # noqa: E501
+        )
 
         vapp = vcd_vapp.VApp(self.context.client, href=curr_entity.externalId)
         control_plane_node_name = curr_entity.entity.status.nodes.control_plane.name  # noqa: E501
@@ -127,7 +132,7 @@ class ClusterService(abstract_broker.AbstractBroker):
 
         return result.content.decode()
 
-    def create_cluster(self, cluster_spec: def_models.ClusterEntity):
+    def create_cluster(self, cluster_spec: def_models.ClusterEntity, **kwargs):
         """Start the cluster creation operation.
 
         Creates corresponding defined entity in vCD for every native cluster.
@@ -211,12 +216,14 @@ class ClusterService(abstract_broker.AbstractBroker):
         self.context.is_async = True
         telemetry_handler.record_user_action_details(
             cse_operation=telemetry_constants.CseOperation.V35_CLUSTER_APPLY,
-            cse_params=def_entity)
+            cse_params=def_entity,
+            **{telemetry_constants.PayloadKey.SOURCE_DESCRIPTION: kwargs.get(RequestKey.USER_AGENT)}  # noqa: E501
+        )
         self._create_cluster_async(def_entity.id, cluster_spec)
         return def_entity
 
     def resize_cluster(self, cluster_id: str,
-                       cluster_spec: def_models.ClusterEntity):
+                       cluster_spec: def_models.ClusterEntity, **kwargs):
         """Start the resize cluster operation.
 
         :param str cluster_id: Defined entity Id of the cluster
@@ -264,7 +271,9 @@ class ClusterService(abstract_broker.AbstractBroker):
         telemetry_data: def_models.DefEntity = def_models.DefEntity(id=cluster_id, entity=cluster_spec)  # noqa: E501
         telemetry_handler.record_user_action_details(
             cse_operation=telemetry_constants.CseOperation.V35_CLUSTER_APPLY,
-            cse_params=telemetry_data)
+            cse_params=telemetry_data,
+            **{telemetry_constants.PayloadKey.SOURCE_DESCRIPTION: kwargs.get(RequestKey.USER_AGENT)}  # noqa: E501
+        )
 
         # update the task and defined entity.
         msg = f"Resizing the cluster '{cluster_name}' ({cluster_id}) to the " \
@@ -289,7 +298,7 @@ class ClusterService(abstract_broker.AbstractBroker):
                              cluster_spec=cluster_spec)
         return curr_entity
 
-    def delete_cluster(self, cluster_id):
+    def delete_cluster(self, cluster_id, **kwargs):
         """Start the delete cluster operation."""
         # Get the current state of the defined entity
         curr_entity: def_models.DefEntity = self.entity_svc.get_entity(
@@ -308,7 +317,9 @@ class ClusterService(abstract_broker.AbstractBroker):
 
         telemetry_handler.record_user_action_details(
             cse_operation=telemetry_constants.CseOperation.V35_CLUSTER_DELETE,
-            cse_params=curr_entity)
+            cse_params=curr_entity,
+            **{telemetry_constants.PayloadKey.SOURCE_DESCRIPTION: kwargs.get(RequestKey.USER_AGENT)}  # noqa: E501
+        )
 
         # must _update_task here or else self.task_resource is None
         # do not logout of sys admin, or else in pyvcloud's session.request()
@@ -336,7 +347,7 @@ class ClusterService(abstract_broker.AbstractBroker):
                                    def_entity=curr_entity)
         return curr_entity
 
-    def get_cluster_upgrade_plan(self, cluster_id: str):
+    def get_cluster_upgrade_plan(self, cluster_id: str, **kwargs):
         """Get the template names/revisions that the cluster can upgrade to.
 
         :param str cluster_id:
@@ -347,14 +358,15 @@ class ClusterService(abstract_broker.AbstractBroker):
         curr_entity = self.entity_svc.get_entity(cluster_id)
         telemetry_handler.record_user_action_details(
             cse_operation=telemetry_constants.CseOperation.V35_CLUSTER_UPGRADE_PLAN,  # noqa: E501
-            cse_params=curr_entity
+            cse_params=curr_entity,
+            **{telemetry_constants.PayloadKey.SOURCE_DESCRIPTION: kwargs.get(RequestKey.USER_AGENT)}  # noqa: E501
         )
 
         return self._get_cluster_upgrade_plan(curr_entity.entity.spec.k8_distribution.template_name, # noqa: E501
                                               curr_entity.entity.spec.k8_distribution.template_revision) # noqa: E501
 
     def upgrade_cluster(self, cluster_id: str,
-                        upgrade_spec: def_models.ClusterEntity):
+                        upgrade_spec: def_models.ClusterEntity, **kwargs):
         """Start the upgrade cluster operation.
 
         Upgrading cluster is an asynchronous task, so the returned
@@ -400,7 +412,9 @@ class ClusterService(abstract_broker.AbstractBroker):
 
         telemetry_handler.record_user_action_details(
             telemetry_constants.CseOperation.V35_CLUSTER_UPGRADE,
-            cse_params=curr_entity)
+            cse_params=curr_entity,
+            **{telemetry_constants.PayloadKey.SOURCE_DESCRIPTION: kwargs.get(RequestKey.USER_AGENT)}  # noqa: E501
+        )
 
         msg = f"Upgrading cluster '{cluster_name}' " \
               f"software to match template {new_template_name} (revision " \
