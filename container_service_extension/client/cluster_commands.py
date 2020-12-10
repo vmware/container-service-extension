@@ -1072,3 +1072,108 @@ Examples:
     except Exception as e:
         stderr(e, ctx)
         CLIENT_LOGGER.error(str(e))
+
+
+@cluster_group.command('share-list',
+                       short_help='List access information of users with '
+                                  'access to a cluster')
+@click.pass_context
+@click.option(
+    '-A',
+    '--all',
+    'should_print_all',
+    is_flag=True,
+    default=False,
+    required=False,
+    metavar='DISPLAY_ALL',
+    help="Display all cluster user access information non-interactively")
+@click.option(
+    '-n',
+    '--name',
+    'name',
+    required=False,
+    default=None,
+    metavar='CLUSTER_NAME',
+    help='Name of the cluster to list shared users')
+@click.option(
+    '-v',
+    '--vdc',
+    'vdc',
+    required=False,
+    default=None,
+    metavar='VDC_NAME',
+    help='Restrict cluster search to specified org VDC')
+@click.option(
+    '-o',
+    '--org',
+    'org',
+    default=None,
+    required=False,
+    metavar='ORG_NAME',
+    help='Restrict cluster search to specified org')
+@click.option(
+    '-k',
+    '--k8-runtime',
+    'k8_runtime',
+    default=None,
+    required=False,
+    metavar='K8-RUNTIME',
+    help='Restrict cluster search to cluster kind')
+@click.option(
+    '--id',
+    'cluster_id',
+    default=None,
+    required=False,
+    metavar='CLUSTER_ID',
+    help="ID of the cluster to share; "
+         "ID gets precedence over cluster name.")
+def cluster_share_list(ctx, should_print_all, name, vdc, org, k8_runtime,
+                       cluster_id):
+    try:
+
+        if not (cluster_id or name):
+            raise Exception("Please specify cluster name or cluster id.")
+        client_utils.cse_restore_session(ctx)
+        if client_utils.is_cli_for_tkg_only():
+            if k8_runtime in [shared_constants.ClusterEntityKind.NATIVE.value,
+                              shared_constants.ClusterEntityKind.TKG_PLUS.value]:  # noqa: E501
+                # Cannot run the command as cse cli is enabled only for native
+                raise CseServerNotRunningError()
+            k8_runtime = shared_constants.ClusterEntityKind.TKG.value
+
+        # Determine cluster type and retrieve cluster id if needed
+        client = ctx.obj['client']
+        cloudapi_client = \
+            vcd_utils.get_cloudapi_client_from_vcd_client(
+                client, logger_debug=CLIENT_LOGGER)
+        if cluster_id:
+            de_svc = entity_svc.DefEntityService(cloudapi_client)
+            is_native_cluster = de_svc.is_native_entity(cluster_id)
+        else:
+            # Get cluster id
+            if k8_runtime == shared_constants.ClusterEntityKind.TKG.value:
+                tkg_cluster_obj = de_cluster_tkg.DEClusterTKG(client)
+                _, tkg_def_ent = tkg_cluster_obj. \
+                    get_tkg_clusters_by_name(name, vdc, org)
+                cluster_id = tkg_def_ent[0]['id']
+                is_native_cluster = False
+            else:
+                cluster_obj = Cluster(client)
+                cluster_ent, entity_properties, is_native_cluster = \
+                    cluster_obj._get_tkg_native_clusters_by_name(name, org=org,
+                                                                 vdc=vdc)
+                cluster_id = cluster_ent.id if is_native_cluster else \
+                    entity_properties['id']
+        if is_native_cluster:
+            native_cluster = DEClusterNative(client)
+            share_entries = native_cluster.list_share_entries(cluster_id)
+        else:
+            if not org:
+                ctx_profiles = ctx.obj['profiles']
+                org = ctx_profiles.get('org')
+            tkg_cluster = de_cluster_tkg.DEClusterTKG(client)
+            share_entries = tkg_cluster.list_share_entries(cluster_id, org)
+        client_utils.print_paginated_result(share_entries, should_print_all)
+    except Exception as e:
+        stderr(e, ctx)
+        CLIENT_LOGGER.error(str(e))

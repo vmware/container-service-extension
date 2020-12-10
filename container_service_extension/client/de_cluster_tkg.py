@@ -14,6 +14,8 @@ from container_service_extension.client.tkgclient.models.tkg_cluster import TkgC
 import container_service_extension.client.tkgclient.rest as tkg_rest
 import container_service_extension.client.utils as client_utils
 import container_service_extension.def_.acl_service as cluster_acl_svc
+import container_service_extension.def_.constants as def_constants
+import container_service_extension.def_.models as def_models
 from container_service_extension.def_.utils import DEF_TKG_ENTITY_TYPE_NSS
 from container_service_extension.def_.utils import DEF_TKG_ENTITY_TYPE_VERSION
 from container_service_extension.def_.utils import DEF_VMWARE_VENDOR
@@ -405,3 +407,25 @@ class DEClusterTKG:
         for _, user_id in name_to_id.items():
             payload[shared_constants.AccessControlKey.MEMBER_ID] = user_id
             acl_svc.share_def_entity(payload)
+
+    def list_share_entries(self, cluster_id, org):
+        org_user_id_to_name_dict = utils.create_org_user_id_to_name_dict(
+            self._client, org)
+        acl_svc = cluster_acl_svc.ClusterACLService(cluster_id, self._client)
+        page_num = result_count = 0
+        while True:
+            page_num += 1
+            response_body = acl_svc.get_def_entity_acl_response(
+                page_num, cli_constants.CLI_ENTRIES_PER_PAGE)
+            result_total = response_body[shared_constants.PaginationKey.RESULT_TOTAL]  # noqa: E501
+            values = response_body[shared_constants.PaginationKey.VALUES]
+            if len(values) == 0:
+                break
+            acl_values = []
+            for entry in values:
+                acl_entry = def_models.ClusterAclEntry(**entry)
+                acl_entry.username = org_user_id_to_name_dict.get(acl_entry.memberId)  # noqa: E501
+                acl_values.append(acl_entry.get_filtered_dict(
+                    include=def_constants.CLUSTER_ACL_LIST_FIELDS))
+            result_count += len(values)
+            yield acl_values, result_count < result_total

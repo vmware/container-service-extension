@@ -48,13 +48,13 @@ UNSUPPORTED_COMMANDS_BY_VERSION = {
 # List of unsupported subcommands by Api Version
 UNSUPPORTED_SUBCOMMANDS_BY_VERSION = {
     vcd_client.ApiVersion.VERSION_33.value: {
-        GroupKey.CLUSTER: ['apply', 'delete-nfs', 'share'],
+        GroupKey.CLUSTER: ['apply', 'delete-nfs', 'share', 'share-list'],
         # TODO(metadata based enablement for < v35): Revisit after decision
         # to support metadata way of enabling for native clusters
         GroupKey.OVDC: ['enable', 'disable', 'list', 'info']
     },
     vcd_client.ApiVersion.VERSION_34.value: {
-        GroupKey.CLUSTER: ['apply', 'delete-nfs', 'share'],
+        GroupKey.CLUSTER: ['apply', 'delete-nfs', 'share', 'share-list'],
         # TODO(metadata based enablement for < v35): Revisit after decision
         # to support metadata way of enabling for native clusters
         GroupKey.OVDC: ['enable', 'disable', 'list', 'info']
