@@ -468,7 +468,9 @@ def get_payload_for_ovdc_disable(params):
     """
     return {
         PayloadKey.TYPE: CseOperation.OVDC_DISABLE.telemetry_table,
-        PayloadKey.WAS_ORG_SPECIFIED: bool(params.get(RequestKey.ORG_NAME))
+        PayloadKey.WAS_ORG_SPECIFIED: bool(params.get(RequestKey.ORG_NAME)),
+        PayloadKey.SOURCE_ID: SourceMap.get_source_id(params.get(RequestKey.USER_AGENT)),  # noqa: E501
+        PayloadKey.SOURCE_DESCRIPTION: params.get(RequestKey.USER_AGENT)
     }
 
 
@@ -486,7 +488,9 @@ def get_payload_for_ovdc_enable(params):
         PayloadKey.K8S_PROVIDER: params.get(RequestKey.K8S_PROVIDER),
         PayloadKey.WAS_PKS_PLAN_SPECIFIED: bool(params.get(RequestKey.PKS_PLAN_NAME)),  # noqa: E501
         PayloadKey.WAS_PKS_CLUSTER_DOMAIN_SPECIFIED: bool(params.get(RequestKey.PKS_CLUSTER_DOMAIN)),  # noqa: E501
-        PayloadKey.WAS_ORG_SPECIFIED: bool(params.get(RequestKey.ORG_NAME))
+        PayloadKey.WAS_ORG_SPECIFIED: bool(params.get(RequestKey.ORG_NAME)),
+        PayloadKey.SOURCE_ID: SourceMap.get_source_id(params.get(RequestKey.USER_AGENT)),  # noqa: E501
+        PayloadKey.SOURCE_DESCRIPTION: params.get(RequestKey.USER_AGENT)
     }
 
 
@@ -501,7 +505,9 @@ def get_payload_for_ovdc_info(params):
     """
     return {
         PayloadKey.TYPE: CseOperation.OVDC_INFO.telemetry_table,
-        PayloadKey.WAS_ORG_SPECIFIED: bool(params.get(RequestKey.ORG_NAME))  # noqa: E501
+        PayloadKey.WAS_ORG_SPECIFIED: bool(params.get(RequestKey.ORG_NAME)),  # noqa: E501
+        PayloadKey.SOURCE_ID: SourceMap.get_source_id(params.get(RequestKey.USER_AGENT)),  # noqa: E501
+        PayloadKey.SOURCE_DESCRIPTION: params.get(RequestKey.USER_AGENT)
     }
 
 
@@ -516,7 +522,9 @@ def get_payload_for_ovdc_list(params):
     """
     return {
         PayloadKey.TYPE: CseOperation.OVDC_LIST.telemetry_table,
-        PayloadKey.WAS_PKS_PLAN_SPECIFIED: bool(params.get(RequestKey.LIST_PKS_PLANS))  # noqa: E501
+        PayloadKey.WAS_PKS_PLAN_SPECIFIED: bool(params.get(RequestKey.LIST_PKS_PLANS)),  # noqa: E501
+        PayloadKey.SOURCE_ID: SourceMap.get_source_id(params.get(RequestKey.USER_AGENT)),  # noqa: E501
+        PayloadKey.SOURCE_DESCRIPTION: params.get(RequestKey.USER_AGENT)
     }
 
 

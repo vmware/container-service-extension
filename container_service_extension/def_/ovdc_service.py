@@ -27,7 +27,7 @@ import container_service_extension.utils as utils
 
 
 def update_ovdc(operation_context: ctx.OperationContext,
-                ovdc_id: str, ovdc_spec: def_models.Ovdc) -> dict: # noqa: 501
+                ovdc_id: str, ovdc_spec: def_models.Ovdc, **kwargs) -> dict:  # noqa: 501
     """Update ovdc with the updated k8s runtimes list.
 
     :param ctx.OperationContext operation_context: context for the request
@@ -82,11 +82,12 @@ def update_ovdc(operation_context: ctx.OperationContext,
                                               ovdc_id=ovdc_id,
                                               vdc=vdc,
                                               org_name=ovdc_spec.org_name,
-                                              remove_cp_from_vms_on_disable=ovdc_spec.remove_cp_from_vms_on_disable) # noqa:E501
+                                              remove_cp_from_vms_on_disable=ovdc_spec.remove_cp_from_vms_on_disable,  # noqa:E501
+                                              **kwargs)
     return {'task_href': task_href}
 
 
-def get_ovdc(operation_context: ctx.OperationContext, ovdc_id: str) -> dict:
+def get_ovdc(operation_context: ctx.OperationContext, ovdc_id: str, **kwargs) -> dict:  # noqa:E501
     """Get ovdc info for a particular ovdc.
 
     :param ctx.OperationContext operation_context: context for the request
@@ -97,7 +98,8 @@ def get_ovdc(operation_context: ctx.OperationContext, ovdc_id: str) -> dict:
     # NOTE: For CSE 3.0, if `enable_tkg_plus` flag in config is set to false,
     # Prevent showing information about TKG+ by skipping TKG+ from the result.
     cse_params = {
-        RequestKey.OVDC_ID: ovdc_id
+        RequestKey.OVDC_ID: ovdc_id,
+        RequestKey.USER_AGENT: kwargs.get(RequestKey.USER_AGENT)
     }
     telemetry_handler.record_user_action_details(cse_operation=CseOperation.OVDC_INFO, # noqa: E501
                                                  cse_params=cse_params)
@@ -126,10 +128,6 @@ def list_ovdc(operation_context: ctx.OperationContext,
     """
     # NOTE: For CSE 3.0, if `enable_tkg_plus` flag in config is set to false,
     # Prevent showing information about TKG+ by skipping TKG+ from the result.
-    # Record telemetry
-    telemetry_handler.record_user_action_details(cse_operation=CseOperation.OVDC_LIST, # noqa: E501
-                                                 cse_params={})
-
     ovdcs = []
     result = cloudapi_utils.get_vdcs_by_page(
         operation_context.cloudapi_client,
@@ -210,7 +208,8 @@ def _update_ovdc_using_placement_policy_async(operation_context: ctx.OperationCo
                                               ovdc_id,
                                               vdc,
                                               org_name,
-                                              remove_cp_from_vms_on_disable=False):  # noqa: E501
+                                              remove_cp_from_vms_on_disable=False,  # noqa: E501
+                                              **kwargs):
     """Enable ovdc using placement policies.
 
     :param ctx.OperationContext operation_context: operation context object
@@ -250,7 +249,8 @@ def _update_ovdc_using_placement_policy_async(operation_context: ctx.OperationCo
             cse_params = {
                 RequestKey.K8S_PROVIDER: k8s_runtimes_added,
                 RequestKey.OVDC_ID: ovdc_id,
-                RequestKey.ORG_NAME: org_name
+                RequestKey.ORG_NAME: org_name,
+                RequestKey.USER_AGENT: kwargs.get(RequestKey.USER_AGENT)
             }
             telemetry_handler.record_user_action_details(cse_operation=CseOperation.OVDC_ENABLE, # noqa: E501
                                                          cse_params=cse_params)
@@ -263,7 +263,8 @@ def _update_ovdc_using_placement_policy_async(operation_context: ctx.OperationCo
                 RequestKey.K8S_PROVIDER: k8s_runtimes_deleted,
                 RequestKey.OVDC_ID: ovdc_id,
                 RequestKey.ORG_NAME: org_name,
-                RequestKey.REMOVE_COMPUTE_POLICY_FROM_VMS: remove_cp_from_vms_on_disable # noqa: E501
+                RequestKey.REMOVE_COMPUTE_POLICY_FROM_VMS: remove_cp_from_vms_on_disable,  # noqa: E501
+                RequestKey.USER_AGENT: kwargs.get(RequestKey.USER_AGENT)
             }
             telemetry_handler.record_user_action_details(cse_operation=CseOperation.OVDC_DISABLE, # noqa: E501
                                                          cse_params=cse_params)
