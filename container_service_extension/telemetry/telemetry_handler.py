@@ -123,7 +123,7 @@ def record_user_action(cse_operation, status=OperationStatus.SUCCESS,
 
 
 def record_user_action_details(cse_operation, cse_params,
-                               telemetry_settings=None):
+                               telemetry_settings=None, **kwargs):
     """Record CSE user operation details in telemetry server.
 
     No exception should be leaked. Catch all exceptions and log them.
@@ -137,7 +137,7 @@ def record_user_action_details(cse_operation, cse_params,
             telemetry_settings = get_server_runtime_config()['service']['telemetry']  # noqa: E501
 
         if telemetry_settings['enable']:
-            payload = OPERATION_TO_PAYLOAD_GENERATOR[cse_operation](cse_params)
+            payload = OPERATION_TO_PAYLOAD_GENERATOR[cse_operation](cse_params, **kwargs)  # noqa: E501
             _send_data_to_telemetry_server(payload, telemetry_settings)
     except Exception as err:
         LOGGER.warning(f"Error in recording CSE operation details :{str(err)}")  # noqa: E501
