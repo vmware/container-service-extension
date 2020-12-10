@@ -54,8 +54,7 @@ class AMQPConsumer(object):
             credentials,
             connection_attempts=3,
             retry_delay=2,
-            socket_timeout=5,
-            blocked_connection_timeout=5)
+            socket_timeout=5)
         return pika.SelectConnection(parameters, self.on_connection_open)
 
     def on_connection_open(self, unused_connection):
@@ -74,6 +73,7 @@ class AMQPConsumer(object):
         else:
             LOGGER.warning(f"Connection closed, reopening in 5 seconds: "
                            f"({str(amqp_exception)})")
+            self._connection.ioloop.call_later(5, self.reconnect)
 
     def reconnect(self):
         self._connection.ioloop.stop()
@@ -208,8 +208,7 @@ class AMQPConsumer(object):
         channel: pika.channel.Channel,
         basic_deliver: pika.spec.Basic.Deliver,
         properties: pika.spec.BasicProperties,
-        body: bytes
-    ):
+        body: bytes):
         # If consumer is closing, no longer adding messages to thread pool
         if channel.is_closed or channel.is_closing:
             return
