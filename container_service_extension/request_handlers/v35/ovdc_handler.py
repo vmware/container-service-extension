@@ -7,7 +7,7 @@ import container_service_extension.operation_context as ctx
 import container_service_extension.request_handlers.request_utils as request_utils  # noqa: E501
 from container_service_extension.shared_constants import RequestKey
 from container_service_extension.telemetry.constants import CseOperation
-from container_service_extension.telemetry.telemetry_handler import record_user_action_telemetry  # noqa: E501
+import container_service_extension.telemetry.telemetry_handler as telemetry_handler  # noqa: E501
 
 
 @request_utils.v35_api_exception_handler
@@ -24,10 +24,11 @@ def ovdc_update(data, operation_context: ctx.OperationContext):
     ovdc_spec = def_models.Ovdc(**data[RequestKey.V35_SPEC])
     return ovdc_service.update_ovdc(operation_context,
                                     ovdc_id=data[RequestKey.OVDC_ID],
-                                    ovdc_spec=ovdc_spec)
+                                    ovdc_spec=ovdc_spec,
+                                    **{RequestKey.USER_AGENT: data.get(RequestKey.USER_AGENT)})  # noqa: E501
 
 
-@record_user_action_telemetry(cse_operation=CseOperation.OVDC_INFO)
+@telemetry_handler.record_user_action_telemetry(cse_operation=CseOperation.OVDC_INFO)  # noqa: E501
 @request_utils.v35_api_exception_handler
 def ovdc_info(data, operation_context: ctx.OperationContext):
     """Request handler for ovdc info operation.
@@ -37,14 +38,20 @@ def ovdc_info(data, operation_context: ctx.OperationContext):
     :return: Dictionary with org VDC k8s provider metadata.
     """
     ovdc_id = data[RequestKey.OVDC_ID]
-    return ovdc_service.get_ovdc(operation_context, ovdc_id)
+    return ovdc_service.get_ovdc(operation_context,
+                                 ovdc_id,
+                                 **{RequestKey.USER_AGENT: data.get(RequestKey.USER_AGENT)})  # noqa: E501
 
 
-@record_user_action_telemetry(cse_operation=CseOperation.OVDC_LIST)
+@telemetry_handler.record_user_action_telemetry(cse_operation=CseOperation.OVDC_LIST)  # noqa: E501
 @request_utils.v35_api_exception_handler
 def ovdc_list(data, operation_context: ctx.OperationContext):
     """Request handler for ovdc list operation.
 
     :return: List of dictionaries with org VDC k8s runtimes.
     """
+    telemetry_handler.record_user_action_details(
+        cse_operation=CseOperation.OVDC_LIST,
+        cse_params={RequestKey.USER_AGENT: data.get(RequestKey.USER_AGENT)}
+    )
     return ovdc_service.list_ovdc(operation_context)
