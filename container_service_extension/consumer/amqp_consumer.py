@@ -5,7 +5,9 @@
 import json
 import sys
 from threading import Lock
+import time
 
+from lru import LRU
 import pika
 import requests
 
@@ -15,6 +17,10 @@ from container_service_extension.consumer.consumer_thread_pool_executor \
 import container_service_extension.consumer.utils as utils
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
 from container_service_extension.server_constants import EXCHANGE_TYPE
+
+
+MAX_PROCESSED_REQUEST_CACHE_SIZE = 1000
+REQUESTS_BEING_PROCESSSED = LRU(MAX_PROCESSED_REQUEST_CACHE_SIZE)
 
 
 class AMQPConsumer(object):
@@ -207,7 +213,16 @@ class AMQPConsumer(object):
         if self._closing:
             return
 
-        self.acknowledge_message(basic_deliver.delivery_tag)
+        req_id = utils.get_request_id(
+            request_msg=body, fsencoding=self.fsencoding)
+        global REQUESTS_BEING_PROCESSSED
+        if req_id not in REQUESTS_BEING_PROCESSSED:
+            REQUESTS_BEING_PROCESSSED[req_id] = time.time()
+            self.acknowledge_message(basic_deliver.delivery_tag)
+        else:
+            self.reject_message(basic_deliver.delivery_tag)
+            return
+
         if self._ctpe.max_threads_busy():
             self.send_too_many_requests_response(properties, body)
         else:
@@ -218,6 +233,11 @@ class AMQPConsumer(object):
     def acknowledge_message(self, delivery_tag):
         LOGGER.debug(f"Acknowledging message {delivery_tag}")
         self._channel.basic_ack(delivery_tag)
+
+    def reject_message(self, delivery_tag):
+        LOGGER.debug(f"Rejecting message {delivery_tag}")
+        self._channel.basic_nack(
+            delivery_tag=delivery_tag, requeue=False)
 
     def stop_consuming(self):
         if self._channel:
