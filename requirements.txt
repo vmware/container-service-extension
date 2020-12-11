@@ -10,6 +10,9 @@ cryptography >= 2.8, < 3.0
 # humanfriendly 4.18
 humanfriendly >= 4.8, < 5.0
 
+# lru-dict 1.1.6
+lru-dict >=1.16, < 2.0.0
+
 #paho-mqtt 1.5.1
 paho-mqtt >=1.5.0, < 1.6.0
 
