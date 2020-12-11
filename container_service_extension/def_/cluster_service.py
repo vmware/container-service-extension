@@ -627,12 +627,11 @@ class ClusterService(abstract_broker.AbstractBroker):
                     raise e.NFSNodeCreationError(
                         f"Error creating NFS node: {err}")
 
-            msg = f"Created cluster '{cluster_name}' ({cluster_id})"
-            LOGGER.debug(msg)
-            self._update_task(vcd_client.TaskStatus.SUCCESS, message=msg)
-
             # Update defined entity instance with new properties like vapp_id,
             # control plane_ip and nodes.
+            msg = f"Updating cluster `{cluster_name}` ({cluster_id}) defined entity"  # noqa: E501
+            LOGGER.debug(msg)
+            self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
             def_entity: def_models.DefEntity = self.entity_svc.get_entity(cluster_id)  # noqa: E501
             def_entity.externalId = vapp_resource.get('href')
             def_entity.entity.status.phase = str(
@@ -643,6 +642,11 @@ class ClusterService(abstract_broker.AbstractBroker):
 
             self.entity_svc.update_entity(cluster_id, def_entity)
             self.entity_svc.resolve_entity(cluster_id)
+
+            # cluster creation succeeded. Mark the task as success
+            msg = f"Created cluster '{cluster_name}' ({cluster_id})"
+            LOGGER.debug(msg)
+            self._update_task(vcd_client.TaskStatus.SUCCESS, message=msg)
         except (e.ControlPlaneNodeCreationError, e.WorkerNodeCreationError,
                 e.NFSNodeCreationError, e.ClusterJoiningError,
                 e.ClusterInitializationError, e.ClusterOperationError) as err:
@@ -1283,8 +1287,9 @@ class ClusterService(abstract_broker.AbstractBroker):
             # and fail the operation.
             def_entity.entity.status.phase = \
                 str(DefEntityPhase(op, DefEntityOperationStatus.FAILED))
-            self._sync_def_entity(cluster_id, def_entity)
+            self.entity_svc.update_entity(cluster_id, def_entity)
             self.entity_svc.resolve_entity(cluster_id)
+            self._sync_def_entity(cluster_id, def_entity)
         except Exception as err:
             msg = f"Failed to resolve defined entity for cluster {cluster_id}"
             LOGGER.error(f"{msg}", exc_info=True)
