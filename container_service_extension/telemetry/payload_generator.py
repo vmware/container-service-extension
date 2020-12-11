@@ -331,8 +331,8 @@ def get_payload_for_v35_cluster_acl_list(cluster_acl_list_info):
     return {
         PayloadKey.TYPE: CseOperation.V35_CLUSTER_ACL_LIST.telemetry_table,
         PayloadKey.CLUSTER_ID: uuid_hash(cluster_id),
-        PayloadKey.PAGE: page,
-        PayloadKey.PAGE_SIZE: page_size
+        PayloadKey.PAGE: str(page),
+        PayloadKey.PAGE_SIZE: str(page_size)
     }
 
 
@@ -358,7 +358,7 @@ def get_payload_for_v35_cluster_acl_update(cluster_acl_update_info: dict):
     return {
         PayloadKey.TYPE: CseOperation.V35_CLUSTER_ACL_UPDATE.telemetry_table,
         PayloadKey.CLUSTER_ID: uuid_hash(cluster_id),
-        PayloadKey.ACCESS_SETTING: filtered_acl_info
+        PayloadKey.ACCESS_SETTING: str(filtered_acl_info)
     }
 
 

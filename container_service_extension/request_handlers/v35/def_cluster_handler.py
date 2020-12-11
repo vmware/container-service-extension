@@ -175,8 +175,10 @@ def cluster_acl_info(data: dict, op_ctx: ctx.OperationContext):
     svc = cluster_svc.ClusterService(op_ctx)
     cluster_id = data[RequestKey.CLUSTER_ID]
     query = data.get(RequestKey.V35_QUERY, {})
-    page = query.get('page', shared_constants.CSE_PAGINATION_FIRST_PAGE_NUMBER)
-    page_size = query.get('pageSize', shared_constants.CSE_PAGINATION_DEFAULT_PAGE_SIZE)  # noqa: E501
+    page = query.get(shared_constants.PaginationKey.PAGE_NUMBER,
+                     shared_constants.CSE_PAGINATION_FIRST_PAGE_NUMBER)
+    page_size = query.get(shared_constants.PaginationKey.PAGE_SIZE,
+                          shared_constants.CSE_PAGINATION_DEFAULT_PAGE_SIZE)
     acl_info_response = svc.get_cluster_acl_info(cluster_id, int(page),
                                                  int(page_size))
     return acl_info_response

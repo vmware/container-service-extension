@@ -114,8 +114,6 @@ class NativeClusterApi(CseClient):
         return processed_response
 
     def list_native_cluster_acl_entries(self, cluster_id):
-        acl_values = []
-        # curr_page, page_cnt = 0, 1
         page_num = 0
         while True:
             page_num += 1
@@ -140,4 +138,4 @@ class NativeClusterApi(CseClient):
             contents=put_content,
             media_type='application/json',
             accept_type='application/json')
-        return response
+        response_processor.process_response(response)

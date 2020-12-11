@@ -458,42 +458,32 @@ class ClusterService(abstract_broker.AbstractBroker):
         acl_values = []
         result_total = 0
         for acl_entry in acl_svc.list_def_entity_acl_entries():
-            if acl_entry.memberId.startswith(shared_constants.USER_URN_BEGIN):
+            if acl_entry.memberId.startswith(shared_constants.USER_URN_PREFIX):
                 curr_page = result_total // page_size + 1
                 page_entry = result_total % page_size
                 # Check if entry is on desired page
                 if curr_page == page and page_entry < page_size:
                     # Add acl entry
                     acl_entry.username = user_id_names_dict[acl_entry.memberId]
-                    filter_acl_value: dict = acl_entry.get_filtered_dict(
+                    filter_acl_value: dict = acl_entry.construct_filtered_dict(
                         include=def_constants.CLUSTER_ACL_LIST_FIELDS)
-                    # filter_acl_value[shared_constants.AccessControlKey.USERNAME] = curr_username  # noqa: E501
                     acl_values.append(filter_acl_value)
                 result_total += 1
 
         # Form final response fields
-        extra_page = 1 if bool(result_total % page_size) else 0
-        page_count = result_total // page_size + extra_page
-        page_url_fragment = f"{self.context.client.get_api_uri()}/" \
-                            f"{shared_constants.CSE_URL_FRAGMENT}/" \
-                            f"{shared_constants.CSE_3_0_URL_FRAGMENT}/" \
-                            f"{shared_constants.CLUSTER_URL_FRAGMENT}/" \
-                            f"{cluster_id}/" \
-                            f"{shared_constants.ACL_URL_FRAGMENT}" \
-                            f"?{shared_constants.PaginationKey.PAGE_SIZE}=" \
-                            f"{page_size}&{shared_constants.PaginationKey.PAGE_NUMBER}="  # noqa: E501
-        next_page_uri = f"{page_url_fragment}{page + 1}" if 0 < page < page_count else None  # noqa: E501
-        prev_page_uri = f"{page_url_fragment}{page - 1}" if page_count > page > 1 else None  # noqa: E501
+        base_uri = f"{self.context.client.get_api_uri()}/" \
+                   f"{shared_constants.CSE_URL_FRAGMENT}/" \
+                   f"{shared_constants.CSE_3_0_URL_FRAGMENT}/" \
+                   f"{shared_constants.CLUSTER_URL_FRAGMENT}/{cluster_id}/" \
+                   f"{shared_constants.ACL_URL_FRAGMENT}" \
 
-        list_paginated_response = utils.construct_paginated_response(
+        paginated_response = utils.create_links_and_construct_paginated_result(
+            base_uri=base_uri,
             values=acl_values,
             result_total=result_total,
             page_number=page,
-            page_size=page_size,
-            page_count=page_count,
-            next_page_uri=next_page_uri,
-            prev_page_uri=prev_page_uri)
-        return list_paginated_response
+            page_size=page_size)
+        return paginated_response
 
     def update_cluster_acl(self, cluster_id, update_acl_entry_dicts: list):
         """Update the cluster ACL by updating the defined entity and vApp ACL."""  # noqa: E501

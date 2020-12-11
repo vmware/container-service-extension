@@ -150,7 +150,7 @@ class ClusterACLService:
                 user_id = utils.extract_id_from_href(shared_href)
 
                 # Don't add current access setting if it will be updated
-                user_urn = f'{shared_constants.USER_URN_BEGIN}{user_id}'
+                user_urn = f'{shared_constants.USER_URN_PREFIX}{user_id}'
                 if not updated_user_acl_level_dict.get(user_urn):
                     user_name = child_obj_attrib.get('name')
 

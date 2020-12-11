@@ -4,7 +4,6 @@
 import os
 
 import click
-import requests
 from vcd_cli.utils import stderr
 from vcd_cli.utils import stdout
 import yaml
@@ -13,15 +12,12 @@ from container_service_extension.client.cluster import Cluster
 import container_service_extension.client.command_filter as cmd_filter
 import container_service_extension.client.constants as cli_constants
 from container_service_extension.client.de_cluster_native import DEClusterNative  # noqa: E501
-import container_service_extension.client.de_cluster_tkg as de_cluster_tkg
 import container_service_extension.client.sample_generator as client_sample_generator  # noqa: E501
 import container_service_extension.client.utils as client_utils
-import container_service_extension.def_.entity_service as entity_svc
 from container_service_extension.exceptions import CseResponseError
 from container_service_extension.exceptions import CseServerNotRunningError
 from container_service_extension.logger import CLIENT_LOGGER
 from container_service_extension.minor_error_codes import MinorErrorCode
-import container_service_extension.pyvcloud_utils as vcd_utils
 from container_service_extension.server_constants import LocalTemplateKey
 import container_service_extension.shared_constants as shared_constants
 import container_service_extension.utils as utils
@@ -1064,56 +1060,15 @@ Examples:
                 raise CseServerNotRunningError()
             k8_runtime = shared_constants.ClusterEntityKind.TKG.value
 
-        # Determine cluster type and retrieve cluster id if needed
         client = ctx.obj['client']
-        cloudapi_client = \
-            vcd_utils.get_cloudapi_client_from_vcd_client(
-                client, logger_debug=CLIENT_LOGGER)
-        if cluster_id:
-            de_svc = entity_svc.DefEntityService(cloudapi_client)
-            is_native_cluster = de_svc.is_native_entity(cluster_id)
-        else:
-            # Get cluster id
-            if k8_runtime == shared_constants.ClusterEntityKind.TKG.value:
-                tkg_cluster_obj = de_cluster_tkg.DEClusterTKG(client)
-                _, tkg_def_ent = tkg_cluster_obj.\
-                    get_tkg_clusters_by_name(name, vdc, org)
-                cluster_id = tkg_def_ent[0]['id']
-                is_native_cluster = False
-            else:
-                cluster_obj = Cluster(client)
-                cluster_ent, entity_properties, is_native_cluster = \
-                    cluster_obj._get_tkg_native_clusters_by_name(name, org=org,
-                                                                 vdc=vdc)
-                cluster_id = cluster_ent.id if is_native_cluster else \
-                    entity_properties['id']
-
-        # Share based on cluster type
-        users_set = set(users)
-        if org:
-            org_href = client.get_org_by_name(org).get('href')
-        else:
+        if not org:
             ctx_profiles = ctx.obj['profiles']
             org = ctx_profiles.get('org')
-            org_href = ctx_profiles.get('org_href')
-        user_name_to_id_dict = client_utils.create_user_name_to_id_dict(
-            client, users_set, org_href)
-        if is_native_cluster:
-            native_cluster = DEClusterNative(client)
-            share_response = native_cluster.share_cluster(
-                cluster_id, user_name_to_id_dict, access_level_id)
-            if share_response.status_code != requests.codes.no_content:
-                stdout(f'Cluster sharing failed with response code '
-                       f'{share_response.status_code} and reason: '
-                       f'{share_response.reason}')
-                return
-        else:
-            tkg_cluster = de_cluster_tkg.DEClusterTKG(client)
-            tkg_cluster.share_cluster(cluster_id, org, user_name_to_id_dict,
-                                      access_level_id)
-
-        stdout(f'Cluster {name or cluster_id} successfully shared with: {users_set}')  # noqa: E501
-
+        users_list = list(users)
+        cluster = Cluster(client, k8_runtime)
+        cluster.share_cluster(cluster_id, name, users_list, access_level_id,
+                              org, vdc)
+        stdout(f'Cluster {cluster_id or name} successfully shared with: {users_list}')  # noqa: E501
     except Exception as e:
         stderr(e, ctx)
         CLIENT_LOGGER.error(str(e))

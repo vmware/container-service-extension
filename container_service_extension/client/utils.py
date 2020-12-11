@@ -229,7 +229,7 @@ def create_user_name_to_id_dict(client: Client, users_set: set, org_href):
         curr_user_name = curr_user_dict['name']
         if curr_user_name in own_users_set:
             user_id = extract_id_from_href(curr_user_dict['href'])
-            user_name_to_id_dict[curr_user_name] = shared_constants.USER_URN_BEGIN + user_id  # noqa: E501
+            user_name_to_id_dict[curr_user_name] = shared_constants.USER_URN_PREFIX + user_id  # noqa: E501
             own_users_set.remove(curr_user_name)
 
         # Stop searching if all needed names and ids found

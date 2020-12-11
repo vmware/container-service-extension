@@ -491,7 +491,7 @@ def create_org_user_id_to_name_dict(client: vcd_client.Client, org_name):
     for user_str_elem in users:
         curr_user_dict = vcd_utils.to_dict(user_str_elem, exclude=[])
         user_name = curr_user_dict['name']
-        user_urn = shared_constants.USER_URN_BEGIN + \
+        user_urn = shared_constants.USER_URN_PREFIX + \
             extract_id_from_href(curr_user_dict['href'])
         user_id_to_name_dict[user_urn] = user_name
 
@@ -555,8 +555,10 @@ def create_links_and_construct_paginated_result(base_uri, values, result_total,
         for q in query_params.keys():
             next_page_uri += f"&{q}={query_params[q]}"
 
+    extra_page = 1 if bool(result_total % page_size) else 0
+    page_count = result_total // page_size + extra_page
     prev_page_uri: str = None
-    if page_number > 1:
+    if page_count + 1 > page_number > 1:
         prev_page_uri = f"{base_uri}?page={page_number-1}&pageSize={page_size}"
 
     # add the rest of the query parameters
@@ -568,5 +570,6 @@ def create_links_and_construct_paginated_result(base_uri, values, result_total,
                                         result_total=result_total,
                                         page_number=page_number,
                                         page_size=page_size,
+                                        page_count=page_count,
                                         next_page_uri=next_page_uri,
                                         prev_page_uri=prev_page_uri)
