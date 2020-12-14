@@ -218,7 +218,6 @@ def _validate_amqp_config(amqp_dict, msg_update_callback=NullPrinter()):
                                            amqp_dict['port'],
                                            amqp_dict['vhost'],
                                            credentials,
-                                           ssl=amqp_dict['ssl'],
                                            connection_attempts=3,
                                            retry_delay=2,
                                            socket_timeout=5)
