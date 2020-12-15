@@ -189,7 +189,12 @@ class AMQPConsumer(object):
                 reply_body_str=reply_body_str)
 
             self.send_response(reply_msg, properties)
-            LOGGER.debug(f"AMQP reply: {reply_msg}")
+            LOGGER.debug(f"Sucessfully sent reply: {reply_msg} to AMQP.")
+            if req_id in REQUESTS_BEING_PROCESSSED:
+                del REQUESTS_BEING_PROCESSSED[req_id]
+        else:
+            LOGGER.debug(f"Unable to reply to message {delivery_tag}")
+            self.reject_message(basic_deliver.delivery_tag)
 
     def send_response(self, reply_msg, properties):
         reply_properties = pika.BasicProperties(
@@ -228,7 +233,7 @@ class AMQPConsumer(object):
             request_msg=body, fsencoding=self.fsencoding)
         global REQUESTS_BEING_PROCESSSED
         if req_id not in REQUESTS_BEING_PROCESSSED:
-            REQUESTS_BEING_PROCESSSED[req_id] = time.time()
+            REQUESTS_BEING_PROCESSSED.set(req_id, time.time())
             self.acknowledge_message(basic_deliver.delivery_tag)
         else:
             self.reject_message(basic_deliver.delivery_tag)
