@@ -470,20 +470,10 @@ class ClusterService(abstract_broker.AbstractBroker):
                     acl_values.append(filter_acl_value)
                 result_total += 1
 
-        # Form final response fields
-        base_uri = f"{self.context.client.get_api_uri()}/" \
-                   f"{shared_constants.CSE_URL_FRAGMENT}/" \
-                   f"{shared_constants.CSE_3_0_URL_FRAGMENT}/" \
-                   f"{shared_constants.CLUSTER_URL_FRAGMENT}/{cluster_id}/" \
-                   f"{shared_constants.ACL_URL_FRAGMENT}" \
-
-        paginated_response = utils.create_links_and_construct_paginated_result(
-            base_uri=base_uri,
-            values=acl_values,
-            result_total=result_total,
-            page_number=page,
-            page_size=page_size)
-        return paginated_response
+        return {
+            shared_constants.PaginationKey.RESULT_TOTAL: result_total,
+            shared_constants.PaginationKey.VALUES: acl_values
+        }
 
     def update_cluster_acl(self, cluster_id, update_acl_entry_dicts: list):
         """Update the cluster ACL by updating the defined entity and vApp ACL."""  # noqa: E501

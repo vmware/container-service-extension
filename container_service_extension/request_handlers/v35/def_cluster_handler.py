@@ -8,7 +8,6 @@ import container_service_extension.def_.models as def_models
 import container_service_extension.operation_context as ctx
 import container_service_extension.request_handlers.request_utils as request_utils  # noqa: E501
 from container_service_extension.server_constants import CseOperation as CseServerOperationInfo  # noqa: E501
-import container_service_extension.shared_constants as shared_constants
 from container_service_extension.shared_constants import ClusterAclKey
 from container_service_extension.shared_constants import CSE_PAGINATION_DEFAULT_PAGE_SIZE  # noqa: E501
 from container_service_extension.shared_constants import CSE_PAGINATION_FIRST_PAGE_NUMBER  # noqa: E501
@@ -175,13 +174,17 @@ def cluster_acl_info(data: dict, op_ctx: ctx.OperationContext):
     svc = cluster_svc.ClusterService(op_ctx)
     cluster_id = data[RequestKey.CLUSTER_ID]
     query = data.get(RequestKey.V35_QUERY, {})
-    page = query.get(shared_constants.PaginationKey.PAGE_NUMBER,
-                     shared_constants.CSE_PAGINATION_FIRST_PAGE_NUMBER)
-    page_size = query.get(shared_constants.PaginationKey.PAGE_SIZE,
-                          shared_constants.CSE_PAGINATION_DEFAULT_PAGE_SIZE)
-    acl_info_response = svc.get_cluster_acl_info(cluster_id, int(page),
-                                                 int(page_size))
-    return acl_info_response
+    page = int(query.get(PaginationKey.PAGE_NUMBER, CSE_PAGINATION_FIRST_PAGE_NUMBER))  # noqa: E501
+    page_size = int(query.get(PaginationKey.PAGE_SIZE, CSE_PAGINATION_DEFAULT_PAGE_SIZE))  # noqa: E501
+    result: dict = svc.get_cluster_acl_info(cluster_id, page, page_size)
+    api_path = CseServerOperationInfo.V35_CLUSTER_ACL_LIST.api_path_format % cluster_id  # noqa: E501
+    uri = f"{op_ctx.client.get_api_uri().strip('/')}{api_path}"
+    return utils.create_links_and_construct_paginated_result(
+        base_uri=uri,
+        values=result.get(PaginationKey.VALUES, []),
+        result_total=result.get(PaginationKey.RESULT_TOTAL, 0),
+        page_number=page,
+        page_size=page_size)
 
 
 @telemetry_handler.record_user_action_telemetry(cse_operation=telemetry_constants.CseOperation.V35_CLUSTER_ACL_UPDATE)  # noqa: E501

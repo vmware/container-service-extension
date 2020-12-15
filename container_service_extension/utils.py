@@ -4,6 +4,7 @@
 
 import functools
 import hashlib
+import math
 import os
 import pathlib
 import platform
@@ -547,7 +548,7 @@ def create_links_and_construct_paginated_result(base_uri, values, result_total,
                                                 page_size=CSE_PAGINATION_DEFAULT_PAGE_SIZE,  # noqa: E501
                                                 query_params={}):
     next_page_uri: str = None
-    if page_number * page_size < result_total:
+    if 0 < page_number * page_size < result_total:
         # TODO find a way to get the initial url part
         # ideally the request details should be passed down to each of the
         # handler funcions as request context
@@ -555,10 +556,9 @@ def create_links_and_construct_paginated_result(base_uri, values, result_total,
         for q in query_params.keys():
             next_page_uri += f"&{q}={query_params[q]}"
 
-    extra_page = 1 if bool(result_total % page_size) else 0
-    page_count = result_total // page_size + extra_page
+    page_count = math.ceil(result_total / page_size)
     prev_page_uri: str = None
-    if page_count + 1 > page_number > 1:
+    if page_count >= page_number > 1:
         prev_page_uri = f"{base_uri}?page={page_number-1}&pageSize={page_size}"
 
     # add the rest of the query parameters

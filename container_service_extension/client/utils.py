@@ -236,7 +236,7 @@ def create_user_name_to_id_dict(client: Client, users_set: set, org_href):
         if len(own_users_set) == 0:
             break
     if len(own_users_set) > 0:
-        raise Exception(f"Not user id's found for: {own_users_set}")
+        raise Exception(f"No user ids found for: {list(own_users_set)}")
     return user_name_to_id_dict
 
 
