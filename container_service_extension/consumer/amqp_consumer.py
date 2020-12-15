@@ -18,9 +18,7 @@ import container_service_extension.consumer.utils as utils
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
 from container_service_extension.server_constants import EXCHANGE_TYPE
 
-
-MAX_PROCESSED_REQUEST_CACHE_SIZE = 1000
-REQUESTS_BEING_PROCESSSED = LRU(MAX_PROCESSED_REQUEST_CACHE_SIZE)
+REQUESTS_BEING_PROCESSSED = LRU(constants.MAX_PROCESSING_REQUEST_CACHE_SIZE)
 
 
 class AMQPConsumer(object):
@@ -190,11 +188,10 @@ class AMQPConsumer(object):
 
             self.send_response(reply_msg, properties)
             LOGGER.debug(f"Sucessfully sent reply: {reply_msg} to AMQP.")
-            if req_id in REQUESTS_BEING_PROCESSSED:
-                del REQUESTS_BEING_PROCESSSED[req_id]
-        else:
-            LOGGER.debug(f"Unable to reply to message {delivery_tag}")
-            self.reject_message(basic_deliver.delivery_tag)
+
+        global REQUESTS_BEING_PROCESSSED
+        if req_id in REQUESTS_BEING_PROCESSSED:
+            del REQUESTS_BEING_PROCESSSED[req_id]
 
     def send_response(self, reply_msg, properties):
         reply_properties = pika.BasicProperties(
@@ -232,19 +229,18 @@ class AMQPConsumer(object):
         req_id = utils.get_request_id(
             request_msg=body, fsencoding=self.fsencoding)
         global REQUESTS_BEING_PROCESSSED
-        if req_id not in REQUESTS_BEING_PROCESSSED:
-            REQUESTS_BEING_PROCESSSED.set(req_id, time.time())
-            self.acknowledge_message(basic_deliver.delivery_tag)
-        else:
+        if req_id in REQUESTS_BEING_PROCESSSED:
+            LOGGER.debug(f"Unable to reply to message {delivery_tag}")
             self.reject_message(basic_deliver.delivery_tag)
             return
 
+        self.acknowledge_message(basic_deliver.delivery_tag)
         if self._ctpe.max_threads_busy():
             self.send_too_many_requests_response(properties, body)
         else:
-            self._ctpe.submit(lambda: self.process_amqp_message(properties,
-                                                                body,
-                                                                basic_deliver))
+            REQUESTS_BEING_PROCESSSED[req_id] = time.time()
+            self._ctpe.submit(lambda: self.process_amqp_message(
+                properties, body, basic_deliver))
 
     def acknowledge_message(self, delivery_tag):
         LOGGER.debug(f"Acknowledging message ({delivery_tag})")
