@@ -22,8 +22,7 @@ from container_service_extension.server_constants import MQTT_MIN_API_VERSION
 from container_service_extension.shared_constants import CSE_PAGINATION_DEFAULT_PAGE_SIZE  # noqa: E501
 from container_service_extension.shared_constants import CSE_PAGINATION_FIRST_PAGE_NUMBER  # noqa: E501
 from container_service_extension.shared_constants import PaginationKey
-from container_service_extension.thread_local_data import get_thread_request_id
-from container_service_extension.thread_local_data import set_thread_request_id
+import container_service_extension.thread_local_data as thread_local_data
 
 
 # chunk size in bytes for file reading
@@ -379,23 +378,23 @@ def read_data_file(filepath, logger=NULL_LOGGER,
     return contents
 
 
-def transfer_request_id_wrapper(func):
-    cur_thread_req_id = get_thread_request_id()
+def transfer_thread_local_data_wrapper(func):
+    cur_thread_data = thread_local_data.get_thread_local_data_as_dict()
 
     @functools.wraps(func)
     def wrapper(*args, **kwargs):
-        set_thread_request_id(cur_thread_req_id)
+        thread_local_data.set_thread_local_data_from_dict(cur_thread_data)
         func(*args, **kwargs)
-        set_thread_request_id(None)  # Reset request id
+        thread_local_data.reset_thread_local_data(cur_thread_data)
     return wrapper
 
 
 def run_async(func):
     @functools.wraps(func)
     def wrapper(*args, **kwargs):
-        req_id_wrapper = transfer_request_id_wrapper(func)
+        thread_local_data_wrapper = transfer_thread_local_data_wrapper(func)
         t = threading.Thread(name=generate_thread_name(func.__name__),
-                             target=req_id_wrapper, args=args, kwargs=kwargs,
+                             target=thread_local_data_wrapper, args=args, kwargs=kwargs,  # noqa: E501
                              daemon=True)
         t.start()
         return t

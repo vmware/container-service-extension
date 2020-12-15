@@ -5,7 +5,7 @@
 import logging
 import re
 
-from container_service_extension.thread_local_data import get_thread_request_id
+import container_service_extension.thread_local_data as thread_local_data
 
 
 class RedactingFilter(logging.Filter):
@@ -70,7 +70,7 @@ class RedactingFilter(logging.Filter):
         :rtype: boolean
         """
         record.msg = self.redact(record.msg)
-        record.requestId = get_thread_request_id()
+        record.requestId = thread_local_data.get_thread_local_data(thread_local_data.REQUEST_ID)  # noqa: E501
         if len(record.args) != 0:
             record.args = self.redact(record.args)
         return True
