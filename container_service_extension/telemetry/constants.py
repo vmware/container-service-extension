@@ -83,6 +83,8 @@ class CseOperation(Enum):
     V35_CLUSTER_UPGRADE = ('DEF cluster upgrade', 'CLUSTER', 'V35_UPGRADE', 'CSE_V35_CLUSTER_UPGRADE')  # noqa: E501
     V35_NODE_DELETE = ('DEF nfs node delete', 'NODE', 'V35_DELETE', 'CSE_V35_NODE_DELETE')  # noqa: E501
 
+    V36_CLUSTER_UPDATE = ('DEF cluster update', 'CLUSTER', 'V36_APPLY', 'CSE_V36_CLUSTER_APPLY')  # noqa: E501
+
     # Following operations do not require telemetry details. Hence the VAC
     # table name field is empty
     OVDC_COMPUTE_POLICY_ADD = ('ovdc compute policy', 'COMPUTE_POLICY', 'ADD', '')  # noqa: E501

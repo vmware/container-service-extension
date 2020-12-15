@@ -102,7 +102,7 @@ class RequestKey(str, Enum):
     OVDC_NAME = 'ovdc_name'
 
     # keys related to cluster requests
-    V35_SPEC = 'spec_body'
+    INPUT_SPEC = 'spec_body'
     V35_QUERY = 'query_filter'
     CLUSTER_NAME = 'cluster_name'
     CLUSTER_ID = 'cluster_id'

@@ -62,6 +62,10 @@ UNSUPPORTED_SUBCOMMANDS_BY_VERSION = {
     vcd_client.ApiVersion.VERSION_35.value: {
         GroupKey.CLUSTER: ['create', 'resize'],
         GroupKey.OVDC: ['compute-policy', 'info']
+    },
+    vcd_client.ApiVersion.VERSION_36.value: {
+        GroupKey.CLUSTER: ['create', 'resize', 'upgrade'],
+        GroupKey.OVDC: ['compute-policy', 'info']
     }
 }
 

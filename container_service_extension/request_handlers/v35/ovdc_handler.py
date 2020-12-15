@@ -26,7 +26,7 @@ def ovdc_update(data, operation_context: ctx.OperationContext):
 
     :return: Dictionary with org VDC update task href.
     """
-    ovdc_spec = def_models.Ovdc(**data[RequestKey.V35_SPEC])
+    ovdc_spec = def_models.Ovdc(**data[RequestKey.INPUT_SPEC])
     return ovdc_service.update_ovdc(operation_context,
                                     ovdc_id=data[RequestKey.OVDC_ID],
                                     ovdc_spec=ovdc_spec)
