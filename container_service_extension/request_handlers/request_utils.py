@@ -7,7 +7,7 @@ import container_service_extension.exceptions as cse_exception
 from container_service_extension.exceptions import BadRequestError
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
 from container_service_extension.minor_error_codes import MinorErrorCode
-from container_service_extension.shared_constants import FlattenedClusterSpecKey  # noqa: E501
+from container_service_extension.shared_constants import FlattenedClusterSpecKey, VALID_UPDATE_FIELDS  # noqa: E501
 from container_service_extension.shared_constants import RequestKey
 import container_service_extension.utils as utils
 
@@ -124,9 +124,7 @@ def validate_cluster_update_request_and_check_cluster_upgrade(input_spec: dict, 
         raise BadRequestError("No change in cluster specification")  # noqa: E501
 
     # Raise exception if fields which cannot be changed are updated
-    valid_fields = [FlattenedClusterSpecKey.WORKERS_COUNT.value, FlattenedClusterSpecKey.NFS_COUNT.value,  # noqa: E501
-                    FlattenedClusterSpecKey.TEMPLATE_REVISION.value, FlattenedClusterSpecKey.TEMPLATE_NAME.value]  # noqa: E501
-    keys_with_invalid_value = [k for k in diff_fields if k not in valid_fields]
+    keys_with_invalid_value = [k for k in diff_fields if k not in VALID_UPDATE_FIELDS]  # noqa: E501
     if len(keys_with_invalid_value) > 0:
         err_msg = f"Invalid input values found in {sorted(keys_with_invalid_value)}"  # noqa: E501
         raise BadRequestError(err_msg)
