@@ -21,6 +21,7 @@ import container_service_extension.request_handlers.system_handler as system_han
 import container_service_extension.request_handlers.template_handler as template_handler  # noqa: E501 E501
 import container_service_extension.request_handlers.v35.def_cluster_handler as v35_cluster_handler # noqa: E501
 import container_service_extension.request_handlers.v35.ovdc_handler as v35_ovdc_handler # noqa: E501
+import container_service_extension.request_handlers.v36.def_cluster_handler as v36_cluster_handler  # noqa: E501
 from container_service_extension.server_constants import CseOperation
 import container_service_extension.shared_constants as shared_constants
 import container_service_extension.utils as utils
@@ -117,6 +118,8 @@ OPERATION_TO_HANDLER = {
     CseOperation.V35_NODE_DELETE: v35_cluster_handler.nfs_node_delete,
     CseOperation.V35_NODE_CREATE: v35_cluster_handler.node_create,
     CseOperation.V35_NODE_INFO: v35_cluster_handler.node_info,
+
+    CseOperation.V36_CLUSTER_UPDATE: v36_cluster_handler.cluster_update,
 
     CseOperation.V35_OVDC_LIST: v35_ovdc_handler.ovdc_list,
     CseOperation.V35_OVDC_INFO: v35_ovdc_handler.ovdc_info,
@@ -278,7 +281,7 @@ def process_request(message):
         raw_body = base64.b64decode(message['body']).decode(sys.getfilesystemencoding())  # noqa: E501
         request_body = json.loads(raw_body)
         if is_cse_3_0_request:
-            request_data[shared_constants.RequestKey.V35_SPEC] = request_body
+            request_data[shared_constants.RequestKey.INPUT_SPEC] = request_body
         else:
             request_data.update(request_body)
         LOGGER.debug(f"request body: {request_data}")
@@ -365,7 +368,7 @@ def _get_url_data(method: str, url: str, api_version: str):
         return _get_pks_url_data(method, url)
 
     if _is_cse_3_0_endpoint(url):
-        return _get_v35_url_data(method, url, api_version)
+        return _get_v35_plus_url_data(method, url, api_version)
 
     return _get_legacy_url_data(method, url, api_version)
 
@@ -441,7 +444,7 @@ def _get_pks_url_data(method: str, url: str):
     raise cse_exception.NotFoundRequestError()
 
 
-def _get_v35_url_data(method: str, url: str, api_version: str):
+def _get_v35_plus_url_data(method: str, url: str, api_version: str):
     """Parse url and http method to get CSE v35 data.
 
     Returns a dictionary with operation and url data.
@@ -451,7 +454,8 @@ def _get_v35_url_data(method: str, url: str, api_version: str):
 
     :rtype: dict
     """
-    if api_version != VcdApiVersion.VERSION_35.value:
+    if api_version not in [VcdApiVersion.VERSION_35.value,
+                           VcdApiVersion.VERSION_36.value]:
         raise cse_exception.NotFoundRequestError()
 
     tokens = url.split('/')
@@ -465,21 +469,22 @@ def _get_v35_url_data(method: str, url: str, api_version: str):
         operation_type = operation_type[:-1]
 
     if operation_type == shared_constants.OperationType.CLUSTER:
-        return _get_v35_cluster_url_data(method, tokens)
+        return _get_v35_plus_cluster_url_data(method, tokens, api_version)
 
     if operation_type == shared_constants.OperationType.OVDC:
-        return _get_v35_ovdc_url_data(method, tokens)
+        return _get_v35_plus_ovdc_url_data(method, tokens)
 
     raise cse_exception.NotFoundRequestError()
 
 
-def _get_v35_cluster_url_data(method: str, tokens: list):
+def _get_v35_plus_cluster_url_data(method: str, tokens: list, api_version: str) -> dict:  # noqa: E501
     """Parse tokens from url and http method to get v35 cluster specific data.
 
     Returns a dictionary with operation and url data.
 
     :param RequestMethod method: http verb
     :param str[] tokens: http url
+    :param str api_version: API version of the request
 
     :rtype: dict
     """
@@ -497,10 +502,14 @@ def _get_v35_cluster_url_data(method: str, tokens: list):
                 shared_constants.RequestKey.CLUSTER_ID: tokens[5]
             }
         if method == shared_constants.RequestMethod.PUT:
-            return {
-                _OPERATION_KEY: CseOperation.V35_CLUSTER_RESIZE,
+            url_data = {
                 shared_constants.RequestKey.CLUSTER_ID: tokens[5]
             }
+            if api_version == VcdApiVersion.VERSION_35.value:
+                url_data[_OPERATION_KEY] = CseOperation.V35_CLUSTER_RESIZE
+            else:
+                url_data[_OPERATION_KEY] = CseOperation.V36_CLUSTER_UPDATE
+            return url_data
         if method == shared_constants.RequestMethod.DELETE:
             return {
                 _OPERATION_KEY: CseOperation.V35_CLUSTER_DELETE,
@@ -534,6 +543,9 @@ def _get_v35_cluster_url_data(method: str, tokens: list):
     if num_tokens == 8:
         if method == shared_constants.RequestMethod.POST:
             if tokens[6] == 'action' and tokens[7] == 'upgrade':
+                # TODO create a constant in pyvcloud.
+                if api_version == '36.0':
+                    raise cse_exception.MethodNotAllowedRequestError()
                 return {
                     _OPERATION_KEY: CseOperation.V35_CLUSTER_UPGRADE,
                     shared_constants.RequestKey.CLUSTER_ID: tokens[5]
@@ -548,7 +560,7 @@ def _get_v35_cluster_url_data(method: str, tokens: list):
         raise cse_exception.MethodNotAllowedRequestError()
 
 
-def _get_v35_ovdc_url_data(method: str, tokens: list):
+def _get_v35_plus_ovdc_url_data(method: str, tokens: list):
     """Parse tokens from url and http method to get v35 ovdc specific data.
 
     Returns a dictionary with operation and url data.
