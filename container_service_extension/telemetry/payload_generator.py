@@ -1,6 +1,9 @@
 # container-service-extension
 # Copyright (c) 2019 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
+
+import json
+
 import pyvcloud.vcd.utils as pyvcd_utils
 
 from container_service_extension.def_.models import DefEntity
@@ -358,7 +361,7 @@ def get_payload_for_v35_cluster_acl_update(cluster_acl_update_info: dict):
     return {
         PayloadKey.TYPE: CseOperation.V35_CLUSTER_ACL_UPDATE.telemetry_table,
         PayloadKey.CLUSTER_ID: uuid_hash(cluster_id),
-        PayloadKey.ACCESS_SETTING: str(filtered_acl_info)
+        PayloadKey.ACCESS_SETTING: json.dumps(filtered_acl_info)
     }
 
 
