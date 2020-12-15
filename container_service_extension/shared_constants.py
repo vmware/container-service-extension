@@ -171,6 +171,10 @@ class FlattenedClusterSpecKey(Enum):
     TEMPLATE_REVISION = 'k8_distribution.template_revision'
 
 
+VALID_UPDATE_FIELDS = [FlattenedClusterSpecKey.WORKERS_COUNT.value, FlattenedClusterSpecKey.NFS_COUNT.value,  # noqa: E501
+                       FlattenedClusterSpecKey.TEMPLATE_NAME.value, FlattenedClusterSpecKey.TEMPLATE_REVISION.value]  # noqa: E501
+
+
 @dataclass
 class DefEntityPhase:
     """Supports two ways of creation.
