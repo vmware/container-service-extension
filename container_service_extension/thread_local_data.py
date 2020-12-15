@@ -9,7 +9,6 @@ from container_service_extension.init_utils import run_once
 
 # Thread data to be initialized once. This data is specific to each thread.
 THREAD_DATA = None
-REQUEST_ID = 'request_id'
 
 
 @run_once
@@ -53,12 +52,11 @@ def set_thread_local_data_from_dict(data_dict: dict = {}):
         THREAD_DATA.__dict__[key] = data_dict.get(key)
 
 
-def reset_thread_local_data(data_dict: dict = {}):
-    """Reset the current thread attributes found in dictionary.
+def reset_thread_local_data():
+    """Reset the current thread attributes.
 
     :param dict data_dict: input attributes
     :return:
     """
     global THREAD_DATA
-    for key in data_dict:
-        THREAD_DATA.__dict__[key] = None
+    THREAD_DATA.__dict__.clear()
