@@ -385,7 +385,7 @@ def transfer_thread_local_data_wrapper(func):
     def wrapper(*args, **kwargs):
         thread_local_data.set_thread_local_data_from_dict(cur_thread_data)
         func(*args, **kwargs)
-        thread_local_data.reset_thread_local_data(cur_thread_data)
+        thread_local_data.reset_thread_local_data()
     return wrapper
 
 
