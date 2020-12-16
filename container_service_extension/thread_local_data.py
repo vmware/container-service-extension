@@ -23,21 +23,40 @@ def init_thread_local_data():
     THREAD_DATA = threading.local()
 
 
-def set_thread_request_id(request_id):
-    """Set the request id only for the current thread.
+def set_thread_local_data(name: str, value):
+    """Set the attribute of current thread to the given value."""
+    global THREAD_DATA
+    setattr(THREAD_DATA, name, value)
 
-    This function can be called multiple times per thread as the thread
-    processes different requests.
+
+def get_thread_local_data(name: str):
+    """Get the value of given attribute from the current thread."""
+    global THREAD_DATA
+    return getattr(THREAD_DATA, name, None)
+
+
+def get_thread_local_data_as_dict() -> dict:
+    """Get all the current thread attributes as dictionary."""
+    global THREAD_DATA
+    return THREAD_DATA.__dict__
+
+
+def set_thread_local_data_from_dict(data_dict: dict = {}):
+    """Set the current thread attributes to given values found in dictionary.
+
+    :param dict data_dict: input attributes
+    :return:
     """
     global THREAD_DATA
-    THREAD_DATA.request_id = request_id
+    for key in data_dict:
+        THREAD_DATA.__dict__[key] = data_dict.get(key)
 
 
-def get_thread_request_id():
-    """Get the request id only for the current thread."""
+def reset_thread_local_data():
+    """Reset the current thread attributes.
+
+    :param dict data_dict: input attributes
+    :return:
+    """
     global THREAD_DATA
-    try:
-        request_id = THREAD_DATA.request_id
-    except AttributeError:
-        request_id = None
-    return request_id
+    THREAD_DATA.__dict__.clear()
