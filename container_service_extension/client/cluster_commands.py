@@ -1129,8 +1129,19 @@ Examples:
          "ID gets precedence over cluster name.")
 def cluster_share_list(ctx, should_print_all, name, vdc, org, k8_runtime,
                        cluster_id):
-    try:
+    """List cluster shared user information.
 
+    Either the cluster name or cluster id is required.
+
+\b
+Examples:
+    vcd cse cluster share-list --name mycluster
+        List shared user information for cluster 'mycluster'
+\b
+    vcd cse cluster share --id urn:vcloud:entity:vmware:tkgcluster:1.0.0:71fa7b01-84dc-4a58-ae54-a1098219b057
+        List shared user information for cluster with cluster ID 'urn:vcloud:entity:vmware:tkgcluster:1.0.0:71fa7b01-84dc-4a58-ae54-a1098219b057'
+    """  # noqa: E501
+    try:
         if not (cluster_id or name):
             raise Exception("Please specify cluster name or cluster id.")
         client_utils.cse_restore_session(ctx)
@@ -1143,36 +1154,11 @@ def cluster_share_list(ctx, should_print_all, name, vdc, org, k8_runtime,
 
         # Determine cluster type and retrieve cluster id if needed
         client = ctx.obj['client']
-        cloudapi_client = \
-            vcd_utils.get_cloudapi_client_from_vcd_client(
-                client, logger_debug=CLIENT_LOGGER)
-        if cluster_id:
-            de_svc = entity_svc.DefEntityService(cloudapi_client)
-            is_native_cluster = de_svc.is_native_entity(cluster_id)
-        else:
-            # Get cluster id
-            if k8_runtime == shared_constants.ClusterEntityKind.TKG.value:
-                tkg_cluster_obj = de_cluster_tkg.DEClusterTKG(client)
-                _, tkg_def_ent = tkg_cluster_obj. \
-                    get_tkg_clusters_by_name(name, vdc, org)
-                cluster_id = tkg_def_ent[0]['id']
-                is_native_cluster = False
-            else:
-                cluster_obj = Cluster(client)
-                cluster_ent, entity_properties, is_native_cluster = \
-                    cluster_obj._get_tkg_native_clusters_by_name(name, org=org,
-                                                                 vdc=vdc)
-                cluster_id = cluster_ent.id if is_native_cluster else \
-                    entity_properties['id']
-        if is_native_cluster:
-            native_cluster = DEClusterNative(client)
-            share_entries = native_cluster.list_share_entries(cluster_id)
-        else:
-            if not org:
-                ctx_profiles = ctx.obj['profiles']
-                org = ctx_profiles.get('org')
-            tkg_cluster = de_cluster_tkg.DEClusterTKG(client)
-            share_entries = tkg_cluster.list_share_entries(cluster_id, org)
+        if not org:
+            ctx_profiles = ctx.obj['profiles']
+            org = ctx_profiles.get('org')
+        cluster = Cluster(client, k8_runtime)
+        share_entries = cluster.list_share_entries(cluster_id, name, org, vdc)
         client_utils.print_paginated_result(share_entries, should_print_all)
     except Exception as e:
         stderr(e, ctx)

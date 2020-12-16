@@ -308,7 +308,9 @@ class DEClusterNative:
              for acl_entry in update_acl_entries]
         self._native_cluster_api.put_cluster_acl(cluster_id, update_acl_values)
 
-    def list_share_entries(self, cluster_id):
+    def list_share_entries(self, cluster_id, cluster_name, org=None, vdc=None):
+        if not cluster_id:
+            cluster_id = self.get_cluster_id_by_name(cluster_name, org, vdc)
         result_count = page_num = 0
         while True:
             page_num += 1

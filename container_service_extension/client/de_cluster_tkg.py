@@ -364,6 +364,11 @@ class DEClusterTKG:
         raise NotImplementedError(
             "Cluster upgrade not supported for TKG clusters")
 
+    def get_cluster_id_by_name(self, cluster_name, org=None, vdc=None):
+        _, tkg_def_entities = \
+            self.get_tkg_clusters_by_name(cluster_name, org=org, vdc=vdc)
+        return tkg_def_entities[0]['id']
+
     def share_cluster(self, cluster_id, cluster_name, users: list,
                       access_level_id, org=None, vdc=None):
         """Share the cluster with the users in user_name_to_id_dict.
@@ -376,9 +381,7 @@ class DEClusterTKG:
         :param str org: name of the org where the users are
         """
         if not cluster_id:
-            _, tkg_def_entities = \
-                self.get_tkg_clusters_by_name(cluster_name, org=org, vdc=vdc)
-            cluster_id = tkg_def_entities[0]['id']
+            cluster_id = self.get_cluster_id_by_name(cluster_name, org, vdc)
 
         # Ensure current cluster user access level is not reduced
         org_href = self._client.get_org_by_name(org).get('href')
@@ -408,7 +411,10 @@ class DEClusterTKG:
             payload[shared_constants.AccessControlKey.MEMBER_ID] = user_id
             acl_svc.share_def_entity(payload)
 
-    def list_share_entries(self, cluster_id, org):
+    def list_share_entries(self, cluster_id, cluster_name, org=None, vdc=None):
+        if not cluster_id:
+            cluster_id = self.get_cluster_id_by_name(cluster_name, org, vdc)
+
         org_user_id_to_name_dict = utils.create_org_user_id_to_name_dict(
             self._client, org)
         acl_svc = cluster_acl_svc.ClusterACLService(cluster_id, self._client)
@@ -425,7 +431,7 @@ class DEClusterTKG:
             for entry in values:
                 acl_entry = def_models.ClusterAclEntry(**entry)
                 acl_entry.username = org_user_id_to_name_dict.get(acl_entry.memberId)  # noqa: E501
-                acl_values.append(acl_entry.get_filtered_dict(
+                acl_values.append(acl_entry.construct_filtered_dict(
                     include=def_constants.CLUSTER_ACL_LIST_FIELDS))
             result_count += len(values)
             yield acl_values, result_count < result_total
