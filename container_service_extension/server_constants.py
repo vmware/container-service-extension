@@ -84,6 +84,10 @@ VCENTER_LOGIN_ERROR_MSG = "vCenter login failed (check config file for "\
 REQUEST_ID_FORMAT = 'Request Id: %(requestId)s | '
 REQUEST_ID = 'request_id'
 
+# User Agent for telemetry
+USER_AGENT = 'User-Agent'
+CLUSTER_ENTITY = 'cluster_entity'
+
 
 @unique
 class NodeType(str, Enum):

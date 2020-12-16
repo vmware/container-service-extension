@@ -17,6 +17,7 @@ import container_service_extension.request_handlers.request_utils as req_utils
 from container_service_extension.server_constants import CseOperation as CseServerOperationInfo  # noqa: E501
 from container_service_extension.server_constants import K8S_PROVIDER_KEY
 from container_service_extension.server_constants import K8sProvider
+from container_service_extension.server_constants import USER_AGENT
 from container_service_extension.shared_constants import ComputePolicyAction
 from container_service_extension.shared_constants import CSE_PAGINATION_DEFAULT_PAGE_SIZE  # noqa: E501
 from container_service_extension.shared_constants import CSE_PAGINATION_FIRST_PAGE_NUMBER  # noqa: E501
@@ -24,9 +25,11 @@ from container_service_extension.shared_constants import PaginationKey
 from container_service_extension.shared_constants import RequestKey
 from container_service_extension.telemetry.constants import CseOperation
 from container_service_extension.telemetry.constants import OperationStatus
+from container_service_extension.telemetry.constants import PayloadKey
 from container_service_extension.telemetry.telemetry_handler import record_user_action  # noqa: E501
 from container_service_extension.telemetry.telemetry_handler import record_user_action_details  # noqa: E501
 from container_service_extension.telemetry.telemetry_handler import record_user_action_telemetry  # noqa: E501
+import container_service_extension.thread_local_data as thread_local_data
 import container_service_extension.utils as utils
 
 SYSTEM_DEFAULT_COMPUTE_POLICY_NAME = "System Default"
@@ -57,6 +60,7 @@ def ovdc_update(request_data, op_ctx: ctx.OperationContext):
 
     # Record the telemetry data
     cse_params = copy.deepcopy(validated_data)
+    cse_params[PayloadKey.SOURCE_DESCRIPTION] = thread_local_data.get_thread_local_data(USER_AGENT)  # noqa: E501
     cse_operation = CseOperation.OVDC_DISABLE if k8s_provider == K8sProvider.NONE else CseOperation.OVDC_ENABLE  # noqa: E501
     record_user_action_details(cse_operation=cse_operation, cse_params=cse_params)  # noqa: E501
 
@@ -92,6 +96,7 @@ def ovdc_info(request_data, op_ctx: ctx.OperationContext):
 
     # Record telemetry data
     cse_params = copy.deepcopy(request_data)
+    cse_params[PayloadKey.SOURCE_DESCRIPTION] = thread_local_data.get_thread_local_data(USER_AGENT)  # noqa: E501
     record_user_action_details(cse_operation=CseOperation.OVDC_INFO,
                                cse_params=cse_params)
 
@@ -117,6 +122,7 @@ def ovdc_list(request_data, op_ctx: ctx.OperationContext):
 
     # Record telemetry data
     cse_params = copy.deepcopy(validated_data)
+    cse_params[PayloadKey.SOURCE_DESCRIPTION] = thread_local_data.get_thread_local_data(USER_AGENT)  # noqa: E501
     record_user_action_details(cse_operation=CseOperation.OVDC_LIST,
                                cse_params=cse_params)
 

@@ -288,7 +288,6 @@ def process_request(message):
         LOGGER.debug(f"query parameters: {query_params}")
     # update request spec with operation specific data in the url
     request_data.update(url_data)
-    request_data.update({shared_constants.RequestKey.USER_AGENT: message['headers'].get('User-Agent')})  # noqa: E501
     # remove None values from request payload
     data = {k: v for k, v in request_data.items() if v is not None}
     # extract out the authorization token
