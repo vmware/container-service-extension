@@ -1,6 +1,7 @@
 # container-service-extension
 # Copyright (c) 2017 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
+from dataclasses import asdict
 from dataclasses import dataclass
 from typing import List
 
@@ -299,3 +300,22 @@ class Ovdc:
     ovdc_id: str = None
     org_name: str = None
     remove_cp_from_vms_on_disable: bool = False
+
+
+@dataclass()
+class ClusterAclEntry:
+    accessLevelId: str = None
+    memberId: str = None
+    id: str = None
+    grantType: str = None
+    objectId: str = None
+    username: str = None
+
+    def construct_filtered_dict(self, include=[]):
+        orig_dict = asdict(self)
+        include_set = set(include)
+        filtered_dict = {}
+        for key, value in orig_dict.items():
+            if key in include_set:
+                filtered_dict[key] = value
+        return filtered_dict

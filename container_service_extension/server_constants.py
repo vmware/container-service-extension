@@ -85,6 +85,14 @@ REQUEST_ID_FORMAT = 'Request Id: %(requestId)s | '
 REQUEST_ID = 'request_id'
 
 
+# User ID parsing
+USER_PATH = '/user/'
+ADMIN_USER_PATH = '/admin/user/'
+
+# vApp Access control type
+CHANGE_ACCESS = 'Change'
+
+
 @unique
 class NodeType(str, Enum):
     CONTROL_PLANE = 'mstr'
@@ -216,6 +224,8 @@ class CseOperation(Enum):
     V35_CLUSTER_RESIZE = ('resize DEF cluster', '/cse/3.0/cluster/%s', requests.codes.accepted)  # noqa: E501
     V35_CLUSTER_UPGRADE_PLAN = ('get supported DEF cluster upgrade paths', '/cse/3.0/cluster/%s/upgrade-plan')  # noqa: E501
     V35_CLUSTER_UPGRADE = ('upgrade DEF cluster software', '/cse/3.0/cluster/%s/action/upgrade', requests.codes.accepted)  # noqa: E501
+    V35_CLUSTER_ACL_LIST = ('list cluster acl', '/cse/3.0/cluster/%s/acl')
+    V35_CLUSTER_ACL_UPDATE = ('update cluster acl', '/cse/3.0/cluster/%s/acl', requests.codes.no_content)  # noqa: E501
     V35_NODE_CREATE = ('create DEF node', 'NOT IMPLEMENTED', requests.codes.accepted)  # noqa: E501
     V35_NODE_DELETE = ('delete DEF node', '/cse/3.0/cluster/%s/nfs/%s', requests.codes.accepted)  # noqa: E501
     V35_NODE_INFO = ('get info of DEF node', 'NOT IMPLEMENTED')
@@ -328,6 +338,15 @@ class AclAccessLevelId(str, Enum):
 @unique
 class AclMemberId(str, Enum):
     SystemOrgId = "urn:vcloud:org:a93c9db9-7471-3192-8d09-a8f7eeda85f9"
+
+
+@unique
+class VappAccessKey(str, Enum):
+    """Keys for VAPP access control."""
+
+    IS_SHARED_TO_EVERYONE = 'isSharedToEveryone'
+    ACCESS_SETTINGS = 'accessSettings'
+    ACCESS_SETTING = 'accessSetting'
 
 
 # CSE Service Role Name

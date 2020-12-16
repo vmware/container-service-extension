@@ -1,10 +1,16 @@
 # container-service-extension
 # Copyright (c) 2019 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
+
+import json
+
 import pyvcloud.vcd.utils as pyvcd_utils
 
 from container_service_extension.def_.models import DefEntity
 from container_service_extension.server_constants import LocalTemplateKey
+import container_service_extension.shared_constants as shared_constants
+from container_service_extension.shared_constants import AccessControlKey
+from container_service_extension.shared_constants import ClusterAclKey
 from container_service_extension.shared_constants import RequestKey
 from container_service_extension.telemetry.constants import CseOperation
 from container_service_extension.telemetry.constants import PayloadKey
@@ -318,6 +324,44 @@ def get_payload_for_cluster_upgrade_plan(params):
         PayloadKey.CLUSTER_ID: uuid_hash(params.get(PayloadKey.CLUSTER_ID)),
         PayloadKey.WAS_OVDC_SPECIFIED: bool(params.get(RequestKey.OVDC_NAME)),
         PayloadKey.WAS_ORG_SPECIFIED: bool(params.get(RequestKey.ORG_NAME))
+    }
+
+
+def get_payload_for_v35_cluster_acl_list(cluster_acl_list_info):
+    cluster_id = cluster_acl_list_info[RequestKey.CLUSTER_ID]
+    page = cluster_acl_list_info[shared_constants.PaginationKey.PAGE_NUMBER]
+    page_size = cluster_acl_list_info[shared_constants.PaginationKey.PAGE_SIZE]
+    return {
+        PayloadKey.TYPE: CseOperation.V35_CLUSTER_ACL_LIST.telemetry_table,
+        PayloadKey.CLUSTER_ID: uuid_hash(cluster_id),
+        PayloadKey.PAGE: str(page),
+        PayloadKey.PAGE_SIZE: str(page_size)
+    }
+
+
+def get_payload_for_v35_cluster_acl_update(cluster_acl_update_info: dict):
+    """Construct payload for v35 cluster acl update.
+
+    :param dict cluster_acl_update_info: a dict containing two entries:
+        1. "cluster_id" mapped to the cluster id
+        2. "update_acl_entries" mapped to a list of
+            def_models.ClusterAclEntry's
+    """
+    cluster_id = cluster_acl_update_info[RequestKey.CLUSTER_ID]
+    update_acl_entries: list = cluster_acl_update_info[ClusterAclKey.UPDATE_ACL_ENTRIES]  # noqa: E501
+
+    # Remove username from being sent
+    filtered_acl_info = []
+    for entry in update_acl_entries:
+        filtered_entry = {
+            AccessControlKey.MEMBER_ID: entry.memberId,
+            AccessControlKey.ACCESS_LEVEL_ID: entry.accessLevelId  # noqa: E501
+        }
+        filtered_acl_info.append(filtered_entry)
+    return {
+        PayloadKey.TYPE: CseOperation.V35_CLUSTER_ACL_UPDATE.telemetry_table,
+        PayloadKey.CLUSTER_ID: uuid_hash(cluster_id),
+        PayloadKey.ACCESS_SETTING: json.dumps(filtered_acl_info)
     }
 
 

@@ -55,7 +55,8 @@ def process_response(response):
         requests.codes.ok,
         requests.codes.created,
         requests.codes.accepted,
-        requests.codes.too_many_requests
+        requests.codes.too_many_requests,
+        requests.codes.no_content
     ]:
         return response_content
 

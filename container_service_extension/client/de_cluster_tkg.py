@@ -13,6 +13,7 @@ from container_service_extension.client.tkgclient.configuration import Configura
 from container_service_extension.client.tkgclient.models.tkg_cluster import TkgCluster  # noqa: E501
 import container_service_extension.client.tkgclient.rest as tkg_rest
 import container_service_extension.client.utils as client_utils
+import container_service_extension.def_.acl_service as cluster_acl_svc
 from container_service_extension.def_.utils import DEF_TKG_ENTITY_TYPE_NSS
 from container_service_extension.def_.utils import DEF_TKG_ENTITY_TYPE_VERSION
 from container_service_extension.def_.utils import DEF_VMWARE_VENDOR
@@ -360,3 +361,47 @@ class DEClusterTKG:
         """Upgrade TKG cluster to the given distribution."""
         raise NotImplementedError(
             "Cluster upgrade not supported for TKG clusters")
+
+    def share_cluster(self, cluster_id, cluster_name, users: list,
+                      access_level_id, org=None, vdc=None):
+        """Share the cluster with the users in user_name_to_id_dict.
+
+        :param str cluster_id: cluster id
+        :param str cluster_name: cluster name
+        :param list users: users to share cluster with
+        :param str access_level_id: access level id of shared users
+        :param str vdc: name of the vdc where the cluster is
+        :param str org: name of the org where the users are
+        """
+        if not cluster_id:
+            _, tkg_def_entities = \
+                self.get_tkg_clusters_by_name(cluster_name, org=org, vdc=vdc)
+            cluster_id = tkg_def_entities[0]['id']
+
+        # Ensure current cluster user access level is not reduced
+        org_href = self._client.get_org_by_name(org).get('href')
+        name_to_id: dict = client_utils.create_user_name_to_id_dict(
+            self._client, users, org_href)
+        org_user_id_to_name_dict = utils.create_org_user_id_to_name_dict(
+            self._client, org)
+        acl_svc = cluster_acl_svc.ClusterACLService(cluster_id, self._client)
+        for acl_entry in acl_svc.list_def_entity_acl_entries():
+            username = org_user_id_to_name_dict.get(acl_entry.memberId)
+            if name_to_id.get(username):
+                curr_access_level = acl_entry.accessLevelId  # noqa: E501
+                if client_utils.access_level_reduced(access_level_id,
+                                                     curr_access_level):
+                    raise Exception(f'{username} currently has higher access '
+                                    f'level: {curr_access_level}')
+
+        # share TKG def entity
+        payload = {
+            shared_constants.AccessControlKey.GRANT_TYPE:
+                shared_constants.MEMBERSHIP_GRANT_TYPE,
+            shared_constants.AccessControlKey.ACCESS_LEVEL_ID:
+                access_level_id,
+            shared_constants.AccessControlKey.MEMBER_ID: None
+        }
+        for _, user_id in name_to_id.items():
+            payload[shared_constants.AccessControlKey.MEMBER_ID] = user_id
+            acl_svc.share_def_entity(payload)

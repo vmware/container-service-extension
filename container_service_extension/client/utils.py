@@ -3,6 +3,8 @@
 # SPDX-License-Identifier: BSD-2-Clause
 import click
 from pyvcloud.vcd.client import Client
+import pyvcloud.vcd.org as vcd_org
+import pyvcloud.vcd.utils as vcd_utils
 import requests
 import six
 from vcd_cli.profiles import Profiles
@@ -13,8 +15,10 @@ from container_service_extension.client.constants import CSE_SERVER_RUNNING
 import container_service_extension.def_.utils as def_utils
 from container_service_extension.exceptions import CseResponseError
 from container_service_extension.logger import NULL_LOGGER
+import container_service_extension.shared_constants as shared_constants
 from container_service_extension.shared_constants import CSE_SERVER_API_VERSION
 from container_service_extension.shared_constants import CSE_SERVER_BUSY_KEY
+from container_service_extension.utils import extract_id_from_href
 
 _RESTRICT_CLI_TO_TKG_OPERATIONS = False
 
@@ -203,6 +207,53 @@ def filter_columns(result, value_field_to_display_field):
             for value_field, display_field in value_field_to_display_field.items()  # noqa: E501
         }
         return filtered_result
+
+
+def create_user_name_to_id_dict(client: Client, users_set: set, org_href):
+    """Get a dictionary of users to user ids from a list of user names.
+
+    :param Client client: current client
+    :param set users_set: set of user names
+    :param str org_href: href of the org to search in
+
+    :return: dict of user name keys and user id values
+    :rtype: dict
+    :raise Exception is not all id's are found for users
+    """
+    own_users_set = users_set.copy()
+    org = vcd_org.Org(client, org_href)
+    org_users = org.list_users()
+    user_name_to_id_dict = {}
+    for user_str_elem in org_users:
+        curr_user_dict = vcd_utils.to_dict(user_str_elem, exclude=[])
+        curr_user_name = curr_user_dict['name']
+        if curr_user_name in own_users_set:
+            user_id = extract_id_from_href(curr_user_dict['href'])
+            user_name_to_id_dict[curr_user_name] = shared_constants.USER_URN_PREFIX + user_id  # noqa: E501
+            own_users_set.remove(curr_user_name)
+
+        # Stop searching if all needed names and ids found
+        if len(own_users_set) == 0:
+            break
+    if len(own_users_set) > 0:
+        raise Exception(f"No user ids found for: {list(own_users_set)}")
+    return user_name_to_id_dict
+
+
+def access_level_reduced(new_access_urn, curr_access_urn):
+    """Check if the access level is reduced.
+
+    Only true is the current access level is full-control and the new access
+    level is not full control, or is the current access level is read-write and
+    the new access level is read-only.
+    """
+    if curr_access_urn == shared_constants.FULL_CONTROL_ACCESS_LEVEL_ID and \
+            new_access_urn != shared_constants.FULL_CONTROL_ACCESS_LEVEL_ID:
+        return True
+    if curr_access_urn == shared_constants.READ_WRITE_ACCESS_LEVEL_ID and \
+            new_access_urn == shared_constants.READ_ONLY_ACCESS_LEVEL_ID:
+        return True
+    return False
 
 
 def print_paginated_result(generator, should_print_all=False, logger=NULL_LOGGER):  # noqa: E501

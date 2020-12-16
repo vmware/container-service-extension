@@ -56,6 +56,8 @@ OPERATION_TO_PAYLOAD_GENERATOR = {
     CseOperation.V35_CLUSTER_DELETE: payload_generator.get_payload_for_v35_cluster_delete,  # noqa: E501
     CseOperation.V35_CLUSTER_UPGRADE_PLAN: payload_generator.get_payload_for_v35_cluster_upgrade_plan,  # noqa: E501
     CseOperation.V35_CLUSTER_UPGRADE: payload_generator.get_payload_for_v35_cluster_upgrade,  # noqa: E501
+    CseOperation.V35_CLUSTER_ACL_LIST: payload_generator.get_payload_for_v35_cluster_acl_list,  # noqa: E501
+    CseOperation.V35_CLUSTER_ACL_UPDATE: payload_generator.get_payload_for_v35_cluster_acl_update,  # noqa: E501
     CseOperation.V35_NODE_DELETE: payload_generator.get_payload_for_v35_node_delete  # noqa: E501
 
 }

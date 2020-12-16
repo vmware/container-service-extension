@@ -81,6 +81,8 @@ class CseOperation(Enum):
     V35_CLUSTER_DELETE = ('DEF cluster delete', 'CLUSTER', 'V35_DELETE', 'CSE_V35_CLUSTER_DELETE')  # noqa: E501
     V35_CLUSTER_UPGRADE_PLAN = ('DEF cluster upgrade plan', 'CLUSTER', 'V35_UPGRADE_PLAN', 'CSE_V35_CLUSTER_UPGRADE_PLAN')  # noqa: E501
     V35_CLUSTER_UPGRADE = ('DEF cluster upgrade', 'CLUSTER', 'V35_UPGRADE', 'CSE_V35_CLUSTER_UPGRADE')  # noqa: E501
+    V35_CLUSTER_ACL_LIST = ('cluster acl list', 'CLUSTER', 'V35_ACL_LIST', 'CSE_V35_CLUSTER_ACL_LIST')  # noqa: E501
+    V35_CLUSTER_ACL_UPDATE = ('cluster acl update', 'CLUSTER', 'V35_ACL_UPDATE', 'CSE_V35_CLUSTER_ACL_UPDATE')  # noqa: E501
     V35_NODE_DELETE = ('DEF nfs node delete', 'NODE', 'V35_DELETE', 'CSE_V35_NODE_DELETE')  # noqa: E501
 
     # Following operations do not require telemetry details. Hence the VAC
@@ -154,6 +156,10 @@ class PayloadKey(str, Enum):
     WAS_TEMP_VAPP_RETAINED = 'was_temp_vapp_retained'
     WERE_TEMPLATES_FORCE_UPDATED = 'were_templates_force_updated'
     WERE_TEMPLATES_SKIPPED = 'were_templates_skipped'
+    QUERY = 'query_filter'
+    ACCESS_SETTING = 'access_setting'
+    PAGE = 'page'
+    PAGE_SIZE = 'page_size'
 
 
 @unique

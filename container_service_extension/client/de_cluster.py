@@ -41,6 +41,7 @@ class DECluster:
         logger_wire = logger.NULL_LOGGER
         if os.getenv(cli_constants.ENV_CSE_CLIENT_WIRE_LOGGING):
             logger_wire = logger.CLIENT_WIRE_LOGGER
+        self._client = client
         self._cloudapi_client = \
             vcd_utils.get_cloudapi_client_from_vcd_client(
                 client=client, logger_debug=logger.CLIENT_LOGGER,
@@ -325,3 +326,21 @@ class DECluster:
             cluster_dict = asdict(cluster)
             return self._nativeCluster.upgrade_cluster_by_cluster_id(cluster.id, cluster_def_entity=cluster_dict)  # noqa: E501
         self._tkgCluster.upgrade_cluster(cluster_name, template_name, template_revision)  # noqa: E501
+
+    def share_cluster(self, cluster_id, cluster_name, users: list,
+                      access_level_id, org=None, vdc=None):
+        # Find cluster type
+        if cluster_id:
+            entity_svc = def_entity_svc.DefEntityService(self._cloudapi_client)
+            is_native_cluster = entity_svc.is_native_entity(cluster_id)
+        else:
+            cluster_ent, entity_properties, is_native_cluster = \
+                self._get_tkg_native_clusters_by_name(cluster_name, org=org,
+                                                      vdc=vdc)
+
+        if is_native_cluster:
+            self._nativeCluster.share_cluster(cluster_id, cluster_name, users,
+                                              access_level_id, org, vdc)
+        else:
+            self._tkgCluster.share_cluster(cluster_id, cluster_name, users,
+                                           access_level_id, org, vdc)

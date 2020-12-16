@@ -6,7 +6,7 @@ import re
 import string
 import threading
 import time
-from typing import List
+from typing import Dict, List
 import urllib
 
 import pkg_resources
@@ -20,6 +20,8 @@ import semantic_version as semver
 
 import container_service_extension.abstract_broker as abstract_broker
 import container_service_extension.compute_policy_manager as compute_policy_manager  # noqa: E501
+import container_service_extension.def_.acl_service as acl_service
+import container_service_extension.def_.constants as def_constants
 import container_service_extension.def_.entity_service as def_entity_svc
 import container_service_extension.def_.models as def_models
 import container_service_extension.def_.utils as def_utils
@@ -34,6 +36,7 @@ from container_service_extension.server_constants import LocalTemplateKey
 from container_service_extension.server_constants import NodeType
 from container_service_extension.server_constants import ScriptFile
 from container_service_extension.server_constants import SYSTEM_ORG_NAME
+import container_service_extension.shared_constants as shared_constants
 from container_service_extension.shared_constants import CSE_PAGINATION_DEFAULT_PAGE_SIZE  # noqa: E501
 from container_service_extension.shared_constants import CSE_PAGINATION_FIRST_PAGE_NUMBER  # noqa: E501
 from container_service_extension.shared_constants import DefEntityOperation
@@ -432,6 +435,79 @@ class ClusterService(abstract_broker.AbstractBroker):
         self._upgrade_cluster_async(cluster_id=cluster_id,
                                     template=template)
         return curr_entity
+
+    def get_cluster_acl_info(self, cluster_id, page: int, page_size: int):
+        """Get cluster ACL info based on the defined entity ACL."""
+        telemetry_params = {
+            shared_constants.RequestKey.CLUSTER_ID: cluster_id,
+            shared_constants.PaginationKey.PAGE_NUMBER: page,
+            shared_constants.PaginationKey.PAGE_SIZE: page_size
+        }
+        telemetry_handler.record_user_action_details(
+            telemetry_constants.CseOperation.V35_CLUSTER_ACL_LIST,
+            cse_params=telemetry_params)
+
+        acl_svc = acl_service.ClusterACLService(cluster_id,
+                                                self.context.client)
+        curr_entity: def_models.DefEntity = acl_svc.get_cluster_entity()
+        user_id_names_dict = utils.create_org_user_id_to_name_dict(
+            client=self.context.client,
+            org_name=curr_entity.org.name)
+
+        # Iterate all acl entries because not all results correspond to a user
+        acl_values = []
+        result_total = 0
+        for acl_entry in acl_svc.list_def_entity_acl_entries():
+            if acl_entry.memberId.startswith(shared_constants.USER_URN_PREFIX):
+                curr_page = result_total // page_size + 1
+                page_entry = result_total % page_size
+                # Check if entry is on desired page
+                if curr_page == page and page_entry < page_size:
+                    # Add acl entry
+                    acl_entry.username = user_id_names_dict[acl_entry.memberId]
+                    filter_acl_value: dict = acl_entry.construct_filtered_dict(
+                        include=def_constants.CLUSTER_ACL_LIST_FIELDS)
+                    acl_values.append(filter_acl_value)
+                result_total += 1
+
+        return {
+            shared_constants.PaginationKey.RESULT_TOTAL: result_total,
+            shared_constants.PaginationKey.VALUES: acl_values
+        }
+
+    def update_cluster_acl(self, cluster_id, update_acl_entry_dicts: list):
+        """Update the cluster ACL by updating the defined entity and vApp ACL."""  # noqa: E501
+        update_acl_entries = [def_models.ClusterAclEntry(**entry_dict)
+                              for entry_dict in update_acl_entry_dicts]
+        telemetry_params = {
+            shared_constants.RequestKey.CLUSTER_ID: cluster_id,
+            shared_constants.ClusterAclKey.UPDATE_ACL_ENTRIES:
+                update_acl_entries
+        }
+        telemetry_handler.record_user_action_details(
+            telemetry_constants.CseOperation.V35_CLUSTER_ACL_UPDATE,
+            cse_params=telemetry_params)
+
+        # Get previous def entity acl
+        acl_svc = acl_service.ClusterACLService(cluster_id,
+                                                self.context.client)
+        prev_user_acl_info_dict: Dict[str, def_models.ClusterAclEntry] = \
+            acl_svc.create_user_id_to_acl_entry_dict()
+
+        try:
+            updated_user_acl_level_dict = acl_svc.update_native_def_entity_acl(
+                update_acl_entries=update_acl_entries,
+                prev_user_acl_info=prev_user_acl_info_dict)
+            acl_svc.native_update_vapp_access_settings(
+                updated_user_acl_level_dict, update_acl_entries)
+        except Exception as err:
+            # Rolback defined entity
+            prev_acl_entries = [acl_entry for _, acl_entry in prev_user_acl_info_dict.items()]  # noqa: E501
+            curr_user_acl_info = acl_svc.create_user_id_to_acl_entry_dict()
+            acl_svc.update_native_def_entity_acl(
+                update_acl_entries=prev_acl_entries,
+                prev_user_acl_info=curr_user_acl_info)
+            raise err
 
     def delete_nodes(self, cluster_id: str, nodes_to_del=[]):
         """Start the delete nodes operation."""

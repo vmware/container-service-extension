@@ -37,6 +37,7 @@ class DEClusterNative:
                 client=client, logger_debug=logger.CLIENT_LOGGER,
                 logger_wire=logger_wire)
         self._native_cluster_api = NativeClusterApi(client)
+        self._client = client
 
     def create_cluster(self, cluster_entity: def_models.ClusterEntity):
         """Create a new Kubernetes cluster.
@@ -105,12 +106,7 @@ class DEClusterNative:
         :raises ClusterNotFoundError
         """
         if not cluster_id:
-            filters = client_utils.construct_filters(org=org, vdc=vdc)
-            entity_svc = def_entity_svc.DefEntityService(self._cloudapi_client)
-            def_entity = entity_svc.get_native_entity_by_name(name=cluster_name, filters=filters)  # noqa: E501
-            if not def_entity:
-                raise cse_exceptions.ClusterNotFoundError(f"Cluster '{cluster_name}' not found.")  # noqa: E501
-            cluster_id = def_entity.id
+            cluster_id = self.get_cluster_id_by_name(cluster_name, org, vdc)
         return self.delete_cluster_by_id(cluster_id)
 
     def delete_cluster_by_id(self, cluster_id, **kwargs):
@@ -168,12 +164,7 @@ class DEClusterNative:
         :raises ClusterNotFoundError, CseDuplicateClusterError
         """
         if not cluster_id:
-            filters = client_utils.construct_filters(org=org, vdc=vdc)
-            entity_svc = def_entity_svc.DefEntityService(self._cloudapi_client)
-            def_entity = entity_svc.get_native_entity_by_name(name=cluster_name, filters=filters)  # noqa: E501
-            if not def_entity:
-                raise cse_exceptions.ClusterNotFoundError(f"Cluster '{cluster_name}' not found.")  # noqa: E501
-            cluster_id = def_entity.id
+            cluster_id = self.get_cluster_id_by_name(cluster_name, org, vdc)
         return self.get_cluster_config_by_id(cluster_id)
 
     def get_cluster_config_by_id(self, cluster_id, **kwargs):
@@ -270,3 +261,48 @@ class DEClusterNative:
             cluster_entity = \
                 self._native_cluster_api.update_cluster_by_cluster_id(cluster_id, cluster_spec)  # noqa: E501
         return client_utils.construct_task_console_message(cluster_entity.entity.status.task_href)  # noqa: E501
+
+    def get_cluster_id_by_name(self, cluster_name, org=None, vdc=None):
+        filters = client_utils.construct_filters(org=org, vdc=vdc)
+        entity_svc = def_entity_svc.DefEntityService(self._cloudapi_client)
+        def_entity = entity_svc.get_native_entity_by_name(name=cluster_name, filters=filters)  # noqa: E501
+        if not def_entity:
+            raise cse_exceptions.ClusterNotFoundError(f"Cluster '{cluster_name}' not found.")  # noqa: E501
+        return def_entity.id
+
+    def share_cluster(self, cluster_id, cluster_name, users: list,
+                      access_level_id, org, vdc):
+        """Share cluster with passed in users."""
+        if not cluster_id:
+            cluster_id = self.get_cluster_id_by_name(cluster_name, org, vdc)
+        org_href = self._client.get_org_by_name(org).get('href')
+        name_to_id: dict = client_utils.create_user_name_to_id_dict(
+            self._client, users, org_href)
+
+        # Parse user id info
+        update_acl_entries = []
+        for username, user_id in name_to_id.items():
+            acl_entry = def_models.ClusterAclEntry(
+                memberId=user_id,
+                username=username,
+                accessLevelId=access_level_id)
+            update_acl_entries.append(acl_entry)
+
+        # Only retain entries that are not updated
+        for acl_entry in self._native_cluster_api.\
+                list_native_cluster_acl_entries(cluster_id):
+            username = acl_entry.username
+            if name_to_id.get(username):
+                # Check that access level is not reduced
+                curr_access_level_id = acl_entry.accessLevelId
+                if client_utils.access_level_reduced(
+                        access_level_id, curr_access_level_id):
+                    raise Exception(f'{username} currently has higher access '
+                                    f'level: {curr_access_level_id}')
+            else:
+                update_acl_entries.append(acl_entry)
+
+        update_acl_values = \
+            [acl_entry.construct_filtered_dict(include=cli_constants.CLUSTER_ACL_UPDATE_REQUEST_FIELDS)  # noqa: E501
+             for acl_entry in update_acl_entries]
+        self._native_cluster_api.put_cluster_acl(cluster_id, update_acl_values)

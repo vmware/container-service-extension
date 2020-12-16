@@ -25,4 +25,5 @@ class CloudApiResource(str, Enum):
     ENTITY_RESOLVE = 'resolve'
     RIGHT_BUNDLES = 'rightsBundles'
     ACL = 'accessControls'
+    USERS = 'users'
     VDCS = 'vdcs'

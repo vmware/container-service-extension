@@ -4,6 +4,7 @@
 
 import functools
 import hashlib
+import math
 import os
 import pathlib
 import platform
@@ -14,11 +15,15 @@ import urllib
 
 import click
 import pkg_resources
+import pyvcloud.vcd.client as vcd_client
+import pyvcloud.vcd.org as vcd_org
+import pyvcloud.vcd.utils as vcd_utils
 import requests
 import semantic_version
 
 from container_service_extension.logger import NULL_LOGGER
-from container_service_extension.server_constants import MQTT_MIN_API_VERSION
+import container_service_extension.server_constants as server_constants
+import container_service_extension.shared_constants as shared_constants
 from container_service_extension.shared_constants import CSE_PAGINATION_DEFAULT_PAGE_SIZE  # noqa: E501
 from container_service_extension.shared_constants import CSE_PAGINATION_FIRST_PAGE_NUMBER  # noqa: E501
 from container_service_extension.shared_constants import PaginationKey
@@ -421,7 +426,7 @@ def should_use_mqtt_protocol(config):
     return config.get('mqtt') is not None and \
         config.get('vcd') is not None and \
         config['vcd'].get('api_version') is not None and \
-        float(config['vcd']['api_version']) >= MQTT_MIN_API_VERSION
+        float(config['vcd']['api_version']) >= server_constants.MQTT_MIN_API_VERSION  # noqa: E501
 
 
 def flatten_dictionary(input_dict, parent_key='', separator='.'):
@@ -470,21 +475,70 @@ def construct_filter_string(filters: dict):
     return filter_string
 
 
+def create_org_user_id_to_name_dict(client: vcd_client.Client, org_name):
+    """Get a dictionary of users ids to user names.
+
+    :param vcd_client.Client client: current client
+    :param str org_name: org name to search for users
+
+    :return: dict of user id keys and user name values
+    :rtype: dict
+    """
+    org_href = client.get_org_by_name(org_name).get('href')
+    org = vcd_org.Org(client, org_href)
+    users: list = org.list_users()
+    user_id_to_name_dict = {}
+    for user_str_elem in users:
+        curr_user_dict = vcd_utils.to_dict(user_str_elem, exclude=[])
+        user_name = curr_user_dict['name']
+        user_urn = shared_constants.USER_URN_PREFIX + \
+            extract_id_from_href(curr_user_dict['href'])
+        user_id_to_name_dict[user_urn] = user_name
+
+    return user_id_to_name_dict
+
+
+def extract_id_from_href(href):
+    """Extract id from an href.
+
+    'https://vmware.com/api/admin/user/123456' will return 123456
+
+    :param str href: an href
+
+    :return: id
+    """
+    if not href:
+        return None
+    if '/' in href:
+        return href.split('/')[-1]
+    return href
+
+
 def construct_paginated_response(values, result_total,
                                  page_number=CSE_PAGINATION_FIRST_PAGE_NUMBER,  # noqa: E501
                                  page_size=CSE_PAGINATION_DEFAULT_PAGE_SIZE,  # noqa: E501
+                                 page_count=None,
                                  next_page_uri=None,
                                  prev_page_uri=None):
+    if not page_count:
+        extra_page = 1 if bool(result_total % page_size) else 0
+        page_count = result_total // page_size + extra_page
     resp = {
-        PaginationKey.VALUES: values,
         PaginationKey.RESULT_TOTAL: result_total,
+        PaginationKey.PAGE_COUNT: page_count,
         PaginationKey.PAGE_NUMBER: page_number,
-        PaginationKey.PAGE_SIZE: page_size
+        PaginationKey.PAGE_SIZE: page_size,
+        PaginationKey.NEXT_PAGE_URI: next_page_uri,
+        PaginationKey.PREV_PAGE_URI: prev_page_uri,
+        PaginationKey.VALUES: values
     }
-    if next_page_uri:
-        resp[PaginationKey.NEXT_PAGE_URI] = next_page_uri
-    if prev_page_uri:
-        resp[PaginationKey.PREV_PAGE_URI] = prev_page_uri
+
+    # Conditionally deleting instead of conditionally adding the entry
+    # maintains the order for the response
+    if not prev_page_uri:
+        del resp[PaginationKey.PREV_PAGE_URI]
+    if not next_page_uri:
+        del resp[PaginationKey.NEXT_PAGE_URI]
     return resp
 
 
@@ -493,7 +547,7 @@ def create_links_and_construct_paginated_result(base_uri, values, result_total,
                                                 page_size=CSE_PAGINATION_DEFAULT_PAGE_SIZE,  # noqa: E501
                                                 query_params={}):
     next_page_uri: str = None
-    if page_number * page_size < result_total:
+    if 0 < page_number * page_size < result_total:
         # TODO find a way to get the initial url part
         # ideally the request details should be passed down to each of the
         # handler funcions as request context
@@ -501,8 +555,9 @@ def create_links_and_construct_paginated_result(base_uri, values, result_total,
         for q in query_params.keys():
             next_page_uri += f"&{q}={query_params[q]}"
 
+    page_count = math.ceil(result_total / page_size)
     prev_page_uri: str = None
-    if page_number > 1:
+    if page_count >= page_number > 1:
         prev_page_uri = f"{base_uri}?page={page_number-1}&pageSize={page_size}"
 
     # add the rest of the query parameters
@@ -514,5 +569,6 @@ def create_links_and_construct_paginated_result(base_uri, values, result_total,
                                         result_total=result_total,
                                         page_number=page_number,
                                         page_size=page_size,
+                                        page_count=page_count,
                                         next_page_uri=next_page_uri,
                                         prev_page_uri=prev_page_uri)

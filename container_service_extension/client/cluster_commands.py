@@ -971,3 +971,104 @@ Example
     except Exception as e:
         stderr(e, ctx)
         CLIENT_LOGGER.error(str(e))
+
+
+@cluster_group.command('share',
+                       short_help='Share a cluster with at least one user')
+@click.pass_context
+@click.argument('users', nargs=-1, required=True)
+@click.option(
+    '-n',
+    '--name',
+    'name',
+    required=False,
+    default=None,
+    metavar='CLUSTER_NAME',
+    help='Name of the cluster to share')
+@click.option(
+    '--acl',
+    'acl',
+    required=True,
+    default=None,
+    metavar='ACL',
+    help=f'access control: {shared_constants.READ_ONLY}, '
+         f'{shared_constants.READ_WRITE}, or {shared_constants.FULL_CONTROL}')
+@click.option(
+    '-v',
+    '--vdc',
+    'vdc',
+    required=False,
+    default=None,
+    metavar='VDC_NAME',
+    help='Restrict cluster search to specified org VDC')
+@click.option(
+    '-o',
+    '--org',
+    'org',
+    default=None,
+    required=False,
+    metavar='ORG_NAME',
+    help='Restrict cluster search to specified org')
+@click.option(
+    '-k',
+    '--k8-runtime',
+    'k8_runtime',
+    default=None,
+    required=False,
+    metavar='K8-RUNTIME',
+    help='Restrict cluster search to cluster kind')
+@click.option(
+    '--id',
+    'cluster_id',
+    default=None,
+    required=False,
+    metavar='CLUSTER_ID',
+    help="ID of the cluster to share; "
+         "ID gets precedence over cluster name.")
+def cluster_share(ctx, name, acl, users, vdc, org, k8_runtime, cluster_id):
+    """Share cluster with users.
+
+Either the cluster name or cluster id is required.
+By default, this command searches for the cluster in the currently logged in user's org.
+
+Note: this command does not remove an ACL entry.
+
+\b
+Examples:
+    vcd cse cluster share --name mycluster --acl FullControl user1 user2
+        Share cluster 'mycluster' with FullControl access with 'user1' and 'user2'
+\b
+    vcd cse cluster share --id urn:vcloud:entity:vmware:tkgcluster:1.0.0:71fa7b01-84dc-4a58-ae54-a1098219b057 --acl ReadOnly user1
+        Share TKG cluster with cluster ID 'urn:vcloud:entity:vmware:tkgcluster:1.0.0:71fa7b01-84dc-4a58-ae54-a1098219b057'
+        with ReadOnly access with 'user1'
+    """  # noqa: E501
+    try:
+        # Verify access level and cluster name/id arguments
+        access_level_id = shared_constants.ACCESS_LEVEL_TYPE_TO_ID.get(acl.lower())  # noqa: E501
+        if not access_level_id:
+            raise Exception(f'Please enter a valid access control type: '
+                            f'{shared_constants.READ_ONLY}, '
+                            f'{shared_constants.READ_WRITE}, or '
+                            f'{shared_constants.FULL_CONTROL}')
+        if not (cluster_id or name):
+            raise Exception("Please specify cluster name or cluster id.")
+        client_utils.cse_restore_session(ctx)
+        if client_utils.is_cli_for_tkg_only():
+            if k8_runtime in [shared_constants.ClusterEntityKind.NATIVE.value,
+                              shared_constants.ClusterEntityKind.TKG_PLUS.value]:  # noqa: E501
+                # Cannot run the command as cse cli is enabled only for native
+                raise CseServerNotRunningError()
+            k8_runtime = shared_constants.ClusterEntityKind.TKG.value
+
+        client = ctx.obj['client']
+        if not org:
+            ctx_profiles = ctx.obj['profiles']
+            org = ctx_profiles.get('org')
+        users_list = list(users)
+        cluster = Cluster(client, k8_runtime)
+        cluster.share_cluster(cluster_id, name, users_list, access_level_id,
+                              org, vdc)
+        stdout(f'Cluster {cluster_id or name} successfully shared with: {users_list}')  # noqa: E501
+    except Exception as e:
+        stderr(e, ctx)
+        CLIENT_LOGGER.error(str(e))

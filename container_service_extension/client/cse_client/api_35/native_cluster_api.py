@@ -17,7 +17,7 @@ class NativeClusterApi(CseClient):
         super().__init__(client)
         self._uri = f"{self._uri}/{shared_constants.CSE_URL_FRAGMENT}/{shared_constants.CSE_3_0_URL_FRAGMENT}"  # noqa: E501
         self._clusters_uri = f"{self._uri}/clusters"
-        self._cluster_uri = f"{self._uri}/cluster"
+        self._cluster_uri = f"{self._uri}/{shared_constants.CLUSTER_URL_FRAGMENT}"  # noqa: E501
 
     def create_cluster(self, cluster_entity_definition: def_models.ClusterEntity):  # noqa: E501
         cluster_entity_dict = asdict(cluster_entity_definition)
@@ -98,3 +98,44 @@ class NativeClusterApi(CseClient):
             accept_type='application/json')
         return def_models.DefEntity(
             **response_processor.process_response(response))
+
+    def get_single_page_cluster_acl(self, cluster_id,
+                                    page=shared_constants.CSE_PAGINATION_FIRST_PAGE_NUMBER,  # noqa: E501
+                                    page_size=shared_constants.CSE_PAGINATION_DEFAULT_PAGE_SIZE):  # noqa: E501
+        query_uri = f'{self._cluster_uri}/{cluster_id}/acl?' \
+                    f'{shared_constants.PaginationKey.PAGE_NUMBER}={page}&' \
+                    f'{shared_constants.PaginationKey.PAGE_SIZE}={page_size}'
+        response = self._client._do_request_prim(
+            shared_constants.RequestMethod.GET,
+            query_uri,
+            self._client._session,
+            accept_type='application/json')
+        processed_response = response_processor.process_response(response)
+        return processed_response
+
+    def list_native_cluster_acl_entries(self, cluster_id):
+        page_num = 0
+        while True:
+            page_num += 1
+            acl_response = self.get_single_page_cluster_acl(
+                cluster_id=cluster_id,
+                page=page_num,
+                page_size=shared_constants.CSE_PAGINATION_DEFAULT_PAGE_SIZE)
+            acl_values = acl_response['values']
+            if len(acl_values) == 0:
+                break
+            for acl_value in acl_values:
+                yield def_models.ClusterAclEntry(**acl_value)
+
+    def put_cluster_acl(self, cluster_id: str, acl_entries: list):
+        uri = f'{self._cluster_uri}/{cluster_id}/acl'
+        put_content = {shared_constants.ClusterAclKey.ACCESS_SETTING:
+                       acl_entries}
+        response = self._client._do_request_prim(
+            shared_constants.RequestMethod.PUT,
+            uri,
+            self._client._session,
+            contents=put_content,
+            media_type='application/json',
+            accept_type='application/json')
+        response_processor.process_response(response)
