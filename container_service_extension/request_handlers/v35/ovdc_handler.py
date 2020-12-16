@@ -11,7 +11,7 @@ from container_service_extension.shared_constants import CSE_PAGINATION_FIRST_PA
 from container_service_extension.shared_constants import PaginationKey
 from container_service_extension.shared_constants import RequestKey
 from container_service_extension.telemetry.constants import CseOperation
-import container_service_extension.telemetry.telemetry_handler as telemetry_handler  # noqa: E501
+from container_service_extension.telemetry.telemetry_handler import record_user_action_telemetry  # noqa: E501
 import container_service_extension.utils as utils
 
 
@@ -29,11 +29,10 @@ def ovdc_update(data, operation_context: ctx.OperationContext):
     ovdc_spec = def_models.Ovdc(**data[RequestKey.V35_SPEC])
     return ovdc_service.update_ovdc(operation_context,
                                     ovdc_id=data[RequestKey.OVDC_ID],
-                                    ovdc_spec=ovdc_spec,
-                                    **{RequestKey.USER_AGENT: data.get(RequestKey.USER_AGENT)})  # noqa: E501
+                                    ovdc_spec=ovdc_spec)
 
 
-@telemetry_handler.record_user_action_telemetry(cse_operation=CseOperation.OVDC_INFO)  # noqa: E501
+@record_user_action_telemetry(cse_operation=CseOperation.OVDC_INFO)
 @request_utils.v35_api_exception_handler
 def ovdc_info(data, operation_context: ctx.OperationContext):
     """Request handler for ovdc info operation.
@@ -43,12 +42,10 @@ def ovdc_info(data, operation_context: ctx.OperationContext):
     :return: Dictionary with org VDC k8s provider metadata.
     """
     ovdc_id = data[RequestKey.OVDC_ID]
-    return ovdc_service.get_ovdc(operation_context,
-                                 ovdc_id,
-                                 **{RequestKey.USER_AGENT: data.get(RequestKey.USER_AGENT)})  # noqa: E501
+    return ovdc_service.get_ovdc(operation_context, ovdc_id)
 
 
-@telemetry_handler.record_user_action_telemetry(cse_operation=CseOperation.OVDC_LIST)  # noqa: E501
+@record_user_action_telemetry(cse_operation=CseOperation.OVDC_LIST)
 @request_utils.v35_api_exception_handler
 def ovdc_list(data, operation_context: ctx.OperationContext):
     """Request handler for ovdc list operation.
@@ -64,10 +61,6 @@ def ovdc_list(data, operation_context: ctx.OperationContext):
                                     page_size=page_size)
     api_path = CseServerOperationInfo.V35_OVDC_LIST.api_path_format
     base_uri = f"{operation_context.client.get_api_uri().strip('/')}{api_path}"
-    telemetry_handler.record_user_action_details(
-        cse_operation=CseOperation.OVDC_LIST,
-        cse_params={RequestKey.USER_AGENT: data.get(RequestKey.USER_AGENT)}
-    )
     return utils.create_links_and_construct_paginated_result(
         base_uri,
         result[PaginationKey.VALUES],
