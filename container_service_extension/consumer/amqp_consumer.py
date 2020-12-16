@@ -230,8 +230,8 @@ class AMQPConsumer(object):
             request_msg=body, fsencoding=self.fsencoding)
         global REQUESTS_BEING_PROCESSSED
         if req_id in REQUESTS_BEING_PROCESSSED:
-            LOGGER.debug(f"Unable to reply to message {delivery_tag}")
             self.reject_message(basic_deliver.delivery_tag)
+            del REQUESTS_BEING_PROCESSSED[req_id]
             return
 
         self.acknowledge_message(basic_deliver.delivery_tag)
