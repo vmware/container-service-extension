@@ -139,20 +139,22 @@ class ClusterACLService:
         return user_acl_level_dict
 
     def native_get_non_updated_vapp_settings(self,
-                                             updated_user_acl_level_dict):
+                                             prev_user_id_to_acl_entry_dict):
         non_updated_access_settings = []
         vapp_access_settings: lxml.objectify.ObjectifiedElement = \
             self.vapp.get_access_settings()
+        # Only add entries in which the defined entity is not shared
         if hasattr(vapp_access_settings, 'AccessSettings'):
             vapp_access_settings_attr = vapp_access_settings.AccessSettings
             for child_obj in vapp_access_settings_attr.getchildren():
+                # Get user_urn
                 child_obj_attrib = child_obj.getchildren()[0].attrib
                 shared_href = child_obj_attrib.get('href')
                 user_id = utils.extract_id_from_href(shared_href)
-
-                # Don't add current access setting if it will be updated
                 user_urn = f'{shared_constants.USER_URN_PREFIX}{user_id}'
-                if not updated_user_acl_level_dict.get(user_urn):
+
+                # Add entries in which only vapp is shared
+                if not prev_user_id_to_acl_entry_dict.get(user_urn):
                     user_name = child_obj_attrib.get('name')
 
                     curr_setting = form_vapp_access_setting_entry(
@@ -163,10 +165,10 @@ class ClusterACLService:
                     non_updated_access_settings.append(curr_setting)
         return non_updated_access_settings
 
-    def native_update_vapp_access_settings(self, updated_user_acl_level_dict,
+    def native_update_vapp_access_settings(self, prev_user_id_to_acl_entry_dict,  # noqa : E501
                                            update_cluster_acl_entries: List[def_models.ClusterAclEntry]):  # noqa: E501
-        total_vapp_access_settings: list = self.\
-            native_get_non_updated_vapp_settings(updated_user_acl_level_dict)
+        total_vapp_access_settings = \
+            self.native_get_non_updated_vapp_settings(prev_user_id_to_acl_entry_dict)  # noqa: E501
 
         # Add updated access settings
         vapp_access_settings: lxml.objectify.ObjectifiedElement = \

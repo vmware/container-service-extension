@@ -306,3 +306,24 @@ class DEClusterNative:
             [acl_entry.construct_filtered_dict(include=cli_constants.CLUSTER_ACL_UPDATE_REQUEST_FIELDS)  # noqa: E501
              for acl_entry in update_acl_entries]
         self._native_cluster_api.put_cluster_acl(cluster_id, update_acl_values)
+
+    def unshare_cluster(self, cluster_id, cluster_name, users: list, org, vdc):
+        if not cluster_id:
+            cluster_id = self.get_cluster_id_by_name(cluster_name, org, vdc)
+
+        delete_users_set = set(users)
+        updated_acl_entries = []
+        for acl_entry in self._native_cluster_api.\
+                list_native_cluster_acl_entries(cluster_id):
+            if acl_entry.username not in delete_users_set:
+                acl_dict = acl_entry.construct_filtered_dict(
+                    include=cli_constants.CLUSTER_ACL_UPDATE_REQUEST_FIELDS)
+                updated_acl_entries.append(acl_dict)
+            else:
+                delete_users_set.remove(acl_entry.username)
+
+        if len(delete_users_set) > 0:
+            raise Exception(f'Cluster {cluster_name or cluster_id} is not '
+                            f'currently shared with: {list(delete_users_set)}')
+
+        self._native_cluster_api.put_cluster_acl(cluster_id, updated_acl_entries)  # noqa: E501

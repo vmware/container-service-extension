@@ -491,18 +491,18 @@ class ClusterService(abstract_broker.AbstractBroker):
         # Get previous def entity acl
         acl_svc = acl_service.ClusterACLService(cluster_id,
                                                 self.context.client)
-        prev_user_acl_info_dict: Dict[str, def_models.ClusterAclEntry] = \
-            acl_svc.create_user_id_to_acl_entry_dict()
+        prev_user_id_to_acl_entry_dict: Dict[str, def_models.ClusterAclEntry] \
+            = acl_svc.create_user_id_to_acl_entry_dict()
 
         try:
-            updated_user_acl_level_dict = acl_svc.update_native_def_entity_acl(
+            acl_svc.update_native_def_entity_acl(
                 update_acl_entries=update_acl_entries,
-                prev_user_acl_info=prev_user_acl_info_dict)
+                prev_user_acl_info=prev_user_id_to_acl_entry_dict)
             acl_svc.native_update_vapp_access_settings(
-                updated_user_acl_level_dict, update_acl_entries)
+                prev_user_id_to_acl_entry_dict, update_acl_entries)
         except Exception as err:
             # Rolback defined entity
-            prev_acl_entries = [acl_entry for _, acl_entry in prev_user_acl_info_dict.items()]  # noqa: E501
+            prev_acl_entries = [acl_entry for _, acl_entry in prev_user_id_to_acl_entry_dict.items()]  # noqa: E501
             curr_user_acl_info = acl_svc.create_user_id_to_acl_entry_dict()
             acl_svc.update_native_def_entity_acl(
                 update_acl_entries=prev_acl_entries,
