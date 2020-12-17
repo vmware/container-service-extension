@@ -63,7 +63,10 @@ class DECluster:
         has_tkg_rights = True
         clusters = []
         try:
-            clusters += self._tkgCluster.list_tkg_clusters(vdc=vdc, org=org)
+            for cluster, has_more_results in self._tkgCluster.list_tkg_clusters(vdc=vdc, org=org):
+                yield clusters, has_more_results
+            # clusters += self._tkgCluster.list_tkg_clusters(vdc=vdc, org=org)
+            return
         except tkg_rest.ApiException as e:
             if e.status not in [requests.codes.FORBIDDEN, requests.codes.UNAUTHORIZED]:  # noqa: E501
                 server_message = json.loads(e.body).get('message') or e.reason

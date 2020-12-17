@@ -99,31 +99,44 @@ class DEClusterTKG:
         if vdc:
             filters[cli_constants.TKGEntityFilterKey.VDC_NAME.value] = vdc
         filter_string = utils.construct_filter_string(filters)
-        # tkg_def_entities in the following statement represents the
-        # information associated with the defined entity
-        (entities, status, headers, tkg_def_entities) = \
-            self._tkg_client_api.list_tkg_clusters(
-                f"{DEF_VMWARE_VENDOR}/{DEF_TKG_ENTITY_TYPE_NSS}/{DEF_TKG_ENTITY_TYPE_VERSION}",  # noqa: E501
-                _return_http_data_only=False,
-                object_filter=filter_string)
-        clusters = []
-        for i in range(len(entities)):
-            # NOTE: tkg_def_entities will contain corresponding defined entity
-            # details
-            entity: TkgCluster = entities[i]
-            entity_properties = tkg_def_entities[i]
-            logger.CLIENT_LOGGER.debug(f"TKG Defined entity list from server: {entity}")  # noqa: E501
-            cluster = {
-                cli_constants.CLIOutputKey.CLUSTER_NAME.value: entity.metadata.name, # noqa: E501
-                cli_constants.CLIOutputKey.VDC.value: entity.metadata.virtual_data_center_name, # noqa: E501
-                cli_constants.CLIOutputKey.ORG.value: entity_properties['org']['name'], # noqa: E501
-                cli_constants.CLIOutputKey.K8S_RUNTIME.value: shared_constants.ClusterEntityKind.TKG.value, # noqa: E501
-                cli_constants.CLIOutputKey.K8S_VERSION.value: entity.spec.distribution.version, # noqa: E501
-                cli_constants.CLIOutputKey.STATUS.value: entity.status.phase if entity.status else 'N/A',  # noqa: E501
-                cli_constants.CLIOutputKey.OWNER.value: entity_properties['owner']['name'],  # noqa: E501
-            }
-            clusters.append(cluster)
-        return clusters
+        query_params = {
+            shared_constants.PaginationKey.PAGE_NUMBER.value: 1,
+            shared_constants.PaginationKey.PAGE_SIZE.value: 3
+        }
+        has_more_results = True
+        while True:
+            try:
+                # tkg_def_entities in the following statement represents the
+                # information associated with the defined entity
+                (entities, status, headers, tkg_def_entities) = \
+                    self._tkg_client_api.list_tkg_clusters(
+                        f"{DEF_VMWARE_VENDOR}/{DEF_TKG_ENTITY_TYPE_NSS}/{DEF_TKG_ENTITY_TYPE_VERSION}",  # noqa: E501
+                        _return_http_data_only=False,
+                        object_filter=filter_string,
+                        query_params=query_params)
+                clusters = []
+                for i in range(len(entities)):
+                    # NOTE: tkg_def_entities will contain corresponding defined entity
+                    # details
+                    entity: TkgCluster = entities[i]
+                    entity_properties = tkg_def_entities[i]
+                    logger.CLIENT_LOGGER.debug(f"TKG Defined entity list from server: {entity}")  # noqa: E501
+                    cluster = {
+                        cli_constants.CLIOutputKey.CLUSTER_NAME.value: entity.metadata.name, # noqa: E501
+                        cli_constants.CLIOutputKey.VDC.value: entity.metadata.virtual_data_center_name, # noqa: E501
+                        cli_constants.CLIOutputKey.ORG.value: entity_properties['org']['name'], # noqa: E501
+                        cli_constants.CLIOutputKey.K8S_RUNTIME.value: shared_constants.ClusterEntityKind.TKG.value, # noqa: E501
+                        cli_constants.CLIOutputKey.K8S_VERSION.value: entity.spec.distribution.version, # noqa: E501
+                        cli_constants.CLIOutputKey.STATUS.value: entity.status.phase if entity.status else 'N/A',  # noqa: E501
+                        cli_constants.CLIOutputKey.OWNER.value: entity_properties['owner']['name'],  # noqa: E501
+                    }
+                    clusters.append(cluster)
+                yield clusters, has_more_results
+                query_params[shared_constants.PaginationKey.PAGE_NUMBER] += 1
+            except Exception as e:
+                cb = utils.ConsoleMessagePrinter()
+                cb.general(f"Exception occured: {type(e)}")
+                raise
 
     def get_tkg_clusters_by_name(self, name, vdc=None, org=None):
         self.set_tenant_org_context(org_name=org)
