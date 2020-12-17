@@ -497,7 +497,7 @@ class ClusterService(abstract_broker.AbstractBroker):
         try:
             acl_svc.update_native_def_entity_acl(
                 update_acl_entries=update_acl_entries,
-                prev_user_acl_info=prev_user_id_to_acl_entry_dict)
+                prev_user_id_to_acl_entry=prev_user_id_to_acl_entry_dict)
             acl_svc.native_update_vapp_access_settings(
                 prev_user_id_to_acl_entry_dict, update_acl_entries)
         except Exception as err:
@@ -506,7 +506,7 @@ class ClusterService(abstract_broker.AbstractBroker):
             curr_user_acl_info = acl_svc.create_user_id_to_acl_entry_dict()
             acl_svc.update_native_def_entity_acl(
                 update_acl_entries=prev_acl_entries,
-                prev_user_acl_info=curr_user_acl_info)
+                prev_user_id_to_acl_entry=curr_user_acl_info)
             raise err
 
     def delete_nodes(self, cluster_id: str, nodes_to_del=[]):
