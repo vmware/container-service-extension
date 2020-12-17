@@ -139,7 +139,14 @@ class ClusterACLService:
         return user_acl_level_dict
 
     def native_get_vapp_settings_only_vapp_shared(self, def_entity_user_ids: set):  # noqa: E501
-        """Get vapp settings in which the defined entity is not also shared."""
+        """Get vapp settings in which the defined entity is not also shared.
+
+        :param set def_entity_user_ids: set of user ids that have access to
+            the defined entity
+
+        :return: vapp settings in which only the vapp is shared
+        :rtype: list
+        """
         non_updated_access_settings = []
         vapp_access_settings: lxml.objectify.ObjectifiedElement = \
             self.vapp.get_access_settings()
