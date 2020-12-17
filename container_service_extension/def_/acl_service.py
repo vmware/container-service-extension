@@ -92,6 +92,15 @@ class ClusterACLService:
             resource_url_relative_path=access_controls_path,
             payload=payload)
 
+    def unshare_def_entity(self, acl_id):
+        delete_path = f'{cloudapi_constants.CloudApiResource.ENTITIES}/' \
+            f'{self._cluster_id}/{cloudapi_constants.CloudApiResource.ACL}/' \
+            f'{acl_id}'
+        self._cloudapi_client.do_request(
+            method=shared_constants.RequestMethod.DELETE,
+            cloudapi_version=cloudapi_constants.CloudApiVersion.VERSION_1_0_0,
+            resource_url_relative_path=delete_path)
+
     def update_native_def_entity_acl(self, update_acl_entries: List[def_models.ClusterAclEntry],  # noqa: E501
                                      prev_user_acl_info: Dict[str, def_models.ClusterAclEntry]):  # noqa: E501
         """Update native defined entity acl.
@@ -106,9 +115,6 @@ class ClusterACLService:
 
         # Share defined entity
         user_acl_level_dict = {}
-        access_controls_path = \
-            f'{cloudapi_constants.CloudApiResource.ENTITIES}/' \
-            f'{self._cluster_id}/{cloudapi_constants.CloudApiResource.ACL}'
         payload = {
             shared_constants.AccessControlKey.GRANT_TYPE:
                 shared_constants.MEMBERSHIP_GRANT_TYPE,
@@ -129,12 +135,7 @@ class ClusterACLService:
 
         # Delete def entity acl entries not in update_acl_entries
         for _, acl_entry in own_prev_user_acl_info.items():
-            delete_path = access_controls_path + f'/{acl_entry.id}'
-            self._cloudapi_client.do_request(
-                method=shared_constants.RequestMethod.DELETE,
-                cloudapi_version=cloudapi_constants.CloudApiVersion.VERSION_1_0_0,  # noqa: E501
-                resource_url_relative_path=delete_path)
-
+            self.unshare_def_entity(acl_entry.id)
         return user_acl_level_dict
 
     def native_get_non_updated_vapp_settings(self,
