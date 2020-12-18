@@ -18,7 +18,8 @@ import container_service_extension.consumer.utils as utils
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
 from container_service_extension.server_constants import EXCHANGE_TYPE
 
-REQUESTS_BEING_PROCESSSED = LRU(constants.MAX_PROCESSING_REQUEST_CACHE_SIZE)
+REQUESTS_BEING_PROCESSED = LRU(constants.MAX_PROCESSING_REQUEST_CACHE_SIZE)
+LRU_LOCK = Lock()
 
 
 class AMQPConsumer(object):
@@ -189,9 +190,13 @@ class AMQPConsumer(object):
             self.send_response(reply_msg, properties)
             LOGGER.debug(f"Sucessfully sent reply: {reply_msg} to AMQP.")
 
-        global REQUESTS_BEING_PROCESSSED
-        if req_id in REQUESTS_BEING_PROCESSSED:
-            del REQUESTS_BEING_PROCESSSED[req_id]
+        global REQUESTS_BEING_PROCESSED, LRU_LOCK
+        LRU_LOCK.acquire()
+        try:
+            if req_id in REQUESTS_BEING_PROCESSED:
+                del REQUESTS_BEING_PROCESSED[req_id]
+        finally:
+            LRU_LOCK.release()
 
     def send_response(self, reply_msg, properties):
         reply_properties = pika.BasicProperties(
@@ -228,17 +233,25 @@ class AMQPConsumer(object):
 
         req_id = utils.get_request_id(
             request_msg=body, fsencoding=self.fsencoding)
-        global REQUESTS_BEING_PROCESSSED
-        if req_id in REQUESTS_BEING_PROCESSSED:
-            self.reject_message(basic_deliver.delivery_tag)
-            del REQUESTS_BEING_PROCESSSED[req_id]
-            return
+        global REQUESTS_BEING_PROCESSED, LRU_LOCK
+        LRU_LOCK.acquire()
+        try:
+            if req_id in REQUESTS_BEING_PROCESSED:
+                self.reject_message(basic_deliver.delivery_tag)
+                del REQUESTS_BEING_PROCESSED[req_id]
+                return
+        finally:
+            LRU_LOCK.release()
 
         self.acknowledge_message(basic_deliver.delivery_tag)
         if self._ctpe.max_threads_busy():
             self.send_too_many_requests_response(properties, body)
         else:
-            REQUESTS_BEING_PROCESSSED[req_id] = time.time()
+            LRU_LOCK.acquire()
+            try:
+                REQUESTS_BEING_PROCESSED[req_id] = time.time()
+            finally:
+                LRU_LOCK.release()
             self._ctpe.submit(lambda: self.process_amqp_message(
                 properties, body, basic_deliver))
 
