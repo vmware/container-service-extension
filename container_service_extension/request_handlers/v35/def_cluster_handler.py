@@ -8,7 +8,7 @@ import container_service_extension.def_.models as def_models
 import container_service_extension.operation_context as ctx
 import container_service_extension.request_handlers.request_utils as request_utils  # noqa: E501
 from container_service_extension.server_constants import CseOperation as CseServerOperationInfo  # noqa: E501
-from container_service_extension.server_constants import USER_AGENT
+from container_service_extension.server_constants import ThreadLocalData
 from container_service_extension.shared_constants import ClusterAclKey
 from container_service_extension.shared_constants import CSE_PAGINATION_DEFAULT_PAGE_SIZE  # noqa: E501
 from container_service_extension.shared_constants import CSE_PAGINATION_FIRST_PAGE_NUMBER  # noqa: E501
@@ -237,7 +237,7 @@ def nfs_node_delete(data, op_ctx: ctx.OperationContext):
         cse_params={
             telemetry_constants.PayloadKey.CLUSTER_ID: cluster_id,
             telemetry_constants.PayloadKey.NODE_NAME: node_name,
-            telemetry_constants.PayloadKey.SOURCE_DESCRIPTION: thread_local_data.get_thread_local_data(USER_AGENT)   # noqa: E501
+            telemetry_constants.PayloadKey.SOURCE_DESCRIPTION: thread_local_data.get_thread_local_data(ThreadLocalData.USER_AGENT)   # noqa: E501
         }
     )
 

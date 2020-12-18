@@ -13,7 +13,7 @@ import container_service_extension.def_.models as def_models
 import container_service_extension.logger as logger
 import container_service_extension.operation_context as ctx
 import container_service_extension.pyvcloud_utils as vcd_utils
-from container_service_extension.server_constants import USER_AGENT
+from container_service_extension.server_constants import ThreadLocalData
 from container_service_extension.shared_constants import ClusterEntityKind
 from container_service_extension.shared_constants import CSE_PAGINATION_DEFAULT_PAGE_SIZE  # noqa: E501
 from container_service_extension.shared_constants import CSE_PAGINATION_FIRST_PAGE_NUMBER  # noqa: E501
@@ -101,7 +101,7 @@ def get_ovdc(operation_context: ctx.OperationContext, ovdc_id: str) -> dict:
     # Prevent showing information about TKG+ by skipping TKG+ from the result.
     cse_params = {
         RequestKey.OVDC_ID: ovdc_id,
-        PayloadKey.SOURCE_DESCRIPTION: thread_local_data.get_thread_local_data(USER_AGENT)  # noqa: E501
+        PayloadKey.SOURCE_DESCRIPTION: thread_local_data.get_thread_local_data(ThreadLocalData.USER_AGENT)  # noqa: E501
     }
     telemetry_handler.record_user_action_details(cse_operation=CseOperation.OVDC_INFO, # noqa: E501
                                                  cse_params=cse_params)
@@ -134,7 +134,7 @@ def list_ovdc(operation_context: ctx.OperationContext,
     telemetry_handler.record_user_action_details(
         cse_operation=CseOperation.OVDC_LIST,
         cse_params={
-            PayloadKey.SOURCE_DESCRIPTION: thread_local_data.get_thread_local_data(USER_AGENT)  # noqa: E501
+            PayloadKey.SOURCE_DESCRIPTION: thread_local_data.get_thread_local_data(ThreadLocalData.USER_AGENT)  # noqa: E501
         }
     )
 
@@ -259,7 +259,7 @@ def _update_ovdc_using_placement_policy_async(operation_context: ctx.OperationCo
                 RequestKey.K8S_PROVIDER: k8s_runtimes_added,
                 RequestKey.OVDC_ID: ovdc_id,
                 RequestKey.ORG_NAME: org_name,
-                PayloadKey.SOURCE_DESCRIPTION: thread_local_data.get_thread_local_data(USER_AGENT)  # noqa: E501
+                PayloadKey.SOURCE_DESCRIPTION: thread_local_data.get_thread_local_data(ThreadLocalData.USER_AGENT)  # noqa: E501
             }
             telemetry_handler.record_user_action_details(cse_operation=CseOperation.OVDC_ENABLE, # noqa: E501
                                                          cse_params=cse_params)
@@ -273,7 +273,7 @@ def _update_ovdc_using_placement_policy_async(operation_context: ctx.OperationCo
                 RequestKey.OVDC_ID: ovdc_id,
                 RequestKey.ORG_NAME: org_name,
                 RequestKey.REMOVE_COMPUTE_POLICY_FROM_VMS: remove_cp_from_vms_on_disable,  # noqa: E501
-                PayloadKey.SOURCE_DESCRIPTION: thread_local_data.get_thread_local_data(USER_AGENT)  # noqa: E501
+                PayloadKey.SOURCE_DESCRIPTION: thread_local_data.get_thread_local_data(ThreadLocalData.USER_AGENT)  # noqa: E501
             }
             telemetry_handler.record_user_action_details(cse_operation=CseOperation.OVDC_DISABLE, # noqa: E501
                                                          cse_params=cse_params)
