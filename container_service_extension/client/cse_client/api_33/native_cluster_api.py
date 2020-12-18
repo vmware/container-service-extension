@@ -6,7 +6,6 @@ import pyvcloud.vcd.client as vcd_client
 
 from container_service_extension.client.cse_client.cse_client import CseClient
 from container_service_extension.client.response_processor import process_response  # noqa: E501
-import container_service_extension.client.utils as client_uitls
 import container_service_extension.shared_constants as shared_constants
 
 
