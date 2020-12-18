@@ -5,7 +5,6 @@
 import json
 import sys
 from threading import Lock
-import time
 
 from lru import LRU
 import pika
@@ -249,7 +248,7 @@ class AMQPConsumer(object):
         else:
             LRU_LOCK.acquire()
             try:
-                REQUESTS_BEING_PROCESSED[req_id] = time.time()
+                REQUESTS_BEING_PROCESSED[req_id] = True
             finally:
                 LRU_LOCK.release()
             self._ctpe.submit(lambda: self.process_amqp_message(
