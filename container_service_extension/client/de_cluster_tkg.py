@@ -131,7 +131,6 @@ class DEClusterTKG:
                     cli_constants.CLIOutputKey.OWNER.value: entity_properties['owner']['name'],  # noqa: E501
                 }
                 clusters.append(cluster)
-            # cb.general(f"{entities}")
             has_more_results = additional_details['page'] < additional_details['pageCount']  # noqa: E501
             yield clusters, has_more_results
             query_params[shared_constants.PaginationKey.PAGE_NUMBER] += 1

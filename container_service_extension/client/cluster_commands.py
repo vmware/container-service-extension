@@ -76,11 +76,9 @@ Examples
         cluster = Cluster(client)
         if not client.is_sysadmin() and org_name is None:
             org_name = ctx.obj['profiles'].get('org_in_use')
-        # clusters = cluster.list_clusters(vdc=vdc, org=org_name)
         client_utils.print_paginated_result(cluster.list_clusters(vdc=vdc, org=org_name),  # noqa: E501
                                             should_print_all=False,
                                             logger=CLIENT_LOGGER)
-        # stdout(clusters, ctx, show_id=True, sort_headers=False)
     except Exception as e:
         stderr(e, ctx)
         CLIENT_LOGGER.error(str(e))
