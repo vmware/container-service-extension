@@ -6,6 +6,7 @@ import pyvcloud.vcd.client as vcd_client
 
 from container_service_extension.client.cse_client.cse_client import CseClient
 from container_service_extension.client.response_processor import process_response  # noqa: E501
+import container_service_extension.client.utils as client_uitls
 import container_service_extension.shared_constants as shared_constants
 
 
@@ -17,6 +18,13 @@ class NativeClusterApi(CseClient):
         self._clusters_uri = f"{self._uri}/clusters"
         self._node_uri = f"{self._uri}/node"
         self._nodes_uri = f"{self._uri}/nodes"
+
+    def get_all_clusters(self, filters={}):
+        filter_string = "&".join([f"{k}={v}" for k, v in filters.items()])
+        url = f"{self._ovdcs_uri}?pageSize={self._request_page_size}"
+        if filter_string:
+            url += f"&{filter_string}"
+        return self.iterate_results(url)
 
     def list_clusters(self, filters={}):
         response = self._client._do_request_prim(

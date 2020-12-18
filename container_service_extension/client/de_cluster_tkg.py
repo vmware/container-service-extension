@@ -102,43 +102,41 @@ class DEClusterTKG:
             filters[cli_constants.TKGEntityFilterKey.VDC_NAME.value] = vdc
         filter_string = utils.construct_filter_string(filters)
         query_params = {
-            shared_constants.PaginationKey.PAGE_NUMBER.value: 1,
-            shared_constants.PaginationKey.PAGE_SIZE.value: 3
+            shared_constants.PaginationKey.PAGE_NUMBER.value: shared_constants.CSE_PAGINATION_FIRST_PAGE_NUMBER,  # noqa: E501
+            shared_constants.PaginationKey.PAGE_SIZE.value: shared_constants.CSE_PAGINATION_DEFAULT_PAGE_SIZE  # noqa: E501
         }
         has_more_results = True
-        while True:
-            try:
-                # tkg_def_entities in the following statement represents the
-                # information associated with the defined entity
-                (entities, status, headers, tkg_def_entities) = \
-                    self._tkg_client_api.list_tkg_clusters(
-                        f"{DEF_VMWARE_VENDOR}/{DEF_TKG_ENTITY_TYPE_NSS}/{DEF_TKG_ENTITY_TYPE_VERSION}",  # noqa: E501
-                        _return_http_data_only=False,
-                        object_filter=filter_string,
-                        query_params=query_params)
-                clusters = []
-                for i in range(len(entities)):
-                    # NOTE: tkg_def_entities will contain corresponding defined entity
-                    # details
-                    entity: TkgCluster = entities[i]
-                    entity_properties = tkg_def_entities[i]
-                    logger.CLIENT_LOGGER.debug(f"TKG Defined entity list from server: {entity}")  # noqa: E501
-                    cluster = {
-                        cli_constants.CLIOutputKey.CLUSTER_NAME.value: entity.metadata.name, # noqa: E501
-                        cli_constants.CLIOutputKey.VDC.value: entity.metadata.virtual_data_center_name, # noqa: E501
-                        cli_constants.CLIOutputKey.ORG.value: entity_properties['org']['name'], # noqa: E501
-                        cli_constants.CLIOutputKey.K8S_RUNTIME.value: shared_constants.ClusterEntityKind.TKG.value, # noqa: E501
-                        cli_constants.CLIOutputKey.K8S_VERSION.value: entity.spec.distribution.version, # noqa: E501
-                        cli_constants.CLIOutputKey.STATUS.value: entity.status.phase if entity.status else 'N/A',  # noqa: E501
-                        cli_constants.CLIOutputKey.OWNER.value: entity_properties['owner']['name'],  # noqa: E501
-                    }
-                    clusters.append(cluster)
-                yield clusters, has_more_results
-                query_params[shared_constants.PaginationKey.PAGE_NUMBER] += 1
-            except Exception as e:
-                cb = utils.ConsoleMessagePrinter()
-                cb.general(f"Exception occured: {type(e)}")
-                raise
+        while has_more_results:
+            (entities, status, headers, additional_details) = \
+                self._tkg_client_api.list_tkg_clusters(
+                    f"{DEF_VMWARE_VENDOR}/{DEF_TKG_ENTITY_TYPE_NSS}/{DEF_TKG_ENTITY_TYPE_VERSION}",  # noqa: E501
+                    _return_http_data_only=False,
+                    object_filter=filter_string,
+                    query_params=query_params)
+            # tkg_def_entities in the following statement represents the
+            # information associated with the defined entity
+            tkg_def_entities = additional_details['entityDetails']
+            clusters = []
+            for i in range(len(entities)):
+                # NOTE: tkg_def_entities will contain corresponding defined
+                # entity details
+                entity: TkgCluster = entities[i]
+                entity_properties = tkg_def_entities[i]
+                logger.CLIENT_LOGGER.debug(f"TKG Defined entity list from server: {entity}")  # noqa: E501
+                cluster = {
+                    cli_constants.CLIOutputKey.CLUSTER_NAME.value: entity.metadata.name, # noqa: E501
+                    cli_constants.CLIOutputKey.VDC.value: entity.metadata.virtual_data_center_name, # noqa: E501
+                    cli_constants.CLIOutputKey.ORG.value: entity_properties['org']['name'], # noqa: E501
+                    cli_constants.CLIOutputKey.K8S_RUNTIME.value: shared_constants.ClusterEntityKind.TKG.value, # noqa: E501
+                    cli_constants.CLIOutputKey.K8S_VERSION.value: entity.spec.distribution.version, # noqa: E501
+                    cli_constants.CLIOutputKey.STATUS.value: entity.status.phase if entity.status else 'N/A',  # noqa: E501
+                    cli_constants.CLIOutputKey.OWNER.value: entity_properties['owner']['name'],  # noqa: E501
+                }
+                clusters.append(cluster)
+            # cb.general(f"{entities}")
+            has_more_results = additional_details['page'] < additional_details['pageCount']  # noqa: E501
+            yield clusters, has_more_results
+            query_params[shared_constants.PaginationKey.PAGE_NUMBER] += 1
 
     def get_tkg_clusters_by_name(self, name, vdc=None, org=None):
         self.set_tenant_org_context(org_name=org)
