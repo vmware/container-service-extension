@@ -7,6 +7,7 @@ import container_service_extension.exceptions as cse_exception
 from container_service_extension.exceptions import BadRequestError
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
 from container_service_extension.minor_error_codes import MinorErrorCode
+from container_service_extension.shared_constants import FlattenedClusterSpecKey, VALID_UPDATE_FIELDS  # noqa: E501
 from container_service_extension.shared_constants import RequestKey
 import container_service_extension.utils as utils
 
@@ -98,17 +99,60 @@ def validate_request_payload(input_spec: dict, reference_spec: dict,
     :rtype: bool
     :raises: BadRequestError on encountering invalid payload value
     """
-    input_dict = utils.flatten_dictionary(input_spec)
-    reference_dict = utils.flatten_dictionary(reference_spec)
-    exclude_key_set = set(exclude_fields)
-    key_set_for_validation = set(input_dict.keys()) - exclude_key_set
-    keys_with_invalid_value = [key for key in key_set_for_validation
-                               if input_dict.get(key) != reference_dict.get(key)]  # noqa: E501
+    keys_with_invalid_value = find_diff_fields(input_spec, reference_spec,
+                                               exclude_fields=exclude_fields)
     if len(keys_with_invalid_value) > 0:
         error_msg = f"Invalid input values found in {sorted(keys_with_invalid_value)}"  # noqa: E501
         raise BadRequestError(error_msg)
 
-    return True
+
+def validate_cluster_update_request_and_check_cluster_upgrade(input_spec: dict, reference_spec: dict) -> bool:  # noqa: E501
+    """Validate the desired spec with curr spec and check if upgrade operation.
+
+    :param dict input_spec: input spec
+    :param dict reference_spec: reference spec to validate the desired spec
+    :return: true if cluster operation is upgrade and false if operation is
+        resize
+    :rtype: bool
+    :raises: BadRequestError for invalid payload.
+    """
+    diff_fields = \
+        find_diff_fields(input_spec, reference_spec, exclude_fields=[])
+
+    # Raise exception if empty diff
+    if not diff_fields:
+        raise BadRequestError("No change in cluster specification")  # noqa: E501
+
+    # Raise exception if fields which cannot be changed are updated
+    keys_with_invalid_value = [k for k in diff_fields if k not in VALID_UPDATE_FIELDS]  # noqa: E501
+    if len(keys_with_invalid_value) > 0:
+        err_msg = f"Invalid input values found in {sorted(keys_with_invalid_value)}"  # noqa: E501
+        raise BadRequestError(err_msg)
+
+    is_resize_operation = False
+    if FlattenedClusterSpecKey.WORKERS_COUNT.value in diff_fields or \
+            FlattenedClusterSpecKey.NFS_COUNT.value in diff_fields:
+        is_resize_operation = True
+    is_upgrade_operation = False
+    if FlattenedClusterSpecKey.TEMPLATE_NAME.value in diff_fields or \
+            FlattenedClusterSpecKey.TEMPLATE_REVISION.value in diff_fields:
+        is_upgrade_operation = True
+
+    # Raise exception if resize and upgrade are performed at the same time
+    if is_resize_operation and is_upgrade_operation:
+        err_msg = "Cannot resize and upgrade the cluster at the same time"
+        raise BadRequestError(err_msg)
+
+    return is_upgrade_operation
+
+
+def find_diff_fields(input_spec: dict, reference_spec: dict, exclude_fields: list = []) -> list:  # noqa: E501
+    input_dict = utils.flatten_dictionary(input_spec)
+    reference_dict = utils.flatten_dictionary(reference_spec)
+    exclude_key_set = set(exclude_fields)
+    key_set_for_validation = set(input_dict.keys()) - exclude_key_set
+    return [key for key in key_set_for_validation
+            if input_dict.get(key) != reference_dict.get(key)]
 
 
 def v35_api_exception_handler(func):

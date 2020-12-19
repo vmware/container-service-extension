@@ -30,7 +30,7 @@ def cluster_create(data: dict, op_ctx: ctx.OperationContext):
     :rtype: container_service_extension.def_.models.DefEntity
     """
     svc = cluster_svc.ClusterService(op_ctx)
-    cluster_entity_spec = def_models.ClusterEntity(**data[RequestKey.V35_SPEC])
+    cluster_entity_spec = def_models.ClusterEntity(**data[RequestKey.INPUT_SPEC])  # noqa: E501
     return asdict(svc.create_cluster(cluster_entity_spec))
 
 
@@ -46,7 +46,7 @@ def cluster_resize(data: dict, op_ctx: ctx.OperationContext):
     """
     svc = cluster_svc.ClusterService(op_ctx)
     cluster_id = data[RequestKey.CLUSTER_ID]
-    cluster_entity_spec = def_models.ClusterEntity(**data[RequestKey.V35_SPEC])
+    cluster_entity_spec = def_models.ClusterEntity(**data[RequestKey.INPUT_SPEC])  # noqa: E501
     curr_entity = svc.entity_svc.get_entity(cluster_id)
     request_utils.validate_request_payload(
         asdict(cluster_entity_spec.spec), asdict(curr_entity.entity.spec),
@@ -124,7 +124,7 @@ def cluster_upgrade(data, op_ctx: ctx.OperationContext):
     :return: Dict
     """
     svc = cluster_svc.ClusterService(op_ctx)
-    cluster_entity_spec = def_models.ClusterEntity(**data[RequestKey.V35_SPEC])
+    cluster_entity_spec = def_models.ClusterEntity(**data[RequestKey.INPUT_SPEC])  # noqa: E501
     cluster_id = data[RequestKey.CLUSTER_ID]
     curr_entity = svc.entity_svc.get_entity(cluster_id)
     request_utils.validate_request_payload(
