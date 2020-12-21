@@ -30,12 +30,14 @@ import container_service_extension.local_template_manager as ltm
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
 import container_service_extension.operation_context as ctx
 import container_service_extension.pyvcloud_utils as vcd_utils
+from container_service_extension.server_constants import CLUSTER_ENTITY
 from container_service_extension.server_constants import ClusterMetadataKey
 from container_service_extension.server_constants import CSE_CLUSTER_KUBECONFIG_PATH # noqa: E501
 from container_service_extension.server_constants import LocalTemplateKey
 from container_service_extension.server_constants import NodeType
 from container_service_extension.server_constants import ScriptFile
 from container_service_extension.server_constants import SYSTEM_ORG_NAME
+from container_service_extension.server_constants import ThreadLocalData
 import container_service_extension.shared_constants as shared_constants
 from container_service_extension.shared_constants import CSE_PAGINATION_DEFAULT_PAGE_SIZE  # noqa: E501
 from container_service_extension.shared_constants import CSE_PAGINATION_FIRST_PAGE_NUMBER  # noqa: E501
@@ -44,6 +46,7 @@ from container_service_extension.shared_constants import DefEntityOperationStatu
 from container_service_extension.shared_constants import DefEntityPhase
 import container_service_extension.telemetry.constants as telemetry_constants
 import container_service_extension.telemetry.telemetry_handler as telemetry_handler  # noqa: E501
+import container_service_extension.thread_local_data as thread_local_data
 import container_service_extension.utils as utils
 import container_service_extension.vsphere_utils as vs_utils
 
@@ -75,7 +78,10 @@ class ClusterService(abstract_broker.AbstractBroker):
         """
         telemetry_handler.record_user_action_details(
             cse_operation=telemetry_constants.CseOperation.V35_CLUSTER_INFO,
-            cse_params={telemetry_constants.PayloadKey.CLUSTER_ID: cluster_id}
+            cse_params={
+                telemetry_constants.PayloadKey.CLUSTER_ID: cluster_id,
+                telemetry_constants.PayloadKey.SOURCE_DESCRIPTION: thread_local_data.get_thread_local_data(ThreadLocalData.USER_AGENT)  # noqa: E501
+            }
         )
         return self._sync_def_entity(cluster_id)
 
@@ -85,7 +91,10 @@ class ClusterService(abstract_broker.AbstractBroker):
         """List corresponding defined entities of all native clusters."""
         telemetry_handler.record_user_action_details(
             cse_operation=telemetry_constants.CseOperation.V35_CLUSTER_LIST,
-            cse_params={telemetry_constants.PayloadKey.FILTER_KEYS: ','.join(filters.keys())}  # noqa: E501
+            cse_params={
+                telemetry_constants.PayloadKey.FILTER_KEYS: ','.join(filters.keys()),  # noqa: E501
+                telemetry_constants.PayloadKey.SOURCE_DESCRIPTION: thread_local_data.get_thread_local_data(ThreadLocalData.USER_AGENT)  # noqa: E501
+            }
         )
         ent_type: def_models.DefEntityType = def_utils.get_registered_def_entity_type()  # noqa: E501
         return self.entity_svc.get_entities_per_page_by_entity_type(
@@ -111,7 +120,11 @@ class ClusterService(abstract_broker.AbstractBroker):
 
         telemetry_handler.record_user_action_details(
             cse_operation=telemetry_constants.CseOperation.V35_CLUSTER_CONFIG,
-            cse_params=curr_entity)
+            cse_params={
+                CLUSTER_ENTITY: curr_entity,
+                telemetry_constants.PayloadKey.SOURCE_DESCRIPTION: thread_local_data.get_thread_local_data(ThreadLocalData.USER_AGENT)  # noqa: E501
+            }
+        )
 
         vapp = vcd_vapp.VApp(self.context.client, href=curr_entity.externalId)
         control_plane_node_name = curr_entity.entity.status.nodes.control_plane.name  # noqa: E501
@@ -216,7 +229,11 @@ class ClusterService(abstract_broker.AbstractBroker):
         self.context.is_async = True
         telemetry_handler.record_user_action_details(
             cse_operation=telemetry_constants.CseOperation.V35_CLUSTER_APPLY,
-            cse_params=def_entity)
+            cse_params={
+                CLUSTER_ENTITY: def_entity,
+                telemetry_constants.PayloadKey.SOURCE_DESCRIPTION: thread_local_data.get_thread_local_data(ThreadLocalData.USER_AGENT)  # noqa: E501
+            }
+        )
         self._create_cluster_async(def_entity.id, cluster_spec)
         return def_entity
 
@@ -269,7 +286,11 @@ class ClusterService(abstract_broker.AbstractBroker):
         telemetry_data: def_models.DefEntity = def_models.DefEntity(id=cluster_id, entity=cluster_spec)  # noqa: E501
         telemetry_handler.record_user_action_details(
             cse_operation=telemetry_constants.CseOperation.V35_CLUSTER_APPLY,
-            cse_params=telemetry_data)
+            cse_params={
+                CLUSTER_ENTITY: telemetry_data,
+                telemetry_constants.PayloadKey.SOURCE_DESCRIPTION: thread_local_data.get_thread_local_data(ThreadLocalData.USER_AGENT)  # noqa: E501
+            }
+        )
 
         # update the task and defined entity.
         msg = f"Resizing the cluster '{cluster_name}' ({cluster_id}) to the " \
@@ -313,7 +334,11 @@ class ClusterService(abstract_broker.AbstractBroker):
 
         telemetry_handler.record_user_action_details(
             cse_operation=telemetry_constants.CseOperation.V35_CLUSTER_DELETE,
-            cse_params=curr_entity)
+            cse_params={
+                CLUSTER_ENTITY: curr_entity,
+                telemetry_constants.PayloadKey.SOURCE_DESCRIPTION: thread_local_data.get_thread_local_data(ThreadLocalData.USER_AGENT)  # noqa: E501
+            }
+        )
 
         # must _update_task here or else self.task_resource is None
         # do not logout of sys admin, or else in pyvcloud's session.request()
@@ -352,7 +377,10 @@ class ClusterService(abstract_broker.AbstractBroker):
         curr_entity = self.entity_svc.get_entity(cluster_id)
         telemetry_handler.record_user_action_details(
             cse_operation=telemetry_constants.CseOperation.V35_CLUSTER_UPGRADE_PLAN,  # noqa: E501
-            cse_params=curr_entity
+            cse_params={
+                CLUSTER_ENTITY: curr_entity,
+                telemetry_constants.PayloadKey.SOURCE_DESCRIPTION: thread_local_data.get_thread_local_data(ThreadLocalData.USER_AGENT)  # noqa: E501
+            }
         )
 
         return self._get_cluster_upgrade_plan(curr_entity.entity.spec.k8_distribution.template_name, # noqa: E501
@@ -405,7 +433,11 @@ class ClusterService(abstract_broker.AbstractBroker):
 
         telemetry_handler.record_user_action_details(
             telemetry_constants.CseOperation.V35_CLUSTER_UPGRADE,
-            cse_params=curr_entity)
+            cse_params={
+                CLUSTER_ENTITY: curr_entity,
+                telemetry_constants.PayloadKey.SOURCE_DESCRIPTION: thread_local_data.get_thread_local_data(ThreadLocalData.USER_AGENT)  # noqa: E501
+            }
+        )
 
         msg = f"Upgrading cluster '{cluster_name}' " \
               f"software to match template {new_template_name} (revision " \

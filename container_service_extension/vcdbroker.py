@@ -38,11 +38,13 @@ from container_service_extension.server_constants import LocalTemplateKey
 from container_service_extension.server_constants import NodeType
 from container_service_extension.server_constants import ScriptFile
 from container_service_extension.server_constants import SYSTEM_ORG_NAME
+from container_service_extension.server_constants import ThreadLocalData
 from container_service_extension.shared_constants import RequestKey
 from container_service_extension.telemetry.constants import CseOperation
 from container_service_extension.telemetry.constants import PayloadKey
 from container_service_extension.telemetry.telemetry_handler import \
     record_user_action_details
+import container_service_extension.thread_local_data as thread_local_data
 import container_service_extension.utils as utils
 import container_service_extension.vsphere_utils as vs_utils
 
@@ -89,6 +91,7 @@ class VcdBroker(abstract_broker.AbstractBroker):
             # Record the telemetry data
             cse_params = copy.deepcopy(validated_data)
             cse_params[PayloadKey.CLUSTER_ID] = cluster[PayloadKey.CLUSTER_ID]
+            cse_params[PayloadKey.SOURCE_DESCRIPTION] = thread_local_data.get_thread_local_data(ThreadLocalData.USER_AGENT)  # noqa: E501
             record_user_action_details(cse_operation=CseOperation.CLUSTER_INFO,
                                        cse_params=cse_params)
 
@@ -114,11 +117,13 @@ class VcdBroker(abstract_broker.AbstractBroker):
         }
         validated_data = {**defaults, **data}
 
+        cse_params = copy.deepcopy(validated_data)
+        cse_params[PayloadKey.SOURCE_DESCRIPTION] = thread_local_data.get_thread_local_data(ThreadLocalData.USER_AGENT)  # noqa: E501
         if kwargs.get(KwargKey.TELEMETRY, True):
             # Record the data for telemetry
             record_user_action_details(
                 cse_operation=CseOperation.CLUSTER_LIST,
-                cse_params=copy.deepcopy(validated_data))
+                cse_params=cse_params)
 
         # "raw clusters" do not have well-defined cluster data keys
         raw_clusters = get_all_clusters(
@@ -182,6 +187,7 @@ class VcdBroker(abstract_broker.AbstractBroker):
         if kwargs.get(KwargKey.TELEMETRY, True):
             # Record the telemetry data
             cse_params = copy.deepcopy(validated_data)
+            cse_params[PayloadKey.SOURCE_DESCRIPTION] = thread_local_data.get_thread_local_data(ThreadLocalData.USER_AGENT)  # noqa: E501
             cse_params[PayloadKey.CLUSTER_ID] = cluster[PayloadKey.CLUSTER_ID]
             record_user_action_details(
                 cse_operation=CseOperation.CLUSTER_CONFIG,
@@ -354,6 +360,7 @@ class VcdBroker(abstract_broker.AbstractBroker):
             cse_params[LocalTemplateKey.OS] = template.get(LocalTemplateKey.OS)
             cse_params[LocalTemplateKey.CNI] = template.get(LocalTemplateKey.CNI) # noqa: E501
             cse_params[LocalTemplateKey.CNI_VERSION] = template.get(LocalTemplateKey.CNI_VERSION)  # noqa: E501
+            cse_params[PayloadKey.SOURCE_DESCRIPTION] = thread_local_data.get_thread_local_data(ThreadLocalData.USER_AGENT)  # noqa: E501
             record_user_action_details(
                 cse_operation=CseOperation.CLUSTER_CREATE,
                 cse_params=cse_params)
@@ -423,6 +430,7 @@ class VcdBroker(abstract_broker.AbstractBroker):
             cse_params[PayloadKey.CLUSTER_ID] = cluster_info[PayloadKey.CLUSTER_ID] # noqa: E501
             cse_params[LocalTemplateKey.MEMORY] = validated_data.get(RequestKey.MB_MEMORY) # noqa: E501
             cse_params[LocalTemplateKey.CPU] = validated_data.get(RequestKey.NUM_CPU) # noqa: E501
+            cse_params[PayloadKey.SOURCE_DESCRIPTION] = thread_local_data.get_thread_local_data(ThreadLocalData.USER_AGENT)  # noqa: E501
             record_user_action_details(
                 cse_operation=CseOperation.CLUSTER_RESIZE,
                 cse_params=cse_params)
@@ -471,6 +479,7 @@ class VcdBroker(abstract_broker.AbstractBroker):
             # Record the telemetry data
             cse_params = copy.deepcopy(validated_data)
             cse_params[PayloadKey.CLUSTER_ID] = cluster_id
+            cse_params[PayloadKey.SOURCE_DESCRIPTION] = thread_local_data.get_thread_local_data(ThreadLocalData.USER_AGENT)  # noqa: E501
             record_user_action_details(
                 cse_operation=CseOperation.CLUSTER_DELETE,
                 cse_params=cse_params)
@@ -543,6 +552,7 @@ class VcdBroker(abstract_broker.AbstractBroker):
             # Record the telemetry data
             cse_params = copy.deepcopy(validated_data)
             cse_params[PayloadKey.CLUSTER_ID] = cluster[PayloadKey.CLUSTER_ID]
+            cse_params[PayloadKey.SOURCE_DESCRIPTION] = thread_local_data.get_thread_local_data(ThreadLocalData.USER_AGENT)  # noqa: E501
             record_user_action_details(
                 cse_operation=CseOperation.CLUSTER_UPGRADE,
                 cse_params=cse_params)
@@ -598,6 +608,7 @@ class VcdBroker(abstract_broker.AbstractBroker):
             # Record the telemetry data
             cse_params = copy.deepcopy(validated_data)
             cse_params[PayloadKey.CLUSTER_ID] = cluster[PayloadKey.CLUSTER_ID]
+            cse_params[PayloadKey.SOURCE_DESCRIPTION] = thread_local_data.get_thread_local_data(ThreadLocalData.USER_AGENT)  # noqa: E501
             record_user_action_details(
                 cse_operation=CseOperation.NODE_INFO,
                 cse_params=cse_params)
@@ -710,6 +721,7 @@ class VcdBroker(abstract_broker.AbstractBroker):
             cse_params[LocalTemplateKey.OS] = template.get(LocalTemplateKey.OS)
             cse_params[LocalTemplateKey.CNI] = template.get(LocalTemplateKey.CNI) # noqa: E501
             cse_params[LocalTemplateKey.CNI_VERSION] = template.get(LocalTemplateKey.CNI_VERSION)  # noqa: E501
+            cse_params[PayloadKey.SOURCE_DESCRIPTION] = thread_local_data.get_thread_local_data(ThreadLocalData.USER_AGENT)  # noqa: E501
             record_user_action_details(cse_operation=CseOperation.NODE_CREATE,
                                        cse_params=cse_params)
 
@@ -789,6 +801,7 @@ class VcdBroker(abstract_broker.AbstractBroker):
             # Record the telemetry data; record separate data for each node
             cse_params = copy.deepcopy(validated_data)
             cse_params[PayloadKey.CLUSTER_ID] = cluster[PayloadKey.CLUSTER_ID]
+            cse_params[PayloadKey.SOURCE_DESCRIPTION] = thread_local_data.get_thread_local_data(ThreadLocalData.USER_AGENT)  # noqa: E501
             for node in node_names_list:
                 cse_params[PayloadKey.NODE_NAME] = node
                 record_user_action_details(
