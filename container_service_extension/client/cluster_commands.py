@@ -1056,7 +1056,7 @@ Examples:
         if client_utils.is_cli_for_tkg_only():
             if k8_runtime in [shared_constants.ClusterEntityKind.NATIVE.value,
                               shared_constants.ClusterEntityKind.TKG_PLUS.value]:  # noqa: E501
-                # Cannot run the command as cse cli is enabled only for native
+                # Cannot run the command as cse cli is enabled only for tkg
                 raise CseServerNotRunningError()
             k8_runtime = shared_constants.ClusterEntityKind.TKG.value
 
@@ -1069,6 +1069,96 @@ Examples:
         cluster.share_cluster(cluster_id, name, users_list, access_level_id,
                               org, vdc)
         stdout(f'Cluster {cluster_id or name} successfully shared with: {users_list}')  # noqa: E501
+    except Exception as e:
+        stderr(e, ctx)
+        CLIENT_LOGGER.error(str(e))
+
+
+@cluster_group.command('share-list',
+                       short_help='List access information of users with '
+                                  'access to a cluster')
+@click.pass_context
+@click.option(
+    '-A',
+    '--all',
+    'should_print_all',
+    is_flag=True,
+    default=False,
+    required=False,
+    metavar='DISPLAY_ALL',
+    help="Display all cluster user access information non-interactively")
+@click.option(
+    '-n',
+    '--name',
+    'name',
+    required=False,
+    default=None,
+    metavar='CLUSTER_NAME',
+    help='Name of the cluster to list shared users')
+@click.option(
+    '-v',
+    '--vdc',
+    'vdc',
+    required=False,
+    default=None,
+    metavar='VDC_NAME',
+    help='Restrict cluster search to specified org VDC')
+@click.option(
+    '-o',
+    '--org',
+    'org',
+    default=None,
+    required=False,
+    metavar='ORG_NAME',
+    help='Restrict cluster search to specified org')
+@click.option(
+    '-k',
+    '--k8-runtime',
+    'k8_runtime',
+    default=None,
+    required=False,
+    metavar='K8-RUNTIME',
+    help='Restrict cluster search to cluster kind')
+@click.option(
+    '--id',
+    'cluster_id',
+    default=None,
+    required=False,
+    metavar='CLUSTER_ID',
+    help="ID of the cluster to share; "
+         "ID gets precedence over cluster name.")
+def cluster_share_list(ctx, should_print_all, name, vdc, org, k8_runtime,
+                       cluster_id):
+    """List cluster shared user information.
+
+    Either the cluster name or cluster id is required.
+\b
+Examples:
+    vcd cse cluster share-list --name mycluster
+        List shared user information for cluster 'mycluster'
+\b
+    vcd cse cluster share --id urn:vcloud:entity:vmware:tkgcluster:1.0.0:71fa7b01-84dc-4a58-ae54-a1098219b057
+        List shared user information for cluster with cluster ID 'urn:vcloud:entity:vmware:tkgcluster:1.0.0:71fa7b01-84dc-4a58-ae54-a1098219b057'
+    """  # noqa: E501
+    try:
+        if not (cluster_id or name):
+            raise Exception("Please specify cluster name or cluster id.")
+        client_utils.cse_restore_session(ctx)
+        if client_utils.is_cli_for_tkg_only():
+            if k8_runtime in [shared_constants.ClusterEntityKind.NATIVE.value,
+                              shared_constants.ClusterEntityKind.TKG_PLUS.value]:  # noqa: E501
+                # Cannot run the command as cse cli is enabled only for tkg
+                raise CseServerNotRunningError()
+            k8_runtime = shared_constants.ClusterEntityKind.TKG.value
+
+        # Determine cluster type and retrieve cluster id if needed
+        client = ctx.obj['client']
+        if not org:
+            ctx_profiles = ctx.obj['profiles']
+            org = ctx_profiles.get('org')
+        cluster = Cluster(client, k8_runtime)
+        share_entries = cluster.list_share_entries(cluster_id, name, org, vdc)
+        client_utils.print_paginated_result(share_entries, should_print_all)
     except Exception as e:
         stderr(e, ctx)
         CLIENT_LOGGER.error(str(e))
@@ -1139,7 +1229,7 @@ Examples:
         if client_utils.is_cli_for_tkg_only():
             if k8_runtime in [shared_constants.ClusterEntityKind.NATIVE.value,
                               shared_constants.ClusterEntityKind.TKG_PLUS.value]:  # noqa: E501
-                # Cannot run the command as cse cli is enabled only for native
+                # Cannot run the command as cse cli is enabled only for tkg
                 raise CseServerNotRunningError()
             k8_runtime = shared_constants.ClusterEntityKind.TKG.value
 

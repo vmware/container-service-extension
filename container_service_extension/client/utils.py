@@ -262,7 +262,7 @@ def print_paginated_result(generator, should_print_all=False, logger=NULL_LOGGER
     :param Generator[(List[dict], int), None, None] generator: generator which
         yields a list of results and a boolean indicating if more results
         are present.
-    :param bool should_print_all: print all the results without promting the
+    :param bool should_print_all: print all the results without prompting the
         user.
     :param logger logger: logger to log the results or exceptions.
     """

@@ -67,9 +67,10 @@ class ClusterACLService:
             page_num += 1
             response_body = self.get_def_entity_acl_response(
                 page_num, shared_constants.CSE_PAGINATION_DEFAULT_PAGE_SIZE)
-            if len(response_body['values']) == 0:
+            values = response_body[shared_constants.PaginationKey.VALUES]
+            if len(values) == 0:
                 break
-            for acl_entry in response_body['values']:
+            for acl_entry in values:
                 yield def_models.ClusterAclEntry(**acl_entry)
 
     def create_user_id_to_acl_entry_dict(self):
