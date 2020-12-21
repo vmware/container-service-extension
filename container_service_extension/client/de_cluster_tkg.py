@@ -23,7 +23,7 @@ import container_service_extension.shared_constants as shared_constants
 import container_service_extension.utils as utils
 
 
-class TKGClusterApi:
+class DEClusterTKG:
     """Embedded Kubernetes into vSphere."""
 
     # NOTE: When converting model objects from tkgclient/models to dictionary,
