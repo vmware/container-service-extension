@@ -684,3 +684,40 @@ def get_payload_for_v35_node_delete(params):
         PayloadKey.SOURCE_ID: SourceMap.get_source_id(params.get(PayloadKey.SOURCE_DESCRIPTION)),  # noqa: E501
         PayloadKey.SOURCE_DESCRIPTION: params.get(PayloadKey.SOURCE_DESCRIPTION)  # noqa: E501
     }
+
+
+def get_payload_for_pks_list_clusters(params):
+    """Construct telemetry payload of list cluster operation.
+
+    :param params: parameters provided to the operation
+
+    :return: json telemetry data the operation
+
+    :type: dict
+    """
+    return {
+        PayloadKey.TYPE: CseOperation.PKS_CLUSTER_LIST.telemetry_table,
+        PayloadKey.WAS_OVDC_SPECIFIED: bool(params.get(RequestKey.OVDC_NAME)),
+        PayloadKey.WAS_ORG_SPECIFIED: bool(params.get(RequestKey.ORG_NAME)),
+        PayloadKey.SOURCE_ID: SourceMap.get_source_id(params.get(PayloadKey.SOURCE_DESCRIPTION)),  # noqa: E501
+        PayloadKey.SOURCE_DESCRIPTION: params.get(PayloadKey.SOURCE_DESCRIPTION)  # noqa: E501
+    }
+
+
+def get_payload_for_pks_cluster_info(params):
+    """Construct telemetry payload of cluster info operation.
+
+    :param params: parameters provided to the operation
+
+    :return: json telemetry data for the operation
+
+    :type: dict
+    """
+    return {
+        PayloadKey.TYPE: CseOperation.PKS_CLUSTER_INFO.telemetry_table,
+        PayloadKey.CLUSTER_ID: uuid_hash(params.get(PayloadKey.PKS_CLUSTER_ID)),  # noqa: E501
+        PayloadKey.WAS_OVDC_SPECIFIED: bool(params.get(RequestKey.OVDC_NAME)),
+        PayloadKey.WAS_ORG_SPECIFIED: bool(params.get(RequestKey.ORG_NAME)),
+        PayloadKey.SOURCE_ID: SourceMap.get_source_id(params.get(PayloadKey.SOURCE_DESCRIPTION)),  # noqa: E501
+        PayloadKey.SOURCE_DESCRIPTION: params.get(PayloadKey.SOURCE_DESCRIPTION)  # noqa: E501
+    }
