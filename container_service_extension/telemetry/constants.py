@@ -85,6 +85,8 @@ class CseOperation(Enum):
     V35_CLUSTER_ACL_UPDATE = ('cluster acl update', 'CLUSTER', 'V35_ACL_UPDATE', 'CSE_V35_CLUSTER_ACL_UPDATE')  # noqa: E501
     V35_NODE_DELETE = ('DEF nfs node delete', 'NODE', 'V35_DELETE', 'CSE_V35_NODE_DELETE')  # noqa: E501
 
+    V36_CLUSTER_UPDATE = ('DEF cluster update', 'CLUSTER', 'V36_APPLY', 'CSE_V36_CLUSTER_APPLY')  # noqa: E501
+
     # Following operations do not require telemetry details. Hence the VAC
     # table name field is empty
     OVDC_COMPUTE_POLICY_ADD = ('ovdc compute policy', 'COMPUTE_POLICY', 'ADD', '')  # noqa: E501
@@ -127,6 +129,8 @@ class PayloadKey(str, Enum):
     NUMBER_OF_NFS_NODES = 'number_of_nfs_nodes'
     OS = 'os'
     SOURCE_CSE_VERSION = 'source_cse_version'
+    SOURCE_DESCRIPTION = 'source_description'
+    SOURCE_ID = 'source_id'
     SOURCE_VCD_API_VERSION = 'source_vcd_api_version'
     STATUS = 'status'
     TARGET = 'target',
@@ -170,3 +174,24 @@ class PayloadValue(str, Enum):
 @unique
 class PayloadTable(str, Enum):
     USER_ACTIONS = 'CSE_USER_ACTIONS'
+
+
+@unique
+class SourceMap(str, Enum):
+    VCD_CLI = 'python'
+    CURL = 'curl'
+    EDGE = 'edg'
+    CHROME = 'chrome'
+    SAFARI = 'safari'
+    TERRAFORM = 'terraform'
+    POSTMAN = 'postman'
+    UNKNOWN = 'unknown'
+
+    @staticmethod
+    def get_source_id(user_agent: str):
+        if user_agent is None:
+            return SourceMap.UNKNOWN.name
+        for source_entry in SourceMap:
+            if source_entry.value in user_agent.lower():
+                return source_entry.name
+        return SourceMap.UNKNOWN.name

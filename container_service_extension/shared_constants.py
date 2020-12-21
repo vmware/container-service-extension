@@ -122,7 +122,7 @@ class RequestKey(str, Enum):
     OVDC_NAME = 'ovdc_name'
 
     # keys related to cluster requests
-    V35_SPEC = 'spec_body'
+    INPUT_SPEC = 'spec_body'
     V35_QUERY = 'query_filter'
     CLUSTER_NAME = 'cluster_name'
     CLUSTER_ID = 'cluster_id'
@@ -190,6 +190,10 @@ class FlattenedClusterSpecKey(Enum):
     NFS_COUNT = 'nfs.count'
     TEMPLATE_NAME = 'k8_distribution.template_name'
     TEMPLATE_REVISION = 'k8_distribution.template_revision'
+
+
+VALID_UPDATE_FIELDS = [FlattenedClusterSpecKey.WORKERS_COUNT.value, FlattenedClusterSpecKey.NFS_COUNT.value,  # noqa: E501
+                       FlattenedClusterSpecKey.TEMPLATE_NAME.value, FlattenedClusterSpecKey.TEMPLATE_REVISION.value]  # noqa: E501
 
 
 @unique

@@ -17,7 +17,7 @@ class RequestIdFormatter(logging.Formatter):
 
         # Remove the request id from being printed if there is no request id
         req_start = orig_format.find(server_constants.REQUEST_ID_FORMAT)
-        if req_start != -1 and thread_local_data.get_thread_local_data(server_constants.REQUEST_ID) is None:  # noqa: E501
+        if req_start != -1 and thread_local_data.get_thread_local_data(server_constants.ThreadLocalData.REQUEST_ID) is None:  # noqa: E501
             req_end = req_start + len(server_constants.REQUEST_ID_FORMAT)
             self._style._fmt = orig_format[:req_start] + orig_format[req_end:]
 

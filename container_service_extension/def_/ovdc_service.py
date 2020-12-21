@@ -13,6 +13,7 @@ import container_service_extension.def_.models as def_models
 import container_service_extension.logger as logger
 import container_service_extension.operation_context as ctx
 import container_service_extension.pyvcloud_utils as vcd_utils
+from container_service_extension.server_constants import ThreadLocalData
 from container_service_extension.shared_constants import ClusterEntityKind
 from container_service_extension.shared_constants import CSE_PAGINATION_DEFAULT_PAGE_SIZE  # noqa: E501
 from container_service_extension.shared_constants import CSE_PAGINATION_FIRST_PAGE_NUMBER  # noqa: E501
@@ -22,7 +23,9 @@ from container_service_extension.shared_constants import RUNTIME_DISPLAY_NAME_TO
 from container_service_extension.shared_constants import RUNTIME_INTERNAL_NAME_TO_DISPLAY_NAME_MAP  # noqa: E501
 from container_service_extension.telemetry.constants import CseOperation
 from container_service_extension.telemetry.constants import OperationStatus
+from container_service_extension.telemetry.constants import PayloadKey
 import container_service_extension.telemetry.telemetry_handler as telemetry_handler # noqa: E501
+import container_service_extension.thread_local_data as thread_local_data
 import container_service_extension.utils as utils
 
 
@@ -97,7 +100,8 @@ def get_ovdc(operation_context: ctx.OperationContext, ovdc_id: str) -> dict:
     # NOTE: For CSE 3.0, if `enable_tkg_plus` flag in config is set to false,
     # Prevent showing information about TKG+ by skipping TKG+ from the result.
     cse_params = {
-        RequestKey.OVDC_ID: ovdc_id
+        RequestKey.OVDC_ID: ovdc_id,
+        PayloadKey.SOURCE_DESCRIPTION: thread_local_data.get_thread_local_data(ThreadLocalData.USER_AGENT)  # noqa: E501
     }
     telemetry_handler.record_user_action_details(cse_operation=CseOperation.OVDC_INFO, # noqa: E501
                                                  cse_params=cse_params)
@@ -127,8 +131,12 @@ def list_ovdc(operation_context: ctx.OperationContext,
     # NOTE: For CSE 3.0, if `enable_tkg_plus` flag in config is set to false,
     # Prevent showing information about TKG+ by skipping TKG+ from the result.
     # Record telemetry
-    telemetry_handler.record_user_action_details(cse_operation=CseOperation.OVDC_LIST, # noqa: E501
-                                                 cse_params={})
+    telemetry_handler.record_user_action_details(
+        cse_operation=CseOperation.OVDC_LIST,
+        cse_params={
+            PayloadKey.SOURCE_DESCRIPTION: thread_local_data.get_thread_local_data(ThreadLocalData.USER_AGENT)  # noqa: E501
+        }
+    )
 
     ovdcs = []
     result = cloudapi_utils.get_vdcs_by_page(
@@ -250,7 +258,8 @@ def _update_ovdc_using_placement_policy_async(operation_context: ctx.OperationCo
             cse_params = {
                 RequestKey.K8S_PROVIDER: k8s_runtimes_added,
                 RequestKey.OVDC_ID: ovdc_id,
-                RequestKey.ORG_NAME: org_name
+                RequestKey.ORG_NAME: org_name,
+                PayloadKey.SOURCE_DESCRIPTION: thread_local_data.get_thread_local_data(ThreadLocalData.USER_AGENT)  # noqa: E501
             }
             telemetry_handler.record_user_action_details(cse_operation=CseOperation.OVDC_ENABLE, # noqa: E501
                                                          cse_params=cse_params)
@@ -263,7 +272,8 @@ def _update_ovdc_using_placement_policy_async(operation_context: ctx.OperationCo
                 RequestKey.K8S_PROVIDER: k8s_runtimes_deleted,
                 RequestKey.OVDC_ID: ovdc_id,
                 RequestKey.ORG_NAME: org_name,
-                RequestKey.REMOVE_COMPUTE_POLICY_FROM_VMS: remove_cp_from_vms_on_disable # noqa: E501
+                RequestKey.REMOVE_COMPUTE_POLICY_FROM_VMS: remove_cp_from_vms_on_disable,  # noqa: E501
+                PayloadKey.SOURCE_DESCRIPTION: thread_local_data.get_thread_local_data(ThreadLocalData.USER_AGENT)  # noqa: E501
             }
             telemetry_handler.record_user_action_details(cse_operation=CseOperation.OVDC_DISABLE, # noqa: E501
                                                          cse_params=cse_params)

@@ -13,7 +13,7 @@ import requests
 from container_service_extension.exceptions import CseRequestError
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
 import container_service_extension.request_processor as request_processor
-import container_service_extension.server_constants as server_constants
+from container_service_extension.server_constants import ThreadLocalData
 from container_service_extension.shared_constants import RESPONSE_MESSAGE_KEY
 import container_service_extension.thread_local_data as thread_local_data
 
@@ -38,7 +38,8 @@ def get_response_fields(request_msg, fsencoding, is_mqtt):
             msg_json = json.loads(request_msg.decode(fsencoding))[0]
             request_id = msg_json['id']
 
-        thread_local_data.set_thread_local_data(server_constants.REQUEST_ID, request_id)  # noqa: E501
+        thread_local_data.set_thread_local_data(ThreadLocalData.REQUEST_ID, request_id)  # noqa: E501
+        thread_local_data.set_thread_local_data(ThreadLocalData.USER_AGENT, msg_json['headers'].get('User-Agent'))  # noqa: E501
         result = request_processor.process_request(msg_json)
         status_code = result['status_code']
         reply_body = result['body']

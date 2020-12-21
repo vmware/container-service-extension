@@ -40,7 +40,7 @@ PKS_COMPUTE_PROFILE_KEY = 'pks_compute_profile_name'
 VERSION_V1 = 'v1'
 
 # vCD API versions supported by CSE
-SUPPORTED_VCD_API_VERSIONS = ['33.0', '34.0', '35.0']
+SUPPORTED_VCD_API_VERSIONS = ['33.0', '34.0', '35.0', '36.0']
 
 # CSE global pvdc compute policy name
 CSE_GLOBAL_PVDC_COMPUTE_POLICY_NAME = 'global'
@@ -82,7 +82,15 @@ VCENTER_LOGIN_ERROR_MSG = "vCenter login failed (check config file for "\
 
 # Request Id format for logging
 REQUEST_ID_FORMAT = 'Request Id: %(requestId)s | '
-REQUEST_ID = 'request_id'
+
+
+@unique
+class ThreadLocalData(str, Enum):
+    USER_AGENT = 'User-Agent'
+    REQUEST_ID = 'request_id'
+
+
+CLUSTER_ENTITY = 'cluster_entity'
 
 
 # User ID parsing
@@ -229,6 +237,8 @@ class CseOperation(Enum):
     V35_NODE_CREATE = ('create DEF node', 'NOT IMPLEMENTED', requests.codes.accepted)  # noqa: E501
     V35_NODE_DELETE = ('delete DEF node', '/cse/3.0/cluster/%s/nfs/%s', requests.codes.accepted)  # noqa: E501
     V35_NODE_INFO = ('get info of DEF node', 'NOT IMPLEMENTED')
+
+    V36_CLUSTER_UPDATE = ('update DEF cluster', '/cse/3.0/cluster/%s', requests.codes.accepted)  # noqa: E501
 
     OVDC_UPDATE = ('enable or disable ovdc for k8s', '/cse/ovdc/%s', requests.codes.accepted)  # noqa: E501
     OVDC_INFO = ('get info of ovdc', '/cse/ovdc/%s')
