@@ -320,7 +320,7 @@ class DEClusterNative:
                 page_size=cli_constants.CLI_ENTRIES_PER_PAGE)
             result_total = response_body[shared_constants.PaginationKey.RESULT_TOTAL]  # noqa: E501
             acl_values = response_body[shared_constants.PaginationKey.VALUES]
-            if acl_values == 0:
+            if not acl_values:
                 break
             result_count += len(acl_values)
             yield acl_values, result_count < result_total

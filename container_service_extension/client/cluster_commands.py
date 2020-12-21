@@ -1056,7 +1056,7 @@ Examples:
         if client_utils.is_cli_for_tkg_only():
             if k8_runtime in [shared_constants.ClusterEntityKind.NATIVE.value,
                               shared_constants.ClusterEntityKind.TKG_PLUS.value]:  # noqa: E501
-                # Cannot run the command as cse cli is enabled only for native
+                # Cannot run the command as cse cli is enabled only for tkg
                 raise CseServerNotRunningError()
             k8_runtime = shared_constants.ClusterEntityKind.TKG.value
 
@@ -1148,7 +1148,7 @@ Examples:
         if client_utils.is_cli_for_tkg_only():
             if k8_runtime in [shared_constants.ClusterEntityKind.NATIVE.value,
                               shared_constants.ClusterEntityKind.TKG_PLUS.value]:  # noqa: E501
-                # Cannot run the command as cse cli is enabled only for native
+                # Cannot run the command as cse cli is enabled only for tkg
                 raise CseServerNotRunningError()
             k8_runtime = shared_constants.ClusterEntityKind.TKG.value
 

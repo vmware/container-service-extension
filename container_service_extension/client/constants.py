@@ -36,8 +36,8 @@ CLUSTER_ACL_UPDATE_REQUEST_FIELDS = \
      shared_constants.AccessControlKey.MEMBER_ID,
      shared_constants.AccessControlKey.USERNAME]
 
-# CLI pagination constant
-CLI_ENTRIES_PER_PAGE = 7
+# CLI pagination constant to be consistent with UI pagination
+CLI_ENTRIES_PER_PAGE = 10
 
 
 @unique
