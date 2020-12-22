@@ -19,8 +19,8 @@ class NativeClusterApi(CseClient):
         self._nodes_uri = f"{self._uri}/nodes"
 
     def get_all_clusters(self, filters={}):
-        filter_string = "&".join([f"{k}={v}" for k, v in filters.items()])
-        url = f"{self._ovdcs_uri}?pageSize={self._request_page_size}"
+        filter_string = "&".join([f"{k}={v}" for k, v in filters.items() if v is not None])  # noqa: E501
+        url = f"{self._clusters_uri}?pageSize={self._request_page_size}"
         if filter_string:
             url += f"&{filter_string}"
         return self.iterate_results(url)

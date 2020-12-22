@@ -8,6 +8,7 @@ from container_service_extension.server_constants import K8S_PROVIDER_KEY
 from container_service_extension.shared_constants import CSE_PAGINATION_DEFAULT_PAGE_SIZE  # noqa: E501
 from container_service_extension.shared_constants import CSE_PAGINATION_FIRST_PAGE_NUMBER  # noqa: E501
 from container_service_extension.shared_constants import PaginationKey
+from container_service_extension.shared_constants import RequestKey
 from container_service_extension.telemetry.constants import CseOperation
 from container_service_extension.telemetry.telemetry_handler import \
     record_user_action_telemetry
@@ -153,6 +154,10 @@ def cluster_list(request_data, op_ctx: ctx.OperationContext):
         K8S_PROVIDER_KEY
     ]
 
+    # Extract the query params
+    query_keys = [RequestKey.ORG_NAME, RequestKey.OVDC_NAME]
+    query_params = {k: request_data[k] for k in query_keys if request_data.get(k) is not None}  # noqa: E501
+
     result = []
     for cluster_info in vcd_clusters_info[PaginationKey.VALUES]:
         filtered_cluster_info = \
@@ -161,9 +166,10 @@ def cluster_list(request_data, op_ctx: ctx.OperationContext):
 
     base_url = f"{op_ctx.client.get_api_uri().strip('/')}{CseOperationInfo.CLUSTER_LIST._api_path_format}"  # noqa: E501
     return utils.create_links_and_construct_paginated_result(base_url, result,
+                                                             vcd_clusters_info[PaginationKey.RESULT_TOTAL],  # noqa: E501
                                                              page_number=page_number,  # noqa: E501
                                                              page_size=page_size,  # noqa: E501
-                                                             query_params=request_data)  # noqa: E501
+                                                             query_params=query_params)  # noqa: E501
 
 
 @record_user_action_telemetry(cse_operation=CseOperation.NODE_CREATE)
