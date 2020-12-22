@@ -1693,7 +1693,7 @@ def get_all_clusters(client, cluster_name=None, cluster_id=None,
         cluster_list = clusters_info['values']
         result_total = int(clusters_info.get('resultTotal'))
     else:
-        cluster_list = q.execute()
+        cluster_list = q2.execute()
     # api query can fetch only 8 metadata at a time
     # since we have more than 8 metadata, we need to use 2 queries
     for record in cluster_list:
