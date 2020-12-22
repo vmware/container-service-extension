@@ -51,6 +51,15 @@ words and cannot be used to name a cluster.
     metavar='VDC_NAME',
     help='Filter list to show clusters from a specific org VDC')
 @click.option(
+    '-A',
+    '--all',
+    'should_print_all',
+    is_flag=True,
+    default=False,
+    required=False,
+    metavar='DISPLAY_ALL',
+    help='Display all the clusters non-interactively')
+@click.option(
     '-o',
     '--org',
     'org_name',
@@ -58,7 +67,7 @@ words and cannot be used to name a cluster.
     required=False,
     metavar='ORG_NAME',
     help="Filter list to show clusters from a specific org")
-def list_clusters(ctx, vdc, org_name):
+def list_clusters(ctx, vdc, org_name, should_print_all):
     """Display clusters in vCD that are visible to the logged in user.
 
 \b
@@ -77,7 +86,7 @@ Examples
         if not client.is_sysadmin() and org_name is None:
             org_name = ctx.obj['profiles'].get('org_in_use')
         client_utils.print_paginated_result(cluster.list_clusters(vdc=vdc, org=org_name),  # noqa: E501
-                                            should_print_all=False,
+                                            should_print_all=should_print_all,
                                             logger=CLIENT_LOGGER)
     except Exception as e:
         stderr(e, ctx)

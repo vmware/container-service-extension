@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from typing import List
 
 import container_service_extension.def_.utils as def_utils
+import container_service_extension.shared_constants as shared_constants
 
 
 @dataclass(frozen=True)
@@ -319,3 +320,95 @@ class ClusterAclEntry:
             if key in include_set:
                 filtered_dict[key] = value
         return filtered_dict
+
+
+# NOTE: Only used for cluster list operation to get entities by interface
+# include the following properties:
+@dataclass()
+class GenericClusterDefEntity:
+    # name:
+    #   de.name
+    # vdc:
+    #   de.entity.metadata.ovdc_name for native
+    #   de.entity.metadata.virtual_data_center_name
+    # org:
+    #   de.org.name
+    # runtime:
+    #   de.entity.kind
+    # version:
+    #   de.entity.status.kubernetes for native,
+    #   de.entity.spec.distribution.version for TKG
+    # status:
+    #   de.entity.status.phase for native and
+    #   de.entity.status.phase if de.entity.status else 'N/A' for TKG
+    # owner:
+    #   de.owner.name
+    name: str = None
+    org: Org = None
+    entity = None
+    owner: Owner = None
+
+    def __init__(self, name: str, org: Org, entity, owner: Owner, **kwargs):
+        self.name = name
+        self.org = Org(**org) if isinstance(org, dict) else org
+        entity_dict = asdict(entity) if not isinstance(entity, dict) else entity  # noqa: E501
+        if entity_dict['kind'] in \
+                [shared_constants.ClusterEntityKind.NATIVE.value,
+                 shared_constants.ClusterEntityKind.TKG_PLUS.value]:
+            self.entity = ClusterEntity(**entity_dict) if isinstance(entity, dict) else entity  # noqa: E501
+        elif entity_dict['kind'] == \
+                shared_constants.ClusterEntityKind.TKG.value:
+            self.entity = TKGEntity(**entity) if isinstance(entity, dict) else entity  # noqa: E501
+        else:
+            raise Exception("Invalid cluster kind")
+        self.owner = Owner(**owner) if isinstance(owner, dict) else owner
+
+
+@dataclass()
+class TKGDistribution:
+    version: str = None
+
+    def __init__(self, version: str, **kwargs):
+        self.version = version
+
+
+@dataclass()
+class TKGSpec:
+    distribution: TKGDistribution = None
+
+    def __init__(self, distribution: TKGDistribution, **kwargs):
+        self.distribution = TKGDistribution(**distribution) \
+            if isinstance(distribution, dict) else distribution
+
+
+@dataclass()
+class TKGStatus:
+    phase: str = None
+
+    def __init__(self, phase: str, **kwargs):
+        self.phase = phase
+
+
+@dataclass()
+class TKGMetadata:
+    virtualDataCenterName: str = None
+
+    def __init__(self, virtualDataCenterName: str, **kwargs):
+        self.virtualDataCenterName = virtualDataCenterName
+
+
+@dataclass()
+class TKGEntity:
+    kind: str = None
+    spec: TKGSpec = None
+    status: TKGStatus = None
+    metadata: TKGMetadata = None
+
+    def __init__(self, kind: str, spec: TKGSpec, status: TKGStatus,
+                 metadata: TKGMetadata, **kwargs):
+        self.kind = kind
+        self.spec = TKGSpec(**spec) if isinstance(spec, dict) else spec
+        self.status = TKGStatus(**status) \
+            if isinstance(status, dict) else status
+        self.metadata = TKGMetadata(**metadata) \
+            if isinstance(metadata, dict) else metadata

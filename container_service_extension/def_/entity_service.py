@@ -13,7 +13,8 @@ from requests.exceptions import HTTPError
 from container_service_extension.cloudapi.cloudapi_client import CloudApiClient
 from container_service_extension.cloudapi.constants import CloudApiResource
 from container_service_extension.cloudapi.constants import CloudApiVersion
-from container_service_extension.def_.models import DefEntity, DefEntityType
+from container_service_extension.def_.models import DefEntity, DefEntityType, \
+    GenericClusterDefEntity
 import container_service_extension.def_.schema_service as def_schema_svc
 import container_service_extension.def_.utils as def_utils
 import container_service_extension.exceptions as cse_exception
@@ -183,6 +184,42 @@ class DefEntityService():
                 break
             for entity in response_body['values']:
                 yield DefEntity(**entity)
+
+    def get_all_entities_per_page_by_interface(self, vendor: str, nss: str, version: str,  # noqa: E501
+                                               filters: dict = None,
+                                               page_number: int = CSE_PAGINATION_FIRST_PAGE_NUMBER,  # noqa: E501
+                                               page_size: int = CSE_PAGINATION_DEFAULT_PAGE_SIZE):  # noqa: E501
+        """Get a page of entities belonging to an interface.
+
+        An interface is uniquely identified by properties vendor, nss and
+        version.
+
+        :param str vendor: Vendor of the interface
+        :param str nss: nss of the interface
+        :param str version: version of the interface
+        :return: Generator of entities of that interface type
+        :rtype: Generator[List, None, None]
+        """
+        filter_string = utils.construct_filter_string(filters)
+        query_string = f"page={page_number}&pageSize={page_size}"
+        if filter_string:
+            query_string = f"filter={filter_string}&{query_string}"
+        response_body = self._cloudapi_client.do_request(
+            method=RequestMethod.GET,
+            cloudapi_version=CloudApiVersion.VERSION_1_0_0,
+            resource_url_relative_path=f"{CloudApiResource.ENTITIES}/"
+                                       f"{CloudApiResource.INTERFACES}/"
+                                       f"{vendor}/{nss}/{version}?{query_string}")  # noqa: E501
+        result = {}
+        entity_list = []
+        for v in response_body['values']:
+            entity_list.append(GenericClusterDefEntity(**v))
+        result[PaginationKey.RESULT_TOTAL] = int(response_body['resultTotal'])
+        result[PaginationKey.PAGE_COUNT] = int(response_body['pageCount'])
+        result[PaginationKey.PAGE_NUMBER] = page_number
+        result[PaginationKey.PAGE_SIZE] = page_size
+        result[PaginationKey.VALUES] = entity_list
+        return result
 
     @handle_entity_service_exception
     def update_entity(self, entity_id: str, entity: DefEntity) -> DefEntity:
