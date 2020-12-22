@@ -353,7 +353,9 @@ def get_payload_for_v35_cluster_acl_list(cluster_acl_list_info):
         PayloadKey.TYPE: CseOperation.V35_CLUSTER_ACL_LIST.telemetry_table,
         PayloadKey.CLUSTER_ID: uuid_hash(cluster_id),
         PayloadKey.PAGE: str(page),
-        PayloadKey.PAGE_SIZE: str(page_size)
+        PayloadKey.PAGE_SIZE: str(page_size),
+        PayloadKey.SOURCE_ID: SourceMap.get_source_id(cluster_acl_list_info.get(PayloadKey.SOURCE_DESCRIPTION)),  # noqa: E501
+        PayloadKey.SOURCE_DESCRIPTION: cluster_acl_list_info.get(PayloadKey.SOURCE_DESCRIPTION)   # noqa: E501
     }
 
 
@@ -379,7 +381,9 @@ def get_payload_for_v35_cluster_acl_update(cluster_acl_update_info: dict):
     return {
         PayloadKey.TYPE: CseOperation.V35_CLUSTER_ACL_UPDATE.telemetry_table,
         PayloadKey.CLUSTER_ID: uuid_hash(cluster_id),
-        PayloadKey.ACCESS_SETTING: json.dumps(filtered_acl_info)
+        PayloadKey.ACCESS_SETTING: json.dumps(filtered_acl_info),
+        PayloadKey.SOURCE_ID: SourceMap.get_source_id(cluster_acl_update_info.get(PayloadKey.SOURCE_DESCRIPTION)),  # noqa: E501
+        PayloadKey.SOURCE_DESCRIPTION: cluster_acl_update_info.get(PayloadKey.SOURCE_DESCRIPTION)  # noqa: E501
     }
 
 
