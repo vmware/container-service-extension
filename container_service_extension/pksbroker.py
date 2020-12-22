@@ -465,8 +465,8 @@ class PksBroker(AbstractBroker):
                 f"PKS: {self.pks_host_uri} accepted the request to delete"
                 f" the cluster: {qualified_cluster_name}")
         except ApiException as err:
-            SERVER_LOGGER(f"Deleting cluster {qualified_cluster_name}"
-                          f" failed with error:\n {err}")
+            SERVER_LOGGER.debug(f"Deleting cluster {qualified_cluster_name} "
+                                f"failed with error:\n {err}")
             raise PksServerError(err.status, err.body)
         result['name'] = qualified_cluster_name
         result['task_status'] = 'in progress'
