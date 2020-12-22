@@ -84,12 +84,9 @@ def cluster_info(request_data, op_ctx: ctx.OperationContext):
     """
     _raise_error_if_pks_not_enabled()
     cluster, _ = _get_cluster_info(request_data, op_ctx)  # noqa: E501
-    cse_params = copy.deepcopy(request_data)
-    cse_params[PayloadKey.PKS_CLUSTER_ID] = cluster.get(PayloadKey.PKS_CLUSTER_ID)  # noqa: E501
-    cse_params[PayloadKey.SOURCE_DESCRIPTION] = thread_local_data.get_thread_local_data(ThreadLocalData.USER_AGENT)  # noqa: E501
     telemetry_handler.record_user_action_details(
         cse_operation=CseOperation.PKS_CLUSTER_INFO,
-        cse_params=cse_params)
+        cse_params=_get_telemetry_data(request_data, cluster))
     return cluster
 
 
@@ -106,12 +103,9 @@ def cluster_config(request_data, op_ctx: ctx.OperationContext):
     """
     _raise_error_if_pks_not_enabled()
     cluster, broker = _get_cluster_info(request_data, op_ctx, telemetry=False)  # noqa: E501
-    cse_params = copy.deepcopy(request_data)
-    cse_params[PayloadKey.SOURCE_DESCRIPTION] = thread_local_data.get_thread_local_data(ThreadLocalData.USER_AGENT)  # noqa: E501
-    cse_params[PayloadKey.PKS_CLUSTER_ID] = cluster.get(PayloadKey.PKS_CLUSTER_ID)  # noqa: E501
     telemetry_handler.record_user_action_details(
         cse_operation=CseOperation.PKS_CLUSTER_CONFIG,
-        cse_params=cse_params)
+        cse_params=_get_telemetry_data(request_data, cluster))
     return broker.get_cluster_config(data=request_data)
 
 
@@ -154,12 +148,9 @@ def cluster_create(request_data, op_ctx: ctx.OperationContext):
         f"{cluster_name}.{k8s_metadata[PKS_CLUSTER_DOMAIN_KEY]}"
     cluster = broker.create_cluster(data=request_data)
     # Record telemetry data
-    cse_params = copy.deepcopy(request_data)
-    cse_params[PayloadKey.PKS_CLUSTER_ID] = cluster.get(PayloadKey.PKS_CLUSTER_ID)  # noqa: E501
-    cse_params[PayloadKey.SOURCE_DESCRIPTION] = thread_local_data.get_thread_local_data(ThreadLocalData.USER_AGENT)  # noqa: E501
     telemetry_handler.record_user_action_details(
         cse_operation=CseOperation.PKS_CLUSTER_CREATE,
-        cse_params=cse_params)
+        cse_params=_get_telemetry_data(request_data, cluster))
     return cluster
 
 
@@ -177,12 +168,9 @@ def cluster_delete(request_data, op_ctx: ctx.OperationContext):
     _raise_error_if_pks_not_enabled()
     cluster, broker = _get_cluster_info(request_data, op_ctx, telemetry=False)  # noqa: E501
     # Record telemetry data
-    cse_params = copy.deepcopy(request_data)
-    cse_params[PayloadKey.PKS_CLUSTER_ID] = cluster.get(PayloadKey.PKS_CLUSTER_ID)  # noqa: E501
-    cse_params[PayloadKey.SOURCE_DESCRIPTION] = thread_local_data.get_thread_local_data(ThreadLocalData.USER_AGENT)  # noqa: E501
     telemetry_handler.record_user_action_details(
         cse_operation=CseOperation.PKS_CLUSTER_DELETE,
-        cse_params=cse_params)
+        cse_params=_get_telemetry_data(request_data, cluster))
     return broker.delete_cluster(data=request_data)
 
 
@@ -200,12 +188,9 @@ def cluster_resize(request_data, op_ctx: ctx.OperationContext):
     _raise_error_if_pks_not_enabled()
     cluster, broker = _get_cluster_info(request_data, op_ctx, telemetry=False)  # noqa: E501
     # Record telemetry data
-    cse_params = copy.deepcopy(request_data)
-    cse_params[PayloadKey.PKS_CLUSTER_ID] = cluster.get(PayloadKey.PKS_CLUSTER_ID)  # noqa: E501
-    cse_params[PayloadKey.SOURCE_DESCRIPTION] = thread_local_data.get_thread_local_data(ThreadLocalData.USER_AGENT)  # noqa: E501
     telemetry_handler.record_user_action_details(
         cse_operation=CseOperation.PKS_CLUSTER_RESIZE,
-        cse_params=cse_params)
+        cse_params=_get_telemetry_data(request_data, cluster))
     return broker.resize_cluster(data=request_data)
 
 
@@ -290,3 +275,19 @@ def _get_broker_from_k8s_metadata(k8s_metadata,
 def _raise_error_if_pks_not_enabled():
     if not utils.is_pks_enabled():
         raise CseServerError('CSE is not configured to work with PKS.')
+
+
+def _get_telemetry_data(request_data, cluster_data):
+    """Construct telemetry data.
+
+    :param dict request_data: data from user
+    :param dict cluster_data: cluster information
+    :return: telemetry data
+    :rtype: dict
+    """
+    cse_params = copy.deepcopy(request_data)
+    cse_params[PayloadKey.K8S_VERSION] = cluster_data.get(PayloadKey.K8S_VERSION)  # noqa: E501
+    cse_params[PayloadKey.PKS_CLUSTER_ID] = cluster_data.get(PayloadKey.PKS_CLUSTER_ID)  # noqa: E501
+    cse_params[PayloadKey.PKS_VERSION] = cluster_data.get(PayloadKey.PKS_VERSION)  # noqa: E501
+    cse_params[PayloadKey.SOURCE_DESCRIPTION] = thread_local_data.get_thread_local_data(ThreadLocalData.USER_AGENT)  # noqa: E501
+    return cse_params
