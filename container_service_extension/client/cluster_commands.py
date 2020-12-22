@@ -1075,8 +1075,8 @@ Examples:
 
 
 @cluster_group.command('share-list',
-                       short_help='List access information of users with '
-                                  'access to a cluster')
+                       short_help='List access information of shared cluster '
+                                  'users')
 @click.pass_context
 @click.option(
     '-A',
