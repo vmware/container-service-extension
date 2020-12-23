@@ -135,7 +135,7 @@ class DEClusterTKG:
                 clusters.append(cluster)
             has_more_results = additional_details['page'] < additional_details['pageCount']  # noqa: E501
             yield clusters, has_more_results
-            query_params[shared_constants.PaginationKey.PAGE_NUMBER] += 1
+            query_params[shared_constants.PaginationKey.PAGE_NUMBER.value] += 1
 
     def get_tkg_clusters_by_name(self, name, vdc=None, org=None):
         self.set_tenant_org_context(org_name=org)
