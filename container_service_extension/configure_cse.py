@@ -1534,6 +1534,7 @@ def _legacy_upgrade_to_33_34(client, config, ext_vcd_api_version,
 
     # Fix cluster metadata and admin password
     clusters = get_all_cse_clusters(client)
+
     _fix_cluster_metadata(
         client=client,
         config=config,
