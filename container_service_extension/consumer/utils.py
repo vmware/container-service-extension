@@ -17,6 +17,19 @@ from container_service_extension.shared_constants import RESPONSE_MESSAGE_KEY
 from container_service_extension.thread_local_data import set_thread_request_id
 
 
+# Note : Only being used by AMQP to reject request that has been already
+# processed, or are being currently processed.
+def get_request_id(request_msg, fsencoding):
+    """."""
+    request_id = None
+    try:
+        msg_json = json.loads(request_msg.decode(fsencoding))[0]
+        request_id = msg_json['id']
+    except Exception:
+        LOGGER.error(traceback.format_exc())
+    return request_id
+
+
 def get_response_fields(request_msg, fsencoding, is_mqtt):
     """Get the msg json and response fields request message."""
     msg_json, request_id = None, None
