@@ -3,6 +3,7 @@
 # SPDX-License-Identifier: BSD-2-Clause
 
 from dataclasses import asdict
+from typing import Dict, List
 
 import pyvcloud.vcd.client as vcd_client
 
@@ -127,7 +128,7 @@ class NativeClusterApi(CseClient):
             for acl_value in acl_values:
                 yield def_models.ClusterAclEntry(**acl_value)
 
-    def put_cluster_acl(self, cluster_id: str, acl_entries: list):
+    def put_cluster_acl(self, cluster_id: str, acl_entries: List[Dict]):
         uri = f'{self._cluster_uri}/{cluster_id}/acl'
         put_content = {shared_constants.ClusterAclKey.ACCESS_SETTING:
                        acl_entries}

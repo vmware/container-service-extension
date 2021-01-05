@@ -361,3 +361,20 @@ class DECluster:
         else:
             return self._tkgCluster.list_share_entries(
                 cluster_id, cluster_name, org, vdc)
+
+    def unshare_cluster(self, cluster_id, cluster_name, users: list, org=None,
+                        vdc=None):
+        if cluster_id:
+            entity_svc = def_entity_svc.DefEntityService(self._cloudapi_client)
+            is_native_cluster = entity_svc.is_native_entity(cluster_id)
+        else:
+            _, _, is_native_cluster = \
+                self._get_tkg_native_clusters_by_name(cluster_name, org=org,
+                                                      vdc=vdc)
+
+        if is_native_cluster:
+            self._nativeCluster.unshare_cluster(cluster_id, cluster_name,
+                                                users, org, vdc)
+        else:
+            self._tkgCluster.unshare_cluster(cluster_id, cluster_name, users,
+                                             org, vdc)

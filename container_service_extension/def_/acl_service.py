@@ -93,23 +93,29 @@ class ClusterACLService:
             resource_url_relative_path=access_controls_path,
             payload=payload)
 
+    def unshare_def_entity(self, acl_id):
+        delete_path = f'{cloudapi_constants.CloudApiResource.ENTITIES}/' \
+            f'{self._cluster_id}/{cloudapi_constants.CloudApiResource.ACL}/' \
+            f'{acl_id}'
+        self._cloudapi_client.do_request(
+            method=shared_constants.RequestMethod.DELETE,
+            cloudapi_version=cloudapi_constants.CloudApiVersion.VERSION_1_0_0,
+            resource_url_relative_path=delete_path)
+
     def update_native_def_entity_acl(self, update_acl_entries: List[def_models.ClusterAclEntry],  # noqa: E501
-                                     prev_user_acl_info: Dict[str, def_models.ClusterAclEntry]):  # noqa: E501
+                                     prev_user_id_to_acl_entry: Dict[str, def_models.ClusterAclEntry]):  # noqa: E501
         """Update native defined entity acl.
 
         :param list update_acl_entries: list of def_models.ClusterAclEntry
-        :param dict prev_user_acl_info: dict mapping user id to
+        :param dict prev_user_id_to_acl_entry: dict mapping user id to
             def_models.ClusterAclEntry
 
         :return: dictionary of memberId keys and access level values
         """
-        own_prev_user_acl_info = prev_user_acl_info.copy()
+        own_prev_user_id_to_acl_entry = prev_user_id_to_acl_entry.copy()
 
         # Share defined entity
         user_acl_level_dict = {}
-        access_controls_path = \
-            f'{cloudapi_constants.CloudApiResource.ENTITIES}/' \
-            f'{self._cluster_id}/{cloudapi_constants.CloudApiResource.ACL}'
         payload = {
             shared_constants.AccessControlKey.GRANT_TYPE:
                 shared_constants.MEMBERSHIP_GRANT_TYPE,
@@ -125,34 +131,38 @@ class ClusterACLService:
             self.share_def_entity(payload)
 
             # Remove entry from previous user acl info
-            if own_prev_user_acl_info.get(user_id):
-                del own_prev_user_acl_info[user_id]
+            if own_prev_user_id_to_acl_entry.get(user_id):
+                del own_prev_user_id_to_acl_entry[user_id]
 
         # Delete def entity acl entries not in update_acl_entries
-        for _, acl_entry in own_prev_user_acl_info.items():
-            delete_path = access_controls_path + f'/{acl_entry.id}'
-            self._cloudapi_client.do_request(
-                method=shared_constants.RequestMethod.DELETE,
-                cloudapi_version=cloudapi_constants.CloudApiVersion.VERSION_1_0_0,  # noqa: E501
-                resource_url_relative_path=delete_path)
-
+        for _, acl_entry in own_prev_user_id_to_acl_entry.items():
+            self.unshare_def_entity(acl_entry.id)
         return user_acl_level_dict
 
-    def native_get_non_updated_vapp_settings(self,
-                                             updated_user_acl_level_dict):
+    def native_get_vapp_settings_only_vapp_shared(self, def_entity_user_ids: set):  # noqa: E501
+        """Get vapp settings in which the defined entity is not also shared.
+
+        :param set def_entity_user_ids: set of user ids that have access to
+            the defined entity
+
+        :return: vapp settings in which only the vapp is shared
+        :rtype: list
+        """
         non_updated_access_settings = []
         vapp_access_settings: lxml.objectify.ObjectifiedElement = \
             self.vapp.get_access_settings()
+        # Only add entries in which the defined entity is not shared
         if hasattr(vapp_access_settings, 'AccessSettings'):
             vapp_access_settings_attr = vapp_access_settings.AccessSettings
             for child_obj in vapp_access_settings_attr.getchildren():
+                # Get user_urn
                 child_obj_attrib = child_obj.getchildren()[0].attrib
                 shared_href = child_obj_attrib.get('href')
                 user_id = utils.extract_id_from_href(shared_href)
-
-                # Don't add current access setting if it will be updated
                 user_urn = f'{shared_constants.USER_URN_PREFIX}{user_id}'
-                if not updated_user_acl_level_dict.get(user_urn):
+
+                # Add entries in which only vapp is shared
+                if user_urn not in def_entity_user_ids:
                     user_name = child_obj_attrib.get('name')
 
                     curr_setting = form_vapp_access_setting_entry(
@@ -163,10 +173,11 @@ class ClusterACLService:
                     non_updated_access_settings.append(curr_setting)
         return non_updated_access_settings
 
-    def native_update_vapp_access_settings(self, updated_user_acl_level_dict,
+    def native_update_vapp_access_settings(self, prev_user_id_to_acl_entry_dict,  # noqa : E501
                                            update_cluster_acl_entries: List[def_models.ClusterAclEntry]):  # noqa: E501
-        total_vapp_access_settings: list = self.\
-            native_get_non_updated_vapp_settings(updated_user_acl_level_dict)
+        def_entity_user_ids = {acl_entry.memberId for _, acl_entry in
+                               prev_user_id_to_acl_entry_dict.items()}
+        total_vapp_access_settings = self.native_get_vapp_settings_only_vapp_shared(def_entity_user_ids)  # noqa: E501
 
         # Add updated access settings
         vapp_access_settings: lxml.objectify.ObjectifiedElement = \
