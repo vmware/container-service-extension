@@ -20,11 +20,11 @@ from container_service_extension.server_constants import K8S_PROVIDER_KEY
 from container_service_extension.server_constants import K8sProvider
 from container_service_extension.server_constants import PKS_CLUSTER_DOMAIN_KEY
 from container_service_extension.server_constants import PKS_PLANS_KEY
+import container_service_extension.server_utils as server_utils
 from container_service_extension.shared_constants import RequestKey
 from container_service_extension.telemetry.constants import CseOperation
 from container_service_extension.telemetry.telemetry_handler import \
     record_user_action_telemetry
-import container_service_extension.utils as utils
 
 
 @record_user_action_telemetry(cse_operation=CseOperation.PKS_CLUSTER_LIST)
@@ -246,5 +246,5 @@ def _get_broker_from_k8s_metadata(k8s_metadata,
 
 
 def _raise_error_if_pks_not_enabled():
-    if not utils.is_pks_enabled():
+    if not server_utils.is_pks_enabled():
         raise CseServerError('CSE is not configured to work with PKS.')

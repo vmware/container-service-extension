@@ -7,7 +7,8 @@ import container_service_extension.exceptions as cse_exception
 from container_service_extension.exceptions import BadRequestError
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
 from container_service_extension.minor_error_codes import MinorErrorCode
-from container_service_extension.shared_constants import FlattenedClusterSpecKey, VALID_UPDATE_FIELDS  # noqa: E501
+from container_service_extension.server_constants import FlattenedClusterSpecKey  # noqa: E501
+from container_service_extension.server_constants import VALID_UPDATE_FIELDS
 from container_service_extension.shared_constants import RequestKey
 import container_service_extension.utils as utils
 

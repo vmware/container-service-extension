@@ -13,6 +13,7 @@ from requests.exceptions import HTTPError
 from container_service_extension.cloudapi.cloudapi_client import CloudApiClient
 from container_service_extension.cloudapi.constants import CloudApiResource
 from container_service_extension.cloudapi.constants import CloudApiVersion
+import container_service_extension.def_.constants as def_constants
 from container_service_extension.def_.models import DefEntity, DefEntityType
 import container_service_extension.def_.schema_service as def_schema_svc
 import container_service_extension.def_.utils as def_utils
@@ -253,7 +254,7 @@ class DefEntityService():
         :param dict filters: key-value pairs representing filter options
         :return:
         """
-        filters[def_utils.ClusterEntityFilterKey.CLUSTER_NAME.value] = name
+        filters[def_constants.ClusterEntityFilterKey.CLUSTER_NAME.value] = name
         entity_type: DefEntityType = self.get_def_entity_type()
         for entity in \
             self.list_entities_by_entity_type(vendor=entity_type.vendor,
@@ -290,12 +291,12 @@ class DefEntityService():
             cloudapi_version=CloudApiVersion.VERSION_1_0_0,
             resource_url_relative_path=f"{CloudApiResource.ENTITIES}/"
                                        f"{entity_id}/{CloudApiResource.ENTITY_RESOLVE}")  # noqa: E501
-        msg = response_body[def_utils.DEF_ERROR_MESSAGE_KEY]
-        del response_body[def_utils.DEF_ERROR_MESSAGE_KEY]
+        msg = response_body[def_constants.DEF_ERROR_MESSAGE_KEY]
+        del response_body[def_constants.DEF_ERROR_MESSAGE_KEY]
         entity = DefEntity(**response_body)
         # TODO: Just record the error message; revisit after HTTP response code
         # is good enough to decide if exception should be thrown or not
-        if entity.state != def_utils.DEF_RESOLVED_STATE:
+        if entity.state != def_constants.DEF_RESOLVED_STATE:
             LOGGER.error(msg)
         return entity
 
@@ -310,11 +311,11 @@ class DefEntityService():
         :rtype: DefEntityType
         """
         schema_svc = def_schema_svc.DefSchemaService(self._cloudapi_client)
-        keys_map = def_utils.MAP_API_VERSION_TO_KEYS[float(self._cloudapi_client.get_api_version())]  # noqa: E501
+        keys_map = def_constants.MAP_API_VERSION_TO_KEYS[float(self._cloudapi_client.get_api_version())]  # noqa: E501
         entity_type_id = def_utils.generate_entity_type_id(
-            vendor=keys_map[def_utils.DefKey.ENTITY_TYPE_VENDOR],
-            nss=keys_map[def_utils.DefKey.ENTITY_TYPE_NSS],
-            version=keys_map[def_utils.DefKey.ENTITY_TYPE_VERSION])
+            vendor=keys_map[def_constants.DefKey.ENTITY_TYPE_VENDOR],
+            nss=keys_map[def_constants.DefKey.ENTITY_TYPE_NSS],
+            version=keys_map[def_constants.DefKey.ENTITY_TYPE_VERSION])
         return schema_svc.get_entity_type(entity_type_id)
 
     def is_native_entity(self, entity_id: str):
@@ -324,4 +325,4 @@ class DefEntityService():
             cloudapi_version=CloudApiVersion.VERSION_1_0_0,
             resource_url_relative_path=f"{CloudApiResource.ENTITIES}/"
                                        f"{entity_id}")
-        return def_utils.DEF_NATIVE_ENTITY_TYPE_NSS in response_body['entityType']  # noqa: E501
+        return def_constants.DEF_NATIVE_ENTITY_TYPE_NSS in response_body['entityType']  # noqa: E501

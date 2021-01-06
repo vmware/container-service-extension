@@ -19,6 +19,7 @@ import container_service_extension.request_handlers.request_utils as req_utils
 from container_service_extension.server_constants import CseOperation as CseServerOperationInfo  # noqa: E501
 from container_service_extension.server_constants import K8S_PROVIDER_KEY
 from container_service_extension.server_constants import K8sProvider
+import container_service_extension.server_utils as server_utils
 from container_service_extension.shared_constants import CSE_PAGINATION_DEFAULT_PAGE_SIZE  # noqa: E501
 from container_service_extension.shared_constants import CSE_PAGINATION_FIRST_PAGE_NUMBER  # noqa: E501
 from container_service_extension.shared_constants import PaginationKey
@@ -63,7 +64,7 @@ def ovdc_update(request_data, op_ctx: ctx.OperationContext):
 
     try:
         if k8s_provider == K8sProvider.PKS:
-            if not utils.is_pks_enabled():
+            if not server_utils.is_pks_enabled():
                 raise e.CseServerError('CSE server is not '
                                        'configured to work with PKS.')
             required = [
@@ -235,9 +236,9 @@ def ovdc_list(request_data, op_ctx: ctx.OperationContext):
     prev_page_uri = vcd_utils.create_cse_page_uri(op_ctx.client,
                                                   api_path,
                                                   vcd_uri=prev_page_uri)
-    return utils.construct_paginated_response(values=ovdcs,
-                                              result_total=result_total,
-                                              page_number=page_number,
-                                              page_size=page_size,
-                                              next_page_uri=next_page_uri,
-                                              prev_page_uri=prev_page_uri)
+    return server_utils.construct_paginated_response(values=ovdcs,
+                                                     result_total=result_total,
+                                                     page_number=page_number,
+                                                     page_size=page_size,
+                                                     next_page_uri=next_page_uri,  # noqa: E501
+                                                     prev_page_uri=prev_page_uri)  # noqa: E501

@@ -7,7 +7,7 @@ import functools
 import container_service_extension.abstract_broker as abstract_broker
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
 from container_service_extension.server_constants import CSE_SERVICE_NAMESPACE
-import container_service_extension.utils as utils
+import container_service_extension.server_utils as server_utils
 
 
 def secure(required_rights=[]):
@@ -25,7 +25,7 @@ def secure(required_rights=[]):
     def decorator_secure(func):
         @functools.wraps(func)
         def decorator_wrapper(*args, **kwargs):
-            server_config = utils.get_server_runtime_config()
+            server_config = server_utils.get_server_runtime_config()
 
             if (server_config['service']['enforce_authorization']
                     and required_rights is not None

@@ -8,11 +8,11 @@ import container_service_extension.def_.models as def_models
 import container_service_extension.operation_context as ctx
 import container_service_extension.request_handlers.request_utils as request_utils  # noqa: E501
 from container_service_extension.server_constants import CseOperation as CseServerOperationInfo  # noqa: E501
+from container_service_extension.server_constants import FlattenedClusterSpecKey  # noqa: E501
 from container_service_extension.server_constants import ThreadLocalData
 from container_service_extension.shared_constants import ClusterAclKey
 from container_service_extension.shared_constants import CSE_PAGINATION_DEFAULT_PAGE_SIZE  # noqa: E501
 from container_service_extension.shared_constants import CSE_PAGINATION_FIRST_PAGE_NUMBER  # noqa: E501
-from container_service_extension.shared_constants import FlattenedClusterSpecKey  # noqa: E501
 from container_service_extension.shared_constants import PaginationKey
 from container_service_extension.shared_constants import RequestKey
 import container_service_extension.telemetry.constants as telemetry_constants

@@ -2,6 +2,8 @@
 # Copyright (c) 2019 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 
+"""Utilities for performing operations for metadata based ovdc."""
+
 from collections import namedtuple
 
 import pyvcloud.vcd.client as vcd_client
@@ -20,8 +22,8 @@ from container_service_extension.server_constants import K8sProvider
 from container_service_extension.server_constants import PKS_CLUSTER_DOMAIN_KEY
 from container_service_extension.server_constants import PKS_COMPUTE_PROFILE_KEY # noqa: E501
 from container_service_extension.server_constants import PKS_PLANS_KEY
+import container_service_extension.server_utils as server_utils
 from container_service_extension.shared_constants import RequestKey
-import container_service_extension.utils as utils
 
 
 def get_ovdc_k8s_provider_metadata(sysadmin_client: vcd_client.Client,
@@ -57,7 +59,7 @@ def get_ovdc_k8s_provider_metadata(sysadmin_client: vcd_client.Client,
 
         # Get the credentials from PksCache
         if include_credentials or include_nsxt_info:
-            pks_cache = utils.get_pks_cache()
+            pks_cache = server_utils.get_pks_cache()
             pvdc_info = pks_cache.get_pvdc_info(
                 vcd_utils.get_pvdc_id(sysadmin_client, ovdc))
             if include_credentials:
@@ -169,12 +171,12 @@ def construct_k8s_metadata_from_pks_cache(sysadmin_client: vcd_client.Client,
         K8S_PROVIDER_KEY: k8s_provider,
     }
     if k8s_provider == K8sProvider.PKS:
-        if not utils.is_pks_enabled():
+        if not server_utils.is_pks_enabled():
             raise e.CseServerError('CSE is not configured to work with PKS.')
 
         ovdc = vcd_utils.get_vdc(client=sysadmin_client, vdc_id=ovdc_id,
                                  is_admin_operation=True)
-        pks_cache = utils.get_pks_cache()
+        pks_cache = server_utils.get_pks_cache()
         pvdc_id = vcd_utils.get_pvdc_id(sysadmin_client, ovdc)
         pvdc_info = pks_cache.get_pvdc_info(pvdc_id)
         if not pvdc_info:

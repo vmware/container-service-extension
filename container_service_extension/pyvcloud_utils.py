@@ -2,6 +2,8 @@
 # Copyright (c) 2019 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 
+"""Utility module to perform operations which involve pyvcloud calls."""
+
 import pathlib
 import urllib
 
@@ -18,11 +20,14 @@ import container_service_extension.cloudapi.cloudapi_client as cloudApiClient
 from container_service_extension.logger import NULL_LOGGER
 from container_service_extension.logger import SERVER_DEBUG_WIRELOG_FILEPATH
 from container_service_extension.logger import SERVER_LOGGER
+import container_service_extension.pyvcloud_utils as vcd_utils
 from container_service_extension.server_constants import SYSTEM_ORG_NAME
+from container_service_extension.server_utils import get_server_runtime_config
 from container_service_extension.shared_constants import CSE_PAGINATION_DEFAULT_PAGE_SIZE  # noqa: E501
 from container_service_extension.shared_constants import CSE_PAGINATION_FIRST_PAGE_NUMBER  # noqa: E501
 from container_service_extension.shared_constants import PaginationKey
-from container_service_extension.utils import get_server_runtime_config
+from container_service_extension.shared_constants import USER_URN_PREFIX
+from container_service_extension.utils import extract_id_from_href
 from container_service_extension.utils import NullPrinter
 from container_service_extension.utils import str_to_bool
 
@@ -583,3 +588,26 @@ def get_ovdcs_by_page(client: vcd_client.Client,
             query_result_format=vcd_client.QueryResultFormat.ID_RECORDS)
     vdc_results = query.execute()
     return vdc_results
+
+
+def create_org_user_id_to_name_dict(client: vcd_client.Client, org_name):
+    """Get a dictionary of users ids to user names.
+
+    :param vcd_client.Client client: current client
+    :param str org_name: org name to search for users
+
+    :return: dict of user id keys and user name values
+    :rtype: dict
+    """
+    org_href = client.get_org_by_name(org_name).get('href')
+    org = vcd_org.Org(client, org_href)
+    users: list = org.list_users()
+    user_id_to_name_dict = {}
+    for user_str_elem in users:
+        curr_user_dict = vcd_utils.to_dict(user_str_elem, exclude=[])
+        user_name = curr_user_dict['name']
+        user_urn = USER_URN_PREFIX + \
+            extract_id_from_href(curr_user_dict['href'])
+        user_id_to_name_dict[user_urn] = user_name
+
+    return user_id_to_name_dict

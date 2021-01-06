@@ -5,6 +5,7 @@
 import functools
 
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
+from container_service_extension.server_utils import get_server_runtime_config
 from container_service_extension.telemetry.constants import CseOperation
 from container_service_extension.telemetry.constants import OperationStatus
 import container_service_extension.telemetry.payload_generator as\
@@ -12,8 +13,7 @@ import container_service_extension.telemetry.payload_generator as\
 from container_service_extension.telemetry.payload_generator \
     import get_payload_for_user_action
 from container_service_extension.telemetry.vac_client import VacClient
-from container_service_extension.utils import get_server_runtime_config
-from container_service_extension.utils import run_async
+from container_service_extension.thread_utils import run_async
 
 # Payload generator function mappings for CSE operations
 # Each command has its own payload generator

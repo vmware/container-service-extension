@@ -2,32 +2,21 @@
 # Copyright (c) 2017 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 
-import functools
+"""Basic utility methods to perform data transformation and file operations."""
+
 import hashlib
-import math
 import os
 import pathlib
 import platform
 import stat
 import sys
-import threading
 import urllib
 
 import click
 import pkg_resources
-import pyvcloud.vcd.client as vcd_client
-import pyvcloud.vcd.org as vcd_org
-import pyvcloud.vcd.utils as vcd_utils
 import requests
-import semantic_version
 
 from container_service_extension.logger import NULL_LOGGER
-import container_service_extension.server_constants as server_constants
-import container_service_extension.shared_constants as shared_constants
-from container_service_extension.shared_constants import CSE_PAGINATION_DEFAULT_PAGE_SIZE  # noqa: E501
-from container_service_extension.shared_constants import CSE_PAGINATION_FIRST_PAGE_NUMBER  # noqa: E501
-from container_service_extension.shared_constants import PaginationKey
-import container_service_extension.thread_local_data as thread_local_data
 
 
 # chunk size in bytes for file reading
@@ -85,73 +74,17 @@ def get_cse_info():
     }
 
 
-def get_installed_cse_version():
-    """."""
-    cse_version_raw = get_cse_info()['version']
-    # Cleanup version string. Strip dev version string segment.
-    # e.g. convert '2.6.0.0b2.dev5' to '2.6.0'
-    tokens = cse_version_raw.split('.')[:3]
-    cse_version = semantic_version.Version('.'.join(tokens))
-    return cse_version
-
-
 def prompt_text(text, color='black', hide_input=False):
     click_text = click.style(str(text), fg=color)
     return click.prompt(click_text, hide_input=hide_input, type=str)
 
 
-def get_server_runtime_config():
-    import container_service_extension.service as cse_service
-    return cse_service.Service().get_service_config()
-
-
-def get_server_api_version():
-    """Get the API version with which CSE server is running.
-
-    :return: api version
-    """
-    config = get_server_runtime_config()
-    return config['vcd']['api_version']
-
-
-def get_default_storage_profile():
-    config = get_server_runtime_config()
-    return config['broker']['storage_profile']
-
-
-def get_default_k8_distribution():
-    config = get_server_runtime_config()
-    import container_service_extension.def_.models as def_models
-    return def_models.Distribution(template_name=config['broker']['default_template_name'],  # noqa: E501
-                                   template_revision=config['broker']['default_template_revision'])  # noqa: E501
-
-
-def get_pks_cache():
-    from container_service_extension.service import Service
-    return Service().get_pks_cache()
-
-
-def is_pks_enabled():
-    from container_service_extension.service import Service
-    return Service().is_pks_enabled()
-
-
-def is_tkg_plus_enabled(config: dict = None):
-    if not config:
-        try:
-            config = get_server_runtime_config()
-        except Exception:
-            return False
-    service_section = config.get('service', {})
-    tkg_plus_enabled = service_section.get('enable_tkg_plus', False)
-    if isinstance(tkg_plus_enabled, bool):
-        return tkg_plus_enabled
-    elif isinstance(tkg_plus_enabled, str):
-        return str_to_bool(tkg_plus_enabled)
-    return False
-
-
 def is_environment_variable_enabled(env_name):
+    """Check if the environment variable is set.
+
+    :param str env_name: Name of the environment variable
+    :rtype: bool
+    """
     return str_to_bool(os.getenv(env_name))
 
 
@@ -383,52 +316,6 @@ def read_data_file(filepath, logger=NULL_LOGGER,
     return contents
 
 
-def transfer_thread_local_data_wrapper(func):
-    cur_thread_data = thread_local_data.get_thread_local_data_as_dict()
-
-    @functools.wraps(func)
-    def wrapper(*args, **kwargs):
-        thread_local_data.set_thread_local_data_from_dict(cur_thread_data)
-        func(*args, **kwargs)
-        thread_local_data.reset_thread_local_data()
-    return wrapper
-
-
-def run_async(func):
-    @functools.wraps(func)
-    def wrapper(*args, **kwargs):
-        thread_local_data_wrapper = transfer_thread_local_data_wrapper(func)
-        t = threading.Thread(name=generate_thread_name(func.__name__),
-                             target=thread_local_data_wrapper, args=args, kwargs=kwargs,  # noqa: E501
-                             daemon=True)
-        t.start()
-        return t
-    return wrapper
-
-
-def generate_thread_name(function_name):
-    parent_thread_id = threading.current_thread().ident
-    return function_name + ':' + str(parent_thread_id)
-
-
-def should_use_mqtt_protocol(config):
-    """Return true if should use the mqtt protocol; false otherwise.
-
-    The MQTT protocol should be used if the config file contains an "mqtt" key
-        and the api version is greater than or equal to the minimum mqtt
-        api version.
-
-    :param dict config: config yaml file as a dictionary
-
-    :return: whether to use the mqtt protocol
-    :rtype: str
-    """
-    return config.get('mqtt') is not None and \
-        config.get('vcd') is not None and \
-        config['vcd'].get('api_version') is not None and \
-        float(config['vcd']['api_version']) >= server_constants.MQTT_MIN_API_VERSION  # noqa: E501
-
-
 def flatten_dictionary(input_dict, parent_key='', separator='.'):
     """Flatten a given dictionary with nested dictionaries if any.
 
@@ -464,6 +351,10 @@ def escape_query_filter_expression_value(value):
 
 
 def construct_filter_string(filters: dict):
+    """Construct anded filter string from the dict.
+
+    :param dict filters: dictionary containing key and values for the filters
+    """
     filter_string = ""
     if filters:
         filter_expressions = []
@@ -473,29 +364,6 @@ def construct_filter_string(filters: dict):
                 filter_expressions.append(filter_exp)
         filter_string = ";".join(filter_expressions)
     return filter_string
-
-
-def create_org_user_id_to_name_dict(client: vcd_client.Client, org_name):
-    """Get a dictionary of users ids to user names.
-
-    :param vcd_client.Client client: current client
-    :param str org_name: org name to search for users
-
-    :return: dict of user id keys and user name values
-    :rtype: dict
-    """
-    org_href = client.get_org_by_name(org_name).get('href')
-    org = vcd_org.Org(client, org_href)
-    users: list = org.list_users()
-    user_id_to_name_dict = {}
-    for user_str_elem in users:
-        curr_user_dict = vcd_utils.to_dict(user_str_elem, exclude=[])
-        user_name = curr_user_dict['name']
-        user_urn = shared_constants.USER_URN_PREFIX + \
-            extract_id_from_href(curr_user_dict['href'])
-        user_id_to_name_dict[user_urn] = user_name
-
-    return user_id_to_name_dict
 
 
 def extract_id_from_href(href):
@@ -512,63 +380,3 @@ def extract_id_from_href(href):
     if '/' in href:
         return href.split('/')[-1]
     return href
-
-
-def construct_paginated_response(values, result_total,
-                                 page_number=CSE_PAGINATION_FIRST_PAGE_NUMBER,  # noqa: E501
-                                 page_size=CSE_PAGINATION_DEFAULT_PAGE_SIZE,  # noqa: E501
-                                 page_count=None,
-                                 next_page_uri=None,
-                                 prev_page_uri=None):
-    if not page_count:
-        extra_page = 1 if bool(result_total % page_size) else 0
-        page_count = result_total // page_size + extra_page
-    resp = {
-        PaginationKey.RESULT_TOTAL: result_total,
-        PaginationKey.PAGE_COUNT: page_count,
-        PaginationKey.PAGE_NUMBER: page_number,
-        PaginationKey.PAGE_SIZE: page_size,
-        PaginationKey.NEXT_PAGE_URI: next_page_uri,
-        PaginationKey.PREV_PAGE_URI: prev_page_uri,
-        PaginationKey.VALUES: values
-    }
-
-    # Conditionally deleting instead of conditionally adding the entry
-    # maintains the order for the response
-    if not prev_page_uri:
-        del resp[PaginationKey.PREV_PAGE_URI]
-    if not next_page_uri:
-        del resp[PaginationKey.NEXT_PAGE_URI]
-    return resp
-
-
-def create_links_and_construct_paginated_result(base_uri, values, result_total,
-                                                page_number=CSE_PAGINATION_FIRST_PAGE_NUMBER,  # noqa: E501
-                                                page_size=CSE_PAGINATION_DEFAULT_PAGE_SIZE,  # noqa: E501
-                                                query_params={}):
-    next_page_uri: str = None
-    if 0 < page_number * page_size < result_total:
-        # TODO find a way to get the initial url part
-        # ideally the request details should be passed down to each of the
-        # handler funcions as request context
-        next_page_uri = f"{base_uri}?page={page_number+1}&pageSize={page_size}"
-        for q in query_params.keys():
-            next_page_uri += f"&{q}={query_params[q]}"
-
-    page_count = math.ceil(result_total / page_size)
-    prev_page_uri: str = None
-    if page_count >= page_number > 1:
-        prev_page_uri = f"{base_uri}?page={page_number-1}&pageSize={page_size}"
-
-    # add the rest of the query parameters
-    for q in query_params.keys():
-        next_page_uri += f"&{q}={query_params[q]}"
-        prev_page_uri += f"&{q}={query_params[q]}"
-
-    return construct_paginated_response(values=values,
-                                        result_total=result_total,
-                                        page_number=page_number,
-                                        page_size=page_size,
-                                        page_count=page_count,
-                                        next_page_uri=next_page_uri,
-                                        prev_page_uri=prev_page_uri)
