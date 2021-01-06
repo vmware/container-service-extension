@@ -9,7 +9,7 @@ import container_service_extension.ovdc_utils as ovdc_utils
 from container_service_extension.pksbroker import PksBroker
 from container_service_extension.server_constants import K8S_PROVIDER_KEY
 from container_service_extension.server_constants import K8sProvider
-import container_service_extension.utils as utils
+import container_service_extension.server_utils as server_utils
 
 
 def list_clusters(request_data, op_ctx: ctx.OperationContext):
@@ -40,7 +40,7 @@ def create_pks_context_for_all_accounts_in_org(op_ctx: ctx.OperationContext): # 
 
     :rtype: list
     """
-    pks_cache = utils.get_pks_cache()
+    pks_cache = server_utils.get_pks_cache()
     if pks_cache is None:
         return []
 

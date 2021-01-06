@@ -33,20 +33,22 @@ import container_service_extension.pyvcloud_utils as vcd_utils
 from container_service_extension.server_constants import CLUSTER_ENTITY
 from container_service_extension.server_constants import ClusterMetadataKey
 from container_service_extension.server_constants import CSE_CLUSTER_KUBECONFIG_PATH # noqa: E501
+from container_service_extension.server_constants import DefEntityOperation
+from container_service_extension.server_constants import DefEntityOperationStatus  # noqa: E501
+from container_service_extension.server_constants import DefEntityPhase
 from container_service_extension.server_constants import LocalTemplateKey
 from container_service_extension.server_constants import NodeType
 from container_service_extension.server_constants import ScriptFile
 from container_service_extension.server_constants import SYSTEM_ORG_NAME
 from container_service_extension.server_constants import ThreadLocalData
+import container_service_extension.server_utils as server_utils
 import container_service_extension.shared_constants as shared_constants
 from container_service_extension.shared_constants import CSE_PAGINATION_DEFAULT_PAGE_SIZE  # noqa: E501
 from container_service_extension.shared_constants import CSE_PAGINATION_FIRST_PAGE_NUMBER  # noqa: E501
-from container_service_extension.shared_constants import DefEntityOperation
-from container_service_extension.shared_constants import DefEntityOperationStatus  # noqa: E501
-from container_service_extension.shared_constants import DefEntityPhase
 import container_service_extension.telemetry.constants as telemetry_constants
 import container_service_extension.telemetry.telemetry_handler as telemetry_handler  # noqa: E501
 import container_service_extension.thread_local_data as thread_local_data
+import container_service_extension.thread_utils as thread_utils
 import container_service_extension.utils as utils
 import container_service_extension.vsphere_utils as vs_utils
 
@@ -113,7 +115,7 @@ class ClusterService(abstract_broker.AbstractBroker):
         :rtype: dict
         """
         curr_entity = self.entity_svc.get_entity(cluster_id)
-        if curr_entity.state != def_utils.DEF_RESOLVED_STATE:
+        if curr_entity.state != def_constants.DEF_RESOLVED_STATE:
             raise e.CseServerError(
                 f"Cluster {curr_entity.name} with id {cluster_id} is not in a "
                 f"valid state for this operation. Please contact the administrator")  # noqa: E501
@@ -163,7 +165,7 @@ class ClusterService(abstract_broker.AbstractBroker):
         template_name = cluster_spec.spec.k8_distribution.template_name
         template_revision = cluster_spec.spec.k8_distribution.template_revision
         if not (template_name or template_revision):
-            default_dist = utils.get_default_k8_distribution()
+            default_dist = server_utils.get_default_k8_distribution()
             cluster_spec.spec.k8_distribution = default_dist
             template_name = default_dist.template_name
             template_revision = default_dist.template_revision
@@ -277,7 +279,7 @@ class ClusterService(abstract_broker.AbstractBroker):
             raise e.CseServerError("Scaling down nfs nodes is not supported")
 
         # check if cluster is in a valid state
-        if state != def_utils.DEF_RESOLVED_STATE or phase.is_entity_busy():
+        if state != def_constants.DEF_RESOLVED_STATE or phase.is_entity_busy():
             raise e.CseServerError(
                 f"Cluster {cluster_name} with id {cluster_id} is not in a "
                 f"valid state to be resized. Please contact the administrator")
@@ -409,7 +411,7 @@ class ClusterService(abstract_broker.AbstractBroker):
         phase: DefEntityPhase = DefEntityPhase.from_phase(
             curr_entity.entity.status.phase)
         state: str = curr_entity.state
-        if state != def_utils.DEF_RESOLVED_STATE or phase.is_entity_busy():
+        if state != def_constants.DEF_RESOLVED_STATE or phase.is_entity_busy():
             raise e.CseServerError(
                 f"Cluster {cluster_name} with id {cluster_id} is not in a "
                 f"valid state to be upgraded. Please contact administrator.")
@@ -483,7 +485,7 @@ class ClusterService(abstract_broker.AbstractBroker):
         acl_svc = acl_service.ClusterACLService(cluster_id,
                                                 self.context.client)
         curr_entity: def_models.DefEntity = acl_svc.get_cluster_entity()
-        user_id_names_dict = utils.create_org_user_id_to_name_dict(
+        user_id_names_dict = vcd_utils.create_org_user_id_to_name_dict(
             client=self.context.client,
             org_name=curr_entity.org.name)
 
@@ -581,7 +583,7 @@ class ClusterService(abstract_broker.AbstractBroker):
                                    nodes_to_del=nodes_to_del)
         return curr_entity
 
-    @utils.run_async
+    @thread_utils.run_async
     def _create_cluster_async(self, cluster_id: str,
                               cluster_spec: def_models.NativeEntity):
         try:
@@ -649,7 +651,7 @@ class ClusterService(abstract_broker.AbstractBroker):
             LOGGER.debug(msg)
             self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
             vapp.reload()
-            server_config = utils.get_server_runtime_config()
+            server_config = server_utils.get_server_runtime_config()
             catalog_name = server_config['broker']['catalog']
             try:
                 _add_nodes(self.context.sysadmin_client,
@@ -800,7 +802,7 @@ class ClusterService(abstract_broker.AbstractBroker):
         finally:
             self.context.end()
 
-    @utils.run_async
+    @thread_utils.run_async
     def _monitor_resize(self, cluster_id, cluster_spec):
         """Triggers and monitors one or more async threads of resize.
 
@@ -881,7 +883,7 @@ class ClusterService(abstract_broker.AbstractBroker):
         finally:
             self.context.end()
 
-    @utils.run_async
+    @thread_utils.run_async
     def _create_nodes_async(self, cluster_id: str,
                             cluster_spec: def_models.NativeEntity):
         """Create worker and/or nfs nodes in vCD.
@@ -928,7 +930,7 @@ class ClusterService(abstract_broker.AbstractBroker):
             desired_nfs_count = cluster_spec.spec.nfs.count
             num_nfs_to_add = desired_nfs_count - curr_nfs_count
 
-            server_config = utils.get_server_runtime_config()
+            server_config = server_utils.get_server_runtime_config()
             catalog_name = server_config['broker']['catalog']
             org = vcd_utils.get_org(self.context.client, org_name=org_name)
             ovdc = vcd_utils.get_vdc(self.context.client, vdc_name=ovdc_name, org=org)  # noqa: E501
@@ -1024,7 +1026,7 @@ class ClusterService(abstract_broker.AbstractBroker):
                               message=msg,
                               error_message=str(err))
 
-    @utils.run_async
+    @thread_utils.run_async
     def _delete_cluster_async(self, cluster_name, org_name, ovdc_name,
                               def_entity: def_models.DefEntity = None):
         """Delete the cluster asynchronously.
@@ -1062,7 +1064,7 @@ class ClusterService(abstract_broker.AbstractBroker):
         :rtype: List[dict]
         """
         upgrades = []
-        config = utils.get_server_runtime_config()
+        config = server_utils.get_server_runtime_config()
         for t in config['broker']['templates']:
             if source_template_name in t[LocalTemplateKey.UPGRADE_FROM]:
                 if t[LocalTemplateKey.NAME] == source_template_name and \
@@ -1072,7 +1074,7 @@ class ClusterService(abstract_broker.AbstractBroker):
 
         return upgrades
 
-    @utils.run_async
+    @thread_utils.run_async
     def _upgrade_cluster_async(self, *args,
                                cluster_id: str,
                                template):
@@ -1245,7 +1247,7 @@ class ClusterService(abstract_broker.AbstractBroker):
         finally:
             self.context.end()
 
-    @utils.run_async
+    @thread_utils.run_async
     def _monitor_delete_nodes(self, cluster_id, nodes_to_del):
         """Triggers and monitors delete thread.
 
@@ -1294,7 +1296,7 @@ class ClusterService(abstract_broker.AbstractBroker):
         finally:
             self.context.end()
 
-    @utils.run_async
+    @thread_utils.run_async
     def _delete_nodes_async(self, cluster_id: str,
                             cluster_spec: def_models.NativeEntity = None,
                             nodes_to_del=[]):
@@ -1695,7 +1697,7 @@ def _get_template(name=None, revision=None):
     if (name is None and revision is not None) or (name is not None and revision is None): # noqa: E501
         raise ValueError("If template revision is specified, then template "
                          "name must also be specified (and vice versa).")
-    server_config = utils.get_server_runtime_config()
+    server_config = server_utils.get_server_runtime_config()
     name = name or server_config['broker']['default_template_name']
     revision = revision or server_config['broker']['default_template_revision']
     for template in server_config['broker']['templates']:
@@ -1735,7 +1737,7 @@ def _add_nodes(sysadmin_client, num_nodes, node_type, org, vdc, vapp,
             if storage_profile is not None:
                 storage_profile = vdc.get_storage_profile(storage_profile)
 
-            config = utils.get_server_runtime_config()
+            config = server_utils.get_server_runtime_config()
             cpm = compute_policy_manager.ComputePolicyManager(sysadmin_client,
                                                               log_wire=utils.str_to_bool(config['service']['log_wire']))  # noqa: E501
             sizing_class_href = None

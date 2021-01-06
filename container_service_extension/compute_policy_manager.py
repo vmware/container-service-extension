@@ -15,6 +15,7 @@ import container_service_extension.exceptions as cse_exceptions
 import container_service_extension.logger as logger
 import container_service_extension.pyvcloud_utils as vcd_utils
 from container_service_extension.shared_constants import RequestMethod
+import container_service_extension.thread_utils as thread_utils
 import container_service_extension.utils as utils
 
 # cse compute policy prefix
@@ -641,7 +642,7 @@ class ComputePolicyManager:
             'task_href': task_href
         }
 
-    @utils.run_async
+    @thread_utils.run_async
     def _remove_compute_policy_from_vdc_async(self, *args,
                                               ovdc_id,
                                               compute_policy_href,

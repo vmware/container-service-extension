@@ -14,11 +14,11 @@ from container_service_extension.client.tkgclient.models.tkg_cluster import TkgC
 import container_service_extension.client.tkgclient.rest as tkg_rest
 import container_service_extension.client.utils as client_utils
 import container_service_extension.def_.acl_service as cluster_acl_svc
-import container_service_extension.def_.constants as def_constants
+from container_service_extension.def_.constants import CLUSTER_ACL_LIST_FIELDS
+from container_service_extension.def_.constants import DEF_TKG_ENTITY_TYPE_NSS
+from container_service_extension.def_.constants import DEF_TKG_ENTITY_TYPE_VERSION  # noqa: E501
+from container_service_extension.def_.constants import DEF_VMWARE_VENDOR
 import container_service_extension.def_.models as def_models
-from container_service_extension.def_.utils import DEF_TKG_ENTITY_TYPE_NSS
-from container_service_extension.def_.utils import DEF_TKG_ENTITY_TYPE_VERSION
-from container_service_extension.def_.utils import DEF_VMWARE_VENDOR
 import container_service_extension.exceptions as cse_exceptions
 import container_service_extension.logger as logger
 import container_service_extension.pyvcloud_utils as vcd_utils
@@ -397,7 +397,7 @@ class DEClusterTKG:
         org_href = self._client.get_org_by_name(org).get('href')
         name_to_id: dict = client_utils.create_user_name_to_id_dict(
             self._client, users, org_href)
-        org_user_id_to_name_dict = utils.create_org_user_id_to_name_dict(
+        org_user_id_to_name_dict = vcd_utils.create_org_user_id_to_name_dict(
             self._client, org)
         acl_svc = cluster_acl_svc.ClusterACLService(cluster_id, self._client)
         for acl_entry in acl_svc.list_def_entity_acl_entries():
@@ -453,7 +453,7 @@ class DEClusterTKG:
         if not cluster_id:
             cluster_id = self.get_cluster_id_by_name(cluster_name, org, vdc)
 
-        org_user_id_to_name_dict = utils.create_org_user_id_to_name_dict(
+        org_user_id_to_name_dict = vcd_utils.create_org_user_id_to_name_dict(
             self._client, org)
         acl_svc = cluster_acl_svc.ClusterACLService(cluster_id, self._client)
         page_num = result_count = 0
@@ -470,6 +470,6 @@ class DEClusterTKG:
                 acl_entry = def_models.ClusterAclEntry(**entry)
                 acl_entry.username = org_user_id_to_name_dict.get(acl_entry.memberId)  # noqa: E501
                 acl_values.append(acl_entry.construct_filtered_dict(
-                    include=def_constants.CLUSTER_ACL_LIST_FIELDS))
+                    include=CLUSTER_ACL_LIST_FIELDS))
             result_count += len(values)
             yield acl_values, result_count < result_total

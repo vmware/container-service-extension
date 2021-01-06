@@ -2,6 +2,8 @@
 # Copyright (c) 2019 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 
+"""Contains utility methods for interacting with vSphere."""
+
 from urllib.parse import urlparse
 
 from cachetools import LRUCache

@@ -14,6 +14,7 @@ import container_service_extension.logger as logger
 import container_service_extension.operation_context as ctx
 import container_service_extension.pyvcloud_utils as vcd_utils
 from container_service_extension.server_constants import ThreadLocalData
+import container_service_extension.server_utils as server_utils
 from container_service_extension.shared_constants import ClusterEntityKind
 from container_service_extension.shared_constants import CSE_PAGINATION_DEFAULT_PAGE_SIZE  # noqa: E501
 from container_service_extension.shared_constants import CSE_PAGINATION_FIRST_PAGE_NUMBER  # noqa: E501
@@ -26,6 +27,7 @@ from container_service_extension.telemetry.constants import OperationStatus
 from container_service_extension.telemetry.constants import PayloadKey
 import container_service_extension.telemetry.telemetry_handler as telemetry_handler # noqa: E501
 import container_service_extension.thread_local_data as thread_local_data
+import container_service_extension.thread_utils as thread_utils
 import container_service_extension.utils as utils
 
 
@@ -71,7 +73,7 @@ def update_ovdc(operation_context: ctx.OperationContext,
     # possible to know the operation (enable/disable) without comparing it to
     # current k8s runtimes.
     if ClusterEntityKind.TKG_PLUS.value in ovdc_spec.k8s_runtime and \
-            not utils.is_tkg_plus_enabled():
+            not server_utils.is_tkg_plus_enabled():
         msg = "TKG+ is not enabled on CSE server. Please enable TKG+ in the " \
               "server and try again."
         logger.SERVER_LOGGER.debug(msg)
@@ -105,7 +107,7 @@ def get_ovdc(operation_context: ctx.OperationContext, ovdc_id: str) -> dict:
     }
     telemetry_handler.record_user_action_details(cse_operation=CseOperation.OVDC_INFO, # noqa: E501
                                                  cse_params=cse_params)
-    config = utils.get_server_runtime_config()
+    config = server_utils.get_server_runtime_config()
     log_wire = utils.str_to_bool(config.get('service', {}).get('log_wire'))
     result = asdict(get_ovdc_k8s_runtime_details(operation_context.sysadmin_client, # noqa: E501
                                                  ovdc_id=ovdc_id,
@@ -113,7 +115,7 @@ def get_ovdc(operation_context: ctx.OperationContext, ovdc_id: str) -> dict:
     # TODO: Find a better way to avoid sending remove_cp_from_vms_on_disable
     # flag
     if ClusterEntityKind.TKG_PLUS.value in result['k8s_runtime'] \
-            and not utils.is_tkg_plus_enabled():
+            and not server_utils.is_tkg_plus_enabled():
         result['k8s_runtime'].remove(ClusterEntityKind.TKG_PLUS.value)
     del result['remove_cp_from_vms_on_disable']
     return result
@@ -146,7 +148,7 @@ def list_ovdc(operation_context: ctx.OperationContext,
     num_results = result[PaginationKey.RESULT_TOTAL]
     for ovdc in org_vdcs:
         ovdc_name = ovdc.get('name')
-        config = utils.get_server_runtime_config()
+        config = server_utils.get_server_runtime_config()
         log_wire = utils.str_to_bool(config.get('service', {}).get('log_wire'))
         ovdc_id = vcd_utils.extract_id(ovdc.get('id'))
         ovdc_details = asdict(
@@ -155,7 +157,7 @@ def list_ovdc(operation_context: ctx.OperationContext,
                                          ovdc_name=ovdc_name,
                                          log_wire=log_wire))
         if ClusterEntityKind.TKG_PLUS.value in ovdc_details['k8s_runtime'] \
-                and not utils.is_tkg_plus_enabled():  # noqa: E501
+                and not server_utils.is_tkg_plus_enabled():  # noqa: E501
             ovdc_details['k8s_runtime'].remove(ClusterEntityKind.TKG_PLUS.value)  # noqa: E501
         # TODO: Find a better way to remove remove_cp_from_vms_on_disable
         del ovdc_details['remove_cp_from_vms_on_disable']
@@ -209,7 +211,7 @@ def get_ovdc_k8s_runtime_details(sysadmin_client: vcd_client.Client,
     return def_models.Ovdc(ovdc_name=ovdc_name, ovdc_id=ovdc_id, k8s_runtime=policies) # noqa: E501
 
 
-@utils.run_async
+@thread_utils.run_async
 def _update_ovdc_using_placement_policy_async(operation_context: ctx.OperationContext,  # noqa: E501
                                               task: vcd_task.Task,
                                               task_href,
@@ -237,7 +239,7 @@ def _update_ovdc_using_placement_policy_async(operation_context: ctx.OperationCo
     k8s_runtimes_added = ''
     k8s_runtimes_deleted = ''
     try:
-        config = utils.get_server_runtime_config()
+        config = server_utils.get_server_runtime_config()
         log_wire = utils.str_to_bool(config.get('service', {}).get('log_wire'))
         cpm = compute_policy_manager.ComputePolicyManager(
             operation_context.sysadmin_client, log_wire=log_wire)

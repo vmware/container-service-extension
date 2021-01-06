@@ -5,6 +5,7 @@ from dataclasses import asdict
 from dataclasses import dataclass
 from typing import List
 
+import container_service_extension.def_.constants as def_constants
 import container_service_extension.def_.utils as def_utils
 import container_service_extension.shared_constants as shared_constants
 
@@ -14,9 +15,9 @@ class DefInterface:
     """Provides interface for the defined entity type."""
 
     name: str
-    vendor: str = def_utils.DEF_VMWARE_VENDOR
-    nss: str = def_utils.DEF_VMWARE_INTERFACE_NSS
-    version: str = def_utils.DEF_VMWARE_INTERFACE_VERSION
+    vendor: str = def_constants.DEF_VMWARE_VENDOR
+    nss: str = def_constants.DEF_VMWARE_INTERFACE_NSS
+    version: str = def_constants.DEF_VMWARE_INTERFACE_VERSION
     id: str = None
     readonly: bool = False
 
@@ -43,9 +44,9 @@ class DefEntityType:
     description: str
     schema: dict
     interfaces: list
-    vendor: str = def_utils.DEF_CSE_VENDOR
-    nss: str = def_utils.DEF_NATIVE_ENTITY_TYPE_NSS
-    version: str = def_utils.DEF_NATIVE_ENTITY_TYPE_VERSION
+    vendor: str = def_constants.DEF_CSE_VENDOR
+    nss: str = def_constants.DEF_NATIVE_ENTITY_TYPE_NSS
+    version: str = def_constants.DEF_NATIVE_ENTITY_TYPE_VERSION
     id: str = None
     externalId: str = None
     readonly: bool = False
@@ -237,11 +238,11 @@ class NativeEntity:
     metadata: Metadata
     spec: ClusterSpec
     status: Status = Status()
-    kind: str = def_utils.DEF_NATIVE_ENTITY_TYPE_NSS
+    kind: str = def_constants.DEF_NATIVE_ENTITY_TYPE_NSS
     api_version: str = ''
 
     def __init__(self, metadata: Metadata, spec: ClusterSpec, status=Status(),
-                 kind: str = def_utils.DEF_VMWARE_INTERFACE_NSS,
+                 kind: str = def_constants.DEF_VMWARE_INTERFACE_NSS,
                  api_version: str = ''):
 
         self.metadata = Metadata(**metadata) \

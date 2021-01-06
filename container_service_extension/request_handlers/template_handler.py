@@ -3,9 +3,9 @@
 # SPDX-License-Identifier: BSD-2-Clause
 
 from container_service_extension.server_constants import LocalTemplateKey
+import container_service_extension.server_utils as server_utils
 from container_service_extension.telemetry.constants import CseOperation
 from container_service_extension.telemetry.telemetry_handler import record_user_action_telemetry  # noqa: E501
-import container_service_extension.utils as utils
 
 
 @record_user_action_telemetry(cse_operation=CseOperation.TEMPLATE_LIST_CLIENT_SIDE)  # noqa: E501
@@ -14,7 +14,7 @@ def template_list(request_data, op_ctx):
 
     :return: List of dictionaries with template info.
     """
-    config = utils.get_server_runtime_config()
+    config = server_utils.get_server_runtime_config()
     templates = []
     default_template_name = config['broker']['default_template_name']
     default_template_revision = str(config['broker']['default_template_revision'])  # noqa: E501

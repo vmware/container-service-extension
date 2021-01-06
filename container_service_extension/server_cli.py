@@ -46,6 +46,7 @@ from container_service_extension.server_constants import LocalTemplateKey
 from container_service_extension.server_constants import RemoteTemplateKey
 from container_service_extension.server_constants import SUPPORTED_VCD_API_VERSIONS  # noqa: E501
 from container_service_extension.server_constants import SYSTEM_ORG_NAME
+import container_service_extension.server_utils as server_utils
 import container_service_extension.service as cse_service
 from container_service_extension.shared_constants import ClusterEntityKind
 from container_service_extension.shared_constants import RequestMethod
@@ -59,11 +60,6 @@ from container_service_extension.telemetry.telemetry_handler import \
 from container_service_extension.telemetry.telemetry_utils \
     import store_telemetry_settings
 import container_service_extension.utils as utils
-from container_service_extension.utils import check_python_version
-from container_service_extension.utils import ConsoleMessagePrinter
-from container_service_extension.utils import NullPrinter
-from container_service_extension.utils import prompt_text
-from container_service_extension.utils import str_to_bool
 
 
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
@@ -220,7 +216,7 @@ def cli(ctx):
             prompted for password to encrypt/decrypt the CSE configuration files.
     """  # noqa: E501
     if ctx.invoked_subcommand is None:
-        console_message_printer = ConsoleMessagePrinter()
+        console_message_printer = utils.ConsoleMessagePrinter()
         console_message_printer.general_no_color(ctx.get_help())
         return
 
@@ -324,19 +320,19 @@ def version(ctx):
 def create_service_role(ctx, vcd_host, verify_ssl_certs):
     """Create CSE service Role."""
     SERVER_CLI_LOGGER.debug(f"Executing command: {ctx.command_path}")
-    console_message_printer = ConsoleMessagePrinter()
+    console_message_printer = utils.ConsoleMessagePrinter()
     requests.packages.urllib3.disable_warnings()
 
     # The console_message_printer is not being passed to the python version
     # check, because we want to suppress the version check messages from being
     # printed onto console.
-    check_python_version()
+    utils.check_python_version()
 
     # Prompt user for administrator username/password
-    admin_username = prompt_text(USERNAME_FOR_SYSTEM_ADMINISTRATOR,
-                                 color='green', hide_input=False)
-    admin_password = prompt_text(PASSWORD_FOR_SYSTEM_ADMINISTRATOR + str(admin_username), # noqa: E501
-                                 color='green', hide_input=True)
+    admin_username = utils.prompt_text(USERNAME_FOR_SYSTEM_ADMINISTRATOR,
+                                       color='green', hide_input=False)
+    admin_password = utils.prompt_text(PASSWORD_FOR_SYSTEM_ADMINISTRATOR + str(admin_username), # noqa: E501
+                                       color='green', hide_input=True)
 
     msg = f"Connecting to vCD: {vcd_host}"
     console_message_printer.general_no_color(msg)
@@ -419,11 +415,11 @@ def create_service_role(ctx, vcd_host, verify_ssl_certs):
 def sample(ctx, output, pks_config, api_version):
     """Display sample CSE config file contents."""
     SERVER_CLI_LOGGER.debug(f"Executing command: {ctx.command_path}")
-    console_message_printer = ConsoleMessagePrinter()
+    console_message_printer = utils.ConsoleMessagePrinter()
     # The console_message_printer is not being passed to the python version
     # check, because we want to suppress the version check messages from being
     # printed onto console, and pollute the sample config.
-    check_python_version()
+    utils.check_python_version()
 
     try:
         api_version = float(api_version)
@@ -471,12 +467,12 @@ def check(ctx, config_file_path, pks_config_file_path, skip_config_decryption,
           check_install):
     """Validate CSE config file."""
     SERVER_CLI_LOGGER.debug(f"Executing command: {ctx.command_path}")
-    console_message_printer = ConsoleMessagePrinter()
-    check_python_version(console_message_printer)
+    console_message_printer = utils.ConsoleMessagePrinter()
+    utils.check_python_version(console_message_printer)
 
     password = None
     if not skip_config_decryption:
-        password = os.getenv('CSE_CONFIG_PASSWORD') or prompt_text(
+        password = os.getenv('CSE_CONFIG_PASSWORD') or utils.prompt_text(
             PASSWORD_FOR_CONFIG_DECRYPTION_MSG,
             color='green', hide_input=True)
 
@@ -547,12 +543,12 @@ def check(ctx, config_file_path, pks_config_file_path, skip_config_decryption,
 def decrypt(ctx, input_file, output_file):
     """Decrypt CSE configuration file."""
     SERVER_CLI_LOGGER.debug(f"Executing command: {ctx.command_path}")
-    console_message_printer = ConsoleMessagePrinter()
-    check_python_version(console_message_printer)
+    console_message_printer = utils.ConsoleMessagePrinter()
+    utils.check_python_version(console_message_printer)
 
     try:
         try:
-            password = os.getenv('CSE_CONFIG_PASSWORD') or prompt_text(
+            password = os.getenv('CSE_CONFIG_PASSWORD') or utils.prompt_text(
                 PASSWORD_FOR_CONFIG_DECRYPTION_MSG,
                 hide_input=True,
                 color='green')
@@ -583,12 +579,12 @@ def decrypt(ctx, input_file, output_file):
 def encrypt(ctx, input_file, output_file):
     """Encrypt CSE configuration file."""
     SERVER_CLI_LOGGER.debug(f"Executing command: {ctx.command_path}")
-    console_message_printer = ConsoleMessagePrinter()
-    check_python_version(console_message_printer)
+    console_message_printer = utils.ConsoleMessagePrinter()
+    utils.check_python_version(console_message_printer)
 
     try:
         try:
-            password = os.getenv('CSE_CONFIG_PASSWORD') or prompt_text(
+            password = os.getenv('CSE_CONFIG_PASSWORD') or utils.prompt_text(
                 PASSWORD_FOR_CONFIG_ENCRYPTION_MSG,
                 hide_input=True,
                 color='green')
@@ -659,8 +655,8 @@ def install(ctx, config_file_path, pks_config_file_path,
     # an Exception will be thrown if TKG+ template is present in the
     # remote_template_cookbook.
     SERVER_CLI_LOGGER.debug(f"Executing command: {ctx.command_path}")
-    console_message_printer = ConsoleMessagePrinter()
-    check_python_version(console_message_printer)
+    console_message_printer = utils.ConsoleMessagePrinter()
+    utils.check_python_version(console_message_printer)
 
     if retain_temp_vapp and not ssh_key_file:
         msg = "Must provide ssh-key file (using --ssh-key OR -k) if " \
@@ -676,7 +672,7 @@ def install(ctx, config_file_path, pks_config_file_path,
 
     password = None
     if not skip_config_decryption:
-        password = os.getenv('CSE_CONFIG_PASSWORD') or prompt_text(
+        password = os.getenv('CSE_CONFIG_PASSWORD') or utils.prompt_text(
             PASSWORD_FOR_CONFIG_DECRYPTION_MSG,
             color='green', hide_input=True)
 
@@ -723,13 +719,13 @@ def install(ctx, config_file_path, pks_config_file_path,
 def pks_configure(ctx, pks_config_file_path, skip_config_decryption):
 
     SERVER_CLI_LOGGER.debug(f"Executing command: {ctx.command_path}")
-    console_message_printer = ConsoleMessagePrinter()
-    check_python_version(console_message_printer)
+    console_message_printer = utils.ConsoleMessagePrinter()
+    utils.check_python_version(console_message_printer)
     requests.packages.urllib3.disable_warnings()
 
     password = None
     if not skip_config_decryption:
-        password = os.getenv('CSE_CONFIG_PASSWORD') or prompt_text(
+        password = os.getenv('CSE_CONFIG_PASSWORD') or utils.prompt_text(
             PASSWORD_FOR_CONFIG_DECRYPTION_MSG,
             color='green', hide_input=True)
     try:
@@ -797,12 +793,12 @@ def run(ctx, config_file_path, pks_config_file_path, skip_check,
         skip_config_decryption):
     """Run CSE service."""
     SERVER_CLI_LOGGER.debug(f"Executing command: {ctx.command_path}")
-    console_message_printer = ConsoleMessagePrinter()
-    check_python_version(console_message_printer)
+    console_message_printer = utils.ConsoleMessagePrinter()
+    utils.check_python_version(console_message_printer)
 
     password = None
     if not skip_config_decryption:
-        password = os.getenv('CSE_CONFIG_PASSWORD') or prompt_text(
+        password = os.getenv('CSE_CONFIG_PASSWORD') or utils.prompt_text(
             PASSWORD_FOR_CONFIG_DECRYPTION_MSG,
             color='green', hide_input=True)
 
@@ -911,8 +907,8 @@ def upgrade(ctx, config_file_path, skip_config_decryption,
     # 1. If there is an existing TKG+ template
     # 2. If remote template cookbook contains a TKG+ template.
     SERVER_CLI_LOGGER.debug(f"Executing command: {ctx.command_path}")
-    console_message_printer = ConsoleMessagePrinter()
-    check_python_version(console_message_printer)
+    console_message_printer = utils.ConsoleMessagePrinter()
+    utils.check_python_version(console_message_printer)
 
     if retain_temp_vapp and not ssh_key_file:
         msg = "Must provide ssh-key file (using --ssh-key OR -k) if " \
@@ -928,7 +924,7 @@ def upgrade(ctx, config_file_path, skip_config_decryption,
 
     password = None
     if not skip_config_decryption:
-        password = os.getenv('CSE_CONFIG_PASSWORD') or prompt_text(
+        password = os.getenv('CSE_CONFIG_PASSWORD') or utils.prompt_text(
             PASSWORD_FOR_CONFIG_DECRYPTION_MSG,
             color='green', hide_input=True)
 
@@ -992,10 +988,10 @@ def list_template(ctx, config_file_path, skip_config_decryption,
                   display_option):
     """List CSE k8s templates."""
     SERVER_CLI_LOGGER.debug(f"Executing command: {ctx.command_path}")
-    console_message_printer = ConsoleMessagePrinter()
+    console_message_printer = utils.ConsoleMessagePrinter()
     # Not passing the console_message_printer, because we want to suppress
     # the python version check messages from being printed onto console.
-    check_python_version()
+    utils.check_python_version()
 
     config_dict = None
     try:
@@ -1022,7 +1018,7 @@ def list_template(ctx, config_file_path, skip_config_decryption,
             client = None
             try:
                 log_wire_file = None
-                log_wire = str_to_bool(config_dict['service'].get('log_wire'))
+                log_wire = utils.str_to_bool(config_dict['service'].get('log_wire'))  # noqa: E501
                 if log_wire:
                     log_wire_file = SERVER_DEBUG_WIRELOG_FILEPATH
 
@@ -1032,7 +1028,7 @@ def list_template(ctx, config_file_path, skip_config_decryption,
 
                 org_name = config_dict['broker']['org']
                 catalog_name = config_dict['broker']['catalog']
-                is_tkg_plus_enabled = utils.is_tkg_plus_enabled(config_dict)
+                is_tkg_plus_enabled = server_utils.is_tkg_plus_enabled(config_dict)  # noqa: E501
                 local_template_definitions = \
                     ltm.get_all_k8s_local_template_definition(
                         client=client,
@@ -1070,7 +1066,7 @@ def list_template(ctx, config_file_path, skip_config_decryption,
                         template['default'] = 'Yes'
                     else:
                         template['default'] = 'No'
-                    template['deprecated'] = 'Yes' if str_to_bool(definition[LocalTemplateKey.DEPRECATED]) else 'No' # noqa: E501
+                    template['deprecated'] = 'Yes' if utils.str_to_bool(definition[LocalTemplateKey.DEPRECATED]) else 'No' # noqa: E501
                     template['cpu'] = definition[LocalTemplateKey.CPU]
                     template['memory'] = definition[LocalTemplateKey.MEMORY]
                     template['description'] = \
@@ -1098,7 +1094,7 @@ def list_template(ctx, config_file_path, skip_config_decryption,
                 template['remote'] = 'Yes'
                 if display_option is DISPLAY_ALL:
                     template['default'] = 'No'
-                template['deprecated'] = 'Yes' if str_to_bool(definition[RemoteTemplateKey.DEPRECATED]) else 'No' # noqa: E501
+                template['deprecated'] = 'Yes' if utils.str_to_bool(definition[RemoteTemplateKey.DEPRECATED]) else 'No' # noqa: E501
                 template['cpu'] = definition[RemoteTemplateKey.CPU]
                 template['memory'] = definition[RemoteTemplateKey.MEMORY]
                 template['description'] = \
@@ -1213,8 +1209,8 @@ def install_cse_template(ctx, template_name, template_revision,
     # NOTE: For CSE 3.0, if `enable_tkg_plus` flag in config is set to false,
     # Throw an error if TKG+ template creation is issued.
     SERVER_CLI_LOGGER.debug(f"Executing command: {ctx.command_path}")
-    console_message_printer = ConsoleMessagePrinter()
-    check_python_version(console_message_printer)
+    console_message_printer = utils.ConsoleMessagePrinter()
+    utils.check_python_version(console_message_printer)
 
     if retain_temp_vapp and not ssh_key_file:
         msg = "Must provide ssh-key file (using --ssh-key OR -k) if " \
@@ -1226,7 +1222,7 @@ def install_cse_template(ctx, template_name, template_revision,
 
     password = None
     if not skip_config_decryption:
-        password = os.getenv('CSE_CONFIG_PASSWORD') or prompt_text(
+        password = os.getenv('CSE_CONFIG_PASSWORD') or utils.prompt_text(
             PASSWORD_FOR_CONFIG_DECRYPTION_MSG,
             color='green', hide_input=True)
 
@@ -1288,8 +1284,8 @@ def register_ui_plugin(ctx, plugin_file_path, config_file_path,
                        skip_config_decryption):
     """."""
     SERVER_CLI_LOGGER.debug(f"Executing command: {ctx.command_path}")
-    console_message_printer = ConsoleMessagePrinter()
-    check_python_version(console_message_printer)
+    console_message_printer = utils.ConsoleMessagePrinter()
+    utils.check_python_version(console_message_printer)
 
     client = None
     tempdir = None
@@ -1330,7 +1326,7 @@ def register_ui_plugin(ctx, plugin_file_path, config_file_path,
         }
 
         log_wire_file = None
-        log_wire = str_to_bool(config_dict['service'].get('log_wire'))
+        log_wire = utils.str_to_bool(config_dict['service'].get('log_wire'))
         if log_wire:
             log_wire_file = SERVER_DEBUG_WIRELOG_FILEPATH
 
@@ -1439,8 +1435,8 @@ def deregister_ui_plugin(ctx, plugin_id, config_file_path,
                          skip_config_decryption):
     """."""
     SERVER_CLI_LOGGER.debug(f"Executing command: {ctx.command_path}")
-    console_message_printer = ConsoleMessagePrinter()
-    check_python_version(console_message_printer)
+    console_message_printer = utils.ConsoleMessagePrinter()
+    utils.check_python_version(console_message_printer)
 
     client = None
     try:
@@ -1454,7 +1450,7 @@ def deregister_ui_plugin(ctx, plugin_id, config_file_path,
             msg_update_callback=console_message_printer)
 
         log_filename = None
-        log_wire = str_to_bool(config_dict['service'].get('log_wire'))
+        log_wire = utils.str_to_bool(config_dict['service'].get('log_wire'))
         if log_wire:
             log_filename = SERVER_CLI_WIRELOG_FILEPATH
 
@@ -1498,10 +1494,10 @@ def deregister_ui_plugin(ctx, plugin_id, config_file_path,
 def list_ui_plugin(ctx, config_file_path, skip_config_decryption):
     """."""
     SERVER_CLI_LOGGER.debug(f"Executing command: {ctx.command_path}")
-    console_message_printer = ConsoleMessagePrinter()
+    console_message_printer = utils.ConsoleMessagePrinter()
     # Suppress the python version check message from being printed on
     # console
-    check_python_version()
+    utils.check_python_version()
 
     client = None
     try:
@@ -1515,7 +1511,7 @@ def list_ui_plugin(ctx, config_file_path, skip_config_decryption):
             msg_update_callback=console_message_printer)
 
         log_filename = None
-        log_wire = str_to_bool(config_dict['service'].get('log_wire'))
+        log_wire = utils.str_to_bool(config_dict['service'].get('log_wire'))
         if log_wire:
             log_filename = SERVER_DEBUG_WIRELOG_FILEPATH
 
@@ -1548,10 +1544,10 @@ def list_ui_plugin(ctx, config_file_path, skip_config_decryption):
 
 def _get_unvalidated_config(config_file_path,
                             skip_config_decryption,
-                            msg_update_callback=NullPrinter()):
+                            msg_update_callback=utils.NullPrinter()):
     password = None
     if not skip_config_decryption:
-        password = os.getenv('CSE_CONFIG_PASSWORD') or prompt_text(
+        password = os.getenv('CSE_CONFIG_PASSWORD') or utils.prompt_text(
             PASSWORD_FOR_CONFIG_DECRYPTION_MSG,
             color='green', hide_input=True)
 

@@ -50,6 +50,7 @@ from container_service_extension.server_constants import K8S_PROVIDER_KEY
 from container_service_extension.server_constants import K8sProvider
 from container_service_extension.server_constants import KwargKey
 from container_service_extension.server_constants import SYSTEM_ORG_NAME
+import container_service_extension.server_utils as server_utils
 from container_service_extension.shared_constants import RequestKey
 from container_service_extension.uaaclient.uaaclient import UaaClient
 import container_service_extension.utils as utils
@@ -105,11 +106,11 @@ class PksBroker(AbstractBroker):
             self.proxy_uri = f"http://{pks_ctx['proxy']}:80"
         self.compute_profile = pks_ctx.get(PKS_COMPUTE_PROFILE_KEY, None)
         self.nsxt_server = \
-            utils.get_pks_cache().get_nsxt_info(pks_ctx.get('vc'))
+            server_utils.get_pks_cache().get_nsxt_info(pks_ctx.get('vc'))
         self.nsxt_client = None
         self.pks_wire_logger = NULL_LOGGER
         nsxt_wire_logger = NULL_LOGGER
-        config = utils.get_server_runtime_config()
+        config = server_utils.get_server_runtime_config()
         if utils.str_to_bool(config['service'].get('log_wire')):
             nsxt_wire_logger = SERVER_NSXT_WIRE_LOGGER
             self.pks_wire_logger = SERVER_PKS_WIRE_LOGGER

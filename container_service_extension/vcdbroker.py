@@ -39,14 +39,17 @@ from container_service_extension.server_constants import NodeType
 from container_service_extension.server_constants import ScriptFile
 from container_service_extension.server_constants import SYSTEM_ORG_NAME
 from container_service_extension.server_constants import ThreadLocalData
-from container_service_extension.shared_constants import CSE_PAGINATION_DEFAULT_PAGE_SIZE, PaginationKey  # noqa: E501
+from container_service_extension.shared_constants import CSE_PAGINATION_DEFAULT_PAGE_SIZE  # noqa: E501
 from container_service_extension.shared_constants import CSE_PAGINATION_FIRST_PAGE_NUMBER  # noqa: E501
+from container_service_extension.shared_constants import PaginationKey
+import container_service_extension.server_utils as server_utils
 from container_service_extension.shared_constants import RequestKey
 from container_service_extension.telemetry.constants import CseOperation
 from container_service_extension.telemetry.constants import PayloadKey
 from container_service_extension.telemetry.telemetry_handler import \
     record_user_action_details
 import container_service_extension.thread_local_data as thread_local_data
+import container_service_extension.thread_utils as thread_utils
 import container_service_extension.utils as utils
 import container_service_extension.vsphere_utils as vs_utils
 
@@ -257,7 +260,7 @@ class VcdBroker(abstract_broker.AbstractBroker):
         src_rev = cluster['template_revision']
 
         upgrades = []
-        config = utils.get_server_runtime_config()
+        config = server_utils.get_server_runtime_config()
         for t in config['broker']['templates']:
             if src_name in t[LocalTemplateKey.UPGRADE_FROM]:
                 if t[LocalTemplateKey.NAME] == src_name and int(t[LocalTemplateKey.REVISION]) <= int(src_rev): # noqa: E501
@@ -835,7 +838,7 @@ class VcdBroker(abstract_broker.AbstractBroker):
         }
 
     # all parameters following '*args' are required and keyword-only
-    @utils.run_async
+    @thread_utils.run_async
     def _create_cluster_async(self, *args,
                               org_name, ovdc_name, cluster_name, cluster_id,
                               template_name, template_revision, num_workers,
@@ -891,7 +894,7 @@ class VcdBroker(abstract_broker.AbstractBroker):
             LOGGER.debug(msg)
             self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
             vapp.reload()
-            server_config = utils.get_server_runtime_config()
+            server_config = server_utils.get_server_runtime_config()
             catalog_name = server_config['broker']['catalog']
             try:
                 _add_nodes(self.context.client,
@@ -1019,7 +1022,7 @@ class VcdBroker(abstract_broker.AbstractBroker):
             self.context.end()
 
     # all parameters following '*args' are required and keyword-only
-    @utils.run_async
+    @thread_utils.run_async
     def _create_nodes_async(self, *args,
                             cluster_name, cluster_vdc_href, vapp_href,
                             cluster_id, template_name, template_revision,
@@ -1032,7 +1035,7 @@ class VcdBroker(abstract_broker.AbstractBroker):
             vapp = vcd_vapp.VApp(self.context.client, href=vapp_href)
             template = _get_template(name=template_name,
                                      revision=template_revision)
-            server_config = utils.get_server_runtime_config()
+            server_config = server_utils.get_server_runtime_config()
             catalog_name = server_config['broker']['catalog']
 
             node_type = NodeType.WORKER
@@ -1115,7 +1118,7 @@ class VcdBroker(abstract_broker.AbstractBroker):
             self.context.end()
 
     # all parameters following '*args' are required and keyword-only
-    @utils.run_async
+    @thread_utils.run_async
     def _delete_nodes_async(self, *args,
                             cluster_name, vapp_href, node_names_list):
         try:
@@ -1160,7 +1163,7 @@ class VcdBroker(abstract_broker.AbstractBroker):
             self.context.end()
 
     # all parameters following '*args' are required and keyword-only
-    @utils.run_async
+    @thread_utils.run_async
     def _delete_cluster_async(self, *args, cluster_name, cluster_vdc_href):
         try:
             msg = f"Deleting cluster '{cluster_name}'"
@@ -1180,7 +1183,7 @@ class VcdBroker(abstract_broker.AbstractBroker):
             self.context.end()
 
     # all parameters following '*args' are required and keyword-only
-    @utils.run_async
+    @thread_utils.run_async
     def _upgrade_cluster_async(self, *args, cluster, template):
         try:
             cluster_name = cluster['name']
@@ -1745,7 +1748,7 @@ def _get_template(name=None, revision=None):
     if (name is None and revision is not None) or (name is not None and revision is None): # noqa: E501
         raise ValueError("If template revision is specified, then template "
                          "name must also be specified (and vice versa).")
-    server_config = utils.get_server_runtime_config()
+    server_config = server_utils.get_server_runtime_config()
     name = name or server_config['broker']['default_template_name']
     revision = revision or server_config['broker']['default_template_revision']
     for template in server_config['broker']['templates']:

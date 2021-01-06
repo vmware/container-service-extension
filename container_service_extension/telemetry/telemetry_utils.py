@@ -17,10 +17,10 @@ from container_service_extension.server_constants import MQTT_EXTENSION_VENDOR
 from container_service_extension.server_constants import MQTT_EXTENSION_VERSION
 from container_service_extension.server_constants import MQTTExtKey
 from container_service_extension.server_constants import SYSTEM_ORG_NAME
+from container_service_extension.server_utils import should_use_mqtt_protocol
 from container_service_extension.telemetry.constants import COLLECTOR_ID
 from container_service_extension.telemetry.constants import VAC_URL
 from container_service_extension.utils import NullPrinter
-from container_service_extension.utils import should_use_mqtt_protocol
 
 
 CEIP_HEADER_NAME = "x-vmware-vcloud-ceip-id"

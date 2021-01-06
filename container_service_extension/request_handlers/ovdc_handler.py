@@ -18,6 +18,7 @@ from container_service_extension.server_constants import CseOperation as CseServ
 from container_service_extension.server_constants import K8S_PROVIDER_KEY
 from container_service_extension.server_constants import K8sProvider
 from container_service_extension.server_constants import ThreadLocalData
+import container_service_extension.server_utils as server_utils
 from container_service_extension.shared_constants import ComputePolicyAction
 from container_service_extension.shared_constants import CSE_PAGINATION_DEFAULT_PAGE_SIZE  # noqa: E501
 from container_service_extension.shared_constants import CSE_PAGINATION_FIRST_PAGE_NUMBER  # noqa: E501
@@ -30,6 +31,7 @@ from container_service_extension.telemetry.telemetry_handler import record_user_
 from container_service_extension.telemetry.telemetry_handler import record_user_action_details  # noqa: E501
 from container_service_extension.telemetry.telemetry_handler import record_user_action_telemetry  # noqa: E501
 import container_service_extension.thread_local_data as thread_local_data
+import container_service_extension.thread_utils as thread_utils
 import container_service_extension.utils as utils
 
 SYSTEM_DEFAULT_COMPUTE_POLICY_NAME = "System Default"
@@ -158,12 +160,12 @@ def ovdc_list(request_data, op_ctx: ctx.OperationContext):
     prev_page_uri = vcd_utils.create_cse_page_uri(op_ctx.client,
                                                   api_path,
                                                   vcd_uri=prev_page_uri)
-    return utils.construct_paginated_response(values=ovdcs,
-                                              result_total=result_total,
-                                              page_number=page_number,
-                                              page_size=page_size,
-                                              next_page_uri=next_page_uri,
-                                              prev_page_uri=prev_page_uri)
+    return server_utils.construct_paginated_response(values=ovdcs,
+                                                     result_total=result_total,
+                                                     page_number=page_number,
+                                                     page_size=page_size,
+                                                     next_page_uri=next_page_uri,  # noqa: E501
+                                                     prev_page_uri=prev_page_uri)  # noqa: E501
 
 
 @record_user_action_telemetry(cse_operation=CseOperation.OVDC_COMPUTE_POLICY_LIST)  # noqa: E501
@@ -180,7 +182,7 @@ def ovdc_compute_policy_list(request_data,
     ]
     req_utils.validate_payload(request_data, required)
 
-    config = utils.get_server_runtime_config()
+    config = server_utils.get_server_runtime_config()
     cpm = compute_policy_manager.ComputePolicyManager(
         op_ctx.sysadmin_client,
         log_wire=utils.str_to_bool(config['service'].get('log_wire')))
@@ -222,7 +224,7 @@ def ovdc_compute_policy_update(request_data,
     ovdc_id = validated_data[RequestKey.OVDC_ID]
     remove_compute_policy_from_vms = validated_data[RequestKey.REMOVE_COMPUTE_POLICY_FROM_VMS] # noqa: E501
     try:
-        config = utils.get_server_runtime_config()
+        config = server_utils.get_server_runtime_config()
         cpm = compute_policy_manager.ComputePolicyManager(
             op_ctx.sysadmin_client,
             log_wire=utils.str_to_bool(config['service'].get('log_wire'))) # noqa: E501
@@ -280,7 +282,7 @@ def ovdc_compute_policy_update(request_data,
         raise err
 
 
-@utils.run_async
+@thread_utils.run_async
 def _follow_task(op_ctx: ctx.OperationContext, task_href: str, ovdc_id: str):
     try:
         task = vcd_task.Task(client=op_ctx.sysadmin_client)
