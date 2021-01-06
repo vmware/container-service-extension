@@ -101,7 +101,7 @@ def watchdog_thread_run(service_obj, num_processors):
 
 def verify_version_compatibility(sysadmin_client: Client,
                                  target_vcd_api_version, is_mqtt_extension):
-    cse_version = utils.get_installed_cse_version()
+    cse_version = server_utils.get_installed_cse_version()
     ext_cse_version, ext_vcd_api_version = \
         configure_cse.parse_cse_extension_description(
             sysadmin_client, is_mqtt_extension)
