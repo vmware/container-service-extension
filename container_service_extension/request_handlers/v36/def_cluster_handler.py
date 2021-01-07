@@ -24,7 +24,7 @@ def cluster_update(data: dict, op_ctx: ctx.OperationContext):
     """
     svc = cluster_svc.ClusterService(op_ctx)
     cluster_id = data[RequestKey.CLUSTER_ID]
-    cluster_entity_spec = def_models.ClusterEntity(**data[RequestKey.INPUT_SPEC])  # noqa: E501
+    cluster_entity_spec = def_models.NativeEntity(**data[RequestKey.INPUT_SPEC])  # noqa: E501
     curr_entity = svc.entity_svc.get_entity(cluster_id)
     is_upgrade_operation = \
         request_utils.validate_cluster_update_request_and_check_cluster_upgrade(  # noqa: E501

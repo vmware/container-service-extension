@@ -155,7 +155,7 @@ class ApiClient(object):
         self.last_response = response_data
 
         return_data = response_data
-        additional_data = {}
+        additional_data = None
         if _preload_content:
             # deserialize response data
             if response_type:
@@ -241,21 +241,13 @@ class ApiClient(object):
             data = data['entity']
             del additional_data['entity']
         elif response_type == 'list[TkgCluster]' and method == 'GET':
-            response_data = data.copy()
             def_entities = data['values']
-            entity_details = []
+            additional_data = []
             data = []
             for def_entity in def_entities:
                 data.append(def_entity['entity'])
                 del def_entity['entity']
-                entity_details.append(def_entity)
-            additional_data = {
-                'page': int(response_data['page']),
-                'pageSize': int(response_data['pageSize']),
-                'resultTotal': int(response_data['resultTotal']),
-                'pageCount': int(response_data['pageCount']),
-                'entityDetails': entity_details
-            }
+                additional_data.append(def_entity)
         return self.__deserialize(data, response_type), additional_data
 
     def __deserialize(self, data, klass):

@@ -94,17 +94,18 @@ class DECluster:
                         filters=filters,
                         page_number=page_number,
                         page_size=page_size)
-                    cluster_def_entities: List[def_models.GenericClusterDefEntity] = clusters_page_results[PaginationKey.VALUES]  # noqa: E501
+                    # Get the list of cluster defined entities
+                    entities: List[def_models.GenericClusterEntity] = clusters_page_results[PaginationKey.VALUES]  # noqa: E501
                     clusters = []
-                    for def_entity in cluster_def_entities:
-                        entity = def_entity.entity
-                        logger.CLIENT_LOGGER.debug(f"Native Defined entity list from server: {def_entity}")  # noqa: E501
+                    for de in entities:
+                        entity = de.entity
+                        logger.CLIENT_LOGGER.debug(f"Native Defined entity list from server: {entity}")  # noqa: E501
                         cluster = {
-                            cli_constants.CLIOutputKey.CLUSTER_NAME.value: def_entity.name,  # noqa: E501
-                            cli_constants.CLIOutputKey.ORG.value: def_entity.org.name, # noqa: E501
-                            cli_constants.CLIOutputKey.OWNER.value: def_entity.owner.name  # noqa: E501
+                            cli_constants.CLIOutputKey.CLUSTER_NAME.value: de.name,  # noqa: E501
+                            cli_constants.CLIOutputKey.ORG.value: de.org.name, # noqa: E501
+                            cli_constants.CLIOutputKey.OWNER.value: de.owner.name  # noqa: E501
                         }
-                        if type(entity) == def_models.ClusterEntity:
+                        if type(entity) == def_models.NativeEntity:
                             cluster[cli_constants.CLIOutputKey.VDC.value] = \
                                 entity.metadata.ovdc_name
                             cluster[cli_constants.CLIOutputKey.K8S_RUNTIME.value] = entity.kind  # noqa: E501

@@ -189,7 +189,7 @@ class ClusterSpec:
 
 
 @dataclass()
-class ClusterEntity:
+class NativeEntity:
     """Represents the Native Cluster entity.
 
     If dictionaries are passed as arguments, the constructor auto-converts
@@ -273,7 +273,7 @@ class DefEntity:
     """
 
     name: str
-    entity: ClusterEntity
+    entity: NativeEntity
     id: str = None
     entityType: str = None
     externalId: str = None
@@ -281,10 +281,10 @@ class DefEntity:
     owner: Owner = None
     org: Org = None
 
-    def __init__(self, entity: ClusterEntity, name: str = None, id: str = None,
+    def __init__(self, entity: NativeEntity, name: str = None, id: str = None,
                  entityType: str = None, externalId: str = None,
                  state: str = None, owner: Owner = None, org: Org = None):
-        self.entity = ClusterEntity(**entity) if isinstance(entity, dict) else entity  # noqa: E501
+        self.entity = NativeEntity(**entity) if isinstance(entity, dict) else entity  # noqa: E501
         self.name = name or self.entity.metadata.cluster_name
         self.id = id
         self.entityType = entityType
@@ -325,24 +325,25 @@ class ClusterAclEntry:
 # NOTE: Only used for cluster list operation to get entities by interface
 # include the following properties:
 @dataclass()
-class GenericClusterDefEntity:
+class GenericClusterEntity:
+    # Properties being used for List operation attributes representiing them
+    # for native and TKG clusters:
     # name:
-    #   de.name
+    #   def_entity.name
     # vdc:
-    #   de.entity.metadata.ovdc_name for native
-    #   de.entity.metadata.virtual_data_center_name
+    #   def_entity.entity.metadata.ovdc_name for native
+    #   de_entity.entity.metadata.virtualDataCenterName for TKG
     # org:
-    #   de.org.name
+    #   def_entity.org.name for both native and TKG
     # runtime:
-    #   de.entity.kind
+    #   def_entity.entity.kind for both native and TKG
     # version:
-    #   de.entity.status.kubernetes for native,
-    #   de.entity.spec.distribution.version for TKG
+    #   def_entity.entity.status.kubernetes for native,
+    #   def_entity.entity.spec.distribution.version for TKG
     # status:
-    #   de.entity.status.phase for native and
-    #   de.entity.status.phase if de.entity.status else 'N/A' for TKG
+    #   def_entity.entity.status.phase for both native and TKG
     # owner:
-    #   de.owner.name
+    #   def_entity.owner.name for both native and TKG
     name: str = None
     org: Org = None
     entity = None
@@ -355,7 +356,7 @@ class GenericClusterDefEntity:
         if entity_dict['kind'] in \
                 [shared_constants.ClusterEntityKind.NATIVE.value,
                  shared_constants.ClusterEntityKind.TKG_PLUS.value]:
-            self.entity = ClusterEntity(**entity_dict) if isinstance(entity, dict) else entity  # noqa: E501
+            self.entity = NativeEntity(**entity_dict) if isinstance(entity, dict) else entity  # noqa: E501
         elif entity_dict['kind'] == \
                 shared_constants.ClusterEntityKind.TKG.value:
             self.entity = TKGEntity(**entity) if isinstance(entity, dict) else entity  # noqa: E501

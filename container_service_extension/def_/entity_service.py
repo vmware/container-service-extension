@@ -14,7 +14,7 @@ from container_service_extension.cloudapi.cloudapi_client import CloudApiClient
 from container_service_extension.cloudapi.constants import CloudApiResource
 from container_service_extension.cloudapi.constants import CloudApiVersion
 from container_service_extension.def_.models import DefEntity, DefEntityType, \
-    GenericClusterDefEntity
+    GenericClusterEntity
 import container_service_extension.def_.schema_service as def_schema_svc
 import container_service_extension.def_.utils as def_utils
 import container_service_extension.exceptions as cse_exception
@@ -212,8 +212,8 @@ class DefEntityService():
                                        f"{vendor}/{nss}/{version}?{query_string}")  # noqa: E501
         result = {}
         entity_list = []
-        for v in response_body['values']:
-            entity_list.append(GenericClusterDefEntity(**v))
+        for entity in response_body['values']:
+            entity_list.append(GenericClusterEntity(**entity))
         result[PaginationKey.RESULT_TOTAL] = int(response_body['resultTotal'])
         result[PaginationKey.PAGE_COUNT] = int(response_body['pageCount'])
         result[PaginationKey.PAGE_NUMBER] = page_number
