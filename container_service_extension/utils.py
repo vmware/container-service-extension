@@ -508,8 +508,10 @@ def create_links_and_construct_paginated_result(base_uri, values, result_total,
 
     # add the rest of the query parameters
     for q in query_params.keys():
-        next_page_uri += f"&{q}={query_params[q]}"
-        prev_page_uri += f"&{q}={query_params[q]}"
+        if next_page_uri:
+            next_page_uri += f"&{q}={query_params[q]}"
+        if prev_page_uri:
+            prev_page_uri += f"&{q}={query_params[q]}"
 
     return construct_paginated_response(values=values,
                                         result_total=result_total,

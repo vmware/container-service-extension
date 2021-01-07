@@ -38,6 +38,8 @@ from container_service_extension.server_constants import LocalTemplateKey
 from container_service_extension.server_constants import NodeType
 from container_service_extension.server_constants import ScriptFile
 from container_service_extension.server_constants import SYSTEM_ORG_NAME
+from container_service_extension.shared_constants import CSE_PAGINATION_DEFAULT_PAGE_SIZE, PaginationKey  # noqa: E501
+from container_service_extension.shared_constants import CSE_PAGINATION_FIRST_PAGE_NUMBER  # noqa: E501
 from container_service_extension.shared_constants import RequestKey
 from container_service_extension.telemetry.constants import CseOperation
 from container_service_extension.telemetry.constants import PayloadKey
@@ -108,6 +110,8 @@ class VcdBroker(abstract_broker.AbstractBroker):
         **telemetry: Optional
         """
         data = kwargs.get(KwargKey.DATA, {})
+        page_number = kwargs.get('page_number', CSE_PAGINATION_FIRST_PAGE_NUMBER)  # noqa: E501
+        page_size = kwargs.get('page_size', CSE_PAGINATION_DEFAULT_PAGE_SIZE)
         defaults = {
             RequestKey.ORG_NAME: None,
             RequestKey.OVDC_NAME: None
@@ -121,10 +125,13 @@ class VcdBroker(abstract_broker.AbstractBroker):
                 cse_params=copy.deepcopy(validated_data))
 
         # "raw clusters" do not have well-defined cluster data keys
-        raw_clusters = get_all_clusters(
+        raw_clusters_info = get_all_clusters(
             self.context.client,
             org_name=validated_data[RequestKey.ORG_NAME],
-            ovdc_name=validated_data[RequestKey.OVDC_NAME])
+            ovdc_name=validated_data[RequestKey.OVDC_NAME],
+            page_number=page_number,
+            page_size=page_size)
+        raw_clusters = raw_clusters_info[PaginationKey.VALUES]
 
         clusters = []
         for c in raw_clusters:
@@ -145,7 +152,8 @@ class VcdBroker(abstract_broker.AbstractBroker):
                 'owner_name': c['owner_name'],
                 K8S_PROVIDER_KEY: K8sProvider.NATIVE
             })
-        return clusters
+        raw_clusters_info[PaginationKey.VALUES] = clusters
+        return raw_clusters_info
 
     def get_cluster_config(self, **kwargs):
         """Get the cluster's kube config contents.
@@ -1533,12 +1541,26 @@ def _update_cluster_dict_with_node_info(client, cluster):
 
 
 def get_all_clusters(client, cluster_name=None, cluster_id=None,
-                     org_name=None, ovdc_name=None, fetch_details=False):
+                     org_name=None, ovdc_name=None, fetch_details=False,
+                     page_number=None, page_size=None):
     """Get list of dictionaries containing data for each visible cluster.
 
+    :param str cluster_name: name of the cluster to search for
+    :param str cluster_id: id of the cluster to search for
+    :param str org_name: restrict the cluster search to a specific org with
+        name org_name
+    :param str ovdc_name: restrict the cluster search to a specific ovdc with
+        name ovdc_name
     :param bool fetch_details: If set, will fetch additional information about
         each individual cluster e.g. network_name, org_name, org_href, list of
         control_plane/worker/nfs nodes and their ips.
+    :param int page_number: return clusters in a specific page number
+    :param int page_size: return page_size results
+    :return: list of clusters if page_number is not specified. Else, a dict
+        containing cluster list and paginaion information
+
+    NOTE: if page_number is provided, the return type will be a dictionary
+        containing pagination information along with the cluster list
     TODO define these cluster data dictionary keys better:
         'name', 'vapp_id', 'vapp_href', 'vdc_name', 'vdc_href', 'vdc_id',
         'leader_endpoint', 'master_nodes', 'nodes', 'nfs_nodes',
@@ -1571,7 +1593,9 @@ def get_all_clusters(client, cluster_name=None, cluster_id=None,
                f',metadata:{ClusterMetadataKey.CSE_VERSION}'
                f',metadata:{ClusterMetadataKey.TEMPLATE_NAME}'
                f',metadata:{ClusterMetadataKey.TEMPLATE_REVISION}'
-               f',metadata:{ClusterMetadataKey.OS}')
+               f',metadata:{ClusterMetadataKey.OS}',
+        page=page_number,
+        page_size=page_size)
     q2 = client.get_typed_query(
         resource_type,
         query_result_format=vcd_client.QueryResultFormat.ID_RECORDS,
@@ -1580,7 +1604,9 @@ def get_all_clusters(client, cluster_name=None, cluster_id=None,
                f',metadata:{ClusterMetadataKey.KUBERNETES}'
                f',metadata:{ClusterMetadataKey.KUBERNETES_VERSION}'
                f',metadata:{ClusterMetadataKey.CNI}'
-               f',metadata:{ClusterMetadataKey.CNI_VERSION}')
+               f',metadata:{ClusterMetadataKey.CNI_VERSION}',
+        page=page_number,
+        page_size=page_size)
 
     metadata_key_to_cluster_key = {
         ClusterMetadataKey.CLUSTER_ID: 'cluster_id',
@@ -1597,7 +1623,17 @@ def get_all_clusters(client, cluster_name=None, cluster_id=None,
     }
 
     clusters = {}
-    for record in q.execute():
+    cluster_list = []
+    result_total = None
+    if page_number:
+        # since page_number is provided during query creation, the return type
+        # from pyvcloud will be a dict containing pagination information
+        clusters_info = q.execute()
+        cluster_list = clusters_info['values']
+        result_total = int(clusters_info.get('resultTotal'))
+    else:
+        cluster_list = q.execute()
+    for record in cluster_list:
         vapp_id = record.get('id').split(':')[-1]
         vdc_id = record.get('vdc').split(':')[-1]
         vapp_href = f'{client.get_api_uri()}/vApp/vapp-{vapp_id}'
@@ -1637,30 +1673,43 @@ def get_all_clusters(client, cluster_name=None, cluster_id=None,
                 if element.Key in metadata_key_to_cluster_key:
                     clusters[vapp_id][metadata_key_to_cluster_key[element.Key]] = str(element.TypedValue.Value) # noqa: E501
 
+    if page_number:
+        # since page_number is provided during query creation, the return type
+        # from pyvcloud will be a dict containing pagination information
+        clusters_info = q2.execute()
+        cluster_list = clusters_info['values']
+        result_total = int(clusters_info.get('resultTotal'))
+    else:
+        cluster_list = q2.execute()
     # api query can fetch only 8 metadata at a time
     # since we have more than 8 metadata, we need to use 2 queries
-    for record in q2.execute():
+    for record in cluster_list:
         vapp_id = record.get('id').split(':')[-1]
         if hasattr(record, 'Metadata'):
             for element in record.Metadata.MetadataEntry:
                 if element.Key in metadata_key_to_cluster_key:
                     clusters[vapp_id][metadata_key_to_cluster_key[element.Key]] = str(element.TypedValue.Value) # noqa: E501
 
-    if not fetch_details:
-        return list(clusters.values())
+    if fetch_details:
+        for cluster in clusters.values():
+            vapp = vcd_vapp.VApp(client, href=cluster['vapp_href'])
+            cluster['network_name'] = \
+                vcd_utils.get_parent_network_name_of_vapp(vapp)
+            cluster['storage_profile_name'] = \
+                vcd_utils.get_storage_profile_name_of_first_vm_in_vapp(vapp)
+            _update_cluster_dict_with_node_info(client, cluster)
+            if client.is_sysadmin():
+                cluster['org_name'] = \
+                    vcd_utils.get_org_name_from_ovdc_id(client, cluster['vdc_id'])  # noqa: E501
+                cluster['org_href'] = \
+                    vcd_utils.get_org_href_from_ovdc_id(client, cluster['vdc_id'])  # noqa: E501
 
-    for cluster in clusters.values():
-        vapp = vcd_vapp.VApp(client, href=cluster['vapp_href'])
-        cluster['network_name'] = \
-            vcd_utils.get_parent_network_name_of_vapp(vapp)
-        cluster['storage_profile_name'] = \
-            vcd_utils.get_storage_profile_name_of_first_vm_in_vapp(vapp)
-        _update_cluster_dict_with_node_info(client, cluster)
-        if client.is_sysadmin():
-            cluster['org_name'] = \
-                vcd_utils.get_org_name_from_ovdc_id(client, cluster['vdc_id'])
-            cluster['org_href'] = \
-                vcd_utils.get_org_href_from_ovdc_id(client, cluster['vdc_id'])
+    if page_number:
+        # return pagination details as well
+        return {
+            PaginationKey.VALUES: list(clusters.values()),
+            PaginationKey.RESULT_TOTAL: result_total
+        }
 
     return list(clusters.values())
 

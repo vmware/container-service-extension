@@ -3,10 +3,16 @@
 # SPDX-License-Identifier: BSD-2-Clause
 
 import container_service_extension.operation_context as ctx
+from container_service_extension.server_constants import CseOperation as CseOperationInfo  # noqa: E501
 from container_service_extension.server_constants import K8S_PROVIDER_KEY
+from container_service_extension.shared_constants import CSE_PAGINATION_DEFAULT_PAGE_SIZE  # noqa: E501
+from container_service_extension.shared_constants import CSE_PAGINATION_FIRST_PAGE_NUMBER  # noqa: E501
+from container_service_extension.shared_constants import PaginationKey
+from container_service_extension.shared_constants import RequestKey
 from container_service_extension.telemetry.constants import CseOperation
 from container_service_extension.telemetry.telemetry_handler import \
     record_user_action_telemetry
+import container_service_extension.utils as utils
 from container_service_extension.vcdbroker import VcdBroker
 
 
@@ -126,7 +132,18 @@ def cluster_list(request_data, op_ctx: ctx.OperationContext):
     :return: List
     """
     vcd_broker = VcdBroker(op_ctx)
-    vcd_clusters_info = vcd_broker.list_clusters(data=request_data)
+    page_number = int(request_data.get(PaginationKey.PAGE_NUMBER, CSE_PAGINATION_FIRST_PAGE_NUMBER))  # noqa: E501
+    page_size = int(request_data.get(PaginationKey.PAGE_SIZE, CSE_PAGINATION_DEFAULT_PAGE_SIZE))  # noqa: E501
+    # remove page number and page size from the filters as it is treated
+    # differently from other filters
+    if PaginationKey.PAGE_NUMBER in request_data:
+        del request_data[PaginationKey.PAGE_NUMBER]
+    if PaginationKey.PAGE_SIZE in request_data:
+        del request_data[PaginationKey.PAGE_SIZE]
+
+    vcd_clusters_info = vcd_broker.list_clusters(data=request_data,
+                                                 page_number=page_number,
+                                                 page_size=page_size)
 
     common_cluster_properties = [
         'name',
@@ -137,13 +154,22 @@ def cluster_list(request_data, op_ctx: ctx.OperationContext):
         K8S_PROVIDER_KEY
     ]
 
+    # Extract the query params
+    query_keys = [RequestKey.ORG_NAME, RequestKey.OVDC_NAME]
+    query_params = {k: request_data[k] for k in query_keys if request_data.get(k) is not None}  # noqa: E501
+
     result = []
-    for cluster_info in vcd_clusters_info:
+    for cluster_info in vcd_clusters_info[PaginationKey.VALUES]:
         filtered_cluster_info = \
             {k: cluster_info.get(k) for k in common_cluster_properties}
         result.append(filtered_cluster_info)
 
-    return result
+    base_url = f"{op_ctx.client.get_api_uri().strip('/')}{CseOperationInfo.CLUSTER_LIST._api_path_format}"  # noqa: E501
+    return utils.create_links_and_construct_paginated_result(base_url, result,
+                                                             vcd_clusters_info[PaginationKey.RESULT_TOTAL],  # noqa: E501
+                                                             page_number=page_number,  # noqa: E501
+                                                             page_size=page_size,  # noqa: E501
+                                                             query_params=query_params)  # noqa: E501
 
 
 @record_user_action_telemetry(cse_operation=CseOperation.NODE_CREATE)

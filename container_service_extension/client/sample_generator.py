@@ -125,7 +125,7 @@ def _get_sample_cluster_configuration_by_k8_runtime(k8_runtime):
         workers=workers,
         nfs=nfs
     )
-    cluster_entity = def_models.ClusterEntity(
+    cluster_entity = def_models.NativeEntity(
         metadata=metadata,
         spec=cluster_spec,
         status=status,
