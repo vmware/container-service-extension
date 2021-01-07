@@ -2353,7 +2353,7 @@ def _create_def_entity_for_existing_clusters(
                 ip=item['ipAddress'],
                 exports=item['exports']))
 
-        cluster_entity = def_models.ClusterEntity(
+        cluster_entity = def_models.NativeEntity(
             kind=kind,
             spec=def_models.ClusterSpec(
                 workers=def_models.Workers(

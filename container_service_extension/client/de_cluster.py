@@ -5,6 +5,7 @@
 from dataclasses import asdict
 import json
 import os
+from typing import List
 
 import requests
 import yaml
@@ -15,12 +16,15 @@ from container_service_extension.client.de_cluster_tkg import DEClusterTKG
 import container_service_extension.client.tkgclient.rest as tkg_rest
 import container_service_extension.client.utils as client_utils
 import container_service_extension.def_.entity_service as def_entity_svc
-from container_service_extension.def_.utils import DEF_CSE_VENDOR
-from container_service_extension.def_.utils import DEF_NATIVE_ENTITY_TYPE_NSS
-from container_service_extension.def_.utils import DEF_NATIVE_ENTITY_TYPE_VERSION # noqa: E501
+import container_service_extension.def_.models as def_models
+from container_service_extension.def_.utils import DEF_VMWARE_INTERFACE_NSS
+from container_service_extension.def_.utils import DEF_VMWARE_INTERFACE_VERSION
+from container_service_extension.def_.utils import DEF_VMWARE_VENDOR
 import container_service_extension.exceptions as cse_exceptions
 import container_service_extension.logger as logger
 import container_service_extension.pyvcloud_utils as vcd_utils
+from container_service_extension.shared_constants import CSE_PAGINATION_DEFAULT_PAGE_SIZE, PaginationKey  # noqa: E501
+from container_service_extension.shared_constants import CSE_PAGINATION_FIRST_PAGE_NUMBER  # noqa: E501
 
 DUPLICATE_CLUSTER_ERROR_MSG = "Duplicate clusters found. Please use --k8-runtime for the unique identification"  # noqa: E501
 
@@ -59,51 +63,70 @@ class DECluster:
         :return: cluster list information
         :rtype: list(dict)
         """
-        has_native_rights = True
-        has_tkg_rights = True
         clusters = []
-        try:
-            clusters += self._tkgCluster.list_tkg_clusters(vdc=vdc, org=org)
-        except tkg_rest.ApiException as e:
-            if e.status not in [requests.codes.FORBIDDEN, requests.codes.UNAUTHORIZED]:  # noqa: E501
-                server_message = json.loads(e.body).get('message') or e.reason
-                msg = cli_constants.TKG_RESPONSE_MESSAGES_BY_STATUS_CODE.get(e.status, f"{server_message}")  # noqa: E501
-                logger.CLIENT_LOGGER.error(msg)
-                raise Exception(msg)
-            logger.CLIENT_LOGGER.debug(f"No rights present to fetch TKG clusters: {e}") # noqa: E501
-            has_tkg_rights = False
-        if not client_utils.is_cli_for_tkg_only():
+        if client_utils.is_cli_for_tkg_only():
+            try:
+                for clusters, has_more_results in \
+                        self._tkgCluster.list_tkg_clusters(vdc=vdc, org=org):
+                    yield clusters, has_more_results
+            except tkg_rest.ApiException as e:
+                if e.status not in [requests.codes.FORBIDDEN, requests.codes.UNAUTHORIZED]:  # noqa: E501
+                    server_message = json.loads(e.body).get('message') or e.reason  # noqa: E501
+                    msg = cli_constants.TKG_RESPONSE_MESSAGES_BY_STATUS_CODE.get(e.status, f"{server_message}")  # noqa: E501
+                    logger.CLIENT_LOGGER.error(msg)
+                    raise Exception(msg)
+                msg = f"User not authorized to fetch TKG clusters: {e}"
+                logger.CLIENT_LOGGER.debug(msg)
+                raise e
+        else:
+            # display all clusters
             filters = client_utils.construct_filters(org=org, vdc=vdc)
             entity_svc = def_entity_svc.DefEntityService(self._cloudapi_client)
-            native_entities = entity_svc.list_entities_by_entity_type(
-                vendor=DEF_CSE_VENDOR,
-                nss=DEF_NATIVE_ENTITY_TYPE_NSS,
-                version=DEF_NATIVE_ENTITY_TYPE_VERSION,
-                filters=filters)
+            has_more_results = True
+            page_number = CSE_PAGINATION_FIRST_PAGE_NUMBER
+            page_size = CSE_PAGINATION_DEFAULT_PAGE_SIZE
             try:
-                for def_entity in native_entities:
-                    entity = def_entity.entity
-                    logger.CLIENT_LOGGER.debug(f"Native Defined entity list from server: {def_entity}")  # noqa: E501
-                    cluster = {
-                        cli_constants.CLIOutputKey.CLUSTER_NAME.value: def_entity.name,  # noqa: E501
-                        cli_constants.CLIOutputKey.VDC.value: entity.metadata.ovdc_name, # noqa: E501
-                        cli_constants.CLIOutputKey.ORG.value: entity.metadata.org_name, # noqa: E501
-                        cli_constants.CLIOutputKey.K8S_RUNTIME.value: entity.kind, # noqa: E501
-                        cli_constants.CLIOutputKey.K8S_VERSION.value: entity.status.kubernetes, # noqa: E501
-                        cli_constants.CLIOutputKey.STATUS.value: entity.status.phase, # noqa: E501
-                        cli_constants.CLIOutputKey.OWNER.value: def_entity.owner.name  # noqa: E501
-                    }
-                    clusters.append(cluster)
+                while has_more_results:
+                    clusters_page_results = entity_svc.get_all_entities_per_page_by_interface(  # noqa: E501
+                        vendor=DEF_VMWARE_VENDOR,
+                        nss=DEF_VMWARE_INTERFACE_NSS,
+                        version=DEF_VMWARE_INTERFACE_VERSION,
+                        filters=filters,
+                        page_number=page_number,
+                        page_size=page_size)
+                    # Get the list of cluster defined entities
+                    entities: List[def_models.GenericClusterEntity] = clusters_page_results[PaginationKey.VALUES]  # noqa: E501
+                    clusters = []
+                    for de in entities:
+                        entity = de.entity
+                        logger.CLIENT_LOGGER.debug(f"Native Defined entity list from server: {entity}")  # noqa: E501
+                        cluster = {
+                            cli_constants.CLIOutputKey.CLUSTER_NAME.value: de.name,  # noqa: E501
+                            cli_constants.CLIOutputKey.ORG.value: de.org.name, # noqa: E501
+                            cli_constants.CLIOutputKey.OWNER.value: de.owner.name  # noqa: E501
+                        }
+                        if type(entity) == def_models.NativeEntity:
+                            cluster[cli_constants.CLIOutputKey.VDC.value] = \
+                                entity.metadata.ovdc_name
+                            cluster[cli_constants.CLIOutputKey.K8S_RUNTIME.value] = entity.kind  # noqa: E501
+                            cluster[cli_constants.CLIOutputKey.K8S_VERSION.value] = entity.status.kubernetes  # noqa: E501
+                            cluster[cli_constants.CLIOutputKey.STATUS.value] = entity.status.phase  # noqa: E501
+                        elif type(entity) == def_models.TKGEntity:
+                            cluster[cli_constants.CLIOutputKey.VDC.value] = \
+                                entity.metadata.virtualDataCenterName
+                            cluster[cli_constants.CLIOutputKey.K8S_RUNTIME.value] = entity.kind  # noqa: E501
+                            cluster[cli_constants.CLIOutputKey.K8S_VERSION.value] = entity.spec.distribution.version  # noqa: E501
+                            cluster[cli_constants.CLIOutputKey.STATUS.value] = \
+                                entity.status.phase if entity.status else 'N/A'  # noqa: E501
+                        clusters.append(cluster)
+                    has_more_results = page_number * page_size < \
+                        clusters_page_results[PaginationKey.RESULT_TOTAL]
+                    yield clusters, has_more_results
+                    page_number += 1
             except requests.exceptions.HTTPError as e:
-                if e.response.status_code not in [requests.codes.FORBIDDEN, requests.codes.UNAUTHORIZED]:  # noqa: E501
-                    logger.CLIENT_LOGGER.error(f"Failed to fetch native clusters: {str(e)}")  # noqa: E501
-                    raise
-                logger.CLIENT_LOGGER.debug(f"No rights present to fetch native clusters: {str(e)}")  # noqa: E501
-                has_native_rights = False
-        if not (has_tkg_rights or has_native_rights):
-            raise Exception("Logged in user doesn't have Native cluster rights"
-                            " or TKG rights. Please contact administrator.")
-        return clusters
+                msg = f"Failed to fetch clusters: {e}"
+                logger.CLIENT_LOGGER.debug(msg)
+                raise e
 
     def _get_tkg_native_clusters_by_name(self, cluster_name: str,
                                          org=None, vdc=None):

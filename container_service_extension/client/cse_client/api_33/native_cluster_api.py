@@ -18,6 +18,13 @@ class NativeClusterApi(CseClient):
         self._node_uri = f"{self._uri}/node"
         self._nodes_uri = f"{self._uri}/nodes"
 
+    def get_all_clusters(self, filters={}):
+        filter_string = "&".join([f"{k}={v}" for k, v in filters.items() if v is not None])  # noqa: E501
+        url = f"{self._clusters_uri}?pageSize={self._request_page_size}"
+        if filter_string:
+            url += f"&{filter_string}"
+        return self.iterate_results(url)
+
     def list_clusters(self, filters={}):
         response = self._client._do_request_prim(
             shared_constants.RequestMethod.GET,

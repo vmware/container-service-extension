@@ -20,7 +20,7 @@ class NativeClusterApi(CseClient):
         self._clusters_uri = f"{self._uri}/clusters"
         self._cluster_uri = f"{self._uri}/{shared_constants.CLUSTER_URL_FRAGMENT}"  # noqa: E501
 
-    def create_cluster(self, cluster_entity_definition: def_models.ClusterEntity):  # noqa: E501
+    def create_cluster(self, cluster_entity_definition: def_models.NativeEntity):  # noqa: E501
         cluster_entity_dict = asdict(cluster_entity_definition)
         uri = self._clusters_uri
         response = self._client._do_request_prim(
@@ -33,7 +33,7 @@ class NativeClusterApi(CseClient):
         return def_models.DefEntity(
             **response_processor.process_response(response))
 
-    def update_cluster_by_cluster_id(self, cluster_id, cluster_entity_definition: def_models.ClusterEntity):  # noqa: E501
+    def update_cluster_by_cluster_id(self, cluster_id, cluster_entity_definition: def_models.NativeEntity):  # noqa: E501
         cluster_entity_dict = asdict(cluster_entity_definition)
         uri = f"{self._cluster_uri}/{cluster_id}"
         response = self._client._do_request_prim(

@@ -145,7 +145,7 @@ class ClusterService(abstract_broker.AbstractBroker):
 
         return result.content.decode()
 
-    def create_cluster(self, cluster_spec: def_models.ClusterEntity):
+    def create_cluster(self, cluster_spec: def_models.NativeEntity):
         """Start the cluster creation operation.
 
         Creates corresponding defined entity in vCD for every native cluster.
@@ -238,7 +238,7 @@ class ClusterService(abstract_broker.AbstractBroker):
         return def_entity
 
     def resize_cluster(self, cluster_id: str,
-                       cluster_spec: def_models.ClusterEntity):
+                       cluster_spec: def_models.NativeEntity):
         """Start the resize cluster operation.
 
         :param str cluster_id: Defined entity Id of the cluster
@@ -387,14 +387,14 @@ class ClusterService(abstract_broker.AbstractBroker):
                                               curr_entity.entity.spec.k8_distribution.template_revision) # noqa: E501
 
     def upgrade_cluster(self, cluster_id: str,
-                        upgrade_spec: def_models.ClusterEntity):
+                        upgrade_spec: def_models.NativeEntity):
         """Start the upgrade cluster operation.
 
         Upgrading cluster is an asynchronous task, so the returned
         `result['task_href']` can be polled to get updates on task progress.
 
         :param str cluster_id: id of the cluster to be upgraded
-        :param def_models.ClusterEntity upgrade_spec: cluster spec with new
+        :param def_models.NativeEntity upgrade_spec: cluster spec with new
             kubernetes distribution and revision
 
         :return: Defined entity with upgrade in progress set
@@ -583,7 +583,7 @@ class ClusterService(abstract_broker.AbstractBroker):
 
     @utils.run_async
     def _create_cluster_async(self, cluster_id: str,
-                              cluster_spec: def_models.ClusterEntity):
+                              cluster_spec: def_models.NativeEntity):
         try:
             cluster_name = cluster_spec.metadata.cluster_name
             org_name = cluster_spec.metadata.org_name
@@ -883,7 +883,7 @@ class ClusterService(abstract_broker.AbstractBroker):
 
     @utils.run_async
     def _create_nodes_async(self, cluster_id: str,
-                            cluster_spec: def_models.ClusterEntity):
+                            cluster_spec: def_models.NativeEntity):
         """Create worker and/or nfs nodes in vCD.
 
         This method is executed by a thread in an asynchronous manner.
@@ -1296,7 +1296,7 @@ class ClusterService(abstract_broker.AbstractBroker):
 
     @utils.run_async
     def _delete_nodes_async(self, cluster_id: str,
-                            cluster_spec: def_models.ClusterEntity = None,
+                            cluster_spec: def_models.NativeEntity = None,
                             nodes_to_del=[]):
         """Delete worker and/or nfs nodes in vCD.
 

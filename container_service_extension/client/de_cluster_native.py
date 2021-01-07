@@ -40,19 +40,19 @@ class DEClusterNative:
         self._native_cluster_api = NativeClusterApi(client)
         self._client = client
 
-    def create_cluster(self, cluster_entity: def_models.ClusterEntity):
+    def create_cluster(self, cluster_entity: def_models.NativeEntity):
         """Create a new Kubernetes cluster.
 
-        :param models.ClusterEntity cluster_entity: native cluster entity
+        :param models.NativeEntity cluster_entity: native cluster entity
         :return: (json) A parsed json object describing the requested cluster.
         """
         msg = "Operation not supported; Under implementation"
         raise vcd_exceptions.OperationNotSupportedException(msg)
 
-    def resize_cluster(self, cluster_entity: def_models.ClusterEntity):
+    def resize_cluster(self, cluster_entity: def_models.NativeEntity):
         """Resize the existing Kubernetes cluster.
 
-        :param models.ClusterEntity cluster_entity: native cluster entity
+        :param models.NativeEntity cluster_entity: native cluster entity
         :return: (json) A parsed json object describing the requested cluster.
         """
         msg = "Operation not supported; Under implementation"
@@ -248,7 +248,7 @@ class DEClusterNative:
         :rtype: dict
         """
         entity_svc = def_entity_svc.DefEntityService(self._cloudapi_client)
-        cluster_spec = def_models.ClusterEntity(**cluster_config)
+        cluster_spec = def_models.NativeEntity(**cluster_config)
         cluster_name = cluster_spec.metadata.cluster_name
         if cluster_id:
             # If cluster id doesn't exist, an exception will be raised
