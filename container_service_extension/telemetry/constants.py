@@ -128,6 +128,8 @@ class PayloadKey(str, Enum):
     NUMBER_OF_WORKER_NODES = 'number_of_worker_nodes'
     NUMBER_OF_NFS_NODES = 'number_of_nfs_nodes'
     OS = 'os'
+    PKS_CLUSTER_ID = 'uuid'
+    PKS_VERSION = 'pks_version'
     SOURCE_CSE_VERSION = 'source_cse_version'
     SOURCE_DESCRIPTION = 'source_description'
     SOURCE_ID = 'source_id'

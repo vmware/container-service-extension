@@ -473,7 +473,8 @@ class ClusterService(abstract_broker.AbstractBroker):
         telemetry_params = {
             shared_constants.RequestKey.CLUSTER_ID: cluster_id,
             shared_constants.PaginationKey.PAGE_NUMBER: page,
-            shared_constants.PaginationKey.PAGE_SIZE: page_size
+            shared_constants.PaginationKey.PAGE_SIZE: page_size,
+            telemetry_constants.PayloadKey.SOURCE_DESCRIPTION: thread_local_data.get_thread_local_data(ThreadLocalData.USER_AGENT)  # noqa: E501
         }
         telemetry_handler.record_user_action_details(
             telemetry_constants.CseOperation.V35_CLUSTER_ACL_LIST,
@@ -514,7 +515,8 @@ class ClusterService(abstract_broker.AbstractBroker):
         telemetry_params = {
             shared_constants.RequestKey.CLUSTER_ID: cluster_id,
             shared_constants.ClusterAclKey.UPDATE_ACL_ENTRIES:
-                update_acl_entries
+                update_acl_entries,
+            telemetry_constants.PayloadKey.SOURCE_DESCRIPTION: thread_local_data.get_thread_local_data(ThreadLocalData.USER_AGENT)  # noqa: E501
         }
         telemetry_handler.record_user_action_details(
             telemetry_constants.CseOperation.V35_CLUSTER_ACL_UPDATE,

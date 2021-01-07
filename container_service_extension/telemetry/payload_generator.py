@@ -353,7 +353,9 @@ def get_payload_for_v35_cluster_acl_list(cluster_acl_list_info):
         PayloadKey.TYPE: CseOperation.V35_CLUSTER_ACL_LIST.telemetry_table,
         PayloadKey.CLUSTER_ID: uuid_hash(cluster_id),
         PayloadKey.PAGE: str(page),
-        PayloadKey.PAGE_SIZE: str(page_size)
+        PayloadKey.PAGE_SIZE: str(page_size),
+        PayloadKey.SOURCE_ID: SourceMap.get_source_id(cluster_acl_list_info.get(PayloadKey.SOURCE_DESCRIPTION)),  # noqa: E501
+        PayloadKey.SOURCE_DESCRIPTION: cluster_acl_list_info.get(PayloadKey.SOURCE_DESCRIPTION)   # noqa: E501
     }
 
 
@@ -379,7 +381,9 @@ def get_payload_for_v35_cluster_acl_update(cluster_acl_update_info: dict):
     return {
         PayloadKey.TYPE: CseOperation.V35_CLUSTER_ACL_UPDATE.telemetry_table,
         PayloadKey.CLUSTER_ID: uuid_hash(cluster_id),
-        PayloadKey.ACCESS_SETTING: json.dumps(filtered_acl_info)
+        PayloadKey.ACCESS_SETTING: json.dumps(filtered_acl_info),
+        PayloadKey.SOURCE_ID: SourceMap.get_source_id(cluster_acl_update_info.get(PayloadKey.SOURCE_DESCRIPTION)),  # noqa: E501
+        PayloadKey.SOURCE_DESCRIPTION: cluster_acl_update_info.get(PayloadKey.SOURCE_DESCRIPTION)  # noqa: E501
     }
 
 
@@ -681,6 +685,132 @@ def get_payload_for_v35_node_delete(params):
         PayloadKey.TYPE: CseOperation.V35_NODE_DELETE.telemetry_table,
         PayloadKey.CLUSTER_ID: uuid_hash(pyvcd_utils.extract_id(params.get(PayloadKey.CLUSTER_ID))),  # noqa: E501
         PayloadKey.NODE_NAME: params.get(PayloadKey.NODE_NAME),
+        PayloadKey.SOURCE_ID: SourceMap.get_source_id(params.get(PayloadKey.SOURCE_DESCRIPTION)),  # noqa: E501
+        PayloadKey.SOURCE_DESCRIPTION: params.get(PayloadKey.SOURCE_DESCRIPTION)  # noqa: E501
+    }
+
+
+def get_payload_for_pks_list_clusters(params):
+    """Construct telemetry payload of list cluster operation.
+
+    :param params: parameters provided to the operation
+
+    :return: json telemetry data the operation
+
+    :type: dict
+    """
+    return {
+        PayloadKey.TYPE: CseOperation.PKS_CLUSTER_LIST.telemetry_table,
+        PayloadKey.WAS_OVDC_SPECIFIED: bool(params.get(RequestKey.OVDC_NAME)),
+        PayloadKey.WAS_ORG_SPECIFIED: bool(params.get(RequestKey.ORG_NAME)),
+        PayloadKey.SOURCE_ID: SourceMap.get_source_id(params.get(PayloadKey.SOURCE_DESCRIPTION)),  # noqa: E501
+        PayloadKey.SOURCE_DESCRIPTION: params.get(PayloadKey.SOURCE_DESCRIPTION)  # noqa: E501
+    }
+
+
+def get_payload_for_pks_cluster_info(params):
+    """Construct telemetry payload of cluster info operation.
+
+    :param params: parameters provided to the operation
+
+    :return: json telemetry data for the operation
+
+    :type: dict
+    """
+    return {
+        PayloadKey.TYPE: CseOperation.PKS_CLUSTER_INFO.telemetry_table,
+        PayloadKey.CLUSTER_ID: uuid_hash(params.get(PayloadKey.PKS_CLUSTER_ID)),  # noqa: E501
+        PayloadKey.K8S_VERSION: params.get(PayloadKey.K8S_VERSION),
+        PayloadKey.PKS_VERSION: params.get(PayloadKey.PKS_VERSION),
+        PayloadKey.WAS_OVDC_SPECIFIED: bool(params.get(RequestKey.OVDC_NAME)),
+        PayloadKey.WAS_ORG_SPECIFIED: bool(params.get(RequestKey.ORG_NAME)),
+        PayloadKey.SOURCE_ID: SourceMap.get_source_id(params.get(PayloadKey.SOURCE_DESCRIPTION)),  # noqa: E501
+        PayloadKey.SOURCE_DESCRIPTION: params.get(PayloadKey.SOURCE_DESCRIPTION)  # noqa: E501
+    }
+
+
+def get_payload_for_pks_cluster_config(params):
+    """Construct telemetry payload of cluster config.
+
+    :param params: parameters provided to the operation
+
+    :return: json telemetry data for the operation
+
+    :type: dict
+    """
+    return {
+        PayloadKey.TYPE: CseOperation.PKS_CLUSTER_CONFIG.telemetry_table,
+        PayloadKey.CLUSTER_ID: uuid_hash(params.get(PayloadKey.PKS_CLUSTER_ID)),  # noqa: E501
+        PayloadKey.K8S_VERSION: params.get(PayloadKey.K8S_VERSION),
+        PayloadKey.PKS_VERSION: params.get(PayloadKey.PKS_VERSION),
+        PayloadKey.WAS_OVDC_SPECIFIED: bool(params.get(RequestKey.OVDC_NAME)),
+        PayloadKey.WAS_ORG_SPECIFIED: bool(params.get(RequestKey.ORG_NAME)),
+        PayloadKey.SOURCE_ID: SourceMap.get_source_id(params.get(PayloadKey.SOURCE_DESCRIPTION)),  # noqa: E501
+        PayloadKey.SOURCE_DESCRIPTION: params.get(PayloadKey.SOURCE_DESCRIPTION)  # noqa: E501
+    }
+
+
+def get_payload_for_pks_cluster_create(params):
+    """Construct telemetry payload of cluster create.
+
+    :param params: parameters provided to the operation
+
+    :return: json telemetry data for the operation
+
+    :type: dict
+    """
+    return {
+        PayloadKey.TYPE: CseOperation.PKS_CLUSTER_CREATE.telemetry_table,
+        PayloadKey.CLUSTER_ID: uuid_hash(params.get(PayloadKey.PKS_CLUSTER_ID)),  # noqa: E501
+        PayloadKey.K8S_VERSION: params.get(PayloadKey.K8S_VERSION),
+        PayloadKey.PKS_VERSION: params.get(PayloadKey.PKS_VERSION),
+        PayloadKey.NUMBER_OF_MASTER_NODES: 1,
+        PayloadKey.NUMBER_OF_WORKER_NODES: params.get(RequestKey.NUM_WORKERS),
+        PayloadKey.WAS_OVDC_SPECIFIED: bool(params.get(RequestKey.OVDC_NAME)),
+        PayloadKey.WAS_ORG_SPECIFIED: bool(params.get(RequestKey.ORG_NAME)),
+        PayloadKey.SOURCE_ID: SourceMap.get_source_id(params.get(PayloadKey.SOURCE_DESCRIPTION)),  # noqa: E501
+        PayloadKey.SOURCE_DESCRIPTION: params.get(PayloadKey.SOURCE_DESCRIPTION)  # noqa: E501
+    }
+
+
+def get_payload_for_pks_cluster_delete(params):
+    """Construct telemetry payload of cluster delete.
+
+    :param params: parameters provided to the operation
+
+    :return: json telemetry data for the operation
+
+    :type: dict
+    """
+    return {
+        PayloadKey.TYPE: CseOperation.PKS_CLUSTER_DELETE.telemetry_table,
+        PayloadKey.CLUSTER_ID: uuid_hash(params.get(PayloadKey.PKS_CLUSTER_ID)),  # noqa: E501
+        PayloadKey.K8S_VERSION: params.get(PayloadKey.K8S_VERSION),
+        PayloadKey.PKS_VERSION: params.get(PayloadKey.PKS_VERSION),
+        PayloadKey.WAS_OVDC_SPECIFIED: bool(params.get(RequestKey.OVDC_NAME)),
+        PayloadKey.WAS_ORG_SPECIFIED: bool(params.get(RequestKey.ORG_NAME)),
+        PayloadKey.SOURCE_ID: SourceMap.get_source_id(params.get(PayloadKey.SOURCE_DESCRIPTION)),  # noqa: E501
+        PayloadKey.SOURCE_DESCRIPTION: params.get(PayloadKey.SOURCE_DESCRIPTION)  # noqa: E501
+    }
+
+
+def get_payload_for_pks_cluster_resize(params):
+    """Construct telemetry payload of cluster resize.
+
+    :param params: parameters provided to the operation
+
+    :return: json telemetry data for the operation
+
+    :type: dict
+    """
+    return {
+        PayloadKey.TYPE: CseOperation.PKS_CLUSTER_RESIZE.telemetry_table,
+        PayloadKey.CLUSTER_ID: uuid_hash(params.get(PayloadKey.PKS_CLUSTER_ID)),  # noqa: E501
+        PayloadKey.K8S_VERSION: params.get(PayloadKey.K8S_VERSION),
+        PayloadKey.PKS_VERSION: params.get(PayloadKey.PKS_VERSION),
+        PayloadKey.NUMBER_OF_WORKER_NODES: params.get(RequestKey.NUM_WORKERS),
+        PayloadKey.WAS_OVDC_SPECIFIED: bool(params.get(RequestKey.OVDC_NAME)),
+        PayloadKey.WAS_ORG_SPECIFIED: bool(params.get(RequestKey.ORG_NAME)),
         PayloadKey.SOURCE_ID: SourceMap.get_source_id(params.get(PayloadKey.SOURCE_DESCRIPTION)),  # noqa: E501
         PayloadKey.SOURCE_DESCRIPTION: params.get(PayloadKey.SOURCE_DESCRIPTION)  # noqa: E501
     }

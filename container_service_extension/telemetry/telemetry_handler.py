@@ -58,8 +58,14 @@ OPERATION_TO_PAYLOAD_GENERATOR = {
     CseOperation.V35_CLUSTER_UPGRADE: payload_generator.get_payload_for_v35_cluster_upgrade,  # noqa: E501
     CseOperation.V35_CLUSTER_ACL_LIST: payload_generator.get_payload_for_v35_cluster_acl_list,  # noqa: E501
     CseOperation.V35_CLUSTER_ACL_UPDATE: payload_generator.get_payload_for_v35_cluster_acl_update,  # noqa: E501
-    CseOperation.V35_NODE_DELETE: payload_generator.get_payload_for_v35_node_delete  # noqa: E501
+    CseOperation.V35_NODE_DELETE: payload_generator.get_payload_for_v35_node_delete,  # noqa: E501
 
+    CseOperation.PKS_CLUSTER_LIST: payload_generator.get_payload_for_pks_list_clusters,  # noqa: E501
+    CseOperation.PKS_CLUSTER_INFO: payload_generator.get_payload_for_pks_cluster_info,  # noqa: E501
+    CseOperation.PKS_CLUSTER_CONFIG: payload_generator.get_payload_for_pks_cluster_config,  # noqa: E501
+    CseOperation.PKS_CLUSTER_CREATE: payload_generator.get_payload_for_pks_cluster_create,  # noqa: E501
+    CseOperation.PKS_CLUSTER_DELETE: payload_generator.get_payload_for_pks_cluster_delete,  # noqa: E501
+    CseOperation.PKS_CLUSTER_RESIZE: payload_generator.get_payload_for_pks_cluster_resize  # noqa: E501
 }
 
 
