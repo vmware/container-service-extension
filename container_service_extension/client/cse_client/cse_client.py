@@ -12,7 +12,7 @@ class CseClient:
     def __init__(self, client: vcd_client.Client):
         self._client = client
         self._uri = self._client.get_api_uri()
-        self._request_page_size = 25
+        self._request_page_size = 10
 
     def iterate_results(self, base_url, filters={}):
         """Iterate over paginated response until all the results are obtained.
