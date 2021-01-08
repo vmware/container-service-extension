@@ -140,6 +140,7 @@ class RequestKey(str, Enum):
 class PaginationKey(str, Enum):
     PAGE_NUMBER = 'page'
     PAGE_SIZE = 'pageSize'
+    PAGE_COUNT = 'pageCount'
     NEXT_PAGE_URI = 'nextPageUri'
     PREV_PAGE_URI = 'previousPageUri'
     RESULT_TOTAL = 'resultTotal'
