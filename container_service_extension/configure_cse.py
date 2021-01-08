@@ -703,8 +703,14 @@ def _update_user_role_with_right_bundle(right_bundle_name,
     # Determine the rights necessary from rights bundle
     # It is assumed that user already has "View Rights Bundle" Right
     rbm = RightBundleManager(client, log_wire, msg_update_callback)
-    native_def_rights = \
-        rbm.get_rights_for_right_bundle(right_bundle_name)
+    try:
+        native_def_rights = \
+            rbm.get_rights_for_right_bundle(right_bundle_name)
+    except Exception as err:
+        msg = "Right bundle " + str(right_bundle_name) + " doesn't exist"
+        msg_update_callback.general_no_color(msg)
+        msg_update_callback.error(str(err))
+        return False
 
     # Get rights as a list of right-name strings
     rights = []
@@ -727,6 +733,41 @@ def _update_user_role_with_right_bundle(right_bundle_name,
     logger_debug.info(msg)
 
     return True
+
+
+def _update_user_role_with_necessary_right_bundles(client: Client,
+                                                   msg_update_callback=utils.NullPrinter(), # noqa: E501
+                                                   logger_debug=NULL_LOGGER,
+                                                   log_wire=False):
+    """Add necessary rights from right bundles to user's role.
+
+    :param pyvcloud.vcd.client.Client  : client
+    :param utils.ConsoleMessagePrinter msg_update_callback: Callback object.
+    :param bool log_wire: wire logging enabled
+    :rtype bool: result of operation. If the rights from any rightbundles
+    were added to user's role or not
+    """
+    user_role_updated = False
+
+    if (_update_user_role_with_right_bundle(
+            def_utils.DEF_NATIVE_ENTITY_TYPE_RIGHT_BUNDLE,
+            client=client,
+            msg_update_callback=msg_update_callback,
+            logger_debug=INSTALL_LOGGER,
+            log_wire=log_wire)):
+
+        user_role_updated = True
+
+    if (_update_user_role_with_right_bundle(
+            def_utils.DEF_TKG_ENTITY_TYPE_RIGHT_BUNDLE,
+            client=client,
+            msg_update_callback=msg_update_callback,
+            logger_debug=INSTALL_LOGGER,
+            log_wire=log_wire)):
+
+        user_role_updated = True
+
+    return user_role_updated
 
 
 def _register_def_schema(client: Client,
@@ -808,8 +849,7 @@ def _register_def_schema(client: Client,
 
         # Update user's role with right bundle associated with native defined
         # entity
-        if(_update_user_role_with_right_bundle(
-                def_utils.DEF_NATIVE_ENTITY_TYPE_RIGHT_BUNDLE,
+        if(_update_user_role_with_necessary_right_bundles(
                 client=client,
                 msg_update_callback=msg_update_callback,
                 logger_debug=INSTALL_LOGGER,

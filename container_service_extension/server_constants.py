@@ -420,9 +420,4 @@ CSE_SERVICE_ROLE_RIGHTS = [
     "vApp: View VM metrics",
     "vCenter: View",
     "vSphere Server: View",
-    "vmware:tkgcluster: Administrator Full access",
-    "vmware:tkgcluster: Administrator View",
-    "vmware:tkgcluster: Full Access",
-    "vmware:tkgcluster: Modify",
-    "vmware:tkgcluster: View"
 ]
