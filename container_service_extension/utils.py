@@ -474,18 +474,28 @@ def construct_filter_string(filters: dict):
 def construct_paginated_response(values, result_total,
                                  page_number=CSE_PAGINATION_FIRST_PAGE_NUMBER,  # noqa: E501
                                  page_size=CSE_PAGINATION_DEFAULT_PAGE_SIZE,  # noqa: E501
+                                 page_count=None,
                                  next_page_uri=None,
                                  prev_page_uri=None):
+    if not page_count:
+        extra_page = 1 if bool(result_total % page_size) else 0
+        page_count = result_total // page_size + extra_page
     resp = {
-        PaginationKey.VALUES: values,
         PaginationKey.RESULT_TOTAL: result_total,
+        PaginationKey.PAGE_COUNT: page_count,
         PaginationKey.PAGE_NUMBER: page_number,
-        PaginationKey.PAGE_SIZE: page_size
+        PaginationKey.PAGE_SIZE: page_size,
+        PaginationKey.NEXT_PAGE_URI: next_page_uri,
+        PaginationKey.PREV_PAGE_URI: prev_page_uri,
+        PaginationKey.VALUES: values
     }
-    if next_page_uri:
-        resp[PaginationKey.NEXT_PAGE_URI] = next_page_uri
-    if prev_page_uri:
-        resp[PaginationKey.PREV_PAGE_URI] = prev_page_uri
+
+    # Conditionally deleting instead of conditionally adding the entry
+    # maintains the order for the response
+    if not prev_page_uri:
+        del resp[PaginationKey.PREV_PAGE_URI]
+    if not next_page_uri:
+        del resp[PaginationKey.NEXT_PAGE_URI]
     return resp
 
 
