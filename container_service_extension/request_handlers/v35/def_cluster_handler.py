@@ -143,15 +143,26 @@ def cluster_list(data: dict, op_ctx: ctx.OperationContext):
     """
     svc = cluster_svc.ClusterService(op_ctx)
     filters = data.get(RequestKey.V35_QUERY, {})
-    # TODO create default constants for PAGE_NUMBER and PAGE_SIZE
-    page_number = int(filters.get(PaginationKey.PAGE_NUMBER, CSE_PAGINATION_FIRST_PAGE_NUMBER))  # noqa: E501
-    page_size = int(filters.get(PaginationKey.PAGE_SIZE, CSE_PAGINATION_DEFAULT_PAGE_SIZE))  # noqa: E501
+
+    page_number = filters.get(PaginationKey.PAGE_NUMBER)
+    page_size = filters.get(PaginationKey.PAGE_SIZE)
+    if page_number or page_size:
+        page_number = int(filters.get(PaginationKey.PAGE_NUMBER, CSE_PAGINATION_FIRST_PAGE_NUMBER))  # noqa: E501
+        page_size = int(filters.get(PaginationKey.PAGE_SIZE, CSE_PAGINATION_DEFAULT_PAGE_SIZE))  # noqa: E501
+
     # remove page number and page size from the filters as it is treated
     # differently from other filters
     if PaginationKey.PAGE_NUMBER in filters:
         del filters[PaginationKey.PAGE_NUMBER]
     if PaginationKey.PAGE_SIZE in filters:
         del filters[PaginationKey.PAGE_SIZE]
+
+    if not (page_number or page_size):
+        # response should not be paginated
+        return [asdict(def_entity) for def_entity in
+                svc.list_clusters(data.get(RequestKey.V35_QUERY, {}))]
+
+    # response needs to paginated
     result = svc.list_clusters(filters=filters,
                                page_number=page_number,
                                page_size=page_size)

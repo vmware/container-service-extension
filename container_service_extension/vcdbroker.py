@@ -38,8 +38,7 @@ from container_service_extension.server_constants import LocalTemplateKey
 from container_service_extension.server_constants import NodeType
 from container_service_extension.server_constants import ScriptFile
 from container_service_extension.server_constants import SYSTEM_ORG_NAME
-from container_service_extension.shared_constants import CSE_PAGINATION_DEFAULT_PAGE_SIZE, PaginationKey  # noqa: E501
-from container_service_extension.shared_constants import CSE_PAGINATION_FIRST_PAGE_NUMBER  # noqa: E501
+from container_service_extension.shared_constants import PaginationKey
 from container_service_extension.shared_constants import RequestKey
 from container_service_extension.telemetry.constants import CseOperation
 from container_service_extension.telemetry.constants import PayloadKey
@@ -102,6 +101,10 @@ class VcdBroker(abstract_broker.AbstractBroker):
     def list_clusters(self, **kwargs):
         """List all native clusters and their relevant metadata.
 
+        :return: a list of all clusters if 'page_number' or 'page_size' are
+            not part of the kwargs. If 'page_number' or 'page_size' is present,
+            a paginated response is returned.
+
         Common broker function that validates data for the 'list clusters'
         operation and returns a list of cluster data.
 
@@ -110,11 +113,9 @@ class VcdBroker(abstract_broker.AbstractBroker):
         **telemetry: Optional
         """
         data = kwargs.get(KwargKey.DATA, {})
-        page_number = kwargs.get('page_number', None)
-        page_size = kwargs.get('page_size', None)
-        if page_number or page_size:
-            page_number = int(kwargs.get('page_number', CSE_PAGINATION_FIRST_PAGE_NUMBER))  # noqa: E501
-            page_size = int(kwargs.get('page_size', CSE_PAGINATION_DEFAULT_PAGE_SIZE))  # noqa: E501
+        page_number = kwargs.get('page_number')
+        page_size = kwargs.get('page_size')
+
         defaults = {
             RequestKey.ORG_NAME: None,
             RequestKey.OVDC_NAME: None
@@ -136,7 +137,7 @@ class VcdBroker(abstract_broker.AbstractBroker):
             page_size=page_size)
 
         raw_clusters = raw_clusters_info
-        if page_number:
+        if page_number and page_size:
             raw_clusters = raw_clusters_info[PaginationKey.VALUES]
 
         clusters = []
