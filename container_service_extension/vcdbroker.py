@@ -110,8 +110,11 @@ class VcdBroker(abstract_broker.AbstractBroker):
         **telemetry: Optional
         """
         data = kwargs.get(KwargKey.DATA, {})
-        page_number = kwargs.get('page_number', CSE_PAGINATION_FIRST_PAGE_NUMBER)  # noqa: E501
-        page_size = kwargs.get('page_size', CSE_PAGINATION_DEFAULT_PAGE_SIZE)
+        page_number = kwargs.get('page_number', None)
+        page_size = kwargs.get('page_size', None)
+        if page_number or page_size:
+            page_number = int(kwargs.get('page_number', CSE_PAGINATION_FIRST_PAGE_NUMBER))  # noqa: E501
+            page_size = int(kwargs.get('page_size', CSE_PAGINATION_DEFAULT_PAGE_SIZE))  # noqa: E501
         defaults = {
             RequestKey.ORG_NAME: None,
             RequestKey.OVDC_NAME: None
@@ -131,7 +134,10 @@ class VcdBroker(abstract_broker.AbstractBroker):
             ovdc_name=validated_data[RequestKey.OVDC_NAME],
             page_number=page_number,
             page_size=page_size)
-        raw_clusters = raw_clusters_info[PaginationKey.VALUES]
+
+        raw_clusters = raw_clusters_info
+        if page_number:
+            raw_clusters = raw_clusters_info[PaginationKey.VALUES]
 
         clusters = []
         for c in raw_clusters:
@@ -152,8 +158,12 @@ class VcdBroker(abstract_broker.AbstractBroker):
                 'owner_name': c['owner_name'],
                 K8S_PROVIDER_KEY: K8sProvider.NATIVE
             })
-        raw_clusters_info[PaginationKey.VALUES] = clusters
-        return raw_clusters_info
+
+        if page_number:
+            raw_clusters_info[PaginationKey.VALUES] = clusters
+            return raw_clusters_info
+
+        return clusters
 
     def get_cluster_config(self, **kwargs):
         """Get the cluster's kube config contents.
