@@ -144,7 +144,7 @@ def ovdc_list(request_data, op_ctx: ctx.OperationContext):
     record_user_action_details(cse_operation=CseOperation.OVDC_LIST,
                                cse_params=cse_params)
 
-    if is_paginated_response:
+    if not is_paginated_response:
         # Return only the list of OVDCs
         org_vdcs = vcd_utils.get_all_ovdcs(op_ctx.client)
         return _filter_ovdc_list(op_ctx.sysadmin_client, org_vdcs)
