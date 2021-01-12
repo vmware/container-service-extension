@@ -14,8 +14,6 @@ import container_service_extension.logger as logger
 import container_service_extension.operation_context as ctx
 import container_service_extension.pyvcloud_utils as vcd_utils
 from container_service_extension.shared_constants import ClusterEntityKind
-from container_service_extension.shared_constants import CSE_PAGINATION_DEFAULT_PAGE_SIZE  # noqa: E501
-from container_service_extension.shared_constants import CSE_PAGINATION_FIRST_PAGE_NUMBER  # noqa: E501
 from container_service_extension.shared_constants import PaginationKey
 from container_service_extension.shared_constants import RequestKey
 from container_service_extension.shared_constants import RUNTIME_DISPLAY_NAME_TO_INTERNAL_NAME_MAP  # noqa: E501
@@ -114,34 +112,15 @@ def get_ovdc(operation_context: ctx.OperationContext, ovdc_id: str) -> dict:
     return result
 
 
-def list_ovdc(operation_context: ctx.OperationContext,
-              page_number=CSE_PAGINATION_FIRST_PAGE_NUMBER,
-              page_size=CSE_PAGINATION_DEFAULT_PAGE_SIZE) -> dict:
-    """List all ovdc and their k8s runtimes.
-
-    :param ctx.OperationContext operation_context: context for the request
-    :return: dictionary containing list of details about the ovdc
-    :rtype: dict
-    """
-    # NOTE: For CSE 3.0, if `enable_tkg_plus` flag in config is set to false,
-    # Prevent showing information about TKG+ by skipping TKG+ from the result.
-    # Record telemetry
-    telemetry_handler.record_user_action_details(cse_operation=CseOperation.OVDC_LIST, # noqa: E501
-                                                 cse_params={})
-
+def _filter_ovdc_list(sysadmin_client: vcd_client.Client, ovdc_list: list):
     ovdcs = []
-    result = cloudapi_utils.get_vdcs_by_page(
-        operation_context.cloudapi_client,
-        page_number=page_number, page_size=page_size)
-    org_vdcs = result[PaginationKey.VALUES]
-    num_results = result[PaginationKey.RESULT_TOTAL]
-    for ovdc in org_vdcs:
+    for ovdc in ovdc_list:
         ovdc_name = ovdc.get('name')
         config = utils.get_server_runtime_config()
         log_wire = utils.str_to_bool(config.get('service', {}).get('log_wire'))
         ovdc_id = vcd_utils.extract_id(ovdc.get('id'))
         ovdc_details = asdict(
-            get_ovdc_k8s_runtime_details(operation_context.sysadmin_client,
+            get_ovdc_k8s_runtime_details(sysadmin_client,
                                          ovdc_id=ovdc_id,
                                          ovdc_name=ovdc_name,
                                          log_wire=log_wire))
@@ -151,10 +130,43 @@ def list_ovdc(operation_context: ctx.OperationContext,
         # TODO: Find a better way to remove remove_cp_from_vms_on_disable
         del ovdc_details['remove_cp_from_vms_on_disable']
         ovdcs.append(ovdc_details)
-    return {
-        PaginationKey.RESULT_TOTAL: num_results,
-        PaginationKey.VALUES: ovdcs
-    }
+    return ovdcs
+
+
+def list_ovdc(operation_context: ctx.OperationContext, page_number=None,
+              page_size=None):
+    """List all ovdc and their k8s runtimes.
+
+    :param ctx.OperationContext operation_context: context for the request
+    :param int page_number: page_number to fetch
+    :param int page_size: size of each page to return
+    :return: dictionary containing list of details about the ovdc
+        if response should be paginated else a list of ovdcs
+    :rtype: list or dict
+    """
+    # NOTE: For CSE 3.0, if `enable_tkg_plus` flag in config is set to false,
+    # Prevent showing information about TKG+ by skipping TKG+ from the result.
+    # Record telemetry
+    telemetry_handler.record_user_action_details(cse_operation=CseOperation.OVDC_LIST, # noqa: E501
+                                                 cse_params={})
+
+    if page_number and page_size:
+        # return paginated response
+        result = cloudapi_utils.get_vdcs_by_page(
+            operation_context.cloudapi_client,
+            page_number=page_number, page_size=page_size)
+        num_results = result[PaginationKey.RESULT_TOTAL]
+        ovdcs = _filter_ovdc_list(operation_context.sysadmin_client,
+                                  result[PaginationKey.VALUES])
+        return {
+            PaginationKey.RESULT_TOTAL: num_results,
+            PaginationKey.VALUES: ovdcs
+        }
+
+    # send un-paginated response
+    org_vdcs = vcd_utils.get_all_ovdcs(operation_context.client)
+    return _filter_ovdc_list(operation_context.sysadmin_client,
+                             org_vdcs)
 
 
 def get_ovdc_k8s_runtime_details(sysadmin_client: vcd_client.Client,
