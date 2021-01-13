@@ -2,7 +2,7 @@
 # Copyright (c) 2019 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 
-"""Utilities for performing operations for metadata based ovdc."""
+"""Utilities to manage CSE metadata on Ovdcs."""
 
 from collections import namedtuple
 

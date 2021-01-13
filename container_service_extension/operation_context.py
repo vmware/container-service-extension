@@ -39,8 +39,7 @@ class OperationContext:
     @property
     def cloudapi_client(self):
         if self._cloudapi_client is None:
-            log_wire = server_utils.get_server_runtime_config() \
-                .get('service', {}).get('log_wire', False)
+            log_wire = server_utils.get_server_runtime_config().get('service', {}).get('log_wire', False)  # noqa: E501
             logger_wire = logger.NULL_LOGGER
             if log_wire:
                 logger_wire = logger.SERVER_CLOUDAPI_WIRE_LOGGER

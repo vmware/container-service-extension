@@ -838,8 +838,8 @@ class ClusterService(abstract_broker.AbstractBroker):
                 #  error between node creation and deletion threads. Below
                 #  serializes the sequence of node creation and deletion.
                 #  Remove the below block once the issue is fixed in pyvcloud.
-                create_nodes_async_thread_name = utils.generate_thread_name(
-                    self._create_nodes_async.__name__)
+                create_nodes_async_thread_name = \
+                    thread_utils.generate_thread_name(self._create_nodes_async.__name__)  # noqa: E501
                 for t in threading.enumerate():
                     if t.getName() == create_nodes_async_thread_name:
                         t.join()
