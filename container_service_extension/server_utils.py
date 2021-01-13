@@ -129,7 +129,9 @@ def construct_paginated_response(values, result_total,
 def create_links_and_construct_paginated_result(base_uri, values, result_total,
                                                 page_number=shared_constants.CSE_PAGINATION_FIRST_PAGE_NUMBER,  # noqa: E501
                                                 page_size=shared_constants.CSE_PAGINATION_DEFAULT_PAGE_SIZE,  # noqa: E501
-                                                query_params={}):
+                                                query_params=None):
+    if query_params is None:
+        query_params = {}
     next_page_uri: str = None
     if 0 < page_number * page_size < result_total:
         # TODO find a way to get the initial url part

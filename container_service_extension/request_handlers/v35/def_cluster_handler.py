@@ -10,6 +10,7 @@ import container_service_extension.request_handlers.request_utils as request_uti
 from container_service_extension.server_constants import CseOperation as CseServerOperationInfo  # noqa: E501
 from container_service_extension.server_constants import FlattenedClusterSpecKey  # noqa: E501
 from container_service_extension.server_constants import ThreadLocalData
+import container_service_extension.server_utils as server_utils
 from container_service_extension.shared_constants import ClusterAclKey
 from container_service_extension.shared_constants import CSE_PAGINATION_DEFAULT_PAGE_SIZE  # noqa: E501
 from container_service_extension.shared_constants import CSE_PAGINATION_FIRST_PAGE_NUMBER  # noqa: E501
@@ -18,7 +19,6 @@ from container_service_extension.shared_constants import RequestKey
 import container_service_extension.telemetry.constants as telemetry_constants
 import container_service_extension.telemetry.telemetry_handler as telemetry_handler  # noqa: E501
 import container_service_extension.thread_local_data as thread_local_data
-import container_service_extension.utils as utils
 
 _OPERATION_KEY = 'operation'
 
@@ -160,7 +160,7 @@ def cluster_list(data: dict, op_ctx: ctx.OperationContext):
     cluster_list = [asdict(def_entity) for def_entity in result[PaginationKey.VALUES]]  # noqa: E501
     api_path = CseServerOperationInfo.V35_CLUSTER_LIST.api_path_format
     uri = f"{op_ctx.client.get_api_uri().strip('/')}{api_path}"
-    return utils.create_links_and_construct_paginated_result(
+    return server_utils.create_links_and_construct_paginated_result(
         uri,
         cluster_list,
         result_total=result[PaginationKey.RESULT_TOTAL],
@@ -181,7 +181,7 @@ def cluster_acl_info(data: dict, op_ctx: ctx.OperationContext):
     result: dict = svc.get_cluster_acl_info(cluster_id, page, page_size)
     api_path = CseServerOperationInfo.V35_CLUSTER_ACL_LIST.api_path_format % cluster_id  # noqa: E501
     uri = f"{op_ctx.client.get_api_uri().strip('/')}{api_path}"
-    return utils.create_links_and_construct_paginated_result(
+    return server_utils.create_links_and_construct_paginated_result(
         base_uri=uri,
         values=result.get(PaginationKey.VALUES, []),
         result_total=result.get(PaginationKey.RESULT_TOTAL, 0),

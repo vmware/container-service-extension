@@ -4,7 +4,7 @@
 
 from container_service_extension.shared_constants import CSE_SERVER_BUSY_KEY
 
-# Shared bewteen AMQP and MQTT consumers
+# Shared between AMQP and MQTT consumers
 TOO_MANY_REQUESTS_BODY = f'{{"{CSE_SERVER_BUSY_KEY}":' \
                          f'"Please wait and try again."}}'
 

@@ -18,14 +18,18 @@ class NativeClusterApi(CseClient):
         self._node_uri = f"{self._uri}/node"
         self._nodes_uri = f"{self._uri}/nodes"
 
-    def get_all_clusters(self, filters={}):
+    def get_all_clusters(self, filters=None):
+        if filters is None:
+            filters = {}
         filter_string = "&".join([f"{k}={v}" for k, v in filters.items() if v is not None])  # noqa: E501
         url = f"{self._clusters_uri}?pageSize={self._request_page_size}"
         if filter_string:
             url += f"&{filter_string}"
         return self.iterate_results(url)
 
-    def list_clusters(self, filters={}):
+    def list_clusters(self, filters=None):
+        if filters is None:
+            filters = {}
         response = self._client._do_request_prim(
             shared_constants.RequestMethod.GET,
             self._clusters_uri,
@@ -34,7 +38,9 @@ class NativeClusterApi(CseClient):
             params=filters)
         return process_response(response)
 
-    def get_cluster(self, cluster_name, filters={}):
+    def get_cluster(self, cluster_name, filters=None):
+        if filters is None:
+            filters = None
         uri = f'{self._cluster_uri}/{cluster_name}'
         response = self._client._do_request_prim(
             shared_constants.RequestMethod.GET,
@@ -44,7 +50,9 @@ class NativeClusterApi(CseClient):
             params=filters)
         return process_response(response)
 
-    def get_cluster_upgrade_plan(self, cluster_name, filters={}):
+    def get_cluster_upgrade_plan(self, cluster_name, filters=None):
+        if filters is None:
+            filters = {}
         uri = f'{self._cluster_uri}/{cluster_name}/upgrade-plan'
         response = self._client._do_request_prim(
             shared_constants.RequestMethod.GET,
@@ -128,7 +136,9 @@ class NativeClusterApi(CseClient):
             accept_type='application/json')
         return process_response(response)
 
-    def delete_cluster(self, cluster_name, filters={}):
+    def delete_cluster(self, cluster_name, filters=None):
+        if filters is None:
+            filters = {}
         uri = f"{self._cluster_uri}/{cluster_name}"
         response = self._client._do_request_prim(
             shared_constants.RequestMethod.DELETE,
@@ -138,7 +148,9 @@ class NativeClusterApi(CseClient):
             params=filters)
         return process_response(response)
 
-    def get_cluster_config(self, cluster_name, filters={}):
+    def get_cluster_config(self, cluster_name, filters=None):
+        if filters is None:
+            filters = {}
         uri = f"{self._cluster_uri}/{cluster_name}/config"
         response = self._client._do_request_prim(
             shared_constants.RequestMethod.GET,
@@ -176,7 +188,9 @@ class NativeClusterApi(CseClient):
             accept_type='application/json')
         return process_response(response)
 
-    def get_node_info(self, cluster_name, node_name, filters={}):
+    def get_node_info(self, cluster_name, node_name, filters=None):
+        if filters is None:
+            filters = {}
         uri = f"{self._node_uri}/{node_name}"
         filters.update({
             shared_constants.RequestKey.CLUSTER_NAME: cluster_name

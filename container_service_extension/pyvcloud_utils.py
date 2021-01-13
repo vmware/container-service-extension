@@ -541,7 +541,7 @@ def get_all_ovdcs(client: vcd_client.Client):
     return list(query.execute())
 
 
-def create_cse_page_uri(client: vcd_client.Client, cse_path: str, vcd_uri=None, query_params={}):  # noqa: E501
+def create_cse_page_uri(client: vcd_client.Client, cse_path: str, vcd_uri=None, query_params=None):  # noqa: E501
     """Create a CSE URI equivalent to the VCD uri.
 
     :param vcd_client.Client client:
@@ -556,6 +556,8 @@ def create_cse_page_uri(client: vcd_client.Client, cse_path: str, vcd_uri=None, 
         Output:
             https://vcd-ip/api/cse/3.0/ovdcs?page=2&pageSize=25
     """  # noqa: E501
+    if query_params is None:
+        query_params = {}
     if vcd_uri:
         base_uri = f"{client.get_api_uri().strip('/')}{cse_path}"
         query_dict = dict(urllib.parse.parse_qsl(urllib.parse.urlsplit(vcd_uri).query))  # noqa: E501

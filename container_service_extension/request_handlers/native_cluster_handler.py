@@ -5,6 +5,7 @@
 import container_service_extension.operation_context as ctx
 from container_service_extension.server_constants import CseOperation as CseOperationInfo  # noqa: E501
 from container_service_extension.server_constants import K8S_PROVIDER_KEY
+import container_service_extension.server_utils as server_utils
 from container_service_extension.shared_constants import CSE_PAGINATION_DEFAULT_PAGE_SIZE  # noqa: E501
 from container_service_extension.shared_constants import CSE_PAGINATION_FIRST_PAGE_NUMBER  # noqa: E501
 from container_service_extension.shared_constants import PaginationKey
@@ -12,7 +13,6 @@ from container_service_extension.shared_constants import RequestKey
 from container_service_extension.telemetry.constants import CseOperation
 from container_service_extension.telemetry.telemetry_handler import \
     record_user_action_telemetry
-import container_service_extension.utils as utils
 from container_service_extension.vcdbroker import VcdBroker
 
 
@@ -165,11 +165,12 @@ def cluster_list(request_data, op_ctx: ctx.OperationContext):
         result.append(filtered_cluster_info)
 
     base_url = f"{op_ctx.client.get_api_uri().strip('/')}{CseOperationInfo.CLUSTER_LIST._api_path_format}"  # noqa: E501
-    return utils.create_links_and_construct_paginated_result(base_url, result,
-                                                             vcd_clusters_info[PaginationKey.RESULT_TOTAL],  # noqa: E501
-                                                             page_number=page_number,  # noqa: E501
-                                                             page_size=page_size,  # noqa: E501
-                                                             query_params=query_params)  # noqa: E501
+    return server_utils.create_links_and_construct_paginated_result(
+        base_url, result,
+        vcd_clusters_info[PaginationKey.RESULT_TOTAL],
+        page_number=page_number,
+        page_size=page_size,
+        query_params=query_params)
 
 
 @record_user_action_telemetry(cse_operation=CseOperation.NODE_CREATE)

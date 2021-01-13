@@ -14,7 +14,7 @@ from container_service_extension.shared_constants import ClusterEntityKind
 class Cluster:
     """Returns the cluster class as determined by API version."""
 
-    def __new__(cls, client: vcd_client, k8_runtime=None):
+    def __new__(cls, client: vcd_client.Client, k8_runtime=None):
         """Create the right cluster class for the negotiated API version.
 
         In case of ApiVersion.VERSION_35, return specific instance if the

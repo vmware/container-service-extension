@@ -143,7 +143,6 @@ class Status:
     cni: str = None
     task_href: str = None
     kubernetes: str = None
-    cni: str = None
     docker_version: str = None
     os: str = None
     nodes: Nodes = None
@@ -313,7 +312,9 @@ class ClusterAclEntry:
     objectId: str = None
     username: str = None
 
-    def construct_filtered_dict(self, include=[]):
+    def construct_filtered_dict(self, include=None):
+        if include is None:
+            include = []
         orig_dict = asdict(self)
         include_set = set(include)
         filtered_dict = {}

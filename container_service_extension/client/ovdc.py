@@ -11,7 +11,7 @@ from container_service_extension.client.policy_based_ovdc import PolicyBasedOvdc
 class Ovdc:
     """Returns the ovdc class as determined by API version."""
 
-    def __new__(cls, client: vcd_client):
+    def __new__(cls, client: vcd_client.Client):
         """Create the right ovdc class for the negotiated API version.
 
         For apiVersion < 35 return MetadataBasedOvdc class
