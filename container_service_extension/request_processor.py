@@ -23,8 +23,9 @@ import container_service_extension.request_handlers.v35.def_cluster_handler as v
 import container_service_extension.request_handlers.v35.ovdc_handler as v35_ovdc_handler # noqa: E501
 import container_service_extension.request_handlers.v36.def_cluster_handler as v36_cluster_handler  # noqa: E501
 from container_service_extension.server_constants import CseOperation
+from container_service_extension.server_constants import OperationType
+import container_service_extension.server_utils as server_utils
 import container_service_extension.shared_constants as shared_constants
-import container_service_extension.utils as utils
 
 
 """Process incoming requests
@@ -268,7 +269,7 @@ def process_request(message):
                 error_message='CSE service is disabled. '
                               'Contact the System Administrator.')
         else:
-            server_api_version = utils.get_server_api_version()
+            server_api_version = server_utils.get_server_api_version()
             if api_version != server_api_version:
                 raise cse_exception.NotAcceptableRequestError(
                     error_message="Invalid api version specified. Expected "
@@ -391,7 +392,7 @@ def _get_pks_url_data(method: str, url: str):
     if operation_type.endswith('s'):
         operation_type = operation_type[:-1]
 
-    if operation_type == shared_constants.OperationType.CLUSTER:
+    if operation_type == OperationType.CLUSTER:
         if num_tokens == 4:
             if method == shared_constants.RequestMethod.GET:
                 return {_OPERATION_KEY: CseOperation.PKS_CLUSTER_LIST}
@@ -423,7 +424,7 @@ def _get_pks_url_data(method: str, url: str):
                         shared_constants.RequestKey.CLUSTER_NAME: tokens[4]
                     }
             raise cse_exception.MethodNotAllowedRequestError()
-    elif operation_type == shared_constants.OperationType.OVDC:
+    elif operation_type == OperationType.OVDC:
         if num_tokens == 4:
             if method == shared_constants.RequestMethod.GET:
                 return {_OPERATION_KEY: CseOperation.PKS_OVDC_LIST}
@@ -468,10 +469,10 @@ def _get_v35_plus_url_data(method: str, url: str, api_version: str):
     if operation_type.endswith('s'):
         operation_type = operation_type[:-1]
 
-    if operation_type == shared_constants.OperationType.CLUSTER:
+    if operation_type == OperationType.CLUSTER:
         return _get_v35_plus_cluster_url_data(method, tokens, api_version)
 
-    if operation_type == shared_constants.OperationType.OVDC:
+    if operation_type == OperationType.OVDC:
         return _get_v35_plus_ovdc_url_data(method, tokens)
 
     raise cse_exception.NotFoundRequestError()
@@ -597,7 +598,7 @@ def _get_legacy_url_data(method: str, url: str, api_version: str):
     if operation_type.endswith('s'):
         operation_type = operation_type[:-1]
 
-    if operation_type == shared_constants.OperationType.CLUSTER:
+    if operation_type == OperationType.CLUSTER:
         if api_version not in (VcdApiVersion.VERSION_33.value,
                                VcdApiVersion.VERSION_34.value):
             raise cse_exception.NotFoundRequestError()
@@ -646,7 +647,7 @@ def _get_legacy_url_data(method: str, url: str, api_version: str):
                         shared_constants.RequestKey.CLUSTER_NAME: tokens[4]
                     }
             raise cse_exception.MethodNotAllowedRequestError()
-    elif operation_type == shared_constants.OperationType.NODE:
+    elif operation_type == OperationType.NODE:
         if api_version not in (VcdApiVersion.VERSION_33.value,
                                VcdApiVersion.VERSION_34.value):
             raise cse_exception.NotFoundRequestError()
@@ -664,7 +665,7 @@ def _get_legacy_url_data(method: str, url: str, api_version: str):
                     shared_constants.RequestKey.NODE_NAME: tokens[4]
                 }
             raise cse_exception.MethodNotAllowedRequestError()
-    elif operation_type == shared_constants.OperationType.OVDC:
+    elif operation_type == OperationType.OVDC:
         if api_version not in (VcdApiVersion.VERSION_33.value,
                                VcdApiVersion.VERSION_34.value):
             raise cse_exception.NotFoundRequestError()
@@ -697,14 +698,14 @@ def _get_legacy_url_data(method: str, url: str, api_version: str):
                     shared_constants.RequestKey.OVDC_ID: tokens[4]
                 }
             raise cse_exception.MethodNotAllowedRequestError()
-    elif operation_type == shared_constants.OperationType.SYSTEM:
+    elif operation_type == OperationType.SYSTEM:
         if num_tokens == 4:
             if method == shared_constants.RequestMethod.GET:
                 return {_OPERATION_KEY: CseOperation.SYSTEM_INFO}
             if method == shared_constants.RequestMethod.PUT:
                 return {_OPERATION_KEY: CseOperation.SYSTEM_UPDATE}
             raise cse_exception.MethodNotAllowedRequestError()
-    elif operation_type == shared_constants.OperationType.TEMPLATE:
+    elif operation_type == OperationType.TEMPLATE:
         if num_tokens == 4:
             if method == shared_constants.RequestMethod.GET:
                 return {_OPERATION_KEY: CseOperation.TEMPLATE_LIST}

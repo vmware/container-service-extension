@@ -3,8 +3,8 @@ import pyvcloud.vcd.client as vcd_client
 import container_service_extension.cloudapi.cloudapi_client as cloudApiClient
 import container_service_extension.logger as logger
 import container_service_extension.pyvcloud_utils as vcd_utils
+import container_service_extension.server_utils as server_utils
 import container_service_extension.user_context as user_context
-import container_service_extension.utils as utils
 
 
 class OperationContext:
@@ -39,8 +39,7 @@ class OperationContext:
     @property
     def cloudapi_client(self):
         if self._cloudapi_client is None:
-            log_wire = utils.get_server_runtime_config() \
-                            .get('service', {}).get('log_wire', False)
+            log_wire = server_utils.get_server_runtime_config().get('service', {}).get('log_wire', False)  # noqa: E501
             logger_wire = logger.NULL_LOGGER
             if log_wire:
                 logger_wire = logger.SERVER_CLOUDAPI_WIRE_LOGGER

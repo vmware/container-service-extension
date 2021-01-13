@@ -6,7 +6,7 @@ import pyvcloud.vcd.role as vcd_role
 import container_service_extension.cloudapi.cloudapi_client as cloudApiClient
 import container_service_extension.logger as logger
 import container_service_extension.pyvcloud_utils as vcd_utils
-import container_service_extension.utils as utils
+import container_service_extension.server_utils as server_utils
 
 
 ORG_ADMIN_RIGHTS = [
@@ -107,8 +107,8 @@ class UserContext:
     @property
     def sysadmin_cloudapi_client(self):
         if self._sysadmin_cloudapi_client is None:
-            log_wire = utils.get_server_runtime_config() \
-                            .get('service', {}).get('log_wire', False)
+            log_wire = server_utils.get_server_runtime_config() \
+                .get('service', {}).get('log_wire', False)
             logger_wire = logger.NULL_LOGGER
             if log_wire:
                 logger_wire = logger.SERVER_CLOUDAPI_WIRE_LOGGER

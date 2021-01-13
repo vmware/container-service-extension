@@ -2,9 +2,12 @@
 # Copyright (c) 2020 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 
+"""Constants used only in the CSE CLI."""
+
 from enum import Enum
 from enum import unique
 
+import container_service_extension.def_.constants as def_constants
 import container_service_extension.def_.utils as def_utils
 import container_service_extension.shared_constants as shared_constants
 
@@ -13,9 +16,9 @@ ENV_CSE_CLIENT_WIRE_LOGGING = 'CSE_CLIENT_WIRE_LOGGING'
 ENV_CSE_TKG_PLUS_ENABLED = 'CSE_TKG_PLUS_ENABLED'
 
 TKG_ENTITY_TYPE_ID = def_utils.generate_entity_type_id(
-    def_utils.DEF_VMWARE_VENDOR,
-    def_utils.TKG_ENTITY_TYPE_NSS,
-    def_utils.TKG_ENTITY_TYPE_VERSION)
+    def_constants.DEF_VMWARE_VENDOR,
+    def_constants.TKG_ENTITY_TYPE_NSS,
+    def_constants.TKG_ENTITY_TYPE_VERSION)
 
 
 # if cse_server_running key is set to false in profiles.yaml, CSE CLI can

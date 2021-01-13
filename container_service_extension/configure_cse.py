@@ -24,6 +24,7 @@ import requests
 import semantic_version
 
 import container_service_extension.compute_policy_manager as compute_policy_manager # noqa: E501
+import container_service_extension.def_.constants as def_constants
 import container_service_extension.def_.entity_service as def_entity_svc
 import container_service_extension.def_.models as def_models
 import container_service_extension.def_.schema_service as def_schema_svc
@@ -47,6 +48,7 @@ from container_service_extension.remote_template_manager import \
     RemoteTemplateManager
 from container_service_extension.right_bundle_manager import RightBundleManager
 import container_service_extension.server_constants as server_constants
+import container_service_extension.server_utils as server_utils
 import container_service_extension.shared_constants as shared_constants
 from container_service_extension.telemetry.constants import CseOperation
 from container_service_extension.telemetry.constants import OperationStatus
@@ -108,7 +110,7 @@ def check_cse_installation(config, msg_update_callback=utils.NullPrinter()):
                                             config['vcd']['password'])
         client.set_credentials(credentials)
 
-        if utils.should_use_mqtt_protocol(config):
+        if server_utils.should_use_mqtt_protocol(config):
             _check_mqtt_extension_installation(client, msg_update_callback,
                                                err_msgs)
         else:
@@ -247,7 +249,7 @@ def _check_mqtt_extension_installation(client, msg_update_callback, err_msgs):
 
 def _construct_cse_extension_description(target_vcd_api_version):
     """."""
-    cse_version = utils.get_installed_cse_version()
+    cse_version = server_utils.get_installed_cse_version()
     description = f"cse-{cse_version},vcd_api-{target_vcd_api_version}"
     return description
 
@@ -378,7 +380,7 @@ def install_cse(config_file_name, config, skip_template_creation,
                              log_wire=log_wire)
 
         # set up placement policies for all types of clusters
-        is_tkg_plus_enabled = utils.is_tkg_plus_enabled(config=config)
+        is_tkg_plus_enabled = server_utils.is_tkg_plus_enabled(config=config)  # noqa: E501
         _setup_placement_policies(
             client=client,
             policy_list=shared_constants.CLUSTER_RUNTIME_PLACEMENT_POLICIES,
@@ -415,7 +417,7 @@ def install_cse(config_file_name, config, skip_template_creation,
             )
 
         # Setup extension based on message bus protocol
-        if utils.should_use_mqtt_protocol(config):
+        if server_utils.should_use_mqtt_protocol(config):
             _register_cse_as_mqtt_extension(client,
                                             config['vcd']['api_version'],
                                             msg_update_callback)
@@ -761,33 +763,32 @@ def _register_def_schema(client: Client,
     try:
         def_utils.raise_error_if_def_not_supported(cloudapi_client)
         schema_svc = def_schema_svc.DefSchemaService(cloudapi_client)
-        keys_map = def_utils.MAP_API_VERSION_TO_KEYS[float(client.get_api_version())] # noqa: E501
-        defKey = def_utils.DefKey
+        keys_map = def_constants.MAP_API_VERSION_TO_KEYS[float(client.get_api_version())] # noqa: E501
         kubernetes_interface = def_models.\
-            DefInterface(name=keys_map[defKey.INTERFACE_NAME],
-                         vendor=keys_map[defKey.INTERFACE_VENDOR],
-                         nss=keys_map[defKey.INTERFACE_NSS],
-                         version=keys_map[defKey.INTERFACE_VERSION], # noqa: E501
+            DefInterface(name=keys_map[def_constants.DefKey.INTERFACE_NAME],
+                         vendor=keys_map[def_constants.DefKey.INTERFACE_VENDOR],  # noqa: E501
+                         nss=keys_map[def_constants.DefKey.INTERFACE_NSS],
+                         version=keys_map[def_constants.DefKey.INTERFACE_VERSION], # noqa: E501
                          readonly=False)
         try:
             # k8s interface should always be present
             schema_svc.get_interface(kubernetes_interface.get_id())
         except cse_exception.DefSchemaServiceError:
             msg = "Failed to obtain built-in defined entity interface " \
-                  f"{keys_map[defKey.INTERFACE_NAME]}"
+                  f"{keys_map[def_constants.DefKey.INTERFACE_NAME]}"
             msg_update_callback.error(msg)
             INSTALL_LOGGER.error(msg)
             raise
 
         schema_module = importlib.import_module(
-            f'{def_utils.DEF_SCHEMA_DIRECTORY}.{keys_map[defKey.ENTITY_TYPE_SCHEMA_VERSION]}') # noqa: E501
-        schema_file = pkg_resources.open_text(schema_module, def_utils.DEF_ENTITY_TYPE_SCHEMA_FILE) # noqa: E501
+            f'{def_constants.DEF_SCHEMA_DIRECTORY}.{keys_map[def_constants.DefKey.ENTITY_TYPE_SCHEMA_VERSION]}') # noqa: E501
+        schema_file = pkg_resources.open_text(schema_module, def_constants.DEF_ENTITY_TYPE_SCHEMA_FILE) # noqa: E501
         native_entity_type = def_models.\
-            DefEntityType(name=keys_map[defKey.ENTITY_TYPE_NAME],
+            DefEntityType(name=keys_map[def_constants.DefKey.ENTITY_TYPE_NAME],
                           description='',
-                          vendor=keys_map[defKey.ENTITY_TYPE_VENDOR],
-                          nss=keys_map[defKey.ENTITY_TYPE_NSS],
-                          version=keys_map[defKey.ENTITY_TYPE_VERSION],
+                          vendor=keys_map[def_constants.DefKey.ENTITY_TYPE_VENDOR],  # noqa: E501
+                          nss=keys_map[def_constants.DefKey.ENTITY_TYPE_NSS],
+                          version=keys_map[def_constants.DefKey.ENTITY_TYPE_VERSION],  # noqa: E501
                           schema=json.load(schema_file),
                           interfaces=[kubernetes_interface.get_id()],
                           readonly=False)
@@ -815,7 +816,7 @@ def _register_def_schema(client: Client,
         # Update user's role with right bundle associated with native defined
         # entity
         if(_update_user_role_with_right_bundle(
-                def_utils.DEF_NATIVE_ENTITY_TYPE_RIGHT_BUNDLE,
+                def_constants.DEF_NATIVE_ENTITY_TYPE_RIGHT_BUNDLE,
                 client=client,
                 msg_update_callback=msg_update_callback,
                 logger_debug=INSTALL_LOGGER,
@@ -1062,7 +1063,7 @@ def _install_all_templates(
             force_update=force_create,
             retain_temp_vapp=retain_temp_vapp,
             ssh_key=ssh_key,
-            is_tkg_plus_enabled=utils.is_tkg_plus_enabled(config),
+            is_tkg_plus_enabled=server_utils.is_tkg_plus_enabled(config),
             msg_update_callback=msg_update_callback)
 
 
@@ -1160,7 +1161,7 @@ def install_template(template_name, template_revision, config_file_name,
                     force_update=force_create,
                     retain_temp_vapp=retain_temp_vapp,
                     ssh_key=ssh_key,
-                    is_tkg_plus_enabled=utils.is_tkg_plus_enabled(config),
+                    is_tkg_plus_enabled=server_utils.is_tkg_plus_enabled(config),  # noqa: E501
                     msg_update_callback=msg_update_callback)
 
         if not found_template:
@@ -1331,7 +1332,7 @@ def upgrade_cse(config_file_name, config, skip_template_creation,
                 "of 'cse upgrade'."
             raise Exception(msg)
         elif existing_ext_type == server_constants.ExtensionType.MQTT and \
-                not utils.should_use_mqtt_protocol(config):
+                not server_utils.should_use_mqtt_protocol(config):
             # Upgrading from MQTT to AMQP extension
             msg = "Upgrading from MQTT extension to AMQP extension is not " \
                   "supported"
@@ -1339,7 +1340,7 @@ def upgrade_cse(config_file_name, config, skip_template_creation,
 
         ext_cse_version, ext_vcd_api_version = \
             parse_cse_extension_description(
-                client, utils.should_use_mqtt_protocol(config))
+                client, server_utils.should_use_mqtt_protocol(config))
         if ext_cse_version == server_constants.UNKNOWN_CSE_VERSION or \
                 ext_vcd_api_version == server_constants.UNKNOWN_VCD_API_VERSION: # noqa: E501
             msg = "Found CSE api extension registered with vCD, but " \
@@ -1355,7 +1356,7 @@ def upgrade_cse(config_file_name, config, skip_template_creation,
             INSTALL_LOGGER.info(msg)
 
         target_vcd_api_version = config['vcd']['api_version']
-        target_cse_version = utils.get_installed_cse_version()
+        target_cse_version = server_utils.get_installed_cse_version()
 
         telemetry_data = {
             PayloadKey.SOURCE_CSE_VERSION: str(ext_cse_version),
@@ -1573,7 +1574,7 @@ def _upgrade_to_35(client, config, ext_vcd_api_version,
     :raises requests.exceptions.HTTPError: (when using MQTT) if the MQTT
         components were not installed correctly
     """
-    is_tkg_plus_enabled = utils.is_tkg_plus_enabled(config=config)
+    is_tkg_plus_enabled = server_utils.is_tkg_plus_enabled(config=config)
 
     # Add global placement polcies
     _setup_placement_policies(
@@ -1670,7 +1671,7 @@ def _upgrade_to_35(client, config, ext_vcd_api_version,
         cse_clusters=clusters, msg_update_callback=msg_update_callback)
 
     # update extension
-    if utils.should_use_mqtt_protocol(config):
+    if server_utils.should_use_mqtt_protocol(config):
         # Caller guarantees that there is an extension present
         existing_ext_type = _get_existing_extension_type(client)
         if existing_ext_type == server_constants.ExtensionType.AMQP:
@@ -2189,7 +2190,7 @@ def _assign_placement_policy_to_vdc_and_right_bundle_to_org(
         try:
             rbm = RightBundleManager(client, log_wire=log_wire, logger_debug=INSTALL_LOGGER)  # noqa: E501
             cse_right_bundle = rbm.get_right_bundle_by_name(
-                def_utils.DEF_NATIVE_ENTITY_TYPE_RIGHT_BUNDLE)
+                def_constants.DEF_NATIVE_ENTITY_TYPE_RIGHT_BUNDLE)
             rbm.publish_cse_right_bundle_to_tenants(
                 right_bundle_id=cse_right_bundle['id'],
                 org_ids=list(org_ids))
@@ -2295,11 +2296,11 @@ def _create_def_entity_for_existing_clusters(
     entity_svc = def_entity_svc.DefEntityService(cloudapi_client)
 
     schema_svc = def_schema_svc.DefSchemaService(cloudapi_client)
-    keys_map = def_utils.MAP_API_VERSION_TO_KEYS[float(client.get_api_version())] # noqa: E501
+    keys_map = def_constants.MAP_API_VERSION_TO_KEYS[float(client.get_api_version())] # noqa: E501
     entity_type_id = def_utils.generate_entity_type_id(
-        vendor=keys_map[def_utils.DefKey.ENTITY_TYPE_VENDOR],
-        nss=keys_map[def_utils.DefKey.ENTITY_TYPE_NSS],
-        version=keys_map[def_utils.DefKey.ENTITY_TYPE_VERSION])
+        vendor=keys_map[def_constants.DefKey.ENTITY_TYPE_VENDOR],
+        nss=keys_map[def_constants.DefKey.ENTITY_TYPE_NSS],
+        version=keys_map[def_constants.DefKey.ENTITY_TYPE_VERSION])
     native_entity_type = schema_svc.get_entity_type(entity_type_id)
 
     for cluster in cse_clusters:
@@ -2372,9 +2373,9 @@ def _create_def_entity_for_existing_clusters(
                     template_name=cluster['template_name'],
                     template_revision=int(cluster['template_revision']))),
             status=def_models.Status(
-                phase=str(shared_constants.DefEntityPhase(
-                    shared_constants.DefEntityOperation.CREATE,
-                    shared_constants.DefEntityOperationStatus.SUCCEEDED)),
+                phase=str(server_constants.DefEntityPhase(
+                    server_constants.DefEntityOperation.CREATE,
+                    server_constants.DefEntityOperationStatus.SUCCEEDED)),
                 kubernetes=f"{cluster['kubernetes']} {cluster['kubernetes_version']}", # noqa: E501
                 cni=f"{cluster['cni']} {cluster['cni_version']}",
                 os=cluster['os'],

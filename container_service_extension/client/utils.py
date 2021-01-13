@@ -1,6 +1,9 @@
 # container-service-extension
 # Copyright (c) 2020 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
+
+"""Utility methods used only by the CLI client."""
+
 import click
 from pyvcloud.vcd.client import Client
 import pyvcloud.vcd.org as vcd_org
@@ -12,7 +15,7 @@ from vcd_cli.utils import stdout
 
 from container_service_extension.client import system as syst
 from container_service_extension.client.constants import CSE_SERVER_RUNNING
-import container_service_extension.def_.utils as def_utils
+import container_service_extension.def_.constants as def_constants
 from container_service_extension.exceptions import CseResponseError
 from container_service_extension.logger import NULL_LOGGER
 import container_service_extension.shared_constants as shared_constants
@@ -138,9 +141,9 @@ def _override_client(ctx) -> None:
 def construct_filters(**kwargs):
     filters = {}
     if kwargs.get('org'):
-        filters[def_utils.ClusterEntityFilterKey.ORG_NAME.value] = kwargs['org']  # noqa: E501
+        filters[def_constants.ClusterEntityFilterKey.ORG_NAME.value] = kwargs['org']  # noqa: E501
     if kwargs.get('vdc'):
-        filters[def_utils.ClusterEntityFilterKey.OVDC_NAME.value] = kwargs['vdc']  # noqa: E501
+        filters[def_constants.ClusterEntityFilterKey.OVDC_NAME.value] = kwargs['vdc']  # noqa: E501
     return filters
 
 

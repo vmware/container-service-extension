@@ -22,6 +22,7 @@ import container_service_extension.compute_policy_manager \
     as compute_policy_manager
 import container_service_extension.configure_cse as configure_cse
 from container_service_extension.consumer.consumer import MessageConsumer
+import container_service_extension.def_.constants as def_constants
 import container_service_extension.def_.models as def_models
 import container_service_extension.def_.schema_service as def_schema_svc
 import container_service_extension.def_.utils as def_utils
@@ -34,7 +35,7 @@ from container_service_extension.mqtt_extension_manager import \
 from container_service_extension.pks_cache import PksCache
 import container_service_extension.pyvcloud_utils as vcd_utils
 import container_service_extension.server_constants as server_constants
-from container_service_extension.server_constants import MQTTExtKey
+import container_service_extension.server_utils as server_utils
 import container_service_extension.shared_constants as shared_constants
 from container_service_extension.telemetry.constants import CseOperation
 from container_service_extension.telemetry.constants import PayloadKey
@@ -100,7 +101,7 @@ def watchdog_thread_run(service_obj, num_processors):
 
 def verify_version_compatibility(sysadmin_client: Client,
                                  target_vcd_api_version, is_mqtt_extension):
-    cse_version = utils.get_installed_cse_version()
+    cse_version = server_utils.get_installed_cse_version()
     ext_cse_version, ext_vcd_api_version = \
         configure_cse.parse_cse_extension_description(
             sysadmin_client, is_mqtt_extension)
@@ -213,7 +214,7 @@ class Service(object, metaclass=Singleton):
 
     def info(self, get_sysadmin_info=False):
         result = utils.get_cse_info()
-        result[shared_constants.CSE_SERVER_API_VERSION] = utils.get_server_api_version()  # noqa: E501
+        result[shared_constants.CSE_SERVER_API_VERSION] = server_utils.get_server_api_version()  # noqa: E501
         if get_sysadmin_info:
             result['all_consumer_threads'] = 0 if self.consumer is None else \
                 self.consumer.get_num_total_threads()
@@ -282,7 +283,7 @@ class Service(object, metaclass=Singleton):
             sysadmin_client = vcd_utils.get_sys_admin_client()
             verify_version_compatibility(sysadmin_client,
                                          self.config['vcd']['api_version'],
-                                         utils.should_use_mqtt_protocol(self.config))  # noqa: E501
+                                         server_utils.should_use_mqtt_protocol(self.config))  # noqa: E501
         except Exception as err:
             logger.SERVER_LOGGER.info(err)
             raise
@@ -290,7 +291,7 @@ class Service(object, metaclass=Singleton):
             if sysadmin_client:
                 sysadmin_client.logout()
 
-        if utils.should_use_mqtt_protocol(self.config):
+        if server_utils.should_use_mqtt_protocol(self.config):
             # Store/setup MQTT extension, api filter, and token info
             try:
                 sysadmin_client = vcd_utils.get_sys_admin_client()
@@ -299,7 +300,7 @@ class Service(object, metaclass=Singleton):
                     ext_name=server_constants.CSE_SERVICE_NAME,
                     ext_version=server_constants.MQTT_EXTENSION_VERSION,
                     ext_vendor=server_constants.MQTT_EXTENSION_VENDOR)
-                ext_urn_id = ext_info[MQTTExtKey.EXT_URN_ID]
+                ext_urn_id = ext_info[server_constants.MQTTExtKey.EXT_URN_ID]
                 ext_uuid = mqtt_ext_manager.get_extension_uuid(ext_urn_id)
                 api_filters_status = mqtt_ext_manager.check_api_filters_setup(
                     ext_uuid, configure_cse.API_FILTER_PATTERNS)
@@ -314,7 +315,8 @@ class Service(object, metaclass=Singleton):
 
                 self.config['mqtt'].update(ext_info)
                 self.config['mqtt'].update(token_info)
-                self.config['mqtt'][MQTTExtKey.EXT_UUID] = ext_uuid
+                self.config['mqtt'][server_constants.MQTTExtKey.EXT_UUID] = \
+                    ext_uuid
             except Exception as err:
                 msg = f'MQTT extension setup error: {err}'
                 logger.SERVER_LOGGER.error(msg)
@@ -474,14 +476,13 @@ class Service(object, metaclass=Singleton):
                                                               logger_wire)
             raise_error_if_def_not_supported(cloudapi_client)
             schema_svc = def_schema_svc.DefSchemaService(cloudapi_client)
-            defKey = def_utils.DefKey
-            keys_map = def_utils.MAP_API_VERSION_TO_KEYS[float(sysadmin_client.get_api_version())] # noqa: E501
-            interface_id = def_utils.generate_interface_id(vendor=keys_map[defKey.INTERFACE_VENDOR], # noqa: E501
-                                                           nss=keys_map[defKey.INTERFACE_NSS], # noqa: E501
-                                                           version=keys_map[defKey.INTERFACE_VERSION]) # noqa: E501
-            entity_type_id = def_utils.generate_entity_type_id(vendor=keys_map[defKey.ENTITY_TYPE_VENDOR], # noqa: E501
-                                                               nss=keys_map[defKey.ENTITY_TYPE_NSS], # noqa: E501
-                                                               version=keys_map[defKey.ENTITY_TYPE_VERSION]) # noqa: E501
+            keys_map = def_constants.MAP_API_VERSION_TO_KEYS[float(sysadmin_client.get_api_version())] # noqa: E501
+            interface_id = def_utils.generate_interface_id(vendor=keys_map[def_constants.DefKey.INTERFACE_VENDOR], # noqa: E501
+                                                           nss=keys_map[def_constants.DefKey.INTERFACE_NSS], # noqa: E501
+                                                           version=keys_map[def_constants.DefKey.INTERFACE_VERSION]) # noqa: E501
+            entity_type_id = def_utils.generate_entity_type_id(vendor=keys_map[def_constants.DefKey.ENTITY_TYPE_VENDOR], # noqa: E501
+                                                               nss=keys_map[def_constants.DefKey.ENTITY_TYPE_NSS], # noqa: E501
+                                                               version=keys_map[def_constants.DefKey.ENTITY_TYPE_VERSION]) # noqa: E501
             self._kubernetesInterface = schema_svc.get_interface(interface_id)
             self._nativeEntityType = schema_svc.get_entity_type(entity_type_id)
             msg = "Successfully loaded defined entity schema to global context"
@@ -569,7 +570,7 @@ class Service(object, metaclass=Singleton):
                                                 self.config['vcd']['password'])
             client.set_credentials(credentials)
 
-            is_tkg_plus_enabled = utils.is_tkg_plus_enabled(self.config)
+            is_tkg_plus_enabled = server_utils.is_tkg_plus_enabled(self.config)
             org_name = self.config['broker']['org']
             catalog_name = self.config['broker']['catalog']
             k8_templates = ltm.get_all_k8s_local_template_definition(

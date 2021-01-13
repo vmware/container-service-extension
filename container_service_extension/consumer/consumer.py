@@ -7,7 +7,7 @@ from container_service_extension.consumer.mqtt_consumer import MQTTConsumer
 import container_service_extension.server_constants as server_constants
 from container_service_extension.server_constants import MQTTExtKey, \
     MQTTExtTokenKey
-from container_service_extension.utils import should_use_mqtt_protocol
+from container_service_extension.server_utils import should_use_mqtt_protocol
 
 
 class MessageConsumer:

@@ -15,11 +15,11 @@ from container_service_extension.client.de_cluster_native import DEClusterNative
 from container_service_extension.client.de_cluster_tkg import DEClusterTKG
 import container_service_extension.client.tkgclient.rest as tkg_rest
 import container_service_extension.client.utils as client_utils
+from container_service_extension.def_.constants import DEF_VMWARE_INTERFACE_NSS
+from container_service_extension.def_.constants import DEF_VMWARE_INTERFACE_VERSION  # noqa: E501
+from container_service_extension.def_.constants import DEF_VMWARE_VENDOR
 import container_service_extension.def_.entity_service as def_entity_svc
 import container_service_extension.def_.models as def_models
-from container_service_extension.def_.utils import DEF_VMWARE_INTERFACE_NSS
-from container_service_extension.def_.utils import DEF_VMWARE_INTERFACE_VERSION
-from container_service_extension.def_.utils import DEF_VMWARE_VENDOR
 import container_service_extension.exceptions as cse_exceptions
 import container_service_extension.logger as logger
 import container_service_extension.pyvcloud_utils as vcd_utils

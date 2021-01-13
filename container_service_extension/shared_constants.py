@@ -2,7 +2,8 @@
 # Copyright (c) 2019 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 
-from dataclasses import dataclass
+"""Constants shared between the client CLI and the server."""
+
 from enum import Enum
 from enum import unique
 
@@ -28,21 +29,23 @@ class ClusterEntityKind(Enum):
     TKG_PLUS = 'TKG+'
 
 
+# Cluster runtimes and placement policies
 NATIVE_CLUSTER_RUNTIME_INTERNAL_NAME = 'native'
 TKG_PLUS_CLUSTER_RUNTIME_INTERNAL_NAME = 'tkgplus'
 CLUSTER_RUNTIME_PLACEMENT_POLICIES = [NATIVE_CLUSTER_RUNTIME_INTERNAL_NAME,
                                       TKG_PLUS_CLUSTER_RUNTIME_INTERNAL_NAME]
+
 
 RUNTIME_DISPLAY_NAME_TO_INTERNAL_NAME_MAP = {
     ClusterEntityKind.NATIVE.value: NATIVE_CLUSTER_RUNTIME_INTERNAL_NAME,
     ClusterEntityKind.TKG_PLUS.value: TKG_PLUS_CLUSTER_RUNTIME_INTERNAL_NAME
 }
 
+
 RUNTIME_INTERNAL_NAME_TO_DISPLAY_NAME_MAP = {
     NATIVE_CLUSTER_RUNTIME_INTERNAL_NAME: ClusterEntityKind.NATIVE.value,
     TKG_PLUS_CLUSTER_RUNTIME_INTERNAL_NAME: ClusterEntityKind.TKG_PLUS.value
 }
-
 
 # CSE Server Busy string
 CSE_SERVER_BUSY_KEY = 'CSE Server Busy'
@@ -69,15 +72,6 @@ ACCESS_LEVEL_TYPE_TO_ID = {
 # CSE Pagination default values
 CSE_PAGINATION_FIRST_PAGE_NUMBER = 1
 CSE_PAGINATION_DEFAULT_PAGE_SIZE = 25
-
-
-@unique
-class OperationType(str, Enum):
-    CLUSTER = 'cluster'
-    NODE = 'node'
-    OVDC = 'ovdc'
-    SYSTEM = 'system'
-    TEMPLATE = 'template'
 
 
 @unique
@@ -168,35 +162,6 @@ class PaginationKey(str, Enum):
 
 
 @unique
-class DefEntityOperation(str, Enum):
-    CREATE = 'CREATE'
-    DELETE = 'DELETE'
-    UPDATE = 'UPDATE'
-    UPGRADE = 'UPGRADE'
-    UNKNOWN = 'UNKNOWN'
-
-
-@unique
-class DefEntityOperationStatus(str, Enum):
-    IN_PROGRESS = 'IN_PROGRESS'
-    SUCCEEDED = 'SUCCEEDED'
-    FAILED = 'FAILED'
-    UNKNOWN = 'UNKNOWN'
-
-
-@unique
-class FlattenedClusterSpecKey(Enum):
-    WORKERS_COUNT = 'workers.count'
-    NFS_COUNT = 'nfs.count'
-    TEMPLATE_NAME = 'k8_distribution.template_name'
-    TEMPLATE_REVISION = 'k8_distribution.template_revision'
-
-
-VALID_UPDATE_FIELDS = [FlattenedClusterSpecKey.WORKERS_COUNT.value, FlattenedClusterSpecKey.NFS_COUNT.value,  # noqa: E501
-                       FlattenedClusterSpecKey.TEMPLATE_NAME.value, FlattenedClusterSpecKey.TEMPLATE_REVISION.value]  # noqa: E501
-
-
-@unique
 class AccessControlKey(str, Enum):
     """Keys for access control requests."""
 
@@ -215,38 +180,3 @@ class AccessControlKey(str, Enum):
 class ClusterAclKey(str, Enum):
     ACCESS_SETTING = 'accessSetting'
     UPDATE_ACL_ENTRIES = 'update_acl_entries'
-
-
-@dataclass
-class DefEntityPhase:
-    """Supports two ways of creation.
-
-    1. DefEntityPhase(DefEntityOperation.CREATE, DefEntityOperationStatus.SUCCEEDED) # noqa: E501
-    2. DefEntityPhase.from_phase('CREATE:SUCCEEDED')
-    """
-
-    operation: DefEntityOperation
-    status: DefEntityOperationStatus
-
-    def __str__(self):
-        return f'{self.operation}:{self.status}'
-
-    @classmethod
-    def from_phase(cls, phase: str):
-        """Return instance of DefEntityPhase.
-
-        :param str phase: defined entity phase value. ex: "CREATE:SUCCEEDED"
-        :return: DefEntityPhase
-        :rtype: <class DefEntityPhase>
-        """
-        operation, status = phase.split(':')
-        return cls(DefEntityOperation[operation], DefEntityOperationStatus[status])  # noqa: E501
-
-    def is_operation_status_success(self) -> bool:
-        try:
-            return self.status == DefEntityOperationStatus.SUCCEEDED
-        except Exception:
-            return False
-
-    def is_entity_busy(self) -> bool:
-        return self.status == DefEntityOperationStatus.IN_PROGRESS
