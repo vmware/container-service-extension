@@ -15,8 +15,8 @@ def get_vdcs_by_page(cloudapi_client: CloudApiClient,
                      page_number=CSE_PAGINATION_FIRST_PAGE_NUMBER, page_size=CSE_PAGINATION_DEFAULT_PAGE_SIZE):  # noqa: E501
     """Return a single page list vdc response for the page number and size.
 
-    :param CloudApiClient cloudapi_cliet
-    :param int page: page number for the response
+    :param CloudApiClient cloudapi_client
+    :param int page_number: page number for the response
     :param int page_size: page size of the response
     :return: touple containing total number of vdcs present and the list of
         vdcs for the current request

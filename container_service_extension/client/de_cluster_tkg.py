@@ -347,7 +347,7 @@ class DEClusterTKG:
                 _, tkg_def_entities = \
                     self.get_tkg_clusters_by_name(cluster_name, org=org, vdc=vdc)  # noqa: E501
                 cluster_id = tkg_def_entities[0]['id']
-            return self.get_cluster_config_by_id(tkg_def_entities[0]['id'],
+            return self.get_cluster_config_by_id(cluster_id,
                                                  org=org)
         except tkg_rest.ApiException as e:
             server_message = json.loads(e.body).get('message') or e.reason
@@ -439,7 +439,7 @@ class DEClusterTKG:
                 users_ids.remove(acl_entry.memberId)
 
         if len(users_ids) > 0:
-            org_user_id_to_name_dict = utils.create_org_user_id_to_name_dict(
+            org_user_id_to_name_dict = vcd_utils.create_org_user_id_to_name_dict(
                 self._client, org)
             unfound_users = [org_user_id_to_name_dict[user_id] for user_id in users_ids]  # noqa: E501
             raise Exception(f'Cluster {cluster_name or cluster_id} is not '
