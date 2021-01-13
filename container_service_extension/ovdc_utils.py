@@ -254,7 +254,9 @@ def create_pks_compute_profile(request_data,
             raise
 
 
-def _remove_metadata_from_ovdc(ovdc: VDC, keys=[]):
+def _remove_metadata_from_ovdc(ovdc: VDC, keys=None):
+    if keys is None:
+        keys = []
     metadata = pyvcd_utils.metadata_to_dict(ovdc.get_all_metadata())
     for k in keys:
         if k in metadata:

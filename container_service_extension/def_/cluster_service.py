@@ -545,8 +545,10 @@ class ClusterService(abstract_broker.AbstractBroker):
                 prev_user_id_to_acl_entry=curr_user_acl_info)
             raise err
 
-    def delete_nodes(self, cluster_id: str, nodes_to_del=[]):
+    def delete_nodes(self, cluster_id: str, nodes_to_del=None):
         """Start the delete nodes operation."""
+        if nodes_to_del is None:
+            nodes_to_del = []
         curr_entity: def_models.DefEntity = self.entity_svc.get_entity(
             cluster_id)
 

@@ -312,7 +312,9 @@ class ClusterAclEntry:
     objectId: str = None
     username: str = None
 
-    def construct_filtered_dict(self, include=[]):
+    def construct_filtered_dict(self, include=None):
+        if include is None:
+            include = None
         orig_dict = asdict(self)
         include_set = set(include)
         filtered_dict = {}

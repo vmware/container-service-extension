@@ -16,7 +16,9 @@ class PksClusterApi(CseClient):
         self._clusters_uri = f"{self._uri}/clusters"
         self._cluster_uri = f"{self._uri}/cluster"
 
-    def list_clusters(self, filters={}):
+    def list_clusters(self, filters=None):
+        if filters is None:
+            filters = {}
         response = self._client._do_request_prim(
             shared_constants.RequestMethod.GET,
             self._clusters_uri,
@@ -25,7 +27,9 @@ class PksClusterApi(CseClient):
             params=filters)
         return response_processor.process_response(response)
 
-    def get_cluster(self, cluster_name, filters={}):
+    def get_cluster(self, cluster_name, filters=None):
+        if filters is None:
+            filters = {}
         uri = f'{self._cluster_uri}/{cluster_name}'
         response = self._client._do_request_prim(
             shared_constants.RequestMethod.GET,
