@@ -439,8 +439,8 @@ class DEClusterTKG:
                 users_ids.remove(acl_entry.memberId)
 
         if len(users_ids) > 0:
-            org_user_id_to_name_dict = vcd_utils.create_org_user_id_to_name_dict(
-                self._client, org)
+            org_user_id_to_name_dict = \
+                vcd_utils.create_org_user_id_to_name_dict(self._client, org)
             unfound_users = [org_user_id_to_name_dict[user_id] for user_id in users_ids]  # noqa: E501
             raise Exception(f'Cluster {cluster_name or cluster_id} is not '
                             f'currently shared with: {unfound_users}')
