@@ -128,43 +128,54 @@ def ovdc_list(request_data, op_ctx: ctx.OperationContext):
 
     :return: List of dictionaries with org VDC k8s provider metadata.
     """
-    page_number = request_data.get(PaginationKey.PAGE_NUMBER)
-    page_size = request_data.get(PaginationKey.PAGE_SIZE)
-    is_paginated_response = False
-    if page_number or page_size:
-        is_paginated_response = True
-        # Override the absent parameter if any one of the both is present
-        page_number = int(request_data.get(PaginationKey.PAGE_NUMBER,
-                                           CSE_PAGINATION_FIRST_PAGE_NUMBER))
-        page_size = int(request_data.get(PaginationKey.PAGE_SIZE,
-                                         CSE_PAGINATION_DEFAULT_PAGE_SIZE))
-
     # Record telemetry data
     cse_params = copy.deepcopy(request_data)
     record_user_action_details(cse_operation=CseOperation.OVDC_LIST,
                                cse_params=cse_params)
 
-    if not is_paginated_response:
-        # Return only the list of OVDCs
-        org_vdcs = vcd_utils.get_all_ovdcs(op_ctx.client)
-        return _filter_ovdc_list(op_ctx.sysadmin_client, org_vdcs)
+    org_vdcs = vcd_utils.get_all_ovdcs(op_ctx.client)
+    return _filter_ovdc_list(op_ctx.sysadmin_client, org_vdcs)
 
+
+@record_user_action_telemetry(cse_operation=CseOperation.OVDC_LIST)
+def org_vdc_list(request_data, op_ctx: ctx.OperationContext):
+    """Request handler ofr orgvdc list operation.
+
+    This handler returns a paginated response.
+    :return: Dictionary containing list of org VDC K8s provider metadata
+    :rtype: dict
+    """
+    defaults = {
+        PaginationKey.PAGE_NUMBER: CSE_PAGINATION_FIRST_PAGE_NUMBER,
+        PaginationKey.PAGE_SIZE: CSE_PAGINATION_DEFAULT_PAGE_SIZE
+    }
+    validated_data = {**defaults, **request_data}
+
+    page_number = int(validated_data[PaginationKey.PAGE_NUMBER])
+    page_size = int(validated_data[PaginationKey.PAGE_SIZE])
+
+    # Record telemetry data
+    cse_params = copy.deepcopy(validated_data)
+    record_user_action_details(cse_operation=CseOperation.OVDC_LIST,
+                               cse_params=cse_params)
     result = \
         vcd_utils.get_ovdcs_by_page(op_ctx.client,
                                     page=page_number,
                                     page_size=page_size)
-    api_path = CseServerOperationInfo.OVDC_LIST.api_path_format
+    org_vdcs = result[PaginationKey.VALUES]
     result_total = result[PaginationKey.RESULT_TOTAL]
+    next_page_uri = result.get(PaginationKey.NEXT_PAGE_URI)
+    prev_page_uri = result.get(PaginationKey.PREV_PAGE_URI)
+
+    ovdcs = _filter_ovdc_list(op_ctx.sysadmin_client, org_vdcs)
+
+    api_path = CseServerOperationInfo.OVDC_LIST.api_path_format
     next_page_uri = vcd_utils.create_cse_page_uri(op_ctx.client,
                                                   api_path,
-                                                  vcd_uri=result.get(PaginationKey.NEXT_PAGE_URI))  # noqa: E501
-
+                                                  vcd_uri=next_page_uri)
     prev_page_uri = vcd_utils.create_cse_page_uri(op_ctx.client,
                                                   api_path,
-                                                  vcd_uri=result.get(PaginationKey.PREV_PAGE_URI))  # noqa: E501
-    ovdcs = _filter_ovdc_list(op_ctx.sysadmin_client,
-                              result[PaginationKey.VALUES])
-
+                                                  vcd_uri=prev_page_uri)
     return utils.construct_paginated_response(values=ovdcs,
                                               result_total=result_total,
                                               page_number=page_number,
