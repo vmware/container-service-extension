@@ -17,7 +17,6 @@ class OvdcApi(CseClient):
         super().__init__(client)
         self._uri = f"{self._uri}/{shared_constants.CSE_URL_FRAGMENT}/" \
                     f"{shared_constants.CSE_3_0_URL_FRAGMENT}"
-        self._ovdcs_uri = f"{self._uri}/ovdcs"
         self._org_vdcs_uri = f"{self._uri}/orgvdcs"
         self._ovdc_uri = f"{self._uri}/ovdc"
         # NOTE: The request page size is overrided because the CSE server takes
