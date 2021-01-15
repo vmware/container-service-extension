@@ -48,6 +48,7 @@ DELETE /cse/nodes
 GET /cse/node/{node name}?cluster_name={cluster name}&org={org name}&vdc={vdc name}
 
 GET /cse/ovdcs
+GET /cse/orgvdcs
 GET /cse/ovdc/{ovdc id}
 PUT /cse/ovdc/{ovdc id}
 GET /cse/ovdc/{ovdc_id}/compute-policies
@@ -70,7 +71,9 @@ DELETE /cse/3.0/cluster/{cluster id}/nfs/{node-name}
 GET /cse/3.0/cluster/{cluster id}/acl
 PUT /cse/3.0/cluster/{cluster id}/acl
 
-GET /cse/3.0/ovdcs
+GET /cse/3.0/ovdcs  (for response which is not paginated.
+                     This will be deprecated soon)
+GET /cse/3.0/orgvdcs  (for paginated response)
 GET /cse/3.0/ovdc/{ovdc_id}
 PUT /cse/3.0/ovdc/{ovdc_id}
 
@@ -88,7 +91,8 @@ GET /pks/cluster/{cluster name}?org={org name}&vdc={vdc name}
 PUT /pks/cluster/{cluster name}?org={org name}&vdc={vdc name}
 DELETE /pks/cluster/{cluster name}?org={org name}&vdc={vdc name}
 GET /pks/cluster/{cluster name}/config?org={org name}&vdc={vdc name}
-GET /pks/ovdcs
+GET /pks/ovdcs  (This endpoint returns non paginated response)
+GET /pks/orgvdcs  (This endpoint returns paginated response)
 GET /pks/ovdc/{ovdc_id}
 PUT /pks/ovdc/{ovdc_id}
 """  # noqa: E501
@@ -123,12 +127,14 @@ OPERATION_TO_HANDLER = {
     CseOperation.V36_CLUSTER_UPDATE: v36_cluster_handler.cluster_update,
 
     CseOperation.V35_OVDC_LIST: v35_ovdc_handler.ovdc_list,
+    CseOperation.V35_ORG_VDC_LIST: v35_ovdc_handler.org_vdc_list,
     CseOperation.V35_OVDC_INFO: v35_ovdc_handler.ovdc_info,
     CseOperation.V35_OVDC_UPDATE: v35_ovdc_handler.ovdc_update,
 
     CseOperation.OVDC_UPDATE: ovdc_handler.ovdc_update,
     CseOperation.OVDC_INFO: ovdc_handler.ovdc_info,
     CseOperation.OVDC_LIST: ovdc_handler.ovdc_list,
+    CseOperation.ORG_VDC_LIST: ovdc_handler.org_vdc_list,
     CseOperation.OVDC_COMPUTE_POLICY_LIST: ovdc_handler.ovdc_compute_policy_list,  # noqa: E501
     CseOperation.OVDC_COMPUTE_POLICY_UPDATE: ovdc_handler.ovdc_compute_policy_update,  # noqa: E501
     CseOperation.SYSTEM_INFO: system_handler.system_info,
@@ -142,6 +148,7 @@ OPERATION_TO_HANDLER = {
     CseOperation.PKS_CLUSTER_LIST: pks_cluster_handler.cluster_list,
     CseOperation.PKS_CLUSTER_RESIZE: pks_cluster_handler.cluster_resize,
     CseOperation.PKS_OVDC_LIST: pks_ovdc_handler.ovdc_list,
+    CseOperation.PKS_ORG_VDC_LIST: pks_ovdc_handler.org_vdc_list,
     CseOperation.PKS_OVDC_INFO: pks_ovdc_handler.ovdc_info,
     CseOperation.PKS_OVDC_UPDATE: pks_ovdc_handler.ovdc_update
 }
@@ -441,7 +448,11 @@ def _get_pks_url_data(method: str, url: str):
                     shared_constants.RequestKey.OVDC_ID: tokens[4]
                 }
             raise cse_exception.MethodNotAllowedRequestError()
-
+    elif operation_type == shared_constants.OperationType.ORG_VDCS:
+        if num_tokens == 4:
+            if method == shared_constants.RequestMethod.GET:
+                return {_OPERATION_KEY: CseOperation.PKS_ORG_VDC_LIST}
+            raise cse_exception.MethodNotAllowedRequestError()
     raise cse_exception.NotFoundRequestError()
 
 
@@ -474,6 +485,9 @@ def _get_v35_plus_url_data(method: str, url: str, api_version: str):
 
     if operation_type == OperationType.OVDC:
         return _get_v35_plus_ovdc_url_data(method, tokens)
+
+    if operation_type == shared_constants.OperationType.ORG_VDCS:
+        return _get_v35_org_vdc_url_data(method, tokens)
 
     raise cse_exception.NotFoundRequestError()
 
@@ -590,6 +604,24 @@ def _get_v35_plus_ovdc_url_data(method: str, tokens: list):
         raise cse_exception.MethodNotAllowedRequestError()
 
 
+def _get_v35_org_vdc_url_data(method: str, tokens: list):
+    """Parse tokens from url and http method to get v35 ovdc specific data.
+
+    Returns a dictionary with operation and url data.
+
+    :param shared_constants.RequestMethod method: http verb
+    :param str[] tokens: http url
+
+    :rtype: dict
+    """
+    num_tokens = len(tokens)
+    if num_tokens == 5:
+        if method == shared_constants.RequestMethod.GET:
+            return {_OPERATION_KEY: CseOperation.V35_ORG_VDC_LIST}
+        raise cse_exception.MethodNotAllowedRequestError()
+    raise cse_exception.NotFoundRequestError()
+
+
 def _get_legacy_url_data(method: str, url: str, api_version: str):
     tokens = url.split('/')
     num_tokens = len(tokens)
@@ -698,7 +730,15 @@ def _get_legacy_url_data(method: str, url: str, api_version: str):
                     shared_constants.RequestKey.OVDC_ID: tokens[4]
                 }
             raise cse_exception.MethodNotAllowedRequestError()
-    elif operation_type == OperationType.SYSTEM:
+    elif operation_type == shared_constants.OperationType.ORG_VDCS:
+        if api_version not in (VcdApiVersion.VERSION_33.value,
+                               VcdApiVersion.VERSION_34.value):
+            raise cse_exception.NotFoundRequestError()
+        if num_tokens == 4:
+            if method == shared_constants.RequestMethod.GET:
+                return {_OPERATION_KEY: CseOperation.ORG_VDC_LIST}
+            raise cse_exception.NotFoundRequestError()
+    elif operation_type == shared_constants.OperationType.SYSTEM:
         if num_tokens == 4:
             if method == shared_constants.RequestMethod.GET:
                 return {_OPERATION_KEY: CseOperation.SYSTEM_INFO}

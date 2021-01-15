@@ -284,6 +284,7 @@ class CseOperation(Enum):
     OVDC_UPDATE = ('enable or disable ovdc for k8s', '/cse/ovdc/%s', requests.codes.accepted)  # noqa: E501
     OVDC_INFO = ('get info of ovdc', '/cse/ovdc/%s')
     OVDC_LIST = ('list ovdcs', '/cse/ovdcs')
+    ORG_VDC_LIST = ('list org VDCs', '/cse/orgvdcs')
     OVDC_COMPUTE_POLICY_LIST = ('list ovdc compute policies', '/cse/ovdc/%s/compute-policies')  # noqa: E501
     OVDC_COMPUTE_POLICY_UPDATE = ('update ovdc compute policies', '/cse/ovdc/%s/compute-policies')  # noqa: E501
     SYSTEM_INFO = ('get info of system', '/cse/system')
@@ -291,6 +292,7 @@ class CseOperation(Enum):
     TEMPLATE_LIST = ('list all templates', '/cse/templates')
 
     V35_OVDC_LIST = ('list ovdcs for v35', '/cse/3.0/ovdcs')
+    V35_ORG_VDC_LIST = ('list org VDCs', '/cse/3.0/orgvdcs')
     V35_OVDC_INFO = ('get info of ovdc for v35', '/cse/3.0/ovdc/%s')
     V35_OVDC_UPDATE = ('enable or disable ovdc for a cluster kind for v35', '/cse/3.0/ovdc/%s', requests.codes.accepted)  # noqa: E501
     V35_TEMPLATE_LIST = ('list all v35 templates', '/cse/templates')
@@ -302,6 +304,7 @@ class CseOperation(Enum):
     PKS_CLUSTER_LIST = ('list PKS clusters', '/pks/clusters')
     PKS_CLUSTER_RESIZE = ('resize PKS cluster', '/pks/cluster/%s', requests.codes.accepted)  # noqa: E501
     PKS_OVDC_LIST = ('list all ovdcs', '/pks/ovdcs')
+    PKS_ORG_VDC_LIST = ('list  org VDCs', '/pks/orgvdcs')
     PKS_OVDC_INFO = ('get info of the ovdc', '/pks/ovdc/%s')
     PKS_OVDC_UPDATE = ('enable or disable ovdc for pks', '/pks/ovdc/%s', requests.codes.accepted)  # noqa: E501
 
@@ -532,3 +535,16 @@ class DefEntityPhase:
 
     def is_entity_busy(self) -> bool:
         return self.status == DefEntityOperationStatus.IN_PROGRESS
+
+
+@unique
+class OvdcInfoKey(str, Enum):
+    OVDC_NAME = 'name'
+    ORG_NAME = 'org'
+    K8S_PROVIDER = 'k8s provider'
+
+
+@unique
+class PKSOvdcInfoKey(str, Enum):
+    PKS_API_SERVER = 'pks api server'
+    AVAILABLE_PKS_PLANS = 'available pks plans'
