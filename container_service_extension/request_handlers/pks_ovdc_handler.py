@@ -19,7 +19,7 @@ import container_service_extension.request_handlers.request_utils as req_utils
 from container_service_extension.server_constants import CseOperation as CseServerOperationInfo  # noqa: E501
 from container_service_extension.server_constants import K8S_PROVIDER_KEY
 from container_service_extension.server_constants import K8sProvider
-from container_service_extension.server_constants import OvdInfoKey
+from container_service_extension.server_constants import OvdcInfoKey
 from container_service_extension.server_constants import PKSOvdcInfoKey
 from container_service_extension.shared_constants import CSE_PAGINATION_DEFAULT_PAGE_SIZE  # noqa: E501
 from container_service_extension.shared_constants import CSE_PAGINATION_FIRST_PAGE_NUMBER  # noqa: E501
@@ -182,9 +182,9 @@ def org_vdc_list(request_data, op_ctx: ctx.OperationContext):
             org_name=org_name)
         k8s_provider = k8s_metadata[K8S_PROVIDER_KEY]
         ovdc_dict = {
-            OvdInfoKey.OVDC_NAME: ovdc_name,
-            OvdInfoKey.ORG_NAME: org_name,
-            OvdInfoKey.K8S_PROVIDER: k8s_provider
+            OvdcInfoKey.OVDC_NAME: ovdc_name,
+            OvdcInfoKey.ORG_NAME: org_name,
+            OvdcInfoKey.K8S_PROVIDER: k8s_provider
         }
         if list_pks_plans:
             pks_plans = ''
@@ -283,9 +283,9 @@ def ovdc_list(request_data, op_ctx: ctx.OperationContext):
             org_name=org_name)
         k8s_provider = k8s_metadata[K8S_PROVIDER_KEY]
         ovdc_dict = {
-            OvdInfoKey.OVDC_NAME: ovdc_name,
-            OvdInfoKey.ORG_NAME: org_name,
-            OvdInfoKey.K8S_PROVIDER: k8s_provider
+            OvdcInfoKey.OVDC_NAME: ovdc_name,
+            OvdcInfoKey.ORG_NAME: org_name,
+            OvdcInfoKey.K8S_PROVIDER: k8s_provider
         }
         if list_pks_plans:
             pks_plans = ''

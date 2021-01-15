@@ -114,7 +114,7 @@ def get_ovdc(operation_context: ctx.OperationContext, ovdc_id: str) -> dict:
     return result
 
 
-def _filter_ovdc_list(sysadmin_client: vcd_client.Client, ovdc_list: list):
+def _get_cse_ovdc_list(sysadmin_client: vcd_client.Client, ovdc_list: list):
     ovdcs = []
     for ovdc in ovdc_list:
         ovdc_name = ovdc.get('name')
@@ -149,8 +149,8 @@ def list_ovdc(operation_context: ctx.OperationContext) -> list:
                                                  cse_params={})
     # send un-paginated response
     org_vdcs = vcd_utils.get_all_ovdcs(operation_context.client)
-    return _filter_ovdc_list(operation_context.sysadmin_client,
-                             org_vdcs)
+    return _get_cse_ovdc_list(operation_context.sysadmin_client,
+                              org_vdcs)
 
 
 def list_org_vdcs(operation_context: ctx.OperationContext,
@@ -173,8 +173,8 @@ def list_org_vdcs(operation_context: ctx.OperationContext,
         operation_context.cloudapi_client,
         page_number=page_number, page_size=page_size)
     num_results = result[PaginationKey.RESULT_TOTAL]
-    ovdcs = _filter_ovdc_list(operation_context.sysadmin_client,
-                              result[PaginationKey.VALUES])
+    ovdcs = _get_cse_ovdc_list(operation_context.sysadmin_client,
+                               result[PaginationKey.VALUES])
     return {
         PaginationKey.RESULT_TOTAL: num_results,
         PaginationKey.VALUES: ovdcs}

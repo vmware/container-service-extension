@@ -432,7 +432,7 @@ CSE_SERVICE_ROLE_RIGHTS = [
 
 
 @unique
-class OvdInfoKey(str, Enum):
+class OvdcInfoKey(str, Enum):
     OVDC_NAME = 'name'
     ORG_NAME = 'org'
     K8S_PROVIDER = 'k8s provider'

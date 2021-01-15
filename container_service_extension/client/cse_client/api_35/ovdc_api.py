@@ -30,7 +30,8 @@ class OvdcApi(CseClient):
             indicating if there are more results.
         :rtype: Generator[(List[dict], int), None, None]
         """
-        url = f"{self._org_vdcs_uri}?pageSize={self._request_page_size}"
+        url = f"{self._org_vdcs_uri}?" \
+              f"{shared_constants.PaginationKey.PAGE_SIZE.value}={self._request_page_size}"  # noqa: E501
         return self.iterate_results(url)
 
     def get_ovdc(self, ovdc_id):

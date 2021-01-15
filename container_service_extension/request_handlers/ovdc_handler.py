@@ -17,7 +17,7 @@ import container_service_extension.request_handlers.request_utils as req_utils
 from container_service_extension.server_constants import CseOperation as CseServerOperationInfo  # noqa: E501
 from container_service_extension.server_constants import K8S_PROVIDER_KEY
 from container_service_extension.server_constants import K8sProvider
-from container_service_extension.server_constants import OvdInfoKey
+from container_service_extension.server_constants import OvdcInfoKey
 from container_service_extension.shared_constants import ComputePolicyAction
 from container_service_extension.shared_constants import CSE_PAGINATION_DEFAULT_PAGE_SIZE  # noqa: E501
 from container_service_extension.shared_constants import CSE_PAGINATION_FIRST_PAGE_NUMBER  # noqa: E501
@@ -101,8 +101,8 @@ def ovdc_info(request_data, op_ctx: ctx.OperationContext):
         ovdc_id=request_data[RequestKey.OVDC_ID])
 
 
-def _filter_ovdc_list(sysadmin_client: vcd_client.Client,
-                      org_vdcs: list) -> list:
+def _get_cse_ovdc_list(sysadmin_client: vcd_client.Client,
+                       org_vdcs: list) -> list:
     ovdcs = []
     for ovdc in org_vdcs:
         ovdc_name = ovdc.get('name')
@@ -115,9 +115,9 @@ def _filter_ovdc_list(sysadmin_client: vcd_client.Client,
             org_name=org_name)
         k8s_provider = k8s_metadata[K8S_PROVIDER_KEY]
         ovdc_dict = {
-            OvdInfoKey.OVDC_NAME: ovdc_name,
-            OvdInfoKey.ORG_NAME: org_name,
-            OvdInfoKey.K8S_PROVIDER: k8s_provider
+            OvdcInfoKey.OVDC_NAME: ovdc_name,
+            OvdcInfoKey.ORG_NAME: org_name,
+            OvdcInfoKey.K8S_PROVIDER: k8s_provider
         }
         ovdcs.append(ovdc_dict)
     return ovdcs
@@ -135,7 +135,7 @@ def ovdc_list(request_data, op_ctx: ctx.OperationContext):
                                cse_params=cse_params)
 
     org_vdcs = vcd_utils.get_all_ovdcs(op_ctx.client)
-    return _filter_ovdc_list(op_ctx.sysadmin_client, org_vdcs)
+    return _get_cse_ovdc_list(op_ctx.sysadmin_client, org_vdcs)
 
 
 @record_user_action_telemetry(cse_operation=CseOperation.OVDC_LIST)
@@ -168,7 +168,7 @@ def org_vdc_list(request_data, op_ctx: ctx.OperationContext):
     next_page_uri = result.get(PaginationKey.NEXT_PAGE_URI)
     prev_page_uri = result.get(PaginationKey.PREV_PAGE_URI)
 
-    ovdcs = _filter_ovdc_list(op_ctx.sysadmin_client, org_vdcs)
+    ovdcs = _get_cse_ovdc_list(op_ctx.sysadmin_client, org_vdcs)
 
     api_path = CseServerOperationInfo.OVDC_LIST.api_path_format
     next_page_uri = vcd_utils.create_cse_page_uri(op_ctx.client,
