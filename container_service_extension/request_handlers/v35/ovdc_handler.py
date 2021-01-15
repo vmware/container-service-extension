@@ -52,13 +52,26 @@ def ovdc_list(data, operation_context: ctx.OperationContext):
 
     :return: List of dictionaries with org VDC k8s runtimes.
     """
-    page_number = int(data.get(RequestKey.V35_QUERY, {}).get(PaginationKey.PAGE_NUMBER,  # noqa: E501
-                                                             CSE_PAGINATION_FIRST_PAGE_NUMBER))  # noqa: E501
-    page_size = int(data.get(RequestKey.V35_QUERY, {}).get(PaginationKey.PAGE_SIZE,  # noqa: E501
-                                                           CSE_PAGINATION_DEFAULT_PAGE_SIZE))  # noqa: E501
-    result = ovdc_service.list_ovdc(operation_context,
-                                    page_number=page_number,
-                                    page_size=page_size)
+    return ovdc_service.list_ovdc(operation_context)
+
+
+@record_user_action_telemetry(cse_operation=CseOperation.OVDC_LIST)
+@request_utils.v35_api_exception_handler
+def org_vdc_list(data, operation_context: ctx.OperationContext):
+    """Request handler for org vdc list operation.
+
+    This handler returns a paginated response.
+    :return: Dictionary containing paginated response with Org VDC runtime info
+    :rtype: dict
+    """
+    query_params = data.get(RequestKey.V35_QUERY, {})
+    page_number = int(query_params.get(PaginationKey.PAGE_NUMBER,
+                                       CSE_PAGINATION_FIRST_PAGE_NUMBER))
+    page_size = int(query_params.get(PaginationKey.PAGE_SIZE,
+                                     CSE_PAGINATION_DEFAULT_PAGE_SIZE))
+    result = ovdc_service.list_org_vdcs(operation_context,
+                                        page_number=page_number,
+                                        page_size=page_size)
     api_path = CseServerOperationInfo.V35_OVDC_LIST.api_path_format
     base_uri = f"{operation_context.client.get_api_uri().strip('/')}{api_path}"
     return utils.create_links_and_construct_paginated_result(

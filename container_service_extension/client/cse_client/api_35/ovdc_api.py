@@ -17,7 +17,7 @@ class OvdcApi(CseClient):
         super().__init__(client)
         self._uri = f"{self._uri}/{shared_constants.CSE_URL_FRAGMENT}/" \
                     f"{shared_constants.CSE_3_0_URL_FRAGMENT}"
-        self._ovdcs_uri = f"{self._uri}/ovdcs"
+        self._org_vdcs_uri = f"{self._uri}/orgvdcs"
         self._ovdc_uri = f"{self._uri}/ovdc"
         # NOTE: The request page size is overrided because the CSE server takes
         # an average of 10 seconds (Default vCD timeout) if there are 5 OVDCs
@@ -30,7 +30,8 @@ class OvdcApi(CseClient):
             indicating if there are more results.
         :rtype: Generator[(List[dict], int), None, None]
         """
-        url = f"{self._ovdcs_uri}?pageSize={self._request_page_size}"
+        url = f"{self._org_vdcs_uri}?" \
+              f"{shared_constants.PaginationKey.PAGE_SIZE.value}={self._request_page_size}"  # noqa: E501
         return self.iterate_results(url)
 
     def get_ovdc(self, ovdc_id):
