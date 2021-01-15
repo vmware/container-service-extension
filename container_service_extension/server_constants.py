@@ -429,3 +429,16 @@ CSE_SERVICE_ROLE_RIGHTS = [
     "vmware:tkgcluster: Modify",
     "vmware:tkgcluster: View"
 ]
+
+
+@unique
+class OvdInfoKey(str, Enum):
+    OVDC_NAME = 'name'
+    ORG_NAME = 'org'
+    K8S_PROVIDER = 'k8s provider'
+
+
+@unique
+class PKSOvdcInfoKey(str, Enum):
+    PKS_API_SERVER = 'pks api server'
+    AVAILABLE_PKS_PLANS = 'available pks plans'

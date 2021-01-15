@@ -19,6 +19,8 @@ import container_service_extension.request_handlers.request_utils as req_utils
 from container_service_extension.server_constants import CseOperation as CseServerOperationInfo  # noqa: E501
 from container_service_extension.server_constants import K8S_PROVIDER_KEY
 from container_service_extension.server_constants import K8sProvider
+from container_service_extension.server_constants import OvdInfoKey
+from container_service_extension.server_constants import PKSOvdcInfoKey
 from container_service_extension.shared_constants import CSE_PAGINATION_DEFAULT_PAGE_SIZE  # noqa: E501
 from container_service_extension.shared_constants import CSE_PAGINATION_FIRST_PAGE_NUMBER  # noqa: E501
 from container_service_extension.shared_constants import PaginationKey
@@ -180,9 +182,9 @@ def org_vdc_list(request_data, op_ctx: ctx.OperationContext):
             org_name=org_name)
         k8s_provider = k8s_metadata[K8S_PROVIDER_KEY]
         ovdc_dict = {
-            'name': ovdc_name,
-            'org': org_name,
-            'k8s provider': k8s_provider
+            OvdInfoKey.OVDC_NAME: ovdc_name,
+            OvdInfoKey.ORG_NAME: org_name,
+            OvdInfoKey.K8S_PROVIDER: k8s_provider
         }
         if list_pks_plans:
             pks_plans = ''
@@ -225,8 +227,8 @@ def org_vdc_list(request_data, op_ctx: ctx.OperationContext):
                     pks_plans = pks_plan_and_server_info[0]
                     pks_server = pks_plan_and_server_info[1]
 
-            ovdc_dict['pks api server'] = pks_server
-            ovdc_dict['available pks plans'] = pks_plans
+            ovdc_dict[PKSOvdcInfoKey.PKS_API_SERVER] = pks_server
+            ovdc_dict[PKSOvdcInfoKey.AVAILABLE_PKS_PLANS] = pks_plans
         ovdcs.append(ovdc_dict)
     api_path = CseServerOperationInfo.PKS_OVDC_LIST.api_path_format
     next_page_uri = vcd_utils.create_cse_page_uri(op_ctx.client,
@@ -281,9 +283,9 @@ def ovdc_list(request_data, op_ctx: ctx.OperationContext):
             org_name=org_name)
         k8s_provider = k8s_metadata[K8S_PROVIDER_KEY]
         ovdc_dict = {
-            'name': ovdc_name,
-            'org': org_name,
-            'k8s provider': k8s_provider
+            OvdInfoKey.OVDC_NAME: ovdc_name,
+            OvdInfoKey.ORG_NAME: org_name,
+            OvdInfoKey.K8S_PROVIDER: k8s_provider
         }
         if list_pks_plans:
             pks_plans = ''
@@ -326,7 +328,7 @@ def ovdc_list(request_data, op_ctx: ctx.OperationContext):
                     pks_plans = pks_plan_and_server_info[0]
                     pks_server = pks_plan_and_server_info[1]
 
-            ovdc_dict['pks api server'] = pks_server
-            ovdc_dict['available pks plans'] = pks_plans
+            ovdc_dict[PKSOvdcInfoKey.PKS_API_SERVER] = pks_server
+            ovdc_dict[PKSOvdcInfoKey.AVAILABLE_PKS_PLANS] = pks_plans
         ovdcs.append(ovdc_dict)
     return ovdcs
