@@ -72,7 +72,7 @@ def org_vdc_list(data, operation_context: ctx.OperationContext):
     result = ovdc_service.list_org_vdcs(operation_context,
                                         page_number=page_number,
                                         page_size=page_size)
-    api_path = CseServerOperationInfo.V35_OVDC_LIST.api_path_format
+    api_path = CseServerOperationInfo.V35_ORG_VDC_LIST.api_path_format
     base_uri = f"{operation_context.client.get_api_uri().strip('/')}{api_path}"
     return utils.create_links_and_construct_paginated_result(
         base_uri,
