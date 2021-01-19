@@ -124,7 +124,7 @@ def cluster_upgrade(data, op_ctx: ctx.OperationContext):
     :return: Dict
     """
     svc = cluster_svc.ClusterService(op_ctx)
-    cluster_entity_spec = def_models.ClusterEntity(**data[RequestKey.V35_SPEC])
+    cluster_entity_spec = def_models.NativeEntity(**data[RequestKey.V35_SPEC])
     cluster_id = data[RequestKey.CLUSTER_ID]
     curr_entity = svc.entity_svc.get_entity(cluster_id)
     request_utils.validate_request_payload(
@@ -132,6 +132,39 @@ def cluster_upgrade(data, op_ctx: ctx.OperationContext):
         exclude_fields=[FlattenedClusterSpecKey.TEMPLATE_NAME.value,
                         FlattenedClusterSpecKey.TEMPLATE_REVISION.value])
     return asdict(svc.upgrade_cluster(cluster_id, cluster_entity_spec))
+
+
+def native_cluster_list(data: dict, op_ctx: ctx.OperationContext):
+    """Request handler for cluster list operation.
+
+    :return: List
+    """
+    svc = cluster_svc.ClusterService(op_ctx)
+    filters = data.get(RequestKey.V35_QUERY, {})
+    page_number = int(filters.get(PaginationKey.PAGE_NUMBER,
+                                  CSE_PAGINATION_FIRST_PAGE_NUMBER))
+    page_size = int(filters.get(PaginationKey.PAGE_SIZE,
+                                CSE_PAGINATION_DEFAULT_PAGE_SIZE))
+
+    # remove page number and page size from the filters as it is treated
+    # differently from other filters
+    if PaginationKey.PAGE_NUMBER in filters:
+        del filters[PaginationKey.PAGE_NUMBER]
+    if PaginationKey.PAGE_SIZE in filters:
+        del filters[PaginationKey.PAGE_SIZE]
+
+    # response needs to paginated
+    result = svc.get_clusters_by_page(filters=filters)
+    clusters = [asdict(def_entity) for def_entity in result[PaginationKey.VALUES]]  # noqa: E501
+    api_path = CseServerOperationInfo.V35_NATIVE_CLUSTER_LIST.api_path_format
+    uri = f"{op_ctx.client.get_api_uri().strip('/')}{api_path}"
+    return utils.create_links_and_construct_paginated_result(
+        uri,
+        clusters,
+        result_total=result[PaginationKey.RESULT_TOTAL],
+        page_number=page_number,
+        page_size=page_size,
+        query_params=filters)
 
 
 @telemetry_handler.record_user_action_telemetry(cse_operation=telemetry_constants.CseOperation.V35_CLUSTER_LIST)  # noqa: E501
@@ -142,40 +175,10 @@ def cluster_list(data: dict, op_ctx: ctx.OperationContext):
     :return: List
     """
     svc = cluster_svc.ClusterService(op_ctx)
-    filters = data.get(RequestKey.V35_QUERY, {})
 
-    page_number = filters.get(PaginationKey.PAGE_NUMBER)
-    page_size = filters.get(PaginationKey.PAGE_SIZE)
-    if page_number or page_size:
-        page_number = int(filters.get(PaginationKey.PAGE_NUMBER, CSE_PAGINATION_FIRST_PAGE_NUMBER))  # noqa: E501
-        page_size = int(filters.get(PaginationKey.PAGE_SIZE, CSE_PAGINATION_DEFAULT_PAGE_SIZE))  # noqa: E501
-
-    # remove page number and page size from the filters as it is treated
-    # differently from other filters
-    if PaginationKey.PAGE_NUMBER in filters:
-        del filters[PaginationKey.PAGE_NUMBER]
-    if PaginationKey.PAGE_SIZE in filters:
-        del filters[PaginationKey.PAGE_SIZE]
-
-    if not (page_number or page_size):
-        # response should not be paginated
-        return [asdict(def_entity) for def_entity in
-                svc.list_clusters(data.get(RequestKey.V35_QUERY, {}))]
-
-    # response needs to paginated
-    result = svc.list_clusters(filters=filters,
-                               page_number=page_number,
-                               page_size=page_size)
-    cluster_list = [asdict(def_entity) for def_entity in result[PaginationKey.VALUES]]  # noqa: E501
-    api_path = CseServerOperationInfo.V35_CLUSTER_LIST.api_path_format
-    uri = f"{op_ctx.client.get_api_uri().strip('/')}{api_path}"
-    return utils.create_links_and_construct_paginated_result(
-        uri,
-        cluster_list,
-        result_total=result[PaginationKey.RESULT_TOTAL],
-        page_number=page_number,
-        page_size=page_size,
-        query_params=filters)
+    # response should not be paginated
+    return [asdict(def_entity) for def_entity in
+            svc.list_clusters(data.get(RequestKey.V35_QUERY, {}))]
 
 
 @request_utils.v35_api_exception_handler

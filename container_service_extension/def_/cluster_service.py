@@ -34,6 +34,8 @@ from container_service_extension.server_constants import LocalTemplateKey
 from container_service_extension.server_constants import NodeType
 from container_service_extension.server_constants import ScriptFile
 from container_service_extension.server_constants import SYSTEM_ORG_NAME
+from container_service_extension.shared_constants import CSE_PAGINATION_DEFAULT_PAGE_SIZE  # noqa: E501
+from container_service_extension.shared_constants import CSE_PAGINATION_FIRST_PAGE_NUMBER  # noqa: E501
 from container_service_extension.shared_constants import DefEntityOperation
 from container_service_extension.shared_constants import DefEntityOperationStatus  # noqa: E501
 from container_service_extension.shared_constants import DefEntityPhase
@@ -74,25 +76,52 @@ class ClusterService(abstract_broker.AbstractBroker):
         )
         return self._sync_def_entity(cluster_id)
 
-    def list_clusters(self, filters: dict = {},
-                      page_number=None,
-                      page_size=None) -> dict:
-        """List corresponding defined entities of all native clusters."""
+    def get_clusters_by_page(self, filters: dict = None,
+                             page_number=CSE_PAGINATION_FIRST_PAGE_NUMBER,
+                             page_size=CSE_PAGINATION_DEFAULT_PAGE_SIZE):
+        """List clusters by page number and page size.
+
+        :param dict filters: filters to use to filter the cluster response
+        :param int page_number: page number of the clusters to be fetchec
+        :param int page_size: page size of the result
+        :return: paginated response containing native clusters
+        :rtype: dict
+        """
+        if not filters:
+            filters = {}
+
         telemetry_handler.record_user_action_details(
             cse_operation=telemetry_constants.CseOperation.V35_CLUSTER_LIST,
             cse_params={telemetry_constants.PayloadKey.FILTER_KEYS: ','.join(filters.keys())}  # noqa: E501
         )
-        # Override page_number and page_size to defaults if any one of them
-        # is present
+
         ent_type: def_models.DefEntityType = def_utils.get_registered_def_entity_type()  # noqa: E501
-        if page_number and page_size:
-            return self.entity_svc.get_entities_per_page_by_entity_type(
-                vendor=ent_type.vendor,
-                nss=ent_type.nss,
-                version=ent_type.version,
-                filters=filters,
-                page_number=page_number,
-                page_size=page_size)
+
+        return self.entity_svc.get_entities_per_page_by_entity_type(
+            vendor=ent_type.vendor,
+            nss=ent_type.nss,
+            version=ent_type.version,
+            filters=filters,
+            page_number=page_number,
+            page_size=page_size)
+
+    def list_clusters(self, filters: dict = None) -> list:
+        """List corresponding defined entities of all native clusters.
+
+        :param dict filters: filters to use to filter the cluster response
+        :return: list of all native clusters
+        :rtype: list
+        """
+        if not filters:
+            filters = {}
+
+        telemetry_handler.record_user_action_details(
+            cse_operation=telemetry_constants.CseOperation.V35_CLUSTER_LIST,
+            cse_params={telemetry_constants.PayloadKey.FILTER_KEYS: ','.join(filters.keys())}  # noqa: E501
+        )
+
+        ent_type: def_models.DefEntityType = def_utils.get_registered_def_entity_type()  # noqa: E501
+
         return self.entity_svc.list_entities_by_entity_type(
             vendor=ent_type.vendor,
             nss=ent_type.nss,

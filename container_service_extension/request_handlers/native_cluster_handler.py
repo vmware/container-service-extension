@@ -131,6 +131,49 @@ def _filter_cluster_list_common_properties(cluster_list: list, common_properties
 
 
 @record_user_action_telemetry(cse_operation=CseOperation.CLUSTER_LIST)
+def legacy_cluster_list(request_data, op_ctx: ctx.OperationContext):
+    """Request handler for cluster list operation.
+
+    Optional data and default values: org_name=None, ovdc_name=None
+
+    (data validation handled in broker)
+
+    :return: List
+    """
+    vcd_broker = VcdBroker(op_ctx)
+    page_number = int(request_data.get(PaginationKey.PAGE_NUMBER, CSE_PAGINATION_FIRST_PAGE_NUMBER))  # noqa: E501
+    page_size = int(request_data.get(PaginationKey.PAGE_SIZE, CSE_PAGINATION_DEFAULT_PAGE_SIZE))  # noqa: E501
+
+    vcd_clusters_info = vcd_broker.get_clusters_by_page(data=request_data,
+                                                        page_number=page_number,  # noqa: E501
+                                                        page_size=page_size)
+    common_cluster_properties = [
+        'name',
+        'vdc',
+        'status',
+        'org_name',
+        'k8s_version',
+        K8S_PROVIDER_KEY
+    ]
+    clusters = vcd_clusters_info[PaginationKey.VALUES]
+    result = _filter_cluster_list_common_properties(clusters,
+                                                    common_cluster_properties)
+
+    # Extract the query params
+    query_keys = [RequestKey.ORG_NAME, RequestKey.OVDC_NAME]
+    query_params = {k: request_data[k] for k in query_keys if request_data.get(k) is not None}  # noqa: E501
+
+    base_url = f"{op_ctx.client.get_api_uri().strip('/')}" \
+               f"{CseOperationInfo.LEGACY_CLUSTER_LIST.api_path_format}"
+    return utils.create_links_and_construct_paginated_result(
+        base_url, result,
+        vcd_clusters_info[PaginationKey.RESULT_TOTAL],
+        page_number=page_number,
+        page_size=page_size,
+        query_params=query_params)
+
+
+@record_user_action_telemetry(cse_operation=CseOperation.CLUSTER_LIST)
 def cluster_list(request_data, op_ctx: ctx.OperationContext):
     """Request handler for cluster list operation.
 
@@ -141,25 +184,8 @@ def cluster_list(request_data, op_ctx: ctx.OperationContext):
     :return: List
     """
     vcd_broker = VcdBroker(op_ctx)
-    page_number = request_data.get(PaginationKey.PAGE_NUMBER)
-    page_size = request_data.get(PaginationKey.PAGE_SIZE)
-    if page_number or page_size:
-        # override page_number and page_size to default values if any one
-        # of them is already set
-        page_number = int(request_data.get('page_number', CSE_PAGINATION_FIRST_PAGE_NUMBER))  # noqa: E501
-        page_size = int(request_data.get('page_size', CSE_PAGINATION_DEFAULT_PAGE_SIZE))  # noqa: E501
-    # remove page number and page size from the filters as it is treated
-    # differently from other filters
-    if PaginationKey.PAGE_NUMBER in request_data:
-        del request_data[PaginationKey.PAGE_NUMBER]
-    if PaginationKey.PAGE_SIZE in request_data:
-        del request_data[PaginationKey.PAGE_SIZE]
 
-    # list_clusters will return a list if page number and page_size are None
-    # else it will return a paginated result
-    vcd_clusters_info = vcd_broker.list_clusters(data=request_data,
-                                                 page_number=page_number,
-                                                 page_size=page_size)
+    vcd_clusters_info = vcd_broker.list_clusters(data=request_data)
 
     common_cluster_properties = [
         'name',
@@ -170,23 +196,8 @@ def cluster_list(request_data, op_ctx: ctx.OperationContext):
         K8S_PROVIDER_KEY
     ]
 
-    if isinstance(vcd_clusters_info, list):
-        return _filter_cluster_list_common_properties(vcd_clusters_info, common_cluster_properties)  # noqa: E501
-
-    clusters = vcd_clusters_info[PaginationKey.VALUES]
-    result = _filter_cluster_list_common_properties(clusters,
-                                                    common_cluster_properties)
-
-    # Extract the query params
-    query_keys = [RequestKey.ORG_NAME, RequestKey.OVDC_NAME]
-    query_params = {k: request_data[k] for k in query_keys if request_data.get(k) is not None}  # noqa: E501
-
-    base_url = f"{op_ctx.client.get_api_uri().strip('/')}{CseOperationInfo.CLUSTER_LIST._api_path_format}"  # noqa: E501
-    return utils.create_links_and_construct_paginated_result(base_url, result,
-                                                             vcd_clusters_info[PaginationKey.RESULT_TOTAL],  # noqa: E501
-                                                             page_number=page_number,  # noqa: E501
-                                                             page_size=page_size,  # noqa: E501
-                                                             query_params=query_params)  # noqa: E501
+    return _filter_cluster_list_common_properties(vcd_clusters_info,
+                                                  common_cluster_properties)
 
 
 @record_user_action_telemetry(cse_operation=CseOperation.NODE_CREATE)
