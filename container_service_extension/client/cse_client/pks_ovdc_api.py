@@ -16,7 +16,9 @@ class PksOvdcApi(CseClient):
         self._org_vdcs_uri = f"{self._uri}/orgvdcs"
         self._ovdc_uri = f"{self._uri}/ovdc"
 
-    def get_all_ovdcs(self, filters={}):
+    def get_all_ovdcs(self, filters=None):
+        if filters is None:
+            filters = {}
         url = f"{self._org_vdcs_uri}?" \
               f"{shared_constants.PaginationKey.PAGE_SIZE.value}={self._request_page_size}"  # noqa: E501
         return self.iterate_results(url, filters=filters)

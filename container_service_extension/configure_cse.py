@@ -730,7 +730,7 @@ def _update_user_role_with_right_bundle(right_bundle_name,
 
 
 def _register_def_schema(client: Client,
-                         config=[],
+                         config=None,
                          msg_update_callback=utils.NullPrinter(),
                          log_wire=False):
     """Register defined entity interface and defined entity type.
@@ -744,6 +744,8 @@ def _register_def_schema(client: Client,
     :param utils.ConsoleMessagePrinter msg_update_callback: Callback object.
     :param bool log_wire: wire logging enabled
     """
+    if config is None:
+        config = []
     msg = "Registering defined entity schema"
     msg_update_callback.info(msg)
     INSTALL_LOGGER.info(msg)

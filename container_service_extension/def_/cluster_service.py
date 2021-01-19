@@ -468,8 +468,10 @@ class ClusterService(abstract_broker.AbstractBroker):
                                     template=template)
         return curr_entity
 
-    def delete_nodes(self, cluster_id: str, nodes_to_del=[]):
+    def delete_nodes(self, cluster_id: str, nodes_to_del=None):
         """Start the delete nodes operation."""
+        if nodes_to_del is None:
+            nodes_to_del = []
         curr_entity: def_models.DefEntity = self.entity_svc.get_entity(
             cluster_id)
 
@@ -1218,7 +1220,7 @@ class ClusterService(abstract_broker.AbstractBroker):
     @utils.run_async
     def _delete_nodes_async(self, cluster_id: str,
                             cluster_spec: def_models.NativeEntity = None,
-                            nodes_to_del=[]):
+                            nodes_to_del=None):
         """Delete worker and/or nfs nodes in vCD.
 
         This method is executed by a thread in an asynchronous manner.
@@ -1234,6 +1236,8 @@ class ClusterService(abstract_broker.AbstractBroker):
         Let the caller monitor thread or method to set SUCCESS task status,
           end the client context
         """
+        if nodes_to_del is None:
+            nodes_to_del = []
         curr_entity: def_models.DefEntity = self.entity_svc.get_entity(cluster_id)  # noqa: E501
         vapp_href = curr_entity.externalId
         cluster_name = curr_entity.entity.metadata.cluster_name
