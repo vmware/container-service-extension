@@ -87,10 +87,12 @@ class ClusterService(abstract_broker.AbstractBroker):
         )
         return self._sync_def_entity(cluster_id)
 
-    def list_clusters(self, filters: dict = {},
+    def list_clusters(self, filters: dict = None,
                       page_number=CSE_PAGINATION_FIRST_PAGE_NUMBER,
                       page_size=CSE_PAGINATION_DEFAULT_PAGE_SIZE) -> dict:
         """List corresponding defined entities of all native clusters."""
+        if filters is None:
+            filters = {}
         telemetry_handler.record_user_action_details(
             cse_operation=telemetry_constants.CseOperation.V35_CLUSTER_LIST,
             cse_params={
@@ -878,7 +880,8 @@ class ClusterService(abstract_broker.AbstractBroker):
             LOGGER.error(f"{msg}",
                          exc_info=True)
             self._fail_operation_and_resolve_entity(cluster_id,
-                                                    DefEntityOperation.UPDATE)
+                                                    DefEntityOperation.UPDATE,
+                                                    should_resolve_entity=False)  # noqa: E501
             self._update_task(vcd_client.TaskStatus.ERROR,
                               message=msg,
                               error_message=str(err))
@@ -1242,7 +1245,8 @@ class ClusterService(abstract_broker.AbstractBroker):
             LOGGER.error(f"{msg}", exc_info=True)
             self._fail_operation_and_resolve_entity(cluster_id,
                                                     DefEntityOperation.UPGRADE,
-                                                    vapp)
+                                                    should_resolve_entity=False,  # noqa: E501
+                                                    vapp=vapp)
             self._update_task(vcd_client.TaskStatus.ERROR,
                               message=msg, error_message=str(err))
 
@@ -1369,7 +1373,8 @@ class ClusterService(abstract_broker.AbstractBroker):
                          exc_info=True)
             self._fail_operation_and_resolve_entity(cluster_id,
                                                     DefEntityOperation.UPDATE,
-                                                    vapp)
+                                                    should_resolve_entity=False,  # noqa: E501
+                                                    vapp=vapp)
             self._update_task(vcd_client.TaskStatus.ERROR,
                               message=msg,
                               error_message=str(err))
@@ -1392,6 +1397,7 @@ class ClusterService(abstract_broker.AbstractBroker):
 
     def _fail_operation_and_resolve_entity(self, cluster_id: str,
                                            op: DefEntityOperation,
+                                           should_resolve_entity=True,
                                            vapp=None):
         try:
             # get the current state of the defined entity
@@ -1402,8 +1408,9 @@ class ClusterService(abstract_broker.AbstractBroker):
             def_entity.entity.status.phase = \
                 str(DefEntityPhase(op, DefEntityOperationStatus.FAILED))
             self.entity_svc.update_entity(cluster_id, def_entity)
-            self.entity_svc.resolve_entity(cluster_id)
-            self._sync_def_entity(cluster_id, def_entity)
+            if should_resolve_entity:
+                self.entity_svc.resolve_entity(cluster_id)
+            self._sync_def_entity(cluster_id, def_entity, vap=vapp)
         except Exception as err:
             msg = f"Failed to resolve defined entity for cluster {cluster_id}"
             LOGGER.error(f"{msg}", exc_info=True)
