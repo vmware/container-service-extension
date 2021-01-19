@@ -24,6 +24,7 @@ def secure(required_rights=None):
     """
     if required_rights is None:
         required_rights = {}
+
     def decorator_secure(func):
         @functools.wraps(func)
         def decorator_wrapper(*args, **kwargs):
