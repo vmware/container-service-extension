@@ -479,8 +479,6 @@ def _get_v35_url_data(method: str, url: str, api_version: str):
     if operation_type == shared_constants.OperationType.CLUSTER:
         return _get_v35_cluster_url_data(method, tokens)
 
-    from container_service_extension.logger import SERVER_LOGGER
-    SERVER_LOGGER.debug(f"********Operation type = {operation_type}")
     if operation_type == shared_constants.OperationType.NATIVE_CLUSTER:
         return _get_v35_native_cluster_url_data(method, tokens)
 

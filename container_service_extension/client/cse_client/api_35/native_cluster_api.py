@@ -22,7 +22,7 @@ class NativeClusterApi(CseClient):
 
     def create_cluster(self, cluster_entity_definition: def_models.NativeEntity):  # noqa: E501
         cluster_entity_dict = asdict(cluster_entity_definition)
-        uri = self._legacy_clusters_uri
+        uri = self._clusters_uri
         response = self._client._do_request_prim(
             shared_constants.RequestMethod.POST,
             uri,
