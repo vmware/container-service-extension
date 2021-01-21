@@ -309,8 +309,11 @@ class Service(object, metaclass=Singleton):
                     logger.SERVER_LOGGER.error(msg)
                     raise cse_exception.MQTTExtensionError(msg)
 
-                token_info = mqtt_ext_manager.create_extension_token(
+                token_info = mqtt_ext_manager.setup_extension_token(
                     token_name=server_constants.MQTT_TOKEN_NAME,
+                    ext_name=server_constants.CSE_SERVICE_NAME,
+                    ext_version=server_constants.MQTT_EXTENSION_VERSION,
+                    ext_vendor=server_constants.MQTT_EXTENSION_VENDOR,
                     ext_urn_id=ext_urn_id)
 
                 self.config['mqtt'].update(ext_info)
