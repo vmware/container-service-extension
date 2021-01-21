@@ -57,9 +57,8 @@ class TkgClusterApi(object):
                 "Missing the required parameter `entity_type` when calling `list_tkg_clusters`")
         path_params = {}
         query_params = []
-        if params.get('query_params'):
-            for k, v in params.get('query_params', {}).items():
-                query_params.append((k, v))
+        for k, v in params.get('query_params', {}).items():
+            query_params.append((k, v))
         if params.get('object_filter'):
             query_params.append(('filter', params['object_filter']))
         header_params = {}
