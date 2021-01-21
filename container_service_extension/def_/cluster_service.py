@@ -6,7 +6,7 @@ import re
 import string
 import threading
 import time
-from typing import Dict, List
+from typing import Dict, List, Tuple
 import urllib
 
 import pkg_resources
@@ -1897,9 +1897,10 @@ def _join_cluster(sysadmin_client: vcd_client.Client, vapp, template_name,
                   template_revision, target_nodes=None):
     vcd_utils.raise_error_if_user_not_from_system_org(sysadmin_client)
     try:
-        script = "#!/usr/bin/env bash\n" \
-                 "kubeadm token create\n" \
-                 "ip route get 1 | awk '{print $NF;exit}'\n"
+        script = """
+                #!/usr/bin/env bash
+                kubeadm token create --print-join-command
+            """
         node_names = _get_node_names(vapp, NodeType.CONTROL_PLANE)
         control_plane_result = _execute_script_in_nodes(sysadmin_client,
                                                         vapp=vapp,
@@ -1910,16 +1911,20 @@ def _join_cluster(sysadmin_client: vcd_client.Client, vapp, template_name,
             raise e.ClusterJoiningError(
                 "Join cluster script execution failed on "
                 f"control plane node {node_names}:{errors}")
-        init_info = control_plane_result[0][1].content.decode().split()
+        # kubeadm join <ip:port> --token <token>     --discovery-token-ca-cert-hash <discovery_token>
+        join_info = control_plane_result[0][1].content.decode().split()
 
         node_names = _get_node_names(vapp, NodeType.WORKER)
         if target_nodes is not None:
             node_names = [name for name in node_names if name in target_nodes]
         tmp_script_filepath = ltm.get_script_filepath(template_name,
                                                       template_revision,
-                                                      ScriptFile.NODE)
+                                                      ScriptFile.NODEV2)
         tmp_script = utils.read_data_file(tmp_script_filepath, logger=LOGGER)
-        script = tmp_script.format(token=init_info[0], ip=init_info[1])
+        script = tmp_script.format(
+            ip_port=join_info[2],
+            token=join_info[4],
+            discovery_token_ca_cert_hash=join_info[6])
         worker_results = _execute_script_in_nodes(sysadmin_client, vapp=vapp,
                                                   node_names=node_names,
                                                   script=script)
@@ -1975,7 +1980,7 @@ def _wait_until_ready_to_exec(vs, vm, password, tries=30):
 
 def _execute_script_in_nodes(sysadmin_client: vcd_client.Client,
                              vapp, node_names, script,
-                             check_tools=True, wait=True):
+                             check_tools=True, wait=True) -> List[Tuple[str, str, str]]:
     vcd_utils.raise_error_if_user_not_from_system_org(sysadmin_client)
     all_results = []
     for node_name in node_names:
@@ -2021,8 +2026,8 @@ def _execute_script_in_nodes(sysadmin_client: vcd_client.Client,
             LOGGER.debug(result_stderr)
             LOGGER.debug(result_stdout)
             all_results.append(result)
-        except Exception:
-            raise e.ScriptExecutionError(f"Error executing script in node {node_name}: {str(e)}")  # noqa: E501
+        except Exception as see:
+            raise e.ScriptExecutionError(f"Error executing script in node {node_name}: {str(see)}")  # noqa: E501
 
     return all_results
 

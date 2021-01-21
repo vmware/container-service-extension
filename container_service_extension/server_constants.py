@@ -182,7 +182,8 @@ class ScriptFile(str, Enum):
 
     # cluster initialization scripts
     CONTROL_PLANE = 'mstr.sh'
-    NODE = 'node.sh'
+    # TODO: Fix file names once VCDA-2078 and its implementation arrives
+    NODEV2 = 'node_v2.sh'
 
     # cluster upgrade scripts
     DOCKER_UPGRADE = 'cluster-upgrade/docker-upgrade.sh'
