@@ -32,7 +32,7 @@ Following are the valid api endpoints.
 
 API version 33.0 and 34.0
 --------------------------
-GET /cse/nativeclusters
+GET /cse/legacyclusters
 GET /cse/clusters?org={org name}&vdc={vdc name}
 POST /cse/clusters
 GET /cse/cluster/{cluster name}?org={org name}&vdc={vdc name}
@@ -56,7 +56,7 @@ PUT /cse/ovdc/{ovdc_id}/compute-policies
 
 API version 35.0
 ----------------
-GET /cse/3.0/legacyclusters
+GET /cse/3.0/nativeclusters
 GET /cse/3.0/clusters
 Entities can be filtered by nested properties as defined per the schema
 GET /cse/3.0/clusters?entity.kind={native}&entity.metadata.org_name={org name}
@@ -83,7 +83,6 @@ PUT /cse/system
 
 GET /cse/templates
 
-GET /pks/pksClusters?org={org name}&vdc={vdc name}
 GET /pks/clusters?org={org name}&vdc={vdc name}
 POST /pks/clusters
 GET /pks/cluster/{cluster name}?org={org name}&vdc={vdc name}
