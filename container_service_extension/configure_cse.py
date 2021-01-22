@@ -738,9 +738,9 @@ def _update_user_role_with_right_bundle(right_bundle_name,
 def _update_user_role_with_necessary_right_bundles(client: Client,
                                                    msg_update_callback=utils.NullPrinter(), # noqa: E501
                                                    logger_debug=NULL_LOGGER,
-                                                   log_wire=False,
-                                                   config=[]):
+                                                   log_wire=False):
     """Add necessary rights from right bundles to user's role.
+
     As of now, CSE admin user requires:
         Native Defined Entity Right Bundle
         TKG Defined Entity Right Bundle
@@ -751,7 +751,6 @@ def _update_user_role_with_necessary_right_bundles(client: Client,
     :rtype bool: result of operation. If the rights from any right bundles
     were added to user's role or not
     """
-
     try:
         _update_user_role_with_right_bundle(
             def_utils.DEF_NATIVE_ENTITY_TYPE_RIGHT_BUNDLE,
@@ -760,7 +759,7 @@ def _update_user_role_with_necessary_right_bundles(client: Client,
             logger_debug=INSTALL_LOGGER,
             log_wire=log_wire)
     except Exception as err:
-        msg="Error Adding Native Def Entity Rights in User Role"
+        msg = "Error Adding Native Def Entity Rights in User Role"
         msg_update_callback.error(msg)
         raise err
 
@@ -774,18 +773,8 @@ def _update_user_role_with_necessary_right_bundles(client: Client,
     except Exception as err:
         # TKG Def Entity Rights Bundle might not be present in VCD always
         # (e.g. VCD 10.1) so ignore the error and move on
-        msg="Error Adding TKG Def Entity Rights in User Role"
+        msg = "Error Adding TKG Def Entity Rights in User Role" + str(err)
         msg_update_callback.general_no_color(msg)
-
-    # Given that Rights for the current user have been updated, CSE
-    # should logout the user and login again.
-    # This will make sure that SecurityContext object in VCD is
-    # recreated and newly added rights are effective for the user.
-    client.logout()
-    credentials = BasicLoginCredentials(config['vcd']['username'],
-                                        server_constants.SYSTEM_ORG_NAME, # noqa: E501
-                                        config['vcd']['password'])
-    client.set_credentials(credentials)
 
 
 def _register_def_schema(client: Client,
@@ -868,11 +857,20 @@ def _register_def_schema(client: Client,
         # Update user's role with right bundle associated with all necessary
         # right bundles
         _update_user_role_with_necessary_right_bundles(
-                client=client,
-                msg_update_callback=msg_update_callback,
-                logger_debug=INSTALL_LOGGER,
-                log_wire=log_wire,
-                config)
+            client=client,
+            msg_update_callback=msg_update_callback,
+            logger_debug=INSTALL_LOGGER,
+            log_wire=log_wire)
+
+        # Given that Rights for the current user have been updated, CSE
+        # should logout the user and login again.
+        # This will make sure that SecurityContext object in VCD is
+        # recreated and newly added rights are effective for the user.
+        client.logout()
+        credentials = BasicLoginCredentials(config['vcd']['username'],
+                                            server_constants.SYSTEM_ORG_NAME,
+                                            config['vcd']['password'])
+        client.set_credentials(credentials)
 
     except cse_exception.DefNotSupportedException:
         msg = "Skipping defined entity type and defined entity interface" \
