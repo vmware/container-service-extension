@@ -13,18 +13,17 @@ class NativeClusterApi(CseClient):
     def __init__(self, client: vcd_client.Client):
         super().__init__(client)
         self._uri = f"{self._uri}/{shared_constants.CSE_URL_FRAGMENT}"
-        self._legacy_clusters_uri = f"{self._uri}/legacyclusters"
+        self._native_clusters_uri = f"{self._uri}/nativeclusters"
         self._cluster_uri = f"{self._uri}/cluster"
         self._clusters_uri = f"{self._uri}/clusters"
         self._node_uri = f"{self._uri}/node"
         self._nodes_uri = f"{self._uri}/nodes"
-        self._request_page_size = 1
 
     def get_all_clusters(self, filters=None):
         if filters is None:
             filters = {}
         filter_string = "&".join([f"{k}={v}" for k, v in filters.items() if v is not None])  # noqa: E501
-        url = f"{self._legacy_clusters_uri}?" \
+        url = f"{self._native_clusters_uri}?" \
               f"{shared_constants.PaginationKey.PAGE_SIZE.value}={self._request_page_size}"  # noqa: E501
         if filter_string:
             url += f"&{filter_string}"

@@ -53,7 +53,6 @@ CSE_PAGINATION_DEFAULT_PAGE_SIZE = 25
 
 @unique
 class OperationType(str, Enum):
-    LEGACY_CLUSTER = 'legacycluster'
     NATIVE_CLUSTER = 'nativecluster'
     CLUSTER = 'cluster'
     NODE = 'node'

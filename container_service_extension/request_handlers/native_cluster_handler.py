@@ -131,7 +131,7 @@ def _filter_cluster_list_common_properties(cluster_list: list, common_properties
 
 
 @record_user_action_telemetry(cse_operation=CseOperation.CLUSTER_LIST)
-def legacy_cluster_list(request_data, op_ctx: ctx.OperationContext):
+def native_cluster_list(request_data, op_ctx: ctx.OperationContext):
     """Request handler for cluster list operation.
 
     Optional data and default values: org_name=None, ovdc_name=None
@@ -164,7 +164,7 @@ def legacy_cluster_list(request_data, op_ctx: ctx.OperationContext):
     query_params = {k: request_data[k] for k in query_keys if request_data.get(k) is not None}  # noqa: E501
 
     base_url = f"{op_ctx.client.get_api_uri().strip('/')}" \
-               f"{CseOperationInfo.LEGACY_CLUSTER_LIST.api_path_format}"
+               f"{CseOperationInfo.NATIVE_CLUSTER_LIST.api_path_format}"
     return utils.create_links_and_construct_paginated_result(
         base_url, result,
         vcd_clusters_info[PaginationKey.RESULT_TOTAL],

@@ -32,7 +32,7 @@ Following are the valid api endpoints.
 
 API version 33.0 and 34.0
 --------------------------
-GET /cse/legacyclusters
+GET /cse/nativeclusters
 GET /cse/clusters?org={org name}&vdc={vdc name}
 POST /cse/clusters
 GET /cse/cluster/{cluster name}?org={org name}&vdc={vdc name}
@@ -100,7 +100,7 @@ OPERATION_TO_HANDLER = {
     CseOperation.CLUSTER_CREATE: native_cluster_handler.cluster_create,
     CseOperation.CLUSTER_DELETE: native_cluster_handler.cluster_delete,
     CseOperation.CLUSTER_INFO: native_cluster_handler.cluster_info,
-    CseOperation.LEGACY_CLUSTER_LIST: native_cluster_handler.legacy_cluster_list,  # noqa: E501
+    CseOperation.NATIVE_CLUSTER_LIST: native_cluster_handler.native_cluster_list,  # noqa: E501
     CseOperation.CLUSTER_LIST: native_cluster_handler.cluster_list,
     CseOperation.CLUSTER_RESIZE: native_cluster_handler.cluster_resize,
     CseOperation.CLUSTER_UPGRADE_PLAN: native_cluster_handler.cluster_upgrade_plan,  # noqa: E501
@@ -626,13 +626,13 @@ def _get_legacy_url_data(method: str, url: str, api_version: str):
     if operation_type.endswith('s'):
         operation_type = operation_type[:-1]
 
-    if operation_type == shared_constants.OperationType.LEGACY_CLUSTER:
+    if operation_type == shared_constants.OperationType.NATIVE_CLUSTER:
         if api_version not in (VcdApiVersion.VERSION_33.value,
                                VcdApiVersion.VERSION_35.value):
             raise cse_exception.NotFoundRequestError()
         if num_tokens == 4:
             if method == shared_constants.RequestMethod.GET:
-                return {_OPERATION_KEY: CseOperation.LEGACY_CLUSTER_LIST}
+                return {_OPERATION_KEY: CseOperation.NATIVE_CLUSTER_LIST}
             raise cse_exception.MethodNotAllowedRequestError()
 
     if operation_type == shared_constants.OperationType.CLUSTER:

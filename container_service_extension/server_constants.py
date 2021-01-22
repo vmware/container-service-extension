@@ -199,7 +199,7 @@ class CseOperation(Enum):
     CLUSTER_CREATE = ('create cluster', '/cse/clusters', requests.codes.accepted)  # noqa: E501
     CLUSTER_DELETE = ('delete cluster', '/cse/cluster/%s', requests.codes.accepted)  # noqa: E501
     CLUSTER_INFO = ('get info of cluster', '/cse/cluster/%s')
-    LEGACY_CLUSTER_LIST = ('list legacy clusters', '/cse/legacyclusters')
+    NATIVE_CLUSTER_LIST = ('list legacy clusters', '/cse/nativeclusters')
     CLUSTER_LIST = ('list clusters', '/cse/clusters')
     CLUSTER_RESIZE = ('resize cluster', '/cse/cluster/%s', requests.codes.accepted)  # noqa: E501
     CLUSTER_UPGRADE_PLAN = ('get supported cluster upgrade paths', '/cse/cluster/%s/upgrade-plan')  # noqa: E501
