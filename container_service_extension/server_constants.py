@@ -86,6 +86,14 @@ VCENTER_LOGIN_ERROR_MSG = "vCenter login failed (check config file for "\
 # Request Id format for logging
 REQUEST_ID_FORMAT = 'Request Id: %(requestId)s | '
 
+# Prefix for Gateway urn
+GATEWAY_URN_PREFIX = 'urn:vcloud:gateway:'
+
+# NSXT Gateway NAT constants
+NATS_PATH = '/nat'
+RULES_PATH = '/rules'
+DNAT_RULE_TYPE = 'DNAT'
+
 
 @unique
 class OperationType(str, Enum):
@@ -398,6 +406,21 @@ class VappAccessKey(str, Enum):
     IS_SHARED_TO_EVERYONE = 'isSharedToEveryone'
     ACCESS_SETTINGS = 'accessSettings'
     ACCESS_SETTING = 'accessSetting'
+
+
+@unique
+class NsxtNATRuleKey(str, Enum):
+    """Keys for NSXT NAT Rules."""
+
+    NAME = 'name'
+    DESCRIPTION = 'description'
+    ENABLED = 'enabled'
+    RULE_TYPE = 'ruleType'
+    EXTERNAL_ADDRESSES = 'externalAddresses'
+    INTERNAL_ADDRESSES = 'internalAddresses'
+    LOGGING = 'logging'
+    APPLICATION_PORT_PROFILE = 'applicationPortProfile'
+    DNAT_EXTERNAL_PORT = 'dnatExternalPort'
 
 
 # CSE Service Role Name

@@ -27,3 +27,4 @@ class CloudApiResource(str, Enum):
     ACL = 'accessControls'
     USERS = 'users'
     VDCS = 'vdcs'
+    EDGE_GATEWAYS = 'edgeGateways'
