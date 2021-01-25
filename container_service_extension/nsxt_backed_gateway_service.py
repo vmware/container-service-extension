@@ -80,10 +80,16 @@ class NsxtBackedGatewayService:
         uplink_index = _get_uplink_index(
             put_request_body['edgeGatewayUplinks'],
             external_network_name)
+        if uplink_index == -1:
+            raise Exception(f'No uplink found with name '
+                            f'({external_network_name})')
         subnet_values = \
             put_request_body['edgeGatewayUplinks'][uplink_index]['subnets']['values']  # noqa: E501
         subnet_index = _get_subnet_index(gateway_ip, prefix_length,
                                          subnet_values)
+        if subnet_index == -1:
+            raise Exception(f'No subnet found with gateway ip ({gateway_ip}) '
+                            f'and prefix length ({prefix_length})')
         request_subnet_value = subnet_values[subnet_index]
         request_subnet_value["totalIpCount"] = \
             int(request_subnet_value["totalIpCount"]) + number_ips
