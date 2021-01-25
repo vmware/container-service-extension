@@ -14,6 +14,7 @@ import container_service_extension.utils as server_utils
 
 def _get_uplink_index(uplinks, uplink_name):
     """Get the index in the uplinks array of the correct uplink name.
+
     :param arr uplinks: array of uplinks
     :param str uplink_name: name of the uplink
     :return: index of the uplink. -1 is returned if the uplink name is not
@@ -66,7 +67,6 @@ class NsxtBackedGatewayService:
         :param int prefix_length: prefix length of the subnet
         :param int number_ips: number of ips to allocate
         """
-
         # Get current edge gateway body and use for PUT request body
         gateway_relative_path = \
             f'{cloudapi_constants.CloudApiResource.EDGE_GATEWAYS}/' \
