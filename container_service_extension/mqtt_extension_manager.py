@@ -128,7 +128,6 @@ class MQTTExtensionManager:
                          priority=constants.MQTT_EXTENSION_PRIORITY,
                          ext_enabled=True, auth_enabled=False,
                          description=''):
-        # TODO: check if authorization should be enabled as default
         """Create the MQTT extension.
 
         Note: vendor-name-version combination must be unique
@@ -331,9 +330,9 @@ class MQTTExtensionManager:
         :rtype: dict with fields: token and token_id
         """
         self.delete_all_extension_tokens(ext_name, ext_version, ext_vendor)
-        return self.create_extension_token(token_name, ext_urn_id)
+        return self._create_extension_token(token_name, ext_urn_id)
 
-    def create_extension_token(self, token_name, ext_urn_id):
+    def _create_extension_token(self, token_name, ext_urn_id):
         """Create a long live token.
 
         Note: the token can only be retrieved upon creation. Following GET
