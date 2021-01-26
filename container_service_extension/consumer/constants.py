@@ -14,3 +14,6 @@ MQTT_CLIENT_ID = 'cseMQTT'
 MQTT_CONNECT_PORT = 443
 TRANSPORT_WSS = 'websockets'
 QOS_LEVEL = 2  # No duplicate messages
+
+# Used by only AMQP consumer
+MAX_PROCESSING_REQUEST_CACHE_SIZE = 1000
