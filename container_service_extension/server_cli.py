@@ -314,19 +314,14 @@ def version(ctx):
 
 @cli.command(short_help='Create CSE service role for CSE install/upgrade/run')
 @click.pass_context
+@click.argument('vcd_host', metavar='VCD_HOST')
 @click.option(
-    '-v',
-    '--vcd-host',
-    metavar='VCD_HOST',
-    required=True,
-    help="VCD host URL")
-@click.option(
-    '-s',
-    '--skip-ssl-verify',
+    '-s/-i',
+    '--verify-ssl-certs/--no-verify-ssl-certs',
     required=False,
-    is_flag=True,
-    help="Skip SSL Verification for VCD Host")
-def create_service_role(ctx, vcd_host, skip_ssl_verify):
+    default=True,
+    help='Verify SSL certificates of VCD Host')
+def create_service_role(ctx, vcd_host, verify_ssl_certs):
     """Create CSE service Role."""
     SERVER_CLI_LOGGER.debug(f"Executing command: {ctx.command_path}")
     console_message_printer = ConsoleMessagePrinter()
@@ -343,13 +338,12 @@ def create_service_role(ctx, vcd_host, skip_ssl_verify):
     admin_password = prompt_text(PASSWORD_FOR_SYSTEM_ADMINISTRATOR + str(admin_username), # noqa: E501
                                  color='green', hide_input=True)
 
-    ssl_verify = not skip_ssl_verify
     msg = f"Connecting to vCD: {vcd_host}"
     console_message_printer.general_no_color(msg)
     SERVER_CLI_LOGGER.info(msg)
 
     try:
-        client = vcd_client.Client(vcd_host, verify_ssl_certs=ssl_verify)
+        client = vcd_client.Client(vcd_host, verify_ssl_certs=verify_ssl_certs)
         credentials = vcd_client.BasicLoginCredentials(
             admin_username,
             SYSTEM_ORG_NAME,
@@ -372,21 +366,21 @@ def create_service_role(ctx, vcd_host, skip_ssl_verify):
             msg = "CSE Internal Error, Please contact support"
             console_message_printer.error(msg)
             SERVER_CLI_LOGGER.error(msg)
-            raise err
+            console_message_printer.error(str(err))
+            SERVER_CLI_LOGGER.error(str(err))
         except BadRequestException as err:
-            msg = "CSE Internal Error, Please contact support"
+            msg = "CSE Service Role already Exists"
             console_message_printer.error(msg)
+            console_message_printer.error(str(err))
             SERVER_CLI_LOGGER.error(msg)
-            raise err
+            SERVER_CLI_LOGGER.error(str(err))
     except requests.exceptions.ConnectionError as err:
-        msg = f"Invalid parameter {vcd_host}"
-        console_message_printer.error(msg)
-        SERVER_CLI_LOGGER.error(msg)
+        console_message_printer.error(str(err))
         SERVER_CLI_LOGGER.error(str(err))
     except VcdException as err:
-        msg = f"Invalid parameters for System Org {admin_username} "
-        "or {admin_password}"
+        msg = f"Incorrect SystemOrg Username: {admin_username} and/or Password"
         console_message_printer.error(msg)
+        console_message_printer.error(str(err))
         SERVER_CLI_LOGGER.error(msg)
         SERVER_CLI_LOGGER.error(str(err))
     except Exception as err:
