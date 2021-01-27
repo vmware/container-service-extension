@@ -789,9 +789,11 @@ class ClusterService(abstract_broker.AbstractBroker):
                     LOGGER.error("Failed to delete the defined entity for "
                                  f"cluster '{cluster_name}'", exc_info=True)
             else:
+                # split to two
                 self._fail_operation_and_resolve_entity(
                     cluster_id, DefEntityOperation.CREATE,
                     should_resolve_entity=True, vapp=vapp)
+            # multiple update
             self._update_task(vcd_client.TaskStatus.ERROR,
                               message=msg,
                               error_message=str(err))
