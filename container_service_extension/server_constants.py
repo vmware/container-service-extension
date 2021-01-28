@@ -87,9 +87,19 @@ REQUEST_ID_FORMAT = 'Request Id: %(requestId)s | '
 GATEWAY_URN_PREFIX = 'urn:vcloud:gateway:'
 
 # NSXT Gateway NAT constants
-NATS_PATH = '/nat'
-RULES_PATH = '/rules'
+NATS_PATH_FRAGMENT = 'nat'
+RULES_PATH_FRAGMENT = 'rules'
 DNAT_RULE_TYPE = 'DNAT'
+
+# NSX-T gateway uplink index: NSX-T backed edge gateways have only 1
+# external network
+NSXT_BACKED_GATEWAY_UPLINK_INDEX = 0
+
+# External network available ip address path fragment
+AVAILABLE_IP_PATH_FRAGMENT = 'availableIpAddresses'
+
+# NSX-T realized status
+NSXT_GATEWAY_REALIZED_STATUS = 'REALIZED'
 
 
 @unique
@@ -362,6 +372,22 @@ class NsxtNATRuleKey(str, Enum):
     LOGGING = 'logging'
     APPLICATION_PORT_PROFILE = 'applicationPortProfile'
     DNAT_EXTERNAL_PORT = 'dnatExternalPort'
+
+
+@unique
+class NsxtGatewayRequestKey(str, Enum):
+    EDGE_GATEWAY_UPLINKS = 'edgeGatewayUplinks'
+    UPLINK_ID = 'uplinkId'
+    GATEWAY = 'gateway'
+    PREFIX_LENGTH = 'prefixLength'
+    TOTAL_IP_COUNT = 'totalIpCount'
+    AUTO_ALLOCATE_IP_RANGES = 'autoAllocateIpRanges'
+    SUBNETS = 'subnets'
+    VALUES = 'values'
+    IP_RANGES = 'ipRanges'
+    START_ADDRESS = 'startAddress'
+    END_ADDRESS = 'endAddress'
+    STATUS = 'status'
 
 
 # CSE Service Role Name
