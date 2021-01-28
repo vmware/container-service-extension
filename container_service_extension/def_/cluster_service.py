@@ -1087,7 +1087,7 @@ class ClusterService(abstract_broker.AbstractBroker):
 
             # TODO use cluster status field to get the control plane and worker nodes  # noqa: E501
             vapp = vcd_vapp.VApp(self.context.client, href=vapp_href)
-            all_node_names = [vm.get('name') for vm in vapp.get_all_vms()]
+            all_node_names = [vm.get('name') for vm in vapp.get_all_vms() if not vm.get('name').startswith(NodeType.NFS)]  # noqa: E501
             control_plane_node_names = [curr_entity.entity.status.nodes.control_plane.name]  # noqa: E501
             worker_node_names = [worker.name for worker in curr_entity.entity.status.nodes.workers]  # noqa: E501
 
