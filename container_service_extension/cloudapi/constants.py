@@ -28,3 +28,4 @@ class CloudApiResource(str, Enum):
     USERS = 'users'
     VDCS = 'vdcs'
     EDGE_GATEWAYS = 'edgeGateways'
+    EXTERNAL_NETWORKS = 'externalNetworks'
