@@ -287,7 +287,7 @@ class Service(object, metaclass=Singleton):
                 set(server_constants.SUPPORTED_VCD_API_VERSIONS)
             common_supported_versions = \
                 list(cse_supported_versions.intersection(vcd_supported_versions))  # noqa: E501
-            self.config['vcd']['supported_api_versions'] = \
+            self.config['service']['supported_api_versions'] = \
                 common_supported_versions
 
             verify_version_compatibility(sysadmin_client,
