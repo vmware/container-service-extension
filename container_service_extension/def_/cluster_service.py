@@ -766,6 +766,7 @@ class ClusterService(abstract_broker.AbstractBroker):
         except (e.ControlPlaneNodeCreationError, e.WorkerNodeCreationError,
                 e.NFSNodeCreationError, e.ClusterJoiningError,
                 e.ClusterInitializationError, e.ClusterOperationError) as err:
+            # noqa: E501
             msg = f"Error creating cluster '{cluster_name}'"
             LOGGER.error(msg, exc_info=True)
             if rollback:
@@ -847,6 +848,9 @@ class ClusterService(abstract_broker.AbstractBroker):
                               message=msg,
                               error_message=str(err))
         finally:
+            # TODO re-organize updating defined entity and task update as per
+            # https://stackoverflow.com/questions/49099637/how-to-determine-if-an-exception-was-raised-once-youre-in-the-finally-block
+            # noqa: E501
             self.context.end()
 
     @thread_utils.run_async
@@ -948,6 +952,9 @@ class ClusterService(abstract_broker.AbstractBroker):
                               message=msg,
                               error_message=str(err))
         finally:
+            # TODO re-organize updating defined entity and task update as per
+            # https://stackoverflow.com/questions/49099637/how-to-determine-if-an-exception-was-raised-once-youre-in-the-finally-block
+            # noqa: E501
             self.context.end()
 
     @thread_utils.run_async
@@ -1147,6 +1154,9 @@ class ClusterService(abstract_broker.AbstractBroker):
                               message=msg,
                               error_message=str(err))
         finally:
+            # TODO re-organize updating defined entity and task update as per
+            # https://stackoverflow.com/questions/49099637/how-to-determine-if-an-exception-was-raised-once-youre-in-the-finally-block
+            # noqa: E501
             self.context.end()
 
     def _get_cluster_upgrade_plan(self, source_template_name,
@@ -1353,6 +1363,9 @@ class ClusterService(abstract_broker.AbstractBroker):
                               message=msg, error_message=str(err))
 
         finally:
+            # TODO re-organize updating defined entity and task update as per
+            # https://stackoverflow.com/questions/49099637/how-to-determine-if-an-exception-was-raised-once-youre-in-the-finally-block
+            # noqa: E501
             self.context.end()
 
     @thread_utils.run_async
@@ -1416,6 +1429,9 @@ class ClusterService(abstract_broker.AbstractBroker):
                               message=msg,
                               error_message=str(err))
         finally:
+            # TODO re-organize updating defined entity and task update as per
+            # https://stackoverflow.com/questions/49099637/how-to-determine-if-an-exception-was-raised-once-youre-in-the-finally-block
+            # noqa: E501
             self.context.end()
 
     @thread_utils.run_async
@@ -1509,6 +1525,8 @@ class ClusterService(abstract_broker.AbstractBroker):
 
     def _sync_def_entity(self, cluster_id, curr_entity=None, vapp=None):
         """Sync the defined entity with the latest vApp status."""
+        # NOTE: This function should not be relied to update the defined entity
+        # unless it is sure that the Vapp with the cluster-id exists
         if not curr_entity:
             curr_entity: def_models.DefEntity = self.entity_svc.get_entity(
                 cluster_id)
