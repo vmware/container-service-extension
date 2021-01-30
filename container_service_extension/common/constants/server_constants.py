@@ -94,6 +94,7 @@ class OperationType(str, Enum):
     OVDC = 'ovdc'
     SYSTEM = 'system'
     TEMPLATE = 'template'
+    ORG_VDCS = 'orgvdc'
 
 
 @unique

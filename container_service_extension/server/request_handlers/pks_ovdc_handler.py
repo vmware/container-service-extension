@@ -268,6 +268,7 @@ def ovdc_list(request_data, op_ctx: ctx.OperationContext):
     # Record telemetry data
     cse_params = copy.deepcopy(validated_data)
     cse_params[RequestKey.LIST_PKS_PLANS] = list_pks_plans
+    cse_params[PayloadKey.SOURCE_DESCRIPTION] = thread_local_data.get_thread_local_data(ThreadLocalData.USER_AGENT)  # noqa: E501
     record_user_action_details(cse_operation=CseOperation.OVDC_LIST,
                                cse_params=cse_params)
 
