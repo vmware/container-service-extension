@@ -282,14 +282,14 @@ class Service(object, metaclass=Singleton):
         try:
             sysadmin_client = vcd_utils.get_sys_admin_client()
 
-            vcd_supported_versions = \
+            vcd_supported_api_versions = \
                 set(sysadmin_client.get_supported_versions_list())
-            cse_supported_versions = \
+            cse_supported_api_versions = \
                 set(server_constants.SUPPORTED_VCD_API_VERSIONS)
-            common_supported_versions = \
-                list(cse_supported_versions.intersection(vcd_supported_versions))  # noqa: E501
+            common_supported_api_versions = \
+                list(cse_supported_api_versions.intersection(vcd_supported_api_versions))  # noqa: E501
             self.config['service']['supported_api_versions'] = \
-                common_supported_versions
+                common_supported_api_versions
 
             verify_version_compatibility(sysadmin_client,
                                          self.config['vcd']['api_version'],
