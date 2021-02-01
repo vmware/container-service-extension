@@ -3,6 +3,7 @@
 # SPDX-License-Identifier: BSD-2-Clause
 import copy
 import ipaddress
+import time
 
 import pyvcloud.vcd.client as vcd_client
 import pyvcloud.vcd.gateway as vcd_gateway
@@ -146,9 +147,12 @@ class NsxtBackedGatewayService:
             content_type='application/json')
 
         # Ensure gateway response status is realized
-        updated_get_gateway_response = self._get_gateway()
-        while updated_get_gateway_response[NsxtGatewayRequestKey.STATUS] != \
+        updated_get_gateway_response = None
+        while not updated_get_gateway_response or \
+                updated_get_gateway_response[NsxtGatewayRequestKey.STATUS] != \
                 server_constants.NSXT_GATEWAY_REALIZED_STATUS:
+            print('making request')
+            time.sleep(server_constants.NSXT_PUT_REQUEST_WAIT_TIME)
             updated_get_gateway_response = self._get_gateway()
 
         # Determine quick ip allocated address
