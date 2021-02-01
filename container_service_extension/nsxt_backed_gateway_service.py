@@ -151,7 +151,6 @@ class NsxtBackedGatewayService:
         while not updated_get_gateway_response or \
                 updated_get_gateway_response[NsxtGatewayRequestKey.STATUS] != \
                 server_constants.NSXT_GATEWAY_REALIZED_STATUS:
-            print('making request')
             time.sleep(server_constants.NSXT_PUT_REQUEST_WAIT_TIME)
             updated_get_gateway_response = self._get_gateway()
 
