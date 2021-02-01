@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: BSD-2-Clause
 
 from container_service_extension.mqi.consumer.amqp_consumer import AMQPConsumer
-from container_service_extension.mqi.consumer import MQTTConsumer
+from container_service_extension.mqi.consumer.mqtt_consumer import MQTTConsumer
 import container_service_extension.common.constants.server_constants as server_constants
 from container_service_extension.common.constants.server_constants import MQTTExtKey, \
     MQTTExtTokenKey

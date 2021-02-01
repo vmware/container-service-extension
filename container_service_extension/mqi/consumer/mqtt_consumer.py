@@ -11,7 +11,7 @@ import paho.mqtt.client as mqtt
 import requests
 
 import container_service_extension.mqi.consumer.constants as constants
-from container_service_extension.mqi.consumer \
+from container_service_extension.mqi.consumer.consumer_thread_pool_executor \
     import ConsumerThreadPoolExecutor
 import container_service_extension.mqi.consumer.utils as utils
 from container_service_extension.logging.logger import SERVER_LOGGER as LOGGER
