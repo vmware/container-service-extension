@@ -12,7 +12,7 @@ from container_service_extension.client.ovdc import Ovdc
 import container_service_extension.client.utils as client_utils
 from container_service_extension.logging.logger import CLIENT_LOGGER
 import container_service_extension.common.constants.shared_constants as shared_constants
-import container_service_extension.common.utils.utils as utils
+import container_service_extension.common.utils.core_utils as utils
 
 
 @click.group(name='ovdc', cls=cmd_filter.GroupCommandFilter,

@@ -50,7 +50,7 @@ from container_service_extension.lib.telemetry.telemetry_handler import \
     record_user_action_details
 import container_service_extension.common.thread_local_data as thread_local_data
 import container_service_extension.common.utils.thread_utils as thread_utils
-import container_service_extension.common.utils.utils as utils
+import container_service_extension.common.utils.core_utils as utils
 import container_service_extension.common.utils.vsphere_utils as vs_utils
 
 

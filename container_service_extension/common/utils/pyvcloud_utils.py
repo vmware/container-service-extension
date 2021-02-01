@@ -27,9 +27,9 @@ from container_service_extension.common.constants.shared_constants import CSE_PA
 from container_service_extension.common.constants.shared_constants import CSE_PAGINATION_FIRST_PAGE_NUMBER  # noqa: E501
 from container_service_extension.common.constants.shared_constants import PaginationKey
 from container_service_extension.common.constants.shared_constants import USER_URN_PREFIX
-from container_service_extension.common.utils.utils import extract_id_from_href
-from container_service_extension.common.utils.utils import NullPrinter
-from container_service_extension.common.utils.utils import str_to_bool
+from container_service_extension.common.utils.core_utils import extract_id_from_href
+from container_service_extension.common.utils.core_utils import NullPrinter
+from container_service_extension.common.utils.core_utils import str_to_bool
 
 
 # Cache to keep ovdc_id to org_name mapping for vcd cse cluster list

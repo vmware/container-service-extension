@@ -20,7 +20,7 @@ from container_service_extension.common.constants.server_constants import SYSTEM
 from container_service_extension.common.utils.server_utils import should_use_mqtt_protocol
 from container_service_extension.lib.telemetry.constants import COLLECTOR_ID
 from container_service_extension.lib.telemetry.constants import VAC_URL
-from container_service_extension.common.utils.utils import NullPrinter
+from container_service_extension.common.utils.core_utils import NullPrinter
 
 
 CEIP_HEADER_NAME = "x-vmware-vcloud-ceip-id"

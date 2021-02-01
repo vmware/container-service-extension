@@ -16,7 +16,7 @@ from container_service_extension.common.constants.shared_constants import ERROR_
 from container_service_extension.common.constants.shared_constants import ERROR_MINOR_CODE_KEY
 from container_service_extension.common.constants.shared_constants import RESPONSE_MESSAGE_KEY
 from container_service_extension.common.constants.shared_constants import UNKNOWN_ERROR_MESSAGE
-from container_service_extension.common.utils.utils import str_to_bool
+from container_service_extension.common.utils.core_utils import str_to_bool
 
 wire_logger = NULL_LOGGER
 if str_to_bool(os.getenv(cli_constants.ENV_CSE_CLIENT_WIRE_LOGGING)):

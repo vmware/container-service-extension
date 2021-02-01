@@ -16,7 +16,7 @@ import container_service_extension.logging.logger as logger
 import container_service_extension.common.utils.pyvcloud_utils as vcd_utils
 from container_service_extension.common.constants.shared_constants import RequestMethod
 import container_service_extension.common.utils.thread_utils as thread_utils
-import container_service_extension.common.utils.utils as utils
+import container_service_extension.common.utils.core_utils as utils
 
 # cse compute policy prefix
 CSE_COMPUTE_POLICY_PREFIX = 'cse----'

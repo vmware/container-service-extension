@@ -19,9 +19,9 @@ from container_service_extension.common.utils.pyvcloud_utils import \
     wait_for_catalog_item_to_resolve
 from container_service_extension.common.constants.server_constants import ScriptFile, \
     TemplateBuildKey
-from container_service_extension.common.utils.utils import download_file
-from container_service_extension.common.utils.utils import NullPrinter
-from container_service_extension.common.utils.utils import read_data_file
+from container_service_extension.common.utils.core_utils import download_file
+from container_service_extension.common.utils.core_utils import NullPrinter
+from container_service_extension.common.utils.core_utils import read_data_file
 from container_service_extension.common.utils.vsphere_utils import get_vsphere
 from container_service_extension.common.utils.vsphere_utils import vgr_callback
 from container_service_extension.common.utils.vsphere_utils import wait_until_tools_ready

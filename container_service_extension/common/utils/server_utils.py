@@ -10,7 +10,7 @@ import semantic_version
 
 import container_service_extension.common.constants.server_constants as server_constants
 import container_service_extension.common.constants.shared_constants as shared_constants
-import container_service_extension.common.utils.utils as utils
+import container_service_extension.common.utils.core_utils as utils
 
 
 def get_installed_cse_version():

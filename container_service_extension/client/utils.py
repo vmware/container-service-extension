@@ -21,7 +21,7 @@ from container_service_extension.logging.logger import NULL_LOGGER
 import container_service_extension.common.constants.shared_constants as shared_constants
 from container_service_extension.common.constants.shared_constants import CSE_SERVER_API_VERSION
 from container_service_extension.common.constants.shared_constants import CSE_SERVER_BUSY_KEY
-from container_service_extension.common.utils.utils import extract_id_from_href
+from container_service_extension.common.utils.core_utils import extract_id_from_href
 
 _RESTRICT_CLI_TO_TKG_OPERATIONS = False
 
