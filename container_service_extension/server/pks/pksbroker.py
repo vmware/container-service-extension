@@ -53,7 +53,7 @@ from container_service_extension.common.constants.server_constants import SYSTEM
 import container_service_extension.common.utils.server_utils as server_utils
 from container_service_extension.common.constants.shared_constants import RequestKey
 from container_service_extension.lib.uaaclient.uaaclient import UaaClient
-import container_service_extension.common.utils.utils as utils
+import container_service_extension.common.utils.core_utils as utils
 
 
 # Delimiter to append with user id context

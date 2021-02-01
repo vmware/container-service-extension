@@ -44,7 +44,7 @@ from container_service_extension.lib.telemetry.telemetry_handler \
 from container_service_extension.lib.telemetry.telemetry_handler import \
     record_user_action_details
 from container_service_extension.installer.templates.template_rule import TemplateRule
-import container_service_extension.common.utils.utils as utils
+import container_service_extension.common.utils.core_utils as utils
 from container_service_extension.common.utils.vsphere_utils import populate_vsphere_list
 
 

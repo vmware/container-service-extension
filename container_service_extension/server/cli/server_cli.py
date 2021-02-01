@@ -59,7 +59,7 @@ from container_service_extension.lib.telemetry.telemetry_handler import \
     record_user_action_details
 from container_service_extension.lib.telemetry.telemetry_utils \
     import store_telemetry_settings
-import container_service_extension.common.utils.utils as utils
+import container_service_extension.common.utils.core_utils as utils
 
 
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])

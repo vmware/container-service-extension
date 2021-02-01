@@ -25,7 +25,7 @@ from container_service_extension.exception.minor_error_codes import MinorErrorCo
 from container_service_extension.common.constants.shared_constants import CSE_PAGINATION_DEFAULT_PAGE_SIZE, PaginationKey  # noqa: E501
 from container_service_extension.common.constants.shared_constants import CSE_PAGINATION_FIRST_PAGE_NUMBER  # noqa: E501
 from container_service_extension.common.constants.shared_constants import RequestMethod
-import container_service_extension.common.utils.utils as utils
+import container_service_extension.common.utils.core_utils as utils
 
 
 def handle_entity_service_exception(func):

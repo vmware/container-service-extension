@@ -10,7 +10,7 @@ from container_service_extension.exception.minor_error_codes import MinorErrorCo
 from container_service_extension.common.constants.server_constants import FlattenedClusterSpecKey  # noqa: E501
 from container_service_extension.common.constants.server_constants import VALID_UPDATE_FIELDS
 from container_service_extension.common.constants.shared_constants import RequestKey
-import container_service_extension.common.utils.utils as utils
+import container_service_extension.common.utils.core_utils as utils
 
 
 MISSING_KEY_TO_MINOR_ERROR_CODE_MAPPING = {

@@ -20,7 +20,7 @@ from container_service_extension.logging.logger import CLIENT_LOGGER
 from container_service_extension.exception.minor_error_codes import MinorErrorCode
 from container_service_extension.common.constants.server_constants import LocalTemplateKey
 import container_service_extension.common.constants.shared_constants as shared_constants
-import container_service_extension.common.utils.utils as utils
+import container_service_extension.common.utils.core_utils as utils
 
 
 @click.group(name='cluster', cls=cmd_filter.GroupCommandFilter,

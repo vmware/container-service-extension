@@ -48,11 +48,11 @@ from container_service_extension.common.utils.server_utils import should_use_mqt
 from container_service_extension.lib.telemetry.telemetry_utils import\
     store_telemetry_settings
 from container_service_extension.lib.uaaclient.uaaclient import UaaClient
-from container_service_extension.common.utils.utils import check_file_permissions
-from container_service_extension.common.utils.utils import check_keys_and_value_types
-from container_service_extension.common.utils.utils import get_duplicate_items_in_list
-from container_service_extension.common.utils.utils import NullPrinter
-from container_service_extension.common.utils.utils import str_to_bool
+from container_service_extension.common.utils.core_utils import check_file_permissions
+from container_service_extension.common.utils.core_utils import check_keys_and_value_types
+from container_service_extension.common.utils.core_utils import get_duplicate_items_in_list
+from container_service_extension.common.utils.core_utils import NullPrinter
+from container_service_extension.common.utils.core_utils import str_to_bool
 
 
 def get_validated_config(config_file_name,

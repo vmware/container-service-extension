@@ -4,7 +4,7 @@
 
 from container_service_extension.logging.logger import NULL_LOGGER
 from container_service_extension.common.constants.server_constants import LocalTemplateKey
-from container_service_extension.common.utils.utils import NullPrinter
+from container_service_extension.common.utils.core_utils import NullPrinter
 
 
 class TemplateRule:

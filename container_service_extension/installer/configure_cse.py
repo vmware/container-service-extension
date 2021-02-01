@@ -61,7 +61,7 @@ from container_service_extension.lib.telemetry.telemetry_utils import \
     store_telemetry_settings
 import container_service_extension.installer.templates.template_builder as template_builder
 from container_service_extension.security.context.user_context import UserContext
-import container_service_extension.common.utils.utils as utils
+import container_service_extension.common.utils.core_utils as utils
 from container_service_extension.server.vcdbroker import get_all_clusters as get_all_cse_clusters # noqa: E501
 from container_service_extension.common.utils.vsphere_utils import populate_vsphere_list
 
@@ -82,7 +82,7 @@ def check_cse_installation(config, msg_update_callback=utils.NullPrinter()):
         3. CSE K8 catalog exists
 
     :param dict config: config yaml file as a dictionary
-    :param utils.ConsoleMessagePrinter msg_update_callback: Callback object.
+    :param core_utils.ConsoleMessagePrinter msg_update_callback: Callback object.
 
     :raises Exception: if CSE is not registered to vCD as an extension, or if
         specified catalog does not exist, or if specified template(s) do not
@@ -315,7 +315,7 @@ def install_cse(config_file_name, config, skip_template_creation,
         so the user can ssh into and debug the vm.
     :param str pks_config_file_name: pks config file name.
     :param bool skip_config_decryption: do not decrypt the config file.
-    :param utils.ConsoleMessagePrinter msg_update_callback: Callback object.
+    :param core_utils.ConsoleMessagePrinter msg_update_callback: Callback object.
 
     :raises cse_exception.AmqpError: (when using AMQP) if AMQP exchange
         could not be created.
@@ -525,7 +525,7 @@ def _register_cse_as_mqtt_extension(client, target_vcd_api_version,
 
     :param Client client: client used to install cse server components
     :param str target_vcd_api_version: the desired vcd api version
-    :param utils.ConsoleMessagePrinter msg_update_callback: Callback object.
+    :param core_utils.ConsoleMessagePrinter msg_update_callback: Callback object.
 
     :raises requests.exceptions.HTTPError: if the MQTT extension and api filter
         were not set up correctly
@@ -561,7 +561,7 @@ def _create_amqp_exchange(exchange_name, host, port, vhost,
     :param int port: AMQP port number.
     :param str username: AMQP username.
     :param str vhost: AMQP vhost.
-    :param utils.ConsoleMessagePrinter msg_update_callback: Callback object.
+    :param core_utils.ConsoleMessagePrinter msg_update_callback: Callback object.
 
     :raises cse_exception.AmqpError: if AMQP exchange could not be created.
     """
@@ -634,7 +634,7 @@ def _register_cse_as_amqp_extension(client, routing_key, exchange,
     :param pyvcloud.vcd.client.Client client:
     :param str routing_key:
     :param str exchange:
-    :param utils.ConsoleMessagePrinter msg_update_callback: Callback object.
+    :param core_utils.ConsoleMessagePrinter msg_update_callback: Callback object.
     """
     ext = api_extension.APIExtension(client)
 
@@ -675,7 +675,7 @@ def _update_user_role_with_right_bundle(right_bundle_name,
     (when user initiated the opetation).
     :param str : right_bundle_name
     :param pyvcloud.vcd.client.Client  : client
-    :param utils.ConsoleMessagePrinter msg_update_callback: Callback object.
+    :param core_utils.ConsoleMessagePrinter msg_update_callback: Callback object.
     :param bool log_wire: wire logging enabled
     :rtype bool: result of operation. If the rights were added to user's role
     or not
@@ -747,7 +747,7 @@ def _register_def_schema(client: Client,
     defined entity type.
 
     :param pyvcloud.vcd.client.Client client:
-    :param utils.ConsoleMessagePrinter msg_update_callback: Callback object.
+    :param core_utils.ConsoleMessagePrinter msg_update_callback: Callback object.
     :param bool log_wire: wire logging enabled
     """
     msg = "Registering defined entity schema"
@@ -861,7 +861,7 @@ def _register_right(client, right_name, description, category, bundle_key,
         vCD Roles and Rights or specify a new category name.
     :param str bundle_key: is used to identify the right name and change
         its value to different languages using localization bundle.
-    :param utils.ConsoleMessagePrinter msg_update_callback: Callback object.
+    :param core_utils.ConsoleMessagePrinter msg_update_callback: Callback object.
 
     :raises BadRequestException: if a right with given name already
         exists in vCD.
@@ -985,7 +985,7 @@ def _assign_placement_policies_to_existing_templates(client, config,
     :param dict config: content of the CSE config file.
     :param bool is_tkg_plus_enable:
     :param bool log_wire:
-    :param utils.ConsoleMessagePrinter msg_update_callback:
+    :param core_utils.ConsoleMessagePrinter msg_update_callback:
     """
     # NOTE: In CSE 3.0 if `enable_tkg_plus` flag in the config is set to false,
     # And there is an existing TKG+ template, throw an exception on the console
@@ -1085,7 +1085,7 @@ def install_template(template_name, template_revision, config_file_name,
         so the user can ssh into and debug the vm.
     :param bool skip_config_decryption: do not decrypt the config file.
     :param str decryption_password: password to decrypt the config file.
-    :param utils.ConsoleMessagePrinter msg_update_callback: Callback object.
+    :param core_utils.ConsoleMessagePrinter msg_update_callback: Callback object.
     """
     populate_vsphere_list(config['vcs'])
 
@@ -1303,7 +1303,7 @@ def upgrade_cse(config_file_name, config, skip_template_creation,
         cluster vms. If omitted, old password will be retained, however if
         old password is missing a new password will be auto generated
         regardless.
-    :param utils.ConsoleMessagePrinter msg_update_callback: Callback object.
+    :param core_utils.ConsoleMessagePrinter msg_update_callback: Callback object.
     """
     populate_vsphere_list(config['vcs'])
 
@@ -2506,7 +2506,7 @@ def configure_nsxt_for_cse(nsxt_servers, log_wire=False, msg_update_callback=uti
 
     :param dict nsxt_servers: nsxt_server details
     :param Logger log_wire:
-    :param utils.ConsoleMessagePrinter msg_update_callback: Callback object.
+    :param core_utils.ConsoleMessagePrinter msg_update_callback: Callback object.
     """
     wire_logger = SERVER_NSXT_WIRE_LOGGER if log_wire else NULL_LOGGER
     try:
