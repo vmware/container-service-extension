@@ -45,7 +45,7 @@ from container_service_extension.common.constants.server_constants import \
     VCENTER_LOGIN_ERROR_MSG
 from container_service_extension.common.constants.server_constants import VERSION_V1
 from container_service_extension.common.utils.server_utils import should_use_mqtt_protocol
-from container_service_extension.lib.telemetry import\
+from container_service_extension.lib.telemetry.telemetry_utils import\
     store_telemetry_settings
 from container_service_extension.lib.uaaclient.uaaclient import UaaClient
 from container_service_extension.common.utils.utils import check_file_permissions

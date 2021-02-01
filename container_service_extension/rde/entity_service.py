@@ -11,8 +11,8 @@ from requests.exceptions import HTTPError
 
 
 from container_service_extension.lib.cloudapi.cloudapi_client import CloudApiClient
-from container_service_extension.lib.cloudapi import CloudApiResource
-from container_service_extension.lib.cloudapi import CloudApiVersion
+from container_service_extension.lib.cloudapi.constants import CloudApiResource
+from container_service_extension.lib.cloudapi.constants import CloudApiVersion
 import container_service_extension.rde.constants as def_constants
 from container_service_extension.rde.models import DefEntity
 from container_service_extension.rde.models import DefEntityType
