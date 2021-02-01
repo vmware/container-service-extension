@@ -94,9 +94,9 @@ NATS_PATH_FRAGMENT = 'nat'
 RULES_PATH_FRAGMENT = 'rules'
 DNAT_RULE_TYPE = 'DNAT'
 
-# NSX-T gateway uplink index: NSX-T backed edge gateways have only 1
-# external network
-NSXT_BACKED_GATEWAY_UPLINK_INDEX = 0
+# NSX-T constants
+NSXT_BACKED_GATEWAY_UPLINK_INDEX = 0  # NSX-T gateway only have 1 ext network
+NSXT_PUT_REQUEST_WAIT_TIME = 2.5
 
 # External network available ip address path fragment
 AVAILABLE_IP_PATH_FRAGMENT = 'availableIpAddresses'
