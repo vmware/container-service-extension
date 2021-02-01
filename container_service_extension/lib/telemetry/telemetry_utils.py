@@ -18,8 +18,8 @@ from container_service_extension.common.constants.server_constants import MQTT_E
 from container_service_extension.common.constants.server_constants import MQTTExtKey
 from container_service_extension.common.constants.server_constants import SYSTEM_ORG_NAME
 from container_service_extension.common.utils.server_utils import should_use_mqtt_protocol
-from container_service_extension.lib.telemetry import COLLECTOR_ID
-from container_service_extension.lib.telemetry import VAC_URL
+from container_service_extension.lib.telemetry.constants import COLLECTOR_ID
+from container_service_extension.lib.telemetry.constants import VAC_URL
 from container_service_extension.common.utils.utils import NullPrinter
 
 

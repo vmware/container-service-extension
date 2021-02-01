@@ -4,8 +4,8 @@
 
 import pyvcloud.vcd.client as vcd_client
 
-from container_service_extension.lib.cloudapi import CloudApiResource
-from container_service_extension.lib.cloudapi import CloudApiVersion
+from container_service_extension.lib.cloudapi.constants import CloudApiResource
+from container_service_extension.lib.cloudapi.constants import CloudApiVersion
 from container_service_extension.logging.logger import NULL_LOGGER
 from container_service_extension.logging.logger import SERVER_CLOUDAPI_WIRE_LOGGER
 import container_service_extension.common.utils.pyvcloud_utils as vcd_utils

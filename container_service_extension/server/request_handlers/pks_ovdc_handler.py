@@ -25,12 +25,12 @@ from container_service_extension.common.constants.shared_constants import CSE_PA
 from container_service_extension.common.constants.shared_constants import CSE_PAGINATION_FIRST_PAGE_NUMBER  # noqa: E501
 from container_service_extension.common.constants.shared_constants import PaginationKey
 from container_service_extension.common.constants.shared_constants import RequestKey
-from container_service_extension.lib.telemetry import CseOperation
-from container_service_extension.lib.telemetry import OperationStatus
-from container_service_extension.lib.telemetry import PayloadKey
-from container_service_extension.lib.telemetry import record_user_action  # noqa: E501
-from container_service_extension.lib.telemetry import record_user_action_details  # noqa: E501
-from container_service_extension.lib.telemetry import record_user_action_telemetry  # noqa: E501
+from container_service_extension.lib.telemetry.constants import CseOperation
+from container_service_extension.lib.telemetry.constants import OperationStatus
+from container_service_extension.lib.telemetry.constants import PayloadKey
+from container_service_extension.lib.telemetry.telemetry_handler import record_user_action  # noqa: E501
+from container_service_extension.lib.telemetry.telemetry_handler import record_user_action_details  # noqa: E501
+from container_service_extension.lib.telemetry.telemetry_handler import record_user_action_telemetry  # noqa: E501
 import container_service_extension.common.thread_local_data as thread_local_data
 import container_service_extension.common.utils.utils as utils
 

@@ -3,8 +3,8 @@
 # SPDX-License-Identifier: BSD-2-Clause
 
 from container_service_extension.lib.cloudapi.cloudapi_client import CloudApiClient
-from container_service_extension.lib.cloudapi import CloudApiResource
-from container_service_extension.lib.cloudapi import CloudApiVersion
+from container_service_extension.lib.cloudapi.constants import CloudApiResource
+from container_service_extension.lib.cloudapi.constants import CloudApiVersion
 from container_service_extension.common.constants.shared_constants import CSE_PAGINATION_DEFAULT_PAGE_SIZE  # noqa: E501
 from container_service_extension.common.constants.shared_constants import CSE_PAGINATION_FIRST_PAGE_NUMBER  # noqa: E501
 from container_service_extension.common.constants.shared_constants import PaginationKey

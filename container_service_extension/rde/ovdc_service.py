@@ -22,9 +22,9 @@ from container_service_extension.common.constants.shared_constants import Pagina
 from container_service_extension.common.constants.shared_constants import RequestKey
 from container_service_extension.common.constants.shared_constants import RUNTIME_DISPLAY_NAME_TO_INTERNAL_NAME_MAP  # noqa: E501
 from container_service_extension.common.constants.shared_constants import RUNTIME_INTERNAL_NAME_TO_DISPLAY_NAME_MAP  # noqa: E501
-from container_service_extension.lib.telemetry import CseOperation
-from container_service_extension.lib.telemetry import OperationStatus
-from container_service_extension.lib.telemetry import PayloadKey
+from container_service_extension.lib.telemetry.constants import CseOperation
+from container_service_extension.lib.telemetry.constants import OperationStatus
+from container_service_extension.lib.telemetry.constants import PayloadKey
 import container_service_extension.lib.telemetry.telemetry_handler as telemetry_handler # noqa: E501
 import container_service_extension.common.thread_local_data as thread_local_data
 import container_service_extension.common.utils.thread_utils as thread_utils

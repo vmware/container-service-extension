@@ -12,12 +12,12 @@ import container_service_extension.common.constants.shared_constants as shared_c
 from container_service_extension.common.constants.shared_constants import AccessControlKey
 from container_service_extension.common.constants.shared_constants import ClusterAclKey
 from container_service_extension.common.constants.shared_constants import RequestKey
-from container_service_extension.lib.telemetry import CseOperation
-from container_service_extension.lib.telemetry import PayloadKey
-from container_service_extension.lib.telemetry import PayloadTable
-from container_service_extension.lib.telemetry import PayloadValue
-from container_service_extension.lib.telemetry import SourceMap
-from container_service_extension.lib.telemetry import uuid_hash
+from container_service_extension.lib.telemetry.constants import CseOperation
+from container_service_extension.lib.telemetry.constants import PayloadKey
+from container_service_extension.lib.telemetry.constants import PayloadTable
+from container_service_extension.lib.telemetry.constants import PayloadValue
+from container_service_extension.lib.telemetry.constants import SourceMap
+from container_service_extension.lib.telemetry.telemetry_utils import uuid_hash
 
 
 def get_payload_for_user_action(cse_operation, status, message=None):

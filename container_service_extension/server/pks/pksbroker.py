@@ -24,21 +24,21 @@ from container_service_extension.lib.nsxt.cluster_network_isolater import \
 from container_service_extension.lib.nsxt.nsxt_client import NSXTClient
 import container_service_extension.security.context.operation_context as ctx
 from container_service_extension.server.pks.pks_cache import PKS_COMPUTE_PROFILE_KEY
-from container_service_extension.lib.pksclient.api import ClusterApi
-from container_service_extension.lib.pksclient.api import PlansApi
-from container_service_extension.lib.pksclient.api import ProfileApi
+from container_service_extension.lib.pksclient.api.cluster_api import ClusterApi
+from container_service_extension.lib.pksclient.api.plans_api import PlansApi
+from container_service_extension.lib.pksclient.api.profile_api import ProfileApi
 from container_service_extension.lib.pksclient.api_client import ApiClient
 from container_service_extension.lib.pksclient.configuration import Configuration
-from container_service_extension.lib.pksclient.models import AZ
-from container_service_extension.lib.pksclient.models \
+from container_service_extension.lib.pksclient.models.az import AZ
+from container_service_extension.lib.pksclient.models.cluster_parameters \
     import ClusterParameters
-from container_service_extension.lib.pksclient.models \
+from container_service_extension.lib.pksclient.models.cluster_request \
     import ClusterRequest
-from container_service_extension.lib.pksclient.models \
+from container_service_extension.lib.pksclient.models.compute_profile_parameters \
     import ComputeProfileParameters
-from container_service_extension.lib.pksclient.models \
+from container_service_extension.lib.pksclient.models.compute_profile_request \
     import ComputeProfileRequest
-from container_service_extension.lib.pksclient.models \
+from container_service_extension.lib.pksclient.models.update_cluster_parameters \
     import UpdateClusterParameters
 from container_service_extension.lib.pksclient.rest import ApiException
 from container_service_extension.common.utils.pyvcloud_utils import \

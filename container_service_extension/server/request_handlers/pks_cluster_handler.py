@@ -23,8 +23,8 @@ from container_service_extension.common.constants.server_constants import PKS_PL
 from container_service_extension.common.constants.server_constants import ThreadLocalData
 import container_service_extension.common.utils.server_utils as server_utils
 from container_service_extension.common.constants.shared_constants import RequestKey
-from container_service_extension.lib.telemetry import CseOperation
-from container_service_extension.lib.telemetry import PayloadKey
+from container_service_extension.lib.telemetry.constants import CseOperation
+from container_service_extension.lib.telemetry.constants import PayloadKey
 import container_service_extension.lib.telemetry.telemetry_handler as telemetry_handler  # noqa: E501
 import container_service_extension.common.thread_local_data as thread_local_data
 

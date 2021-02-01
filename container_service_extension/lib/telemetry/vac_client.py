@@ -8,7 +8,7 @@ import requests
 from requests.exceptions import RequestException
 
 from container_service_extension.common.constants.shared_constants import RequestMethod
-from container_service_extension.lib.telemetry import PayloadKey
+from container_service_extension.lib.telemetry.constants import PayloadKey
 
 SEND_FAILED_MSG = "Failed to send telemetry payload"
 

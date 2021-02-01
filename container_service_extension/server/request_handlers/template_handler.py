@@ -4,8 +4,8 @@
 
 from container_service_extension.common.constants.server_constants import LocalTemplateKey
 import container_service_extension.common.utils.server_utils as server_utils
-from container_service_extension.lib.telemetry import CseOperation
-from container_service_extension.lib.telemetry import record_user_action_telemetry  # noqa: E501
+from container_service_extension.lib.telemetry.constants import CseOperation
+from container_service_extension.lib.telemetry.telemetry_handler import record_user_action_telemetry  # noqa: E501
 
 
 @record_user_action_telemetry(cse_operation=CseOperation.TEMPLATE_LIST_CLIENT_SIDE)  # noqa: E501

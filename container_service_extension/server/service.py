@@ -37,11 +37,11 @@ import container_service_extension.common.utils.pyvcloud_utils as vcd_utils
 import container_service_extension.common.constants.server_constants as server_constants
 import container_service_extension.common.utils.server_utils as server_utils
 import container_service_extension.common.constants.shared_constants as shared_constants
-from container_service_extension.lib.telemetry import CseOperation
-from container_service_extension.lib.telemetry import PayloadKey
-from container_service_extension.lib.telemetry \
+from container_service_extension.lib.telemetry.constants import CseOperation
+from container_service_extension.lib.telemetry.constants import PayloadKey
+from container_service_extension.lib.telemetry.telemetry_handler \
     import record_user_action
-from container_service_extension.lib.telemetry import \
+from container_service_extension.lib.telemetry.telemetry_handler import \
     record_user_action_details
 from container_service_extension.installer.templates.template_rule import TemplateRule
 import container_service_extension.common.utils.utils as utils

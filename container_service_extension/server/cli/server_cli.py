@@ -22,7 +22,7 @@ import requests
 from vcd_cli.utils import stdout
 import yaml
 
-from container_service_extension.lib.cloudapi import CloudApiResource
+from container_service_extension.lib.cloudapi.constants import CloudApiResource
 from container_service_extension.installer.config_validator import get_validated_config
 import container_service_extension.installer.configure_cse as configure_cse
 from container_service_extension.installer.cse_service_role_mgr import create_cse_service_role # noqa : E501
@@ -50,14 +50,14 @@ import container_service_extension.common.utils.server_utils as server_utils
 import container_service_extension.server.service as cse_service
 from container_service_extension.common.constants.shared_constants import ClusterEntityKind
 from container_service_extension.common.constants.shared_constants import RequestMethod
-from container_service_extension.lib.telemetry import CseOperation
-from container_service_extension.lib.telemetry import OperationStatus
-from container_service_extension.lib.telemetry import PayloadKey
-from container_service_extension.lib.telemetry \
+from container_service_extension.lib.telemetry.constants import CseOperation
+from container_service_extension.lib.telemetry.constants import OperationStatus
+from container_service_extension.lib.telemetry.constants import PayloadKey
+from container_service_extension.lib.telemetry.telemetry_handler \
     import record_user_action
-from container_service_extension.lib.telemetry import \
+from container_service_extension.lib.telemetry.telemetry_handler import \
     record_user_action_details
-from container_service_extension.lib.telemetry \
+from container_service_extension.lib.telemetry.telemetry_utils \
     import store_telemetry_settings
 import container_service_extension.common.utils.utils as utils
 
