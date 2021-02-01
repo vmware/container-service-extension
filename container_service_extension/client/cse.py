@@ -12,8 +12,8 @@ from container_service_extension.client.node_commands import node_group
 from container_service_extension.client.ovdc_commands import ovdc_group
 from container_service_extension.client.system_commands import system_group
 from container_service_extension.client.template_commands import template_group
-from container_service_extension.logger import CLIENT_LOGGER
-import container_service_extension.utils as utils
+from container_service_extension.logging.logger import CLIENT_LOGGER
+import container_service_extension.common.utils.utils as utils
 
 
 @vcd.group(short_help='Manage Kubernetes clusters',

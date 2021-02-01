@@ -11,8 +11,8 @@ from vcd_cli.utils import stdout
 from container_service_extension.client.pks_cluster import PksCluster
 from container_service_extension.client.pks_ovdc import PksOvdc
 import container_service_extension.client.utils as client_utils
-from container_service_extension.logger import CLIENT_LOGGER
-from container_service_extension.shared_constants import RESPONSE_MESSAGE_KEY
+from container_service_extension.logging.logger import CLIENT_LOGGER
+from container_service_extension.common.constants.shared_constants import RESPONSE_MESSAGE_KEY
 
 
 @click.group(name='pks', short_help='Manage Ent-PKS clusters')

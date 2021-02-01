@@ -9,16 +9,16 @@ import pyvcloud.vcd.client as vcd_client
 
 from container_service_extension.client.cse_client.cse_client import CseClient
 import container_service_extension.client.response_processor as response_processor  # noqa: E501
-import container_service_extension.def_.models as def_models
-import container_service_extension.shared_constants as shared_constants
+import container_service_extension.rde.models as def_models
+import container_service_extension.common.constants.shared_constants as shared_constants
 
 
 class NativeClusterApi(CseClient):
     def __init__(self, client: vcd_client.Client):
         super().__init__(client)
-        self._uri = f"{self._uri}/{shared_constants.CSE_URL_FRAGMENT}/{shared_constants.CSE_3_0_URL_FRAGMENT}"  # noqa: E501
+        self._uri = f"{self._uri}/{ shared_constants.CSE_URL_FRAGMENT}/{ shared_constants.CSE_3_0_URL_FRAGMENT}"  # noqa: E501
         self._clusters_uri = f"{self._uri}/clusters"
-        self._cluster_uri = f"{self._uri}/{shared_constants.CLUSTER_URL_FRAGMENT}"  # noqa: E501
+        self._cluster_uri = f"{self._uri}/{ shared_constants.CLUSTER_URL_FRAGMENT}"  # noqa: E501
 
     def create_cluster(self, cluster_entity_definition: def_models.NativeEntity):  # noqa: E501
         cluster_entity_dict = asdict(cluster_entity_definition)
@@ -104,8 +104,8 @@ class NativeClusterApi(CseClient):
                                     page=shared_constants.CSE_PAGINATION_FIRST_PAGE_NUMBER,  # noqa: E501
                                     page_size=shared_constants.CSE_PAGINATION_DEFAULT_PAGE_SIZE):  # noqa: E501
         query_uri = f'{self._cluster_uri}/{cluster_id}/acl?' \
-                    f'{shared_constants.PaginationKey.PAGE_NUMBER}={page}&' \
-                    f'{shared_constants.PaginationKey.PAGE_SIZE}={page_size}'
+                    f'{ shared_constants.PaginationKey.PAGE_NUMBER}={page}&' \
+                    f'{ shared_constants.PaginationKey.PAGE_SIZE}={page_size}'
         response = self._client._do_request_prim(
             shared_constants.RequestMethod.GET,
             query_uri,

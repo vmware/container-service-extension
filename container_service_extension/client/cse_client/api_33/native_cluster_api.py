@@ -6,13 +6,13 @@ import pyvcloud.vcd.client as vcd_client
 
 from container_service_extension.client.cse_client.cse_client import CseClient
 from container_service_extension.client.response_processor import process_response  # noqa: E501
-import container_service_extension.shared_constants as shared_constants
+import container_service_extension.common.constants.shared_constants as shared_constants
 
 
 class NativeClusterApi(CseClient):
     def __init__(self, client: vcd_client.Client):
         super().__init__(client)
-        self._uri = f"{self._uri}/{shared_constants.CSE_URL_FRAGMENT}"
+        self._uri = f"{self._uri}/{ shared_constants.CSE_URL_FRAGMENT}"
         self._cluster_uri = f"{self._uri}/cluster"
         self._clusters_uri = f"{self._uri}/clusters"
         self._node_uri = f"{self._uri}/node"

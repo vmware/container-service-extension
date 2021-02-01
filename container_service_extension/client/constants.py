@@ -7,9 +7,9 @@
 from enum import Enum
 from enum import unique
 
-import container_service_extension.def_.constants as def_constants
-import container_service_extension.def_.utils as def_utils
-import container_service_extension.shared_constants as shared_constants
+import container_service_extension.rde.constants as def_constants
+import container_service_extension.rde.utils as def_utils
+import container_service_extension.common.constants.shared_constants as shared_constants
 
 # Client environment variables
 ENV_CSE_CLIENT_WIRE_LOGGING = 'CSE_CLIENT_WIRE_LOGGING'
