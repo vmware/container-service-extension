@@ -11,8 +11,8 @@ import pyvcloud.vcd.client as vcd_client
 
 import container_service_extension.client.constants as cli_constants
 import container_service_extension.client.utils as client_utils
-from container_service_extension.logger import CLIENT_LOGGER
-from container_service_extension.utils import str_to_bool
+from container_service_extension.logging.logger import CLIENT_LOGGER
+from container_service_extension.common.utils.utils import str_to_bool
 
 
 @unique

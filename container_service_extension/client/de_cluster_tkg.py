@@ -13,17 +13,17 @@ from container_service_extension.client.tkgclient.configuration import Configura
 from container_service_extension.client.tkgclient.models.tkg_cluster import TkgCluster  # noqa: E501
 import container_service_extension.client.tkgclient.rest as tkg_rest
 import container_service_extension.client.utils as client_utils
-import container_service_extension.def_.acl_service as cluster_acl_svc
-from container_service_extension.def_.constants import CLUSTER_ACL_LIST_FIELDS
-from container_service_extension.def_.constants import DEF_TKG_ENTITY_TYPE_NSS
-from container_service_extension.def_.constants import DEF_TKG_ENTITY_TYPE_VERSION  # noqa: E501
-from container_service_extension.def_.constants import DEF_VMWARE_VENDOR
-import container_service_extension.def_.models as def_models
-import container_service_extension.exceptions as cse_exceptions
-import container_service_extension.logger as logger
-import container_service_extension.pyvcloud_utils as vcd_utils
-import container_service_extension.shared_constants as shared_constants
-import container_service_extension.utils as utils
+import container_service_extension.rde.acl_service as cluster_acl_svc
+from container_service_extension.rde.constants import CLUSTER_ACL_LIST_FIELDS
+from container_service_extension.rde.constants import DEF_TKG_ENTITY_TYPE_NSS
+from container_service_extension.rde.constants import DEF_TKG_ENTITY_TYPE_VERSION  # noqa: E501
+from container_service_extension.rde.constants import DEF_VMWARE_VENDOR
+import container_service_extension.rde.models as def_models
+import container_service_extension.exception.exceptions as cse_exceptions
+import container_service_extension.logging.logger as logger
+import container_service_extension.common.utils.pyvcloud_utils as vcd_utils
+import container_service_extension.common.constants.shared_constants as shared_constants
+import container_service_extension.common.utils.utils as utils
 
 
 class DEClusterTKG:
@@ -323,7 +323,8 @@ class DEClusterTKG:
             config_task = self._client.get_resource(config_task_href)
             self._client.get_task_monitor().wait_for_success(config_task)
             config_task = self._client.get_resource(config_task_href)
-            return {shared_constants.RESPONSE_MESSAGE_KEY: config_task.Result.ResultContent.text}  # noqa: E501
+            return {
+                shared_constants.RESPONSE_MESSAGE_KEY: config_task.Result.ResultContent.text}  # noqa: E501
         except tkg_rest.ApiException as e:
             server_message = json.loads(e.body).get('message') or e.reason
             msg = cli_constants.TKG_RESPONSE_MESSAGES_BY_STATUS_CODE.get(e.status, f"{server_message}")  # noqa: E501
@@ -461,7 +462,8 @@ class DEClusterTKG:
             page_num += 1
             response_body = acl_svc.get_def_entity_acl_response(
                 page_num, cli_constants.CLI_ENTRIES_PER_PAGE)
-            result_total = response_body[shared_constants.PaginationKey.RESULT_TOTAL]  # noqa: E501
+            result_total = response_body[
+                shared_constants.PaginationKey.RESULT_TOTAL]  # noqa: E501
             values = response_body[shared_constants.PaginationKey.VALUES]
             if len(values) == 0:
                 break

@@ -15,12 +15,12 @@ from pyvcloud.vcd.org import Org
 from pyvcloud.vcd.vdc import VDC
 from vcd_cli.vcd import vcd
 
-import container_service_extension.pyvcloud_utils as pyvcloud_utils
-from container_service_extension.remote_template_manager import \
+import container_service_extension.common.utils.pyvcloud_utils as pyvcloud_utils
+from container_service_extension.installer.templates.remote_template_manager import \
     RemoteTemplateManager
-from container_service_extension.server_constants import CSE_SERVICE_NAME
-from container_service_extension.server_constants import CSE_SERVICE_NAMESPACE
-from container_service_extension.server_constants import SYSTEM_ORG_NAME
+from container_service_extension.common.constants.server_constants import CSE_SERVICE_NAME
+from container_service_extension.common.constants.server_constants import CSE_SERVICE_NAMESPACE
+from container_service_extension.common.constants.server_constants import SYSTEM_ORG_NAME
 import container_service_extension.system_test_framework.utils as testutils
 
 

@@ -14,13 +14,13 @@ import container_service_extension.client.constants as cli_constants
 from container_service_extension.client.de_cluster_native import DEClusterNative  # noqa: E501
 import container_service_extension.client.sample_generator as client_sample_generator  # noqa: E501
 import container_service_extension.client.utils as client_utils
-from container_service_extension.exceptions import CseResponseError
-from container_service_extension.exceptions import CseServerNotRunningError
-from container_service_extension.logger import CLIENT_LOGGER
-from container_service_extension.minor_error_codes import MinorErrorCode
-from container_service_extension.server_constants import LocalTemplateKey
-import container_service_extension.shared_constants as shared_constants
-import container_service_extension.utils as utils
+from container_service_extension.exception.exceptions import CseResponseError
+from container_service_extension.exception.exceptions import CseServerNotRunningError
+from container_service_extension.logging.logger import CLIENT_LOGGER
+from container_service_extension.exception.minor_error_codes import MinorErrorCode
+from container_service_extension.common.constants.server_constants import LocalTemplateKey
+import container_service_extension.common.constants.shared_constants as shared_constants
+import container_service_extension.common.utils.utils as utils
 
 
 @click.group(name='cluster', cls=cmd_filter.GroupCommandFilter,
@@ -599,7 +599,7 @@ def apply(ctx, cluster_config_file_path, generate_sample_config, k8_runtime, out
                 raise Exception(msg)
             elif k8_runtime == shared_constants.ClusterEntityKind.TKG_PLUS \
                     and not utils.is_environment_variable_enabled(cli_constants.ENV_CSE_TKG_PLUS_ENABLED):  # noqa: E501
-                raise Exception(f"{shared_constants.ClusterEntityKind.TKG_PLUS.value} not enabled")  # noqa: E501
+                raise Exception(f"{ shared_constants.ClusterEntityKind.TKG_PLUS.value} not enabled")  # noqa: E501
             else:
                 sample_cluster_config = client_sample_generator.get_sample_cluster_configuration(output=output, k8_runtime=k8_runtime)  # noqa: E501
                 console_message_printer.general_no_color(sample_cluster_config)
@@ -1001,8 +1001,8 @@ Example
     required=True,
     default=None,
     metavar='ACL',
-    help=f'access control: {shared_constants.READ_ONLY}, '
-         f'{shared_constants.READ_WRITE}, or {shared_constants.FULL_CONTROL}')
+    help=f'access control: { shared_constants.READ_ONLY}, '
+         f'{ shared_constants.READ_WRITE}, or { shared_constants.FULL_CONTROL}')
 @click.option(
     '-v',
     '--vdc',
@@ -1057,9 +1057,9 @@ Examples:
         access_level_id = shared_constants.ACCESS_LEVEL_TYPE_TO_ID.get(acl.lower())  # noqa: E501
         if not access_level_id:
             raise Exception(f'Please enter a valid access control type: '
-                            f'{shared_constants.READ_ONLY}, '
-                            f'{shared_constants.READ_WRITE}, or '
-                            f'{shared_constants.FULL_CONTROL}')
+                            f'{ shared_constants.READ_ONLY}, '
+                            f'{ shared_constants.READ_WRITE}, or '
+                            f'{ shared_constants.FULL_CONTROL}')
         if not (cluster_id or name):
             raise Exception("Please specify cluster name or cluster id.")
         client_utils.cse_restore_session(ctx)
