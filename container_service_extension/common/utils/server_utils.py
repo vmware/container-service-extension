@@ -93,9 +93,9 @@ def should_use_mqtt_protocol(config):
     :rtype: str
     """
     return config.get('mqtt') is not None and \
-           config.get('vcd') is not None and \
-           config['vcd'].get('api_version') is not None and \
-           float(config['vcd']['api_version']) >= server_constants.MQTT_MIN_API_VERSION  # noqa: E501
+        config.get('vcd') is not None and \
+        config['vcd'].get('api_version') is not None and \
+        float(config['vcd']['api_version']) >= server_constants.MQTT_MIN_API_VERSION  # noqa: E501
 
 
 def construct_paginated_response(values, result_total,
