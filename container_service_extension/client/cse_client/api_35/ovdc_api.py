@@ -21,7 +21,7 @@ class OvdcApi(CseClient):
         self._ovdc_uri = f"{self._uri}/ovdc"
         # NOTE: The request page size is overrided because the CSE server takes
         # an average of 10 seconds (Default vCD timeout) if there are 5 OVDCs
-        self._request_page_size = 5
+        self._request_page_size = 3
 
     def get_all_ovdcs(self):
         """Iterate over all the get ovdc response page by page.

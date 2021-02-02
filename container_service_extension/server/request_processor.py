@@ -448,7 +448,7 @@ def _get_pks_url_data(method: str, url: str):
                     shared_constants.RequestKey.OVDC_ID: tokens[4]
                 }
             raise cse_exception.MethodNotAllowedRequestError()
-    elif operation_type == shared_constants.OperationType.ORG_VDCS:
+    elif operation_type == OperationType.ORG_VDCS:
         if num_tokens == 4:
             if method == shared_constants.RequestMethod.GET:
                 return {_OPERATION_KEY: CseOperation.PKS_ORG_VDC_LIST}
@@ -486,7 +486,7 @@ def _get_v35_plus_url_data(method: str, url: str, api_version: str):
     if operation_type == OperationType.OVDC:
         return _get_v35_plus_ovdc_url_data(method, tokens)
 
-    if operation_type == shared_constants.OperationType.ORG_VDCS:
+    if operation_type == OperationType.ORG_VDCS:
         return _get_v35_org_vdc_url_data(method, tokens)
 
     raise cse_exception.NotFoundRequestError()
@@ -730,7 +730,7 @@ def _get_legacy_url_data(method: str, url: str, api_version: str):
                     shared_constants.RequestKey.OVDC_ID: tokens[4]
                 }
             raise cse_exception.MethodNotAllowedRequestError()
-    elif operation_type == shared_constants.OperationType.ORG_VDCS:
+    elif operation_type == OperationType.ORG_VDCS:
         if api_version not in (VcdApiVersion.VERSION_33.value,
                                VcdApiVersion.VERSION_34.value):
             raise cse_exception.NotFoundRequestError()
@@ -738,7 +738,7 @@ def _get_legacy_url_data(method: str, url: str, api_version: str):
             if method == shared_constants.RequestMethod.GET:
                 return {_OPERATION_KEY: CseOperation.ORG_VDC_LIST}
             raise cse_exception.NotFoundRequestError()
-    elif operation_type == shared_constants.OperationType.SYSTEM:
+    elif operation_type == OperationType.SYSTEM:
         if num_tokens == 4:
             if method == shared_constants.RequestMethod.GET:
                 return {_OPERATION_KEY: CseOperation.SYSTEM_INFO}
