@@ -178,7 +178,7 @@ def org_vdc_list(request_data, op_ctx: ctx.OperationContext):
 
     ovdcs = _get_cse_ovdc_list(op_ctx.sysadmin_client, org_vdcs)
 
-    api_path = CseServerOperationInfo.OVDC_LIST.api_path_format
+    api_path = CseServerOperationInfo.ORG_VDC_LIST.api_path_format
     next_page_uri = vcd_utils.create_cse_page_uri(op_ctx.client,
                                                   api_path,
                                                   vcd_uri=next_page_uri)

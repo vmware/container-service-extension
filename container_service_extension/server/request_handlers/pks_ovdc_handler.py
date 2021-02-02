@@ -237,7 +237,7 @@ def org_vdc_list(request_data, op_ctx: ctx.OperationContext):
             ovdc_dict[PKSOvdcInfoKey.PKS_API_SERVER] = pks_server
             ovdc_dict[PKSOvdcInfoKey.AVAILABLE_PKS_PLANS] = pks_plans
         ovdcs.append(ovdc_dict)
-    api_path = CseServerOperationInfo.PKS_OVDC_LIST.api_path_format
+    api_path = CseServerOperationInfo.PKS_ORG_VDC_LIST.api_path_format
     next_page_uri = vcd_utils.create_cse_page_uri(op_ctx.client,
                                                   api_path,
                                                   vcd_uri=next_page_uri)
