@@ -10,7 +10,7 @@ from typing import List
 from requests.exceptions import HTTPError
 
 
-from container_service_extension.lib.cloudapi.cloudapi_client import CloudApiClient
+from container_service_extension.lib.cloudapi.cloudapi_client import CloudApiClient  # noqa: E501
 from container_service_extension.lib.cloudapi.constants import CloudApiResource
 from container_service_extension.lib.cloudapi.constants import CloudApiVersion
 import container_service_extension.rde.constants as def_constants
@@ -21,10 +21,10 @@ import container_service_extension.rde.schema_service as def_schema_svc
 import container_service_extension.rde.utils as def_utils
 import container_service_extension.exception.exceptions as cse_exception
 from container_service_extension.logging.logger import SERVER_LOGGER as LOGGER
-from container_service_extension.exception.minor_error_codes import MinorErrorCode
+from container_service_extension.exception.minor_error_codes import MinorErrorCode  # noqa: E501
 from container_service_extension.common.constants.shared_constants import CSE_PAGINATION_DEFAULT_PAGE_SIZE, PaginationKey  # noqa: E501
 from container_service_extension.common.constants.shared_constants import CSE_PAGINATION_FIRST_PAGE_NUMBER  # noqa: E501
-from container_service_extension.common.constants.shared_constants import RequestMethod
+from container_service_extension.common.constants.shared_constants import RequestMethod  # noqa: E501
 import container_service_extension.common.utils.core_utils as utils
 
 

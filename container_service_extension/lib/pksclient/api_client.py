@@ -23,7 +23,7 @@ import tempfile
 import six
 from six.moves.urllib.parse import quote
 
-from container_service_extension.lib.pksclient.configuration import Configuration
+from container_service_extension.lib.pksclient.configuration import Configuration  # noqa: E501
 import container_service_extension.lib.pksclient.models
 from container_service_extension.lib.pksclient import rest
 

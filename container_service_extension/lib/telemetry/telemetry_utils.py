@@ -11,13 +11,13 @@ import requests
 from container_service_extension.logging.logger import NULL_LOGGER
 from container_service_extension.mqi.mqtt_extension_manager import \
     MQTTExtensionManager
-from container_service_extension.common.constants.server_constants import CSE_SERVICE_NAME
-from container_service_extension.common.constants.server_constants import CSE_SERVICE_NAMESPACE
-from container_service_extension.common.constants.server_constants import MQTT_EXTENSION_VENDOR
-from container_service_extension.common.constants.server_constants import MQTT_EXTENSION_VERSION
-from container_service_extension.common.constants.server_constants import MQTTExtKey
-from container_service_extension.common.constants.server_constants import SYSTEM_ORG_NAME
-from container_service_extension.common.utils.server_utils import should_use_mqtt_protocol
+from container_service_extension.common.constants.server_constants import CSE_SERVICE_NAME  # noqa: E501
+from container_service_extension.common.constants.server_constants import CSE_SERVICE_NAMESPACE  # noqa: E501
+from container_service_extension.common.constants.server_constants import MQTT_EXTENSION_VENDOR  # noqa: E501
+from container_service_extension.common.constants.server_constants import MQTT_EXTENSION_VERSION  # noqa: E501
+from container_service_extension.common.constants.server_constants import MQTTExtKey  # noqa: E501
+from container_service_extension.common.constants.server_constants import SYSTEM_ORG_NAME  # noqa: E501
+from container_service_extension.common.utils.server_utils import should_use_mqtt_protocol  # noqa: E501
 from container_service_extension.lib.telemetry.constants import COLLECTOR_ID
 from container_service_extension.lib.telemetry.constants import VAC_URL
 from container_service_extension.common.utils.core_utils import NullPrinter

@@ -6,12 +6,12 @@ import json
 
 import pyvcloud.vcd.utils as pyvcd_utils
 
-from container_service_extension.common.constants.server_constants import CLUSTER_ENTITY
-from container_service_extension.common.constants.server_constants import LocalTemplateKey
-import container_service_extension.common.constants.shared_constants as shared_constants
-from container_service_extension.common.constants.shared_constants import AccessControlKey
-from container_service_extension.common.constants.shared_constants import ClusterAclKey
-from container_service_extension.common.constants.shared_constants import RequestKey
+from container_service_extension.common.constants.server_constants import CLUSTER_ENTITY  # noqa: E501
+from container_service_extension.common.constants.server_constants import LocalTemplateKey  # noqa: E501
+import container_service_extension.common.constants.shared_constants as shared_constants  # noqa: E501
+from container_service_extension.common.constants.shared_constants import AccessControlKey  # noqa: E501
+from container_service_extension.common.constants.shared_constants import ClusterAclKey  # noqa: E501
+from container_service_extension.common.constants.shared_constants import RequestKey  # noqa: E501
 from container_service_extension.lib.telemetry.constants import CseOperation
 from container_service_extension.lib.telemetry.constants import PayloadKey
 from container_service_extension.lib.telemetry.constants import PayloadTable

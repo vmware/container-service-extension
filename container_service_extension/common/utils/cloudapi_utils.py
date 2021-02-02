@@ -2,13 +2,13 @@
 # Copyright (c) 2020 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 
-from container_service_extension.lib.cloudapi.cloudapi_client import CloudApiClient
+from container_service_extension.lib.cloudapi.cloudapi_client import CloudApiClient  # noqa: E501
 from container_service_extension.lib.cloudapi.constants import CloudApiResource
 from container_service_extension.lib.cloudapi.constants import CloudApiVersion
 from container_service_extension.common.constants.shared_constants import CSE_PAGINATION_DEFAULT_PAGE_SIZE  # noqa: E501
 from container_service_extension.common.constants.shared_constants import CSE_PAGINATION_FIRST_PAGE_NUMBER  # noqa: E501
-from container_service_extension.common.constants.shared_constants import PaginationKey
-from container_service_extension.common.constants.shared_constants import RequestMethod
+from container_service_extension.common.constants.shared_constants import PaginationKey  # noqa: E501
+from container_service_extension.common.constants.shared_constants import RequestMethod  # noqa: E501
 
 
 def get_vdcs_by_page(cloudapi_client: CloudApiClient,

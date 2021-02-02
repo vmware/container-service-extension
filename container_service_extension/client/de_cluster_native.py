@@ -16,7 +16,7 @@ import container_service_extension.rde.entity_service as def_entity_svc
 import container_service_extension.exception.exceptions as cse_exceptions
 import container_service_extension.logging.logger as logger
 import container_service_extension.common.utils.pyvcloud_utils as vcd_utils
-import container_service_extension.common.constants.shared_constants as shared_constants
+import container_service_extension.common.constants.shared_constants as shared_constants  # noqa: E501
 
 
 class DEClusterNative:

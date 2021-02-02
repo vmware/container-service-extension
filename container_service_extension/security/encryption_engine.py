@@ -8,7 +8,7 @@ from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 
-import container_service_extension.common.constants.server_constants as constants
+import container_service_extension.common.constants.server_constants as constants  # noqa: E501
 
 
 def encrypt_file(input_file, passwd, output_file):

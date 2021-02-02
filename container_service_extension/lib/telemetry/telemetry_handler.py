@@ -5,7 +5,7 @@
 import functools
 
 from container_service_extension.logging.logger import SERVER_LOGGER as LOGGER
-from container_service_extension.common.utils.server_utils import get_server_runtime_config
+from container_service_extension.common.utils.server_utils import get_server_runtime_config  # noqa: E501
 from container_service_extension.lib.telemetry.constants import CseOperation
 from container_service_extension.lib.telemetry.constants import OperationStatus
 import container_service_extension.lib.telemetry.payload_generator as\

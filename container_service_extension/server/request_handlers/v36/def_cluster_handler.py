@@ -7,8 +7,8 @@ import container_service_extension.rde.cluster_service as cluster_svc
 import container_service_extension.rde.models as def_models
 import container_service_extension.security.context.operation_context as ctx
 import container_service_extension.server.request_handlers.request_utils as request_utils  # noqa: E501
-from container_service_extension.common.constants.shared_constants import RequestKey
-import container_service_extension.lib.telemetry.constants as telemetry_constants
+from container_service_extension.common.constants.shared_constants import RequestKey  # noqa: E501
+import container_service_extension.lib.telemetry.constants as telemetry_constants  # noqa: E501
 import container_service_extension.lib.telemetry.telemetry_handler as telemetry_handler  # noqa: E501
 
 

@@ -4,8 +4,8 @@
 
 import logging
 
-import container_service_extension.common.constants.server_constants as server_constants
-import container_service_extension.common.thread_local_data as thread_local_data
+import container_service_extension.common.constants.server_constants as server_constants  # noqa: E501
+import container_service_extension.common.thread_local_data as thread_local_data  # noqa: E501
 
 
 class RequestIdFormatter(logging.Formatter):

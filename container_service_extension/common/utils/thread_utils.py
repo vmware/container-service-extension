@@ -7,7 +7,7 @@
 import functools
 import threading
 
-import container_service_extension.common.thread_local_data as thread_local_data
+import container_service_extension.common.thread_local_data as thread_local_data  # noqa: E501
 
 
 def _transfer_thread_local_data_wrapper(func):
