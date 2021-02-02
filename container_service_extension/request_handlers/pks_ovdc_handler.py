@@ -152,6 +152,7 @@ def org_vdc_list(request_data, op_ctx: ctx.OperationContext):
     list_pks_plans = utils.str_to_bool(validated_data[RequestKey.LIST_PKS_PLANS]) # noqa: E501
 
     # Record telemetry data
+    #TODO: enhance telemetry to record the page number and page size data.
     cse_params = copy.deepcopy(validated_data)
     cse_params[RequestKey.LIST_PKS_PLANS] = list_pks_plans
     record_user_action_details(cse_operation=CseOperation.OVDC_LIST,
