@@ -147,12 +147,13 @@ class NsxtBackedGatewayService:
             content_type='application/json')
 
         # Ensure gateway response status is realized
-        updated_get_gateway_response = None
-        while not updated_get_gateway_response or \
-                updated_get_gateway_response[NsxtGatewayRequestKey.STATUS] != \
-                server_constants.NSXT_GATEWAY_REALIZED_STATUS:
-            time.sleep(server_constants.NSXT_PUT_REQUEST_WAIT_TIME)
+        while True:
             updated_get_gateway_response = self._get_gateway()
+            if updated_get_gateway_response[NsxtGatewayRequestKey.STATUS] != \
+                    server_constants.NSXT_GATEWAY_REALIZED_STATUS:
+                time.sleep(server_constants.NSXT_PUT_REQUEST_WAIT_TIME)
+            else:
+                break
 
         # Determine quick ip allocated address
         updated_subnet_value = _get_updated_subnet_value(
