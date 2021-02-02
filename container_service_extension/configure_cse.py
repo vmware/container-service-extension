@@ -745,7 +745,7 @@ def _register_def_schema(client: Client,
     :param bool log_wire: wire logging enabled
     """
     if config is None:
-        config = []
+        config = {}
     msg = "Registering defined entity schema"
     msg_update_callback.info(msg)
     INSTALL_LOGGER.info(msg)

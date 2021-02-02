@@ -101,14 +101,10 @@ class VcdBroker(abstract_broker.AbstractBroker):
         return cluster
 
     def get_clusters_by_page(self, **kwargs):
-        """List all native clusters and their relevant metadata.
+        """Get native clusters by page and their relevant metadata.
 
-        :return: a list of all clusters if 'page_number' or 'page_size' are
-            not part of the kwargs. If 'page_number' or 'page_size' is present,
-            a paginated response is returned.
-
-        Common broker function that validates data for the 'list clusters'
-        operation and returns a list of cluster data.
+        :return: paginated dictionary containing list of clusters in
+            that page as values.
 
         **data: Optional
             Optional data and default values: org_name=None, ovdc_name=None

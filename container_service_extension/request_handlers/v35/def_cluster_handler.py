@@ -134,6 +134,9 @@ def cluster_upgrade(data, op_ctx: ctx.OperationContext):
     return asdict(svc.upgrade_cluster(cluster_id, cluster_entity_spec))
 
 
+# TODO: Record telemetry in a different telemetry handler
+@telemetry_handler.record_user_action_telemetry(cse_operation=telemetry_constants.CseOperation.V35_CLUSTER_UPGRADE)  # noqa: E501
+@request_utils.v35_api_exception_handler
 def native_cluster_list(data: dict, op_ctx: ctx.OperationContext):
     """Request handler for cluster list operation.
 
