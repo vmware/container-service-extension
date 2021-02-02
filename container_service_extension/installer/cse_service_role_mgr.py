@@ -5,7 +5,7 @@ from pyvcloud.vcd.org import Org
 
 from container_service_extension.logging.logger import SERVER_CLI_LOGGER
 import container_service_extension.common.utils.pyvcloud_utils as vcd_utils
-import container_service_extension.common.constants.server_constants as server_constants
+import container_service_extension.common.constants.server_constants as server_constants  # noqa: E501
 import container_service_extension.common.utils.core_utils as utils
 
 
@@ -16,7 +16,7 @@ def create_cse_service_role(client,
 
     The method can only be called by System Administrator user
     :param client: pyvcloud.vcd.client to interact with VCD HOST
-    :param core_utils.ConsoleMessagePrinter msg_update_callback: Callback object.
+    :param core_utils.ConsoleMessagePrinter msg_update_callback: Callback object. # noqa: E501
 
     :raises pyvcloud.vcd.exceptions.BadRequestException when Role already exist
     :raises pyvcloud.vcd.exceptions.EntityNotFoundException when Right doesn't

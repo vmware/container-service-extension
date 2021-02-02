@@ -4,10 +4,9 @@
 
 from container_service_extension.mqi.consumer.amqp_consumer import AMQPConsumer
 from container_service_extension.mqi.consumer.mqtt_consumer import MQTTConsumer
-import container_service_extension.common.constants.server_constants as server_constants
-from container_service_extension.common.constants.server_constants import MQTTExtKey, \
-    MQTTExtTokenKey
-from container_service_extension.common.utils.server_utils import should_use_mqtt_protocol
+import container_service_extension.common.constants.server_constants as server_constants  # noqa: E501
+from container_service_extension.common.constants.server_constants import MQTTExtKey, MQTTExtTokenKey  # noqa: E501
+from container_service_extension.common.utils.server_utils import should_use_mqtt_protocol  # noqa: E501
 
 
 class MessageConsumer:

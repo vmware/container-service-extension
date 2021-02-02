@@ -9,7 +9,7 @@ from urllib.parse import parse_qsl
 
 from pyvcloud.vcd.client import ApiVersion as VcdApiVersion
 
-from container_service_extension.exception.exception_handler import handle_exception
+from container_service_extension.exception.exception_handler import handle_exception  # noqa: E501
 import container_service_extension.exception.exceptions as cse_exception
 from container_service_extension.logging.logger import SERVER_LOGGER as LOGGER
 import container_service_extension.security.context.operation_context as ctx
@@ -22,10 +22,10 @@ import container_service_extension.server.request_handlers.template_handler as t
 import container_service_extension.server.request_handlers.v35.def_cluster_handler as v35_cluster_handler # noqa: E501
 import container_service_extension.server.request_handlers.v35.ovdc_handler as v35_ovdc_handler # noqa: E501
 import container_service_extension.server.request_handlers.v36.def_cluster_handler as v36_cluster_handler  # noqa: E501
-from container_service_extension.common.constants.server_constants import CseOperation
-from container_service_extension.common.constants.server_constants import OperationType
+from container_service_extension.common.constants.server_constants import CseOperation  # noqa: E501
+from container_service_extension.common.constants.server_constants import OperationType  # noqa: E501
 import container_service_extension.common.utils.server_utils as server_utils
-import container_service_extension.common.constants.shared_constants as shared_constants
+import container_service_extension.common.constants.shared_constants as shared_constants  # noqa: E501
 
 
 """Process incoming requests

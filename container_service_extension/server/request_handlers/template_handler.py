@@ -2,7 +2,7 @@
 # Copyright (c) 2019 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 
-from container_service_extension.common.constants.server_constants import LocalTemplateKey
+from container_service_extension.common.constants.server_constants import LocalTemplateKey  # noqa: E501
 import container_service_extension.common.utils.server_utils as server_utils
 from container_service_extension.lib.telemetry.constants import CseOperation
 from container_service_extension.lib.telemetry.telemetry_handler import record_user_action_telemetry  # noqa: E501

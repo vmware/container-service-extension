@@ -11,7 +11,7 @@ import container_service_extension.client.constants as cli_constants
 from container_service_extension.client.ovdc import Ovdc
 import container_service_extension.client.utils as client_utils
 from container_service_extension.logging.logger import CLIENT_LOGGER
-import container_service_extension.common.constants.shared_constants as shared_constants
+import container_service_extension.common.constants.shared_constants as shared_constants  # noqa: E501
 import container_service_extension.common.utils.core_utils as utils
 
 

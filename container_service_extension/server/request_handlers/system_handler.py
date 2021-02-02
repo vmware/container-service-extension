@@ -4,8 +4,8 @@
 
 import container_service_extension.exception.exceptions as e
 import container_service_extension.security.context.operation_context as ctx
-import container_service_extension.server.request_handlers.request_utils as req_utils
-from container_service_extension.common.constants.shared_constants import RequestKey
+import container_service_extension.server.request_handlers.request_utils as req_utils  # noqa: E501
+from container_service_extension.common.constants.shared_constants import RequestKey  # noqa: E501
 from container_service_extension.lib.telemetry.constants import CseOperation
 from container_service_extension.lib.telemetry.constants import OperationStatus
 from container_service_extension.lib.telemetry.telemetry_handler \

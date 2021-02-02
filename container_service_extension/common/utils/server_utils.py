@@ -8,8 +8,8 @@ import math
 
 import semantic_version
 
-import container_service_extension.common.constants.server_constants as server_constants
-import container_service_extension.common.constants.shared_constants as shared_constants
+import container_service_extension.common.constants.server_constants as server_constants  # noqa: E501
+import container_service_extension.common.constants.shared_constants as shared_constants  # noqa: E501
 import container_service_extension.common.utils.core_utils as utils
 
 

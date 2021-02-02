@@ -15,7 +15,7 @@ from container_service_extension.mqi.consumer.consumer_thread_pool_executor \
     import ConsumerThreadPoolExecutor
 import container_service_extension.mqi.consumer.utils as utils
 from container_service_extension.logging.logger import SERVER_LOGGER as LOGGER
-from container_service_extension.common.constants.server_constants import EXCHANGE_TYPE
+from container_service_extension.common.constants.server_constants import EXCHANGE_TYPE  # noqa: E501
 
 REQUESTS_BEING_PROCESSED = LRU(constants.MAX_PROCESSING_REQUEST_CACHE_SIZE)
 LRU_LOCK = Lock()

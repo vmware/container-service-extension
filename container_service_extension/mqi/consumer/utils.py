@@ -12,10 +12,10 @@ import requests
 
 from container_service_extension.exception.exceptions import CseRequestError
 from container_service_extension.logging.logger import SERVER_LOGGER as LOGGER
-import container_service_extension.server.request_processor as request_processor
-from container_service_extension.common.constants.server_constants import ThreadLocalData
-from container_service_extension.common.constants.shared_constants import RESPONSE_MESSAGE_KEY
-import container_service_extension.common.thread_local_data as thread_local_data
+import container_service_extension.server.request_processor as request_processor  # noqa: E501
+from container_service_extension.common.constants.server_constants import ThreadLocalData  # noqa: E501
+from container_service_extension.common.constants.shared_constants import RESPONSE_MESSAGE_KEY  # noqa: E501
+import container_service_extension.common.thread_local_data as thread_local_data  # noqa: E501
 
 
 # Note : Only being used by AMQP to reject request that has been already

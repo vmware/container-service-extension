@@ -5,7 +5,7 @@
 import pyvcloud.vcd.exceptions as vcd_exceptions
 import requests
 
-from container_service_extension.exception.minor_error_codes import MinorErrorCode
+from container_service_extension.exception.minor_error_codes import MinorErrorCode  # noqa: E501
 
 
 class AmqpError(Exception):

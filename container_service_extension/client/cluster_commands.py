@@ -15,11 +15,11 @@ from container_service_extension.client.de_cluster_native import DEClusterNative
 import container_service_extension.client.sample_generator as client_sample_generator  # noqa: E501
 import container_service_extension.client.utils as client_utils
 from container_service_extension.exception.exceptions import CseResponseError
-from container_service_extension.exception.exceptions import CseServerNotRunningError
+from container_service_extension.exception.exceptions import CseServerNotRunningError  # noqa: E501
 from container_service_extension.logging.logger import CLIENT_LOGGER
-from container_service_extension.exception.minor_error_codes import MinorErrorCode
-from container_service_extension.common.constants.server_constants import LocalTemplateKey
-import container_service_extension.common.constants.shared_constants as shared_constants
+from container_service_extension.exception.minor_error_codes import MinorErrorCode  # noqa: E501
+from container_service_extension.common.constants.server_constants import LocalTemplateKey  # noqa: E501
+import container_service_extension.common.constants.shared_constants as shared_constants  # noqa: E501
 import container_service_extension.common.utils.core_utils as utils
 
 
@@ -1002,7 +1002,7 @@ Example
     default=None,
     metavar='ACL',
     help=f'access control: { shared_constants.READ_ONLY}, '
-         f'{ shared_constants.READ_WRITE}, or { shared_constants.FULL_CONTROL}')
+         f'{shared_constants.READ_WRITE}, or {shared_constants.FULL_CONTROL}')
 @click.option(
     '-v',
     '--vdc',

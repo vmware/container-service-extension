@@ -4,7 +4,7 @@
 
 """Utility methods to help interaction with defined entities framework."""
 
-from container_service_extension.lib.cloudapi.cloudapi_client import CloudApiClient
+from container_service_extension.lib.cloudapi.cloudapi_client import CloudApiClient  # noqa: E501
 import container_service_extension.rde.constants as def_constants
 import container_service_extension.exception.exceptions as excptn
 

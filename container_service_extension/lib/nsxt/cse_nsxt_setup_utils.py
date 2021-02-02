@@ -2,7 +2,7 @@
 # Copyright (c) 2019 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 
-from container_service_extension.lib.nsxt.constants import ALL_NODES_IP_SET_NAME
+from container_service_extension.lib.nsxt.constants import ALL_NODES_IP_SET_NAME  # noqa: E501
 from container_service_extension.lib.nsxt.constants import \
     ALL_NODES_PODS_NSGROUP_NAME
 from container_service_extension.lib.nsxt.constants import ALL_PODS_IP_SET_NAME

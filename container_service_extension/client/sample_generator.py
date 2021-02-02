@@ -7,7 +7,7 @@ import yaml
 
 import container_service_extension.rde.models as def_models
 from container_service_extension.logging.logger import CLIENT_LOGGER
-import container_service_extension.common.constants.shared_constants as shared_constants
+import container_service_extension.common.constants.shared_constants as shared_constants  # noqa: E501
 
 
 SAMPLE_K8_CLUSTER_SPEC_HELP = """# Short description of various properties used in this sample cluster configuration

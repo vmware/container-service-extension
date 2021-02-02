@@ -9,8 +9,8 @@ from container_service_extension.common.constants.server_constants import CseOpe
 import container_service_extension.common.utils.server_utils as server_utils
 from container_service_extension.common.constants.shared_constants import CSE_PAGINATION_DEFAULT_PAGE_SIZE  # noqa: E501
 from container_service_extension.common.constants.shared_constants import CSE_PAGINATION_FIRST_PAGE_NUMBER  # noqa: E501
-from container_service_extension.common.constants.shared_constants import PaginationKey
-from container_service_extension.common.constants.shared_constants import RequestKey
+from container_service_extension.common.constants.shared_constants import PaginationKey  # noqa: E501
+from container_service_extension.common.constants.shared_constants import RequestKey  # noqa: E501
 from container_service_extension.lib.telemetry.constants import CseOperation
 from container_service_extension.lib.telemetry.telemetry_handler import record_user_action_telemetry  # noqa: E501
 

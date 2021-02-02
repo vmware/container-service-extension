@@ -28,24 +28,24 @@ import container_service_extension.rde.schema_service as def_schema_svc
 import container_service_extension.rde.utils as def_utils
 from container_service_extension.rde.utils import raise_error_if_def_not_supported  # noqa: E501
 import container_service_extension.exception.exceptions as cse_exception
-import container_service_extension.installer.templates.local_template_manager as ltm
+import container_service_extension.installer.templates.local_template_manager as ltm  # noqa: E501
 import container_service_extension.logging.logger as logger
 from container_service_extension.mqi.mqtt_extension_manager import \
     MQTTExtensionManager
 from container_service_extension.server.pks.pks_cache import PksCache
 import container_service_extension.common.utils.pyvcloud_utils as vcd_utils
-import container_service_extension.common.constants.server_constants as server_constants
+import container_service_extension.common.constants.server_constants as server_constants  # noqa: E501
 import container_service_extension.common.utils.server_utils as server_utils
-import container_service_extension.common.constants.shared_constants as shared_constants
+import container_service_extension.common.constants.shared_constants as shared_constants  # noqa: E501
 from container_service_extension.lib.telemetry.constants import CseOperation
 from container_service_extension.lib.telemetry.constants import PayloadKey
 from container_service_extension.lib.telemetry.telemetry_handler \
     import record_user_action
 from container_service_extension.lib.telemetry.telemetry_handler import \
     record_user_action_details
-from container_service_extension.installer.templates.template_rule import TemplateRule
+from container_service_extension.installer.templates.template_rule import TemplateRule  # noqa: E501
 import container_service_extension.common.utils.core_utils as utils
-from container_service_extension.common.utils.vsphere_utils import populate_vsphere_list
+from container_service_extension.common.utils.vsphere_utils import populate_vsphere_list  # noqa: E501
 
 
 class Singleton(type):

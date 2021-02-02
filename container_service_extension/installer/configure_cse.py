@@ -30,13 +30,13 @@ import container_service_extension.rde.models as def_models
 import container_service_extension.rde.schema_service as def_schema_svc
 import container_service_extension.rde.utils as def_utils
 import container_service_extension.exception.exceptions as cse_exception
-import container_service_extension.installer.templates.local_template_manager as ltm
+import container_service_extension.installer.templates.local_template_manager as ltm  # noqa: E501
 from container_service_extension.logging.logger import INSTALL_LOGGER
 from container_service_extension.logging.logger import INSTALL_WIRELOG_FILEPATH
 from container_service_extension.logging.logger import NULL_LOGGER
 from container_service_extension.logging.logger import SERVER_CLI_LOGGER
-from container_service_extension.logging.logger import SERVER_CLI_WIRELOG_FILEPATH
-from container_service_extension.logging.logger import SERVER_CLOUDAPI_WIRE_LOGGER
+from container_service_extension.logging.logger import SERVER_CLI_WIRELOG_FILEPATH  # noqa: E501
+from container_service_extension.logging.logger import SERVER_CLOUDAPI_WIRE_LOGGER  # noqa: E501
 from container_service_extension.logging.logger import SERVER_NSXT_WIRE_LOGGER
 from container_service_extension.mqi.mqtt_extension_manager import \
     MQTTExtensionManager
@@ -44,12 +44,11 @@ from container_service_extension.lib.nsxt.cse_nsxt_setup_utils import \
     setup_nsxt_constructs
 from container_service_extension.lib.nsxt.nsxt_client import NSXTClient
 import container_service_extension.common.utils.pyvcloud_utils as vcd_utils
-from container_service_extension.installer.templates.remote_template_manager import \
-    RemoteTemplateManager
-from container_service_extension.installer.right_bundle_manager import RightBundleManager
-import container_service_extension.common.constants.server_constants as server_constants
+from container_service_extension.installer.templates.remote_template_manager import RemoteTemplateManager  # noqa: E501
+from container_service_extension.installer.right_bundle_manager import RightBundleManager  # noqa: E501
+import container_service_extension.common.constants.server_constants as server_constants  # noqa: E501
 import container_service_extension.common.utils.server_utils as server_utils
-import container_service_extension.common.constants.shared_constants as shared_constants
+import container_service_extension.common.constants.shared_constants as shared_constants  # noqa: E501
 from container_service_extension.lib.telemetry.constants import CseOperation
 from container_service_extension.lib.telemetry.constants import OperationStatus
 from container_service_extension.lib.telemetry.constants import PayloadKey
@@ -59,11 +58,11 @@ from container_service_extension.lib.telemetry.telemetry_handler import \
     record_user_action_details
 from container_service_extension.lib.telemetry.telemetry_utils import \
     store_telemetry_settings
-import container_service_extension.installer.templates.template_builder as template_builder
-from container_service_extension.security.context.user_context import UserContext
+import container_service_extension.installer.templates.template_builder as template_builder  # noqa: E501
+from container_service_extension.security.context.user_context import UserContext  # noqa: E501
 import container_service_extension.common.utils.core_utils as utils
 from container_service_extension.server.vcdbroker import get_all_clusters as get_all_cse_clusters # noqa: E501
-from container_service_extension.common.utils.vsphere_utils import populate_vsphere_list
+from container_service_extension.common.utils.vsphere_utils import populate_vsphere_list  # noqa: E501
 
 API_FILTER_PATTERNS = [
     f'/api/{ shared_constants.CSE_URL_FRAGMENT}',
@@ -82,7 +81,7 @@ def check_cse_installation(config, msg_update_callback=utils.NullPrinter()):
         3. CSE K8 catalog exists
 
     :param dict config: config yaml file as a dictionary
-    :param core_utils.ConsoleMessagePrinter msg_update_callback: Callback object.
+    :param core_utils.ConsoleMessagePrinter msg_update_callback: Callback object.  # noqa: E501
 
     :raises Exception: if CSE is not registered to vCD as an extension, or if
         specified catalog does not exist, or if specified template(s) do not
@@ -315,7 +314,7 @@ def install_cse(config_file_name, config, skip_template_creation,
         so the user can ssh into and debug the vm.
     :param str pks_config_file_name: pks config file name.
     :param bool skip_config_decryption: do not decrypt the config file.
-    :param core_utils.ConsoleMessagePrinter msg_update_callback: Callback object.
+    :param core_utils.ConsoleMessagePrinter msg_update_callback: Callback object.  # noqa: E501
 
     :raises cse_exception.AmqpError: (when using AMQP) if AMQP exchange
         could not be created.
@@ -525,7 +524,7 @@ def _register_cse_as_mqtt_extension(client, target_vcd_api_version,
 
     :param Client client: client used to install cse server components
     :param str target_vcd_api_version: the desired vcd api version
-    :param core_utils.ConsoleMessagePrinter msg_update_callback: Callback object.
+    :param core_utils.ConsoleMessagePrinter msg_update_callback: Callback object.  # noqa: E501
 
     :raises requests.exceptions.HTTPError: if the MQTT extension and api filter
         were not set up correctly
@@ -561,7 +560,7 @@ def _create_amqp_exchange(exchange_name, host, port, vhost,
     :param int port: AMQP port number.
     :param str username: AMQP username.
     :param str vhost: AMQP vhost.
-    :param core_utils.ConsoleMessagePrinter msg_update_callback: Callback object.
+    :param core_utils.ConsoleMessagePrinter msg_update_callback: Callback object.  # noqa: E501
 
     :raises cse_exception.AmqpError: if AMQP exchange could not be created.
     """
@@ -634,7 +633,7 @@ def _register_cse_as_amqp_extension(client, routing_key, exchange,
     :param pyvcloud.vcd.client.Client client:
     :param str routing_key:
     :param str exchange:
-    :param core_utils.ConsoleMessagePrinter msg_update_callback: Callback object.
+    :param core_utils.ConsoleMessagePrinter msg_update_callback: Callback object.  # noqa: E501
     """
     ext = api_extension.APIExtension(client)
 
@@ -675,7 +674,7 @@ def _update_user_role_with_right_bundle(right_bundle_name,
     (when user initiated the opetation).
     :param str : right_bundle_name
     :param pyvcloud.vcd.client.Client  : client
-    :param core_utils.ConsoleMessagePrinter msg_update_callback: Callback object.
+    :param core_utils.ConsoleMessagePrinter msg_update_callback: Callback object.  # noqa: E501
     :param bool log_wire: wire logging enabled
     :rtype bool: result of operation. If the rights were added to user's role
     or not
@@ -747,7 +746,7 @@ def _register_def_schema(client: Client,
     defined entity type.
 
     :param pyvcloud.vcd.client.Client client:
-    :param core_utils.ConsoleMessagePrinter msg_update_callback: Callback object.
+    :param core_utils.ConsoleMessagePrinter msg_update_callback: Callback object.  # noqa: E501
     :param bool log_wire: wire logging enabled
     """
     msg = "Registering defined entity schema"
@@ -861,7 +860,7 @@ def _register_right(client, right_name, description, category, bundle_key,
         vCD Roles and Rights or specify a new category name.
     :param str bundle_key: is used to identify the right name and change
         its value to different languages using localization bundle.
-    :param core_utils.ConsoleMessagePrinter msg_update_callback: Callback object.
+    :param core_utils.ConsoleMessagePrinter msg_update_callback: Callback object.  # noqa: E501
 
     :raises BadRequestException: if a right with given name already
         exists in vCD.
@@ -1085,7 +1084,7 @@ def install_template(template_name, template_revision, config_file_name,
         so the user can ssh into and debug the vm.
     :param bool skip_config_decryption: do not decrypt the config file.
     :param str decryption_password: password to decrypt the config file.
-    :param core_utils.ConsoleMessagePrinter msg_update_callback: Callback object.
+    :param core_utils.ConsoleMessagePrinter msg_update_callback: Callback object.  # noqa: E501
     """
     populate_vsphere_list(config['vcs'])
 
@@ -1141,11 +1140,9 @@ def install_template(template_name, template_revision, config_file_name,
 
         found_template = False
         for template in remote_template_cookbook['templates']:
-            template_name_matched = template_name in (template[
-                                                          server_constants.RemoteTemplateKey.NAME], '*') # noqa: E501
+            template_name_matched = template_name in (template[server_constants.RemoteTemplateKey.NAME], '*') # noqa: E501
             template_revision_matched = \
-                str(template_revision) in (str(template[
-                                                   server_constants.RemoteTemplateKey.REVISION]), '*') # noqa: E501
+                str(template_revision) in (str(template[server_constants.RemoteTemplateKey.REVISION]), '*') # noqa: E501
             if template_name_matched and template_revision_matched:
                 found_template = True
                 _install_single_template(
@@ -1237,28 +1234,20 @@ def _install_single_template(
         f"{template[server_constants.RemoteTemplateKey.CNI_VERSION].replace('.', '')}-vm" # noqa: E501
     )
     build_params = {
-        templateBuildKey.TEMPLATE_NAME: template[
-            server_constants.RemoteTemplateKey.NAME], # noqa: E501
-        templateBuildKey.TEMPLATE_REVISION: template[
-            server_constants.RemoteTemplateKey.REVISION], # noqa: E501
-        templateBuildKey.SOURCE_OVA_NAME: template[
-            server_constants.RemoteTemplateKey.SOURCE_OVA_NAME], # noqa: E501
-        templateBuildKey.SOURCE_OVA_HREF: template[
-            server_constants.RemoteTemplateKey.SOURCE_OVA_HREF], # noqa: E501
-        templateBuildKey.SOURCE_OVA_SHA256: template[
-            server_constants.RemoteTemplateKey.SOURCE_OVA_SHA256], # noqa: E501
+        templateBuildKey.TEMPLATE_NAME: template[server_constants.RemoteTemplateKey.NAME], # noqa: E501
+        templateBuildKey.TEMPLATE_REVISION: template[server_constants.RemoteTemplateKey.REVISION], # noqa: E501
+        templateBuildKey.SOURCE_OVA_NAME: template[server_constants.RemoteTemplateKey.SOURCE_OVA_NAME], # noqa: E501
+        templateBuildKey.SOURCE_OVA_HREF: template[server_constants.RemoteTemplateKey.SOURCE_OVA_HREF], # noqa: E501
+        templateBuildKey.SOURCE_OVA_SHA256: template[server_constants.RemoteTemplateKey.SOURCE_OVA_SHA256], # noqa: E501
         templateBuildKey.ORG_NAME: org_name,
         templateBuildKey.VDC_NAME: vdc_name,
         templateBuildKey.CATALOG_NAME: catalog_name,
         templateBuildKey.CATALOG_ITEM_NAME: catalog_item_name,
-        templateBuildKey.CATALOG_ITEM_DESCRIPTION: template[
-            server_constants.RemoteTemplateKey.DESCRIPTION], # noqa: E501
-        templateBuildKey.TEMP_VAPP_NAME: template[
-                                             server_constants.RemoteTemplateKey.NAME] + '_temp', # noqa: E501
+        templateBuildKey.CATALOG_ITEM_DESCRIPTION: template[server_constants.RemoteTemplateKey.DESCRIPTION], # noqa: E501
+        templateBuildKey.TEMP_VAPP_NAME: template[server_constants.RemoteTemplateKey.NAME] + '_temp', # noqa: E501
         templateBuildKey.TEMP_VM_NAME: temp_vm_name,
         templateBuildKey.CPU: template[server_constants.RemoteTemplateKey.CPU],
-        templateBuildKey.MEMORY: template[
-            server_constants.RemoteTemplateKey.MEMORY], # noqa: E501
+        templateBuildKey.MEMORY: template[server_constants.RemoteTemplateKey.MEMORY], # noqa: E501
         templateBuildKey.NETWORK_NAME: network_name,
         templateBuildKey.IP_ALLOCATION_MODE: ip_allocation_mode, # noqa: E501
         templateBuildKey.STORAGE_PROFILE: storage_profile
@@ -1269,8 +1258,7 @@ def _install_single_template(
             raise ValueError(f"Cluster kind is {template.get(server_constants.RemoteTemplateKey.KIND)}" # noqa: E501
                              f" Expected { shared_constants.RUNTIME_DISPLAY_NAME_TO_INTERNAL_NAME_MAP.keys()}") # noqa: E501
         build_params[templateBuildKey.CSE_PLACEMENT_POLICY] = \
-            shared_constants.RUNTIME_DISPLAY_NAME_TO_INTERNAL_NAME_MAP[template.get(
-                server_constants.RemoteTemplateKey.KIND)] # noqa: E501
+            shared_constants.RUNTIME_DISPLAY_NAME_TO_INTERNAL_NAME_MAP[template.get(server_constants.RemoteTemplateKey.KIND)] # noqa: E501
     builder = template_builder.TemplateBuilder(client, client, build_params,
                                                ssh_key=ssh_key,
                                                logger=INSTALL_LOGGER,
@@ -1303,7 +1291,7 @@ def upgrade_cse(config_file_name, config, skip_template_creation,
         cluster vms. If omitted, old password will be retained, however if
         old password is missing a new password will be auto generated
         regardless.
-    :param core_utils.ConsoleMessagePrinter msg_update_callback: Callback object.
+    :param core_utils.ConsoleMessagePrinter msg_update_callback: Callback object.  # noqa: E501
     """
     populate_vsphere_list(config['vcs'])
 
@@ -1519,7 +1507,7 @@ def _update_cse_amqp_extension(client, routing_key, exchange,
         patterns=API_FILTER_PATTERNS,
         namespace=server_constants.CSE_SERVICE_NAMESPACE)
 
-    msg = f"Updated API extension '{ server_constants.CSE_SERVICE_NAME}' in vCD"
+    msg = f"Updated API extension '{server_constants.CSE_SERVICE_NAME}' in vCD"
     msg_update_callback.general(msg)
     INSTALL_LOGGER.info(msg)
 
@@ -1845,9 +1833,7 @@ def _fix_cluster_metadata(client,
             for k8s_template in k8s_templates:
                 # The source of truth for metadata on the clusters is always
                 # the template metadata.
-                if (str(k8s_template[
-                            server_constants.LocalTemplateKey.REVISION]), k8s_template[
-                        server_constants.LocalTemplateKey.NAME]) == (template_revision, template_name):  # noqa: E501
+                if (str(k8s_template[server_constants.LocalTemplateKey.REVISION]), k8s_template[server_constants.LocalTemplateKey.NAME]) == (template_revision, template_name):  # noqa: E501
                     if k8s_template.get(server_constants.LocalTemplateKey.OS):
                         os_name = k8s_template.get(
                             server_constants.LocalTemplateKey.OS) # noqa: E501
@@ -2506,7 +2492,7 @@ def configure_nsxt_for_cse(nsxt_servers, log_wire=False, msg_update_callback=uti
 
     :param dict nsxt_servers: nsxt_server details
     :param Logger log_wire:
-    :param core_utils.ConsoleMessagePrinter msg_update_callback: Callback object.
+    :param core_utils.ConsoleMessagePrinter msg_update_callback: Callback object.  # noqa: E501
     """
     wire_logger = SERVER_NSXT_WIRE_LOGGER if log_wire else NULL_LOGGER
     try:

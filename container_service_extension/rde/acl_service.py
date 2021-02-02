@@ -13,8 +13,8 @@ import container_service_extension.rde.constants as def_constants
 import container_service_extension.rde.entity_service as def_entity_svc
 import container_service_extension.rde.models as def_models
 import container_service_extension.common.utils.pyvcloud_utils as vcd_utils
-import container_service_extension.common.constants.server_constants as server_constants
-import container_service_extension.common.constants.shared_constants as shared_constants
+import container_service_extension.common.constants.server_constants as server_constants  # noqa: E501
+import container_service_extension.common.constants.shared_constants as shared_constants  # noqa: E501
 import container_service_extension.common.utils.core_utils as utils
 
 

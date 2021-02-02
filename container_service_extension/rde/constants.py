@@ -7,7 +7,7 @@
 from enum import Enum
 from enum import unique
 
-import container_service_extension.common.constants.shared_constants as shared_constants
+import container_service_extension.common.constants.shared_constants as shared_constants  # noqa: E501
 
 CLUSTER_ACL_LIST_FIELDS = [shared_constants.AccessControlKey.ACCESS_LEVEL_ID,
                            shared_constants.AccessControlKey.MEMBER_ID,
