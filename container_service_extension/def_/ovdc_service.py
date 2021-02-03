@@ -167,7 +167,7 @@ def list_org_vdcs(operation_context: ctx.OperationContext,
     # NOTE: For CSE 3.0, if `enable_tkg_plus` flag in config is set to false,
     # Prevent showing information about TKG+ by skipping TKG+ from the result.
     # Record telemetry
-    #TODO: enhance telemetry to record the page number and page size data.
+    # TODO: enhance telemetry to record the page number and page size data.
     telemetry_handler.record_user_action_details(cse_operation=CseOperation.OVDC_LIST,  # noqa: E501
                                                  cse_params={})
     result = cloudapi_utils.get_vdcs_by_page(
