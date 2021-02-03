@@ -517,3 +517,16 @@ def create_links_and_construct_paginated_result(base_uri, values, result_total,
                                         page_size=page_size,
                                         next_page_uri=next_page_uri,
                                         prev_page_uri=prev_page_uri)
+
+
+def extract_id_from_href(href):
+    """Extract id from an href.
+    'https://vmware.com/api/admin/user/123456' will return 123456
+    :param str href: an href
+    :return: id
+    """
+    if not href:
+        return None
+    if '/' in href:
+        return href.split('/')[-1]
+    return href
