@@ -4,10 +4,10 @@
 
 import functools
 
-import container_service_extension.server.abstract_broker as abstract_broker
-from container_service_extension.logging.logger import SERVER_LOGGER as LOGGER
 from container_service_extension.common.constants.server_constants import CSE_SERVICE_NAMESPACE  # noqa: E501
 import container_service_extension.common.utils.server_utils as server_utils
+from container_service_extension.logging.logger import SERVER_LOGGER as LOGGER
+import container_service_extension.server.abstract_broker as abstract_broker
 
 
 def secure(required_rights=None):

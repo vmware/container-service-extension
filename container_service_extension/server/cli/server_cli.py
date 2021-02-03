@@ -22,34 +22,23 @@ import requests
 from vcd_cli.utils import stdout
 import yaml
 
-from container_service_extension.lib.cloudapi.constants import CloudApiResource
-from container_service_extension.installer.config_validator import get_validated_config # noqa: E501
-import container_service_extension.installer.configure_cse as configure_cse
-from container_service_extension.installer.cse_service_role_mgr import create_cse_service_role # noqa : E501
-from container_service_extension.security.encryption_engine import decrypt_file
-from container_service_extension.security.encryption_engine import encrypt_file
-from container_service_extension.security.encryption_engine import get_decrypted_file_contents # noqa: E501
-import container_service_extension.installer.templates.local_template_manager as ltm  # noqa: E501
-from container_service_extension.logging.logger import INSTALL_LOGGER
-from container_service_extension.logging.logger import INSTALL_WIRELOG_FILEPATH
-from container_service_extension.logging.logger import NULL_LOGGER
-from container_service_extension.logging.logger import SERVER_CLI_LOGGER
-from container_service_extension.logging.logger import SERVER_CLI_WIRELOG_FILEPATH  # noqa: E501
-from container_service_extension.logging.logger import SERVER_CLOUDAPI_WIRE_LOGGER  # noqa: E501
-from container_service_extension.logging.logger import SERVER_DEBUG_WIRELOG_FILEPATH  # noqa: E501
-from container_service_extension.logging.logger import SERVER_LOGGER
-import container_service_extension.common.utils.pyvcloud_utils as vcd_utils
-from container_service_extension.installer.templates.remote_template_manager import RemoteTemplateManager # noqa: E501
-from container_service_extension.installer.sample_generator import generate_sample_config  # noqa: E501
 from container_service_extension.common.constants.server_constants import CONFIG_DECRYPTION_ERROR_MSG  # noqa: E501
 from container_service_extension.common.constants.server_constants import LocalTemplateKey  # noqa: E501
 from container_service_extension.common.constants.server_constants import RemoteTemplateKey  # noqa: E501
 from container_service_extension.common.constants.server_constants import SUPPORTED_VCD_API_VERSIONS  # noqa: E501
 from container_service_extension.common.constants.server_constants import SYSTEM_ORG_NAME  # noqa: E501
-import container_service_extension.common.utils.server_utils as server_utils
-import container_service_extension.server.service as cse_service
 from container_service_extension.common.constants.shared_constants import ClusterEntityKind  # noqa: E501
 from container_service_extension.common.constants.shared_constants import RequestMethod  # noqa: E501
+import container_service_extension.common.utils.core_utils as utils
+import container_service_extension.common.utils.pyvcloud_utils as vcd_utils
+import container_service_extension.common.utils.server_utils as server_utils
+from container_service_extension.installer.config_validator import get_validated_config # noqa: E501
+import container_service_extension.installer.configure_cse as configure_cse
+from container_service_extension.installer.cse_service_role_mgr import create_cse_service_role # noqa : E501
+from container_service_extension.installer.sample_generator import generate_sample_config  # noqa: E501
+import container_service_extension.installer.templates.local_template_manager as ltm  # noqa: E501
+from container_service_extension.installer.templates.remote_template_manager import RemoteTemplateManager # noqa: E501
+from container_service_extension.lib.cloudapi.constants import CloudApiResource
 from container_service_extension.lib.telemetry.constants import CseOperation
 from container_service_extension.lib.telemetry.constants import OperationStatus
 from container_service_extension.lib.telemetry.constants import PayloadKey
@@ -59,8 +48,18 @@ from container_service_extension.lib.telemetry.telemetry_handler import \
     record_user_action_details
 from container_service_extension.lib.telemetry.telemetry_utils \
     import store_telemetry_settings
-import container_service_extension.common.utils.core_utils as utils
-
+from container_service_extension.logging.logger import INSTALL_LOGGER
+from container_service_extension.logging.logger import INSTALL_WIRELOG_FILEPATH
+from container_service_extension.logging.logger import NULL_LOGGER
+from container_service_extension.logging.logger import SERVER_CLI_LOGGER
+from container_service_extension.logging.logger import SERVER_CLI_WIRELOG_FILEPATH  # noqa: E501
+from container_service_extension.logging.logger import SERVER_CLOUDAPI_WIRE_LOGGER  # noqa: E501
+from container_service_extension.logging.logger import SERVER_DEBUG_WIRELOG_FILEPATH  # noqa: E501
+from container_service_extension.logging.logger import SERVER_LOGGER
+from container_service_extension.security.encryption_engine import decrypt_file
+from container_service_extension.security.encryption_engine import encrypt_file
+from container_service_extension.security.encryption_engine import get_decrypted_file_contents # noqa: E501
+import container_service_extension.server.service as cse_service
 
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 
@@ -331,7 +330,7 @@ def create_service_role(ctx, vcd_host, verify_ssl_certs):
     # Prompt user for administrator username/password
     admin_username = utils.prompt_text(USERNAME_FOR_SYSTEM_ADMINISTRATOR,
                                        color='green', hide_input=False)
-    admin_password = utils.prompt_text(PASSWORD_FOR_SYSTEM_ADMINISTRATOR + str(admin_username),  # noqa: E501
+    admin_password = utils.prompt_text(PASSWORD_FOR_SYSTEM_ADMINISTRATOR + str(admin_username), # noqa: E501
                                        color='green', hide_input=True)
 
     msg = f"Connecting to vCD: {vcd_host}"

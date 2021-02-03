@@ -6,8 +6,8 @@ import pyvcloud.vcd.exceptions as vcd_exceptions
 
 import container_service_extension.client.cse_client.api_35.ovdc_api as ovdc_api_v35  # noqa: E501
 import container_service_extension.client.utils as client_utils
-import container_service_extension.rde.models as def_models
 from container_service_extension.common.utils.pyvcloud_utils import get_vdc
+import container_service_extension.rde.models as def_models
 
 
 class PolicyBasedOvdc:

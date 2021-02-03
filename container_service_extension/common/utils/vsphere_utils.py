@@ -12,8 +12,8 @@ from pyvcloud.vcd.vapp import VApp
 from pyvcloud.vcd.vm import VM
 from vsphere_guest_run.vsphere import VSphere
 
-from container_service_extension.logging.logger import NULL_LOGGER
 from container_service_extension.common.utils.core_utils import NullPrinter
+from container_service_extension.logging.logger import NULL_LOGGER
 
 cache = LRUCache(maxsize=1024)
 vsphere_list = []

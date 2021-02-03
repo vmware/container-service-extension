@@ -11,9 +11,9 @@ from pyvcloud.vcd.client import MetadataVisibility
 from pyvcloud.vcd.org import Org
 from pyvcloud.vcd.utils import metadata_to_dict
 
-import container_service_extension.logging.logger as logger
-from container_service_extension.common.utils.pyvcloud_utils import get_org
 from container_service_extension.common.constants.server_constants import LocalTemplateKey  # noqa: E501
+from container_service_extension.common.utils.pyvcloud_utils import get_org
+import container_service_extension.logging.logger as logger
 
 LOCAL_SCRIPTS_DIR = '.cse_scripts'
 

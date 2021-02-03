@@ -12,7 +12,7 @@ import container_service_extension.common.constants.shared_constants as shared_c
 class TemplatesApi(CseClient):
     def __init__(self, client: vcd_client.Client):
         super().__init__(client)
-        self._uri = f"{self._uri}/{ shared_constants.CSE_URL_FRAGMENT}"
+        self._uri = f"{self._uri}/{shared_constants.CSE_URL_FRAGMENT}"
         self._templates_uri = f"{self._uri}/templates"
 
     def list_templates(self):

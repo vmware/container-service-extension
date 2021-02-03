@@ -5,9 +5,9 @@ from dataclasses import asdict
 from dataclasses import dataclass
 from typing import List
 
+import container_service_extension.common.constants.shared_constants as shared_constants  # noqa: E501
 import container_service_extension.rde.constants as def_constants
 import container_service_extension.rde.utils as def_utils
-import container_service_extension.common.constants.shared_constants as shared_constants  # noqa: E501
 
 
 @dataclass(frozen=True)

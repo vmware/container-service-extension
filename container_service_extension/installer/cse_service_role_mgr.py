@@ -3,10 +3,10 @@
 # SPDX-License-Identifier: BSD-2-Clause
 from pyvcloud.vcd.org import Org
 
-from container_service_extension.logging.logger import SERVER_CLI_LOGGER
-import container_service_extension.common.utils.pyvcloud_utils as vcd_utils
 import container_service_extension.common.constants.server_constants as server_constants  # noqa: E501
 import container_service_extension.common.utils.core_utils as utils
+import container_service_extension.common.utils.pyvcloud_utils as vcd_utils
+from container_service_extension.logging.logger import SERVER_CLI_LOGGER
 
 
 def create_cse_service_role(client,

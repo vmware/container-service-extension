@@ -2,17 +2,17 @@
 # Copyright (c) 2020 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 
-import container_service_extension.security.context.operation_context as ctx
 from container_service_extension.common.constants.server_constants import CseOperation as CseOperationInfo  # noqa: E501
 from container_service_extension.common.constants.server_constants import K8S_PROVIDER_KEY  # noqa: E501
-import container_service_extension.common.utils.server_utils as server_utils
 from container_service_extension.common.constants.shared_constants import CSE_PAGINATION_DEFAULT_PAGE_SIZE  # noqa: E501
 from container_service_extension.common.constants.shared_constants import CSE_PAGINATION_FIRST_PAGE_NUMBER  # noqa: E501
 from container_service_extension.common.constants.shared_constants import PaginationKey  # noqa: E501
 from container_service_extension.common.constants.shared_constants import RequestKey  # noqa: E501
+import container_service_extension.common.utils.server_utils as server_utils
 from container_service_extension.lib.telemetry.constants import CseOperation
 from container_service_extension.lib.telemetry.telemetry_handler import \
     record_user_action_telemetry
+import container_service_extension.security.context.operation_context as ctx
 from container_service_extension.server.vcdbroker import VcdBroker
 
 

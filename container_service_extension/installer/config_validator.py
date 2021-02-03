@@ -15,26 +15,6 @@ from requests.exceptions import HTTPError
 from vsphere_guest_run.vsphere import VSphere
 import yaml
 
-from container_service_extension.security.encryption_engine import \
-    get_decrypted_file_contents
-from container_service_extension.exception.exceptions import AmqpConnectionError  # noqa: E501
-from container_service_extension.logging.logger import NULL_LOGGER
-from container_service_extension.logging.logger import SERVER_NSXT_WIRE_LOGGER
-from container_service_extension.lib.nsxt.dfw_manager import DFWManager
-from container_service_extension.lib.nsxt.ipset_manager import IPSetManager
-from container_service_extension.lib.nsxt.nsxt_client import NSXTClient
-from container_service_extension.server.pks.pks_cache import Credentials
-from container_service_extension.lib.pksclient.api_client import ApiClient
-from container_service_extension.lib.pksclient.configuration import Configuration  # noqa: E501
-from container_service_extension.installer.templates.remote_template_manager import RemoteTemplateManager  # noqa: E501
-from container_service_extension.installer.sample_generator import \
-    PKS_ACCOUNTS_SECTION_KEY, PKS_NSXT_SERVERS_SECTION_KEY, \
-    PKS_ORGS_SECTION_KEY, PKS_PVDCS_SECTION_KEY, PKS_SERVERS_SECTION_KEY, \
-    SAMPLE_AMQP_CONFIG, SAMPLE_BROKER_CONFIG, SAMPLE_MQTT_CONFIG, \
-    SAMPLE_PKS_ACCOUNTS_SECTION, SAMPLE_PKS_NSXT_SERVERS_SECTION, \
-    SAMPLE_PKS_ORGS_SECTION, SAMPLE_PKS_PVDCS_SECTION, \
-    SAMPLE_PKS_SERVERS_SECTION, SAMPLE_SERVICE_CONFIG, SAMPLE_VCD_CONFIG, \
-    SAMPLE_VCS_CONFIG
 from container_service_extension.common.constants.server_constants import \
     CONFIG_DECRYPTION_ERROR_MSG
 from container_service_extension.common.constants.server_constants import \
@@ -43,15 +23,35 @@ from container_service_extension.common.constants.server_constants import SYSTEM
 from container_service_extension.common.constants.server_constants import \
     VCENTER_LOGIN_ERROR_MSG
 from container_service_extension.common.constants.server_constants import VERSION_V1  # noqa: E501
-from container_service_extension.common.utils.server_utils import should_use_mqtt_protocol  # noqa: E501
-from container_service_extension.lib.telemetry.telemetry_utils import\
-    store_telemetry_settings
-from container_service_extension.lib.uaaclient.uaaclient import UaaClient
 from container_service_extension.common.utils.core_utils import check_file_permissions  # noqa: E501
 from container_service_extension.common.utils.core_utils import check_keys_and_value_types  # noqa: E501
 from container_service_extension.common.utils.core_utils import get_duplicate_items_in_list  # noqa: E501
 from container_service_extension.common.utils.core_utils import NullPrinter
 from container_service_extension.common.utils.core_utils import str_to_bool
+from container_service_extension.common.utils.server_utils import should_use_mqtt_protocol  # noqa: E501
+from container_service_extension.exception.exceptions import AmqpConnectionError  # noqa: E501
+from container_service_extension.installer.sample_generator import \
+    PKS_ACCOUNTS_SECTION_KEY, PKS_NSXT_SERVERS_SECTION_KEY, \
+    PKS_ORGS_SECTION_KEY, PKS_PVDCS_SECTION_KEY, PKS_SERVERS_SECTION_KEY, \
+    SAMPLE_AMQP_CONFIG, SAMPLE_BROKER_CONFIG, SAMPLE_MQTT_CONFIG, \
+    SAMPLE_PKS_ACCOUNTS_SECTION, SAMPLE_PKS_NSXT_SERVERS_SECTION, \
+    SAMPLE_PKS_ORGS_SECTION, SAMPLE_PKS_PVDCS_SECTION, \
+    SAMPLE_PKS_SERVERS_SECTION, SAMPLE_SERVICE_CONFIG, SAMPLE_VCD_CONFIG, \
+    SAMPLE_VCS_CONFIG
+from container_service_extension.installer.templates.remote_template_manager import RemoteTemplateManager  # noqa: E501
+from container_service_extension.lib.nsxt.dfw_manager import DFWManager
+from container_service_extension.lib.nsxt.ipset_manager import IPSetManager
+from container_service_extension.lib.nsxt.nsxt_client import NSXTClient
+from container_service_extension.lib.pksclient.api_client import ApiClient
+from container_service_extension.lib.pksclient.configuration import Configuration  # noqa: E501
+from container_service_extension.lib.telemetry.telemetry_utils import \
+    store_telemetry_settings
+from container_service_extension.lib.uaaclient.uaaclient import UaaClient
+from container_service_extension.logging.logger import NULL_LOGGER
+from container_service_extension.logging.logger import SERVER_NSXT_WIRE_LOGGER
+from container_service_extension.security.encryption_engine import \
+    get_decrypted_file_contents
+from container_service_extension.server.pks.pks_cache import Credentials
 
 
 def get_validated_config(config_file_name,

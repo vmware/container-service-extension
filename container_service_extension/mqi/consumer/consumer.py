@@ -2,11 +2,11 @@
 # Copyright (c) 2020 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 
-from container_service_extension.mqi.consumer.amqp_consumer import AMQPConsumer
-from container_service_extension.mqi.consumer.mqtt_consumer import MQTTConsumer
 import container_service_extension.common.constants.server_constants as server_constants  # noqa: E501
 from container_service_extension.common.constants.server_constants import MQTTExtKey, MQTTExtTokenKey  # noqa: E501
 from container_service_extension.common.utils.server_utils import should_use_mqtt_protocol  # noqa: E501
+from container_service_extension.mqi.consumer.amqp_consumer import AMQPConsumer
+from container_service_extension.mqi.consumer.mqtt_consumer import MQTTConsumer
 
 
 class MessageConsumer:
@@ -29,9 +29,9 @@ class MessageConsumer:
                 respond_topic=mqtt[MQTTExtKey.EXT_RESPOND_TOPIC],
                 verify_ssl=mqtt['verify_ssl'],
                 token=mqtt[MQTTExtTokenKey.TOKEN],
-                client_username=f'{ server_constants.MQTT_EXTENSION_VENDOR}/'
-                                f'{ server_constants.CSE_SERVICE_NAME}/'
-                                f'{ server_constants.MQTT_EXTENSION_VERSION}',
+                client_username=f'{server_constants.MQTT_EXTENSION_VENDOR}/'
+                                f'{server_constants.CSE_SERVICE_NAME}/'
+                                f'{server_constants.MQTT_EXTENSION_VERSION}',
                 num_processors=num_processors)
         else:
             amqp = config['amqp']

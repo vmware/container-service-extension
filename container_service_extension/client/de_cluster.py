@@ -15,16 +15,17 @@ from container_service_extension.client.de_cluster_native import DEClusterNative
 from container_service_extension.client.de_cluster_tkg import DEClusterTKG
 import container_service_extension.client.tkgclient.rest as tkg_rest
 import container_service_extension.client.utils as client_utils
+from container_service_extension.common.constants.shared_constants import CSE_PAGINATION_DEFAULT_PAGE_SIZE, PaginationKey  # noqa: E501
+from container_service_extension.common.constants.shared_constants import CSE_PAGINATION_FIRST_PAGE_NUMBER  # noqa: E501
+import container_service_extension.common.utils.pyvcloud_utils as vcd_utils
+import container_service_extension.exception.exceptions as cse_exceptions
+import container_service_extension.logging.logger as logger
 from container_service_extension.rde.constants import DEF_VMWARE_INTERFACE_NSS
 from container_service_extension.rde.constants import DEF_VMWARE_INTERFACE_VERSION  # noqa: E501
 from container_service_extension.rde.constants import DEF_VMWARE_VENDOR
 import container_service_extension.rde.entity_service as def_entity_svc
 import container_service_extension.rde.models as def_models
-import container_service_extension.exception.exceptions as cse_exceptions
-import container_service_extension.logging.logger as logger
-import container_service_extension.common.utils.pyvcloud_utils as vcd_utils
-from container_service_extension.common.constants.shared_constants import CSE_PAGINATION_DEFAULT_PAGE_SIZE, PaginationKey  # noqa: E501
-from container_service_extension.common.constants.shared_constants import CSE_PAGINATION_FIRST_PAGE_NUMBER  # noqa: E501
+
 
 DUPLICATE_CLUSTER_ERROR_MSG = "Duplicate clusters found. Please use --k8-runtime for the unique identification"  # noqa: E501
 

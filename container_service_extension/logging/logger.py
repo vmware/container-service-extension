@@ -8,10 +8,10 @@ import logging
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 
-from container_service_extension.common.utils.init_utils import run_once
-from container_service_extension.server.request_id_formatter import RequestIdFormatter  # noqa: E501
-from container_service_extension.security.security import RedactingFilter
 from container_service_extension.common.constants.server_constants import REQUEST_ID_FORMAT  # noqa: E501
+from container_service_extension.common.utils.init_utils import run_once
+from container_service_extension.security.security import RedactingFilter
+from container_service_extension.server.request_id_formatter import RequestIdFormatter  # noqa: E501
 
 # max size for log files (8MB)
 _MAX_BYTES = 2**23
