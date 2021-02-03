@@ -5,15 +5,15 @@
 from pyvcloud.vcd import utils
 
 from container_service_extension.client.cse_client.pks_ovdc_api import PksOvdcApi  # noqa: E501
-from container_service_extension.common.utils.pyvcloud_utils import get_vdc
 import container_service_extension.common.constants.server_constants as server_constants  # noqa: E501
 import container_service_extension.common.constants.shared_constants as shared_constants  # noqa: E501
+from container_service_extension.common.utils.pyvcloud_utils import get_vdc
 
 
 class PksOvdc:
     def __init__(self, client):
         self.client = client
-        self._uri = f"{self.client.get_api_uri()}/{ shared_constants.PKS_URL_FRAGMENT}"  # noqa: E501
+        self._uri = f"{self.client.get_api_uri()}/{shared_constants.PKS_URL_FRAGMENT}"  # noqa: E501
         self._pks_ovdc_api = PksOvdcApi(client)
 
     def list_ovdc(self, list_pks_plans=False):

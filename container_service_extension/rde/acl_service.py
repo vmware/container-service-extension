@@ -8,14 +8,14 @@ import pyvcloud.vcd.client as vcd_client
 import pyvcloud.vcd.utils as pyvcloud_utils
 import pyvcloud.vcd.vapp as vcd_vapp
 
+import container_service_extension.common.constants.server_constants as server_constants  # noqa: E501
+import container_service_extension.common.constants.shared_constants as shared_constants  # noqa: E501
+import container_service_extension.common.utils.core_utils as utils
+import container_service_extension.common.utils.pyvcloud_utils as vcd_utils
 import container_service_extension.lib.cloudapi.constants as cloudapi_constants
 import container_service_extension.rde.constants as def_constants
 import container_service_extension.rde.entity_service as def_entity_svc
 import container_service_extension.rde.models as def_models
-import container_service_extension.common.utils.pyvcloud_utils as vcd_utils
-import container_service_extension.common.constants.server_constants as server_constants  # noqa: E501
-import container_service_extension.common.constants.shared_constants as shared_constants  # noqa: E501
-import container_service_extension.common.utils.core_utils as utils
 
 
 class ClusterACLService:
@@ -48,8 +48,8 @@ class ClusterACLService:
         acl_path = f'{cloudapi_constants.CloudApiResource.ENTITIES}/' \
                    f'{self._cluster_id}/' \
                    f'{cloudapi_constants.CloudApiResource.ACL}' \
-                   f'?{ shared_constants.PaginationKey.PAGE_NUMBER}={page}&' \
-                   f'{ shared_constants.PaginationKey.PAGE_SIZE}={page_size}'
+                   f'?{shared_constants.PaginationKey.PAGE_NUMBER}={page}&' \
+                   f'{shared_constants.PaginationKey.PAGE_SIZE}={page_size}'
         de_acl_response = self._cloudapi_client.do_request(
             method=shared_constants.RequestMethod.GET,
             cloudapi_version=cloudapi_constants.CloudApiVersion.VERSION_1_0_0,
@@ -159,7 +159,7 @@ class ClusterACLService:
                 child_obj_attrib = child_obj.getchildren()[0].attrib
                 shared_href = child_obj_attrib.get('href')
                 user_id = utils.extract_id_from_href(shared_href)
-                user_urn = f'{ shared_constants.USER_URN_PREFIX}{user_id}'
+                user_urn = f'{shared_constants.USER_URN_PREFIX}{user_id}'
 
                 # Add entries in which only vapp is shared
                 if user_urn not in def_entity_user_ids:
@@ -193,7 +193,7 @@ class ClusterACLService:
             user_setting = form_vapp_access_setting_entry(
                 access_level=access_level,
                 name=acl_entry.username,
-                href=f'{api_uri}{ server_constants.ADMIN_USER_PATH}{user_id}',  # noqa: E501
+                href=f'{api_uri}{server_constants.ADMIN_USER_PATH}{user_id}',  # noqa: E501
                 user_id=user_id)
             total_vapp_access_settings.append(user_setting)
 
@@ -201,8 +201,7 @@ class ClusterACLService:
             server_constants.VappAccessKey.IS_SHARED_TO_EVERYONE:
                 bool(vapp_access_settings.IsSharedToEveryone),
             server_constants.VappAccessKey.ACCESS_SETTINGS:
-                {
-                    server_constants.VappAccessKey.ACCESS_SETTING: total_vapp_access_settings}  # noqa: E501
+                {server_constants.VappAccessKey.ACCESS_SETTING: total_vapp_access_settings}  # noqa: E501
         }
 
         self._client.post_resource(

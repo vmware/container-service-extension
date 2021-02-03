@@ -12,7 +12,7 @@ import container_service_extension.common.constants.shared_constants as shared_c
 class OvdcApi(CseClient):
     def __init__(self, client: vcd_client.Client):
         super().__init__(client)
-        self._uri = f"{self._uri}/{ shared_constants.CSE_URL_FRAGMENT}"
+        self._uri = f"{self._uri}/{shared_constants.CSE_URL_FRAGMENT}"
         self._ovdcs_uri = f"{self._uri}/ovdcs"
         self._ovdc_uri = f"{self._uri}/ovdc"
 

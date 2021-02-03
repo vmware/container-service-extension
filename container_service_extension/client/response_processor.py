@@ -8,15 +8,15 @@ import os
 import requests
 
 import container_service_extension.client.constants as cli_constants
-from container_service_extension.exception.exceptions import CseResponseError
-from container_service_extension.logging.logger import CLIENT_WIRE_LOGGER
-from container_service_extension.logging.logger import NULL_LOGGER
-from container_service_extension.exception.minor_error_codes import MinorErrorCode  # noqa: E501
 from container_service_extension.common.constants.shared_constants import ERROR_DESCRIPTION_KEY  # noqa: E501
 from container_service_extension.common.constants.shared_constants import ERROR_MINOR_CODE_KEY  # noqa: E501
 from container_service_extension.common.constants.shared_constants import RESPONSE_MESSAGE_KEY  # noqa: E501
 from container_service_extension.common.constants.shared_constants import UNKNOWN_ERROR_MESSAGE  # noqa: E501
 from container_service_extension.common.utils.core_utils import str_to_bool
+from container_service_extension.exception.exceptions import CseResponseError
+from container_service_extension.exception.minor_error_codes import MinorErrorCode  # noqa: E501
+from container_service_extension.logging.logger import CLIENT_WIRE_LOGGER
+from container_service_extension.logging.logger import NULL_LOGGER
 
 wire_logger = NULL_LOGGER
 if str_to_bool(os.getenv(cli_constants.ENV_CSE_CLIENT_WIRE_LOGGING)):

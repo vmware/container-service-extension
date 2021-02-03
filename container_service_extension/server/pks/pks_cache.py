@@ -4,10 +4,10 @@
 
 from collections import namedtuple
 
-from container_service_extension.common.utils.pyvcloud_utils import get_pvdc_id_from_pvdc_name # noqa: E501
 from container_service_extension.common.constants.server_constants import PKS_CLUSTER_DOMAIN_KEY  # noqa: E501
 from container_service_extension.common.constants.server_constants import PKS_COMPUTE_PROFILE_KEY # noqa: E501
 from container_service_extension.common.constants.server_constants import PKS_PLANS_KEY  # noqa: E501
+from container_service_extension.common.utils.pyvcloud_utils import get_pvdc_id_from_pvdc_name # noqa: E501
 
 
 class PksCache(object):

@@ -15,11 +15,11 @@ from pyvcloud.vcd.org import Org
 from pyvcloud.vcd.vdc import VDC
 from vcd_cli.vcd import vcd
 
-import container_service_extension.common.utils.pyvcloud_utils as pyvcloud_utils  # noqa: E501
-from container_service_extension.installer.templates.remote_template_manager import RemoteTemplateManager  # noqa: E501
 from container_service_extension.common.constants.server_constants import CSE_SERVICE_NAME  # noqa: E501
 from container_service_extension.common.constants.server_constants import CSE_SERVICE_NAMESPACE  # noqa: E501
 from container_service_extension.common.constants.server_constants import SYSTEM_ORG_NAME  # noqa: E501
+import container_service_extension.common.utils.pyvcloud_utils as pyvcloud_utils  # noqa: E501
+from container_service_extension.installer.templates.remote_template_manager import RemoteTemplateManager  # noqa: E501
 import container_service_extension.system_test_framework.utils as testutils
 
 

@@ -2,16 +2,16 @@
 # Copyright (c) 2019 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 
-import container_service_extension.exception.exceptions as e
-import container_service_extension.security.context.operation_context as ctx
-import container_service_extension.server.request_handlers.request_utils as req_utils  # noqa: E501
 from container_service_extension.common.constants.shared_constants import RequestKey  # noqa: E501
+import container_service_extension.exception.exceptions as e
 from container_service_extension.lib.telemetry.constants import CseOperation
 from container_service_extension.lib.telemetry.constants import OperationStatus
 from container_service_extension.lib.telemetry.telemetry_handler \
     import record_user_action
 from container_service_extension.lib.telemetry.telemetry_handler \
     import record_user_action_telemetry
+import container_service_extension.security.context.operation_context as ctx
+import container_service_extension.server.request_handlers.request_utils as req_utils  # noqa: E501
 
 
 @record_user_action_telemetry(CseOperation.SYSTEM_INFO)

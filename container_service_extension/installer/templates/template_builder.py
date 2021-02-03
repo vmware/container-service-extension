@@ -8,22 +8,22 @@ from pyvcloud.vcd.exceptions import EntityNotFoundException
 from pyvcloud.vcd.exceptions import OperationNotSupportedException
 from pyvcloud.vcd.vapp import VApp
 
-import container_service_extension.server.compute_policy_manager as compute_policy_manager # noqa: E501
-import container_service_extension.installer.templates.local_template_manager as ltm  # noqa: E501
-from container_service_extension.logging.logger import NULL_LOGGER
+from container_service_extension.common.constants.server_constants import ScriptFile, TemplateBuildKey  # noqa: E501
+from container_service_extension.common.utils.core_utils import download_file
+from container_service_extension.common.utils.core_utils import NullPrinter
+from container_service_extension.common.utils.core_utils import read_data_file
 from container_service_extension.common.utils.pyvcloud_utils import catalog_item_exists  # noqa: E501
 from container_service_extension.common.utils.pyvcloud_utils import get_org
 from container_service_extension.common.utils.pyvcloud_utils import get_vdc
 from container_service_extension.common.utils.pyvcloud_utils import upload_ova_to_catalog  # noqa: E501
 from container_service_extension.common.utils.pyvcloud_utils import \
     wait_for_catalog_item_to_resolve
-from container_service_extension.common.constants.server_constants import ScriptFile, TemplateBuildKey  # noqa: E501
-from container_service_extension.common.utils.core_utils import download_file
-from container_service_extension.common.utils.core_utils import NullPrinter
-from container_service_extension.common.utils.core_utils import read_data_file
 from container_service_extension.common.utils.vsphere_utils import get_vsphere
 from container_service_extension.common.utils.vsphere_utils import vgr_callback
 from container_service_extension.common.utils.vsphere_utils import wait_until_tools_ready  # noqa: E501
+import container_service_extension.installer.templates.local_template_manager as ltm  # noqa: E501
+from container_service_extension.logging.logger import NULL_LOGGER
+import container_service_extension.server.compute_policy_manager as compute_policy_manager # noqa: E501
 
 
 # used for creating temp vapp

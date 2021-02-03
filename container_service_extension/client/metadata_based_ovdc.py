@@ -6,14 +6,14 @@ from pyvcloud.vcd import utils
 import pyvcloud.vcd.exceptions as vcd_exceptions
 
 import container_service_extension.client.cse_client.api_33.ovdc_api as ovdc_api_v33  # noqa: E501
-from container_service_extension.common.utils.pyvcloud_utils import get_vdc
 import container_service_extension.common.constants.shared_constants as shared_constants  # noqa: E501
+from container_service_extension.common.utils.pyvcloud_utils import get_vdc
 
 
 class MetadataBasedOvdc:
     def __init__(self, client):
         self.client = client
-        self._uri = f"{self.client.get_api_uri()}/{ shared_constants.CSE_URL_FRAGMENT}"  # noqa: E501
+        self._uri = f"{self.client.get_api_uri()}/{shared_constants.CSE_URL_FRAGMENT}"  # noqa: E501
         self._ovdc_api = ovdc_api_v33.OvdcApi(self.client)
 
     def list_ovdc(self):

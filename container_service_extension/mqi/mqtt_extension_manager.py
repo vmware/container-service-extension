@@ -2,13 +2,13 @@ from lxml import etree
 import pyvcloud.vcd.client as vcd_client
 import requests
 
-import container_service_extension.lib.cloudapi.constants as cloudapi_constants
-import container_service_extension.logging.logger as logger
-import container_service_extension.common.utils.pyvcloud_utils as vcd_utils
 import container_service_extension.common.constants.server_constants as constants  # noqa: E501
 from container_service_extension.common.constants.server_constants import \
     MQTTExtKey, MQTTExtTokenKey
 from container_service_extension.common.constants.shared_constants import RequestMethod  # noqa: E501
+import container_service_extension.common.utils.pyvcloud_utils as vcd_utils
+import container_service_extension.lib.cloudapi.constants as cloudapi_constants
+import container_service_extension.logging.logger as logger
 
 
 def _get_id_from_extension_link(ext_link):

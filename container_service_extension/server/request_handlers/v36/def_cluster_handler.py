@@ -3,13 +3,13 @@
 # SPDX-License-Identifier: BSD-2-Clause
 from dataclasses import asdict
 
+from container_service_extension.common.constants.shared_constants import RequestKey  # noqa: E501
+import container_service_extension.lib.telemetry.constants as telemetry_constants  # noqa: E501
+import container_service_extension.lib.telemetry.telemetry_handler as telemetry_handler  # noqa: E501
 import container_service_extension.rde.cluster_service as cluster_svc
 import container_service_extension.rde.models as def_models
 import container_service_extension.security.context.operation_context as ctx
 import container_service_extension.server.request_handlers.request_utils as request_utils  # noqa: E501
-from container_service_extension.common.constants.shared_constants import RequestKey  # noqa: E501
-import container_service_extension.lib.telemetry.constants as telemetry_constants  # noqa: E501
-import container_service_extension.lib.telemetry.telemetry_handler as telemetry_handler  # noqa: E501
 
 
 @telemetry_handler.record_user_action_telemetry(cse_operation=telemetry_constants.CseOperation.V36_CLUSTER_UPDATE)  # noqa: E501

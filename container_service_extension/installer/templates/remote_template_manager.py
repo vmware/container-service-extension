@@ -8,12 +8,11 @@ import stat
 import requests
 import yaml
 
-import container_service_extension.installer.templates.local_template_manager as ltm  # noqa: E501
-from container_service_extension.logging.logger import NULL_LOGGER
 from container_service_extension.common.constants.server_constants import ScriptFile  # noqa: E501
 from container_service_extension.common.utils.core_utils import download_file
 from container_service_extension.common.utils.core_utils import NullPrinter
-
+import container_service_extension.installer.templates.local_template_manager as ltm  # noqa: E501
+from container_service_extension.logging.logger import NULL_LOGGER
 
 REMOTE_TEMPLATE_COOKBOOK_FILENAME = 'template.yaml'
 REMOTE_SCRIPTS_DIR = 'scripts'

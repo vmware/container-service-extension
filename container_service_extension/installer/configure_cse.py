@@ -23,32 +23,20 @@ from pyvcloud.vcd.vm import VM
 import requests
 import semantic_version
 
-import container_service_extension.server.compute_policy_manager as compute_policy_manager # noqa: E501
-import container_service_extension.rde.constants as def_constants
-import container_service_extension.rde.entity_service as def_entity_svc
-import container_service_extension.rde.models as def_models
-import container_service_extension.rde.schema_service as def_schema_svc
-import container_service_extension.rde.utils as def_utils
+import container_service_extension.common.constants.server_constants as server_constants  # noqa: E501
+import container_service_extension.common.constants.shared_constants as shared_constants  # noqa: E501
+import container_service_extension.common.utils.core_utils as utils
+import container_service_extension.common.utils.pyvcloud_utils as vcd_utils
+import container_service_extension.common.utils.server_utils as server_utils
+from container_service_extension.common.utils.vsphere_utils import populate_vsphere_list  # noqa: E501
 import container_service_extension.exception.exceptions as cse_exception
+from container_service_extension.installer.right_bundle_manager import RightBundleManager  # noqa: E501
 import container_service_extension.installer.templates.local_template_manager as ltm  # noqa: E501
-from container_service_extension.logging.logger import INSTALL_LOGGER
-from container_service_extension.logging.logger import INSTALL_WIRELOG_FILEPATH
-from container_service_extension.logging.logger import NULL_LOGGER
-from container_service_extension.logging.logger import SERVER_CLI_LOGGER
-from container_service_extension.logging.logger import SERVER_CLI_WIRELOG_FILEPATH  # noqa: E501
-from container_service_extension.logging.logger import SERVER_CLOUDAPI_WIRE_LOGGER  # noqa: E501
-from container_service_extension.logging.logger import SERVER_NSXT_WIRE_LOGGER
-from container_service_extension.mqi.mqtt_extension_manager import \
-    MQTTExtensionManager
+from container_service_extension.installer.templates.remote_template_manager import RemoteTemplateManager  # noqa: E501
+import container_service_extension.installer.templates.template_builder as template_builder  # noqa: E501
 from container_service_extension.lib.nsxt.cse_nsxt_setup_utils import \
     setup_nsxt_constructs
 from container_service_extension.lib.nsxt.nsxt_client import NSXTClient
-import container_service_extension.common.utils.pyvcloud_utils as vcd_utils
-from container_service_extension.installer.templates.remote_template_manager import RemoteTemplateManager  # noqa: E501
-from container_service_extension.installer.right_bundle_manager import RightBundleManager  # noqa: E501
-import container_service_extension.common.constants.server_constants as server_constants  # noqa: E501
-import container_service_extension.common.utils.server_utils as server_utils
-import container_service_extension.common.constants.shared_constants as shared_constants  # noqa: E501
 from container_service_extension.lib.telemetry.constants import CseOperation
 from container_service_extension.lib.telemetry.constants import OperationStatus
 from container_service_extension.lib.telemetry.constants import PayloadKey
@@ -58,11 +46,23 @@ from container_service_extension.lib.telemetry.telemetry_handler import \
     record_user_action_details
 from container_service_extension.lib.telemetry.telemetry_utils import \
     store_telemetry_settings
-import container_service_extension.installer.templates.template_builder as template_builder  # noqa: E501
+from container_service_extension.logging.logger import INSTALL_LOGGER
+from container_service_extension.logging.logger import INSTALL_WIRELOG_FILEPATH
+from container_service_extension.logging.logger import NULL_LOGGER
+from container_service_extension.logging.logger import SERVER_CLI_LOGGER
+from container_service_extension.logging.logger import SERVER_CLI_WIRELOG_FILEPATH  # noqa: E501
+from container_service_extension.logging.logger import SERVER_CLOUDAPI_WIRE_LOGGER  # noqa: E501
+from container_service_extension.logging.logger import SERVER_NSXT_WIRE_LOGGER
+from container_service_extension.mqi.mqtt_extension_manager import \
+    MQTTExtensionManager
+import container_service_extension.rde.constants as def_constants
+import container_service_extension.rde.entity_service as def_entity_svc
+import container_service_extension.rde.models as def_models
+import container_service_extension.rde.schema_service as def_schema_svc
+import container_service_extension.rde.utils as def_utils
 from container_service_extension.security.context.user_context import UserContext  # noqa: E501
-import container_service_extension.common.utils.core_utils as utils
+import container_service_extension.server.compute_policy_manager as compute_policy_manager # noqa: E501
 from container_service_extension.server.vcdbroker import get_all_clusters as get_all_cse_clusters # noqa: E501
-from container_service_extension.common.utils.vsphere_utils import populate_vsphere_list  # noqa: E501
 
 API_FILTER_PATTERNS = [
     f'/api/{ shared_constants.CSE_URL_FRAGMENT}',

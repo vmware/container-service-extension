@@ -10,13 +10,13 @@ from pyvcloud.vcd.utils import retrieve_compute_policy_id_from_href
 from pyvcloud.vcd.vm import VM
 import requests
 
-import container_service_extension.lib.cloudapi.constants as cloudapi_constants
-import container_service_extension.exception.exceptions as cse_exceptions
-import container_service_extension.logging.logger as logger
-import container_service_extension.common.utils.pyvcloud_utils as vcd_utils
 from container_service_extension.common.constants.shared_constants import RequestMethod  # noqa: E501
-import container_service_extension.common.utils.thread_utils as thread_utils
 import container_service_extension.common.utils.core_utils as utils
+import container_service_extension.common.utils.pyvcloud_utils as vcd_utils
+import container_service_extension.common.utils.thread_utils as thread_utils
+import container_service_extension.exception.exceptions as cse_exceptions
+import container_service_extension.lib.cloudapi.constants as cloudapi_constants
+import container_service_extension.logging.logger as logger
 
 # cse compute policy prefix
 CSE_COMPUTE_POLICY_PREFIX = 'cse----'
@@ -50,8 +50,8 @@ class ComputePolicyManager:
             if log_wire:
                 wire_logger = logger.SERVER_CLOUDAPI_WIRE_LOGGER
             self._cloudapi_client = \
-                vcd_utils.get_cloudapi_client_from_vcd_client(self._sysadmin_client,  # noqa: E501
-                                                              logger.SERVER_LOGGER,  # noqa: E501
+                vcd_utils.get_cloudapi_client_from_vcd_client(self._sysadmin_client, # noqa: E501
+                                                              logger.SERVER_LOGGER, # noqa: E501
                                                               wire_logger)
             self._cloudapi_version = \
                 cloudapi_constants.CloudApiVersion.VERSION_2_0_0

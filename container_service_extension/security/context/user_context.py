@@ -3,10 +3,10 @@ import pyvcloud.vcd.client as vcd_client
 import pyvcloud.vcd.org as vcd_org
 import pyvcloud.vcd.role as vcd_role
 
-import container_service_extension.lib.cloudapi.cloudapi_client as cloudApiClient  # noqa: E501
-import container_service_extension.logging.logger as logger
 import container_service_extension.common.utils.pyvcloud_utils as vcd_utils
 import container_service_extension.common.utils.server_utils as server_utils
+import container_service_extension.lib.cloudapi.cloudapi_client as cloudApiClient  # noqa: E501
+import container_service_extension.logging.logger as logger
 
 
 ORG_ADMIN_RIGHTS = [

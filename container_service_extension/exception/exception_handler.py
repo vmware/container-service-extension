@@ -7,12 +7,12 @@ import traceback
 
 import requests
 
-from container_service_extension.exception.exceptions import CseRequestError
-from container_service_extension.logging.logger import SERVER_LOGGER as LOGGER
-from container_service_extension.exception.minor_error_codes import MinorErrorCode # noqa: E501
 from container_service_extension.common.constants.shared_constants import ERROR_DESCRIPTION_KEY  # noqa: E501
 from container_service_extension.common.constants.shared_constants import ERROR_MINOR_CODE_KEY   # noqa: E501
 from container_service_extension.common.constants.shared_constants import RESPONSE_MESSAGE_KEY   # noqa: E501
+from container_service_extension.exception.exceptions import CseRequestError
+from container_service_extension.exception.minor_error_codes import MinorErrorCode # noqa: E501
+from container_service_extension.logging.logger import SERVER_LOGGER as LOGGER
 
 
 def handle_exception(func):
