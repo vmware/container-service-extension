@@ -10,9 +10,9 @@ import container_service_extension.client.command_filter as cmd_filter
 import container_service_extension.client.constants as cli_constants
 from container_service_extension.client.ovdc import Ovdc
 import container_service_extension.client.utils as client_utils
-from container_service_extension.logger import CLIENT_LOGGER
-import container_service_extension.shared_constants as shared_constants
-import container_service_extension.utils as utils
+import container_service_extension.common.constants.shared_constants as shared_constants  # noqa: E501
+import container_service_extension.common.utils.core_utils as utils
+from container_service_extension.logging.logger import CLIENT_LOGGER
 
 
 @click.group(name='ovdc', cls=cmd_filter.GroupCommandFilter,
@@ -354,7 +354,7 @@ def compute_policy_add(ctx, org_name, ovdc_name, compute_policy_name):
         result = ovdc.update_ovdc_compute_policies(ovdc_name,
                                                    org_name,
                                                    compute_policy_name,
-                                                   shared_constants.ComputePolicyAction.ADD, # noqa: E501
+                                                   shared_constants.ComputePolicyAction.ADD,  # noqa: E501
                                                    False)
         stdout(result, ctx)
         CLIENT_LOGGER.debug(result)

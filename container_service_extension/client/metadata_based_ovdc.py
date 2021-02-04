@@ -6,8 +6,8 @@ from pyvcloud.vcd import utils
 import pyvcloud.vcd.exceptions as vcd_exceptions
 
 import container_service_extension.client.cse_client.api_33.ovdc_api as ovdc_api_v33  # noqa: E501
-from container_service_extension.pyvcloud_utils import get_vdc
-import container_service_extension.shared_constants as shared_constants
+import container_service_extension.common.constants.shared_constants as shared_constants  # noqa: E501
+from container_service_extension.common.utils.pyvcloud_utils import get_vdc
 
 
 class MetadataBasedOvdc:

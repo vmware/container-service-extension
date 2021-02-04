@@ -5,9 +5,9 @@
 from pyvcloud.vcd import utils
 
 from container_service_extension.client.cse_client.pks_ovdc_api import PksOvdcApi  # noqa: E501
-from container_service_extension.pyvcloud_utils import get_vdc
-import container_service_extension.server_constants as server_constants
-import container_service_extension.shared_constants as shared_constants
+import container_service_extension.common.constants.server_constants as server_constants  # noqa: E501
+import container_service_extension.common.constants.shared_constants as shared_constants  # noqa: E501
+from container_service_extension.common.utils.pyvcloud_utils import get_vdc
 
 
 class PksOvdc:

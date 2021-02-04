@@ -14,13 +14,13 @@ import container_service_extension.client.constants as cli_constants
 from container_service_extension.client.de_cluster_native import DEClusterNative  # noqa: E501
 import container_service_extension.client.sample_generator as client_sample_generator  # noqa: E501
 import container_service_extension.client.utils as client_utils
-from container_service_extension.exceptions import CseResponseError
-from container_service_extension.exceptions import CseServerNotRunningError
-from container_service_extension.logger import CLIENT_LOGGER
-from container_service_extension.minor_error_codes import MinorErrorCode
-from container_service_extension.server_constants import LocalTemplateKey
-import container_service_extension.shared_constants as shared_constants
-import container_service_extension.utils as utils
+from container_service_extension.common.constants.server_constants import LocalTemplateKey  # noqa: E501
+import container_service_extension.common.constants.shared_constants as shared_constants  # noqa: E501
+import container_service_extension.common.utils.core_utils as utils
+from container_service_extension.exception.exceptions import CseResponseError
+from container_service_extension.exception.exceptions import CseServerNotRunningError  # noqa: E501
+from container_service_extension.exception.minor_error_codes import MinorErrorCode  # noqa: E501
+from container_service_extension.logging.logger import CLIENT_LOGGER
 
 
 @click.group(name='cluster', cls=cmd_filter.GroupCommandFilter,

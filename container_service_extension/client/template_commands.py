@@ -7,7 +7,7 @@ from vcd_cli.utils import stdout
 
 from container_service_extension.client.template import Template
 import container_service_extension.client.utils as client_utils
-from container_service_extension.logger import CLIENT_LOGGER
+from container_service_extension.logging.logger import CLIENT_LOGGER
 
 
 @click.group(name='template',

@@ -7,8 +7,8 @@ from vcd_cli.utils import stdout
 
 from container_service_extension.client.system import System
 import container_service_extension.client.utils as client_utils
-from container_service_extension.logger import CLIENT_LOGGER
-import container_service_extension.shared_constants as shared_constants
+import container_service_extension.common.constants.shared_constants as shared_constants  # noqa: E501
+from container_service_extension.logging.logger import CLIENT_LOGGER
 
 
 @click.group(name='system', short_help='Manage CSE service (system daemon)')

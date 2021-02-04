@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: BSD-2-Clause
 
 from container_service_extension.client.cse_client.pks_cluster_api import PksClusterApi  # noqa: E501
-import container_service_extension.shared_constants as shared_constants
+import container_service_extension.common.constants.shared_constants as shared_constants  # noqa: E501
 
 
 class PksCluster:

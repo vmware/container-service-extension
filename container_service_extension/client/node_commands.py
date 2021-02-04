@@ -8,9 +8,9 @@ from vcd_cli.utils import stdout
 
 from container_service_extension.client.cluster import Cluster
 import container_service_extension.client.utils as client_utils
-from container_service_extension.logger import CLIENT_LOGGER
-from container_service_extension.server_constants import K8S_PROVIDER_KEY
-from container_service_extension.server_constants import K8sProvider
+from container_service_extension.common.constants.server_constants import K8S_PROVIDER_KEY  # noqa: E501
+from container_service_extension.common.constants.server_constants import K8sProvider  # noqa: E501
+from container_service_extension.logging.logger import CLIENT_LOGGER
 
 
 @click.group(name='node', short_help='Manage nodes of native clusters')

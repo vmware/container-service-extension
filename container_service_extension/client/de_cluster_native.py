@@ -11,12 +11,12 @@ import yaml
 import container_service_extension.client.constants as cli_constants
 from container_service_extension.client.cse_client.api_35.native_cluster_api import NativeClusterApi  # noqa: E501
 import container_service_extension.client.utils as client_utils
-from container_service_extension.def_ import models as def_models
-import container_service_extension.def_.entity_service as def_entity_svc
-import container_service_extension.exceptions as cse_exceptions
-import container_service_extension.logger as logger
-import container_service_extension.pyvcloud_utils as vcd_utils
-import container_service_extension.shared_constants as shared_constants
+import container_service_extension.common.constants.shared_constants as shared_constants  # noqa: E501
+import container_service_extension.common.utils.pyvcloud_utils as vcd_utils
+import container_service_extension.exception.exceptions as cse_exceptions
+import container_service_extension.logging.logger as logger
+from container_service_extension.rde import models as def_models
+import container_service_extension.rde.entity_service as def_entity_svc
 
 
 class DEClusterNative:
