@@ -84,7 +84,7 @@ VCENTER_LOGIN_ERROR_MSG = "vCenter login failed (check config file for "\
 REQUEST_ID_FORMAT = 'Request Id: %(requestId)s | '
 
 # Prefix for Gateway urn
-GATEWAY_URN_PREFIX = 'urn:vcloud:gateway:'
+GATEWAY_URN_PREFIX = 'urn:vcloud:gateway'
 
 # NSXT Gateway NAT constants
 NATS_PATH_FRAGMENT = 'nat'

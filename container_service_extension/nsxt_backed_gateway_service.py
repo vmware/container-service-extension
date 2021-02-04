@@ -114,7 +114,7 @@ class NsxtBackedGatewayService:
         self._cloudapi_client = \
             pyvcloud_utils.get_cloudapi_client_from_vcd_client(client)
         gateway_id = server_utils.extract_id_from_href(self._gateway.href)
-        self._gateway_urn = f'{server_constants.GATEWAY_URN_PREFIX}' \
+        self._gateway_urn = f'{server_constants.GATEWAY_URN_PREFIX}:' \
                             f'{gateway_id}'
         self._gateway_relative_path = \
             f'{cloudapi_constants.CloudApiResource.EDGE_GATEWAYS}/' \
