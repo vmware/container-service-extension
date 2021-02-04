@@ -55,7 +55,6 @@ def process_response(response):
         requests.codes.ok,
         requests.codes.created,
         requests.codes.accepted,
-        requests.codes.too_many_requests
     ]:
         return response_content
 
@@ -102,6 +101,8 @@ def response_to_exception(response):
     if response.status_code == requests.codes.unauthorized:
         error_message = 'Session has expired or user not logged in.'\
                         ' Please re-login.'
+    elif response.status_code == requests.codes.too_many_requests:
+        error_message = 'Server is busy. Please try again later.'
     elif 'json' in response.headers['Content-Type']:
         response_dict = deserialize_response_content(response)
         if RESPONSE_MESSAGE_KEY in response_dict:
