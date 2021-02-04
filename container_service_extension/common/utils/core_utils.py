@@ -110,7 +110,7 @@ def get_duplicate_items_in_list(items):
 
 
 def check_keys_and_value_types(dikt, ref_dict, location='dictionary',
-                               excluded_keys=[],
+                               excluded_keys=None,
                                msg_update_callback=NullPrinter()):
     """Compare a dictionary with a reference dictionary.
 
@@ -128,6 +128,8 @@ def check_keys_and_value_types(dikt, ref_dict, location='dictionary',
     :raises TypeError: if the value of a property in @dikt does not match with
         the value of the same property in @ref_dict
     """
+    if excluded_keys is None:
+        excluded_keys = []
     ref_keys = set(ref_dict.keys())
     keys = set(dikt.keys())
 

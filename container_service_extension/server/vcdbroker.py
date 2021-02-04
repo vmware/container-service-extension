@@ -105,8 +105,53 @@ class VcdBroker(abstract_broker.AbstractBroker):
 
         return cluster
 
+    def get_clusters_by_page(self, **kwargs):
+        """Get native clusters by page and their relevant metadata.
+
+        :return: paginated dictionary containing list of clusters in
+            that page as values.
+
+        **data: Optional
+            Optional data and default values: org_name=None, ovdc_name=None
+        **telemetry: Optional
+        """
+        data = kwargs.get(KwargKey.DATA, {})
+        page_number = kwargs.get('page_number',
+                                 CSE_PAGINATION_FIRST_PAGE_NUMBER)
+        page_size = kwargs.get('page_size',
+                               CSE_PAGINATION_DEFAULT_PAGE_SIZE)
+
+        defaults = {
+            RequestKey.ORG_NAME: None,
+            RequestKey.OVDC_NAME: None,
+        }
+        validated_data = {**defaults, **data}
+
+        if kwargs.get(KwargKey.TELEMETRY, True):
+            # Record the data for telemetry
+            record_user_action_details(
+                cse_operation=CseOperation.CLUSTER_LIST,
+                cse_params=copy.deepcopy(validated_data))
+
+        # "raw clusters" do not have well-defined cluster data keys
+        raw_clusters_info = get_all_clusters(
+            self.context.client,
+            org_name=validated_data[RequestKey.ORG_NAME],
+            ovdc_name=validated_data[RequestKey.OVDC_NAME],
+            page_number=page_number,
+            page_size=page_size)
+
+        raw_clusters_info[PaginationKey.VALUES] = \
+            _extract_cse_cluster_list_info(self.context.sysadmin_client,
+                                           raw_clusters_info[PaginationKey.VALUES])  # noqa: E501
+        return raw_clusters_info
+
     def list_clusters(self, **kwargs):
         """List all native clusters and their relevant metadata.
+
+        :return: a list of all clusters if 'page_number' or 'page_size' are
+            not part of the kwargs. If 'page_number' or 'page_size' is present,
+            a paginated response is returned.
 
         Common broker function that validates data for the 'list clusters'
         operation and returns a list of cluster data.
@@ -116,8 +161,6 @@ class VcdBroker(abstract_broker.AbstractBroker):
         **telemetry: Optional
         """
         data = kwargs.get(KwargKey.DATA, {})
-        page_number = kwargs.get('page_number', CSE_PAGINATION_FIRST_PAGE_NUMBER)  # noqa: E501
-        page_size = kwargs.get('page_size', CSE_PAGINATION_DEFAULT_PAGE_SIZE)
         defaults = {
             RequestKey.ORG_NAME: None,
             RequestKey.OVDC_NAME: None
@@ -136,32 +179,11 @@ class VcdBroker(abstract_broker.AbstractBroker):
         raw_clusters_info = get_all_clusters(
             self.context.client,
             org_name=validated_data[RequestKey.ORG_NAME],
-            ovdc_name=validated_data[RequestKey.OVDC_NAME],
-            page_number=page_number,
-            page_size=page_size)
+            ovdc_name=validated_data[RequestKey.OVDC_NAME])
         raw_clusters = raw_clusters_info[PaginationKey.VALUES]
 
-        clusters = []
-        for c in raw_clusters:
-            org_name = vcd_utils.get_org_name_from_ovdc_id(
-                self.context.sysadmin_client, c['vdc_id'])
-            clusters.append({
-                'name': c['name'],
-                'control_plane_ip': c['leader_endpoint'],
-                'template_name': c.get('template_name'),
-                'template_revision': c.get('template_revision'),
-                'k8s_type': c.get('kubernetes'),
-                'k8s_version': c.get('kubernetes_version'),
-                'VMs': c['number_of_vms'],
-                'vdc': c['vdc_name'],
-                'status': c['status'],
-                'vdc_id': c['vdc_id'],
-                'org_name': org_name,
-                'owner_name': c['owner_name'],
-                K8S_PROVIDER_KEY: K8sProvider.NATIVE
-            })
-        raw_clusters_info[PaginationKey.VALUES] = clusters
-        return raw_clusters_info
+        return _extract_cse_cluster_list_info(self.context.sysadmin_client,
+                                              raw_clusters)
 
     def get_cluster_config(self, **kwargs):
         """Get the cluster's kube config contents.
@@ -1859,6 +1881,30 @@ def _add_nodes(client, num_nodes, node_type, org, vdc, vapp,
 
         vapp.reload()
         return {'task': task, 'specs': specs}
+
+
+def _extract_cse_cluster_list_info(sysadmin_client: vcd_client.Client,
+                                   raw_clusters: list) -> list:
+    clusters = []
+    for c in raw_clusters:
+        org_name = vcd_utils.get_org_name_from_ovdc_id(sysadmin_client,
+                                                       c['vdc_id'])
+        clusters.append({
+            'name': c['name'],
+            'control_plane_ip': c['leader_endpoint'],
+            'template_name': c.get('template_name'),
+            'template_revision': c.get('template_revision'),
+            'k8s_type': c.get('kubernetes'),
+            'k8s_version': c.get('kubernetes_version'),
+            'VMs': c['number_of_vms'],
+            'vdc': c['vdc_name'],
+            'status': c['status'],
+            'vdc_id': c['vdc_id'],
+            'org_name': org_name,
+            'owner_name': c['owner_name'],
+            K8S_PROVIDER_KEY: K8sProvider.NATIVE
+        })
+    return clusters
 
 
 def _get_node_names(vapp, node_type):

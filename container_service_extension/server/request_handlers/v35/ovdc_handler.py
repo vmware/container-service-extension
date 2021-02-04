@@ -56,6 +56,7 @@ def ovdc_list(data, operation_context: ctx.OperationContext):
     return ovdc_service.list_ovdc(operation_context)
 
 
+# TODO: Record telemetry in a different telemetry handler
 @record_user_action_telemetry(cse_operation=CseOperation.OVDC_LIST)
 @request_utils.v35_api_exception_handler
 def org_vdc_list(data, operation_context: ctx.OperationContext):
