@@ -88,7 +88,7 @@ def validate_payload(payload, required_keys):
 
 
 def validate_request_payload(input_spec: dict, reference_spec: dict,
-                             exclude_fields=[]):
+                             exclude_fields=None):
     """Validate the desired spec with the current spec.
 
     :param dict input_spec: input spec
@@ -98,6 +98,8 @@ def validate_request_payload(input_spec: dict, reference_spec: dict,
     :rtype: bool
     :raises: BadRequestError on encountering invalid payload value
     """
+    if exclude_fields is None:
+        exclude_fields = []
     input_dict = utils.flatten_dictionary(input_spec)
     reference_dict = utils.flatten_dictionary(reference_spec)
     exclude_key_set = set(exclude_fields)

@@ -10,7 +10,7 @@ from container_service_extension.server_constants import CSE_SERVICE_NAMESPACE
 import container_service_extension.utils as utils
 
 
-def secure(required_rights=[]):
+def secure(required_rights=None):
     """Secure methods against unauthorized access using this decorator.
 
     Only compatible with methods in AbstractBroker-derived classes.
@@ -22,6 +22,9 @@ def secure(required_rights=[]):
 
     :rtype: method
     """
+    if required_rights is None:
+        required_rights = {}
+
     def decorator_secure(func):
         @functools.wraps(func)
         def decorator_wrapper(*args, **kwargs):

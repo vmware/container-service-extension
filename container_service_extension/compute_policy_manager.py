@@ -356,7 +356,7 @@ class ComputePolicyManager:
                                 is_admin_operation=True)
         return vdc.add_compute_policy(compute_policy_href)
 
-    def list_vdc_placement_policies_on_vdc(self, vdc_id, filters={}):
+    def list_vdc_placement_policies_on_vdc(self, vdc_id, filters=None):
         """List all placement policies assigned to a given vdc.
 
         :param str vdc_id: id of the vdc for which policies need to be
@@ -366,11 +366,13 @@ class ComputePolicyManager:
             the vdc
         :rtype: Generator[Dict, None, None]
         """
+        if filters is None:
+            filters = {}
         sizing_filter = {'isSizingOnly': 'false'}
         filters.update(sizing_filter)
         return self.list_compute_policies_on_vdc(vdc_id, filters=filters)
 
-    def list_vdc_sizing_policies_on_vdc(self, vdc_id, filters={}):
+    def list_vdc_sizing_policies_on_vdc(self, vdc_id, filters=None):
         """List all sizing policies created by CSE and assigned to a given vdc.
 
         :param str vdc_id: id of the vdc for which policies need to be
@@ -380,6 +382,8 @@ class ComputePolicyManager:
             the vdc
         :rtpe: Generator[Dict, None, None]
         """
+        if filters is None:
+            filters = {}
         sizing_filter = {'isSizingOnly': 'true'}
         filters.update(sizing_filter)
         return self.list_compute_policies_on_vdc(vdc_id, filters=filters)

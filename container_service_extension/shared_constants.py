@@ -53,6 +53,7 @@ CSE_PAGINATION_DEFAULT_PAGE_SIZE = 25
 
 @unique
 class OperationType(str, Enum):
+    NATIVE_CLUSTER = 'nativecluster'
     CLUSTER = 'cluster'
     NODE = 'node'
     OVDC = 'ovdc'
@@ -141,6 +142,7 @@ class RequestKey(str, Enum):
 class PaginationKey(str, Enum):
     PAGE_NUMBER = 'page'
     PAGE_SIZE = 'pageSize'
+    PAGE_COUNT = 'pageCount'
     NEXT_PAGE_URI = 'nextPageUri'
     PREV_PAGE_URI = 'previousPageUri'
     RESULT_TOTAL = 'resultTotal'

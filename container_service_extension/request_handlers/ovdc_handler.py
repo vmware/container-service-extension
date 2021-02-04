@@ -138,6 +138,7 @@ def ovdc_list(request_data, op_ctx: ctx.OperationContext):
     return _get_cse_ovdc_list(op_ctx.sysadmin_client, org_vdcs)
 
 
+# TODO: Record telemetry in a different telemetry handler
 @record_user_action_telemetry(cse_operation=CseOperation.OVDC_LIST)
 def org_vdc_list(request_data, op_ctx: ctx.OperationContext):
     """Request handler for orgvdc list operation.
@@ -156,6 +157,7 @@ def org_vdc_list(request_data, op_ctx: ctx.OperationContext):
     page_size = int(validated_data[PaginationKey.PAGE_SIZE])
 
     # Record telemetry data
+    # TODO: enhance telemetry to record the page number and page size data.
     cse_params = copy.deepcopy(validated_data)
     record_user_action_details(cse_operation=CseOperation.OVDC_LIST,
                                cse_params=cse_params)

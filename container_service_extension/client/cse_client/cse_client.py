@@ -12,9 +12,9 @@ class CseClient:
     def __init__(self, client: vcd_client.Client):
         self._client = client
         self._uri = self._client.get_api_uri()
-        self._request_page_size = 25
+        self._request_page_size = 10
 
-    def iterate_results(self, base_url, filters={}):
+    def iterate_results(self, base_url, filters=None):
         """Iterate over paginated response until all the results are obtained.
 
         :param str base_url: initial url
@@ -34,6 +34,8 @@ class CseClient:
             page 3:
                 self.iterate_results("https://vcd-ip/api/cse/3.0/clusters?page=3&pageSize=25")
         """  # noqa: E501
+        if filters is None:
+            filters = {}
         # NOTE: This method is added here to reduce dependency between
         # cse_client package and the rest of the code.
         url = base_url

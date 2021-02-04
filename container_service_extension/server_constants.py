@@ -199,6 +199,7 @@ class CseOperation(Enum):
     CLUSTER_CREATE = ('create cluster', '/cse/clusters', requests.codes.accepted)  # noqa: E501
     CLUSTER_DELETE = ('delete cluster', '/cse/cluster/%s', requests.codes.accepted)  # noqa: E501
     CLUSTER_INFO = ('get info of cluster', '/cse/cluster/%s')
+    NATIVE_CLUSTER_LIST = ('list legacy clusters', '/cse/nativeclusters')
     CLUSTER_LIST = ('list clusters', '/cse/clusters')
     CLUSTER_RESIZE = ('resize cluster', '/cse/cluster/%s', requests.codes.accepted)  # noqa: E501
     CLUSTER_UPGRADE_PLAN = ('get supported cluster upgrade paths', '/cse/cluster/%s/upgrade-plan')  # noqa: E501
@@ -211,6 +212,7 @@ class CseOperation(Enum):
     V35_CLUSTER_CREATE = ('create DEF cluster', '/cse/3.0/clusters', requests.codes.accepted)  # noqa: E501
     V35_CLUSTER_DELETE = ('delete DEF cluster', '/cse/3.0/cluster/%s', requests.codes.accepted)  # noqa: E501
     V35_CLUSTER_INFO = ('get info of DEF cluster', '/cse/3.0/cluster/%s')
+    V35_NATIVE_CLUSTER_LIST = ('list paginated DEF clusters', '/cse/3.0/nativeclusters')  # noqa: E501
     V35_CLUSTER_LIST = ('list DEF clusters', '/cse/3.0/clusters')
     V35_CLUSTER_RESIZE = ('resize DEF cluster', '/cse/3.0/cluster/%s', requests.codes.accepted)  # noqa: E501
     V35_CLUSTER_UPGRADE_PLAN = ('get supported DEF cluster upgrade paths', '/cse/3.0/cluster/%s/upgrade-plan')  # noqa: E501

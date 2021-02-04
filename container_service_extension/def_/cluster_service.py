@@ -76,15 +76,27 @@ class ClusterService(abstract_broker.AbstractBroker):
         )
         return self._sync_def_entity(cluster_id)
 
-    def list_clusters(self, filters: dict = {},
-                      page_number=CSE_PAGINATION_FIRST_PAGE_NUMBER,
-                      page_size=CSE_PAGINATION_DEFAULT_PAGE_SIZE) -> dict:
-        """List corresponding defined entities of all native clusters."""
+    def get_clusters_by_page(self, filters: dict = None,
+                             page_number=CSE_PAGINATION_FIRST_PAGE_NUMBER,
+                             page_size=CSE_PAGINATION_DEFAULT_PAGE_SIZE):
+        """List clusters by page number and page size.
+
+        :param dict filters: filters to use to filter the cluster response
+        :param int page_number: page number of the clusters to be fetchec
+        :param int page_size: page size of the result
+        :return: paginated response containing native clusters
+        :rtype: dict
+        """
+        if not filters:
+            filters = {}
+
         telemetry_handler.record_user_action_details(
             cse_operation=telemetry_constants.CseOperation.V35_CLUSTER_LIST,
             cse_params={telemetry_constants.PayloadKey.FILTER_KEYS: ','.join(filters.keys())}  # noqa: E501
         )
+
         ent_type: def_models.DefEntityType = def_utils.get_registered_def_entity_type()  # noqa: E501
+
         return self.entity_svc.get_entities_per_page_by_entity_type(
             vendor=ent_type.vendor,
             nss=ent_type.nss,
@@ -92,6 +104,29 @@ class ClusterService(abstract_broker.AbstractBroker):
             filters=filters,
             page_number=page_number,
             page_size=page_size)
+
+    def list_clusters(self, filters: dict = None) -> list:
+        """List corresponding defined entities of all native clusters.
+
+        :param dict filters: filters to use to filter the cluster response
+        :return: list of all native clusters
+        :rtype: list
+        """
+        if not filters:
+            filters = {}
+
+        telemetry_handler.record_user_action_details(
+            cse_operation=telemetry_constants.CseOperation.V35_CLUSTER_LIST,
+            cse_params={telemetry_constants.PayloadKey.FILTER_KEYS: ','.join(filters.keys())}  # noqa: E501
+        )
+
+        ent_type: def_models.DefEntityType = def_utils.get_registered_def_entity_type()  # noqa: E501
+
+        return self.entity_svc.list_entities_by_entity_type(
+            vendor=ent_type.vendor,
+            nss=ent_type.nss,
+            version=ent_type.version,
+            filters=filters)
 
     def get_cluster_config(self, cluster_id: str):
         """Get the cluster's kube config contents.
@@ -129,7 +164,7 @@ class ClusterService(abstract_broker.AbstractBroker):
 
         return result.content.decode()
 
-    def create_cluster(self, cluster_spec: def_models.ClusterEntity):
+    def create_cluster(self, cluster_spec: def_models.NativeEntity):
         """Start the cluster creation operation.
 
         Creates corresponding defined entity in vCD for every native cluster.
@@ -218,7 +253,7 @@ class ClusterService(abstract_broker.AbstractBroker):
         return def_entity
 
     def resize_cluster(self, cluster_id: str,
-                       cluster_spec: def_models.ClusterEntity):
+                       cluster_spec: def_models.NativeEntity):
         """Start the resize cluster operation.
 
         :param str cluster_id: Defined entity Id of the cluster
@@ -356,14 +391,14 @@ class ClusterService(abstract_broker.AbstractBroker):
                                               curr_entity.entity.spec.k8_distribution.template_revision) # noqa: E501
 
     def upgrade_cluster(self, cluster_id: str,
-                        upgrade_spec: def_models.ClusterEntity):
+                        upgrade_spec: def_models.NativeEntity):
         """Start the upgrade cluster operation.
 
         Upgrading cluster is an asynchronous task, so the returned
         `result['task_href']` can be polled to get updates on task progress.
 
         :param str cluster_id: id of the cluster to be upgraded
-        :param def_models.ClusterEntity upgrade_spec: cluster spec with new
+        :param def_models.NativeEntity upgrade_spec: cluster spec with new
             kubernetes distribution and revision
 
         :return: Defined entity with upgrade in progress set
@@ -433,8 +468,10 @@ class ClusterService(abstract_broker.AbstractBroker):
                                     template=template)
         return curr_entity
 
-    def delete_nodes(self, cluster_id: str, nodes_to_del=[]):
+    def delete_nodes(self, cluster_id: str, nodes_to_del=None):
         """Start the delete nodes operation."""
+        if nodes_to_del is None:
+            nodes_to_del = []
         curr_entity: def_models.DefEntity = self.entity_svc.get_entity(
             cluster_id)
 
@@ -473,7 +510,7 @@ class ClusterService(abstract_broker.AbstractBroker):
 
     @utils.run_async
     def _create_cluster_async(self, cluster_id: str,
-                              cluster_spec: def_models.ClusterEntity):
+                              cluster_spec: def_models.NativeEntity):
         try:
             cluster_name = cluster_spec.metadata.cluster_name
             org_name = cluster_spec.metadata.org_name
@@ -773,7 +810,7 @@ class ClusterService(abstract_broker.AbstractBroker):
 
     @utils.run_async
     def _create_nodes_async(self, cluster_id: str,
-                            cluster_spec: def_models.ClusterEntity):
+                            cluster_spec: def_models.NativeEntity):
         """Create worker and/or nfs nodes in vCD.
 
         This method is executed by a thread in an asynchronous manner.
@@ -1186,8 +1223,8 @@ class ClusterService(abstract_broker.AbstractBroker):
 
     @utils.run_async
     def _delete_nodes_async(self, cluster_id: str,
-                            cluster_spec: def_models.ClusterEntity = None,
-                            nodes_to_del=[]):
+                            cluster_spec: def_models.NativeEntity = None,
+                            nodes_to_del=None):
         """Delete worker and/or nfs nodes in vCD.
 
         This method is executed by a thread in an asynchronous manner.
@@ -1203,6 +1240,8 @@ class ClusterService(abstract_broker.AbstractBroker):
         Let the caller monitor thread or method to set SUCCESS task status,
           end the client context
         """
+        if nodes_to_del is None:
+            nodes_to_del = []
         curr_entity: def_models.DefEntity = self.entity_svc.get_entity(cluster_id)  # noqa: E501
         vapp_href = curr_entity.externalId
         cluster_name = curr_entity.entity.metadata.cluster_name

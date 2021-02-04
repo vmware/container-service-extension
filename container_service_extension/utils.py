@@ -173,7 +173,7 @@ def get_duplicate_items_in_list(items):
 
 
 def check_keys_and_value_types(dikt, ref_dict, location='dictionary',
-                               excluded_keys=[],
+                               excluded_keys=None,
                                msg_update_callback=NullPrinter()):
     """Compare a dictionary with a reference dictionary.
 
@@ -191,6 +191,8 @@ def check_keys_and_value_types(dikt, ref_dict, location='dictionary',
     :raises TypeError: if the value of a property in @dikt does not match with
         the value of the same property in @ref_dict
     """
+    if excluded_keys is None:
+        excluded_keys = []
     ref_keys = set(ref_dict.keys())
     keys = set(dikt.keys())
 
@@ -474,25 +476,37 @@ def construct_filter_string(filters: dict):
 def construct_paginated_response(values, result_total,
                                  page_number=CSE_PAGINATION_FIRST_PAGE_NUMBER,  # noqa: E501
                                  page_size=CSE_PAGINATION_DEFAULT_PAGE_SIZE,  # noqa: E501
+                                 page_count=None,
                                  next_page_uri=None,
                                  prev_page_uri=None):
+    if not page_count:
+        extra_page = 1 if bool(result_total % page_size) else 0
+        page_count = result_total // page_size + extra_page
     resp = {
-        PaginationKey.VALUES: values,
         PaginationKey.RESULT_TOTAL: result_total,
+        PaginationKey.PAGE_COUNT: page_count,
         PaginationKey.PAGE_NUMBER: page_number,
-        PaginationKey.PAGE_SIZE: page_size
+        PaginationKey.PAGE_SIZE: page_size,
+        PaginationKey.NEXT_PAGE_URI: next_page_uri,
+        PaginationKey.PREV_PAGE_URI: prev_page_uri,
+        PaginationKey.VALUES: values
     }
-    if next_page_uri:
-        resp[PaginationKey.NEXT_PAGE_URI] = next_page_uri
-    if prev_page_uri:
-        resp[PaginationKey.PREV_PAGE_URI] = prev_page_uri
+
+    # Conditionally deleting instead of conditionally adding the entry
+    # maintains the order for the response
+    if not prev_page_uri:
+        del resp[PaginationKey.PREV_PAGE_URI]
+    if not next_page_uri:
+        del resp[PaginationKey.NEXT_PAGE_URI]
     return resp
 
 
 def create_links_and_construct_paginated_result(base_uri, values, result_total,
                                                 page_number=CSE_PAGINATION_FIRST_PAGE_NUMBER,  # noqa: E501
                                                 page_size=CSE_PAGINATION_DEFAULT_PAGE_SIZE,  # noqa: E501
-                                                query_params={}):
+                                                query_params=None):
+    if query_params is None:
+        query_params = {}
     next_page_uri: str = None
     if page_number * page_size < result_total:
         # TODO find a way to get the initial url part
@@ -508,8 +522,10 @@ def create_links_and_construct_paginated_result(base_uri, values, result_total,
 
     # add the rest of the query parameters
     for q in query_params.keys():
-        next_page_uri += f"&{q}={query_params[q]}"
-        prev_page_uri += f"&{q}={query_params[q]}"
+        if next_page_uri:
+            next_page_uri += f"&{q}={query_params[q]}"
+        if prev_page_uri:
+            prev_page_uri += f"&{q}={query_params[q]}"
 
     return construct_paginated_response(values=values,
                                         result_total=result_total,
