@@ -8,12 +8,15 @@ import time
 import pyvcloud.vcd.client as vcd_client
 import pyvcloud.vcd.gateway as vcd_gateway
 
-import container_service_extension.cloudapi.constants as cloudapi_constants
-import container_service_extension.pyvcloud_utils as pyvcloud_utils
-import container_service_extension.server_constants as server_constants
-from container_service_extension.server_constants import NsxtGatewayRequestKey
-import container_service_extension.shared_constants as shared_constants
-import container_service_extension.utils as server_utils
+import container_service_extension.common.constants.shared_constants as \
+    shared_constants
+import container_service_extension.common.utils.core_utils as core_utils
+import container_service_extension.common.utils.pyvcloud_utils as \
+    pyvcloud_utils
+import container_service_extension.lib.cloudapi.constants as cloudapi_constants
+import container_service_extension.lib.nsxt.constants as nsxt_constants
+from container_service_extension.lib.nsxt.constants import \
+    NsxtGatewayRequestKey, NsxtNATRuleKey
 
 
 def _get_available_subnet_info(subnet_values, network_to_available_ip_dict):
@@ -50,7 +53,7 @@ def _get_updated_subnet_value(updated_get_gateway_response, gateway_ip,
 
 def _gateway_body_to_external_address_id(gateway_body: dict):
     return gateway_body[NsxtGatewayRequestKey.EDGE_GATEWAY_UPLINKS][
-        server_constants.NSXT_BACKED_GATEWAY_UPLINK_INDEX][NsxtGatewayRequestKey.UPLINK_ID]  # noqa: E501
+        nsxt_constants.NSXT_BACKED_GATEWAY_UPLINK_INDEX][NsxtGatewayRequestKey.UPLINK_ID]  # noqa: E501
 
 
 def _gateway_body_to_subnet_values(gateway_body: dict):
@@ -62,7 +65,7 @@ def _gateway_body_to_subnet_values(gateway_body: dict):
     :rtype: list
     """
     return gateway_body[NsxtGatewayRequestKey.EDGE_GATEWAY_UPLINKS][
-        server_constants.NSXT_BACKED_GATEWAY_UPLINK_INDEX][
+        nsxt_constants.NSXT_BACKED_GATEWAY_UPLINK_INDEX][
         NsxtGatewayRequestKey.SUBNETS][NsxtGatewayRequestKey.VALUES]
 
 
@@ -113,15 +116,20 @@ class NsxtBackedGatewayService:
         self._client = client
         self._cloudapi_client = \
             pyvcloud_utils.get_cloudapi_client_from_vcd_client(client)
-        gateway_id = server_utils.extract_id_from_href(self._gateway.href)
-        self._gateway_urn = f'{server_constants.GATEWAY_URN_PREFIX}:' \
+        gateway_id = core_utils.extract_id_from_href(self._gateway.href)
+        self._gateway_urn = f'{nsxt_constants.GATEWAY_URN_PREFIX}:' \
                             f'{gateway_id}'
         self._gateway_relative_path = \
             f'{cloudapi_constants.CloudApiResource.EDGE_GATEWAYS}/' \
             f'{self._gateway_urn}'
 
     def quick_ip_allocation(self):
-        """Allocate one ip using the edge quick ip allocation feature."""
+        """Allocate one ip using the edge quick ip allocation feature.
+
+        :return: ip address of the allocated ip. None is returned if no ip
+            is allocated
+        :rtype: str
+        """
         # Get current edge gateway body to use for PUT request body
         put_request_body = self._get_gateway()
 
@@ -150,8 +158,8 @@ class NsxtBackedGatewayService:
         while True:
             updated_get_gateway_response = self._get_gateway()
             if updated_get_gateway_response[NsxtGatewayRequestKey.STATUS] != \
-                    server_constants.NSXT_GATEWAY_REALIZED_STATUS:
-                time.sleep(server_constants.NSXT_PUT_REQUEST_WAIT_TIME)
+                    nsxt_constants.NSXT_GATEWAY_REALIZED_STATUS:
+                time.sleep(nsxt_constants.NSXT_PUT_REQUEST_WAIT_TIME)
             else:
                 break
 
@@ -190,22 +198,21 @@ class NsxtBackedGatewayService:
             for port profile
         """
         post_body = {
-            server_constants.NsxtNATRuleKey.NAME: name,
-            server_constants.NsxtNATRuleKey.DESCRIPTION: description,
-            server_constants.NsxtNATRuleKey.ENABLED: enabled,
-            server_constants.NsxtNATRuleKey.RULE_TYPE: server_constants.DNAT_RULE_TYPE,  # noqa: E501
-            server_constants.NsxtNATRuleKey.EXTERNAL_ADDRESSES: external_address,  # noqa: E501
-            server_constants.NsxtNATRuleKey.INTERNAL_ADDRESSES: internal_address,  # noqa: E501
-            server_constants.NsxtNATRuleKey.LOGGING: logging_enabled,
-            server_constants.NsxtNATRuleKey.APPLICATION_PORT_PROFILE:
-                application_port_profile,
-            server_constants.NsxtNATRuleKey.DNAT_EXTERNAL_PORT: dnat_external_port  # noqa: E501
+            NsxtNATRuleKey.NAME: name,
+            NsxtNATRuleKey.DESCRIPTION: description,
+            NsxtNATRuleKey.ENABLED: enabled,
+            NsxtNATRuleKey.RULE_TYPE: nsxt_constants.DNAT_RULE_TYPE,
+            NsxtNATRuleKey.EXTERNAL_ADDRESSES: external_address,
+            NsxtNATRuleKey.INTERNAL_ADDRESSES: internal_address,
+            NsxtNATRuleKey.LOGGING: logging_enabled,
+            NsxtNATRuleKey.APPLICATION_PORT_PROFILE: application_port_profile,
+            NsxtNATRuleKey.DNAT_EXTERNAL_PORT: dnat_external_port
         }
 
         nat_rules_relative_path = \
             f'{cloudapi_constants.CloudApiResource.EDGE_GATEWAYS}/' \
-            f'{self._gateway_urn}/{server_constants.NATS_PATH_FRAGMENT}/' \
-            f'{server_constants.RULES_PATH_FRAGMENT}'
+            f'{self._gateway_urn}/{nsxt_constants.NATS_PATH_FRAGMENT}/' \
+            f'{nsxt_constants.RULES_PATH_FRAGMENT}'
         self._cloudapi_client.do_request(
             method=shared_constants.RequestMethod.POST,
             cloudapi_version=cloudapi_constants.CloudApiVersion.VERSION_1_0_0,
@@ -227,7 +234,7 @@ class NsxtBackedGatewayService:
         """
         request_relative_path = \
             f'{cloudapi_constants.CloudApiResource.EXTERNAL_NETWORKS}/' \
-            f'{external_network_id}/{server_constants.AVAILABLE_IP_PATH_FRAGMENT}'  # noqa: E501
+            f'{external_network_id}/{nsxt_constants.AVAILABLE_IP_PATH_FRAGMENT}'  # noqa: E501
         available_ip_response = self._cloudapi_client.do_request(
             method=shared_constants.RequestMethod.GET,
             cloudapi_version=cloudapi_constants.CloudApiVersion.VERSION_1_0_0,
