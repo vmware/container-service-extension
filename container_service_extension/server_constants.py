@@ -83,6 +83,24 @@ VCENTER_LOGIN_ERROR_MSG = "vCenter login failed (check config file for "\
 # Request Id format for logging
 REQUEST_ID_FORMAT = 'Request Id: %(requestId)s | '
 
+# Prefix for Gateway urn
+GATEWAY_URN_PREFIX = 'urn:vcloud:gateway'
+
+# NSXT Gateway NAT constants
+NATS_PATH_FRAGMENT = 'nat'
+RULES_PATH_FRAGMENT = 'rules'
+DNAT_RULE_TYPE = 'DNAT'
+
+# NSX-T constants
+NSXT_BACKED_GATEWAY_UPLINK_INDEX = 0  # NSX-T gateway only have 1 ext network
+NSXT_PUT_REQUEST_WAIT_TIME = 3
+
+# External network available ip address path fragment
+AVAILABLE_IP_PATH_FRAGMENT = 'availableIpAddresses'
+
+# NSX-T realized status
+NSXT_GATEWAY_REALIZED_STATUS = 'REALIZED'
+
 
 @unique
 class NodeType(str, Enum):
@@ -332,6 +350,46 @@ class AclAccessLevelId(str, Enum):
 @unique
 class AclMemberId(str, Enum):
     SystemOrgId = "urn:vcloud:org:a93c9db9-7471-3192-8d09-a8f7eeda85f9"
+
+
+@unique
+class VappAccessKey(str, Enum):
+    """Keys for VAPP access control."""
+
+    IS_SHARED_TO_EVERYONE = 'isSharedToEveryone'
+    ACCESS_SETTINGS = 'accessSettings'
+    ACCESS_SETTING = 'accessSetting'
+
+
+@unique
+class NsxtNATRuleKey(str, Enum):
+    """Keys for NSXT NAT Rules."""
+
+    NAME = 'name'
+    DESCRIPTION = 'description'
+    ENABLED = 'enabled'
+    RULE_TYPE = 'ruleType'
+    EXTERNAL_ADDRESSES = 'externalAddresses'
+    INTERNAL_ADDRESSES = 'internalAddresses'
+    LOGGING = 'logging'
+    APPLICATION_PORT_PROFILE = 'applicationPortProfile'
+    DNAT_EXTERNAL_PORT = 'dnatExternalPort'
+
+
+@unique
+class NsxtGatewayRequestKey(str, Enum):
+    EDGE_GATEWAY_UPLINKS = 'edgeGatewayUplinks'
+    UPLINK_ID = 'uplinkId'
+    GATEWAY = 'gateway'
+    PREFIX_LENGTH = 'prefixLength'
+    TOTAL_IP_COUNT = 'totalIpCount'
+    AUTO_ALLOCATE_IP_RANGES = 'autoAllocateIpRanges'
+    SUBNETS = 'subnets'
+    VALUES = 'values'
+    IP_RANGES = 'ipRanges'
+    START_ADDRESS = 'startAddress'
+    END_ADDRESS = 'endAddress'
+    STATUS = 'status'
 
 
 # CSE Service Role Name

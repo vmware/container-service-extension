@@ -26,3 +26,5 @@ class CloudApiResource(str, Enum):
     RIGHT_BUNDLES = 'rightsBundles'
     ACL = 'accessControls'
     VDCS = 'vdcs'
+    EDGE_GATEWAYS = 'edgeGateways'
+    EXTERNAL_NETWORKS = 'externalNetworks'
