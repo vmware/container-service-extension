@@ -5,9 +5,7 @@
 from dataclasses import dataclass
 from typing import List
 
-import container_service_extension.common.constants.shared_constants as shared_constants  # noqa: E501
 import container_service_extension.rde.constants as def_constants
-import container_service_extension.rde.utils as def_utils
 
 
 @dataclass()
@@ -211,5 +209,3 @@ class NativeEntity:
         self.status = Status(**status) if isinstance(status, dict) else status
         self.kind = kind
         self.api_version = api_version
-
-
