@@ -625,9 +625,10 @@ def process_request(message):
 
         url_matched = True
         for i in range(0, len(url_tokens)):
-            if entry['url_tokens'][i].startswith("$"):
-                url_data[entry['url_tokens'][1:]] = url_tokens[i]
-            elif entry['url_tokens'][i].lower() != url_tokens[i].lower():
+            token = entry['url_tokens'][i]
+            if token.startswith("$"):
+                url_data[token[1:]] = url_tokens[i]
+            elif token.lower() != url_tokens[i].lower():
                 url_matched = False
                 url_data.clear()
                 break
