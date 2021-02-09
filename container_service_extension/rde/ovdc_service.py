@@ -128,11 +128,15 @@ def _get_cse_ovdc_list(sysadmin_client: vcd_client.Client, ovdc_list: list):
         config = server_utils.get_server_runtime_config()
         log_wire = utils.str_to_bool(config.get('service', {}).get('log_wire'))
         ovdc_id = vcd_utils.extract_id(ovdc.get('id'))
+        # obtain ovdc runtime details for the ovdc
         ovdc_details = asdict(
             get_ovdc_k8s_runtime_details(sysadmin_client,
                                          ovdc_id=ovdc_id,
                                          ovdc_name=ovdc_name,
                                          log_wire=log_wire))
+        # NOTE: For CSE 3.0, if `enable_tkg_plus` flag in
+        # config is set to false, Prevent showing information
+        # about TKG+ by skipping TKG+ from the result.
         if ClusterEntityKind.TKG_PLUS.value in ovdc_details['k8s_runtime'] \
                 and not server_utils.is_tkg_plus_enabled():  # noqa: E501
             ovdc_details['k8s_runtime'].remove(ClusterEntityKind.TKG_PLUS.value)  # noqa: E501
@@ -149,8 +153,10 @@ def list_ovdc(operation_context: ctx.OperationContext) -> list:
     :return: list of org vdcs
     :rtype: list
     """
-    # NOTE: For CSE 3.0, if `enable_tkg_plus` flag in config is set to false,
-    # Prevent showing information about TKG+ by skipping TKG+ from the result.
+    # NOTE: Response sent out by this function should not be
+    # paginated. The purpose of this handler is to maintain
+    # backward compatibility
+    # TODO: Deprecate handler once support for CSE 3.0 is removed
     # Record telemetry
     telemetry_handler.record_user_action_details(
         cse_operation=CseOperation.OVDC_LIST,
@@ -175,8 +181,8 @@ def list_org_vdcs(operation_context: ctx.OperationContext,
     :return: dictionary containing list of details about the ovdc
     :rtype: dict
     """
-    # NOTE: For CSE 3.0, if `enable_tkg_plus` flag in config is set to false,
-    # Prevent showing information about TKG+ by skipping TKG+ from the result.
+    # NOTE: The response sent out by this function needs to be
+    # paginated
     # Record telemetry
     telemetry_handler.record_user_action_details(
         cse_operation=CseOperation.OVDC_LIST,

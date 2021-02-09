@@ -115,6 +115,8 @@ def _get_cse_ovdc_list(sysadmin_client: vcd_client.Client,
         ovdc_name = ovdc.get('name')
         org_name = ovdc.get('orgName')
         ovdc_id = vcd_utils.extract_id(ovdc.get('id'))
+        # obtain the runtimes supported stored in
+        # ovdc metadata
         k8s_metadata = ovdc_utils.get_ovdc_k8s_provider_metadata(
             sysadmin_client,
             ovdc_id=ovdc_id,
@@ -136,6 +138,8 @@ def ovdc_list(request_data, op_ctx: ctx.OperationContext):
 
     :return: List of dictionaries with org VDC k8s provider metadata.
     """
+    # NOTE: Response sent out by this function should not be
+    # paginated
     # Record telemetry data
     cse_params = copy.deepcopy(request_data)
     record_user_action_details(cse_operation=CseOperation.OVDC_LIST,
@@ -153,6 +157,7 @@ def org_vdc_list(request_data, op_ctx: ctx.OperationContext):
     :return: Dictionary containing list of org VDC K8s provider metadata
     :rtype: dict
     """
+    # NOTE: Response sent out by this funciton should be paginated
     defaults = {
         PaginationKey.PAGE_NUMBER: CSE_PAGINATION_FIRST_PAGE_NUMBER,
         PaginationKey.PAGE_SIZE: CSE_PAGINATION_DEFAULT_PAGE_SIZE

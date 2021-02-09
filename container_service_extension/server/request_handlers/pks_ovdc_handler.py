@@ -144,8 +144,10 @@ def ovdc_info(request_data, op_ctx: ctx.OperationContext):
 def org_vdc_list(request_data, op_ctx: ctx.OperationContext):
     """Request handler for ovdc list operation.
 
-    :return: List of dictionaries with org VDC k8s provider metadata.
+    :return: dictionary containing list of Org VDCs
+    :rtype: dict
     """
+    # NOTE: Response sent out by this handler should be paginated
     defaults = {
         RequestKey.LIST_PKS_PLANS: False,
         PaginationKey.PAGE_NUMBER: CSE_PAGINATION_FIRST_PAGE_NUMBER,
@@ -257,7 +259,9 @@ def ovdc_list(request_data, op_ctx: ctx.OperationContext):
     """Request handler for ovdc list operation.
 
     :return: List of dictionaries with org VDC k8s provider metadata.
+    :rtype: list
     """
+    # NOTE: response sent out by this handler should not be paginated
     defaults = {
         RequestKey.LIST_PKS_PLANS: False,
     }
