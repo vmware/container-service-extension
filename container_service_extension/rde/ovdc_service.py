@@ -121,17 +121,42 @@ def get_ovdc(operation_context: ctx.OperationContext, ovdc_id: str) -> dict:
     return result
 
 
-def list_ovdc(operation_context: ctx.OperationContext,
-              page_number=CSE_PAGINATION_FIRST_PAGE_NUMBER,
-              page_size=CSE_PAGINATION_DEFAULT_PAGE_SIZE) -> dict:
+def _get_cse_ovdc_list(sysadmin_client: vcd_client.Client, ovdc_list: list):
+    ovdcs = []
+    for ovdc in ovdc_list:
+        ovdc_name = ovdc.get('name')
+        config = server_utils.get_server_runtime_config()
+        log_wire = utils.str_to_bool(config.get('service', {}).get('log_wire'))
+        ovdc_id = vcd_utils.extract_id(ovdc.get('id'))
+        # obtain ovdc runtime details for the ovdc
+        ovdc_details = asdict(
+            get_ovdc_k8s_runtime_details(sysadmin_client,
+                                         ovdc_id=ovdc_id,
+                                         ovdc_name=ovdc_name,
+                                         log_wire=log_wire))
+        # NOTE: For CSE 3.0, if `enable_tkg_plus` flag in
+        # config is set to false, Prevent showing information
+        # about TKG+ by skipping TKG+ from the result.
+        if ClusterEntityKind.TKG_PLUS.value in ovdc_details['k8s_runtime'] \
+                and not server_utils.is_tkg_plus_enabled():  # noqa: E501
+            ovdc_details['k8s_runtime'].remove(ClusterEntityKind.TKG_PLUS.value)  # noqa: E501
+        # TODO: Find a better way to remove remove_cp_from_vms_on_disable
+        del ovdc_details['remove_cp_from_vms_on_disable']
+        ovdcs.append(ovdc_details)
+    return ovdcs
+
+
+def list_ovdc(operation_context: ctx.OperationContext) -> list:
     """List all ovdc and their k8s runtimes.
 
     :param ctx.OperationContext operation_context: context for the request
-    :return: dictionary containing list of details about the ovdc
-    :rtype: dict
+    :return: list of org vdcs
+    :rtype: list
     """
-    # NOTE: For CSE 3.0, if `enable_tkg_plus` flag in config is set to false,
-    # Prevent showing information about TKG+ by skipping TKG+ from the result.
+    # NOTE: Response sent out by this function should not be
+    # paginated. The purpose of this handler is to maintain
+    # backward compatibility
+    # TODO: Deprecate handler once support for CSE 3.0 is removed
     # Record telemetry
     telemetry_handler.record_user_action_details(
         cse_operation=CseOperation.OVDC_LIST,
@@ -139,33 +164,41 @@ def list_ovdc(operation_context: ctx.OperationContext,
             PayloadKey.SOURCE_DESCRIPTION: thread_local_data.get_thread_local_data(ThreadLocalData.USER_AGENT)  # noqa: E501
         }
     )
+    # send un-paginated response
+    org_vdcs = vcd_utils.get_all_ovdcs(operation_context.client)
+    return _get_cse_ovdc_list(operation_context.sysadmin_client,
+                              org_vdcs)
 
-    ovdcs = []
+
+def list_org_vdcs(operation_context: ctx.OperationContext,
+                  page_number=CSE_PAGINATION_FIRST_PAGE_NUMBER,
+                  page_size=CSE_PAGINATION_DEFAULT_PAGE_SIZE) -> dict:
+    """Fetch org VDCs and their k8s runtimes.
+
+    :param ctx.OperationContext operation_context: context for the request
+    :param int page_number: page_number to fetch
+    :param int page_size: size of each page to return
+    :return: dictionary containing list of details about the ovdc
+    :rtype: dict
+    """
+    # NOTE: The response sent out by this function needs to be
+    # paginated
+    # Record telemetry
+    telemetry_handler.record_user_action_details(
+        cse_operation=CseOperation.OVDC_LIST,
+        cse_params={
+            PayloadKey.SOURCE_DESCRIPTION: thread_local_data.get_thread_local_data(ThreadLocalData.USER_AGENT)  # noqa: E501
+        }
+    )
     result = cloudapi_utils.get_vdcs_by_page(
         operation_context.cloudapi_client,
         page_number=page_number, page_size=page_size)
-    org_vdcs = result[PaginationKey.VALUES]
     num_results = result[PaginationKey.RESULT_TOTAL]
-    for ovdc in org_vdcs:
-        ovdc_name = ovdc.get('name')
-        config = server_utils.get_server_runtime_config()
-        log_wire = utils.str_to_bool(config.get('service', {}).get('log_wire'))
-        ovdc_id = vcd_utils.extract_id(ovdc.get('id'))
-        ovdc_details = asdict(
-            get_ovdc_k8s_runtime_details(operation_context.sysadmin_client,
-                                         ovdc_id=ovdc_id,
-                                         ovdc_name=ovdc_name,
-                                         log_wire=log_wire))
-        if ClusterEntityKind.TKG_PLUS.value in ovdc_details['k8s_runtime'] \
-                and not server_utils.is_tkg_plus_enabled():  # noqa: E501
-            ovdc_details['k8s_runtime'].remove(ClusterEntityKind.TKG_PLUS.value)  # noqa: E501
-        # TODO: Find a better way to remove remove_cp_from_vms_on_disable
-        del ovdc_details['remove_cp_from_vms_on_disable']
-        ovdcs.append(ovdc_details)
+    ovdcs = _get_cse_ovdc_list(operation_context.sysadmin_client,
+                               result[PaginationKey.VALUES])
     return {
         PaginationKey.RESULT_TOTAL: num_results,
-        PaginationKey.VALUES: ovdcs
-    }
+        PaginationKey.VALUES: ovdcs}
 
 
 def get_ovdc_k8s_runtime_details(sysadmin_client: vcd_client.Client,
