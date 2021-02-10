@@ -11,6 +11,8 @@ import semantic_version
 import container_service_extension.common.constants.server_constants as server_constants  # noqa: E501
 import container_service_extension.common.constants.shared_constants as shared_constants  # noqa: E501
 import container_service_extension.common.utils.core_utils as utils
+import container_service_extension.rde.models_.common_models
+import container_service_extension.rde.models_.rde_1_0_0
 
 
 def get_installed_cse_version():
@@ -44,9 +46,9 @@ def get_default_storage_profile():
 
 def get_default_k8_distribution():
     config = get_server_runtime_config()
-    import container_service_extension.rde.models as def_models
-    return def_models.Distribution(template_name=config['broker']['default_template_name'],  # noqa: E501
-                                   template_revision=config['broker']['default_template_revision'])  # noqa: E501
+    import container_service_extension.rde.models_.rde_1_0_0 as rde_1_0_0
+    return rde_1_0_0.Distribution(template_name=config['broker']['default_template_name'],
+                                  template_revision=config['broker']['default_template_revision'])
 
 
 def get_pks_cache():

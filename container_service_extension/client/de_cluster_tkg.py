@@ -7,6 +7,7 @@ import json
 import yaml
 
 import container_service_extension.client.constants as cli_constants
+import container_service_extension.rde.models_.common_models
 from container_service_extension.client.tkgclient import TkgClusterApi
 from container_service_extension.client.tkgclient.api_client import ApiClient
 from container_service_extension.client.tkgclient.configuration import Configuration  # noqa: E501
@@ -23,7 +24,6 @@ from container_service_extension.rde.constants import CLUSTER_ACL_LIST_FIELDS
 from container_service_extension.rde.constants import DEF_TKG_ENTITY_TYPE_NSS
 from container_service_extension.rde.constants import DEF_TKG_ENTITY_TYPE_VERSION  # noqa: E501
 from container_service_extension.rde.constants import DEF_VMWARE_VENDOR
-import container_service_extension.rde.models as def_models
 
 
 class DEClusterTKG:
@@ -467,7 +467,7 @@ class DEClusterTKG:
                 break
             acl_values = []
             for entry in values:
-                acl_entry = def_models.ClusterAclEntry(**entry)
+                acl_entry = container_service_extension.rde.models_.common_models.ClusterAclEntry(**entry)
                 acl_entry.username = org_user_id_to_name_dict.get(acl_entry.memberId)  # noqa: E501
                 acl_values.append(acl_entry.construct_filtered_dict(
                     include=CLUSTER_ACL_LIST_FIELDS))

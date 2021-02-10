@@ -7,10 +7,11 @@ from typing import Dict, List
 
 import pyvcloud.vcd.client as vcd_client
 
+import container_service_extension.rde.models_.common_models
+import container_service_extension.rde.models_.rde_1_0_0
 from container_service_extension.client.cse_client.cse_client import CseClient
 import container_service_extension.client.response_processor as response_processor  # noqa: E501
 import container_service_extension.common.constants.shared_constants as shared_constants  # noqa: E501
-import container_service_extension.rde.models as def_models
 
 
 class NativeClusterApi(CseClient):
@@ -20,7 +21,7 @@ class NativeClusterApi(CseClient):
         self._clusters_uri = f"{self._uri}/clusters"
         self._cluster_uri = f"{self._uri}/{shared_constants.CLUSTER_URL_FRAGMENT}"  # noqa: E501
 
-    def create_cluster(self, cluster_entity_definition: def_models.NativeEntity):  # noqa: E501
+    def create_cluster(self, cluster_entity_definition: container_service_extension.rde.models_.rde_1_0_0.NativeEntity):  # noqa: E501
         cluster_entity_dict = asdict(cluster_entity_definition)
         uri = self._clusters_uri
         response = self._client._do_request_prim(
@@ -30,10 +31,10 @@ class NativeClusterApi(CseClient):
             contents=cluster_entity_dict,
             media_type='application/json',
             accept_type='application/json')
-        return def_models.DefEntity(
+        return container_service_extension.rde.models_.common_models.DefEntity(
             **response_processor.process_response(response))
 
-    def update_cluster_by_cluster_id(self, cluster_id, cluster_entity_definition: def_models.NativeEntity):  # noqa: E501
+    def update_cluster_by_cluster_id(self, cluster_id, cluster_entity_definition: container_service_extension.rde.models_.rde_1_0_0.NativeEntity):  # noqa: E501
         cluster_entity_dict = asdict(cluster_entity_definition)
         uri = f"{self._cluster_uri}/{cluster_id}"
         response = self._client._do_request_prim(
@@ -43,7 +44,7 @@ class NativeClusterApi(CseClient):
             contents=cluster_entity_dict,
             media_type='application/json',
             accept_type='application/json')
-        return def_models.DefEntity(
+        return container_service_extension.rde.models_.common_models.DefEntity(
             **response_processor.process_response(response))
 
     def delete_cluster_by_cluster_id(self, cluster_id):
@@ -54,7 +55,7 @@ class NativeClusterApi(CseClient):
             self._client._session,
             media_type='application/json',
             accept_type='application/json')
-        return def_models.DefEntity(**response_processor.process_response(response))  # noqa: E501
+        return container_service_extension.rde.models_.common_models.DefEntity(**response_processor.process_response(response))  # noqa: E501
 
     def delete_nfs_node_by_node_name(self, cluster_id: str, node_name: str):
         uri = f"{self._cluster_uri}/{cluster_id}/nfs/{node_name}"
@@ -64,7 +65,7 @@ class NativeClusterApi(CseClient):
             self._client._session,
             media_type='application/json',
             accept_type='application/json')
-        return def_models.DefEntity(
+        return container_service_extension.rde.models_.common_models.DefEntity(
             **response_processor.process_response(response))
 
     def get_cluster_config_by_cluster_id(self, cluster_id: str) -> dict:
@@ -87,7 +88,7 @@ class NativeClusterApi(CseClient):
         return response_processor.process_response(response)
 
     def upgrade_cluster_by_cluster_id(self, cluster_id: str,
-                                      cluster_upgrade_definition: def_models.DefEntity):  # noqa: E501
+                                      cluster_upgrade_definition: container_service_extension.rde.models_.common_models.DefEntity):  # noqa: E501
         uri = f'{self._uri}/cluster/{cluster_id}/action/upgrade'
         entity_dict = asdict(cluster_upgrade_definition.entity)
         response = self._client._do_request_prim(
@@ -97,7 +98,7 @@ class NativeClusterApi(CseClient):
             contents=entity_dict,
             media_type='application/json',
             accept_type='application/json')
-        return def_models.DefEntity(
+        return container_service_extension.rde.models_.common_models.DefEntity(
             **response_processor.process_response(response))
 
     def get_single_page_cluster_acl(self, cluster_id,
@@ -126,7 +127,7 @@ class NativeClusterApi(CseClient):
             if len(acl_values) == 0:
                 break
             for acl_value in acl_values:
-                yield def_models.ClusterAclEntry(**acl_value)
+                yield container_service_extension.rde.models_.common_models.ClusterAclEntry(**acl_value)
 
     def put_cluster_acl(self, cluster_id: str, acl_entries: List[Dict]):
         uri = f'{self._cluster_uri}/{cluster_id}/acl'

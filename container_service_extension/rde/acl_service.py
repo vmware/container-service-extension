@@ -15,7 +15,7 @@ import container_service_extension.common.utils.pyvcloud_utils as vcd_utils
 import container_service_extension.lib.cloudapi.constants as cloudapi_constants
 import container_service_extension.rde.constants as def_constants
 import container_service_extension.rde.entity_service as def_entity_svc
-import container_service_extension.rde.models as def_models
+import container_service_extension.rde.models_.common_models
 
 
 class ClusterACLService:
@@ -27,7 +27,7 @@ class ClusterACLService:
         self._cloudapi_client = \
             vcd_utils.get_cloudapi_client_from_vcd_client(client)
         self._cluster_id = cluster_id
-        self._def_entity: def_models.DefEntity = None
+        self._def_entity: container_service_extension.rde.models_.common_models.DefEntity = None
         self._vapp: vcd_vapp.VApp = None
 
     @property
@@ -71,7 +71,7 @@ class ClusterACLService:
             if len(values) == 0:
                 break
             for acl_entry in values:
-                yield def_models.ClusterAclEntry(**acl_entry)
+                yield container_service_extension.rde.models_.common_models.ClusterAclEntry(**acl_entry)
 
     def create_user_id_to_acl_entry_dict(self):
         """Get all def entity acl values from all pages.
@@ -102,8 +102,9 @@ class ClusterACLService:
             cloudapi_version=cloudapi_constants.CloudApiVersion.VERSION_1_0_0,
             resource_url_relative_path=delete_path)
 
-    def update_native_def_entity_acl(self, update_acl_entries: List[def_models.ClusterAclEntry],  # noqa: E501
-                                     prev_user_id_to_acl_entry: Dict[str, def_models.ClusterAclEntry]):  # noqa: E501
+    def update_native_def_entity_acl(self, update_acl_entries: List[
+        container_service_extension.rde.models_.common_models.ClusterAclEntry],  # noqa: E501
+                                     prev_user_id_to_acl_entry: Dict[str, container_service_extension.rde.models_.common_models.ClusterAclEntry]):  # noqa: E501
         """Update native defined entity acl.
 
         :param list update_acl_entries: list of def_models.ClusterAclEntry
@@ -174,7 +175,8 @@ class ClusterACLService:
         return non_updated_access_settings
 
     def native_update_vapp_access_settings(self, prev_user_id_to_acl_entry_dict,  # noqa : E501
-                                           update_cluster_acl_entries: List[def_models.ClusterAclEntry]):  # noqa: E501
+                                           update_cluster_acl_entries: List[
+                                               container_service_extension.rde.models_.common_models.ClusterAclEntry]):  # noqa: E501
         def_entity_user_ids = {acl_entry.memberId for _, acl_entry in
                                prev_user_id_to_acl_entry_dict.items()}
         total_vapp_access_settings = self.native_get_vapp_settings_only_vapp_shared(def_entity_user_ids)  # noqa: E501
