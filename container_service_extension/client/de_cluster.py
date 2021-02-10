@@ -12,7 +12,7 @@ import yaml
 
 import container_service_extension.client.constants as cli_constants
 import container_service_extension.rde.models.common_models as common_models
-import container_service_extension.rde.models.rde_1_0_0
+import container_service_extension.rde.models.rde_1_0_0 as rde_1_0_0
 from container_service_extension.client.de_cluster_native import DEClusterNative  # noqa: E501
 from container_service_extension.client.de_cluster_tkg import DEClusterTKG
 import container_service_extension.client.tkgclient.rest as tkg_rest
@@ -107,7 +107,7 @@ class DECluster:
                             cli_constants.CLIOutputKey.ORG.value: de.org.name, # noqa: E501
                             cli_constants.CLIOutputKey.OWNER.value: de.owner.name  # noqa: E501
                         }
-                        if type(entity) == container_service_extension.rde.models.rde_1_0_0.NativeEntity:
+                        if type(entity) == rde_1_0_0.NativeEntity:
                             cluster[cli_constants.CLIOutputKey.VDC.value] = \
                                 entity.metadata.ovdc_name
                             cluster[cli_constants.CLIOutputKey.K8S_RUNTIME.value] = entity.kind  # noqa: E501

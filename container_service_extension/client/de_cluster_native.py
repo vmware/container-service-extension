@@ -10,7 +10,7 @@ import yaml
 
 import container_service_extension.client.constants as cli_constants
 import container_service_extension.rde.models.common_models as common_models
-import container_service_extension.rde.models.rde_1_0_0
+import container_service_extension.rde.models.rde_1_0_0 as rde_1_0_0
 from container_service_extension.client.cse_client.api_35.native_cluster_api import NativeClusterApi  # noqa: E501
 import container_service_extension.client.utils as client_utils
 import container_service_extension.common.constants.shared_constants as shared_constants  # noqa: E501
@@ -41,7 +41,7 @@ class DEClusterNative:
         self._native_cluster_api = NativeClusterApi(client)
         self._client = client
 
-    def create_cluster(self, cluster_entity: container_service_extension.rde.models.rde_1_0_0.NativeEntity):
+    def create_cluster(self, cluster_entity: rde_1_0_0.NativeEntity):
         """Create a new Kubernetes cluster.
 
         :param models.NativeEntity cluster_entity: native cluster entity
@@ -50,7 +50,7 @@ class DEClusterNative:
         msg = "Operation not supported; Under implementation"
         raise vcd_exceptions.OperationNotSupportedException(msg)
 
-    def resize_cluster(self, cluster_entity: container_service_extension.rde.models.rde_1_0_0.NativeEntity):
+    def resize_cluster(self, cluster_entity: rde_1_0_0.NativeEntity):
         """Resize the existing Kubernetes cluster.
 
         :param models.NativeEntity cluster_entity: native cluster entity
@@ -249,7 +249,7 @@ class DEClusterNative:
         :rtype: dict
         """
         entity_svc = def_entity_svc.DefEntityService(self._cloudapi_client)
-        cluster_spec = container_service_extension.rde.models.rde_1_0_0.NativeEntity(**cluster_config)
+        cluster_spec = rde_1_0_0.NativeEntity(**cluster_config)
         cluster_name = cluster_spec.metadata.cluster_name
         if cluster_id:
             # If cluster id doesn't exist, an exception will be raised

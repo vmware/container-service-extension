@@ -29,7 +29,7 @@ import container_service_extension.common.utils.core_utils as utils
 import container_service_extension.common.utils.pyvcloud_utils as vcd_utils
 import container_service_extension.common.utils.server_utils as server_utils
 import container_service_extension.rde.models.common_models as common_models
-import container_service_extension.rde.models.rde_1_0_0
+import container_service_extension.rde.models.rde_1_0_0 as rde_1_0_0
 from container_service_extension.common.utils.vsphere_utils import populate_vsphere_list  # noqa: E501
 import container_service_extension.exception.exceptions as cse_exception
 from container_service_extension.installer.right_bundle_manager import RightBundleManager  # noqa: E501
@@ -2352,33 +2352,33 @@ def _create_def_entity_for_existing_clusters(
         worker_nodes = []
         for item in cluster['nodes']:
             worker_nodes.append(
-                container_service_extension.rde.models.rde_1_0_0.Node(name=item['name'], ip=item['ipAddress']))
+                rde_1_0_0.Node(name=item['name'], ip=item['ipAddress']))
         nfs_nodes = []
         for item in cluster['nfs_nodes']:
-            nfs_nodes.append(container_service_extension.rde.models.rde_1_0_0.NfsNode(
+            nfs_nodes.append(rde_1_0_0.NfsNode(
                 name=item['name'],
                 ip=item['ipAddress'],
                 exports=item['exports']))
 
-        cluster_entity = container_service_extension.rde.models.rde_1_0_0.NativeEntity(
+        cluster_entity = rde_1_0_0.NativeEntity(
             kind=kind,
-            spec=container_service_extension.rde.models.rde_1_0_0.ClusterSpec(
-                workers=container_service_extension.rde.models.rde_1_0_0.Workers(
+            spec=rde_1_0_0.ClusterSpec(
+                workers=rde_1_0_0.Workers(
                     count=len(cluster['nodes']),
                     storage_profile=cluster['storage_profile_name']),
-                control_plane=container_service_extension.rde.models.rde_1_0_0.ControlPlane(
+                control_plane=rde_1_0_0.ControlPlane(
                     count=len(cluster['master_nodes']),
                     storage_profile=cluster['storage_profile_name']),
-                nfs=container_service_extension.rde.models.rde_1_0_0.Nfs(
+                nfs=rde_1_0_0.Nfs(
                     count=len(cluster['nfs_nodes']),
                     storage_profile=cluster['storage_profile_name']),
-                settings=container_service_extension.rde.models.rde_1_0_0.Settings(
+                settings=rde_1_0_0.Settings(
                     network=cluster['network_name'],
                     ssh_key=""),  # Impossible to get this value from clusters
-                k8_distribution=container_service_extension.rde.models.rde_1_0_0.Distribution(
+                k8_distribution=rde_1_0_0.Distribution(
                     template_name=cluster['template_name'],
                     template_revision=int(cluster['template_revision']))),
-            status=container_service_extension.rde.models.rde_1_0_0.Status(
+            status=rde_1_0_0.Status(
                 phase=str(server_constants.DefEntityPhase(
                     server_constants.DefEntityOperation.CREATE,
                     server_constants.DefEntityOperationStatus.SUCCEEDED)),
@@ -2386,13 +2386,13 @@ def _create_def_entity_for_existing_clusters(
                 cni=f"{cluster['cni']} {cluster['cni_version']}",
                 os=cluster['os'],
                 docker_version=cluster['docker_version'],
-                nodes=container_service_extension.rde.models.rde_1_0_0.Nodes(
-                    control_plane=container_service_extension.rde.models.rde_1_0_0.Node(
+                nodes=rde_1_0_0.Nodes(
+                    control_plane=rde_1_0_0.Node(
                         name=cluster['master_nodes'][0]['name'],
                         ip=cluster['master_nodes'][0]['ipAddress']),
                     workers=worker_nodes,
                     nfs=nfs_nodes)),
-            metadata=container_service_extension.rde.models.rde_1_0_0.Metadata(
+            metadata=rde_1_0_0.Metadata(
                 org_name=cluster['org_name'],
                 ovdc_name=cluster['vdc_name'],
                 cluster_name=cluster['name']),

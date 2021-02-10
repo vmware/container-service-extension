@@ -8,7 +8,7 @@ from typing import Dict, List
 import pyvcloud.vcd.client as vcd_client
 
 import container_service_extension.rde.models.common_models as common_models
-import container_service_extension.rde.models.rde_1_0_0
+import container_service_extension.rde.models.rde_1_0_0 as rde_1_0_0
 from container_service_extension.client.cse_client.cse_client import CseClient
 import container_service_extension.client.response_processor as response_processor  # noqa: E501
 import container_service_extension.common.constants.shared_constants as shared_constants  # noqa: E501
@@ -21,7 +21,7 @@ class NativeClusterApi(CseClient):
         self._clusters_uri = f"{self._uri}/clusters"
         self._cluster_uri = f"{self._uri}/{shared_constants.CLUSTER_URL_FRAGMENT}"  # noqa: E501
 
-    def create_cluster(self, cluster_entity_definition: container_service_extension.rde.models.rde_1_0_0.NativeEntity):  # noqa: E501
+    def create_cluster(self, cluster_entity_definition: rde_1_0_0.NativeEntity):  # noqa: E501
         cluster_entity_dict = asdict(cluster_entity_definition)
         uri = self._clusters_uri
         response = self._client._do_request_prim(
@@ -34,7 +34,7 @@ class NativeClusterApi(CseClient):
         return common_models.DefEntity(
             **response_processor.process_response(response))
 
-    def update_cluster_by_cluster_id(self, cluster_id, cluster_entity_definition: container_service_extension.rde.models.rde_1_0_0.NativeEntity):  # noqa: E501
+    def update_cluster_by_cluster_id(self, cluster_id, cluster_entity_definition: rde_1_0_0.NativeEntity):  # noqa: E501
         cluster_entity_dict = asdict(cluster_entity_definition)
         uri = f"{self._cluster_uri}/{cluster_id}"
         response = self._client._do_request_prim(
