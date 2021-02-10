@@ -6,8 +6,8 @@ import dataclasses
 import yaml
 
 import container_service_extension.common.constants.shared_constants as shared_constants  # noqa: E501
-import container_service_extension.rde.models.rde_1_0_0 as rde_1_0_0
 from container_service_extension.logging.logger import CLIENT_LOGGER
+import container_service_extension.rde.models.rde_1_0_0 as rde_1_0_0
 
 SAMPLE_K8_CLUSTER_SPEC_HELP = """# Short description of various properties used in this sample cluster configuration
 # kind: The kind of the Kubernetes cluster.

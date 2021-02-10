@@ -7,7 +7,6 @@ from dataclasses import asdict
 import pyvcloud.vcd.client as vcd_client
 import pyvcloud.vcd.task as vcd_task
 
-import container_service_extension.rde.models.common_models as common_models
 from container_service_extension.common.constants.server_constants import ThreadLocalData  # noqa: E501
 from container_service_extension.common.constants.shared_constants import ClusterEntityKind  # noqa: E501
 from container_service_extension.common.constants.shared_constants import CSE_PAGINATION_DEFAULT_PAGE_SIZE  # noqa: E501
@@ -27,6 +26,7 @@ from container_service_extension.lib.telemetry.constants import OperationStatus
 from container_service_extension.lib.telemetry.constants import PayloadKey
 import container_service_extension.lib.telemetry.telemetry_handler as telemetry_handler # noqa: E501
 import container_service_extension.logging.logger as logger
+import container_service_extension.rde.models.common_models as common_models
 import container_service_extension.security.context.operation_context as ctx
 import container_service_extension.server.compute_policy_manager as compute_policy_manager # noqa: E501
 

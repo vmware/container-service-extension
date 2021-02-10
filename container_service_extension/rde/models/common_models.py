@@ -2,7 +2,7 @@
 # Copyright (c) 2021 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 
-from dataclasses import dataclass, asdict
+from dataclasses import asdict, dataclass
 from typing import List
 
 from container_service_extension.common.constants import shared_constants as shared_constants  # noqa: E501

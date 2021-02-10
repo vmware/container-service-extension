@@ -10,12 +10,12 @@ from requests.exceptions import HTTPError
 
 import container_service_extension.common.constants.shared_constants as cse_shared_constants  # noqa: E501
 import container_service_extension.exception.exceptions as cse_exceptions
-import container_service_extension.rde.models.common_models as common_models
 from container_service_extension.exception.minor_error_codes import MinorErrorCode  # noqa: E501
 from container_service_extension.lib.cloudapi.cloudapi_client import CloudApiClient  # noqa: E501
 from container_service_extension.lib.cloudapi.constants import CloudApiResource
 from container_service_extension.lib.cloudapi.constants import CloudApiVersion
 from container_service_extension.logging.logger import SERVER_LOGGER as LOGGER
+import container_service_extension.rde.models.common_models as common_models
 from container_service_extension.rde.utils import raise_error_if_def_not_supported # noqa: E501
 
 

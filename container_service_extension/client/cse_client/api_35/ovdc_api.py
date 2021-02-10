@@ -6,10 +6,10 @@ from dataclasses import asdict
 
 import pyvcloud.vcd.client as vcd_client
 
-import container_service_extension.rde.models.common_models as common_models
 from container_service_extension.client.cse_client.cse_client import CseClient
 from container_service_extension.client.response_processor import process_response  # noqa: E501
 import container_service_extension.common.constants.shared_constants as shared_constants  # noqa: E501
+import container_service_extension.rde.models.common_models as common_models
 
 
 class OvdcApi(CseClient):

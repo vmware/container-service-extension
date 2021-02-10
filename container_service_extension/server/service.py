@@ -23,7 +23,6 @@ import container_service_extension.common.constants.shared_constants as shared_c
 import container_service_extension.common.utils.core_utils as utils
 import container_service_extension.common.utils.pyvcloud_utils as vcd_utils
 import container_service_extension.common.utils.server_utils as server_utils
-import container_service_extension.rde.models.common_models as common_models
 from container_service_extension.common.utils.vsphere_utils import populate_vsphere_list  # noqa: E501
 import container_service_extension.exception.exceptions as cse_exception
 import container_service_extension.installer.configure_cse as configure_cse
@@ -40,6 +39,7 @@ from container_service_extension.mqi.consumer.consumer import MessageConsumer
 from container_service_extension.mqi.mqtt_extension_manager import \
     MQTTExtensionManager
 import container_service_extension.rde.constants as def_constants
+import container_service_extension.rde.models.common_models as common_models
 import container_service_extension.rde.schema_service as def_schema_svc
 import container_service_extension.rde.utils as def_utils
 from container_service_extension.rde.utils import raise_error_if_def_not_supported  # noqa: E501
@@ -345,8 +345,8 @@ class Service(object, metaclass=Singleton):
 
         # Read k8s catalog definition from catalog item metadata and append
         # the same to to server run-time config
-        # self._load_template_definition_from_catalog(
-        #     msg_update_callback=msg_update_callback)
+        self._load_template_definition_from_catalog(
+            msg_update_callback=msg_update_callback)
 
         self._load_placement_policy_details(
             msg_update_callback=msg_update_callback)
