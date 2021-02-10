@@ -18,8 +18,8 @@ from pyvcloud.vcd.vdc import VDC
 import pyvcloud.vcd.vm as vcd_vm
 import semantic_version as semver
 
-import container_service_extension.rde.models_.common_models
-import container_service_extension.rde.models_.rde_1_0_0
+import container_service_extension.rde.models.common_models as common_models
+import container_service_extension.rde.models.rde_1_0_0
 from container_service_extension.common.constants.server_constants import CLUSTER_ENTITY  # noqa: E501
 from container_service_extension.common.constants.server_constants import ClusterMetadataKey  # noqa: E501
 from container_service_extension.common.constants.server_constants import CSE_CLUSTER_KUBECONFIG_PATH # noqa: E501
@@ -72,7 +72,7 @@ class ClusterService(abstract_broker.AbstractBroker):
         self.sysadmin_entity_svc = def_entity_svc.DefEntityService(
             op_ctx.sysadmin_cloudapi_client)
 
-    def get_cluster_info(self, cluster_id: str) -> container_service_extension.rde.models_.common_models.DefEntity:
+    def get_cluster_info(self, cluster_id: str) -> common_models.DefEntity:
         """Get the corresponding defined entity of the native cluster.
 
         This method ensures to return the latest state of the cluster vApp.
@@ -101,7 +101,7 @@ class ClusterService(abstract_broker.AbstractBroker):
                 telemetry_constants.PayloadKey.SOURCE_DESCRIPTION: thread_local_data.get_thread_local_data(ThreadLocalData.USER_AGENT)  # noqa: E501
             }
         )
-        ent_type: container_service_extension.rde.models_.common_models.DefEntityType = def_utils.get_registered_def_entity_type()  # noqa: E501
+        ent_type: common_models.DefEntityType = def_utils.get_registered_def_entity_type()  # noqa: E501
         return self.entity_svc.get_entities_per_page_by_entity_type(
             vendor=ent_type.vendor,
             nss=ent_type.nss,
@@ -150,7 +150,7 @@ class ClusterService(abstract_broker.AbstractBroker):
 
         return result.content.decode()
 
-    def create_cluster(self, cluster_spec: container_service_extension.rde.models_.rde_1_0_0.NativeEntity):
+    def create_cluster(self, cluster_spec: container_service_extension.rde.models.rde_1_0_0.NativeEntity):
         """Start the cluster creation operation.
 
         Creates corresponding defined entity in vCD for every native cluster.
@@ -160,7 +160,7 @@ class ClusterService(abstract_broker.AbstractBroker):
         **telemetry: Optional
 
         :return: Defined entity of the cluster
-        :rtype: container_service_extension.rde.models_.common_models.DefEntity
+        :rtype: common_models.DefEntity
         """
         cluster_name = cluster_spec.metadata.cluster_name
         org_name = cluster_spec.metadata.org_name
@@ -196,7 +196,7 @@ class ClusterService(abstract_broker.AbstractBroker):
         #  based clusters
 
         # create the corresponding defined entity .
-        def_entity = container_service_extension.rde.models_.common_models.DefEntity(entity=cluster_spec)
+        def_entity = common_models.DefEntity(entity=cluster_spec)
         def_entity.entity.status.phase = str(
             DefEntityPhase(DefEntityOperation.CREATE,
                            DefEntityOperationStatus.IN_PROGRESS))
@@ -243,7 +243,7 @@ class ClusterService(abstract_broker.AbstractBroker):
         return def_entity
 
     def resize_cluster(self, cluster_id: str,
-                       cluster_spec: container_service_extension.rde.models_.rde_1_0_0.NativeEntity):
+                       cluster_spec: container_service_extension.rde.models.rde_1_0_0.NativeEntity):
         """Start the resize cluster operation.
 
         :param str cluster_id: Defined entity Id of the cluster
@@ -254,7 +254,7 @@ class ClusterService(abstract_broker.AbstractBroker):
         :rtype: DefEntity
         """
         # Get the existing defined entity for the given cluster id
-        curr_entity: container_service_extension.rde.models_.common_models.DefEntity = self.entity_svc.get_entity(cluster_id)  # noqa: E501
+        curr_entity: common_models.DefEntity = self.entity_svc.get_entity(cluster_id)  # noqa: E501
         cluster_name: str = curr_entity.name
         curr_worker_count: int = curr_entity.entity.spec.workers.count
         curr_nfs_count: int = curr_entity.entity.spec.nfs.count
@@ -288,7 +288,7 @@ class ClusterService(abstract_broker.AbstractBroker):
                 f"valid state to be resized. Please contact the administrator")
 
         # Record telemetry details
-        telemetry_data: container_service_extension.rde.models_.common_models.DefEntity = container_service_extension.rde.models_.common_models.DefEntity(id=cluster_id, entity=cluster_spec)  # noqa: E501
+        telemetry_data: common_models.DefEntity = common_models.DefEntity(id=cluster_id, entity=cluster_spec)  # noqa: E501
         telemetry_handler.record_user_action_details(
             cse_operation=telemetry_constants.CseOperation.V35_CLUSTER_APPLY,
             cse_params={
@@ -323,7 +323,7 @@ class ClusterService(abstract_broker.AbstractBroker):
     def delete_cluster(self, cluster_id):
         """Start the delete cluster operation."""
         # Get the current state of the defined entity
-        curr_entity: container_service_extension.rde.models_.common_models.DefEntity = self.entity_svc.get_entity(
+        curr_entity: common_models.DefEntity = self.entity_svc.get_entity(
             cluster_id)
         cluster_name: str = curr_entity.name
         org_name: str = curr_entity.entity.metadata.org_name
@@ -392,14 +392,14 @@ class ClusterService(abstract_broker.AbstractBroker):
                                               curr_entity.entity.spec.k8_distribution.template_revision) # noqa: E501
 
     def upgrade_cluster(self, cluster_id: str,
-                        upgrade_spec: container_service_extension.rde.models_.rde_1_0_0.NativeEntity):
+                        upgrade_spec: container_service_extension.rde.models.rde_1_0_0.NativeEntity):
         """Start the upgrade cluster operation.
 
         Upgrading cluster is an asynchronous task, so the returned
         `result['task_href']` can be polled to get updates on task progress.
 
         :param str cluster_id: id of the cluster to be upgraded
-        :param container_service_extension.rde.models_.rde_1_0_0.NativeEntity upgrade_spec: cluster spec with new
+        :param container_service_extension.rde.models.rde_1_0_0.NativeEntity upgrade_spec: cluster spec with new
             kubernetes distribution and revision
 
         :return: Defined entity with upgrade in progress set
@@ -487,7 +487,7 @@ class ClusterService(abstract_broker.AbstractBroker):
 
         acl_svc = acl_service.ClusterACLService(cluster_id,
                                                 self.context.client)
-        curr_entity: container_service_extension.rde.models_.common_models.DefEntity = acl_svc.get_cluster_entity()
+        curr_entity: common_models.DefEntity = acl_svc.get_cluster_entity()
         user_id_names_dict = vcd_utils.create_org_user_id_to_name_dict(
             client=self.context.client,
             org_name=curr_entity.org.name)
@@ -515,7 +515,7 @@ class ClusterService(abstract_broker.AbstractBroker):
 
     def update_cluster_acl(self, cluster_id, update_acl_entry_dicts: list):
         """Update the cluster ACL by updating the defined entity and vApp ACL."""  # noqa: E501
-        update_acl_entries = [container_service_extension.rde.models_.common_models.ClusterAclEntry(**entry_dict)
+        update_acl_entries = [common_models.ClusterAclEntry(**entry_dict)
                               for entry_dict in update_acl_entry_dicts]
         telemetry_params = {
             shared_constants.RequestKey.CLUSTER_ID: cluster_id,
@@ -530,7 +530,7 @@ class ClusterService(abstract_broker.AbstractBroker):
         # Get previous def entity acl
         acl_svc = acl_service.ClusterACLService(cluster_id,
                                                 self.context.client)
-        prev_user_id_to_acl_entry_dict: Dict[str, container_service_extension.rde.models_.common_models.ClusterAclEntry] \
+        prev_user_id_to_acl_entry_dict: Dict[str, common_models.ClusterAclEntry] \
             = acl_svc.create_user_id_to_acl_entry_dict()
 
         try:
@@ -552,7 +552,7 @@ class ClusterService(abstract_broker.AbstractBroker):
         """Start the delete nodes operation."""
         if nodes_to_del is None:
             nodes_to_del = []
-        curr_entity: container_service_extension.rde.models_.common_models.DefEntity = self.entity_svc.get_entity(
+        curr_entity: common_models.DefEntity = self.entity_svc.get_entity(
             cluster_id)
 
         if len(nodes_to_del) == 0:
@@ -590,7 +590,7 @@ class ClusterService(abstract_broker.AbstractBroker):
 
     @thread_utils.run_async
     def _create_cluster_async(self, cluster_id: str,
-                              cluster_spec: container_service_extension.rde.models_.rde_1_0_0.NativeEntity):
+                              cluster_spec: container_service_extension.rde.models.rde_1_0_0.NativeEntity):
         try:
             cluster_name = cluster_spec.metadata.cluster_name
             org_name = cluster_spec.metadata.org_name
@@ -749,7 +749,7 @@ class ClusterService(abstract_broker.AbstractBroker):
             msg = f"Updating cluster `{cluster_name}` ({cluster_id}) defined entity"  # noqa: E501
             LOGGER.debug(msg)
             self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
-            def_entity: container_service_extension.rde.models_.common_models.DefEntity = self.entity_svc.get_entity(cluster_id)  # noqa: E501
+            def_entity: common_models.DefEntity = self.entity_svc.get_entity(cluster_id)  # noqa: E501
             def_entity.externalId = vapp_resource.get('href')
             def_entity.entity.status.phase = str(
                 DefEntityPhase(DefEntityOperation.CREATE,
@@ -868,7 +868,7 @@ class ClusterService(abstract_broker.AbstractBroker):
         - ends the client context
         """
         try:
-            curr_entity: container_service_extension.rde.models_.common_models.DefEntity = self.entity_svc.get_entity(
+            curr_entity: common_models.DefEntity = self.entity_svc.get_entity(
                 cluster_id)
             cluster_name: str = curr_entity.name
             curr_worker_count: int = curr_entity.entity.spec.workers.count
@@ -960,7 +960,7 @@ class ClusterService(abstract_broker.AbstractBroker):
 
     @thread_utils.run_async
     def _create_nodes_async(self, cluster_id: str,
-                            cluster_spec: container_service_extension.rde.models_.rde_1_0_0.NativeEntity):
+                            cluster_spec: container_service_extension.rde.models.rde_1_0_0.NativeEntity):
         """Create worker and/or nfs nodes in vCD.
 
         This method is executed by a thread in an asynchronous manner.
@@ -978,7 +978,7 @@ class ClusterService(abstract_broker.AbstractBroker):
         """
         try:
             # get the current state of the defined entity
-            curr_entity: container_service_extension.rde.models_.common_models.DefEntity = self.entity_svc.get_entity(cluster_id)  # noqa: E501
+            curr_entity: common_models.DefEntity = self.entity_svc.get_entity(cluster_id)  # noqa: E501
             vapp_href = curr_entity.externalId
             cluster_name = curr_entity.entity.metadata.cluster_name
             org_name = curr_entity.entity.metadata.org_name
@@ -1131,7 +1131,7 @@ class ClusterService(abstract_broker.AbstractBroker):
 
     @thread_utils.run_async
     def _delete_cluster_async(self, cluster_name, org_name, ovdc_name,
-                              def_entity: container_service_extension.rde.models_.common_models.DefEntity = None):
+                              def_entity: common_models.DefEntity = None):
         """Delete the cluster asynchronously.
 
         :param cluster_name: Name of the cluster to be deleted.
@@ -1185,7 +1185,7 @@ class ClusterService(abstract_broker.AbstractBroker):
                                cluster_id: str,
                                template):
         try:
-            curr_entity: container_service_extension.rde.models_.common_models.DefEntity = self.entity_svc.get_entity(cluster_id) # noqa: E501
+            curr_entity: common_models.DefEntity = self.entity_svc.get_entity(cluster_id) # noqa: E501
             cluster_name = curr_entity.entity.metadata.cluster_name
             vapp_href = curr_entity.externalId
 
@@ -1379,7 +1379,7 @@ class ClusterService(abstract_broker.AbstractBroker):
         - ending the client context
         """
         try:
-            curr_entity: container_service_extension.rde.models_.common_models.DefEntity = self.entity_svc.get_entity(
+            curr_entity: common_models.DefEntity = self.entity_svc.get_entity(
                 cluster_id)
             cluster_name: str = curr_entity.name
             self._delete_nodes_async(cluster_id=cluster_id,
@@ -1437,7 +1437,7 @@ class ClusterService(abstract_broker.AbstractBroker):
 
     @thread_utils.run_async
     def _delete_nodes_async(self, cluster_id: str,
-                            cluster_spec: container_service_extension.rde.models_.rde_1_0_0.NativeEntity = None,
+                            cluster_spec: container_service_extension.rde.models.rde_1_0_0.NativeEntity = None,
                             nodes_to_del=[]):
         """Delete worker and/or nfs nodes in vCD.
 
@@ -1454,7 +1454,7 @@ class ClusterService(abstract_broker.AbstractBroker):
         Let the caller monitor thread or method to set SUCCESS task status,
           end the client context
         """
-        curr_entity: container_service_extension.rde.models_.common_models.DefEntity = self.entity_svc.get_entity(cluster_id)  # noqa: E501
+        curr_entity: common_models.DefEntity = self.entity_svc.get_entity(cluster_id)  # noqa: E501
         vapp_href = curr_entity.externalId
         cluster_name = curr_entity.entity.metadata.cluster_name
 
@@ -1529,7 +1529,7 @@ class ClusterService(abstract_broker.AbstractBroker):
         # NOTE: This function should not be relied to update the defined entity
         # unless it is sure that the Vapp with the cluster-id exists
         if not curr_entity:
-            curr_entity: container_service_extension.rde.models_.common_models.DefEntity = self.entity_svc.get_entity(
+            curr_entity: common_models.DefEntity = self.entity_svc.get_entity(
                 cluster_id)
         if not vapp:
             vapp = vcd_vapp.VApp(self.context.client, href=curr_entity.externalId)  # noqa: E501
@@ -1543,7 +1543,7 @@ class ClusterService(abstract_broker.AbstractBroker):
         return self.entity_svc.update_entity(cluster_id, curr_entity)
 
     def _fail_operation(self, cluster_id: str, op: DefEntityOperation):
-        def_entity: container_service_extension.rde.models_.common_models.DefEntity = self.entity_svc.get_entity(cluster_id)  # noqa: E501
+        def_entity: common_models.DefEntity = self.entity_svc.get_entity(cluster_id)  # noqa: E501
         def_entity.entity.status.phase = \
             str(DefEntityPhase(op, DefEntityOperationStatus.FAILED))
         self.entity_svc.update_entity(cluster_id, def_entity)
@@ -1642,11 +1642,11 @@ def _get_nodes_details(sysadmin_client, vapp):
                 sizing_class = compute_policy_manager.\
                     get_cse_policy_display_name(policy_name)
             if vm_name.startswith(NodeType.CONTROL_PLANE):
-                control_plane = container_service_extension.rde.models_.rde_1_0_0.Node(name=vm_name, ip=ip,
+                control_plane = container_service_extension.rde.models.rde_1_0_0.Node(name=vm_name, ip=ip,
                                                                                        sizing_class=sizing_class)
             elif vm_name.startswith(NodeType.WORKER):
                 workers.append(
-                    container_service_extension.rde.models_.rde_1_0_0.Node(name=vm_name, ip=ip,
+                    container_service_extension.rde.models.rde_1_0_0.Node(name=vm_name, ip=ip,
                                                                            sizing_class=sizing_class))
             elif vm_name.startswith(NodeType.NFS):
                 exports = None
@@ -1659,10 +1659,10 @@ def _get_nodes_details(sysadmin_client, vapp):
                     LOGGER.error(f"Failed to retrieve the NFS exports of "
                                  f"node {vm_name} of cluster {vapp.name} ",
                                  exc_info=True)
-                nfs_nodes.append(container_service_extension.rde.models_.rde_1_0_0.NfsNode(name=vm_name, ip=ip,
+                nfs_nodes.append(container_service_extension.rde.models.rde_1_0_0.NfsNode(name=vm_name, ip=ip,
                                                                                            sizing_class=sizing_class,
                                                                                            exports=exports))
-        return container_service_extension.rde.models_.rde_1_0_0.Nodes(control_plane=control_plane, workers=workers,
+        return container_service_extension.rde.models.rde_1_0_0.Nodes(control_plane=control_plane, workers=workers,
                                                                        nfs=nfs_nodes)
     except Exception as err:
         LOGGER.error("Failed to retrieve the status of the nodes of the "

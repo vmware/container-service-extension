@@ -21,7 +21,7 @@ from container_service_extension.lib.cloudapi.constants import CloudApiResource
 from container_service_extension.lib.cloudapi.constants import CloudApiVersion
 from container_service_extension.logging.logger import SERVER_LOGGER as LOGGER
 import container_service_extension.rde.constants as def_constants
-from container_service_extension.rde.models_.common_models import DefEntityType, DefEntity, GenericClusterEntity
+from container_service_extension.rde.models.common_models import DefEntityType, DefEntity, GenericClusterEntity
 import container_service_extension.rde.schema_service as def_schema_svc
 import container_service_extension.rde.utils as def_utils
 

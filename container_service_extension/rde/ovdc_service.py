@@ -7,7 +7,7 @@ from dataclasses import asdict
 import pyvcloud.vcd.client as vcd_client
 import pyvcloud.vcd.task as vcd_task
 
-import container_service_extension.rde.models_.common_models
+import container_service_extension.rde.models.common_models as common_models
 from container_service_extension.common.constants.server_constants import ThreadLocalData  # noqa: E501
 from container_service_extension.common.constants.shared_constants import ClusterEntityKind  # noqa: E501
 from container_service_extension.common.constants.shared_constants import CSE_PAGINATION_DEFAULT_PAGE_SIZE  # noqa: E501
@@ -31,11 +31,11 @@ import container_service_extension.server.compute_policy_manager as compute_poli
 
 
 def update_ovdc(operation_context: ctx.OperationContext,
-                ovdc_id: str, ovdc_spec: container_service_extension.rde.models_.common_models.Ovdc) -> dict: # noqa: 501
+                ovdc_id: str, ovdc_spec: common_models.Ovdc) -> dict: # noqa: 501
     """Update ovdc with the updated k8s runtimes list.
 
     :param ctx.OperationContext operation_context: context for the request
-    :param container_service_extension.rde.models_.common_models.Ovdc ovdc_spec: Ovdc object having the updated
+    :param common_models.Ovdc ovdc_spec: Ovdc object having the updated
         k8s runtime list
     :return: dictionary containing the task href for the update operation
     :rtype: dict
@@ -171,7 +171,7 @@ def get_ovdc_k8s_runtime_details(sysadmin_client: vcd_client.Client,
                                  ovdc_id=None,
                                  ovdc_name=None,
                                  org_name=None,
-                                 log_wire=False) -> container_service_extension.rde.models_.common_models.Ovdc:
+                                 log_wire=False) -> common_models.Ovdc:
     """Get k8s runtime details for an ovdc.
 
     Atleast ovdc_id and ovdc_name or org_name and ovdc_name should be provided.
@@ -184,7 +184,7 @@ def get_ovdc_k8s_runtime_details(sysadmin_client: vcd_client.Client,
     :param str ovdc_id:
     :param bool log_wire:
     :return: Ovdc object with k8s runtimes
-    :rtype: container_service_extension.rde.models_.common_models.Ovdc
+    :rtype: common_models.Ovdc
     """
     vcd_utils.raise_error_if_user_not_from_system_org(sysadmin_client)
     cpm = compute_policy_manager.ComputePolicyManager(sysadmin_client,
@@ -207,7 +207,7 @@ def get_ovdc_k8s_runtime_details(sysadmin_client: vcd_client.Client,
     for cse_policy in \
             compute_policy_manager.list_cse_placement_policies_on_vdc(cpm, ovdc_id):  # noqa: E501
         policies.append(RUNTIME_INTERNAL_NAME_TO_DISPLAY_NAME_MAP[cse_policy['display_name']])  # noqa: E501
-    return container_service_extension.rde.models_.common_models.Ovdc(ovdc_name=ovdc_name, ovdc_id=ovdc_id, k8s_runtime=policies) # noqa: E501
+    return common_models.Ovdc(ovdc_name=ovdc_name, ovdc_id=ovdc_id, k8s_runtime=policies) # noqa: E501
 
 
 @thread_utils.run_async

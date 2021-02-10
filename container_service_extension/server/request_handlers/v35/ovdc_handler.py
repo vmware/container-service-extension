@@ -1,7 +1,7 @@
 # container-service-extension
 # Copyright (c) 2019 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
-import container_service_extension.rde.models_.common_models
+import container_service_extension.rde.models.common_models as common_models
 from container_service_extension.common.constants.server_constants import CseOperation as CseServerOperationInfo  # noqa: E501
 from container_service_extension.common.constants.shared_constants import CSE_PAGINATION_DEFAULT_PAGE_SIZE  # noqa: E501
 from container_service_extension.common.constants.shared_constants import CSE_PAGINATION_FIRST_PAGE_NUMBER  # noqa: E501
@@ -26,7 +26,7 @@ def ovdc_update(data, operation_context: ctx.OperationContext):
 
     :return: Dictionary with org VDC update task href.
     """
-    ovdc_spec = container_service_extension.rde.models_.common_models.Ovdc(**data[RequestKey.INPUT_SPEC])
+    ovdc_spec = common_models.Ovdc(**data[RequestKey.INPUT_SPEC])
     return ovdc_service.update_ovdc(operation_context,
                                     ovdc_id=data[RequestKey.OVDC_ID],
                                     ovdc_spec=ovdc_spec)

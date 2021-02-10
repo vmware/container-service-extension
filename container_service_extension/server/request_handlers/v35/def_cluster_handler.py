@@ -3,8 +3,7 @@
 # SPDX-License-Identifier: BSD-2-Clause
 from dataclasses import asdict
 
-import container_service_extension.rde.models_.common_models
-import container_service_extension.rde.models_.rde_1_0_0
+import container_service_extension.rde.models.rde_1_0_0
 from container_service_extension.common.constants.server_constants import CseOperation as CseServerOperationInfo  # noqa: E501
 from container_service_extension.common.constants.server_constants import FlattenedClusterSpecKey  # noqa: E501
 from container_service_extension.common.constants.server_constants import ThreadLocalData  # noqa: E501
@@ -33,7 +32,7 @@ def cluster_create(data: dict, op_ctx: ctx.OperationContext):
     :rtype: container_service_extension.def_.models.DefEntity
     """
     svc = cluster_svc.ClusterService(op_ctx)
-    cluster_entity_spec = container_service_extension.rde.models_.rde_1_0_0.NativeEntity(**data[RequestKey.INPUT_SPEC])  # noqa: E501
+    cluster_entity_spec = container_service_extension.rde.models.rde_1_0_0.NativeEntity(**data[RequestKey.INPUT_SPEC])  # noqa: E501
     return asdict(svc.create_cluster(cluster_entity_spec))
 
 
@@ -49,7 +48,7 @@ def cluster_resize(data: dict, op_ctx: ctx.OperationContext):
     """
     svc = cluster_svc.ClusterService(op_ctx)
     cluster_id = data[RequestKey.CLUSTER_ID]
-    cluster_entity_spec = container_service_extension.rde.models_.rde_1_0_0.NativeEntity(**data[RequestKey.INPUT_SPEC])  # noqa: E501
+    cluster_entity_spec = container_service_extension.rde.models.rde_1_0_0.NativeEntity(**data[RequestKey.INPUT_SPEC])  # noqa: E501
     curr_entity = svc.entity_svc.get_entity(cluster_id)
     request_utils.validate_request_payload(
         asdict(cluster_entity_spec.spec), asdict(curr_entity.entity.spec),
@@ -127,7 +126,7 @@ def cluster_upgrade(data, op_ctx: ctx.OperationContext):
     :return: Dict
     """
     svc = cluster_svc.ClusterService(op_ctx)
-    cluster_entity_spec = container_service_extension.rde.models_.rde_1_0_0.NativeEntity(**data[RequestKey.INPUT_SPEC])  # noqa: E501
+    cluster_entity_spec = container_service_extension.rde.models.rde_1_0_0.NativeEntity(**data[RequestKey.INPUT_SPEC])  # noqa: E501
     cluster_id = data[RequestKey.CLUSTER_ID]
     curr_entity = svc.entity_svc.get_entity(cluster_id)
     request_utils.validate_request_payload(

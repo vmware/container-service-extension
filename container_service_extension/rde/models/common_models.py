@@ -7,7 +7,7 @@ from typing import List
 
 from container_service_extension.common.constants import shared_constants as shared_constants
 from container_service_extension.rde import constants as def_constants, utils as def_utils
-from container_service_extension.rde.models_.rde_1_0_0 import NativeEntity
+from container_service_extension.rde.models.rde_1_0_0 import NativeEntity
 
 
 @dataclass(frozen=True)

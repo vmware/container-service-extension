@@ -20,8 +20,8 @@ import pyvcloud.vcd.vm as vcd_vm
 import requests
 import semantic_version as semver
 
-import container_service_extension.rde.models_.common_models
-import container_service_extension.rde.models_.rde_1_0_0
+import container_service_extension.rde.models.common_models as common_models
+import container_service_extension.rde.models.rde_1_0_0
 from container_service_extension.common.constants.server_constants import ClusterMetadataKey  # noqa: E501
 from container_service_extension.common.constants.server_constants import CSE_CLUSTER_KUBECONFIG_PATH # noqa: E501
 from container_service_extension.common.constants.server_constants import CSE_NATIVE_DEPLOY_RIGHT_NAME # noqa: E501
@@ -1687,7 +1687,7 @@ def get_all_clusters(client, cluster_name=None, cluster_id=None,
         }
 
         if hasattr(record, 'Metadata'):
-            for element in container_service_extension.rde.models_.rde_1_0_0.Metadata.MetadataEntry:
+            for element in container_service_extension.rde.models.rde_1_0_0.Metadata.MetadataEntry:
                 if element.Key in metadata_key_to_cluster_key:
                     clusters[vapp_id][metadata_key_to_cluster_key[element.Key]] = str(element.TypedValue.Value) # noqa: E501
 
@@ -1704,7 +1704,7 @@ def get_all_clusters(client, cluster_name=None, cluster_id=None,
     for record in cluster_list:
         vapp_id = record.get('id').split(':')[-1]
         if hasattr(record, 'Metadata'):
-            for element in container_service_extension.rde.models_.rde_1_0_0.Metadata.MetadataEntry:
+            for element in container_service_extension.rde.models.rde_1_0_0.Metadata.MetadataEntry:
                 if element.Key in metadata_key_to_cluster_key:
                     clusters[vapp_id][metadata_key_to_cluster_key[element.Key]] = str(element.TypedValue.Value) # noqa: E501
 

@@ -23,7 +23,7 @@ import container_service_extension.common.constants.shared_constants as shared_c
 import container_service_extension.common.utils.core_utils as utils
 import container_service_extension.common.utils.pyvcloud_utils as vcd_utils
 import container_service_extension.common.utils.server_utils as server_utils
-import container_service_extension.rde.models_.common_models
+import container_service_extension.rde.models.common_models as common_models
 from container_service_extension.common.utils.vsphere_utils import populate_vsphere_list  # noqa: E501
 import container_service_extension.exception.exceptions as cse_exception
 import container_service_extension.installer.configure_cse as configure_cse
@@ -184,8 +184,8 @@ class Service(object, metaclass=Singleton):
         self.skip_config_decryption = skip_config_decryption
         self.pks_cache = None
         self._state = ServerState.STOPPED
-        self._kubernetesInterface: container_service_extension.rde.models_.common_models.DefInterface = None
-        self._nativeEntityType: container_service_extension.rde.models_.common_models.DefEntityType = None
+        self._kubernetesInterface: common_models.DefInterface = None
+        self._nativeEntityType: common_models.DefEntityType = None
         self.consumer = None
         self.consumer_thread = None
         self._consumer_watchdog = None
@@ -226,11 +226,11 @@ class Service(object, metaclass=Singleton):
             del result['python']
         return result
 
-    def get_kubernetes_interface(self) -> container_service_extension.rde.models_.common_models.DefInterface:
+    def get_kubernetes_interface(self) -> common_models.DefInterface:
         """Get the built-in kubernetes interface from vCD."""
         return self._kubernetesInterface
 
-    def get_native_cluster_entity_type(self) -> container_service_extension.rde.models_.common_models.DefEntityType:
+    def get_native_cluster_entity_type(self) -> common_models.DefEntityType:
         return self._nativeEntityType
 
     def update_status(self, server_action: shared_constants.ServerAction):
@@ -345,8 +345,8 @@ class Service(object, metaclass=Singleton):
 
         # Read k8s catalog definition from catalog item metadata and append
         # the same to to server run-time config
-        self._load_template_definition_from_catalog(
-            msg_update_callback=msg_update_callback)
+        # self._load_template_definition_from_catalog(
+        #     msg_update_callback=msg_update_callback)
 
         self._load_placement_policy_details(
             msg_update_callback=msg_update_callback)

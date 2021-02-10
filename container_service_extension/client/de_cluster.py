@@ -11,8 +11,8 @@ import requests
 import yaml
 
 import container_service_extension.client.constants as cli_constants
-import container_service_extension.rde.models_.common_models
-import container_service_extension.rde.models_.rde_1_0_0
+import container_service_extension.rde.models.common_models as common_models
+import container_service_extension.rde.models.rde_1_0_0
 from container_service_extension.client.de_cluster_native import DEClusterNative  # noqa: E501
 from container_service_extension.client.de_cluster_tkg import DEClusterTKG
 import container_service_extension.client.tkgclient.rest as tkg_rest
@@ -97,7 +97,7 @@ class DECluster:
                         page_number=page_number,
                         page_size=page_size)
                     # Get the list of cluster defined entities
-                    entities: List[container_service_extension.rde.models_.common_models.GenericClusterEntity] = clusters_page_results[PaginationKey.VALUES]  # noqa: E501
+                    entities: List[common_models.GenericClusterEntity] = clusters_page_results[PaginationKey.VALUES]  # noqa: E501
                     clusters = []
                     for de in entities:
                         entity = de.entity
@@ -107,13 +107,13 @@ class DECluster:
                             cli_constants.CLIOutputKey.ORG.value: de.org.name, # noqa: E501
                             cli_constants.CLIOutputKey.OWNER.value: de.owner.name  # noqa: E501
                         }
-                        if type(entity) == container_service_extension.rde.models_.rde_1_0_0.NativeEntity:
+                        if type(entity) == container_service_extension.rde.models.rde_1_0_0.NativeEntity:
                             cluster[cli_constants.CLIOutputKey.VDC.value] = \
                                 entity.metadata.ovdc_name
                             cluster[cli_constants.CLIOutputKey.K8S_RUNTIME.value] = entity.kind  # noqa: E501
                             cluster[cli_constants.CLIOutputKey.K8S_VERSION.value] = entity.status.kubernetes  # noqa: E501
                             cluster[cli_constants.CLIOutputKey.STATUS.value] = entity.status.phase  # noqa: E501
-                        elif type(entity) == container_service_extension.rde.models_.common_models.TKGEntity:
+                        elif type(entity) == common_models.TKGEntity:
                             cluster[cli_constants.CLIOutputKey.VDC.value] = \
                                 entity.metadata.virtualDataCenterName
                             cluster[cli_constants.CLIOutputKey.K8S_RUNTIME.value] = entity.kind  # noqa: E501
