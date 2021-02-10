@@ -11,8 +11,6 @@ import requests
 import yaml
 
 import container_service_extension.client.constants as cli_constants
-import container_service_extension.rde.models.common_models as common_models
-import container_service_extension.rde.models.rde_1_0_0 as rde_1_0_0
 from container_service_extension.client.de_cluster_native import DEClusterNative  # noqa: E501
 from container_service_extension.client.de_cluster_tkg import DEClusterTKG
 import container_service_extension.client.tkgclient.rest as tkg_rest
@@ -26,6 +24,8 @@ from container_service_extension.rde.constants import DEF_VMWARE_INTERFACE_NSS
 from container_service_extension.rde.constants import DEF_VMWARE_INTERFACE_VERSION  # noqa: E501
 from container_service_extension.rde.constants import DEF_VMWARE_VENDOR
 import container_service_extension.rde.entity_service as def_entity_svc
+import container_service_extension.rde.models.common_models as common_models
+import container_service_extension.rde.models.rde_1_0_0 as rde_1_0_0
 
 
 DUPLICATE_CLUSTER_ERROR_MSG = "Duplicate clusters found. Please use --k8-runtime for the unique identification"  # noqa: E501

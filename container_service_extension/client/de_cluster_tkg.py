@@ -7,7 +7,6 @@ import json
 import yaml
 
 import container_service_extension.client.constants as cli_constants
-import container_service_extension.rde.models.common_models as common_models
 from container_service_extension.client.tkgclient import TkgClusterApi
 from container_service_extension.client.tkgclient.api_client import ApiClient
 from container_service_extension.client.tkgclient.configuration import Configuration  # noqa: E501
@@ -24,6 +23,7 @@ from container_service_extension.rde.constants import CLUSTER_ACL_LIST_FIELDS
 from container_service_extension.rde.constants import DEF_TKG_ENTITY_TYPE_NSS
 from container_service_extension.rde.constants import DEF_TKG_ENTITY_TYPE_VERSION  # noqa: E501
 from container_service_extension.rde.constants import DEF_VMWARE_VENDOR
+import container_service_extension.rde.models.common_models as common_models
 
 
 class DEClusterTKG:

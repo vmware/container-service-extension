@@ -18,8 +18,6 @@ from pyvcloud.vcd.vdc import VDC
 import pyvcloud.vcd.vm as vcd_vm
 import semantic_version as semver
 
-import container_service_extension.rde.models.common_models as common_models
-import container_service_extension.rde.models.rde_1_0_0 as rde_1_0_0
 from container_service_extension.common.constants.server_constants import CLUSTER_ENTITY  # noqa: E501
 from container_service_extension.common.constants.server_constants import ClusterMetadataKey  # noqa: E501
 from container_service_extension.common.constants.server_constants import CSE_CLUSTER_KUBECONFIG_PATH # noqa: E501
@@ -48,6 +46,8 @@ from container_service_extension.logging.logger import SERVER_LOGGER as LOGGER
 import container_service_extension.rde.acl_service as acl_service
 import container_service_extension.rde.constants as def_constants
 import container_service_extension.rde.entity_service as def_entity_svc
+import container_service_extension.rde.models.common_models as common_models
+import container_service_extension.rde.models.rde_1_0_0 as rde_1_0_0
 import container_service_extension.rde.utils as def_utils
 import container_service_extension.security.context.operation_context as ctx
 import container_service_extension.server.abstract_broker as abstract_broker
