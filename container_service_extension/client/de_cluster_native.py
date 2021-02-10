@@ -235,7 +235,7 @@ class DEClusterNative:
         :rtype: str
         """
         # TODO: check if we really need to decode-encode-decode-encode
-        cluster_upgrade_definition = common_models.DefEntity(**cluster_def_entity)
+        cluster_upgrade_definition = common_models.DefEntity(**cluster_def_entity)  # noqa: E501
         cluster_def_entity = \
             self._native_cluster_api.upgrade_cluster_by_cluster_id(
                 cluster_id, cluster_upgrade_definition)

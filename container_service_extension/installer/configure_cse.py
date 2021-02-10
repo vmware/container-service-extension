@@ -762,11 +762,12 @@ def _register_def_schema(client: Client,
         def_utils.raise_error_if_def_not_supported(cloudapi_client)
         schema_svc = def_schema_svc.DefSchemaService(cloudapi_client)
         keys_map = def_constants.MAP_API_VERSION_TO_KEYS[float(client.get_api_version())] # noqa: E501
-        kubernetes_interface = common_models.DefInterface(name=keys_map[def_constants.DefKey.INTERFACE_NAME],
-                                                                                                  vendor=keys_map[def_constants.DefKey.INTERFACE_VENDOR],  # noqa: E501
-                                                                                                  nss=keys_map[def_constants.DefKey.INTERFACE_NSS],
-                                                                                                  version=keys_map[def_constants.DefKey.INTERFACE_VERSION],  # noqa: E501
-                                                                                                  readonly=False)
+        kubernetes_interface = common_models.DefInterface(
+            name=keys_map[def_constants.DefKey.INTERFACE_NAME],
+            vendor=keys_map[def_constants.DefKey.INTERFACE_VENDOR],
+            nss=keys_map[def_constants.DefKey.INTERFACE_NSS],
+            version=keys_map[def_constants.DefKey.INTERFACE_VERSION],
+            readonly=False)
         try:
             # k8s interface should always be present
             schema_svc.get_interface(kubernetes_interface.get_id())
@@ -780,14 +781,15 @@ def _register_def_schema(client: Client,
         schema_module = importlib.import_module(
             f'{def_constants.DEF_SCHEMA_DIRECTORY}.{keys_map[def_constants.DefKey.ENTITY_TYPE_SCHEMA_VERSION]}') # noqa: E501
         schema_file = pkg_resources.open_text(schema_module, def_constants.DEF_ENTITY_TYPE_SCHEMA_FILE) # noqa: E501
-        native_entity_type = common_models.DefEntityType(name=keys_map[def_constants.DefKey.ENTITY_TYPE_NAME],
-                                                                                                 description='',
-                                                                                                 vendor=keys_map[def_constants.DefKey.ENTITY_TYPE_VENDOR],  # noqa: E501
-                                                                                                 nss=keys_map[def_constants.DefKey.ENTITY_TYPE_NSS],
-                                                                                                 version=keys_map[def_constants.DefKey.ENTITY_TYPE_VERSION],  # noqa: E501
-                                                                                                 schema=json.load(schema_file),
-                                                                                                 interfaces=[kubernetes_interface.get_id()],
-                                                                                                 readonly=False)
+        native_entity_type = common_models.DefEntityType(
+            name=keys_map[def_constants.DefKey.ENTITY_TYPE_NAME],
+            description='',
+            vendor=keys_map[def_constants.DefKey.ENTITY_TYPE_VENDOR],
+            nss=keys_map[def_constants.DefKey.ENTITY_TYPE_NSS],
+            version=keys_map[def_constants.DefKey.ENTITY_TYPE_VERSION],
+            schema=json.load(schema_file),
+            interfaces=[kubernetes_interface.get_id()],
+            readonly=False)
 
         msg = ""
         try:

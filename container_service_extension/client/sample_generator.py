@@ -6,7 +6,6 @@ import dataclasses
 import yaml
 
 import container_service_extension.common.constants.shared_constants as shared_constants  # noqa: E501
-import container_service_extension.rde.models.common_models as common_models
 import container_service_extension.rde.models.rde_1_0_0 as rde_1_0_0
 from container_service_extension.logging.logger import CLIENT_LOGGER
 
@@ -94,7 +93,7 @@ def get_sample_cluster_configuration(output=None, k8_runtime=None):
 
 def _get_sample_cluster_configuration_by_k8_runtime(k8_runtime):
     metadata = rde_1_0_0.Metadata('cluster_name', 'organization_name',
-                                   'org_virtual_datacenter_name')
+                                  'org_virtual_datacenter_name')
     status = rde_1_0_0.Status()
     settings = rde_1_0_0.Settings(network='ovdc_network_name', ssh_key=None)
     k8_distribution = rde_1_0_0.Distribution(

@@ -5,8 +5,8 @@
 from dataclasses import dataclass, asdict
 from typing import List
 
-from container_service_extension.common.constants import shared_constants as shared_constants
-from container_service_extension.rde import constants as def_constants, utils as def_utils
+from container_service_extension.common.constants import shared_constants as shared_constants  # noqa: E501
+from container_service_extension.rde import constants as def_constants, utils as def_utils  # noqa: E501
 from container_service_extension.rde.models.rde_1_0_0 import NativeEntity
 
 

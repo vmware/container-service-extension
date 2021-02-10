@@ -530,8 +530,9 @@ class ClusterService(abstract_broker.AbstractBroker):
         # Get previous def entity acl
         acl_svc = acl_service.ClusterACLService(cluster_id,
                                                 self.context.client)
-        prev_user_id_to_acl_entry_dict: Dict[str, common_models.ClusterAclEntry] \
-            = acl_svc.create_user_id_to_acl_entry_dict()
+        prev_user_id_to_acl_entry_dict: \
+            Dict[str, common_models.ClusterAclEntry] = \
+            acl_svc.create_user_id_to_acl_entry_dict()
 
         try:
             acl_svc.update_native_def_entity_acl(
@@ -1643,11 +1644,11 @@ def _get_nodes_details(sysadmin_client, vapp):
                     get_cse_policy_display_name(policy_name)
             if vm_name.startswith(NodeType.CONTROL_PLANE):
                 control_plane = rde_1_0_0.Node(name=vm_name, ip=ip,
-                                                                                       sizing_class=sizing_class)
+                                               sizing_class=sizing_class)
             elif vm_name.startswith(NodeType.WORKER):
                 workers.append(
                     rde_1_0_0.Node(name=vm_name, ip=ip,
-                                                                           sizing_class=sizing_class))
+                                   sizing_class=sizing_class))
             elif vm_name.startswith(NodeType.NFS):
                 exports = None
                 try:
@@ -1660,10 +1661,10 @@ def _get_nodes_details(sysadmin_client, vapp):
                                  f"node {vm_name} of cluster {vapp.name} ",
                                  exc_info=True)
                 nfs_nodes.append(rde_1_0_0.NfsNode(name=vm_name, ip=ip,
-                                                                                           sizing_class=sizing_class,
-                                                                                           exports=exports))
+                                                   sizing_class=sizing_class,
+                                                   exports=exports))
         return rde_1_0_0.Nodes(control_plane=control_plane, workers=workers,
-                                                                       nfs=nfs_nodes)
+                               nfs=nfs_nodes)
     except Exception as err:
         LOGGER.error("Failed to retrieve the status of the nodes of the "
                      f"cluster {vapp.name}: {err}", exc_info=True)

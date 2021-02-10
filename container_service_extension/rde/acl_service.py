@@ -103,8 +103,8 @@ class ClusterACLService:
             resource_url_relative_path=delete_path)
 
     def update_native_def_entity_acl(self, update_acl_entries: List[
-        common_models.ClusterAclEntry],  # noqa: E501
-                                     prev_user_id_to_acl_entry: Dict[str, common_models.ClusterAclEntry]):  # noqa: E501
+        common_models.ClusterAclEntry], prev_user_id_to_acl_entry: Dict[str,
+                                                                        common_models.ClusterAclEntry]):  # noqa: E501
         """Update native defined entity acl.
 
         :param list update_acl_entries: list of def_models.ClusterAclEntry
@@ -174,9 +174,9 @@ class ClusterACLService:
                     non_updated_access_settings.append(curr_setting)
         return non_updated_access_settings
 
-    def native_update_vapp_access_settings(self, prev_user_id_to_acl_entry_dict,  # noqa : E501
+    def native_update_vapp_access_settings(self, prev_user_id_to_acl_entry_dict,  # noqa: E501
                                            update_cluster_acl_entries: List[
-                                               common_models.ClusterAclEntry]):  # noqa: E501
+                                               common_models.ClusterAclEntry]):
         def_entity_user_ids = {acl_entry.memberId for _, acl_entry in
                                prev_user_id_to_acl_entry_dict.items()}
         total_vapp_access_settings = self.native_get_vapp_settings_only_vapp_shared(def_entity_user_ids)  # noqa: E501
@@ -195,7 +195,7 @@ class ClusterACLService:
             user_setting = form_vapp_access_setting_entry(
                 access_level=access_level,
                 name=acl_entry.username,
-                href=f'{api_uri}{server_constants.ADMIN_USER_PATH}{user_id}',  # noqa: E501
+                href=f'{api_uri}{server_constants.ADMIN_USER_PATH}{user_id}',
                 user_id=user_id)
             total_vapp_access_settings.append(user_setting)
 

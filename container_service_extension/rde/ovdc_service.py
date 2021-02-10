@@ -26,6 +26,7 @@ from container_service_extension.lib.telemetry.constants import CseOperation
 from container_service_extension.lib.telemetry.constants import OperationStatus
 from container_service_extension.lib.telemetry.constants import PayloadKey
 import container_service_extension.lib.telemetry.telemetry_handler as telemetry_handler # noqa: E501
+import container_service_extension.logging.logger as logger
 import container_service_extension.security.context.operation_context as ctx
 import container_service_extension.server.compute_policy_manager as compute_policy_manager # noqa: E501
 
