@@ -515,6 +515,7 @@ def _get_v35_plus_native_cluster_url_data(method: str, tokens: list):
             return {_OPERATION_KEY: CseOperation.V35_NATIVE_CLUSTER_LIST}
         raise cse_exception.MethodNotAllowedRequestError()
 
+
 def _get_v35_plus_cluster_url_data(method: str, tokens: list, api_version: str) -> dict:  # noqa: E501
     """Parse tokens from url and http method to get v35 cluster specific data.
 
