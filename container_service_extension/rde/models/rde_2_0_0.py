@@ -115,8 +115,8 @@ class Status:
         self.os = os
         self.nodes = Nodes(**nodes) if isinstance(nodes, dict) else nodes
         self.cloud_properties = CloudProperties(
-            **cloud_properties if isinstance(cloud_properties,
-                                             dict) else cloud_properties)
+            **cloud_properties) if isinstance(cloud_properties, dict) \
+            else cloud_properties
 
 
 @dataclass()

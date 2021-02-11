@@ -2,7 +2,7 @@
 # Copyright (c) 2021 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 
-from container_service_extension.rde.validators.abstract_validator import AbstractValidator  # noqa: E501
+from container_service_extension.rde.validators.utils import AbstractValidator
 
 
 class Validator2X(AbstractValidator):
