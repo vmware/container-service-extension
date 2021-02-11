@@ -168,7 +168,7 @@ def native_cluster_list(request_data, op_ctx: ctx.OperationContext):
 
     base_url = f"{op_ctx.client.get_api_uri().strip('/')}" \
                f"{CseOperationInfo.NATIVE_CLUSTER_LIST.api_path_format}"
-    return utils.create_links_and_construct_paginated_result(
+    return server_utils.create_links_and_construct_paginated_result(
         base_url, result,
         vcd_clusters_info[PaginationKey.RESULT_TOTAL],
         page_number=page_number,
