@@ -89,6 +89,7 @@ REQUEST_ID_FORMAT = 'Request Id: %(requestId)s | '
 
 @unique
 class OperationType(str, Enum):
+    NATIVE_CLUSTER = 'nativecluster'
     CLUSTER = 'cluster'
     NODE = 'node'
     OVDC = 'ovdc'
