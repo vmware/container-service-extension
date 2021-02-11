@@ -1,6 +1,7 @@
 # container-service-extension
 # Copyright (c) 2019 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
+
 from container_service_extension.common.constants.server_constants import CseOperation as CseServerOperationInfo  # noqa: E501
 from container_service_extension.common.constants.shared_constants import CSE_PAGINATION_DEFAULT_PAGE_SIZE  # noqa: E501
 from container_service_extension.common.constants.shared_constants import CSE_PAGINATION_FIRST_PAGE_NUMBER  # noqa: E501
@@ -9,7 +10,7 @@ from container_service_extension.common.constants.shared_constants import Reques
 import container_service_extension.common.utils.server_utils as server_utils
 from container_service_extension.lib.telemetry.constants import CseOperation
 from container_service_extension.lib.telemetry.telemetry_handler import record_user_action_telemetry  # noqa: E501
-import container_service_extension.rde.models as def_models
+import container_service_extension.rde.models.common_models as common_models
 import container_service_extension.rde.ovdc_service as ovdc_service
 import container_service_extension.security.context.operation_context as ctx
 import container_service_extension.server.request_handlers.request_utils as request_utils  # noqa: E501
@@ -26,7 +27,7 @@ def ovdc_update(data, operation_context: ctx.OperationContext):
 
     :return: Dictionary with org VDC update task href.
     """
-    ovdc_spec = def_models.Ovdc(**data[RequestKey.INPUT_SPEC])
+    ovdc_spec = common_models.Ovdc(**data[RequestKey.INPUT_SPEC])
     return ovdc_service.update_ovdc(operation_context,
                                     ovdc_id=data[RequestKey.OVDC_ID],
                                     ovdc_spec=ovdc_spec)

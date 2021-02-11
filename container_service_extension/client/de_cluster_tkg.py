@@ -23,7 +23,7 @@ from container_service_extension.rde.constants import CLUSTER_ACL_LIST_FIELDS
 from container_service_extension.rde.constants import DEF_TKG_ENTITY_TYPE_NSS
 from container_service_extension.rde.constants import DEF_TKG_ENTITY_TYPE_VERSION  # noqa: E501
 from container_service_extension.rde.constants import DEF_VMWARE_VENDOR
-import container_service_extension.rde.models as def_models
+import container_service_extension.rde.models.common_models as common_models
 
 
 class DEClusterTKG:
@@ -467,7 +467,7 @@ class DEClusterTKG:
                 break
             acl_values = []
             for entry in values:
-                acl_entry = def_models.ClusterAclEntry(**entry)
+                acl_entry = common_models.ClusterAclEntry(**entry)
                 acl_entry.username = org_user_id_to_name_dict.get(acl_entry.memberId)  # noqa: E501
                 acl_values.append(acl_entry.construct_filtered_dict(
                     include=CLUSTER_ACL_LIST_FIELDS))

@@ -15,7 +15,7 @@ from container_service_extension.lib.cloudapi.cloudapi_client import CloudApiCli
 from container_service_extension.lib.cloudapi.constants import CloudApiResource
 from container_service_extension.lib.cloudapi.constants import CloudApiVersion
 from container_service_extension.logging.logger import SERVER_LOGGER as LOGGER
-import container_service_extension.rde.models as def_models
+import container_service_extension.rde.models.common_models as common_models
 from container_service_extension.rde.utils import raise_error_if_def_not_supported # noqa: E501
 
 
@@ -74,12 +74,12 @@ class DefSchemaService():
                 f"page={page_num}")
             if len(response_body['values']) > 0:
                 for interface in response_body['values']:
-                    yield def_models.DefInterface(**interface)
+                    yield common_models.DefInterface(**interface)
             else:
                 break
 
     @handle_schema_service_exception
-    def get_interface(self, id: str) -> def_models.DefInterface:
+    def get_interface(self, id: str) -> common_models.DefInterface:
         """Get the interface given an id.
 
         :param str id: Id if the interface.
@@ -90,10 +90,10 @@ class DefSchemaService():
             method=cse_shared_constants.RequestMethod.GET,
             cloudapi_version=CloudApiVersion.VERSION_1_0_0,
             resource_url_relative_path=f"{CloudApiResource.INTERFACES}/{id}")
-        return def_models.DefInterface(**response_body)
+        return common_models.DefInterface(**response_body)
 
     @handle_schema_service_exception
-    def create_interface(self, interface: def_models.DefInterface) -> def_models.DefInterface:  # noqa: E501
+    def create_interface(self, interface: common_models.DefInterface) -> common_models.DefInterface:  # noqa: E501
         """Create the Defined entity interface.
 
         :param DefInterface interface: body of the interface
@@ -107,10 +107,10 @@ class DefSchemaService():
             cloudapi_version=CloudApiVersion.VERSION_1_0_0,
             resource_url_relative_path=f"{CloudApiResource.INTERFACES}",
             payload=asdict(interface))
-        return def_models.DefInterface(**response_body)
+        return common_models.DefInterface(**response_body)
 
     @handle_schema_service_exception
-    def update_interface(self, interface: def_models.DefInterface) -> def_models.DefInterface:  # noqa: E501
+    def update_interface(self, interface: common_models.DefInterface) -> common_models.DefInterface:  # noqa: E501
         """Update the Defined entity interface.
 
         As of May 2020, only name of the interface can be updated.
@@ -127,7 +127,7 @@ class DefSchemaService():
             resource_url_relative_path=f"{CloudApiResource.INTERFACES}/"
             f"{interface.id}",
             payload=asdict(interface))
-        return def_models.DefInterface(**response_body)
+        return common_models.DefInterface(**response_body)
 
     @handle_schema_service_exception
     def delete_interface(self, id: str) -> None:
@@ -144,7 +144,7 @@ class DefSchemaService():
             resource_url_relative_path=f"{CloudApiResource.INTERFACES}/{id}")
 
     @handle_schema_service_exception
-    def create_entity_type(self, entity_type: def_models.DefEntityType) -> def_models.DefEntityType:  # noqa: E501
+    def create_entity_type(self, entity_type: common_models.DefEntityType) -> common_models.DefEntityType:  # noqa: E501
         """Create the Defined entity type.
 
         :param DefEntityType interface: body of the entity type
@@ -158,10 +158,10 @@ class DefSchemaService():
             cloudapi_version=CloudApiVersion.VERSION_1_0_0,
             resource_url_relative_path=f"{CloudApiResource.ENTITY_TYPES}",
             payload=asdict(entity_type))
-        return def_models.DefEntityType(**response_body)
+        return common_models.DefEntityType(**response_body)
 
     @handle_schema_service_exception
-    def get_entity_type(self, id: str) -> def_models.DefEntityType:
+    def get_entity_type(self, id: str) -> common_models.DefEntityType:
         """Get the entity type given an id.
 
         :param str id: Id of the interface.
@@ -172,7 +172,7 @@ class DefSchemaService():
             method=cse_shared_constants.RequestMethod.GET,
             cloudapi_version=CloudApiVersion.VERSION_1_0_0,
             resource_url_relative_path=f"{CloudApiResource.ENTITY_TYPES}/{id}")
-        return def_models.DefEntityType(**response_body)
+        return common_models.DefEntityType(**response_body)
 
     @handle_schema_service_exception
     def list_entity_types(self):
@@ -191,12 +191,12 @@ class DefSchemaService():
                 f"page={page_num}")
             if len(response_body['values']) > 0:
                 for entityType in response_body['values']:
-                    yield def_models.DefEntityType(**entityType)
+                    yield common_models.DefEntityType(**entityType)
             else:
                 break
 
     @handle_schema_service_exception
-    def update_entity_type(self, entity_type: def_models.DefEntityType) -> def_models.DefEntityType:  # noqa: E501
+    def update_entity_type(self, entity_type: common_models.DefEntityType) -> common_models.DefEntityType:  # noqa: E501
         """Update the entity type.
 
         As of May 2020, only name and schema of the entity type can be
@@ -214,7 +214,7 @@ class DefSchemaService():
             resource_url_relative_path=f"{CloudApiResource.ENTITY_TYPES}/"
             f"{entity_type.id}",
             payload=asdict(entity_type))
-        return def_models.DefEntityType(**response_body)
+        return common_models.DefEntityType(**response_body)
 
     @handle_schema_service_exception
     def delete_entity_type(self, id: str) -> None:

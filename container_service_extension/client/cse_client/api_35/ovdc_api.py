@@ -9,7 +9,7 @@ import pyvcloud.vcd.client as vcd_client
 from container_service_extension.client.cse_client.cse_client import CseClient
 from container_service_extension.client.response_processor import process_response  # noqa: E501
 import container_service_extension.common.constants.shared_constants as shared_constants  # noqa: E501
-import container_service_extension.rde.models as def_models
+import container_service_extension.rde.models.common_models as common_models
 
 
 class OvdcApi(CseClient):
@@ -41,9 +41,9 @@ class OvdcApi(CseClient):
             uri,
             self._client._session,
             accept_type='application/json')
-        return def_models.Ovdc(**process_response(response))
+        return common_models.Ovdc(**process_response(response))
 
-    def update_ovdc(self, ovdc_id, ovdc_obj: def_models.Ovdc):
+    def update_ovdc(self, ovdc_id, ovdc_obj: common_models.Ovdc):
         uri = f"{self._ovdc_uri}/{ovdc_id}"
         resp = self._client._do_request_prim(
             shared_constants.RequestMethod.PUT,

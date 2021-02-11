@@ -57,7 +57,8 @@ from container_service_extension.mqi.mqtt_extension_manager import \
     MQTTExtensionManager
 import container_service_extension.rde.constants as def_constants
 import container_service_extension.rde.entity_service as def_entity_svc
-import container_service_extension.rde.models as def_models
+import container_service_extension.rde.models.common_models as common_models
+import container_service_extension.rde.models.rde_1_0_0 as rde_1_0_0
 import container_service_extension.rde.schema_service as def_schema_svc
 import container_service_extension.rde.utils as def_utils
 from container_service_extension.security.context.user_context import UserContext  # noqa: E501
@@ -761,12 +762,12 @@ def _register_def_schema(client: Client,
         def_utils.raise_error_if_def_not_supported(cloudapi_client)
         schema_svc = def_schema_svc.DefSchemaService(cloudapi_client)
         keys_map = def_constants.MAP_API_VERSION_TO_KEYS[float(client.get_api_version())] # noqa: E501
-        kubernetes_interface = def_models.\
-            DefInterface(name=keys_map[def_constants.DefKey.INTERFACE_NAME],
-                         vendor=keys_map[def_constants.DefKey.INTERFACE_VENDOR],  # noqa: E501
-                         nss=keys_map[def_constants.DefKey.INTERFACE_NSS],
-                         version=keys_map[def_constants.DefKey.INTERFACE_VERSION], # noqa: E501
-                         readonly=False)
+        kubernetes_interface = common_models.DefInterface(
+            name=keys_map[def_constants.DefKey.INTERFACE_NAME],
+            vendor=keys_map[def_constants.DefKey.INTERFACE_VENDOR],
+            nss=keys_map[def_constants.DefKey.INTERFACE_NSS],
+            version=keys_map[def_constants.DefKey.INTERFACE_VERSION],
+            readonly=False)
         try:
             # k8s interface should always be present
             schema_svc.get_interface(kubernetes_interface.get_id())
@@ -780,15 +781,15 @@ def _register_def_schema(client: Client,
         schema_module = importlib.import_module(
             f'{def_constants.DEF_SCHEMA_DIRECTORY}.{keys_map[def_constants.DefKey.ENTITY_TYPE_SCHEMA_VERSION]}') # noqa: E501
         schema_file = pkg_resources.open_text(schema_module, def_constants.DEF_ENTITY_TYPE_SCHEMA_FILE) # noqa: E501
-        native_entity_type = def_models.\
-            DefEntityType(name=keys_map[def_constants.DefKey.ENTITY_TYPE_NAME],
-                          description='',
-                          vendor=keys_map[def_constants.DefKey.ENTITY_TYPE_VENDOR],  # noqa: E501
-                          nss=keys_map[def_constants.DefKey.ENTITY_TYPE_NSS],
-                          version=keys_map[def_constants.DefKey.ENTITY_TYPE_VERSION],  # noqa: E501
-                          schema=json.load(schema_file),
-                          interfaces=[kubernetes_interface.get_id()],
-                          readonly=False)
+        native_entity_type = common_models.DefEntityType(
+            name=keys_map[def_constants.DefKey.ENTITY_TYPE_NAME],
+            description='',
+            vendor=keys_map[def_constants.DefKey.ENTITY_TYPE_VENDOR],
+            nss=keys_map[def_constants.DefKey.ENTITY_TYPE_NSS],
+            version=keys_map[def_constants.DefKey.ENTITY_TYPE_VERSION],
+            schema=json.load(schema_file),
+            interfaces=[kubernetes_interface.get_id()],
+            readonly=False)
 
         msg = ""
         try:
@@ -2353,33 +2354,33 @@ def _create_def_entity_for_existing_clusters(
         worker_nodes = []
         for item in cluster['nodes']:
             worker_nodes.append(
-                def_models.Node(name=item['name'], ip=item['ipAddress']))
+                rde_1_0_0.Node(name=item['name'], ip=item['ipAddress']))
         nfs_nodes = []
         for item in cluster['nfs_nodes']:
-            nfs_nodes.append(def_models.NfsNode(
+            nfs_nodes.append(rde_1_0_0.NfsNode(
                 name=item['name'],
                 ip=item['ipAddress'],
                 exports=item['exports']))
 
-        cluster_entity = def_models.NativeEntity(
+        cluster_entity = rde_1_0_0.NativeEntity(
             kind=kind,
-            spec=def_models.ClusterSpec(
-                workers=def_models.Workers(
+            spec=rde_1_0_0.ClusterSpec(
+                workers=rde_1_0_0.Workers(
                     count=len(cluster['nodes']),
                     storage_profile=cluster['storage_profile_name']),
-                control_plane=def_models.ControlPlane(
+                control_plane=rde_1_0_0.ControlPlane(
                     count=len(cluster['master_nodes']),
                     storage_profile=cluster['storage_profile_name']),
-                nfs=def_models.Nfs(
+                nfs=rde_1_0_0.Nfs(
                     count=len(cluster['nfs_nodes']),
                     storage_profile=cluster['storage_profile_name']),
-                settings=def_models.Settings(
+                settings=rde_1_0_0.Settings(
                     network=cluster['network_name'],
                     ssh_key=""),  # Impossible to get this value from clusters
-                k8_distribution=def_models.Distribution(
+                k8_distribution=rde_1_0_0.Distribution(
                     template_name=cluster['template_name'],
                     template_revision=int(cluster['template_revision']))),
-            status=def_models.Status(
+            status=rde_1_0_0.Status(
                 phase=str(server_constants.DefEntityPhase(
                     server_constants.DefEntityOperation.CREATE,
                     server_constants.DefEntityOperationStatus.SUCCEEDED)),
@@ -2387,13 +2388,13 @@ def _create_def_entity_for_existing_clusters(
                 cni=f"{cluster['cni']} {cluster['cni_version']}",
                 os=cluster['os'],
                 docker_version=cluster['docker_version'],
-                nodes=def_models.Nodes(
-                    control_plane=def_models.Node(
+                nodes=rde_1_0_0.Nodes(
+                    control_plane=rde_1_0_0.Node(
                         name=cluster['master_nodes'][0]['name'],
                         ip=cluster['master_nodes'][0]['ipAddress']),
                     workers=worker_nodes,
                     nfs=nfs_nodes)),
-            metadata=def_models.Metadata(
+            metadata=rde_1_0_0.Metadata(
                 org_name=cluster['org_name'],
                 ovdc_name=cluster['vdc_name'],
                 cluster_name=cluster['name']),
@@ -2401,7 +2402,7 @@ def _create_def_entity_for_existing_clusters(
 
         org_resource = vcd_utils.get_org(client, org_name=cluster['org_name'])
         org_id = org_resource.href.split('/')[-1]
-        def_entity = def_models.DefEntity(entity=cluster_entity)
+        def_entity = common_models.DefEntity(entity=cluster_entity)
         entity_svc.create_entity(native_entity_type.id, entity=def_entity,
                                  tenant_org_context=org_id)
 
@@ -2421,10 +2422,10 @@ def _create_def_entity_for_existing_clusters(
             org_id = org_href.split("/")[-1]
             org_urn = f"urn:vcloud:org:{org_id}"
 
-            def_entity.owner = def_models.Owner(
+            def_entity.owner = common_models.Owner(
                 name=cluster['owner_name'],
                 id=orgmember_urn)
-            def_entity.org = def_models.Org(
+            def_entity.org = common_models.Org(
                 name=cluster['org_name'],
                 id=org_urn)
         except Exception as err:

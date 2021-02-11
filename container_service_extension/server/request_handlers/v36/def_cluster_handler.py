@@ -7,7 +7,7 @@ from container_service_extension.common.constants.shared_constants import Reques
 import container_service_extension.lib.telemetry.constants as telemetry_constants  # noqa: E501
 import container_service_extension.lib.telemetry.telemetry_handler as telemetry_handler  # noqa: E501
 import container_service_extension.rde.cluster_service as cluster_svc
-import container_service_extension.rde.models as def_models
+import container_service_extension.rde.models.rde_1_0_0 as rde_1_0_0
 import container_service_extension.security.context.operation_context as ctx
 import container_service_extension.server.request_handlers.request_utils as request_utils  # noqa: E501
 
@@ -24,7 +24,7 @@ def cluster_update(data: dict, op_ctx: ctx.OperationContext):
     """
     svc = cluster_svc.ClusterService(op_ctx)
     cluster_id = data[RequestKey.CLUSTER_ID]
-    cluster_entity_spec = def_models.NativeEntity(**data[RequestKey.INPUT_SPEC])  # noqa: E501
+    cluster_entity_spec = rde_1_0_0.NativeEntity(**data[RequestKey.INPUT_SPEC])  # noqa: E501
     curr_entity = svc.entity_svc.get_entity(cluster_id)
     is_upgrade_operation = \
         request_utils.validate_cluster_update_request_and_check_cluster_upgrade(  # noqa: E501

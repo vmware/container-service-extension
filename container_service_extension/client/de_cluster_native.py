@@ -15,8 +15,9 @@ import container_service_extension.common.constants.shared_constants as shared_c
 import container_service_extension.common.utils.pyvcloud_utils as vcd_utils
 import container_service_extension.exception.exceptions as cse_exceptions
 import container_service_extension.logging.logger as logger
-from container_service_extension.rde import models as def_models
 import container_service_extension.rde.entity_service as def_entity_svc
+import container_service_extension.rde.models.common_models as common_models
+import container_service_extension.rde.models.rde_1_0_0 as rde_1_0_0
 
 
 class DEClusterNative:
@@ -40,7 +41,7 @@ class DEClusterNative:
         self._native_cluster_api = NativeClusterApi(client)
         self._client = client
 
-    def create_cluster(self, cluster_entity: def_models.NativeEntity):
+    def create_cluster(self, cluster_entity: rde_1_0_0.NativeEntity):
         """Create a new Kubernetes cluster.
 
         :param models.NativeEntity cluster_entity: native cluster entity
@@ -49,7 +50,7 @@ class DEClusterNative:
         msg = "Operation not supported; Under implementation"
         raise vcd_exceptions.OperationNotSupportedException(msg)
 
-    def resize_cluster(self, cluster_entity: def_models.NativeEntity):
+    def resize_cluster(self, cluster_entity: rde_1_0_0.NativeEntity):
         """Resize the existing Kubernetes cluster.
 
         :param models.NativeEntity cluster_entity: native cluster entity
@@ -234,7 +235,7 @@ class DEClusterNative:
         :rtype: str
         """
         # TODO: check if we really need to decode-encode-decode-encode
-        cluster_upgrade_definition = def_models.DefEntity(**cluster_def_entity)
+        cluster_upgrade_definition = common_models.DefEntity(**cluster_def_entity)  # noqa: E501
         cluster_def_entity = \
             self._native_cluster_api.upgrade_cluster_by_cluster_id(
                 cluster_id, cluster_upgrade_definition)
@@ -248,7 +249,7 @@ class DEClusterNative:
         :rtype: dict
         """
         entity_svc = def_entity_svc.DefEntityService(self._cloudapi_client)
-        cluster_spec = def_models.NativeEntity(**cluster_config)
+        cluster_spec = rde_1_0_0.NativeEntity(**cluster_config)
         cluster_name = cluster_spec.metadata.cluster_name
         if cluster_id:
             # If cluster id doesn't exist, an exception will be raised
@@ -283,7 +284,7 @@ class DEClusterNative:
         # Parse user id info
         update_acl_entries = []
         for username, user_id in name_to_id.items():
-            acl_entry = def_models.ClusterAclEntry(
+            acl_entry = common_models.ClusterAclEntry(
                 memberId=user_id,
                 username=username,
                 accessLevelId=access_level_id)
