@@ -10,6 +10,7 @@ import pyvcloud.vcd.task as vcd_task
 from container_service_extension.common.constants.server_constants import CseOperation as CseServerOperationInfo  # noqa: E501
 from container_service_extension.common.constants.server_constants import K8S_PROVIDER_KEY  # noqa: E501
 from container_service_extension.common.constants.server_constants import K8sProvider  # noqa: E501
+from container_service_extension.common.constants.server_constants import OvdcInfoKey  # noqa: E501
 from container_service_extension.common.constants.server_constants import ThreadLocalData  # noqa: E501
 from container_service_extension.common.constants.shared_constants import ComputePolicyAction  # noqa: E501
 from container_service_extension.common.constants.shared_constants import CSE_PAGINATION_DEFAULT_PAGE_SIZE  # noqa: E501
@@ -107,12 +108,56 @@ def ovdc_info(request_data, op_ctx: ctx.OperationContext):
         ovdc_id=request_data[RequestKey.OVDC_ID])
 
 
+def _get_cse_ovdc_list(sysadmin_client: vcd_client.Client,
+                       org_vdcs: list) -> list:
+    ovdcs = []
+    for ovdc in org_vdcs:
+        ovdc_name = ovdc.get('name')
+        org_name = ovdc.get('orgName')
+        ovdc_id = vcd_utils.extract_id(ovdc.get('id'))
+        # obtain the runtimes supported stored in
+        # ovdc metadata
+        k8s_metadata = ovdc_utils.get_ovdc_k8s_provider_metadata(
+            sysadmin_client,
+            ovdc_id=ovdc_id,
+            ovdc_name=ovdc_name,
+            org_name=org_name)
+        k8s_provider = k8s_metadata[K8S_PROVIDER_KEY]
+        ovdc_dict = {
+            OvdcInfoKey.OVDC_NAME: ovdc_name,
+            OvdcInfoKey.ORG_NAME: org_name,
+            OvdcInfoKey.K8S_PROVIDER: k8s_provider
+        }
+        ovdcs.append(ovdc_dict)
+    return ovdcs
+
+
 @record_user_action_telemetry(cse_operation=CseOperation.OVDC_LIST)
 def ovdc_list(request_data, op_ctx: ctx.OperationContext):
     """Request handler for ovdc list operation.
 
     :return: List of dictionaries with org VDC k8s provider metadata.
     """
+    # NOTE: Response sent out by this function should not be
+    # paginated
+    # Record telemetry data
+    cse_params = copy.deepcopy(request_data)
+    record_user_action_details(cse_operation=CseOperation.OVDC_LIST,
+                               cse_params=cse_params)
+
+    org_vdcs = vcd_utils.get_all_ovdcs(op_ctx.client)
+    return _get_cse_ovdc_list(op_ctx.sysadmin_client, org_vdcs)
+
+
+@record_user_action_telemetry(cse_operation=CseOperation.OVDC_LIST)
+def org_vdc_list(request_data, op_ctx: ctx.OperationContext):
+    """Request handler for orgvdc list operation.
+
+    This handler returns a paginated response.
+    :return: Dictionary containing list of org VDC K8s provider metadata
+    :rtype: dict
+    """
+    # NOTE: Response sent out by this funciton should be paginated
     defaults = {
         PaginationKey.PAGE_NUMBER: CSE_PAGINATION_FIRST_PAGE_NUMBER,
         PaginationKey.PAGE_SIZE: CSE_PAGINATION_DEFAULT_PAGE_SIZE
@@ -127,8 +172,6 @@ def ovdc_list(request_data, op_ctx: ctx.OperationContext):
     cse_params[PayloadKey.SOURCE_DESCRIPTION] = thread_local_data.get_thread_local_data(ThreadLocalData.USER_AGENT)  # noqa: E501
     record_user_action_details(cse_operation=CseOperation.OVDC_LIST,
                                cse_params=cse_params)
-
-    ovdcs = []
     result = \
         vcd_utils.get_ovdcs_by_page(op_ctx.client,
                                     page=page_number,
@@ -137,23 +180,10 @@ def ovdc_list(request_data, op_ctx: ctx.OperationContext):
     result_total = result[PaginationKey.RESULT_TOTAL]
     next_page_uri = result.get(PaginationKey.NEXT_PAGE_URI)
     prev_page_uri = result.get(PaginationKey.PREV_PAGE_URI)
-    for ovdc in org_vdcs:
-        ovdc_name = ovdc.get('name')
-        org_name = ovdc.get('orgName')
-        ovdc_id = vcd_utils.extract_id(ovdc.get('id'))
-        k8s_metadata = ovdc_utils.get_ovdc_k8s_provider_metadata(
-            op_ctx.sysadmin_client,
-            ovdc_id=ovdc_id,
-            ovdc_name=ovdc_name,
-            org_name=org_name)
-        k8s_provider = k8s_metadata[K8S_PROVIDER_KEY]
-        ovdc_dict = {
-            'name': ovdc_name,
-            'org': org_name,
-            'k8s provider': k8s_provider
-        }
-        ovdcs.append(ovdc_dict)
-    api_path = CseServerOperationInfo.OVDC_LIST.api_path_format
+
+    ovdcs = _get_cse_ovdc_list(op_ctx.sysadmin_client, org_vdcs)
+
+    api_path = CseServerOperationInfo.ORG_VDC_LIST.api_path_format
     next_page_uri = vcd_utils.create_cse_page_uri(op_ctx.client,
                                                   api_path,
                                                   vcd_uri=next_page_uri)

@@ -13,13 +13,14 @@ class PksOvdcApi(CseClient):
     def __init__(self, client: vcd_client.Client):
         super().__init__(client)
         self._uri = f"{self._uri}/{shared_constants.PKS_URL_FRAGMENT}"
-        self._ovdcs_uri = f"{self._uri}/ovdcs"
+        self._org_vdcs_uri = f"{self._uri}/orgvdcs"
         self._ovdc_uri = f"{self._uri}/ovdc"
 
     def get_all_ovdcs(self, filters=None):
         if filters is None:
             filters = {}
-        url = f"{self._ovdcs_uri}?pageSize={self._request_page_size}"
+        url = f"{self._org_vdcs_uri}?" \
+              f"{shared_constants.PaginationKey.PAGE_SIZE.value}={self._request_page_size}"  # noqa: E501
         return self.iterate_results(url, filters=filters)
 
     def get_ovdc(self, ovdc_id):
