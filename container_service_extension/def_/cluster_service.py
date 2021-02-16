@@ -23,7 +23,7 @@ import container_service_extension.compute_policy_manager as compute_policy_mana
 import container_service_extension.def_.entity_service as def_entity_svc
 import container_service_extension.def_.models as def_models
 import container_service_extension.def_.utils as def_utils
-import container_service_extension.exceptions as e
+import container_service_extension.exceptions as E
 import container_service_extension.local_template_manager as ltm
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
 import container_service_extension.operation_context as ctx
@@ -137,7 +137,7 @@ class ClusterService(abstract_broker.AbstractBroker):
         """
         curr_entity = self.entity_svc.get_entity(cluster_id)
         if curr_entity.state != def_utils.DEF_RESOLVED_STATE:
-            raise e.CseServerError(
+            raise E.CseServerError(
                 f"Cluster {curr_entity.name} with id {cluster_id} is not in a "
                 f"valid state for this operation. Please contact the administrator")  # noqa: E501
 
@@ -160,7 +160,7 @@ class ClusterService(abstract_broker.AbstractBroker):
                                              CSE_CLUSTER_KUBECONFIG_PATH)
 
         if not result:
-            raise e.ClusterOperationError("Couldn't get cluster configuration")
+            raise E.ClusterOperationError("Couldn't get cluster configuration")
 
         return result.content.decode()
 
@@ -189,7 +189,7 @@ class ClusterService(abstract_broker.AbstractBroker):
 
         # check that cluster name is syntactically valid
         if not _is_valid_cluster_name(cluster_name):
-            raise e.CseServerError(f"Invalid cluster name '{cluster_name}'")
+            raise E.CseServerError(f"Invalid cluster name '{cluster_name}'")
 
         # Check that cluster name doesn't already exist.
         # Do not replace the below with the check to verify if defined entity
@@ -199,7 +199,7 @@ class ClusterService(abstract_broker.AbstractBroker):
         if _cluster_exists(self.context.client, cluster_name,
                            org_name=org_name,
                            ovdc_name=ovdc_name):
-            raise e.ClusterAlreadyExistsError(
+            raise E.ClusterAlreadyExistsError(
                 f"Cluster '{cluster_name}' already exists.")
 
         # check that requested/default template is valid
@@ -282,18 +282,18 @@ class ClusterService(abstract_broker.AbstractBroker):
 
         # Check if the desired worker and nfs count is valid
         if num_workers_to_add == 0 and num_nfs_to_add == 0:
-            raise e.CseServerError(f"Cluster '{cluster_name}' already has "
+            raise E.CseServerError(f"Cluster '{cluster_name}' already has "
                                    f"{desired_worker_count} workers and "
                                    f"{desired_nfs_count} nfs nodes.")
         elif desired_worker_count < 0:
-            raise e.CseServerError(
+            raise E.CseServerError(
                 f"Worker count must be >= 0 (received {desired_worker_count})")
         elif num_nfs_to_add < 0:
-            raise e.CseServerError("Scaling down nfs nodes is not supported")
+            raise E.CseServerError("Scaling down nfs nodes is not supported")
 
         # check if cluster is in a valid state
         if state != def_utils.DEF_RESOLVED_STATE or phase.is_entity_busy():
-            raise e.CseServerError(
+            raise E.CseServerError(
                 f"Cluster {cluster_name} with id {cluster_id} is not in a "
                 f"valid state to be resized. Please contact the administrator")
 
@@ -339,7 +339,7 @@ class ClusterService(abstract_broker.AbstractBroker):
 
         # Check if cluster is busy
         if phase.is_entity_busy():
-            raise e.CseServerError(
+            raise E.CseServerError(
                 f"Cluster {cluster_name} with id {cluster_id} is not in a "
                 f"valid state to be deleted. Please contact administrator.")
 
@@ -414,7 +414,7 @@ class ClusterService(abstract_broker.AbstractBroker):
             curr_entity.entity.status.phase)
         state: str = curr_entity.state
         if state != def_utils.DEF_RESOLVED_STATE or phase.is_entity_busy():
-            raise e.CseServerError(
+            raise E.CseServerError(
                 f"Cluster {cluster_name} with id {cluster_id} is not in a "
                 f"valid state to be upgraded. Please contact administrator.")
 
@@ -430,7 +430,7 @@ class ClusterService(abstract_broker.AbstractBroker):
         if not template:
             # TODO all of these e.CseServerError instances related to request
             # should be changed to BadRequestError (400)
-            raise e.CseServerError(
+            raise E.CseServerError(
                 f"Specified template/revision ({new_template_name} revision "
                 f"{new_template_revision}) is not a valid upgrade target for "
                 f"cluster '{cluster_name}'.")
@@ -547,7 +547,7 @@ class ClusterService(abstract_broker.AbstractBroker):
                     fence_mode='bridged')
             except Exception as err:
                 LOGGER.error(err, exc_info=True)
-                raise e.ClusterOperationError(
+                raise E.ClusterOperationError(
                     f"Error while creating vApp: {err}")
             self.context.client.get_task_monitor().wait_for_status(vapp_resource.Tasks.Task[0]) # noqa: E501
 
@@ -593,7 +593,7 @@ class ClusterService(abstract_broker.AbstractBroker):
                            sizing_class_name=control_plane_sizing_class)
             except Exception as err:
                 LOGGER.error(err, exc_info=True)
-                raise e.ControlPlaneNodeCreationError(
+                raise E.ControlPlaneNodeCreationError(
                     f"Error adding control plane node: {err}")
 
             msg = f"Initializing cluster '{cluster_name}' ({cluster_id})"
@@ -628,7 +628,7 @@ class ClusterService(abstract_broker.AbstractBroker):
                            sizing_class_name=worker_sizing_class)
             except Exception as err:
                 LOGGER.error(err, exc_info=True)
-                raise e.WorkerNodeCreationError(
+                raise E.WorkerNodeCreationError(
                     f"Error creating worker node: {err}")
 
             msg = f"Adding {num_workers} node(s) to cluster " \
@@ -661,7 +661,7 @@ class ClusterService(abstract_broker.AbstractBroker):
                                sizing_class_name=nfs_sizing_class)
                 except Exception as err:
                     LOGGER.error(err, exc_info=True)
-                    raise e.NFSNodeCreationError(
+                    raise E.NFSNodeCreationError(
                         f"Error creating NFS node: {err}")
 
             # Update defined entity instance with new properties like vapp_id,
@@ -684,9 +684,9 @@ class ClusterService(abstract_broker.AbstractBroker):
             msg = f"Created cluster '{cluster_name}' ({cluster_id})"
             LOGGER.debug(msg)
             self._update_task(vcd_client.TaskStatus.SUCCESS, message=msg)
-        except (e.ControlPlaneNodeCreationError, e.WorkerNodeCreationError,
-                e.NFSNodeCreationError, e.ClusterJoiningError,
-                e.ClusterInitializationError, e.ClusterOperationError) as err:
+        except (E.ControlPlaneNodeCreationError, E.WorkerNodeCreationError,
+                E.NFSNodeCreationError, E.ClusterJoiningError,
+                E.ClusterInitializationError, E.ClusterOperationError) as err:
             msg = f"Error creating cluster '{cluster_name}'"
             LOGGER.error(msg, exc_info=True)
             if rollback:
@@ -919,7 +919,7 @@ class ClusterService(abstract_broker.AbstractBroker):
             msg = f"Created {num_workers_to_add} workers & {num_nfs_to_add}" \
                   f" nfs nodes for '{cluster_name}' ({cluster_id}) "
             self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
-        except (e.NodeCreationError, e.ClusterJoiningError) as err:
+        except (E.NodeCreationError, E.ClusterJoiningError) as err:
             msg = f"Error adding nodes to cluster '{cluster_name}'"
             LOGGER.error(msg, exc_info=True)
             if rollback:
@@ -1248,7 +1248,7 @@ class ClusterService(abstract_broker.AbstractBroker):
 
         if not nodes_to_del:
             if not cluster_spec:
-                raise e.CseServerError(f"No nodes specified to delete for "
+                raise E.CseServerError(f"No nodes specified to delete for "
                                        f"cluster {cluster_name}({cluster_id})")
             desired_worker_count = cluster_spec.spec.workers.count
             nodes_to_del = [node.name for node in
@@ -1271,7 +1271,7 @@ class ClusterService(abstract_broker.AbstractBroker):
                                  vapp_href,
                                  worker_nodes_to_delete,
                                  cluster_name=cluster_name)
-            except (e.NodeOperationError, e.ScriptExecutionError) as err:
+            except (E.NodeOperationError, E.ScriptExecutionError) as err:
                 LOGGER.warning(f"Failed to drain nodes: {nodes_to_del}"
                                f" in cluster '{cluster_name}'."
                                f" Continuing node delete...\nError: {err}")
@@ -1747,7 +1747,7 @@ def _add_nodes(sysadmin_client, num_nodes, node_type, org, vdc, vapp,
                         script=script)
                     errors = _get_script_execution_errors(exec_results)
                     if errors:
-                        raise e.ScriptExecutionError(
+                        raise E.ScriptExecutionError(
                             f"VM customization script execution failed "
                             f"on node {vm_name}:{errors}")
         except Exception as err:
@@ -1757,10 +1757,10 @@ def _add_nodes(sysadmin_client, num_nodes, node_type, org, vdc, vapp,
             node_list = [entry.get('target_vm_name') for entry in specs]
             if hasattr(err, 'vcd_error') and err.vcd_error is not None and \
                     "throwPolicyNotAvailableException" in err.vcd_error.get('stackTrace', ''):  # noqa: E501
-                raise e.NodeCreationError(node_list,
+                raise E.NodeCreationError(node_list,
                                           f"OVDC not enabled for {template[LocalTemplateKey.KIND]}")  # noqa: E501
 
-            raise e.NodeCreationError(node_list, str(err))
+            raise E.NodeCreationError(node_list, str(err))
 
         vapp.reload()
         return {'task': task, 'specs': specs}
@@ -1784,7 +1784,7 @@ def _get_control_plane_ip(sysadmin_client: vcd_client.Client, vapp):
                                       check_tools=False)
     errors = _get_script_execution_errors(result)
     if errors:
-        raise e.ScriptExecutionError(f"Get control plane IP script execution "
+        raise E.ScriptExecutionError(f"Get control plane IP script execution "
                                      f"failed on control plane node "
                                      f"{node_names}:{errors}")
     control_plane_ip = result[0][1].content.decode().split()[0]
@@ -1807,14 +1807,14 @@ def _init_cluster(sysadmin_client: vcd_client.Client, vapp, template_name,
                                           node_names=node_names, script=script)
         errors = _get_script_execution_errors(result)
         if errors:
-            raise e.ScriptExecutionError(
+            raise E.ScriptExecutionError(
                 f"Initialize cluster script execution failed on node "
                 f"{node_names}:{errors}")
         if result[0][0] != 0:
-            raise e.ClusterInitializationError(f"Couldn't initialize cluster:\n{result[0][2].content.decode()}") # noqa: E501
+            raise E.ClusterInitializationError(f"Couldn't initialize cluster:\n{result[0][2].content.decode()}") # noqa: E501
     except Exception as err:
         LOGGER.error(err, exc_info=True)
-        raise e.ClusterInitializationError(
+        raise E.ClusterInitializationError(
             f"Couldn't initialize cluster: {str(err)}")
 
 
@@ -1832,7 +1832,7 @@ def _join_cluster(sysadmin_client: vcd_client.Client, vapp, template_name,
                                                         script=script)
         errors = _get_script_execution_errors(control_plane_result)
         if errors:
-            raise e.ClusterJoiningError(
+            raise E.ClusterJoiningError(
                 "Join cluster script execution failed on "
                 f"control plane node {node_names}:{errors}")
         init_info = control_plane_result[0][1].content.decode().split()
@@ -1850,16 +1850,16 @@ def _join_cluster(sysadmin_client: vcd_client.Client, vapp, template_name,
                                                   script=script)
         errors = _get_script_execution_errors(worker_results)
         if errors:
-            raise e.ClusterJoiningError(
+            raise E.ClusterJoiningError(
                 "Join cluster script execution failed "
                 f"on worker node  {node_names}:{errors}")
         for result in worker_results:
             if result[0] != 0:
-                raise e.ClusterJoiningError(f"Couldn't join cluster:"
+                raise E.ClusterJoiningError(f"Couldn't join cluster:"
                                             f"\n{result[2].content.decode()}")
     except Exception as err:
         LOGGER.error(err, exc_info=True)
-        raise e.ClusterJoiningError(f"Couldn't join cluster: {str(err)}")
+        raise E.ClusterJoiningError(f"Couldn't join cluster: {str(err)}")
 
 
 def _wait_for_tools_ready_callback(message, exception=None):
@@ -1895,7 +1895,7 @@ def _wait_until_ready_to_exec(vs, vm, password, tries=30):
         time.sleep(2)
 
     if not ready:
-        raise e.CseServerError('VM is not ready to execute scripts')
+        raise E.CseServerError('VM is not ready to execute scripts')
 
 
 def _execute_script_in_nodes(sysadmin_client: vcd_client.Client,
@@ -1947,7 +1947,7 @@ def _execute_script_in_nodes(sysadmin_client: vcd_client.Client,
             LOGGER.debug(result_stdout)
             all_results.append(result)
         except Exception as err:
-            raise e.ScriptExecutionError(f"Error executing script in node {node_name}: {str(err)}")  # noqa: E501
+            raise E.ScriptExecutionError(f"Error executing script in node {node_name}: {str(err)}")  # noqa: E501
 
     return all_results
 
@@ -1975,10 +1975,10 @@ def _run_script_in_nodes(sysadmin_client: vcd_client.Client, vapp_href,
                                        check_tools=False)
     errors = _get_script_execution_errors(results)
     if errors:
-        raise e.ScriptExecutionError(f"Script execution failed on node "
+        raise E.ScriptExecutionError(f"Script execution failed on node "
                                      f"{node_names}\nErrors: {errors}")
     if results[0][0] != 0:
-        raise e.NodeOperationError(f"Error during node operation:\n"
+        raise E.NodeOperationError(f"Error during node operation:\n"
                                    f"{results[0][2].content.decode()}")
 
 
