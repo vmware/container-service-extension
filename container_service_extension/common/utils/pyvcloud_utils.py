@@ -12,6 +12,7 @@ from pyvcloud.vcd.exceptions import EntityNotFoundException
 import pyvcloud.vcd.org as vcd_org
 from pyvcloud.vcd.utils import extract_id
 from pyvcloud.vcd.utils import get_admin_href
+from pyvcloud.vcd.utils import to_dict
 import pyvcloud.vcd.vapp as vcd_vapp
 from pyvcloud.vcd.vdc import VDC
 import requests
@@ -24,7 +25,6 @@ from container_service_extension.common.constants.shared_constants import USER_U
 from container_service_extension.common.utils.core_utils import extract_id_from_href  # noqa: E501
 from container_service_extension.common.utils.core_utils import NullPrinter
 from container_service_extension.common.utils.core_utils import str_to_bool
-import container_service_extension.common.utils.pyvcloud_utils as vcd_utils
 from container_service_extension.common.utils.server_utils import get_server_runtime_config  # noqa: E501
 import container_service_extension.lib.cloudapi.cloudapi_client as cloudApiClient  # noqa: E501
 from container_service_extension.logging.logger import NULL_LOGGER
@@ -606,7 +606,7 @@ def create_org_user_id_to_name_dict(client: vcd_client.Client, org_name):
     users: list = org.list_users()
     user_id_to_name_dict = {}
     for user_str_elem in users:
-        curr_user_dict = vcd_utils.to_dict(user_str_elem, exclude=[])
+        curr_user_dict = to_dict(user_str_elem, exclude=[])
         user_name = curr_user_dict['name']
         user_urn = USER_URN_PREFIX + \
             extract_id_from_href(curr_user_dict['href'])
