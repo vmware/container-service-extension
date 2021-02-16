@@ -8,7 +8,7 @@ from container_service_extension.rde.models.rde_2_0_0 import NativeEntity as Nat
 def get_model(rde_version):
     """Get the model class of the specified rde_version.
 
-    Factory method to return the model class based on the specified RDE version.
+    Factory method to return the model class based on the specified RDE version
     :param rde_version (str)
 
     :rtype model: NativeEntity

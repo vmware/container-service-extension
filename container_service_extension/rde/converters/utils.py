@@ -34,4 +34,3 @@ def convert(data: dict, destn_rde_version: str, src_rde_version: str = None,
     destn_model = get_model(destn_rde_version)
     data = destn_model(**data)
     return data
-

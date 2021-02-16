@@ -2,8 +2,8 @@ import abc
 
 import semantic_version
 
-from container_service_extension.rde.validators.validator_rde_1_x import Validator1X
-from container_service_extension.rde.validators.validator_rde_2_x import Validator2X
+from container_service_extension.rde.validators.validator_rde_1_x import Validator1X  # noqa: E501
+from container_service_extension.rde.validators.validator_rde_2_x import Validator2X  # noqa: E501
 
 
 def get_validator(rde_version_in_use):
@@ -36,4 +36,3 @@ class AbstractValidator(abc.ABC):
         :retur bool:
         """
         pass
-
