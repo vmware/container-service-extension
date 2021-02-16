@@ -1946,7 +1946,7 @@ def _execute_script_in_nodes(sysadmin_client: vcd_client.Client,
             LOGGER.debug(result_stderr)
             LOGGER.debug(result_stdout)
             all_results.append(result)
-        except Exception:
+        except Exception as e:
             raise e.ScriptExecutionError(f"Error executing script in node {node_name}: {str(e)}")  # noqa: E501
 
     return all_results
