@@ -18,7 +18,6 @@ class NativeClusterApi(CseClient):
         self._uri = f"{self._uri}/{shared_constants.CSE_URL_FRAGMENT}/{shared_constants.CSE_3_0_URL_FRAGMENT}"  # noqa: E501
         self._clusters_uri = f"{self._uri}/clusters"
         self._cluster_uri = f"{self._uri}/cluster"
-        self._request_page_size = 1
 
     def create_cluster(self, cluster_entity_definition: def_models.NativeEntity):  # noqa: E501
         cluster_entity_dict = asdict(cluster_entity_definition)
