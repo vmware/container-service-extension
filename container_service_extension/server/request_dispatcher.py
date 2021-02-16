@@ -27,8 +27,8 @@ import container_service_extension.server.request_handlers.v35.ovdc_handler as v
 import container_service_extension.server.request_handlers.v36.def_cluster_handler as v36_cluster_handler  # noqa: E501
 
 
-CSE_REQUEST_DISPATCHER_LIST = [
-    # /system end points
+# /system end points
+SYSTEM_HANDLERS = [
     {
         'url': "cse/system",
         RequestMethod.GET: {
@@ -49,9 +49,11 @@ CSE_REQUEST_DISPATCHER_LIST = [
                 'handler': system_handler.system_update
             }
         }
-    },
+    }
+]
 
-    # /template end point
+# /template end point
+TEMPLATE_HANDLERS = [
     {
         'url': "cse/templates",
         RequestMethod.GET: {
@@ -62,9 +64,11 @@ CSE_REQUEST_DISPATCHER_LIST = [
                 'handler': template_handler.template_list
             }
         }
-    },
+    }
+]
 
-    # /pks end points
+# /pks end points
+PKS_HANDLERS = [
     {
         'url': "pks/clusters",
         RequestMethod.GET: {
@@ -157,9 +161,11 @@ CSE_REQUEST_DISPATCHER_LIST = [
                 'handler': pks_ovdc_handler.ovdc_update
             }
         }
-    },
+    }
+]
 
-    # /cse end points
+# /cse/cluster end points
+LEGACY_CLUSTER_HANDLERS = [
     {
         'url': "cse/clusters",
         RequestMethod.GET: {
@@ -244,7 +250,11 @@ CSE_REQUEST_DISPATCHER_LIST = [
                 'handler': native_cluster_handler.cluster_upgrade
             }
         }
-    },
+    }
+]
+
+# /cse/cluster/{id}/nodes end points
+LEGACY_NODE_HANDLERS = [
     {
         'url': "cse/nodes",
         RequestMethod.POST: {
@@ -278,7 +288,11 @@ CSE_REQUEST_DISPATCHER_LIST = [
                 'handler': native_cluster_handler.node_info
             }
         },
-    },
+    }
+]
+
+# /cse/ovdcs end points
+LEGACY_OVDC_HANDLERS = [
     {
         'url': "cse/ovdcs",
         RequestMethod.GET: {
@@ -331,9 +345,11 @@ CSE_REQUEST_DISPATCHER_LIST = [
                 'handler': ovdc_handler.ovdc_compute_policy_update
             }
         }
-    },
+    }
+]
 
-    # /cse/3.0 end points
+# /cse/3.0/cluster end points
+CLUSTER_HANDLERS = [
     {
         'url': "cse/3.0/clusters",
         RequestMethod.GET: {
@@ -450,7 +466,11 @@ CSE_REQUEST_DISPATCHER_LIST = [
                 'handler': v35_cluster_handler.cluster_acl_update
             }
         },
-    },
+    }
+]
+
+# /cse/3.0/ovdcs end points
+OVDC_HANDLERS = [
     {
         'url': "cse/3.0/ovdcs",
         RequestMethod.GET: {
@@ -485,9 +505,22 @@ CSE_REQUEST_DISPATCHER_LIST = [
     }
 ]
 
+CSE_REQUEST_DISPATCHER_LIST = [
+    *SYSTEM_HANDLERS,
+    *TEMPLATE_HANDLERS,
+    *PKS_HANDLERS,
+    *LEGACY_CLUSTER_HANDLERS,
+    *LEGACY_NODE_HANDLERS,
+    *LEGACY_OVDC_HANDLERS,
+    *CLUSTER_HANDLERS,
+    *OVDC_HANDLERS
+]
 
 for entry in CSE_REQUEST_DISPATCHER_LIST:
     entry['url_tokens'] = entry['url'].split('/')
+
+for entry in CSE_REQUEST_DISPATCHER_LIST:
+    print(entry['url_tokens'])
 
 
 def _parse_accept_header(accept_header: str):
@@ -550,9 +583,7 @@ def _parse_accept_header(accept_header: str):
 
     selected_header = None
     for header, value in processed_headers.items():
-        val0 = value[0]
-        val1 = value[1]
-        val2 = value[2]
+        val0, val1, val2, _ = value
 
         # * -> */*
         if val0 == '*' and not val1:
@@ -642,10 +673,10 @@ def process_request(message):
         handlers = entry[method]
         matched_handler = None
         supported_api_versions = []
-        for version in handlers.keys():
-            supported_api_versions.extend(list(version))
-            if api_version in version or '*' in version:
-                matched_handler = handlers[version]
+        for versions in handlers.keys():
+            supported_api_versions.extend(list(versions))
+            if api_version in versions or '*' in versions:
+                matched_handler = handlers[versions]
                 break
 
         if not matched_handler:
@@ -677,13 +708,13 @@ def process_request(message):
 
     # ToDo: Device better way to send request body to handlers.
     if request_body:
-        # request_data[some_key] = request_body
+        # update request_data with request_body
         LOGGER.debug(f"request body: {request_data}")
 
     # update request data dict with query params data
     # ToDo: Device better way to send request query params to handlers.
     if query_params:
-        # request_data[some key] = query_params
+        # update request_data with query_params
         LOGGER.debug(f"query parameters: {query_params}")
 
     # update request spec with operation specific data in the url
