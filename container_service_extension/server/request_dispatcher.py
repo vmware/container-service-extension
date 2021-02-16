@@ -387,8 +387,16 @@ CLUSTER_HANDLERS = [
                 'required_params': [],
                 'verify_payload': False,
                 'payload_type': '*',
-                'operation': CseOperation.V35_CLUSTER_CREATE,
-                'handler': v35_cluster_handler.cluster_create
+                'operation': CseOperation.V35_CLUSTER_RESIZE,
+                'handler': v35_cluster_handler.cluster_resize
+            },
+            ('36.0', ): {
+                'allowed_params': [],
+                'required_params': [],
+                'verify_payload': False,
+                'payload_type': '*',
+                'operation': CseOperation.V36_CLUSTER_UPDATE,
+                'handler': v36_cluster_handler.cluster_update
             }
         },
         RequestMethod.DELETE: {
