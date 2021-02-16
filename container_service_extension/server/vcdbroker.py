@@ -213,7 +213,7 @@ class VcdBroker(abstract_broker.AbstractBroker):
         cluster = _get_cluster(self.context.client, cluster_name,
                                org_name=validated_data[RequestKey.ORG_NAME],
                                ovdc_name=validated_data[RequestKey.OVDC_NAME])
-        vapp = vcd_vapp.VApp(self.context.client, href=cluster[ClusterDetailsKey.VAPP_HREF])
+        vapp = vcd_vapp.VApp(self.context.client, href=cluster[ClusterDetailsKey.VAPP_HREF])  # noqa: E501
         node_names = _get_node_names(vapp, NodeType.CONTROL_PLANE)
 
         all_results = []
@@ -222,7 +222,7 @@ class VcdBroker(abstract_broker.AbstractBroker):
             # Record the telemetry data
             cse_params = copy.deepcopy(validated_data)
             cse_params[PayloadKey.SOURCE_DESCRIPTION] = thread_local_data.get_thread_local_data(ThreadLocalData.USER_AGENT)  # noqa: E501
-            cse_params[PayloadKey.CLUSTER_ID] = cluster[ClusterDetailsKey.CLUSTER_ID.value]
+            cse_params[PayloadKey.CLUSTER_ID] = cluster[ClusterDetailsKey.CLUSTER_ID.value]  # noqa: E501
             record_user_action_details(
                 cse_operation=CseOperation.CLUSTER_CONFIG,
                 cse_params=cse_params)
@@ -274,7 +274,7 @@ class VcdBroker(abstract_broker.AbstractBroker):
         if kwargs.get(KwargKey.TELEMETRY, True):
             # Record the telemetry data
             cse_params = copy.deepcopy(validated_data)
-            cse_params[PayloadKey.CLUSTER_ID] = cluster[ClusterDetailsKey.CLUSTER_ID.value]
+            cse_params[PayloadKey.CLUSTER_ID] = cluster[ClusterDetailsKey.CLUSTER_ID.value]  # noqa: E501
             record_user_action_details(
                 cse_operation=CseOperation.CLUSTER_UPGRADE_PLAN,
                 cse_params=cse_params)
@@ -526,7 +526,7 @@ class VcdBroker(abstract_broker.AbstractBroker):
         self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
         self.context.is_async = True
         self._delete_cluster_async(cluster_name=cluster_name,
-                                   cluster_vdc_href=cluster[ClusterDetailsKey.VDC_HREF])
+                                   cluster_vdc_href=cluster[ClusterDetailsKey.VDC_HREF])  # noqa: E501
 
         return {
             'cluster_name': cluster_name,
@@ -585,7 +585,7 @@ class VcdBroker(abstract_broker.AbstractBroker):
         if kwargs.get(KwargKey.TELEMETRY, True):
             # Record the telemetry data
             cse_params = copy.deepcopy(validated_data)
-            cse_params[PayloadKey.CLUSTER_ID] = cluster[ClusterDetailsKey.CLUSTER_ID.value]
+            cse_params[PayloadKey.CLUSTER_ID] = cluster[ClusterDetailsKey.CLUSTER_ID.value]  # noqa: E501
             cse_params[PayloadKey.SOURCE_DESCRIPTION] = thread_local_data.get_thread_local_data(ThreadLocalData.USER_AGENT)  # noqa: E501
             record_user_action_details(
                 cse_operation=CseOperation.CLUSTER_UPGRADE,
@@ -599,7 +599,7 @@ class VcdBroker(abstract_broker.AbstractBroker):
               f"{cluster[ClusterDetailsKey.DOCKER_VERSION]} -> " \
               f"{template[LocalTemplateKey.DOCKER_VERSION]}, CNI: " \
               f"{cluster[ClusterDetailsKey.CNI_NAME]} {cluster[ClusterDetailsKey.CNI_VERSION]} -> " \
-              f"{template[LocalTemplateKey.CNI_VERSION]}"
+              f"{template[LocalTemplateKey.CNI_VERSION]}"  # noqa: E501
         LOGGER.debug(msg)
         self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
         LOGGER.info(f"{msg} ({cluster[ClusterDetailsKey.VAPP_HREF]})")
@@ -641,13 +641,13 @@ class VcdBroker(abstract_broker.AbstractBroker):
         if kwargs.get(KwargKey.TELEMETRY, True):
             # Record the telemetry data
             cse_params = copy.deepcopy(validated_data)
-            cse_params[PayloadKey.CLUSTER_ID] = cluster[ClusterDetailsKey.CLUSTER_ID.value]
+            cse_params[PayloadKey.CLUSTER_ID] = cluster[ClusterDetailsKey.CLUSTER_ID.value]  # noqa: E501
             cse_params[PayloadKey.SOURCE_DESCRIPTION] = thread_local_data.get_thread_local_data(ThreadLocalData.USER_AGENT)  # noqa: E501
             record_user_action_details(
                 cse_operation=CseOperation.NODE_INFO,
                 cse_params=cse_params)
 
-        vapp = vcd_vapp.VApp(self.context.client, href=cluster[ClusterDetailsKey.VAPP_HREF])
+        vapp = vcd_vapp.VApp(self.context.client, href=cluster[ClusterDetailsKey.VAPP_HREF])  # noqa: E501
         vms = vapp.get_all_vms()
         node_info = None
         for vm in vms:
@@ -834,7 +834,7 @@ class VcdBroker(abstract_broker.AbstractBroker):
         if kwargs.get(KwargKey.TELEMETRY, True):
             # Record the telemetry data; record separate data for each node
             cse_params = copy.deepcopy(validated_data)
-            cse_params[PayloadKey.CLUSTER_ID] = cluster[ClusterDetailsKey.CLUSTER_ID.value]
+            cse_params[PayloadKey.CLUSTER_ID] = cluster[ClusterDetailsKey.CLUSTER_ID.value]  # noqa: E501
             cse_params[PayloadKey.SOURCE_DESCRIPTION] = thread_local_data.get_thread_local_data(ThreadLocalData.USER_AGENT)  # noqa: E501
             for node in node_names_list:
                 cse_params[PayloadKey.NODE_NAME] = node
@@ -1023,7 +1023,7 @@ class VcdBroker(abstract_broker.AbstractBroker):
                                            cluster_id=cluster_id,
                                            org_name=org_name,
                                            ovdc_name=ovdc_name)
-                    _delete_vapp(self.context.client, cluster[ClusterDetailsKey.VDC_HREF],
+                    _delete_vapp(self.context.client, cluster[ClusterDetailsKey.VDC_HREF],  # noqa: E501
                                  cluster_name)
                 except Exception:
                     LOGGER.error(f"Failed to delete cluster '{cluster_name}'",
@@ -1222,7 +1222,7 @@ class VcdBroker(abstract_broker.AbstractBroker):
             # lexicographical string comparison
             c_docker = cluster[ClusterDetailsKey.DOCKER_VERSION]
             t_docker = template[LocalTemplateKey.DOCKER_VERSION]
-            c_k8s = semver.Version(cluster[ClusterDetailsKey.KUBERNETES_VERSION])
+            c_k8s = semver.Version(cluster[ClusterDetailsKey.KUBERNETES_VERSION])  # noqa: E501
             t_k8s = semver.Version(template[LocalTemplateKey.KUBERNETES_VERSION]) # noqa: E501
             c_cni = semver.Version(cluster[ClusterDetailsKey.CNI_VERSION])
             t_cni = semver.Version(template[LocalTemplateKey.CNI_VERSION])
@@ -1311,7 +1311,7 @@ class VcdBroker(abstract_broker.AbstractBroker):
 
             if upgrade_cni:
                 msg = f"Applying CNI ({cluster[ClusterDetailsKey.CNI_NAME]} {c_cni} -> {t_cni}) " \
-                      f"incontrol plane node {control_plane_node_names}"
+                      f"incontrol plane node {control_plane_node_names}"  # noqa: E501
                 LOGGER.debug(msg)
                 self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
                 filepath = ltm.get_script_filepath(template_name,
@@ -1731,7 +1731,7 @@ def get_all_clusters(client, cluster_name=None, cluster_id=None,
 
     if fetch_details:
         for cluster in clusters.values():
-            vapp = vcd_vapp.VApp(client, href=cluster[ClusterDetailsKey.VAPP_HREF])
+            vapp = vcd_vapp.VApp(client, href=cluster[ClusterDetailsKey.VAPP_HREF])  # noqa: E501
             cluster[ClusterDetailsKey.NETWORK_NAME] = \
                 vcd_utils.get_parent_network_name_of_vapp(vapp)
             cluster[ClusterDetailsKey.STORAGE_PROFILE_NAME] = \
