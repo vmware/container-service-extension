@@ -133,7 +133,7 @@ class ClusterService(abstract_broker.AbstractBroker):
             cse_params={telemetry_constants.PayloadKey.FILTER_KEYS: ','.join(filters.keys())}  # noqa: E501
         )
 
-        ent_type: def_models.DefEntityType = def_utils.get_registered_def_entity_type()  # noqa: E501
+        ent_type: common_models.DefEntityType = def_utils.get_registered_def_entity_type()  # noqa: E501
 
         return self.entity_svc.list_entities_by_entity_type(
             vendor=ent_type.vendor,
