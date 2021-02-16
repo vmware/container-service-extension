@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from typing import List
 
 from container_service_extension.rde import constants as def_constants
+from container_service_extension.rde.models.abstractNativeEntity import AbstractNativeEntity  # noqa: E501
 
 
 @dataclass()
@@ -131,7 +132,7 @@ class ClusterSpec:
 
 
 @dataclass()
-class NativeEntity:
+class NativeEntity(AbstractNativeEntity):
     """Represents the Native Cluster entity.
 
     If dictionaries are passed as arguments, the constructor auto-converts

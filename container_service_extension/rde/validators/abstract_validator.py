@@ -2,14 +2,14 @@
 # Copyright (c) 2021 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 
-from container_service_extension.rde.validators.abstract_validator import \
-    AbstractValidator
+import abc
 
 
-class Validator2X(AbstractValidator):
+class AbstractValidator(abc.ABC):
     def __init__(self):
         pass
 
+    @abc.abstractmethod
     def validate(self, request_spec: dict, current_spec: dict, operation: str):
         """Validate the input_spec against current_spec.
 
@@ -18,4 +18,4 @@ class Validator2X(AbstractValidator):
         :param str operation: POST/PUT/DEL
         :retur bool:
         """
-        raise NotImplementedError
+        pass

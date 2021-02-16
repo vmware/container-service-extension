@@ -4,7 +4,8 @@
 
 import semantic_version
 
-from container_service_extension.rde.converters.utils import AbstractConvertStrategy  # noqa: E501
+from container_service_extension.rde.converters.abstract_convert_strategy import \
+    AbstractConvertStrategy
 
 
 class ConvertStrategy_1X_2X(AbstractConvertStrategy):

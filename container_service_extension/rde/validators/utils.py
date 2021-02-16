@@ -1,5 +1,3 @@
-import abc
-
 import semantic_version
 
 from container_service_extension.rde.validators.validator_rde_1_x import Validator1X  # noqa: E501
@@ -22,17 +20,3 @@ def get_validator(rde_version_in_use):
         return Validator2X()
 
 
-class AbstractValidator(abc.ABC):
-    def __init__(self):
-        pass
-
-    @abc.abstractmethod
-    def validate(self, request_spec: dict, current_spec: dict, operation: str):
-        """Validate the input_spec against current_spec.
-
-        :param dict request_spec: Request spec of the cluster
-        :param dict current_spec: Current status of the cluster
-        :param str operation: POST/PUT/DEL
-        :retur bool:
-        """
-        pass

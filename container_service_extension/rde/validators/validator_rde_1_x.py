@@ -1,7 +1,8 @@
 # container-service-extension
 # Copyright (c) 2021 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
-from container_service_extension.rde.validators.utils import AbstractValidator
+from container_service_extension.rde.validators.abstract_validator import \
+    AbstractValidator
 
 
 class Validator1X(AbstractValidator):
