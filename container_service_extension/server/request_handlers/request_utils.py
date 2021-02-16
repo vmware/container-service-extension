@@ -147,7 +147,9 @@ def validate_cluster_update_request_and_check_cluster_upgrade(input_spec: dict, 
     return is_upgrade_operation
 
 
-def find_diff_fields(input_spec: dict, reference_spec: dict, exclude_fields: list = []) -> list:  # noqa: E501
+def find_diff_fields(input_spec: dict, reference_spec: dict, exclude_fields: list = None) -> list:  # noqa: E501
+    if exclude_fields is None:
+        exclude_fields = []
     input_dict = utils.flatten_dictionary(input_spec)
     reference_dict = utils.flatten_dictionary(reference_spec)
     exclude_key_set = set(exclude_fields)
