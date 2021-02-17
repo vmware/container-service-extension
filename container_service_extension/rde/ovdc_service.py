@@ -123,16 +123,19 @@ def get_ovdc(operation_context: ctx.OperationContext, ovdc_id: str) -> dict:
 
 def _get_cse_ovdc_list(sysadmin_client: vcd_client.Client, ovdc_list: list):
     ovdcs = []
+    config = server_utils.get_server_runtime_config()
+    log_wire = utils.str_to_bool(config.get('service', {}).get('log_wire'))
+    cpm = compute_policy_manager.ComputePolicyManager(sysadmin_client,
+                                                      log_wire=log_wire)
     for ovdc in ovdc_list:
         ovdc_name = ovdc.get('name')
-        config = server_utils.get_server_runtime_config()
-        log_wire = utils.str_to_bool(config.get('service', {}).get('log_wire'))
         ovdc_id = vcd_utils.extract_id(ovdc.get('id'))
         # obtain ovdc runtime details for the ovdc
         ovdc_details = asdict(
             get_ovdc_k8s_runtime_details(sysadmin_client,
                                          ovdc_id=ovdc_id,
                                          ovdc_name=ovdc_name,
+                                         cpm=cpm,
                                          log_wire=log_wire))
         # NOTE: For CSE 3.0, if `enable_tkg_plus` flag in
         # config is set to false, Prevent showing information
@@ -205,7 +208,8 @@ def get_ovdc_k8s_runtime_details(sysadmin_client: vcd_client.Client,
                                  ovdc_id=None,
                                  ovdc_name=None,
                                  org_name=None,
-                                 log_wire=False) -> common_models.Ovdc:
+                                 cpm: compute_policy_manager.ComputePolicyManager = None,  # noqa: E501
+                                 log_wire=False) -> def_models.Ovdc:
     """Get k8s runtime details for an ovdc.
 
     Atleast ovdc_id and ovdc_name or org_name and ovdc_name should be provided.
@@ -221,8 +225,9 @@ def get_ovdc_k8s_runtime_details(sysadmin_client: vcd_client.Client,
     :rtype: common_models.Ovdc
     """
     vcd_utils.raise_error_if_user_not_from_system_org(sysadmin_client)
-    cpm = compute_policy_manager.ComputePolicyManager(sysadmin_client,
-                                                      log_wire=log_wire)
+    if not cpm:
+        cpm = compute_policy_manager.ComputePolicyManager(sysadmin_client,
+                                                          log_wire=log_wire)
     if not (org_name and ovdc_name) and not ovdc_id:
         msg = "Unable to fetch OVDC k8 runtime details with the " \
               "provided parameters"
