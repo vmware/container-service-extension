@@ -117,7 +117,7 @@ MAP_API_VERSION_TO_KEYS = {
 # 36.0: 2.0.0,
 # 37.0: 3.0.0 (Newly introduced RDE)
 # }
-MAP_VCD_API_VERSION_TO_RDE_SCHEMA_VERSION = {
+MAP_VCD_API_VERSION_TO_RDE_VERSION = {
     35.0: RDESchemaVersions.RDE_1_X.value,
     36.0: RDESchemaVersions.RDE_2_X.value
 }
