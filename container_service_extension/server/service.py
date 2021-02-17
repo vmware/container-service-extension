@@ -492,16 +492,16 @@ class Service(object, metaclass=Singleton):
                                                               logger.SERVER_LOGGER, # noqa: E501
                                                               logger_wire)
             raise_error_if_def_not_supported(cloudapi_client)
-            
+
             # set the RDE version used
             max_vcd_api_version_supported = \
-                max([float(x) for x in self.config['service']['supported_api_versions']])
+                max([float(x) for x in self.config['service']['supported_api_versions']])  # noqa: E501
             self._rde_schema_version = \
                 def_utils.get_rde_schema_version_by_vcd_api_version(max_vcd_api_version_supported)  # noqa: E501
             msg_update_callback.general(f"Using RDE version: {self._rde_schema_version}")  # noqa: E501
-            
+
             schema_svc = def_schema_svc.DefSchemaService(cloudapi_client)
-            # TODO make use of self._rde_version to get the interface and entity type
+            # TODO make use of self._rde_version to load Interface and Type
             keys_map = def_constants.MAP_API_VERSION_TO_KEYS[float(sysadmin_client.get_api_version())] # noqa: E501
             interface_id = def_utils.generate_interface_id(vendor=keys_map[def_constants.DefKey.INTERFACE_VENDOR], # noqa: E501
                                                            nss=keys_map[def_constants.DefKey.INTERFACE_NSS], # noqa: E501
