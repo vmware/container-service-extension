@@ -348,6 +348,22 @@ LEGACY_OVDC_HANDLERS = [
     }
 ]
 
+# /cse/orgvdcs end points
+# These differ from /ovdcs in terms of pagination support
+LEGACY_ORG_VDC_HANDLERS = [
+    {
+        'url': "cse/orgvdcs",
+        RequestMethod.GET: {
+            ('33.0', '34.0'): {
+                'allowed_params': [],
+                'required_params': [],
+                'operation': CseOperation.ORG_VDC_LIST,
+                'handler': ovdc_handler.org_vdc_list
+            }
+        },
+    }
+]
+
 # /cse/3.0/cluster end points
 CLUSTER_HANDLERS = [
     {
@@ -513,6 +529,22 @@ OVDC_HANDLERS = [
     }
 ]
 
+# /cse/3.0/orgvdcs end points
+# These differ from /ovdcs in terms of pagination support
+ORG_VDC_HANDLERS = [
+    {
+        'url': "cse/3.0/orgvdcs",
+        RequestMethod.GET: {
+            ('35.0', ): {
+                'allowed_params': [],
+                'required_params': [],
+                'operation': CseOperation.V35_ORG_VDC_LIST,
+                'handler': v35_ovdc_handler.org_vdc_list
+            }
+        },
+    }
+]
+
 CSE_REQUEST_DISPATCHER_LIST = [
     *SYSTEM_HANDLERS,
     *TEMPLATE_HANDLERS,
@@ -520,8 +552,10 @@ CSE_REQUEST_DISPATCHER_LIST = [
     *LEGACY_CLUSTER_HANDLERS,
     *LEGACY_NODE_HANDLERS,
     *LEGACY_OVDC_HANDLERS,
+    *LEGACY_ORG_VDC_HANDLERS,
     *CLUSTER_HANDLERS,
-    *OVDC_HANDLERS
+    *OVDC_HANDLERS,
+    *ORG_VDC_HANDLERS
 ]
 
 for entry in CSE_REQUEST_DISPATCHER_LIST:
@@ -617,6 +651,16 @@ def _parse_accept_header(accept_header: str):
 
 
 def _get_api_version_from_accept_header(api_version_header: str):
+    """Split input string and return the api version.
+
+    Input must be of the format:
+    [something];version=[some version]
+
+    :param str api_version_header: value of 'Accept' header
+
+    :returns: api version specified in the input string.
+        Returns 0.0 by default.
+    """
     api_version = '0.0'
     if api_version_header:
         tokens = api_version_header.split(";")
@@ -629,6 +673,24 @@ def _get_api_version_from_accept_header(api_version_header: str):
 
 @handle_exception
 def process_request(message):
+    """
+    Determine the correct api handler to invoke and invoke it.
+
+    The request URI, api version and HTTP verb are used to determine the
+    request operation and the corresponding handler.
+
+    Additionaly support for payload verification, query param verification
+    will be added in a later point of time.
+
+    URL template matching is also performed to compute values of url template
+    parameters. These computed values, request body and query params are all
+    sent to handlers in form of a dictionary.
+
+    :param dict message: message recived over AMQP/MQTT bus representing the
+        incoming REST request.
+
+    :returns: response computed by the handler after processing the request
+    """
     LOGGER.debug(f"Incoming request message: {json.dumps(message)}")
 
     api_version_header = _parse_accept_header(
