@@ -173,7 +173,35 @@ class KwargKey(str, Enum):
 
 
 @unique
+class K8SScriptFile(str, Enum):
+    """Types of script for vApp template customizations in CSE."""
+
+    SCRIPTS_DIR = "container_service_extension.rde.k8s_scripts"
+    CLUSTER_UPGRADE_DIR = "container_service_extension.rde.k8s_scripts.cluster-upgrade" # noqa: E501
+    CONTROL_PLANE = 'mstr.sh'
+    NODE = 'node.sh'
+
+
+@unique
+class TemplateScriptFile(str, Enum):
+    """Types of script for vApp template customizations in CSE."""
+
+    # vapp template creation scripts
+    CUST = 'cust.sh'
+    INIT = 'init.sh'
+    NFSD = 'nfsd.sh'
+
+    # cluster upgrade scripts
+    CONTROL_PLANE_CNI_APPLY = 'master-cni-apply.sh'
+    CONTROL_PLANE_K8S_UPGRADE = 'master-k8s-upgrade.sh'
+    WORKER_K8S_UPGRADE = 'worker-k8s-upgrade.sh'
+
+    DOCKER_UPGRADE = 'cluster-upgrade/docker-upgrade.sh'
+
+
+@unique
 class ScriptFile(str, Enum):
+    # For Usage in vcdbroker.py only due to legacy code
     """Types of script for vApp template customizations in CSE."""
 
     # vapp template creation scripts
