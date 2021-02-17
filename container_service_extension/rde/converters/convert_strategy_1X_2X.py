@@ -4,10 +4,10 @@
 
 import semantic_version
 
-from container_service_extension.rde.converters.abstract_convert_strategy import AbstractConvertStrategy  # noqa: E501
+from container_service_extension.rde.converters.base_convert_strategy import BaseConvertStrategy  # noqa: E501
 
 
-class ConvertStrategy_1X_2X(AbstractConvertStrategy):
+class ConvertStrategy_1X_2X(BaseConvertStrategy):
     def __init__(self):
         pass
 

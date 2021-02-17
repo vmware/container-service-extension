@@ -5,7 +5,7 @@
 from container_service_extension.rde.models.utils import get_model
 
 
-class AbstractConvertStrategy:
+class BaseConvertStrategy:
     def __init__(self):
         pass
 
