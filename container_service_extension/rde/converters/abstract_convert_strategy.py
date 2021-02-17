@@ -10,13 +10,13 @@ class AbstractConvertStrategy:
         pass
 
     @staticmethod
-    def convert(data, src_rde_version: str, target_rde_version: str):
+    def convert(entity, src_rde_version: str, target_rde_version: str):
         """Convert the Cluster Entity from one RDE version to another.
 
-        :param  data: Input cluster entity
-        :param src_rde_version: Source RDE version
-        :param str target_rde_version: Target RDE version
+        :param  entity: Input cluster entity
+        :param src_rde_version: The current RDE version of the entity
+        :param str target_rde_version: The target RDE version of the entity.
         :return data:
         """
         target_model = get_model(target_rde_version)
-        return target_model(**data)
+        return target_model(**entity)

@@ -12,13 +12,13 @@ class ConvertStrategy_1X_2X(AbstractConvertStrategy):
         pass
 
     @staticmethod
-    def convert(data, src_rde_version, target_rde_version):
+    def convert(entity, src_rde_version, target_rde_version):
         """Convert the Cluster Entity from one RDE version to another.
 
-        :param  data: Input Native cluster entity
-        :param src_rde_version:
-        :param str target_rde_version:
-        :retur data:
+        :param  entity: Input Native cluster entity
+        :param src_rde_version: The current RDE version of the entity
+        :param str target_rde_version: The target RDE version of the entity.
+        :return data:
         """
         src_rde_version: semantic_version.Version = semantic_version.Version(src_rde_version)  # noqa: E501
         target_rde_version: semantic_version.Version = semantic_version.Version(target_rde_version)  # noqa: E501
@@ -28,5 +28,5 @@ class ConvertStrategy_1X_2X(AbstractConvertStrategy):
         elif src_rde_version < target_rde_version:
             # TODO convert the data from 1.0 to 2.0
             pass
-        # return data
+        # return entity
         raise NotImplementedError
