@@ -18,5 +18,3 @@ def get_validator(rde_version_in_use):
         return Validator1X()
     elif rde_version.major == 2:
         return Validator2X()
-
-

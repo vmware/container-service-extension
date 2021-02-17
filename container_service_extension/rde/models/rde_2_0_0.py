@@ -131,6 +131,7 @@ class ClusterSpec:
     workers: Workers
     nfs: Nfs
     k8_distribution: Distribution
+    load_balancer = None
     settings: Settings
 
     def __init__(self, settings: Settings, k8_distribution: Distribution = None,  # noqa: E501
