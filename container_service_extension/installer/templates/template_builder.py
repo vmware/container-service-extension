@@ -8,7 +8,7 @@ from pyvcloud.vcd.exceptions import EntityNotFoundException
 from pyvcloud.vcd.exceptions import OperationNotSupportedException
 from pyvcloud.vcd.vapp import VApp
 
-from container_service_extension.common.constants.server_constants import ScriptFile, TemplateBuildKey  # noqa: E501
+from container_service_extension.common.constants.server_constants import TemplateBuildKey, TemplateScriptFile  # noqa: E501
 from container_service_extension.common.utils.core_utils import download_file
 from container_service_extension.common.utils.core_utils import NullPrinter
 from container_service_extension.common.utils.core_utils import read_data_file
@@ -222,7 +222,9 @@ class TemplateBuilder():
         :rtype: str
         """
         init_script_filepath = ltm.get_script_filepath(
-            self.template_name, self.template_revision, ScriptFile.INIT)
+            self.template_name,
+            self.template_revision,
+            TemplateScriptFile.INIT)
         init_script = read_data_file(
             init_script_filepath, logger=self.logger,
             msg_update_callback=self.msg_update_callback)
@@ -288,7 +290,8 @@ class TemplateBuilder():
         self.logger.info(msg)
 
         cust_script_filepath = ltm.get_script_filepath(
-            self.template_name, self.template_revision, ScriptFile.CUST)
+            self.template_name, self.template_revision,
+            TemplateScriptFile.CUST)
         cust_script = read_data_file(
             cust_script_filepath, logger=self.logger,
             msg_update_callback=self.msg_update_callback)

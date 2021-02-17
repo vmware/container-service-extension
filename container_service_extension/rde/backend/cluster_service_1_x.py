@@ -20,13 +20,13 @@ import semantic_version as semver
 
 from container_service_extension.common.constants.server_constants import CLUSTER_ENTITY  # noqa: E501
 from container_service_extension.common.constants.server_constants import ClusterMetadataKey  # noqa: E501
+from container_service_extension.common.constants.server_constants import ClusterScriptFile, TemplateScriptFile  # noqa: E501
 from container_service_extension.common.constants.server_constants import CSE_CLUSTER_KUBECONFIG_PATH # noqa: E501
 from container_service_extension.common.constants.server_constants import DefEntityOperation  # noqa: E501
 from container_service_extension.common.constants.server_constants import DefEntityOperationStatus  # noqa: E501
 from container_service_extension.common.constants.server_constants import DefEntityPhase  # noqa: E501
 from container_service_extension.common.constants.server_constants import LocalTemplateKey  # noqa: E501
 from container_service_extension.common.constants.server_constants import NodeType  # noqa: E501
-from container_service_extension.common.constants.server_constants import ScriptFile  # noqa: E501
 from container_service_extension.common.constants.server_constants import SYSTEM_ORG_NAME  # noqa: E501
 from container_service_extension.common.constants.server_constants import ThreadLocalData  # noqa: E501
 import container_service_extension.common.constants.shared_constants as shared_constants # noqa: E501
@@ -35,6 +35,7 @@ from container_service_extension.common.constants.shared_constants import CSE_PA
 import container_service_extension.common.thread_local_data as thread_local_data  # noqa: E501
 import container_service_extension.common.utils.core_utils as utils
 import container_service_extension.common.utils.pyvcloud_utils as vcd_utils
+from container_service_extension.common.utils.script_utils import get_cluster_script_file_contents # noqa: E501
 import container_service_extension.common.utils.server_utils as server_utils
 import container_service_extension.common.utils.thread_utils as thread_utils
 import container_service_extension.common.utils.vsphere_utils as vs_utils
@@ -683,8 +684,8 @@ class ClusterService(abstract_broker.AbstractBroker):
             vapp.reload()
             _init_cluster(self.context.sysadmin_client,
                           vapp,
-                          template[LocalTemplateKey.NAME],
-                          template[LocalTemplateKey.REVISION])
+                          template[LocalTemplateKey.KUBERNETES_VERSION],
+                          template[LocalTemplateKey.CNI_VERSION])
             control_plane_ip = _get_control_plane_ip(self.context.sysadmin_client, vapp)  # noqa: E501
             task = vapp.set_metadata('GENERAL', 'READWRITE', 'cse.master.ip',
                                      control_plane_ip)
@@ -977,6 +978,7 @@ class ClusterService(abstract_broker.AbstractBroker):
         Let the caller monitor thread or method to set SUCCESS task status,
          end the client context
         """
+        vapp: vcd_vapp.VApp = None
         try:
             # get the current state of the defined entity
             curr_entity: common_models.DefEntity = self.entity_svc.get_entity(cluster_id)  # noqa: E501
@@ -1226,7 +1228,7 @@ class ClusterService(abstract_broker.AbstractBroker):
                 self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
                 filepath = ltm.get_script_filepath(template_name,
                                                    template_revision,
-                                                   ScriptFile.CONTROL_PLANE_K8S_UPGRADE) # noqa: E501
+                                                   TemplateScriptFile.CONTROL_PLANE_K8S_UPGRADE) # noqa: E501
                 script = utils.read_data_file(filepath, logger=LOGGER)
                 _run_script_in_nodes(self.context.sysadmin_client, vapp_href,
                                      control_plane_node_names, script)
@@ -1240,7 +1242,7 @@ class ClusterService(abstract_broker.AbstractBroker):
 
                 filepath = ltm.get_script_filepath(template_name,
                                                    template_revision,
-                                                   ScriptFile.WORKER_K8S_UPGRADE) # noqa: E501
+                                                   TemplateScriptFile.WORKER_K8S_UPGRADE) # noqa: E501
                 script = utils.read_data_file(filepath, logger=LOGGER)
                 for node in worker_node_names:
                     msg = f"Draining node {node}"
@@ -1276,9 +1278,10 @@ class ClusterService(abstract_broker.AbstractBroker):
                 msg = f"Upgrading Docker-CE ({c_docker} -> {t_docker}) " \
                       f"in nodes {all_node_names}"
                 self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
-                filepath = ltm.get_script_filepath(template_name,
-                                                   template_revision,
-                                                   ScriptFile.DOCKER_UPGRADE)
+                filepath = ltm.get_script_filepath(
+                    template_name,
+                    template_revision,
+                    TemplateScriptFile.DOCKER_UPGRADE)
                 script = utils.read_data_file(filepath, logger=LOGGER)
                 _run_script_in_nodes(self.context.sysadmin_client, vapp_href,
                                      all_node_names, script)
@@ -1290,7 +1293,7 @@ class ClusterService(abstract_broker.AbstractBroker):
                 self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
                 filepath = ltm.get_script_filepath(template_name,
                                                    template_revision,
-                                                   ScriptFile.CONTROL_PLANE_CNI_APPLY)  # noqa: E501
+                                                   TemplateScriptFile.CONTROL_PLANE_CNI_APPLY)  # noqa: E501
                 script = utils.read_data_file(filepath, logger=LOGGER)
                 _run_script_in_nodes(self.context.sysadmin_client, vapp_href,
                                      control_plane_node_names, script)
@@ -1954,7 +1957,7 @@ def _add_nodes(sysadmin_client, num_nodes, node_type, org, vdc, vapp,
                     script_filepath = ltm.get_script_filepath(
                         template[LocalTemplateKey.NAME],
                         template[LocalTemplateKey.REVISION],
-                        ScriptFile.NFSD)
+                        TemplateScriptFile.NFSD)
                     script = utils.read_data_file(script_filepath, logger=LOGGER)  # noqa: E501
                     exec_results = _execute_script_in_nodes(
                         sysadmin_client, vapp=vapp, node_names=[vm_name],
@@ -2007,15 +2010,16 @@ def _get_control_plane_ip(sysadmin_client: vcd_client.Client, vapp):
     return control_plane_ip
 
 
-def _init_cluster(sysadmin_client: vcd_client.Client, vapp, template_name,
-                  template_revision):
+def _init_cluster(sysadmin_client: vcd_client.Client, vapp, k8s_version,
+                  cni_version):
     vcd_utils.raise_error_if_user_not_from_system_org(sysadmin_client)
 
     try:
-        script_filepath = ltm.get_script_filepath(template_name,
-                                                  template_revision,
-                                                  ScriptFile.CONTROL_PLANE)
-        script = utils.read_data_file(script_filepath, logger=LOGGER)
+        templated_script = get_cluster_script_file_contents(
+            ClusterScriptFile.CONTROL_PLANE, ClusterScriptFile.VERSION_1_X)
+        script = templated_script.format(
+            k8s_version=k8s_version,
+            cni_version=cni_version)
         node_names = _get_node_names(vapp, NodeType.CONTROL_PLANE)
         result = _execute_script_in_nodes(sysadmin_client, vapp=vapp,
                                           node_names=node_names, script=script)
@@ -2036,9 +2040,12 @@ def _join_cluster(sysadmin_client: vcd_client.Client, vapp, template_name,
                   template_revision, target_nodes=None):
     vcd_utils.raise_error_if_user_not_from_system_org(sysadmin_client)
     try:
-        script = "#!/usr/bin/env bash\n" \
-                 "kubeadm token create\n" \
-                 "ip route get 1 | awk '{print $NF;exit}'\n"
+
+        script = """
+                 #!/usr/bin/env bash
+                 kubeadm token create --print-join-command
+            """
+
         node_names = _get_node_names(vapp, NodeType.CONTROL_PLANE)
         control_plane_result = _execute_script_in_nodes(sysadmin_client,
                                                         vapp=vapp,
@@ -2049,16 +2056,20 @@ def _join_cluster(sysadmin_client: vcd_client.Client, vapp, template_name,
             raise e.ClusterJoiningError(
                 "Join cluster script execution failed on "
                 f"control plane node {node_names}:{errors}")
-        init_info = control_plane_result[0][1].content.decode().split()
+        # kubeadm join <ip:port> --token <token> --discovery-token-ca-cert-hash <discovery_token> # noqa: E501
+        join_info = control_plane_result[0][1].content.decode().split()
+
+        templated_script = get_cluster_script_file_contents(
+            ClusterScriptFile.NODE, ClusterScriptFile.VERSION_1_X)
+        script = templated_script.format(
+            ip_port=join_info[2],
+            token=join_info[4],
+            discovery_token_ca_cert_hash=join_info[6])
 
         node_names = _get_node_names(vapp, NodeType.WORKER)
         if target_nodes is not None:
             node_names = [name for name in node_names if name in target_nodes]
-        tmp_script_filepath = ltm.get_script_filepath(template_name,
-                                                      template_revision,
-                                                      ScriptFile.NODE)
-        tmp_script = utils.read_data_file(tmp_script_filepath, logger=LOGGER)
-        script = tmp_script.format(token=init_info[0], ip=init_info[1])
+
         worker_results = _execute_script_in_nodes(sysadmin_client, vapp=vapp,
                                                   node_names=node_names,
                                                   script=script)
