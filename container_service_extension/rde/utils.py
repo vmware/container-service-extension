@@ -60,3 +60,7 @@ def generate_entity_type_id(vendor, nss, version):
     :rtype str
     """
     return f"{def_constants.DEF_ENTITY_TYPE_ID_PREFIX}:{vendor}:{nss}:{version}"  # noqa: E501
+
+
+def get_rde_schema_version_by_vcd_api_version(vcd_api_version: float) -> str:
+    return def_constants.MAP_VCD_API_VERSION_TO_RDE_SCHEMA_VERSION[vcd_api_version]

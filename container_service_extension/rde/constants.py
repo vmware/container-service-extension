@@ -53,6 +53,15 @@ class DefKey(str, Enum):
     ENTITY_TYPE_SCHEMA_VERSION = 'schema_version'
 
 
+# Defines the RDE versions CSE makes use of.
+# Different RDE versions may be used as CSE
+# is compatible with multiple VCD API versions.
+@unique
+class RDESchemaVersions(str, Enum):
+    RDE_1_X = '1.0.0'
+    RDE_2_X = '2.0.0'
+
+
 MAP_API_VERSION_TO_KEYS = {
     35.0: {
         DefKey.INTERFACE_VENDOR: DEF_VMWARE_VENDOR,
@@ -76,6 +85,14 @@ MAP_API_VERSION_TO_KEYS = {
         DefKey.ENTITY_TYPE_NAME: DEF_NATIVE_ENTITY_TYPE_NAME,
         DefKey.ENTITY_TYPE_SCHEMA_VERSION: 'api_v35',
     }
+}
+
+
+# Dictionary indicating RDE version to use
+# for the VCD API version
+MAP_VCD_API_VERSION_TO_RDE_SCHEMA_VERSION = {
+    35.0: RDESchemaVersions.RDE_1_X.value,
+    36.0: RDESchemaVersions.RDE_2_X.value
 }
 
 
