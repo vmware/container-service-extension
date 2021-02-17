@@ -561,9 +561,6 @@ CSE_REQUEST_DISPATCHER_LIST = [
 for entry in CSE_REQUEST_DISPATCHER_LIST:
     entry['url_tokens'] = entry['url'].split('/')
 
-for entry in CSE_REQUEST_DISPATCHER_LIST:
-    print(entry['url_tokens'])
-
 
 def _parse_accept_header(accept_header: str):
     """Parse accept headers and select one that fits CSE.
