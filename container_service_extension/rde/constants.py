@@ -90,28 +90,34 @@ MAP_API_VERSION_TO_KEYS = {
 
 # Dictionary indicating RDE version to use
 # for the VCD API version
-# During runtime, the max RDE version supported
-# with the VCD API version is used.
-# MAP_VCD_API_VERSION_TO_RDE_SCHEMA_VERSION is a dictionary
-# depicting the current max RDE version in use for each
-# VCD API version.
-# NOTE: The RDE version used by the VCD API version can
-# be different in other CSE releases.
+# Based on the VCD-version CSE server is configured with,
+# CSE server dynamically determines the RDE-version-to-use at runtime.
+# Below dictionary essentially answers this question:
+# "When CSE is configured with VCD of a given api-version, what is the
+# compatible RDE-version CSE-server must use on that VCD?"
+# Key represents the VCD api-version CSE is configured with.
+# Value represents the RDE-version CSE-server must use for that VCD
+#   environment.
+# This map must be carefully updated for every major/minor/patch version
+# increments of RDE for each official CSE release. Below are few examples on
+#  how this map could be updated.
+# NOTE: The RDE version used by the VCD API version can be different in other
+#   CSE releases.
 # Example -
-# Current mapping:
+# Mapping for CSE 3.1:
 # MAP_VCD_API_VERSION_TO_RDE_SCHEMA_VERSION = {
 #     35.0: 1.0.0,
 #     36.0: 2.0.0
 # }
-# For CSE 3.2 with vCD 10.4 (API Version 37) with minor
-# version bump in RDE
+# If CSE 3.2 introduces Minor version bump in RDE (i.e 2.1) and is released
+#   alongside vCD 10.4 (API Version 37), mapping would be -
 # MAP_VCD_API_VERSION_TO_RDE_SCHEMA_VERSION = {
 # 35.0: 1.0.0,
 # 36.0: 2.1.0 (Note the RDE version change),
 # 37.0: 2.1.0 (Newly introduced RDE),
 # }
-# For CSE 3.2 with vCD 10.4 (API version 37) with major
-# version bump in RDE
+# If CSE 3.2 introduces Major version bump in RDE (i.e 3.0) and is released
+#   alongside vCD 10.4 (API version 37), mapping would be -
 # MAP_VCD_API_VERSION_TO_RDE_SCHEMA_VERSION = {
 # 35.0: 1.0.0,
 # 36.0: 2.0.0,
