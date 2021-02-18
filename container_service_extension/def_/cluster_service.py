@@ -11,14 +11,18 @@ import urllib
 
 import pkg_resources
 import pyvcloud.vcd.client as vcd_client
+from pyvcloud.vcd.exceptions import EntityNotFoundException
+import pyvcloud.vcd.gateway as vcd_gateway
 import pyvcloud.vcd.org as vcd_org
 import pyvcloud.vcd.task as vcd_task
 import pyvcloud.vcd.vapp as vcd_vapp
 from pyvcloud.vcd.vdc import VDC
+import pyvcloud.vcd.vdc_network as vdc_network
 import pyvcloud.vcd.vm as vcd_vm
 import semantic_version as semver
 
 import container_service_extension.abstract_broker as abstract_broker
+import container_service_extension.cloudapi.constants as cloudapi_constants
 import container_service_extension.compute_policy_manager as compute_policy_manager  # noqa: E501
 import container_service_extension.def_.entity_service as def_entity_svc
 import container_service_extension.def_.models as def_models
@@ -26,21 +30,27 @@ import container_service_extension.def_.utils as def_utils
 import container_service_extension.exceptions as E
 import container_service_extension.local_template_manager as ltm
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
+from container_service_extension.nsxt_backed_gateway_service import NsxtBackedGatewayService  # noqa: E501
 import container_service_extension.operation_context as ctx
 import container_service_extension.pyvcloud_utils as vcd_utils
 from container_service_extension.server_constants import ClusterMetadataKey
 from container_service_extension.server_constants import CSE_CLUSTER_KUBECONFIG_PATH # noqa: E501
+from container_service_extension.server_constants import EXPOSE_CLUSTER_RIGHTS
 from container_service_extension.server_constants import LocalTemplateKey
+from container_service_extension.server_constants import NETWORK_URN_PREFIX
 from container_service_extension.server_constants import NodeType
 from container_service_extension.server_constants import ScriptFile
 from container_service_extension.server_constants import SYSTEM_ORG_NAME
+from container_service_extension.server_constants import VdcNetworkInfoKey
 from container_service_extension.shared_constants import CSE_PAGINATION_DEFAULT_PAGE_SIZE  # noqa: E501
 from container_service_extension.shared_constants import CSE_PAGINATION_FIRST_PAGE_NUMBER  # noqa: E501
 from container_service_extension.shared_constants import DefEntityOperation
 from container_service_extension.shared_constants import DefEntityOperationStatus  # noqa: E501
 from container_service_extension.shared_constants import DefEntityPhase
+from container_service_extension.shared_constants import RequestMethod
 import container_service_extension.telemetry.constants as telemetry_constants
 import container_service_extension.telemetry.telemetry_handler as telemetry_handler  # noqa: E501
+import container_service_extension.user_context as user_context
 import container_service_extension.utils as utils
 import container_service_extension.vsphere_utils as vs_utils
 
@@ -528,6 +538,8 @@ class ClusterService(abstract_broker.AbstractBroker):
             template_revision = cluster_spec.spec.k8_distribution.template_revision  # noqa: E501
             ssh_key = cluster_spec.spec.settings.ssh_key
             rollback = cluster_spec.spec.settings.rollback_on_failure
+            intent_to_expose = cluster_spec.spec.intent_to_expose
+            api_version = cluster_spec.api_version
             vapp = None
             org = vcd_utils.get_org(self.context.client, org_name=org_name)
             vdc = vcd_utils.get_vdc(self.context.client,
@@ -605,6 +617,19 @@ class ClusterService(abstract_broker.AbstractBroker):
                           template[LocalTemplateKey.NAME],
                           template[LocalTemplateKey.REVISION])
             control_plane_ip = _get_control_plane_ip(self.context.sysadmin_client, vapp)  # noqa: E501
+
+            # Handle exposing cluster
+            expose_ip = None
+            if intent_to_expose and float(api_version) >= float(vcd_client.ApiVersion.VERSION_36.value):  # noqa: E501
+                expose_ip = _expose_cluster(
+                    client=self.context.client,
+                    ovdc_name=ovdc_name,
+                    network_name=cluster_spec.spec.settings.network,
+                    cluster_name=cluster_name,
+                    internal_ip=control_plane_ip)
+                if expose_ip:
+                    control_plane_ip = expose_ip
+
             task = vapp.set_metadata('GENERAL', 'READWRITE', 'cse.master.ip',
                                      control_plane_ip)
             self.context.client.get_task_monitor().wait_for_status(task)
@@ -677,6 +702,9 @@ class ClusterService(abstract_broker.AbstractBroker):
             def_entity.entity.status.nodes = _get_nodes_details(
                 self.context.sysadmin_client, vapp)
 
+            # Update defined entity with exposed ip
+            if expose_ip and def_entity.entity.status.nodes:
+                def_entity.entity.status.nodes.control_plane.ip = expose_ip
             self.entity_svc.update_entity(cluster_id, def_entity)
             self.entity_svc.resolve_entity(cluster_id)
 
@@ -1997,3 +2025,83 @@ def _create_k8s_software_string(software_name: str, software_version: str) -> st
     :rtype: str
     """
     return f"{software_name} {software_version}"
+
+
+def _get_vdc_network_response(cloudapi_client, network_urn_id: str):
+    relative_path = f'{cloudapi_constants.CloudApiResource.ORG_VDC_NETWORKS}' \
+                    f'?filter=id=={network_urn_id}'
+    response = cloudapi_client.do_request(
+        method=RequestMethod.GET,
+        cloudapi_version=cloudapi_constants.CloudApiVersion.VERSION_1_0_0,
+        resource_url_relative_path=relative_path)
+    return response
+
+
+def _get_gateway_href(vdc: VDC, gateway_name):
+    edge_gateways = vdc.list_edge_gateways()
+    for gateway_dict in edge_gateways:
+        if gateway_dict['name'] == gateway_name:
+            return gateway_dict['href']
+    return None
+
+
+def _user_has_edit_gateway_rights(user_rights: list):
+    """Check if user has rights to edit gateway."""
+    missing_rights = set(EXPOSE_CLUSTER_RIGHTS)
+    for right in user_rights:
+        if right in missing_rights:
+            missing_rights.remove(right)
+            if len(missing_rights) == 0:
+                return True
+    return False
+
+
+def _expose_cluster(client: vcd_client.Client, ovdc_name: str,
+                    network_name: str, cluster_name: str, internal_ip: str):
+    # Check if routed org vdc network
+    ovdc = vcd_utils.get_vdc(client, vdc_name=ovdc_name)
+    try:
+        routed_network_resource = ovdc.get_routed_orgvdc_network(network_name)
+    except EntityNotFoundException:
+        return None
+
+    # Check user has gateway view and edit rights
+    cloudapi_client = vcd_utils.get_cloudapi_client_from_vcd_client(client)
+    user_ctx = user_context.UserContext(client, cloudapi_client)
+    if not _user_has_edit_gateway_rights(user_ctx.rights):
+        return None
+
+    # Check if NSX-T backed gateway
+    # TODO: make helper for getting gateway
+    routed_vdc_network = vdc_network.VdcNetwork(
+        client=client,
+        resource=routed_network_resource)
+    network_id = utils.extract_id_from_href(routed_vdc_network.href)
+    network_urn_id = f'{NETWORK_URN_PREFIX}:{network_id}'
+    try:
+        vdc_network_response = _get_vdc_network_response(
+            cloudapi_client, network_urn_id)
+    except Exception:
+        return None
+    gateway_name = vdc_network_response[VdcNetworkInfoKey.VALUES][0][
+        VdcNetworkInfoKey.CONNECTION][VdcNetworkInfoKey.ROUTER_REF][
+        VdcNetworkInfoKey.NAME]
+    gateway_href = _get_gateway_href(ovdc, gateway_name)
+    gateway = vcd_gateway.Gateway(client, name=gateway_name, href=gateway_href)
+    if not gateway.is_nsxt_backed():
+        return None
+
+    # Auto reserve ip and add dnat rule
+    nsxt_gateway_svc = NsxtBackedGatewayService(gateway, client)
+    expose_ip = nsxt_gateway_svc.quick_ip_allocation()
+    if not expose_ip:
+        return None
+    try:
+        nsxt_gateway_svc.add_dnat_rule(
+            name=cluster_name + '_dnat',
+            internal_address=internal_ip,
+            external_address=expose_ip)
+    except Exception as err:
+        print(err)
+        return None
+    return expose_ip

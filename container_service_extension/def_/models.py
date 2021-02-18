@@ -173,10 +173,11 @@ class ClusterSpec:
     nfs: Nfs
     k8_distribution: Distribution
     settings: Settings
+    intent_to_expose: bool
 
     def __init__(self, settings: Settings, k8_distribution: Distribution = None,  # noqa: E501
                  control_plane: ControlPlane = None, workers: Workers = None,
-                 nfs: Nfs = None):
+                 nfs: Nfs = None, intent_to_expose: bool = False):
         self.settings = Settings(**settings) \
             if isinstance(settings, dict) else settings
         self.control_plane = ControlPlane(**control_plane) \
@@ -186,6 +187,7 @@ class ClusterSpec:
         self.nfs = Nfs(**nfs) if isinstance(nfs, dict) else nfs or Nfs()
         self.k8_distribution = Distribution(**k8_distribution) \
             if isinstance(k8_distribution, dict) else k8_distribution or Distribution()  # noqa: E501
+        self.intent_to_expose = intent_to_expose
 
 
 @dataclass()

@@ -20,7 +20,7 @@ paho-mqtt >=1.5.0, < 1.6.0
 pika >= 1.0.0, < 2.0.0
 
 # pyvcloud >= 23.0.0, < 24.0.0
-pyvcloud == 23.0.1.dev4
+pyvcloud == 23.0.1.dev8
 
 # pyvmomi 6.7.3
 pyvmomi >= 6.7.0 , < 7.0.0
@@ -29,7 +29,7 @@ pyvmomi >= 6.7.0 , < 7.0.0
 semantic-version >= 2.8.4, < 3.0.0
 
 # vcd-cli >= 24.0.0, < 25.0.0
-vcd-cli == 24.0.1.dev1
+vcd-cli == 24.0.1.dev2
 
 # vsphere-guest-run 0.0.7
 vsphere-guest-run >= 0.0.7, < 1.0.0

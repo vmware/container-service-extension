@@ -497,3 +497,23 @@ class OvdcInfoKey(str, Enum):
 class PKSOvdcInfoKey(str, Enum):
     PKS_API_SERVER = 'pks api server'
     AVAILABLE_PKS_PLANS = 'available pks plans'
+
+
+# Network urn prefix
+NETWORK_URN_PREFIX = 'urn:vcloud:network'
+
+# Expose network rights
+EXPOSE_CLUSTER_RIGHTS = [
+    'Organization vDC Gateway: View',
+    'Organization vDC Gateway: Update',
+    'Organization vDC Gateway: View NAT',
+    'Organization vDC Gateway: Configure NAT'
+]
+
+
+@unique
+class VdcNetworkInfoKey(str, Enum):
+    VALUES = 'values'
+    CONNECTION = 'connection'
+    ROUTER_REF = 'routerRef'
+    NAME = 'name'
