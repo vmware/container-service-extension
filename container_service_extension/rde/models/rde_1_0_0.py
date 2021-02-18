@@ -202,4 +202,5 @@ class NativeEntity(AbstractNativeEntity):
         :param str operation: POST/PUT/DEL
         :retur bool:
         """
+        # TODO Change the signature of the method as you see it fit.
         raise NotImplementedError
