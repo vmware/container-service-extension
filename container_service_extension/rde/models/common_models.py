@@ -6,8 +6,8 @@ from typing import List
 
 from container_service_extension.common.constants import shared_constants as shared_constants  # noqa: E501
 from container_service_extension.rde import constants as def_constants, utils as def_utils  # noqa: E501
-from container_service_extension.rde.models.rde_factory import get_rde_model
 from container_service_extension.rde.models.abstractNativeEntity import AbstractNativeEntity  # noqa: E501
+from container_service_extension.rde.models.rde_factory import get_rde_model
 
 
 @dataclass(frozen=True)
