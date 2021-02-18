@@ -4,6 +4,8 @@
 
 import semantic_version
 
+from container_service_extension.rde.backend.cluster_service_1_x import ClusterService as ClusterService1X  # noqa: E501
+from container_service_extension.rde.backend.cluster_service_2_x import ClusterService as ClusterService2X  # noqa: E501
 import container_service_extension.security.context.operation_context as ctx
 
 
@@ -22,8 +24,6 @@ class ClusterServiceFactory:
         """
         rde_version: semantic_version.Version = semantic_version.Version(rde_version_in_use)  # noqa: E501
         if rde_version.major == 1:
-            from container_service_extension.rde.backend.cluster_service_1_x import ClusterService as ClusterService1X  # noqa: E501
             return ClusterService1X(op_ctx=self.op_ctx)
         elif rde_version.major == 2:
-            from container_service_extension.rde.backend.cluster_service_2_x import ClusterService as ClusterService2X  # noqa: E501
             return ClusterService2X(op_ctx=self.op_ctx)
