@@ -88,12 +88,20 @@ class ClusterService(abstract_broker.AbstractBroker):
         )
         return self._sync_def_entity(cluster_id)
 
-    def list_clusters(self, filters: dict = None,
-                      page_number=CSE_PAGINATION_FIRST_PAGE_NUMBER,
-                      page_size=CSE_PAGINATION_DEFAULT_PAGE_SIZE) -> dict:
-        """List corresponding defined entities of all native clusters."""
-        if filters is None:
+    def get_clusters_by_page(self, filters: dict = None,
+                             page_number=CSE_PAGINATION_FIRST_PAGE_NUMBER,
+                             page_size=CSE_PAGINATION_DEFAULT_PAGE_SIZE):
+        """List clusters by page number and page size.
+
+        :param dict filters: filters to use to filter the cluster response
+        :param int page_number: page number of the clusters to be fetchec
+        :param int page_size: page size of the result
+        :return: paginated response containing native clusters
+        :rtype: dict
+        """
+        if not filters:
             filters = {}
+
         telemetry_handler.record_user_action_details(
             cse_operation=telemetry_constants.CseOperation.V35_CLUSTER_LIST,
             cse_params={
@@ -109,6 +117,29 @@ class ClusterService(abstract_broker.AbstractBroker):
             filters=filters,
             page_number=page_number,
             page_size=page_size)
+
+    def list_clusters(self, filters: dict = None) -> list:
+        """List corresponding defined entities of all native clusters.
+
+        :param dict filters: filters to use to filter the cluster response
+        :return: list of all native clusters
+        :rtype: list
+        """
+        if not filters:
+            filters = {}
+
+        telemetry_handler.record_user_action_details(
+            cse_operation=telemetry_constants.CseOperation.V35_CLUSTER_LIST,
+            cse_params={telemetry_constants.PayloadKey.FILTER_KEYS: ','.join(filters.keys())}  # noqa: E501
+        )
+
+        ent_type: common_models.DefEntityType = def_utils.get_registered_def_entity_type()  # noqa: E501
+
+        return self.entity_svc.list_entities_by_entity_type(
+            vendor=ent_type.vendor,
+            nss=ent_type.nss,
+            version=ent_type.version,
+            filters=filters)
 
     def get_cluster_config(self, cluster_id: str):
         """Get the cluster's kube config contents.
@@ -1439,7 +1470,7 @@ class ClusterService(abstract_broker.AbstractBroker):
     @thread_utils.run_async
     def _delete_nodes_async(self, cluster_id: str,
                             cluster_spec: rde_1_0_0.NativeEntity = None,
-                            nodes_to_del=[]):
+                            nodes_to_del=None):
         """Delete worker and/or nfs nodes in vCD.
 
         This method is executed by a thread in an asynchronous manner.
@@ -1455,6 +1486,8 @@ class ClusterService(abstract_broker.AbstractBroker):
         Let the caller monitor thread or method to set SUCCESS task status,
           end the client context
         """
+        if nodes_to_del is None:
+            nodes_to_del = []
         curr_entity: common_models.DefEntity = self.entity_svc.get_entity(cluster_id)  # noqa: E501
         vapp_href = curr_entity.externalId
         cluster_name = curr_entity.entity.metadata.cluster_name
