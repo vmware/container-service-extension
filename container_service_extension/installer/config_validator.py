@@ -306,6 +306,10 @@ def _validate_vcd_and_vcs_config(vcd_dict,
         # Check that all VCs listed in config file are registered in vCD
         for vc in vcs:
             vcenter = platform.get_vcenter(vc['name'])
+            if not (hasattr(vcenter, 'IsConnected') and vcenter.IsConnected):
+                msg = f"vCenter Server '{vc['name']}' not available"
+                msg_update_callback.info(msg)
+                continue
             vsphere_url = urlparse(vcenter.Url.text)
             vsphere_url_port = vsphere_url.port
             if vsphere_url_port:
