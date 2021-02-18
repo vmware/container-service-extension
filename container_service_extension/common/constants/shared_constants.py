@@ -84,9 +84,14 @@ class ServerAction(str, Enum):
 @unique
 class RequestMethod(str, Enum):
     GET = 'GET'
+    HEAD = 'HEAD'
     POST = 'POST'
-    DELETE = 'DELETE'
     PUT = 'PUT'
+    DELETE = 'DELETE'
+    CONNECT = 'CONNECT'
+    OPTIONS = 'OPTIONS'
+    TRACE = 'TRACE'
+    PATCH = 'PATCH'
 
 
 @unique
