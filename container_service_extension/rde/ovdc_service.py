@@ -209,7 +209,7 @@ def get_ovdc_k8s_runtime_details(sysadmin_client: vcd_client.Client,
                                  ovdc_name=None,
                                  org_name=None,
                                  cpm: compute_policy_manager.ComputePolicyManager = None,  # noqa: E501
-                                 log_wire=False) -> def_models.Ovdc:
+                                 log_wire=False) -> common_models.Ovdc:
     """Get k8s runtime details for an ovdc.
 
     Atleast ovdc_id and ovdc_name or org_name and ovdc_name should be provided.
