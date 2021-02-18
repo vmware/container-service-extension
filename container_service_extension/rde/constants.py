@@ -53,6 +53,15 @@ class DefKey(str, Enum):
     ENTITY_TYPE_SCHEMA_VERSION = 'schema_version'
 
 
+# Defines the RDE versions CSE makes use of.
+# Different RDE versions may be used as CSE
+# is compatible with multiple VCD API versions.
+@unique
+class RDESchemaVersions(str, Enum):
+    RDE_1_X = '1.0.0'
+    RDE_2_X = '2.0.0'
+
+
 MAP_API_VERSION_TO_KEYS = {
     35.0: {
         DefKey.INTERFACE_VENDOR: DEF_VMWARE_VENDOR,
@@ -76,6 +85,47 @@ MAP_API_VERSION_TO_KEYS = {
         DefKey.ENTITY_TYPE_NAME: DEF_NATIVE_ENTITY_TYPE_NAME,
         DefKey.ENTITY_TYPE_SCHEMA_VERSION: 'api_v35',
     }
+}
+
+
+# Dictionary indicating RDE version to use
+# for the VCD API version
+# Based on the VCD-version CSE server is configured with,
+# CSE server dynamically determines the RDE-version-to-use at runtime.
+# Below dictionary essentially answers this question:
+# "When CSE is configured with VCD of a given api-version, what is the
+# compatible RDE-version CSE-server must use on that VCD?"
+# Key represents the VCD api-version CSE is configured with.
+# Value represents the RDE-version CSE-server must use for that VCD
+#   environment.
+# This map must be carefully updated for every major/minor/patch version
+# increments of RDE for each official CSE release. Below are few examples on
+#  how this map could be updated.
+# NOTE: The RDE version used by the VCD API version can be different in other
+#   CSE releases.
+# Example -
+# Mapping for CSE 3.1:
+# MAP_VCD_API_VERSION_TO_RDE_SCHEMA_VERSION = {
+#     35.0: 1.0.0,
+#     36.0: 2.0.0
+# }
+# If CSE 3.2 introduces Minor version bump in RDE (i.e 2.1) and is released
+#   alongside vCD 10.4 (API Version 37), mapping would be -
+# MAP_VCD_API_VERSION_TO_RDE_SCHEMA_VERSION = {
+# 35.0: 1.0.0,
+# 36.0: 2.1.0 (Note the RDE version change),
+# 37.0: 2.1.0 (Newly introduced RDE),
+# }
+# If CSE 3.2 introduces Major version bump in RDE (i.e 3.0) and is released
+#   alongside vCD 10.4 (API version 37), mapping would be -
+# MAP_VCD_API_VERSION_TO_RDE_SCHEMA_VERSION = {
+# 35.0: 1.0.0,
+# 36.0: 2.0.0,
+# 37.0: 3.0.0 (Newly introduced RDE)
+# }
+MAP_VCD_API_VERSION_TO_RDE_VERSION = {
+    35.0: RDESchemaVersions.RDE_1_X.value,
+    36.0: RDESchemaVersions.RDE_2_X.value
 }
 
 
