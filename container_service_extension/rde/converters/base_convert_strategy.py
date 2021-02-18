@@ -2,7 +2,7 @@
 # Copyright (c) 2021 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 
-from container_service_extension.rde.models.utils import get_model
+from container_service_extension.rde.models.rde_factory import get_rde_model
 
 
 class BaseConvertStrategy:
@@ -18,5 +18,5 @@ class BaseConvertStrategy:
         :param str target_rde_version: The target RDE version of the entity.
         :return data:
         """
-        target_model = get_model(target_rde_version)
+        target_model = get_rde_model(target_rde_version)
         return target_model(**entity)

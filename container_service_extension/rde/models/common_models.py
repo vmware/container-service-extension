@@ -6,7 +6,7 @@ from typing import List
 
 from container_service_extension.common.constants import shared_constants as shared_constants  # noqa: E501
 from container_service_extension.rde import constants as def_constants, utils as def_utils  # noqa: E501
-from container_service_extension.rde.models import utils as model_utils
+from container_service_extension.rde.models.rde_factory import get_rde_model
 from container_service_extension.rde.models.abstractNativeEntity import AbstractNativeEntity  # noqa: E501
 
 
@@ -101,7 +101,7 @@ class DefEntity:
                  owner: Owner = None, org: Org = None):
         # TODO Replace the hard-coded '1.0.0' with the dynamically retrieved
         #  the RDE version to use
-        NativeEntityClass = model_utils.get_model('1.0.0')
+        NativeEntityClass = get_rde_model('1.0.0')
         self.entity = NativeEntityClass(**entity) if isinstance(entity, dict) else entity  # noqa: E501
         self.name = name or self.entity.metadata.cluster_name
         self.id = id
@@ -178,7 +178,7 @@ class GenericClusterEntity:
                  shared_constants.ClusterEntityKind.TKG_PLUS.value]:
             # TODO Replace the hard-coded '1.0.0' with the dynamically
             #  retrieved the RDE version to use
-            NativeEntityClass = model_utils.get_model('1.0.0')
+            NativeEntityClass = get_rde_model('1.0.0')
             self.entity = NativeEntityClass(**entity_dict) if isinstance(entity, dict) else entity  # noqa: E501
         elif entity_dict['kind'] == \
                 shared_constants.ClusterEntityKind.TKG.value:
