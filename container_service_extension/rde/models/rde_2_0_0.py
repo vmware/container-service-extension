@@ -115,8 +115,8 @@ class Status:
         self.os = os
         self.nodes = Nodes(**nodes) if isinstance(nodes, dict) else nodes
         self.cloud_properties = CloudProperties(
-            **cloud_properties if isinstance(cloud_properties,
-                                             dict) else cloud_properties)
+            **cloud_properties) if isinstance(cloud_properties, dict) \
+            else cloud_properties
 
 
 @dataclass()
@@ -209,3 +209,14 @@ class NativeEntity:
         self.status = Status(**status) if isinstance(status, dict) else status
         self.kind = kind
         self.api_version = api_version
+
+    def validate(self, request_spec: dict, current_spec: dict, operation: str):
+        """Validate the input_spec against current_spec.
+
+        :param dict request_spec: Request spec of the cluster
+        :param dict current_spec: Current status of the cluster
+        :param str operation: POST/PUT/DEL
+        :retur bool:
+        """
+        # TODO Change the signature of the method as you see it fit.
+        raise NotImplementedError

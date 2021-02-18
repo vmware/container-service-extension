@@ -1,13 +1,13 @@
 # container-service-extension
 # Copyright (c) 2021 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
-
 from dataclasses import asdict, dataclass
 from typing import List
 
 from container_service_extension.common.constants import shared_constants as shared_constants  # noqa: E501
 from container_service_extension.rde import constants as def_constants, utils as def_utils  # noqa: E501
-from container_service_extension.rde.models.rde_1_0_0 import NativeEntity
+from container_service_extension.rde.models.abstractNativeEntity import AbstractNativeEntity  # noqa: E501
+from container_service_extension.rde.models.rde_factory import get_rde_model
 
 
 @dataclass(frozen=True)
@@ -87,7 +87,7 @@ class DefEntity:
     """
 
     name: str
-    entity: NativeEntity
+    entity: AbstractNativeEntity
     id: str = None
     entityType: str = None
     externalId: str = None
@@ -95,10 +95,14 @@ class DefEntity:
     owner: Owner = None
     org: Org = None
 
-    def __init__(self, entity: NativeEntity, name: str = None, id: str = None,
-                 entityType: str = None, externalId: str = None,
-                 state: str = None, owner: Owner = None, org: Org = None):
-        self.entity = NativeEntity(**entity) if isinstance(entity, dict) else entity  # noqa: E501
+    def __init__(self, entity: AbstractNativeEntity, name: str = None,
+                 id: str = None, entityType: str = None,
+                 externalId: str = None, state: str = None,
+                 owner: Owner = None, org: Org = None):
+        # TODO Replace the hard-coded '1.0.0' with the dynamically retrieved
+        #  the RDE version to use
+        NativeEntityClass = get_rde_model('1.0.0')
+        self.entity = NativeEntityClass(**entity) if isinstance(entity, dict) else entity  # noqa: E501
         self.name = name or self.entity.metadata.cluster_name
         self.id = id
         self.entityType = entityType
@@ -172,7 +176,10 @@ class GenericClusterEntity:
         if entity_dict['kind'] in \
                 [shared_constants.ClusterEntityKind.NATIVE.value,
                  shared_constants.ClusterEntityKind.TKG_PLUS.value]:
-            self.entity = NativeEntity(**entity_dict) if isinstance(entity, dict) else entity  # noqa: E501
+            # TODO Replace the hard-coded '1.0.0' with the dynamically
+            #  retrieved the RDE version to use
+            NativeEntityClass = get_rde_model('1.0.0')
+            self.entity = NativeEntityClass(**entity_dict) if isinstance(entity, dict) else entity  # noqa: E501
         elif entity_dict['kind'] == \
                 shared_constants.ClusterEntityKind.TKG.value:
             self.entity = TKGEntity(**entity) if isinstance(entity, dict) else entity  # noqa: E501

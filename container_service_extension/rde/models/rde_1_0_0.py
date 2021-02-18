@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from typing import List
 
 from container_service_extension.rde import constants as def_constants
+from container_service_extension.rde.models.abstractNativeEntity import AbstractNativeEntity  # noqa: E501
 
 
 @dataclass()
@@ -131,7 +132,7 @@ class ClusterSpec:
 
 
 @dataclass()
-class NativeEntity:
+class NativeEntity(AbstractNativeEntity):
     """Represents the Native Cluster entity.
 
     If dictionaries are passed as arguments, the constructor auto-converts
@@ -192,3 +193,14 @@ class NativeEntity:
         self.status = Status(**status) if isinstance(status, dict) else status
         self.kind = kind
         self.api_version = api_version
+
+    def validate(self, request_spec: dict, current_spec: dict, operation: str):
+        """Validate the input_spec against current_spec.
+
+        :param dict request_spec: Request spec of the cluster
+        :param dict current_spec: Current status of the cluster
+        :param str operation: POST/PUT/DEL
+        :retur bool:
+        """
+        # TODO Change the signature of the method as you see it fit.
+        raise NotImplementedError
