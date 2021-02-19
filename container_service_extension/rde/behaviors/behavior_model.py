@@ -12,6 +12,11 @@ class ExecutionProperties:
     # TODO Remove this property once Extensibility team sets the default value.
     invocation_timeout: int = 216000
 
+    def __init__(self, serviceId: str = MQTT_EXTENSION_URN,
+                 invocation_timeout: int = 216000, **kwargs):
+        self.serviceId = serviceId
+        self.invocation_timeout = invocation_timeout
+
 
 @dataclass
 class Execution:
@@ -20,7 +25,7 @@ class Execution:
     execution_properties: ExecutionProperties = ExecutionProperties()
 
     def __init__(self, id: str, type: str = ExtensionType.MQTT.value,
-                 execution_properties: ExecutionProperties = ExecutionProperties()):  # noqa: E501
+                 execution_properties: ExecutionProperties = ExecutionProperties(), **kwargs):  # noqa: E501
         self.id = id
         self.type = type
         self.execution_properties = \
