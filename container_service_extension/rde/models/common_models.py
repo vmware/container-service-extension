@@ -95,8 +95,8 @@ class DefEntity:
     owner: Owner = None
     org: Org = None
 
-    def __init__(self, entity: AbstractNativeEntity, name: str = None,
-                 id: str = None, entityType: str = None,
+    def __init__(self, entity: AbstractNativeEntity, entityType: str,
+                 name: str = None, id: str = None,
                  externalId: str = None, state: str = None,
                  owner: Owner = None, org: Org = None):
         self.id = id
@@ -173,7 +173,8 @@ class GenericClusterEntity:
     entity = None
     owner: Owner = None
 
-    def __init__(self, name: str, org: Org, entityType: str, entity, owner: Owner, **kwargs):
+    def __init__(self, name: str, org: Org, entityType: str, entity,
+                 owner: Owner, **kwargs):
         self.name = name
         self.org = Org(**org) if isinstance(org, dict) else org
         self.entityType = entityType
