@@ -61,6 +61,8 @@ EXTENSIONS_API_PATH = 'extensions/api'
 MQTT_API_FILTER_PATTERN = '/api/mqttEndpoint/cse'  # Needs to start with '/'
 MQTT_EXTENSION_VERSION = '1.0.0'
 MQTT_EXTENSION_VENDOR = 'VMWare'
+MQTT_EXTENSION_URN = 'urn:vcloud:extension-api:' + MQTT_EXTENSION_VENDOR + ':'\
+                     + CSE_SERVICE_NAME + ':' + MQTT_EXTENSION_VERSION
 MQTT_EXTENSION_PRIORITY = 100
 MQTT_MIN_API_VERSION = 35.0
 MQTT_TOKEN_NAME = "mqttCseToken"
