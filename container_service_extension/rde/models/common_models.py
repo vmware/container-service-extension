@@ -99,13 +99,17 @@ class DefEntity:
                  id: str = None, entityType: str = None,
                  externalId: str = None, state: str = None,
                  owner: Owner = None, org: Org = None):
-        # TODO Replace the hard-coded '1.0.0' with the dynamically retrieved
-        #  the RDE version to use
-        NativeEntityClass = get_rde_model('1.0.0')
-        self.entity = NativeEntityClass(**entity) if isinstance(entity, dict) else entity  # noqa: E501
-        self.name = name or self.entity.metadata.cluster_name
         self.id = id
         self.entityType = entityType
+
+        # Get the entity type version from entity type urn
+        entity_type_version = self.entityType.split(":")[-1]
+        # Parse the enitty to the right entity class
+        NativeEntityClass = get_rde_model(entity_type_version)
+        self.entity = NativeEntityClass(**entity) \
+            if isinstance(entity, dict) else entity
+
+        self.name = name or self.entity.metadata.cluster_name
         self.externalId = externalId
         self.state = state
         self.owner = Owner(**owner) if isinstance(owner, dict) else owner
@@ -176,9 +180,10 @@ class GenericClusterEntity:
         if entity_dict['kind'] in \
                 [shared_constants.ClusterEntityKind.NATIVE.value,
                  shared_constants.ClusterEntityKind.TKG_PLUS.value]:
-            # TODO Replace the hard-coded '1.0.0' with the dynamically
-            #  retrieved the RDE version to use
-            NativeEntityClass = get_rde_model('1.0.0')
+            # Get the entity type version from entity type urn
+            entity_type_version = self.entityType.split(":")[-1]
+            # Parse the enitty to the right entity class
+            NativeEntityClass = get_rde_model(entity_type_version)
             self.entity = NativeEntityClass(**entity_dict) if isinstance(entity, dict) else entity  # noqa: E501
         elif entity_dict['kind'] == \
                 shared_constants.ClusterEntityKind.TKG.value:
