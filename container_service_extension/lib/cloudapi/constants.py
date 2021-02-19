@@ -19,6 +19,7 @@ class CloudApiResource(str, Enum):
     PVDC_COMPUTE_POLICIES = 'pvdcComputePolicies'
     EXTENSION_UI = 'extensions/ui'
     INTERFACES = 'interfaces'
+    BEHAVIORS = 'behaviors'
     ENTITY_TYPES = 'entityTypes'
     ENTITY_TYPES_TOKEN = 'types'
     ENTITIES = 'entities'
