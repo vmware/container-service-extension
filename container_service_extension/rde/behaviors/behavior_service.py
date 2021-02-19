@@ -73,4 +73,3 @@ class BehaviorService:
         matched_behaviors = [behavior for behavior in behaviors
                              if behavior.name == behavior_name]
         return matched_behaviors[0]
-
