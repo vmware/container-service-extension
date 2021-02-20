@@ -196,7 +196,9 @@ class ClusterService(abstract_broker.AbstractBroker):
         #  based clusters
 
         # create the corresponding defined entity .
-        def_entity = common_models.DefEntity(entity=cluster_spec)
+        entity_type_id = def_utils.get_registered_def_entity_type().id
+        def_entity = common_models.DefEntity(entity=cluster_spec,
+                                             entityType=entity_type_id)
         def_entity.entity.status.phase = str(
             DefEntityPhase(DefEntityOperation.CREATE,
                            DefEntityOperationStatus.IN_PROGRESS))
@@ -220,7 +222,7 @@ class ClusterService(abstract_broker.AbstractBroker):
         def_entity.entity.status.task_href = self.task_resource.get('href')
         try:
             self.entity_svc.create_entity(
-                def_utils.get_registered_def_entity_type().id,
+                entity_type_id,
                 entity=def_entity,
                 tenant_org_context=org_context)
             def_entity = self.entity_svc.get_native_entity_by_name(cluster_name)  # noqa: E501
