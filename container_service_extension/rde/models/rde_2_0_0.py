@@ -83,12 +83,14 @@ class CloudProperties:
     org_name: str = None
     ovdc_name: str = None
     ovdc_network_name: str = None
+    k8_distribution: Distribution = None
 
     def __init__(self, org_name: str, ovdc_name: int, ovdc_network_name: str,
-                 **kwargs):
+                 k8_distribution: Distribution, **kwargs):
         self.org_name = org_name
         self.ovdc_name = ovdc_name
         self.ovdc_network_name = ovdc_network_name
+        self.k8_distribution = k8_distribution
 
 
 @dataclass()

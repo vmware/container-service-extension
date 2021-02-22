@@ -202,6 +202,17 @@
                         "ovdc_network_name": {
                           "type":  "string",
                           "description": "The name of the Organization Virtual data center network to which cluster is connected."
+                        },
+                        "k8_distribution": {
+                          "type": "object",
+                          "properties": {
+                            "template_name": {
+                              "type": "string"
+                            },
+                            "template_revision": {
+                              "type": "integer"
+                            }
+                          }
                         }
                       }
                     }
