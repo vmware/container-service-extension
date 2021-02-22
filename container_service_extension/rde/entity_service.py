@@ -149,7 +149,7 @@ class DefEntityService():
                                        f"{CloudApiResource.ENTITY_TYPES_TOKEN}/"  # noqa: E501
                                        f"{vendor}/{nss}/{version}?{query_string}")  # noqa: E501
         result = {}
-        entity_list = []
+        entity_list: list[DefEntity] = []
         for v in response_body['values']:
             entity_list.append(DefEntity(**v))
         result[PaginationKey.RESULT_TOTAL] = int(response_body['resultTotal'])
