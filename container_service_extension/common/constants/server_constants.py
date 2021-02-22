@@ -204,7 +204,7 @@ class TemplateScriptFile(str, Enum):
 
 @unique
 class ScriptFile(str, Enum):
-    # For Usage in vcdbroker.py due to legacy code; also cluster_service_1_x.
+    # For Usage in vcdbroker.py due to legacy code.
     # When those are deprecated, we could remove this struct.
     """Types of script for vApp template customizations in CSE."""
 
