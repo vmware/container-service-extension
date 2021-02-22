@@ -6,9 +6,21 @@
                 "properties": {
                     "name": {"type": "string"},
                     "ip": {"type": "string"},
-                    "sizing_class": {"type": "string"}
+                    "sizing_class": {"type": "string"},
+                    "storage_profile": {"type": "string"}
                 },
                 "additionalproperties": true
+            },
+            "k8_distribution": {
+                "type": "object",
+                "required": [
+                   "template_name",
+                   "template_revision"
+                ],
+                "properties": {
+                   "template_name":  { "type": "string"},
+                   "template_revision": { "type": "integer"}
+                }
             }
         },
         "type": "object",
@@ -124,19 +136,7 @@
                         }
                     },
                     "k8_distribution": {
-                        "type": "object",
-                        "required": [
-                            "template_name",
-                            "template_revision"
-                        ],
-                        "properties": {
-                            "template_name": {
-                                "type": "string"
-                            },
-                            "template_revision": {
-                                "type": "integer"
-                            }
-                        }
+                      "$ref": "#/definitions/k8_distribution"
                     }
                 }
             },
@@ -204,15 +204,7 @@
                           "description": "The name of the Organization Virtual data center network to which cluster is connected."
                         },
                         "k8_distribution": {
-                          "type": "object",
-                          "properties": {
-                            "template_name": {
-                              "type": "string"
-                            },
-                            "template_revision": {
-                              "type": "integer"
-                            }
-                          }
+                          "$ref": "#/definitions/k8_distribution"
                         }
                       }
                     }

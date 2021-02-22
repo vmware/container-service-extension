@@ -91,7 +91,8 @@ class CloudProperties:
         self.org_name = org_name
         self.ovdc_name = ovdc_name
         self.ovdc_network_name = ovdc_network_name
-        self.k8_distribution = k8_distribution
+        self.k8_distribution = Distribution(**k8_distribution) \
+            if isinstance(k8_distribution, dict) else k8_distribution or Distribution()  # noqa: E501
 
 
 @dataclass()
