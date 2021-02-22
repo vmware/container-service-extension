@@ -73,3 +73,96 @@ class BehaviorService:
         matched_behaviors = [behavior for behavior in behaviors
                              if behavior.name == behavior_name]
         return matched_behaviors[0]
+
+    def delete_behavior_on_interface(self, behavior_id, interface_id):
+        if not self._cloudapi_client.is_sys_admin:
+            raise ValueError("Cloud API Client should be sysadmin.")
+        return self._cloudapi_client.do_request(
+            method=cse_shared_constants.RequestMethod.DELETE,
+            cloudapi_version=CloudApiVersion.VERSION_1_0_0,
+            resource_url_relative_path=f"{CloudApiResource.INTERFACES}"
+                                       f"/{interface_id}"
+                                       f"/{CloudApiResource.BEHAVIORS}"
+                                       f"/{behavior_id}")
+
+    # def create_behavior_on_entity_type(self, behavior: Behavior, entity_type_id):
+    #     if not self._cloudapi_client.is_sys_admin:
+    #         raise ValueError("Cloud API Client should be sysadmin.")
+    #     response_body = self._cloudapi_client.do_request(
+    #         method=cse_shared_constants.RequestMethod.POST,
+    #         cloudapi_version=CloudApiVersion.VERSION_1_0_0,
+    #         resource_url_relative_path=f"{CloudApiResource.ENTITY_TYPES}"
+    #                                    f"/{entity_type_id}"
+    #                                    f"/{CloudApiResource.BEHAVIORS}",
+    #         payload=asdict(behavior))
+    #     return Behavior(**response_body)
+
+    def override_behavior_on_entity_type(self, behavior: Behavior, entity_type_id):
+        """Only Execution section can be overridden.
+
+        @param behavior:
+        @param entity_type_id:
+        @return:
+        """
+        if not self._cloudapi_client.is_sys_admin:
+            raise ValueError("Cloud API Client should be sysadmin.")
+        response_body = self._cloudapi_client.do_request(
+            method=cse_shared_constants.RequestMethod.PUT,
+            cloudapi_version=CloudApiVersion.VERSION_1_0_0,
+            resource_url_relative_path=f"{CloudApiResource.ENTITY_TYPES}"
+                                       f"/{entity_type_id}"
+                                       f"/{CloudApiResource.BEHAVIORS}"
+                                       f"/{behavior.ref}",
+            payload=asdict(behavior))
+        return Behavior(**response_body)
+
+    def list_behaviors_on_entity_type(self, entity_type_id):
+        page_num = 0
+        while True:
+            page_num += 1
+            response_body = self._cloudapi_client.do_request(
+                method=cse_shared_constants.RequestMethod.GET,
+                cloudapi_version=CloudApiVersion.VERSION_1_0_0,
+                resource_url_relative_path=f"{CloudApiResource.ENTITY_TYPES}"
+                                           f"/{entity_type_id}"
+                                           f"/{CloudApiResource.BEHAVIORS}?"
+                                           f"page={page_num}")
+            if len(response_body['values']) > 0:
+                for behavior in response_body['values']:
+                    yield Behavior(**behavior)
+            else:
+                break
+
+    def get_behavior_on_entity_type_by_id(self, behavior_interface_id, entity_type_id):
+        response_body = self._cloudapi_client.do_request(
+            method=cse_shared_constants.RequestMethod.GET,
+            cloudapi_version=CloudApiVersion.VERSION_1_0_0,
+            resource_url_relative_path=f"{CloudApiResource.ENTITY_TYPES}"
+                                       f"/{entity_type_id}"
+                                       f"/{CloudApiResource.BEHAVIORS}"
+                                       f"/{behavior_interface_id}")
+        return Behavior(**response_body)
+
+    def get_behavior_on_entity_type_by_name(self, behavior_name, entity_type_id):
+        behaviors = self.list_behaviors_on_entity_type(entity_type_id=entity_type_id)
+        matched_behaviors = [behavior for behavior in behaviors
+                             if behavior.name == behavior_name]
+        return matched_behaviors[0]
+
+    def delete_behavior_on_entity_type(self, behavior_interface_id, entity_type_id):
+        if not self._cloudapi_client.is_sys_admin:
+            raise ValueError("Cloud API Client should be sysadmin.")
+        return self._cloudapi_client.do_request(
+            method=cse_shared_constants.RequestMethod.DELETE,
+            cloudapi_version=CloudApiVersion.VERSION_1_0_0,
+            resource_url_relative_path=f"{CloudApiResource.ENTITY_TYPES}"
+                                       f"/{entity_type_id}"
+                                       f"/{CloudApiResource.BEHAVIORS}"
+                                       f"/{behavior_interface_id}")
+
+    def invoke_behavior(self):
+        pass
+
+    def set_acls_on_behavior(self):
+        pass
+

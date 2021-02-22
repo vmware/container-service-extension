@@ -29,8 +29,8 @@ class Execution:
         self.id = id
         self.type = type
         self.execution_properties = \
-            ExecutionProperties(**execution_properties) \
-                if isinstance(execution_properties, dict) else execution_properties  # noqa: E501
+            ExecutionProperties(**execution_properties)\
+            if isinstance(execution_properties, dict) else execution_properties
 
 
 @dataclass
