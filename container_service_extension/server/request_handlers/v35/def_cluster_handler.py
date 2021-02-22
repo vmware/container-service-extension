@@ -15,8 +15,8 @@ import container_service_extension.common.thread_local_data as thread_local_data
 import container_service_extension.common.utils.server_utils as server_utils
 import container_service_extension.lib.telemetry.constants as telemetry_constants  # noqa: E501
 import container_service_extension.lib.telemetry.telemetry_handler as telemetry_handler  # noqa: E501
-import container_service_extension.rde.backend.cluster_service_1_x as cluster_svc  # noqa: E501
-import container_service_extension.rde.models.rde_1_0_0 as rde_1_0_0
+import container_service_extension.rde.backend.cluster_service_factory as cluster_service_factory  # noqa: E501
+import container_service_extension.rde.models.rde_factory as rde_factory
 import container_service_extension.security.context.operation_context as ctx
 import container_service_extension.server.request_handlers.request_utils as request_utils  # noqa: E501
 
@@ -31,8 +31,13 @@ def cluster_create(data: dict, op_ctx: ctx.OperationContext):
     :return: Defined entity of the native cluster
     :rtype: container_service_extension.def_.models.DefEntity
     """
-    svc = cluster_svc.ClusterService(op_ctx)
-    cluster_entity_spec = rde_1_0_0.NativeEntity(**data[RequestKey.INPUT_SPEC])  # noqa: E501
+    rde_in_use = server_utils.get_rde_version_in_use()
+    svc = cluster_service_factory.ClusterServiceFactory(op_ctx). \
+        get_cluster_service(rde_in_use)
+    # TODO find out the RDE version from the request spec
+    # TODO convert the spec to rde_in_use
+    NativeEntityClass = rde_factory.get_rde_model(rde_in_use)
+    cluster_entity_spec = NativeEntityClass(**data[RequestKey.INPUT_SPEC])
     return asdict(svc.create_cluster(cluster_entity_spec))
 
 
@@ -46,9 +51,14 @@ def cluster_resize(data: dict, op_ctx: ctx.OperationContext):
     :return: Defined entity of the native cluster
     :rtype: container_service_extension.def_.models.DefEntity
     """
-    svc = cluster_svc.ClusterService(op_ctx)
+    rde_in_use = server_utils.get_rde_version_in_use()
+    svc = cluster_service_factory.ClusterServiceFactory(op_ctx). \
+        get_cluster_service(rde_in_use)
     cluster_id = data[RequestKey.CLUSTER_ID]
-    cluster_entity_spec = rde_1_0_0.NativeEntity(**data[RequestKey.INPUT_SPEC])  # noqa: E501
+    # TODO find out the RDE version from the request spec
+    # TODO convert the spec to rde_in_use
+    NativeEntityClass = rde_factory.get_rde_model(rde_in_use)
+    cluster_entity_spec = NativeEntityClass(**data[RequestKey.INPUT_SPEC])  # noqa: E501
     curr_entity = svc.entity_svc.get_entity(cluster_id)
     request_utils.validate_request_payload(
         asdict(cluster_entity_spec.spec), asdict(curr_entity.entity.spec),
@@ -69,7 +79,9 @@ def cluster_delete(data: dict, op_ctx: ctx.OperationContext):
 
     :return: Dict
     """
-    svc = cluster_svc.ClusterService(op_ctx)
+    rde_in_use = server_utils.get_rde_version_in_use()
+    svc = cluster_service_factory.ClusterServiceFactory(op_ctx). \
+        get_cluster_service(rde_in_use)
     cluster_id = data[RequestKey.CLUSTER_ID]
     return asdict(svc.delete_cluster(cluster_id))
 
@@ -86,7 +98,9 @@ def cluster_info(data: dict, op_ctx: ctx.OperationContext):
 
     :return: Dict
     """
-    svc = cluster_svc.ClusterService(op_ctx)
+    rde_in_use = server_utils.get_rde_version_in_use()
+    svc = cluster_service_factory.ClusterServiceFactory(op_ctx). \
+        get_cluster_service(rde_in_use)
     cluster_id = data[RequestKey.CLUSTER_ID]
     return asdict(svc.get_cluster_info(cluster_id))
 
@@ -100,7 +114,9 @@ def cluster_config(data: dict, op_ctx: ctx.OperationContext):
 
     :return: Dict
     """
-    svc = cluster_svc.ClusterService(op_ctx)
+    rde_in_use = server_utils.get_rde_version_in_use()
+    svc = cluster_service_factory.ClusterServiceFactory(op_ctx). \
+        get_cluster_service(rde_in_use)
     cluster_id = data[RequestKey.CLUSTER_ID]
     return svc.get_cluster_config(cluster_id)
 
@@ -112,7 +128,9 @@ def cluster_upgrade_plan(data, op_ctx: ctx.OperationContext):
 
     :return: List[Tuple(str, str)]
     """
-    svc = cluster_svc.ClusterService(op_ctx)
+    rde_in_use = server_utils.get_rde_version_in_use()
+    svc = cluster_service_factory.ClusterServiceFactory(op_ctx). \
+        get_cluster_service(rde_in_use)
     return svc.get_cluster_upgrade_plan(data[RequestKey.CLUSTER_ID])
 
 
@@ -125,8 +143,13 @@ def cluster_upgrade(data, op_ctx: ctx.OperationContext):
 
     :return: Dict
     """
-    svc = cluster_svc.ClusterService(op_ctx)
-    cluster_entity_spec = rde_1_0_0.NativeEntity(**data[RequestKey.INPUT_SPEC])  # noqa: E501
+    rde_in_use = server_utils.get_rde_version_in_use()
+    svc = cluster_service_factory.ClusterServiceFactory(op_ctx). \
+        get_cluster_service(rde_in_use)
+    # TODO find out the RDE version from the request spec
+    # TODO convert the spec to rde_in_use
+    NativeEntityClass = rde_factory.get_rde_model(rde_in_use)
+    cluster_entity_spec = NativeEntityClass(**data[RequestKey.INPUT_SPEC])
     cluster_id = data[RequestKey.CLUSTER_ID]
     curr_entity = svc.entity_svc.get_entity(cluster_id)
     request_utils.validate_request_payload(
@@ -144,7 +167,9 @@ def native_cluster_list(data: dict, op_ctx: ctx.OperationContext):
 
     :return: List
     """
-    svc = cluster_svc.ClusterService(op_ctx)
+    rde_in_use = server_utils.get_rde_version_in_use()
+    svc = cluster_service_factory.ClusterServiceFactory(op_ctx). \
+        get_cluster_service(rde_in_use)
     filters = data.get(RequestKey.V35_QUERY, {})
     page_number = int(filters.get(PaginationKey.PAGE_NUMBER,
                                   CSE_PAGINATION_FIRST_PAGE_NUMBER))
@@ -176,7 +201,9 @@ def native_cluster_list(data: dict, op_ctx: ctx.OperationContext):
 @request_utils.v35_api_exception_handler
 def cluster_acl_info(data: dict, op_ctx: ctx.OperationContext):
     """Request handler for cluster acl list operation."""
-    svc = cluster_svc.ClusterService(op_ctx)
+    rde_in_use = server_utils.get_rde_version_in_use()
+    svc = cluster_service_factory.ClusterServiceFactory(op_ctx). \
+        get_cluster_service(rde_in_use)
     cluster_id = data[RequestKey.CLUSTER_ID]
     query = data.get(RequestKey.V35_QUERY, {})
     page = int(query.get(PaginationKey.PAGE_NUMBER, CSE_PAGINATION_FIRST_PAGE_NUMBER))  # noqa: E501
@@ -196,7 +223,9 @@ def cluster_acl_info(data: dict, op_ctx: ctx.OperationContext):
 @request_utils.v35_api_exception_handler
 def cluster_acl_update(data: dict, op_ctx: ctx.OperationContext):
     """Request handler for cluster acl update operation."""
-    svc = cluster_svc.ClusterService(op_ctx)
+    rde_in_use = server_utils.get_rde_version_in_use()
+    svc = cluster_service_factory.ClusterServiceFactory(op_ctx). \
+        get_cluster_service(rde_in_use)
     cluster_id = data[RequestKey.CLUSTER_ID]
     update_acl_entries = data.get(RequestKey.INPUT_SPEC, {}).get(ClusterAclKey.ACCESS_SETTING)  # noqa: E501
     svc.update_cluster_acl(cluster_id, update_acl_entries)
@@ -245,7 +274,9 @@ def nfs_node_delete(data, op_ctx: ctx.OperationContext):
 
     :return: Dict
     """
-    svc = cluster_svc.ClusterService(op_ctx)
+    rde_in_use = server_utils.get_rde_version_in_use()
+    svc = cluster_service_factory.ClusterServiceFactory(op_ctx). \
+        get_cluster_service(rde_in_use)
     cluster_id = data[RequestKey.CLUSTER_ID]
     node_name = data[RequestKey.NODE_NAME]
 
