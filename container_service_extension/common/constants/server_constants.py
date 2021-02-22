@@ -176,7 +176,7 @@ class KwargKey(str, Enum):
 class ClusterScriptFile(str, Enum):
     """Types of script for vApp template customizations in CSE."""
 
-    SCRIPTS_DIR = "container_service_extension.rde.cluster_scripts"
+    SCRIPTS_DIR = "cluster_scripts"
     CONTROL_PLANE = 'mstr.sh'
     NODE = 'node.sh'
 
