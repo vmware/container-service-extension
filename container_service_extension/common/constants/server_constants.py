@@ -175,7 +175,39 @@ class KwargKey(str, Enum):
 
 
 @unique
+class ClusterScriptFile(str, Enum):
+    """Types of script for vApp template customizations in CSE."""
+
+    SCRIPTS_DIR = "cluster_scripts"
+    CONTROL_PLANE = 'mstr.sh'
+    NODE = 'node.sh'
+
+    # Note that we need _ in the version instead of dots to allow
+    # python package parsing methods to work well
+    VERSION_1_X = "1_x"
+    VERSION_2_X = "2_x"
+
+
+@unique
+class TemplateScriptFile(str, Enum):
+    """Types of script for vApp template customizations in CSE."""
+
+    # vapp template creation scripts
+    CUST = 'cust.sh'
+    INIT = 'init.sh'
+    NFSD = 'nfsd.sh'
+
+    # cluster upgrade scripts
+    DOCKER_UPGRADE = 'cluster-upgrade/docker-upgrade.sh'
+    CONTROL_PLANE_CNI_APPLY = 'cluster-upgrade/master-cni-apply.sh'
+    CONTROL_PLANE_K8S_UPGRADE = 'cluster-upgrade/master-k8s-upgrade.sh'
+    WORKER_K8S_UPGRADE = 'cluster-upgrade/worker-k8s-upgrade.sh'
+
+
+@unique
 class ScriptFile(str, Enum):
+    # For Usage in vcdbroker.py due to legacy code.
+    # When those are deprecated, we could remove this struct.
     """Types of script for vApp template customizations in CSE."""
 
     # vapp template creation scripts

@@ -8,7 +8,7 @@ import stat
 import requests
 import yaml
 
-from container_service_extension.common.constants.server_constants import ScriptFile  # noqa: E501
+from container_service_extension.common.constants.server_constants import TemplateScriptFile  # noqa: E501
 from container_service_extension.common.utils.core_utils import download_file
 from container_service_extension.common.utils.core_utils import NullPrinter
 import container_service_extension.installer.templates.local_template_manager as ltm  # noqa: E501
@@ -113,7 +113,7 @@ class RemoteTemplateManager():
         :param bool force_overwrite: if True, will download the script even if
             it already exists.
         """
-        for script_file in ScriptFile:
+        for script_file in TemplateScriptFile:
             remote_script_url = \
                 self._get_remote_script_url(template_name, revision,
                                             script_file)
