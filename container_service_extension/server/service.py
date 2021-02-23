@@ -498,13 +498,14 @@ class Service(object, metaclass=Singleton):
 
             schema_svc = def_schema_svc.DefSchemaService(cloudapi_client)
             # TODO make use of self._rde_version to load Interface and Type
-            keys_map = def_constants.MAP_API_VERSION_TO_KEYS[float(sysadmin_client.get_api_version())] # noqa: E501
-            interface_id = def_utils.generate_interface_id(vendor=keys_map[def_constants.DefKey.INTERFACE_VENDOR], # noqa: E501
-                                                           nss=keys_map[def_constants.DefKey.INTERFACE_NSS], # noqa: E501
-                                                           version=keys_map[def_constants.DefKey.INTERFACE_VERSION]) # noqa: E501
-            entity_type_id = def_utils.generate_entity_type_id(vendor=keys_map[def_constants.DefKey.ENTITY_TYPE_VENDOR], # noqa: E501
-                                                               nss=keys_map[def_constants.DefKey.ENTITY_TYPE_NSS], # noqa: E501
-                                                               version=keys_map[def_constants.DefKey.ENTITY_TYPE_VERSION]) # noqa: E501
+            DefInfo = def_constants.MAP_RDE_VERSION_TO_KEYS[self.get_rde_version_in_use()]
+
+            interface_id = def_utils.generate_interface_id(vendor=DefInfo[def_constants.DefKey.INTERFACE_VENDOR], # noqa: E501
+                                                           nss=DefInfo[def_constants.DefKey.INTERFACE_NSS], # noqa: E501
+                                                           version=DefInfo[def_constants.DefKey.INTERFACE_VERSION]) # noqa: E501
+            entity_type_id = def_utils.generate_entity_type_id(vendor=DefInfo[def_constants.DefKey.ENTITY_TYPE_VENDOR], # noqa: E501
+                                                               nss=DefInfo[def_constants.DefKey.ENTITY_TYPE_NSS], # noqa: E501
+                                                               version=self.get_rde_version_in_use()) # noqa: E501
             self._kubernetesInterface = schema_svc.get_interface(interface_id)
             self._nativeEntityType = schema_svc.get_entity_type(entity_type_id)
             msg = "Successfully loaded defined entity schema to global context"
