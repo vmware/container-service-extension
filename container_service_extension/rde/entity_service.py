@@ -382,13 +382,13 @@ class DefEntityService():
 
     def get_rde_type_by_rde_version(self, rde_version: str) -> DefEntityType:
         """Fetch Native cluster RDE-Type by RDE version.
-    
+
         :param str rde_version:
         :rtype: DefEntityType
         :return: Defined entity type for the RDE version
         """
         schema_svc = def_schema_svc.DefSchemaService(self._cloudapi_client)
-        RDE_INFO_MAP = def_constants.MAP_RDE_VERSION_TO_KEYS[rde_version] 
+        RDE_INFO_MAP = def_constants.MAP_RDE_VERSION_TO_KEYS[rde_version]
         entity_type_id = def_utils.generate_entity_type_id(
             vendor=RDE_INFO_MAP[def_constants.DefKey.ENTITY_TYPE_VENDOR],
             nss=RDE_INFO_MAP[def_constants.DefKey.ENTITY_TYPE_NSS],
