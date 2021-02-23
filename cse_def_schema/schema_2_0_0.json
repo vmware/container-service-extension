@@ -9,7 +9,7 @@
                     "sizing_class": {"type": "string"},
                     "storage_profile": {"type": "string"}
                 },
-                "additionalproperties": true
+                "additionalProperties": true
             },
             "k8_distribution": {
                 "type": "object",
@@ -20,7 +20,8 @@
                 "properties": {
                    "template_name":  { "type": "string"},
                    "template_revision": { "type": "integer"}
-                }
+                },
+                "additionalProperties": true
             }
         },
         "type": "object",
@@ -217,7 +218,7 @@
                       }
                     }
                 },
-                "additionalproperties": true
+                "additionalProperties": true
             },
             "metadata": {
                 "type": "object",
@@ -246,6 +247,6 @@
                 "description":"Yet to be defined."
             }
         },
-        "additionalproperties": false
+        "additionalProperties": false
 
 }
