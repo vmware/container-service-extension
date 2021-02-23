@@ -498,7 +498,7 @@ class Service(object, metaclass=Singleton):
 
             schema_svc = def_schema_svc.DefSchemaService(cloudapi_client)
             # TODO make use of self._rde_version to load Interface and Type
-            DefInfo = def_constants.MAP_RDE_VERSION_TO_KEYS[self.get_rde_version_in_use()]
+            DefInfo = def_constants.MAP_RDE_VERSION_TO_KEYS[self.get_rde_version_in_use()]  # noqa: E501
 
             interface_id = def_utils.generate_interface_id(vendor=DefInfo[def_constants.DefKey.INTERFACE_VENDOR], # noqa: E501
                                                            nss=DefInfo[def_constants.DefKey.INTERFACE_NSS], # noqa: E501

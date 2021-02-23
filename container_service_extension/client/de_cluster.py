@@ -25,8 +25,8 @@ from container_service_extension.rde.constants import DEF_VMWARE_INTERFACE_VERSI
 from container_service_extension.rde.constants import DEF_VMWARE_VENDOR
 import container_service_extension.rde.entity_service as def_entity_svc
 import container_service_extension.rde.models.common_models as common_models
-import container_service_extension.rde.utils as def_utils
 import container_service_extension.rde.models.rde_1_0_0 as rde_1_0_0
+import container_service_extension.rde.utils as def_utils
 
 
 DUPLICATE_CLUSTER_ERROR_MSG = "Duplicate clusters found. Please use --k8-runtime for the unique identification"  # noqa: E501
@@ -158,8 +158,9 @@ class DECluster:
         # NOTE: The following can throw error if invoked by users who
         # doesn't have the necessary rights.
         try:
-            native_def_entity = entity_svc.get_native_rde_by_name_and_rde_version(
-                cluster_name, rde_version_used)
+            native_def_entity = \
+                entity_svc.get_native_rde_by_name_and_rde_version(
+                    cluster_name, rde_version_used, filters=filters)
         except cse_exceptions.DefSchemaServiceError:
             # NOTE: 500 status code is returned which is not ideal
             # when user doesn't have native rights

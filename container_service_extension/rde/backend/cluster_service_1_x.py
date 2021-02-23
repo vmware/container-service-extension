@@ -257,7 +257,7 @@ class ClusterService(abstract_broker.AbstractBroker):
                 native_entity_type.id,
                 entity=def_entity,
                 tenant_org_context=org_context)
-            
+
             def_entity = \
                 self.entity_svc.get_native_rde_by_name_and_rde_version(
                     cluster_name,

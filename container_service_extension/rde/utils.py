@@ -7,7 +7,6 @@
 import container_service_extension.exception.exceptions as excptn
 from container_service_extension.lib.cloudapi.cloudapi_client import CloudApiClient  # noqa: E501
 import container_service_extension.rde.constants as def_constants
-import container_service_extension.rde.models.common_models as common_models
 
 
 def raise_error_if_def_not_supported(cloudapi_client: CloudApiClient):

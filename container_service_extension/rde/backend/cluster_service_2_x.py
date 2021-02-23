@@ -230,7 +230,7 @@ class ClusterService(abstract_broker.AbstractBroker):
         # create the corresponding defined entity .
         entity_type = def_utils.get_registered_def_entity_type()
         def_entity = common_models.DefEntity(entity=cluster_spec,
-                                             entityType=entity_type_id)
+                                             entityType=entity_type.id)
         def_entity.entity.status.phase = str(
             DefEntityPhase(DefEntityOperation.CREATE,
                            DefEntityOperationStatus.IN_PROGRESS))
@@ -258,8 +258,9 @@ class ClusterService(abstract_broker.AbstractBroker):
                 entity=def_entity,
                 tenant_org_context=org_context)
             def_entity = \
-                self.entity_svc.get_native_rde_by_name_and_rde_version(cluster_name,
-                                                                       entity_type.version)
+                self.entity_svc.get_native_rde_by_name_and_rde_version(
+                    cluster_name,
+                    entity_type.version)
         except Exception as err:
             msg = f"Error creating the cluster '{cluster_name}'"
             LOGGER.error(f"{msg}: {err}")
