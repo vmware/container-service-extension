@@ -302,6 +302,8 @@ class BehaviorService:
         :param behavior_interface_id: Id of the behavior interface
         :param arguments: Arguments to the behavior
         """
+        # TODO Invocation of the behavior must return the taskID retrieved from
+        #  the response headers. This is yet to be done by Extensibility team.
         return self._cloudapi_client.do_request(
             method=cse_shared_constants.RequestMethod.POST,
             cloudapi_version=CloudApiVersion.VERSION_1_0_0,
