@@ -31,6 +31,7 @@ from container_service_extension.common.constants.server_constants import NodeTy
 from container_service_extension.common.constants.server_constants import ScriptFile  # noqa: E501
 from container_service_extension.common.constants.server_constants import SYSTEM_ORG_NAME  # noqa: E501
 from container_service_extension.common.constants.server_constants import ThreadLocalData  # noqa: E501
+from container_service_extension.common.constants.shared_constants import ClusterDetailsKey  # noqa: E501
 from container_service_extension.common.constants.shared_constants import CSE_PAGINATION_DEFAULT_PAGE_SIZE  # noqa: E501
 from container_service_extension.common.constants.shared_constants import CSE_PAGINATION_FIRST_PAGE_NUMBER  # noqa: E501
 from container_service_extension.common.constants.shared_constants import PaginationKey  # noqa: E501
@@ -95,7 +96,7 @@ class VcdBroker(abstract_broker.AbstractBroker):
         if kwargs.get(KwargKey.TELEMETRY, True):
             # Record the telemetry data
             cse_params = copy.deepcopy(validated_data)
-            cse_params[PayloadKey.CLUSTER_ID] = cluster[PayloadKey.CLUSTER_ID]
+            cse_params[PayloadKey.CLUSTER_ID] = cluster[ClusterDetailsKey.CLUSTER_ID.value]  # noqa: E501
             cse_params[PayloadKey.SOURCE_DESCRIPTION] = thread_local_data.get_thread_local_data(ThreadLocalData.USER_AGENT)  # noqa: E501
             record_user_action_details(cse_operation=CseOperation.CLUSTER_INFO,
                                        cse_params=cse_params)
@@ -105,8 +106,53 @@ class VcdBroker(abstract_broker.AbstractBroker):
 
         return cluster
 
+    def get_clusters_by_page(self, **kwargs):
+        """Get native clusters by page and their relevant metadata.
+
+        :return: paginated dictionary containing list of clusters in
+            that page as values.
+
+        **data: Optional
+            Optional data and default values: org_name=None, ovdc_name=None
+        **telemetry: Optional
+        """
+        data = kwargs.get(KwargKey.DATA, {})
+        page_number = kwargs.get('page_number',
+                                 CSE_PAGINATION_FIRST_PAGE_NUMBER)
+        page_size = kwargs.get('page_size',
+                               CSE_PAGINATION_DEFAULT_PAGE_SIZE)
+
+        defaults = {
+            RequestKey.ORG_NAME: None,
+            RequestKey.OVDC_NAME: None,
+        }
+        validated_data = {**defaults, **data}
+
+        if kwargs.get(KwargKey.TELEMETRY, True):
+            # Record the data for telemetry
+            record_user_action_details(
+                cse_operation=CseOperation.CLUSTER_LIST,
+                cse_params=copy.deepcopy(validated_data))
+
+        # "raw clusters" do not have well-defined cluster data keys
+        raw_clusters_info = get_all_clusters(
+            self.context.client,
+            org_name=validated_data[RequestKey.ORG_NAME],
+            ovdc_name=validated_data[RequestKey.OVDC_NAME],
+            page_number=page_number,
+            page_size=page_size)
+
+        raw_clusters_info[PaginationKey.VALUES] = \
+            _extract_cse_cluster_list_info(self.context.sysadmin_client,
+                                           raw_clusters_info[PaginationKey.VALUES])  # noqa: E501
+        return raw_clusters_info
+
     def list_clusters(self, **kwargs):
         """List all native clusters and their relevant metadata.
+
+        :return: a list of all clusters if 'page_number' or 'page_size' are
+            not part of the kwargs. If 'page_number' or 'page_size' is present,
+            a paginated response is returned.
 
         Common broker function that validates data for the 'list clusters'
         operation and returns a list of cluster data.
@@ -116,8 +162,6 @@ class VcdBroker(abstract_broker.AbstractBroker):
         **telemetry: Optional
         """
         data = kwargs.get(KwargKey.DATA, {})
-        page_number = kwargs.get('page_number', CSE_PAGINATION_FIRST_PAGE_NUMBER)  # noqa: E501
-        page_size = kwargs.get('page_size', CSE_PAGINATION_DEFAULT_PAGE_SIZE)
         defaults = {
             RequestKey.ORG_NAME: None,
             RequestKey.OVDC_NAME: None
@@ -136,32 +180,11 @@ class VcdBroker(abstract_broker.AbstractBroker):
         raw_clusters_info = get_all_clusters(
             self.context.client,
             org_name=validated_data[RequestKey.ORG_NAME],
-            ovdc_name=validated_data[RequestKey.OVDC_NAME],
-            page_number=page_number,
-            page_size=page_size)
+            ovdc_name=validated_data[RequestKey.OVDC_NAME])
         raw_clusters = raw_clusters_info[PaginationKey.VALUES]
 
-        clusters = []
-        for c in raw_clusters:
-            org_name = vcd_utils.get_org_name_from_ovdc_id(
-                self.context.sysadmin_client, c['vdc_id'])
-            clusters.append({
-                'name': c['name'],
-                'control_plane_ip': c['leader_endpoint'],
-                'template_name': c.get('template_name'),
-                'template_revision': c.get('template_revision'),
-                'k8s_type': c.get('kubernetes'),
-                'k8s_version': c.get('kubernetes_version'),
-                'VMs': c['number_of_vms'],
-                'vdc': c['vdc_name'],
-                'status': c['status'],
-                'vdc_id': c['vdc_id'],
-                'org_name': org_name,
-                'owner_name': c['owner_name'],
-                K8S_PROVIDER_KEY: K8sProvider.NATIVE
-            })
-        raw_clusters_info[PaginationKey.VALUES] = clusters
-        return raw_clusters_info
+        return _extract_cse_cluster_list_info(self.context.sysadmin_client,
+                                              raw_clusters)
 
     def get_cluster_config(self, **kwargs):
         """Get the cluster's kube config contents.
@@ -190,7 +213,7 @@ class VcdBroker(abstract_broker.AbstractBroker):
         cluster = _get_cluster(self.context.client, cluster_name,
                                org_name=validated_data[RequestKey.ORG_NAME],
                                ovdc_name=validated_data[RequestKey.OVDC_NAME])
-        vapp = vcd_vapp.VApp(self.context.client, href=cluster['vapp_href'])
+        vapp = vcd_vapp.VApp(self.context.client, href=cluster[ClusterDetailsKey.VAPP_HREF])  # noqa: E501
         node_names = _get_node_names(vapp, NodeType.CONTROL_PLANE)
 
         all_results = []
@@ -199,7 +222,7 @@ class VcdBroker(abstract_broker.AbstractBroker):
             # Record the telemetry data
             cse_params = copy.deepcopy(validated_data)
             cse_params[PayloadKey.SOURCE_DESCRIPTION] = thread_local_data.get_thread_local_data(ThreadLocalData.USER_AGENT)  # noqa: E501
-            cse_params[PayloadKey.CLUSTER_ID] = cluster[PayloadKey.CLUSTER_ID]
+            cse_params[PayloadKey.CLUSTER_ID] = cluster[ClusterDetailsKey.CLUSTER_ID.value]  # noqa: E501
             record_user_action_details(
                 cse_operation=CseOperation.CLUSTER_CONFIG,
                 cse_params=cse_params)
@@ -251,13 +274,13 @@ class VcdBroker(abstract_broker.AbstractBroker):
         if kwargs.get(KwargKey.TELEMETRY, True):
             # Record the telemetry data
             cse_params = copy.deepcopy(validated_data)
-            cse_params[PayloadKey.CLUSTER_ID] = cluster[PayloadKey.CLUSTER_ID]
+            cse_params[PayloadKey.CLUSTER_ID] = cluster[ClusterDetailsKey.CLUSTER_ID.value]  # noqa: E501
             record_user_action_details(
                 cse_operation=CseOperation.CLUSTER_UPGRADE_PLAN,
                 cse_params=cse_params)
 
-        src_name = cluster['template_name']
-        src_rev = cluster['template_revision']
+        src_name = cluster[ClusterDetailsKey.TEMPLATE_NAME]
+        src_rev = cluster[ClusterDetailsKey.TEMPLATE_REVISION]
 
         upgrades = []
         config = server_utils.get_server_runtime_config()
@@ -438,7 +461,7 @@ class VcdBroker(abstract_broker.AbstractBroker):
         if kwargs.get(KwargKey.TELEMETRY, True):
             # Record the telemetry data
             cse_params = copy.deepcopy(validated_data)
-            cse_params[PayloadKey.CLUSTER_ID] = cluster_info[PayloadKey.CLUSTER_ID] # noqa: E501
+            cse_params[PayloadKey.CLUSTER_ID] = cluster_info[ClusterDetailsKey.CLUSTER_ID.value] # noqa: E501
             cse_params[LocalTemplateKey.MEMORY] = validated_data.get(RequestKey.MB_MEMORY) # noqa: E501
             cse_params[LocalTemplateKey.CPU] = validated_data.get(RequestKey.NUM_CPU) # noqa: E501
             cse_params[PayloadKey.SOURCE_DESCRIPTION] = thread_local_data.get_thread_local_data(ThreadLocalData.USER_AGENT)  # noqa: E501
@@ -451,7 +474,7 @@ class VcdBroker(abstract_broker.AbstractBroker):
             return self.create_nodes(data=validated_data, telemetry=False)
         else:
             num_workers_to_be_deleted = num_workers - num_workers_wanted
-            node_list = cluster_info['nodes']
+            node_list = cluster_info[ClusterDetailsKey.WORKER_NODE_LIST]
             validated_data[RequestKey.NODE_NAMES_LIST] = [node['name'] for node in node_list[0:num_workers_to_be_deleted]] # noqa: E501
             return self.delete_nodes(data=validated_data, telemetry=False)
 
@@ -484,7 +507,7 @@ class VcdBroker(abstract_broker.AbstractBroker):
         cluster = _get_cluster(self.context.client, cluster_name,
                                org_name=validated_data[RequestKey.ORG_NAME],
                                ovdc_name=validated_data[RequestKey.OVDC_NAME])
-        cluster_id = cluster['cluster_id']
+        cluster_id = cluster[ClusterDetailsKey.CLUSTER_ID.value]
 
         if kwargs.get(KwargKey.TELEMETRY, True):
             # Record the telemetry data
@@ -503,7 +526,7 @@ class VcdBroker(abstract_broker.AbstractBroker):
         self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
         self.context.is_async = True
         self._delete_cluster_async(cluster_name=cluster_name,
-                                   cluster_vdc_href=cluster['vdc_href'])
+                                   cluster_vdc_href=cluster[ClusterDetailsKey.VDC_HREF])  # noqa: E501
 
         return {
             'cluster_name': cluster_name,
@@ -562,7 +585,7 @@ class VcdBroker(abstract_broker.AbstractBroker):
         if kwargs.get(KwargKey.TELEMETRY, True):
             # Record the telemetry data
             cse_params = copy.deepcopy(validated_data)
-            cse_params[PayloadKey.CLUSTER_ID] = cluster[PayloadKey.CLUSTER_ID]
+            cse_params[PayloadKey.CLUSTER_ID] = cluster[ClusterDetailsKey.CLUSTER_ID.value]  # noqa: E501
             cse_params[PayloadKey.SOURCE_DESCRIPTION] = thread_local_data.get_thread_local_data(ThreadLocalData.USER_AGENT)  # noqa: E501
             record_user_action_details(
                 cse_operation=CseOperation.CLUSTER_UPGRADE,
@@ -571,15 +594,15 @@ class VcdBroker(abstract_broker.AbstractBroker):
         msg = f"Upgrading cluster '{cluster_name}' " \
               f"software to match template {template_name} (revision " \
               f"{template_revision}): Kubernetes: " \
-              f"{cluster['kubernetes_version']} -> " \
+              f"{cluster[ClusterDetailsKey.KUBERNETES_VERSION]} -> " \
               f"{template[LocalTemplateKey.KUBERNETES_VERSION]}, Docker-CE: " \
-              f"{cluster['docker_version']} -> " \
+              f"{cluster[ClusterDetailsKey.DOCKER_VERSION]} -> " \
               f"{template[LocalTemplateKey.DOCKER_VERSION]}, CNI: " \
-              f"{cluster['cni']} {cluster['cni_version']} -> " \
-              f"{template[LocalTemplateKey.CNI_VERSION]}"
+              f"{cluster[ClusterDetailsKey.CNI_NAME]} {cluster[ClusterDetailsKey.CNI_VERSION]} -> " \
+              f"{template[LocalTemplateKey.CNI_VERSION]}"  # noqa: E501
         LOGGER.debug(msg)
         self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
-        LOGGER.info(f"{msg} ({cluster['vapp_href']})")
+        LOGGER.info(f"{msg} ({cluster[ClusterDetailsKey.VAPP_HREF]})")
         self.context.is_async = True
         self._upgrade_cluster_async(cluster=cluster, template=template)
 
@@ -618,13 +641,13 @@ class VcdBroker(abstract_broker.AbstractBroker):
         if kwargs.get(KwargKey.TELEMETRY, True):
             # Record the telemetry data
             cse_params = copy.deepcopy(validated_data)
-            cse_params[PayloadKey.CLUSTER_ID] = cluster[PayloadKey.CLUSTER_ID]
+            cse_params[PayloadKey.CLUSTER_ID] = cluster[ClusterDetailsKey.CLUSTER_ID.value]  # noqa: E501
             cse_params[PayloadKey.SOURCE_DESCRIPTION] = thread_local_data.get_thread_local_data(ThreadLocalData.USER_AGENT)  # noqa: E501
             record_user_action_details(
                 cse_operation=CseOperation.NODE_INFO,
                 cse_params=cse_params)
 
-        vapp = vcd_vapp.VApp(self.context.client, href=cluster['vapp_href'])
+        vapp = vcd_vapp.VApp(self.context.client, href=cluster[ClusterDetailsKey.VAPP_HREF])  # noqa: E501
         vms = vapp.get_all_vms()
         node_info = None
         for vm in vms:
@@ -719,7 +742,7 @@ class VcdBroker(abstract_broker.AbstractBroker):
         cluster = _get_cluster(self.context.client, cluster_name,
                                org_name=validated_data[RequestKey.ORG_NAME],
                                ovdc_name=validated_data[RequestKey.OVDC_NAME])
-        cluster_id = cluster['cluster_id']
+        cluster_id = cluster[ClusterDetailsKey.CLUSTER_ID.value]
 
         if kwargs.get(KwargKey.TELEMETRY, True):
             # Record the data for telemetry
@@ -747,8 +770,8 @@ class VcdBroker(abstract_broker.AbstractBroker):
         self.context.is_async = True
         self._create_nodes_async(
             cluster_name=cluster_name,
-            cluster_vdc_href=cluster['vdc_href'],
-            vapp_href=cluster['vapp_href'],
+            cluster_vdc_href=cluster[ClusterDetailsKey.VDC_HREF],
+            vapp_href=cluster[ClusterDetailsKey.VAPP_HREF],
             cluster_id=cluster_id,
             template_name=template_name,
             template_revision=template_revision,
@@ -806,12 +829,12 @@ class VcdBroker(abstract_broker.AbstractBroker):
         cluster = _get_cluster(self.context.client, cluster_name,
                                org_name=validated_data[RequestKey.ORG_NAME],
                                ovdc_name=validated_data[RequestKey.OVDC_NAME])
-        cluster_id = cluster['cluster_id']
+        cluster_id = cluster[ClusterDetailsKey.CLUSTER_ID.value]
 
         if kwargs.get(KwargKey.TELEMETRY, True):
             # Record the telemetry data; record separate data for each node
             cse_params = copy.deepcopy(validated_data)
-            cse_params[PayloadKey.CLUSTER_ID] = cluster[PayloadKey.CLUSTER_ID]
+            cse_params[PayloadKey.CLUSTER_ID] = cluster[ClusterDetailsKey.CLUSTER_ID.value]  # noqa: E501
             cse_params[PayloadKey.SOURCE_DESCRIPTION] = thread_local_data.get_thread_local_data(ThreadLocalData.USER_AGENT)  # noqa: E501
             for node in node_names_list:
                 cse_params[PayloadKey.NODE_NAME] = node
@@ -829,7 +852,7 @@ class VcdBroker(abstract_broker.AbstractBroker):
         self.context.is_async = True
         self._delete_nodes_async(
             cluster_name=cluster_name,
-            vapp_href=cluster['vapp_href'],
+            vapp_href=cluster[ClusterDetailsKey.VAPP_HREF],
             node_names_list=validated_data[RequestKey.NODE_NAMES_LIST])
 
         return {
@@ -1000,7 +1023,7 @@ class VcdBroker(abstract_broker.AbstractBroker):
                                            cluster_id=cluster_id,
                                            org_name=org_name,
                                            ovdc_name=ovdc_name)
-                    _delete_vapp(self.context.client, cluster['vdc_href'],
+                    _delete_vapp(self.context.client, cluster[ClusterDetailsKey.VDC_HREF],  # noqa: E501
                                  cluster_name)
                 except Exception:
                     LOGGER.error(f"Failed to delete cluster '{cluster_name}'",
@@ -1186,22 +1209,22 @@ class VcdBroker(abstract_broker.AbstractBroker):
     @thread_utils.run_async
     def _upgrade_cluster_async(self, *args, cluster, template):
         try:
-            cluster_name = cluster['name']
-            control_plane_node_names = [n['name'] for n in cluster['master_nodes']]  # noqa: E501
+            cluster_name = cluster[ClusterDetailsKey.CLUSTER_NAME]
+            control_plane_node_names = [n['name'] for n in cluster[ClusterDetailsKey.CONTROL_PLANE_NODE_LIST]]  # noqa: E501
             worker_node_names = [n['name'] for n in cluster['nodes']]
             all_node_names = control_plane_node_names + worker_node_names
-            vapp_href = cluster['vapp_href']
+            vapp_href = cluster[ClusterDetailsKey.VAPP_HREF]
             template_name = template[LocalTemplateKey.NAME]
             template_revision = template[LocalTemplateKey.REVISION]
 
             # semantic version doesn't allow leading zeros
             # docker's version format YY.MM.patch allows us to directly use
             # lexicographical string comparison
-            c_docker = cluster['docker_version']
+            c_docker = cluster[ClusterDetailsKey.DOCKER_VERSION]
             t_docker = template[LocalTemplateKey.DOCKER_VERSION]
-            c_k8s = semver.Version(cluster['kubernetes_version'])
+            c_k8s = semver.Version(cluster[ClusterDetailsKey.KUBERNETES_VERSION])  # noqa: E501
             t_k8s = semver.Version(template[LocalTemplateKey.KUBERNETES_VERSION]) # noqa: E501
-            c_cni = semver.Version(cluster['cni_version'])
+            c_cni = semver.Version(cluster[ClusterDetailsKey.CNI_VERSION])
             t_cni = semver.Version(template[LocalTemplateKey.CNI_VERSION])
 
             upgrade_docker = t_docker > c_docker
@@ -1287,8 +1310,8 @@ class VcdBroker(abstract_broker.AbstractBroker):
                                      all_node_names, script)
 
             if upgrade_cni:
-                msg = f"Applying CNI ({cluster['cni']} {c_cni} -> {t_cni}) " \
-                      f"incontrol plane node {control_plane_node_names}"
+                msg = f"Applying CNI ({cluster[ClusterDetailsKey.CNI_NAME]} {c_cni} -> {t_cni}) " \
+                      f"incontrol plane node {control_plane_node_names}"  # noqa: E501
                 LOGGER.debug(msg)
                 self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
                 filepath = ltm.get_script_filepath(template_name,
@@ -1329,7 +1352,7 @@ class VcdBroker(abstract_broker.AbstractBroker):
             LOGGER.debug(f"{msg} ({vapp_href})")
             self._update_task(vcd_client.TaskStatus.SUCCESS, message=msg)
         except Exception as err:
-            msg = f"Unexpected error while upgrading cluster {cluster.get('name')}"  # noqa: E501
+            msg = f"Unexpected error while upgrading cluster {cluster.get(ClusterDetailsKey.CLUSTER_NAME)}"  # noqa: E501
             LOGGER.error(msg, exc_info=True)
             self._update_task(vcd_client.TaskStatus.ERROR,
                               message=msg,
@@ -1655,33 +1678,33 @@ def get_all_clusters(client, cluster_name=None, cluster_id=None,
         vapp_href = f'{client.get_api_uri()}/vApp/vapp-{vapp_id}'
 
         clusters[vapp_id] = {
-            'cluster_id': '',
-            'cni': '',
-            'cni_version': '',
-            'cse_version': '',
-            'docker_version': '',
-            'kubernetes': '',
-            'kubernetes_version': '',
-            'leader_endpoint': '',
-            'master_nodes': [],
-            'name': record.get('name'),
-            'network_name': '',
-            'nfs_nodes': [],
-            'nodes': [],
-            'number_of_vms': record.get('numberOfVMs'),
-            'org_name': '',
-            'org_href': '',
-            'os': '',
-            'owner_name': record.get('ownerName'),
-            'status': record.get('status'),
-            'storage_profile_name': '',
-            'template_name': '',
-            'template_revision': '',
-            'vapp_href': vapp_href,
-            'vapp_id': vapp_id,
-            'vdc_href': f'{client.get_api_uri()}/vdc/{vdc_id}',
-            'vdc_id': vdc_id,
-            'vdc_name': record.get('vdcName')
+            ClusterDetailsKey.CLUSTER_ID: '',
+            ClusterDetailsKey.CNI_NAME: '',
+            ClusterDetailsKey.CNI_VERSION: '',
+            ClusterDetailsKey.CSE_VERSION: '',
+            ClusterDetailsKey.DOCKER_VERSION: '',
+            ClusterDetailsKey.KUBERNETES_RUNTIME: '',
+            ClusterDetailsKey.KUBERNETES_VERSION: '',
+            ClusterDetailsKey.LEADER_ENDPOINT: '',
+            ClusterDetailsKey.CONTROL_PLANE_NODE_LIST: [],
+            ClusterDetailsKey.CLUSTER_NAME: record.get('name'),
+            ClusterDetailsKey.NETWORK_NAME: '',
+            ClusterDetailsKey.NFS_NODE_LIST: [],
+            ClusterDetailsKey.WORKER_NODE_LIST: [],
+            ClusterDetailsKey.VM_COUNT: record.get('numberOfVMs'),
+            ClusterDetailsKey.ORG_NAME: '',
+            ClusterDetailsKey.ORG_HREF: '',
+            ClusterDetailsKey.OS: '',
+            ClusterDetailsKey.OWNER_NAME: record.get('ownerName'),
+            ClusterDetailsKey.STATUS: record.get('status'),
+            ClusterDetailsKey.STORAGE_PROFILE_NAME: '',
+            ClusterDetailsKey.TEMPLATE_NAME: '',
+            ClusterDetailsKey.TEMPLATE_REVISION: '',
+            ClusterDetailsKey.VAPP_HREF: vapp_href,
+            ClusterDetailsKey.VAPP_ID: vapp_id,
+            ClusterDetailsKey.VDC_HREF: f'{client.get_api_uri()}/vdc/{vdc_id}',
+            ClusterDetailsKey.VDC_ID: vdc_id,
+            ClusterDetailsKey.VDC_NAME: record.get('vdcName')
         }
 
         if hasattr(record, 'Metadata'):
@@ -1708,17 +1731,17 @@ def get_all_clusters(client, cluster_name=None, cluster_id=None,
 
     if fetch_details:
         for cluster in clusters.values():
-            vapp = vcd_vapp.VApp(client, href=cluster['vapp_href'])
-            cluster['network_name'] = \
+            vapp = vcd_vapp.VApp(client, href=cluster[ClusterDetailsKey.VAPP_HREF])  # noqa: E501
+            cluster[ClusterDetailsKey.NETWORK_NAME] = \
                 vcd_utils.get_parent_network_name_of_vapp(vapp)
-            cluster['storage_profile_name'] = \
+            cluster[ClusterDetailsKey.STORAGE_PROFILE_NAME] = \
                 vcd_utils.get_storage_profile_name_of_first_vm_in_vapp(vapp)
             _update_cluster_dict_with_node_info(client, cluster)
             if client.is_sysadmin():
-                cluster['org_name'] = \
-                    vcd_utils.get_org_name_from_ovdc_id(client, cluster['vdc_id'])  # noqa: E501
-                cluster['org_href'] = \
-                    vcd_utils.get_org_href_from_ovdc_id(client, cluster['vdc_id'])  # noqa: E501
+                cluster[ClusterDetailsKey.ORG_NAME] = \
+                    vcd_utils.get_org_name_from_ovdc_id(client, cluster[ClusterDetailsKey.VDC_ID])  # noqa: E501
+                cluster[ClusterDetailsKey.ORG_HREF] = \
+                    vcd_utils.get_org_href_from_ovdc_id(client, cluster[ClusterDetailsKey.VDC_ID])  # noqa: E501
 
     if page_number:
         # return pagination details as well
@@ -1859,6 +1882,30 @@ def _add_nodes(client, num_nodes, node_type, org, vdc, vapp,
 
         vapp.reload()
         return {'task': task, 'specs': specs}
+
+
+def _extract_cse_cluster_list_info(sysadmin_client: vcd_client.Client,
+                                   raw_clusters: list) -> list:
+    clusters = []
+    for c in raw_clusters:
+        org_name = vcd_utils.get_org_name_from_ovdc_id(sysadmin_client,
+                                                       c['vdc_id'])
+        clusters.append({
+            'name': c[ClusterDetailsKey.CLUSTER_NAME],
+            'control_plane_ip': c[ClusterDetailsKey.LEADER_ENDPOINT],
+            'template_name': c.get(ClusterDetailsKey.TEMPLATE_NAME),
+            'template_revision': c.get(ClusterDetailsKey.TEMPLATE_REVISION),
+            'k8s_type': c.get(ClusterDetailsKey.KUBERNETES_RUNTIME),
+            'k8s_version': c.get(ClusterDetailsKey.KUBERNETES_VERSION),
+            'VMs': c[ClusterDetailsKey.VM_COUNT],
+            'vdc': c[ClusterDetailsKey.VDC_NAME],
+            'status': c[ClusterDetailsKey.STATUS],
+            'vdc_id': c[ClusterDetailsKey.VDC_ID],
+            'org_name': org_name,
+            'owner_name': c[ClusterDetailsKey.OWNER_NAME],
+            K8S_PROVIDER_KEY: K8sProvider.NATIVE
+        })
+    return clusters
 
 
 def _get_node_names(vapp, node_type):

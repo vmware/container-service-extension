@@ -244,12 +244,10 @@ class ApiClient(object):
             response_data = data.copy()
             def_entities = data['values']
             entity_details = []
-            additional_data = []
             data = []
             for def_entity in def_entities:
                 data.append(def_entity['entity'])
                 del def_entity['entity']
-                additional_data.append(def_entity)
                 entity_details.append(def_entity)
             additional_data = {
                 'page': int(response_data['page']),

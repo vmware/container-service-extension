@@ -13,6 +13,7 @@ class NativeClusterApi(CseClient):
     def __init__(self, client: vcd_client.Client):
         super().__init__(client)
         self._uri = f"{self._uri}/{shared_constants.CSE_URL_FRAGMENT}"
+        self._native_clusters_uri = f"{self._uri}/nativeclusters"
         self._cluster_uri = f"{self._uri}/cluster"
         self._clusters_uri = f"{self._uri}/clusters"
         self._node_uri = f"{self._uri}/node"
@@ -22,7 +23,8 @@ class NativeClusterApi(CseClient):
         if filters is None:
             filters = {}
         filter_string = "&".join([f"{k}={v}" for k, v in filters.items() if v is not None])  # noqa: E501
-        url = f"{self._clusters_uri}?pageSize={self._request_page_size}"
+        url = f"{self._native_clusters_uri}?" \
+              f"{shared_constants.PaginationKey.PAGE_SIZE.value}={self._request_page_size}"  # noqa: E501
         if filter_string:
             url += f"&{filter_string}"
         return self.iterate_results(url)
@@ -40,7 +42,7 @@ class NativeClusterApi(CseClient):
 
     def get_cluster(self, cluster_name, filters=None):
         if filters is None:
-            filters = None
+            filters = {}
         uri = f'{self._cluster_uri}/{cluster_name}'
         response = self._client._do_request_prim(
             shared_constants.RequestMethod.GET,
