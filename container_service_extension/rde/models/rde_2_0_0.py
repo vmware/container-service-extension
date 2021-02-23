@@ -84,12 +84,20 @@ class CloudProperties:
     org_name: str = None
     ovdc_name: str = None
     ovdc_network_name: str = None
+    k8_distribution: Distribution = None
+    ssh_key: str = None
+    rollback_on_failure: bool = True
 
     def __init__(self, org_name: str, ovdc_name: int, ovdc_network_name: str,
-                 **kwargs):
+                 k8_distribution: Distribution, ssh_key: str,
+                 rollback_on_failure: bool, **kwargs):
         self.org_name = org_name
         self.ovdc_name = ovdc_name
         self.ovdc_network_name = ovdc_network_name
+        self.k8_distribution = Distribution(**k8_distribution) \
+            if isinstance(k8_distribution, dict) else k8_distribution or Distribution()  # noqa: E501
+        self.ssh_key = ssh_key
+        self.rollback_on_failure = rollback_on_failure
 
 
 @dataclass()
