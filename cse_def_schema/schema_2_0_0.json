@@ -68,7 +68,8 @@
                                 "type": "string",
                                 "description":"The storage-profile with which worker nodes need to be provisioned in a given \"ovdc\". The specified storage-profile is expected to be available on the given ovdc."
                             }
-                        }
+                        },
+                        "additionalProperties": true
                     },
                     "control_plane": {
                         "type": "object",
@@ -91,7 +92,8 @@
                                 "type": "string",
                                 "description":"The storage-profile with which control-plane needs to be provisioned in a given \"ovdc\". The specified storage-profile is expected to be available on the given ovdc."
                             }
-                        }
+                        },
+                        "additionalProperties": true
                     },
                     "nfs": {
                         "type": "object",
@@ -114,7 +116,8 @@
                                 "type": "string",
                                 "description":"The storage-profile with which nfs needs to be provisioned in a given \"ovdc\". The specified storage-profile is expected to be available on the given ovdc."
                             }
-                        }
+                        },
+                        "additionalProperties": true
                     },
                     "settings": {
                         "type": "object",
@@ -134,12 +137,14 @@
                                 "type": "boolean",
                                 "description":"On any cluster operation failure, if the value is set to true, affected node VMs will be automatically deleted."
                             }
-                        }
+                        },
+                        "additionalProperties": true
                     },
                     "k8_distribution": {
                       "$ref": "#/definitions/k8_distribution"
                     }
-                }
+                },
+                "additionalProperties": true
             },
             "status": {
                 "type": "object",
@@ -186,7 +191,8 @@
                           },
                           "default": []
                         }
-                      }
+                      },
+                      "additionalProperties": true
                     },
                     "cloud_properties": {
                       "type": "object",
@@ -215,7 +221,8 @@
                           "type": "boolean",
                           "description":"On any cluster operation failure, if the value is set to true, affected node VMs will be automatically deleted."
                         }
-                      }
+                      },
+                      "additionalProperties": true
                     }
                 },
                 "additionalProperties": true
@@ -240,7 +247,8 @@
                         "type": "string",
                         "description":"The name of the cluster."
                     }
-                }
+                },
+                "additionalProperties": true
             },
             "apiversion": {
                 "type": "string",
