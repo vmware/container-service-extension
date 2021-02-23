@@ -2,7 +2,7 @@
 # Copyright (c) 2021 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 from dataclasses import asdict
-from typing import List
+from typing import Iterator, List
 
 import container_service_extension.common.constants.shared_constants as cse_shared_constants  # noqa: E501
 from container_service_extension.lib.cloudapi.cloudapi_client import CloudApiClient  # noqa: E501
@@ -56,7 +56,7 @@ class BehaviorService:
             payload=asdict(behavior))
         return Behavior(**response_body)
 
-    def list_behaviors_on_interface(self, interface_id) -> List[Behavior]:
+    def list_behaviors_on_interface(self, interface_id) -> Iterator[Behavior]:
         """List all the behaviors on the specified interface.
 
         :param interface_id: Interface Id.
@@ -101,10 +101,12 @@ class BehaviorService:
         :param interface_id: Id of the interface.
         :return: The behavior details.
         """
+        # TODO Check with Extensibility team to ensure there canno exist
+        #  duplicates.
         behaviors = self.list_behaviors_on_interface(interface_id=interface_id)
-        matched_behaviors = [behavior for behavior in behaviors
-                             if behavior.name == behavior_name]
-        return matched_behaviors[0]
+        for behavior in behaviors:
+            if behavior.name == behavior_name:
+                return behavior
 
     def delete_behavior_on_interface(self, behavior_id, interface_id):
         """Delete the behavior by its Id on the specified interface.
@@ -149,9 +151,9 @@ class BehaviorService:
 
         Only Execution portion of the Behavior can be overridden.
 
-        @param behavior: The updated behavior to be overridden on the entity-type.  # noqa: E501
-        @param entity_type_id: Id of the entity type
-        @return: Overridden behavior on the entity type.
+        :param behavior: The updated behavior to be overridden on the entity-type.  # noqa: E501
+        :param entity_type_id: Id of the entity type
+        :return: Overridden behavior on the entity type.
         """
         if not self._cloudapi_client.is_sys_admin:
             raise ValueError("Cloud API Client should be sysadmin.")
@@ -165,7 +167,7 @@ class BehaviorService:
             payload=asdict(behavior))
         return Behavior(**response_body)
 
-    def list_behaviors_on_entity_type(self, entity_type_id) -> List[Behavior]:
+    def list_behaviors_on_entity_type(self, entity_type_id) -> Iterator[Behavior]:  # noqa: E501
         """List behaviors on the specified entity type.
 
         :param entity_type_id: Id of the entity type.
@@ -215,11 +217,11 @@ class BehaviorService:
         :return: Behavior details
         """
         # TODO Test this later, there is pagination issue on the entity types
-        #  endpoint.
+        #  endpoint. Ensure there cannot exist duplicates.
         behaviors = self.list_behaviors_on_entity_type(entity_type_id=entity_type_id)  # noqa: E501
-        matched_behaviors = [behavior for behavior in behaviors
-                             if behavior.name == behavior_name]
-        return matched_behaviors[0]
+        for behavior in behaviors:
+            if behavior.name == behavior_name:
+                return behavior
 
     def delete_behavior_on_entity_type(self, behavior_interface_id, entity_type_id):  # noqa: E501
         """Delete the behavior on the entity type.
@@ -239,7 +241,7 @@ class BehaviorService:
                                        f"/{CloudApiResource.BEHAVIORS}"
                                        f"/{behavior_interface_id}")
 
-    def get_behavior_acls_on_entity_type(self, entity_type_id: str) -> List[BehaviorAclEntry]:  # noqa: E501
+    def list_behavior_acls_on_entity_type(self, entity_type_id: str) -> Iterator[BehaviorAclEntry]:  # noqa: E501
         """Get the list of access controls of the individual behaviors.
 
         Get the list of access controls of the individual behaviors on the
@@ -248,13 +250,20 @@ class BehaviorService:
         :param entity_type_id: Id of the entity type.
         :return: List of Behavior access controls.
         """
-        response_body = self._cloudapi_client.do_request(
-            method=cse_shared_constants.RequestMethod.GET,
-            cloudapi_version=CloudApiVersion.VERSION_1_0_0,
-            resource_url_relative_path=f"{CloudApiResource.ENTITY_TYPES}"
-                                       f"/{entity_type_id}"
-                                       f"/{CloudApiResource.BEHAVIOR_ACLS}")
-        return [BehaviorAclEntry(**acl) for acl in response_body['values']]
+        page_num = 0
+        while True:
+            page_num += 1
+            response_body = self._cloudapi_client.do_request(
+                method=cse_shared_constants.RequestMethod.GET,
+                cloudapi_version=CloudApiVersion.VERSION_1_0_0,
+                resource_url_relative_path=f"{CloudApiResource.ENTITY_TYPES}"
+                                           f"/{entity_type_id}"
+                                           f"/{CloudApiResource.BEHAVIOR_ACLS}")  # noqa: E501
+            if len(response_body['values']) > 0:
+                for acl in response_body['values']:
+                    yield BehaviorAclEntry(**acl)
+            else:
+                break
 
     def update_behavior_acls_on_entity_type(self, entity_type_id: str,
                                             behavior_acl_list: List[BehaviorAclEntry]):  # noqa: E501
