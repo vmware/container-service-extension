@@ -205,6 +205,14 @@
                         },
                         "k8_distribution": {
                           "$ref": "#/definitions/k8_distribution"
+                        },
+                        "ssh_key": {
+                          "type": "string",
+                          "description":"The ssh key that users can use to log into the node VMs without explicitly providing passwords."
+                        },
+                        "rollback_on_failure": {
+                          "type": "boolean",
+                          "description":"On any cluster operation failure, if the value is set to true, affected node VMs will be automatically deleted."
                         }
                       }
                     }
