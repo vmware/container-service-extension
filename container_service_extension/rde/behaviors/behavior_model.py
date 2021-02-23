@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: BSD-2-Clause
 from dataclasses import dataclass
 
-from container_service_extension.common.constants.server_constants import ExtensionType, MQTT_EXTENSION_URN  # noqa: E501
+from container_service_extension.common.constants.server_constants import AclAccessLevelId, ExtensionType, MQTT_EXTENSION_URN   # noqa: E501
 
 
 @dataclass()
@@ -51,3 +51,9 @@ class Behavior:
             self.execution = Execution(**execution) if isinstance(execution, dict) else execution  # noqa: E501
         else:
             self.execution = Execution(name)
+
+
+@dataclass
+class BehaviorAclEntry:
+    behaviorId: str
+    accessLevelId: AclAccessLevelId
