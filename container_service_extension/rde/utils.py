@@ -20,18 +20,6 @@ def raise_error_if_def_not_supported(cloudapi_client: CloudApiClient):
                                               " supported for {cloudapi_client.get_api_version()}")  # noqa: E501
 
 
-def get_registered_def_interface():
-    """Fetch the native cluster interface loaded during server startup."""
-    from container_service_extension.server.service import Service
-    return Service().get_kubernetes_interface()
-
-
-def get_registered_def_entity_type():
-    """Fetch the native cluster entity type loaded during server startup."""
-    from container_service_extension.server.service import Service
-    return Service().get_native_cluster_entity_type()
-
-
 def generate_interface_id(vendor, nss, version):
     """Generate defined entity interface id.
 

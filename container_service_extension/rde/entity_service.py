@@ -21,8 +21,8 @@ from container_service_extension.lib.cloudapi.constants import CloudApiResource
 from container_service_extension.lib.cloudapi.constants import CloudApiVersion
 from container_service_extension.logging.logger import SERVER_LOGGER as LOGGER
 import container_service_extension.rde.constants as def_constants
-from container_service_extension.rde.models.common_models import DefEntity, DefEntityType, GenericClusterEntity   # noqa: E501
-import container_service_extension.rde.schema_service as def_schema_svc
+from container_service_extension.rde.models.common_models import DefEntity
+from container_service_extension.rde.models.common_models import GenericClusterEntity   # noqa: E501
 import container_service_extension.rde.utils as def_utils
 
 
@@ -283,29 +283,11 @@ class DefEntityService():
         return
 
     @handle_entity_service_exception
-    def get_native_entity_by_name(self, name: str, filters: dict = {}) -> DefEntity:  # noqa: E501
-        """Get Native cluster defined entity by its name.
-
-        :param str name: Name of the native cluster.
-        :param dict filters: key-value pairs representing filter options
-        :return:
-        """
-        # TODO deprecate this method and
-        # Use get_native_rde_by_name_and_rde_version() instead
-        filters[def_constants.ClusterEntityFilterKey.CLUSTER_NAME.value] = name
-        entity_type: DefEntityType = self.get_def_entity_type()
-        for entity in \
-            self.list_entities_by_entity_type(vendor=entity_type.vendor,
-                                              nss=entity_type.nss,
-                                              version=entity_type.version,
-                                              filters=filters):
-            return entity
-
-    @handle_entity_service_exception
     def get_native_rde_by_name_and_rde_version(self, name: str, version: str,  # noqa: E501
                                                filters: dict = None) -> DefEntity:  # noqa: E501
         """Get native RDE given its name and RDE version.
 
+        This function is used commonly by CSE CLI client and CSE server
         :param str name: Name of the native cluster.
         :param str version: RDE version
         :rtype: DefEntity
@@ -314,12 +296,11 @@ class DefEntityService():
         if not filters:
             filters = {}
         filters[def_constants.ClusterEntityFilterKey.CLUSTER_NAME.value] = name
-        entity_type: DefEntityType = \
-            self.get_rde_type_by_rde_version(version)
+        DefInfo = def_constants.MAP_RDE_VERSION_TO_KEYS[version]
         for entity in \
-            self.list_entities_by_entity_type(vendor=entity_type.vendor,
-                                              nss=entity_type.nss,
-                                              version=entity_type.version,
+            self.list_entities_by_entity_type(vendor=DefInfo[def_constants.DEF_CSE_VENDOR],  # noqa: E501
+                                              nss=DefInfo[def_constants.DEF_NATIVE_ENTITY_TYPE_NSS],  # noqa: E501
+                                              version=version,
                                               filters=filters):
             return entity
 
@@ -359,41 +340,6 @@ class DefEntityService():
         if entity.state != def_constants.DEF_RESOLVED_STATE:
             LOGGER.error(msg)
         return entity
-
-    def get_def_entity_type(self):
-        """Fetch the native cluster entity type.
-
-        This method is required for CSE client to make use of
-        Defined entity service directly with no requirement of
-        CSE server.
-
-        :return: Defined Entity Type for the current client api version
-        :rtype: DefEntityType
-        """
-        # TODO deprecate this method
-        # Use get_rde_type_by_rde_version() instead
-        schema_svc = def_schema_svc.DefSchemaService(self._cloudapi_client)
-        keys_map = def_constants.MAP_API_VERSION_TO_KEYS[float(self._cloudapi_client.get_api_version())]  # noqa: E501
-        entity_type_id = def_utils.generate_entity_type_id(
-            vendor=keys_map[def_constants.DefKey.ENTITY_TYPE_VENDOR],
-            nss=keys_map[def_constants.DefKey.ENTITY_TYPE_NSS],
-            version=keys_map[def_constants.DefKey.ENTITY_TYPE_VERSION])
-        return schema_svc.get_entity_type(entity_type_id)
-
-    def get_rde_type_by_rde_version(self, rde_version: str) -> DefEntityType:
-        """Fetch Native cluster RDE-Type by RDE version.
-
-        :param str rde_version:
-        :rtype: DefEntityType
-        :return: Defined entity type for the RDE version
-        """
-        schema_svc = def_schema_svc.DefSchemaService(self._cloudapi_client)
-        RDE_INFO_MAP = def_constants.MAP_RDE_VERSION_TO_KEYS[rde_version]
-        entity_type_id = def_utils.generate_entity_type_id(
-            vendor=RDE_INFO_MAP[def_constants.DefKey.ENTITY_TYPE_VENDOR],
-            nss=RDE_INFO_MAP[def_constants.DefKey.ENTITY_TYPE_NSS],
-            version=rde_version)
-        return schema_svc.get_entity_type(entity_type_id)
 
     def is_native_entity(self, entity_id: str):
         """."""

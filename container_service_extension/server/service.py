@@ -494,7 +494,8 @@ class Service(object, metaclass=Singleton):
                 max([float(x) for x in self.config['service']['supported_api_versions']])  # noqa: E501
             self.config['service']['rde_version_in_use'] = \
                 def_utils.get_rde_version_by_vcd_api_version(max_vcd_api_version_supported)  # noqa: E501
-            msg_update_callback.general(f"Using RDE version: {server_utils.get_rde_version_in_use()}")  # noqa: E501
+            server_rde_version = server_utils.get_rde_version_in_use()
+            msg_update_callback.general(f"Using RDE version: {server_rde_version}")  # noqa: E501
 
             schema_svc = def_schema_svc.DefSchemaService(cloudapi_client)
             # TODO make use of self._rde_version to load Interface and Type
@@ -505,7 +506,7 @@ class Service(object, metaclass=Singleton):
                                                            version=DefInfo[def_constants.DefKey.INTERFACE_VERSION]) # noqa: E501
             entity_type_id = def_utils.generate_entity_type_id(vendor=DefInfo[def_constants.DefKey.ENTITY_TYPE_VENDOR], # noqa: E501
                                                                nss=DefInfo[def_constants.DefKey.ENTITY_TYPE_NSS], # noqa: E501
-                                                               version=self.get_rde_version_in_use()) # noqa: E501
+                                                               version=server_rde_version) # noqa: E501
             self._kubernetesInterface = schema_svc.get_interface(interface_id)
             self._nativeEntityType = schema_svc.get_entity_type(entity_type_id)
             msg = "Successfully loaded defined entity schema to global context"

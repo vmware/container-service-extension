@@ -46,7 +46,7 @@ class DefEntityType:
     interfaces: list
     vendor: str = def_constants.DEF_CSE_VENDOR
     nss: str = def_constants.DEF_NATIVE_ENTITY_TYPE_NSS
-    version: str = def_constants.DEF_NATIVE_ENTITY_TYPE_VERSION
+    version: str
     id: str = None
     externalId: str = None
     readonly: bool = False

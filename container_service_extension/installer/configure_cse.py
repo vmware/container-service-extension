@@ -2410,7 +2410,6 @@ def _create_def_entity_for_existing_clusters(
         entity_svc.create_entity(native_entity_type.id, entity=def_entity,
                                  tenant_org_context=org_id)
 
-        # TODO use rde_in_use instead of 1.0.0
         def_entity = entity_svc.get_native_rde_by_name_and_rde_version(
             cluster['name'], '1.0.0')
         def_entity_id = def_entity.id

@@ -55,6 +55,9 @@ class DECluster:
                 logger_wire=logger_wire)
         self._nativeCluster = DEClusterNative(client)
         self._tkgCluster = DEClusterTKG(client)
+        self._server_rde_version = \
+            def_utils.get_rde_version_by_vcd_api_version(
+                float(self._cloudapi_client.get_api_version()))
 
     def list_clusters(self, vdc=None, org=None, **kwargs):
         """Get collection of clusters using DEF API.
@@ -152,15 +155,13 @@ class DECluster:
         has_tkg_rights = True
         native_def_entity = None
         additional_entity_properties = None
-        rde_version_used = \
-            def_utils.get_rde_version_by_vcd_api_version(
-                float(self._cloudapi_client.get_api_version()))
         # NOTE: The following can throw error if invoked by users who
         # doesn't have the necessary rights.
         try:
             native_def_entity = \
                 entity_svc.get_native_rde_by_name_and_rde_version(
-                    cluster_name, rde_version_used, filters=filters)
+                    cluster_name, self._server_rde_version,
+                    filters=filters)
         except cse_exceptions.DefSchemaServiceError:
             # NOTE: 500 status code is returned which is not ideal
             # when user doesn't have native rights
