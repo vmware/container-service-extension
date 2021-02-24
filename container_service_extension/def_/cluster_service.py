@@ -612,23 +612,33 @@ class ClusterService(abstract_broker.AbstractBroker):
             LOGGER.debug(msg)
             self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
             vapp.reload()
-            _init_cluster(self.context.sysadmin_client,
-                          vapp,
-                          template[LocalTemplateKey.NAME],
-                          template[LocalTemplateKey.REVISION])
-            control_plane_ip = _get_control_plane_ip(self.context.sysadmin_client, vapp)  # noqa: E501
+            control_plane_ip = _get_control_plane_ip(
+                self.context.sysadmin_client, vapp, check_tools=True)
 
             # Handle exposing cluster
-            expose_ip = None
+            # expose_ip = None
+            # control_plane_vm_name = _get_node_names(vapp, NodeType.CONTROL_PLANE)[0]  # noqa: E501
+            # control_plane_vm_resource = vapp.get_vm(control_plane_vm_name)
+            # control_plane_vm = vcd_vm.VM(self.context.client,
+            #                              resource=control_plane_vm_resource)
+            # control_plane_nics = control_plane_vm.list_nics()
+            # print(control_plane_nics)
             if intent_to_expose and float(api_version) >= float(vcd_client.ApiVersion.VERSION_36.value):  # noqa: E501
                 expose_ip = _expose_cluster(
                     client=self.context.client,
+                    org_name=org_name,
                     ovdc_name=ovdc_name,
                     network_name=cluster_spec.spec.settings.network,
                     cluster_name=cluster_name,
                     internal_ip=control_plane_ip)
                 if expose_ip:
                     control_plane_ip = expose_ip
+
+            _init_cluster(self.context.sysadmin_client,
+                          vapp,
+                          template[LocalTemplateKey.NAME],
+                          template[LocalTemplateKey.REVISION],
+                          expose_ip=expose_ip)
 
             task = vapp.set_metadata('GENERAL', 'READWRITE', 'cse.master.ip',
                                      control_plane_ip)
@@ -1798,7 +1808,8 @@ def _get_node_names(vapp, node_type):
     return [vm.get('name') for vm in vapp.get_all_vms() if vm.get('name').startswith(node_type)] # noqa: E501
 
 
-def _get_control_plane_ip(sysadmin_client: vcd_client.Client, vapp):
+def _get_control_plane_ip(sysadmin_client: vcd_client.Client, vapp,
+                          check_tools=False):
     vcd_utils.raise_error_if_user_not_from_system_org(sysadmin_client)
 
     LOGGER.debug(f"Getting control_plane IP for vapp: "
@@ -1809,7 +1820,7 @@ def _get_control_plane_ip(sysadmin_client: vcd_client.Client, vapp):
     node_names = _get_node_names(vapp, NodeType.CONTROL_PLANE)
     result = _execute_script_in_nodes(sysadmin_client, vapp=vapp,
                                       node_names=node_names, script=script,
-                                      check_tools=False)
+                                      check_tools=check_tools)
     errors = _get_script_execution_errors(result)
     if errors:
         raise E.ScriptExecutionError(f"Get control plane IP script execution "
@@ -1822,7 +1833,7 @@ def _get_control_plane_ip(sysadmin_client: vcd_client.Client, vapp):
 
 
 def _init_cluster(sysadmin_client: vcd_client.Client, vapp, template_name,
-                  template_revision):
+                  template_revision, expose_ip=None):
     vcd_utils.raise_error_if_user_not_from_system_org(sysadmin_client)
 
     try:
@@ -1830,6 +1841,9 @@ def _init_cluster(sysadmin_client: vcd_client.Client, vapp, template_name,
                                                   template_revision,
                                                   ScriptFile.CONTROL_PLANE)
         script = utils.read_data_file(script_filepath, logger=LOGGER)
+        if expose_ip:
+            script = script.replace(
+                'kubeadm init', f'kubeadm init --control-plane-endpoint=\"{expose_ip}:6443\"')  # noqa: E501
         node_names = _get_node_names(vapp, NodeType.CONTROL_PLANE)
         result = _execute_script_in_nodes(sysadmin_client, vapp=vapp,
                                           node_names=node_names, script=script)
@@ -2056,10 +2070,10 @@ def _user_has_edit_gateway_rights(user_rights: list):
     return False
 
 
-def _expose_cluster(client: vcd_client.Client, ovdc_name: str,
+def _expose_cluster(client: vcd_client.Client, org_name: str, ovdc_name: str,
                     network_name: str, cluster_name: str, internal_ip: str):
     # Check if routed org vdc network
-    ovdc = vcd_utils.get_vdc(client, vdc_name=ovdc_name)
+    ovdc = vcd_utils.get_vdc(client, org_name=org_name, vdc_name=ovdc_name)
     try:
         routed_network_resource = ovdc.get_routed_orgvdc_network(network_name)
     except EntityNotFoundException:
