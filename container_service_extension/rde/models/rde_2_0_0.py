@@ -59,6 +59,7 @@ class Node:
     name: str
     ip: str
     sizing_class: str = None
+    storage_profile: str = None
 
 
 @dataclass()
