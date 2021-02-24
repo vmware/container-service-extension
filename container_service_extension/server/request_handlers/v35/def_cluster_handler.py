@@ -35,6 +35,7 @@ def cluster_create(data: dict, op_ctx: ctx.OperationContext):
     rde_in_use = server_utils.get_rde_version_in_use()
     svc = cluster_service_factory.ClusterServiceFactory(op_ctx). \
         get_cluster_service(rde_in_use)
+
     # TODO find out the RDE version from the request spec
     # TODO Insert RDE converters and validators
     NativeEntityClass = rde_factory.get_rde_model(rde_in_use)
