@@ -243,7 +243,9 @@ def cluster_list(data: dict, op_ctx: ctx.OperationContext):
 
     :return: List
     """
-    svc = cluster_svc.ClusterService(op_ctx)
+    rde_in_use = server_utils.get_rde_version_in_use()
+    svc = cluster_service_factory.ClusterServiceFactory(op_ctx). \
+        get_cluster_service(rde_in_use)
 
     # response should not be paginated
     return [asdict(def_entity) for def_entity in
