@@ -494,7 +494,7 @@ class Service(object, metaclass=Singleton):
                 max([float(x) for x in self.config['service']['supported_api_versions']])  # noqa: E501
             self.config['service']['rde_version_in_use'] = \
                 def_utils.get_rde_version_by_vcd_api_version(max_vcd_api_version_supported)  # noqa: E501
-            msg_update_callback.general(f"Using RDE version: {self.config['service']['rde_version_in_use']}")  # noqa: E501
+            msg_update_callback.general(f"Using RDE version: {server_utils.get_rde_version_in_use()}")  # noqa: E501
 
             schema_svc = def_schema_svc.DefSchemaService(cloudapi_client)
             # TODO make use of self._rde_version to load Interface and Type
