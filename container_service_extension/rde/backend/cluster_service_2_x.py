@@ -242,6 +242,13 @@ class ClusterService(abstract_broker.AbstractBroker):
                                         template[LocalTemplateKey.CNI_VERSION])
         def_entity.entity.status.docker_version = template[LocalTemplateKey.DOCKER_VERSION] # noqa: E501
         def_entity.entity.status.os = template[LocalTemplateKey.OS]
+        def_entity.entity.status.cloud_properties.k8_distribution.template_name = template_name  # noqa: E501
+        def_entity.entity.status.cloud_properties.k8_distribution.template_revision = template_revision  # noqa: E501
+        def_entity.entity.status.cloud_properties.org_name = org_name
+        def_entity.entity.status.cloud_properties.ovdc_name = ovdc_name
+        def_entity.entity.status.cloud_properties.ovdc_network_name = cluster_spec.spec.settings.network  # noqa: E501
+        def_entity.entity.status.cloud_properties.rollback_on_failure = cluster_spec.spec.settings.rollback_on_failure  # noqa: E501
+        def_entity.entity.status.cloud_properties.ssh_key = cluster_spec.spec.settings.ssh_key  # noqa: E501
         # No need to set org context for non sysadmin users
         org_context = None
         if self.context.client.is_sysadmin():
