@@ -42,6 +42,18 @@ def get_default_storage_profile():
     return config['broker']['storage_profile']
 
 
+def get_rde_version_in_use() -> str:
+    """Get the RDE version used by CSE server.
+
+    :return: rde version
+    :rtype: str
+    """
+    # TODO(VCDA-2151): Uncomment after new RDE version
+    # is installed
+    config = get_server_runtime_config()
+    return config['service']['rde_version_in_use']
+
+
 def get_default_k8_distribution():
     config = get_server_runtime_config()
     import container_service_extension.rde.models.rde_1_0_0 as rde_1_0_0
