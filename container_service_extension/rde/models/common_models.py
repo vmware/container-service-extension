@@ -106,8 +106,8 @@ class DefEntity:
         entity_type_version = self.entityType.split(":")[-1]
         # Parse the enitty to the right entity class
         NativeEntityClass = get_rde_model(entity_type_version)
-        self.entity = NativeEntityClass(**entity) \
-            if isinstance(entity, dict) else entity
+        self.entity: AbstractNativeEntity = \
+            NativeEntityClass(**entity) if isinstance(entity, dict) else entity
 
         self.name = name or self.entity.metadata.cluster_name
         self.externalId = externalId
@@ -186,7 +186,8 @@ class GenericClusterEntity:
             entity_type_version = self.entityType.split(":")[-1]
             # Parse the enitty to the right entity class
             NativeEntityClass = get_rde_model(entity_type_version)
-            self.entity = NativeEntityClass(**entity_dict) if isinstance(entity, dict) else entity  # noqa: E501
+            self.entity: AbstractNativeEntity = \
+                NativeEntityClass(**entity_dict) if isinstance(entity, dict) else entity  # noqa: E501
         elif entity_dict['kind'] == \
                 shared_constants.ClusterEntityKind.TKG.value:
             self.entity = TKGEntity(**entity) if isinstance(entity, dict) else entity  # noqa: E501
