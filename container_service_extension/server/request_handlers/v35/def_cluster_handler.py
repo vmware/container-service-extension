@@ -16,6 +16,7 @@ import container_service_extension.common.utils.server_utils as server_utils
 import container_service_extension.lib.telemetry.constants as telemetry_constants  # noqa: E501
 import container_service_extension.lib.telemetry.telemetry_handler as telemetry_handler  # noqa: E501
 import container_service_extension.rde.backend.cluster_service_factory as cluster_service_factory  # noqa: E501
+from container_service_extension.rde.models.abstractNativeEntity import AbstractNativeEntity  # noqa: E501
 import container_service_extension.rde.models.rde_factory as rde_factory
 import container_service_extension.security.context.operation_context as ctx
 import container_service_extension.server.request_handlers.request_utils as request_utils  # noqa: E501
@@ -37,7 +38,8 @@ def cluster_create(data: dict, op_ctx: ctx.OperationContext):
     # TODO find out the RDE version from the request spec
     # TODO Insert RDE converters and validators
     NativeEntityClass = rde_factory.get_rde_model(rde_in_use)
-    cluster_entity_spec = NativeEntityClass(**data[RequestKey.INPUT_SPEC])
+    cluster_entity_spec: AbstractNativeEntity = \
+        NativeEntityClass(**data[RequestKey.INPUT_SPEC])
     return asdict(svc.create_cluster(cluster_entity_spec))
 
 
@@ -58,7 +60,8 @@ def cluster_resize(data: dict, op_ctx: ctx.OperationContext):
     # TODO find out the RDE version from the request spec
     # TODO Insert RDE converters and validators
     NativeEntityClass = rde_factory.get_rde_model(rde_in_use)
-    cluster_entity_spec = NativeEntityClass(**data[RequestKey.INPUT_SPEC])  # noqa: E501
+    cluster_entity_spec: AbstractNativeEntity = \
+        NativeEntityClass(**data[RequestKey.INPUT_SPEC])  # noqa: E501
     curr_entity = svc.entity_svc.get_entity(cluster_id)
     request_utils.validate_request_payload(
         asdict(cluster_entity_spec.spec), asdict(curr_entity.entity.spec),
@@ -149,7 +152,8 @@ def cluster_upgrade(data, op_ctx: ctx.OperationContext):
     # TODO find out the RDE version from the request spec
     # TODO Insert RDE converters and validators
     NativeEntityClass = rde_factory.get_rde_model(rde_in_use)
-    cluster_entity_spec = NativeEntityClass(**data[RequestKey.INPUT_SPEC])
+    cluster_entity_spec: AbstractNativeEntity = \
+        NativeEntityClass(**data[RequestKey.INPUT_SPEC])
     cluster_id = data[RequestKey.CLUSTER_ID]
     curr_entity = svc.entity_svc.get_entity(cluster_id)
     request_utils.validate_request_payload(
