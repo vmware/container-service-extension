@@ -25,8 +25,6 @@ class BehaviorService:
         created.
         :return: The created behavior object.
         """
-        if not self._cloudapi_client.is_sys_admin:
-            raise ValueError("Cloud API Client should be sysadmin.")
         response_body = self._cloudapi_client.do_request(
             method=cse_shared_constants.RequestMethod.POST,
             cloudapi_version=CloudApiVersion.VERSION_1_0_0,
@@ -44,8 +42,6 @@ class BehaviorService:
         is present.
         :return: The updated behavior object.
         """
-        if not self._cloudapi_client.is_sys_admin:
-            raise ValueError("Cloud API Client should be sysadmin.")
         response_body = self._cloudapi_client.do_request(
             method=cse_shared_constants.RequestMethod.PUT,
             cloudapi_version=CloudApiVersion.VERSION_1_0_0,
@@ -108,7 +104,7 @@ class BehaviorService:
             if behavior.name == behavior_name:
                 return behavior
 
-    def delete_behavior_on_interface(self, behavior_id, interface_id):
+    def delete_behavior_on_interface(self, behavior_id: str, interface_id: str):
         """Delete the behavior by its Id on the specified interface.
 
         :param behavior_id: Id of the behavior.
@@ -135,8 +131,6 @@ class BehaviorService:
         :param entity_type_id:
         :return:
         """
-        if not self._cloudapi_client.is_sys_admin:
-            raise ValueError("Cloud API Client should be sysadmin.")
         response_body = self._cloudapi_client.do_request(
             method=cse_shared_constants.RequestMethod.POST,
             cloudapi_version=CloudApiVersion.VERSION_1_0_0,
@@ -155,8 +149,6 @@ class BehaviorService:
         :param entity_type_id: Id of the entity type
         :return: Overridden behavior on the entity type.
         """
-        if not self._cloudapi_client.is_sys_admin:
-            raise ValueError("Cloud API Client should be sysadmin.")
         response_body = self._cloudapi_client.do_request(
             method=cse_shared_constants.RequestMethod.PUT,
             cloudapi_version=CloudApiVersion.VERSION_1_0_0,
