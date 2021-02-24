@@ -35,7 +35,7 @@ def cluster_create(data: dict, op_ctx: ctx.OperationContext):
     svc = cluster_service_factory.ClusterServiceFactory(op_ctx). \
         get_cluster_service(rde_in_use)
     # TODO find out the RDE version from the request spec
-    # TODO convert the spec to rde_in_use
+    # TODO Insert RDE converters and validators
     NativeEntityClass = rde_factory.get_rde_model(rde_in_use)
     cluster_entity_spec = NativeEntityClass(**data[RequestKey.INPUT_SPEC])
     return asdict(svc.create_cluster(cluster_entity_spec))
@@ -56,7 +56,7 @@ def cluster_resize(data: dict, op_ctx: ctx.OperationContext):
         get_cluster_service(rde_in_use)
     cluster_id = data[RequestKey.CLUSTER_ID]
     # TODO find out the RDE version from the request spec
-    # TODO convert the spec to rde_in_use
+    # TODO Insert RDE converters and validators
     NativeEntityClass = rde_factory.get_rde_model(rde_in_use)
     cluster_entity_spec = NativeEntityClass(**data[RequestKey.INPUT_SPEC])  # noqa: E501
     curr_entity = svc.entity_svc.get_entity(cluster_id)
@@ -147,7 +147,7 @@ def cluster_upgrade(data, op_ctx: ctx.OperationContext):
     svc = cluster_service_factory.ClusterServiceFactory(op_ctx). \
         get_cluster_service(rde_in_use)
     # TODO find out the RDE version from the request spec
-    # TODO convert the spec to rde_in_use
+    # TODO Insert RDE converters and validators
     NativeEntityClass = rde_factory.get_rde_model(rde_in_use)
     cluster_entity_spec = NativeEntityClass(**data[RequestKey.INPUT_SPEC])
     cluster_id = data[RequestKey.CLUSTER_ID]
