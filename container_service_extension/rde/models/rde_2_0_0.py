@@ -42,14 +42,14 @@ class Distribution:
     template_name: str = ""
     template_revision: int = 0
 
-    def __init__(self, template_name: str, template_revision: int, **kwargs):
+    def __init__(self, template_name: str = '', template_revision: int = 0, **kwargs):  # noqa: E501
         self.template_name = template_name
         self.template_revision = template_revision
 
 
 @dataclass()
 class Settings:
-    network: str
+    network: str = None
     ssh_key: str = None
     rollback_on_failure: bool = True
 
@@ -89,9 +89,9 @@ class CloudProperties:
     ssh_key: str = None
     rollback_on_failure: bool = True
 
-    def __init__(self, org_name: str, ovdc_name: int, ovdc_network_name: str,
-                 k8_distribution: Distribution, ssh_key: str,
-                 rollback_on_failure: bool, **kwargs):
+    def __init__(self, org_name: str = None, ovdc_name: str = None, ovdc_network_name: str = None,  # noqa: E501
+                 k8_distribution: Distribution = None, ssh_key: str = None,
+                 rollback_on_failure: bool = True, **kwargs):
         self.org_name = org_name
         self.ovdc_name = ovdc_name
         self.ovdc_network_name = ovdc_network_name
@@ -126,7 +126,7 @@ class Status:
         self.nodes = Nodes(**nodes) if isinstance(nodes, dict) else nodes
         self.cloud_properties = CloudProperties(
             **cloud_properties) if isinstance(cloud_properties, dict) \
-            else cloud_properties
+            else cloud_properties or CloudProperties()
 
 
 @dataclass()
@@ -137,17 +137,17 @@ class ClusterSpec:
     them into the expected class instances.
     """
 
-    control_plane: ControlPlane
-    workers: Workers
-    nfs: Nfs
-    k8_distribution: Distribution
-    settings: Settings
+    control_plane: ControlPlane = None
+    workers: Workers = None
+    nfs: Nfs = None
+    k8_distribution: Distribution = None
+    settings: Settings = None
 
-    def __init__(self, settings: Settings, k8_distribution: Distribution = None,  # noqa: E501
+    def __init__(self, settings: Settings = None, k8_distribution: Distribution = None,  # noqa: E501
                  control_plane: ControlPlane = None, workers: Workers = None,
                  nfs: Nfs = None, **kwargs):
         self.settings = Settings(**settings) \
-            if isinstance(settings, dict) else settings
+            if isinstance(settings, dict) else settings or Settings()
         self.control_plane = ControlPlane(**control_plane) \
             if isinstance(control_plane, dict) else control_plane or ControlPlane()  # noqa: E501
         self.workers = Workers(**workers) \
