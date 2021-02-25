@@ -104,7 +104,7 @@ class BehaviorService:
             if behavior.name == behavior_name:
                 return behavior
 
-    def delete_behavior_on_interface(self, behavior_id: str, interface_id: str):
+    def delete_behavior_on_interface(self, behavior_id: str, interface_id: str):  # noqa: E501
         """Delete the behavior by its Id on the specified interface.
 
         :param behavior_id: Id of the behavior.
