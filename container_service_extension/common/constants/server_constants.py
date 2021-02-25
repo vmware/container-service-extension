@@ -424,7 +424,9 @@ class AclGrantType(str, Enum):
 
 @unique
 class AclAccessLevelId(str, Enum):
+    AccessLevelReadOnly = "urn:vcloud:accessLevel:ReadOnly"
     AccessLevelReadWrite = "urn:vcloud:accessLevel:ReadWrite"
+    AccessLevelFullControl = "urn:vcloud:accessLevel:FullControl"
 
 
 @unique
