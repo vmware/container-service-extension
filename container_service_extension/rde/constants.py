@@ -15,21 +15,8 @@ CLUSTER_ACL_LIST_FIELDS = [shared_constants.AccessControlKey.ACCESS_LEVEL_ID,
 
 # ACL Path
 ACTION_CONTROL_ACCESS_PATH = '/action/controlAccess/'
-
-DEF_CSE_VENDOR = 'cse'
-DEF_VMWARE_VENDOR = 'vmware'
-DEF_VMWARE_INTERFACE_NSS = 'k8s'
-DEF_VMWARE_INTERFACE_VERSION = '1.0.0'
-DEF_VMWARE_INTERFACE_NAME = 'Kubernetes'
-DEF_TKG_ENTITY_TYPE_NSS = 'tkgcluster'
-DEF_TKG_ENTITY_TYPE_VERSION = '1.0.0'
 DEF_INTERFACE_ID_PREFIX = 'urn:vcloud:interface'
 DEF_NATIVE_ENTITY_TYPE_NSS = 'nativeCluster'
-DEF_NATIVE_ENTITY_TYPE_VERSION = '1.0.0'
-DEF_NATIVE_ENTITY_TYPE_NAME = 'nativeClusterEntityType'
-DEF_NATIVE_ENTITY_TYPE_RIGHT_BUNDLE = \
-    f'{DEF_CSE_VENDOR}:{DEF_NATIVE_ENTITY_TYPE_NSS} Entitlement'
-
 DEF_ENTITY_TYPE_ID_PREFIX = 'urn:vcloud:type'
 DEF_API_MIN_VERSION = 35.0
 DEF_SCHEMA_DIRECTORY = 'cse_def_schema'
@@ -37,7 +24,23 @@ DEF_ENTITY_TYPE_SCHEMA_FILE = 'schema.json'
 DEF_ERROR_MESSAGE_KEY = 'message'
 DEF_RESOLVED_STATE = 'RESOLVED'
 TKG_ENTITY_TYPE_NSS = 'tkgcluster'
-TKG_ENTITY_TYPE_VERSION = '1.0.0'
+
+
+@unique
+class Vendor(str, Enum):
+    CSE = 'cse'
+    VMWARE = 'vmware'
+
+
+@unique
+class Nss(str, Enum):
+    KUBERNETES = 'k8s'
+    NATIVE_ClUSTER = 'nativeCluster'
+    TKG = 'tkgcluster'
+
+
+DEF_NATIVE_ENTITY_TYPE_RIGHT_BUNDLE = \
+    f'{Vendor.CSE.value}:{Nss.NATIVE_ClUSTER.value} Entitlement'
 
 
 @unique
@@ -56,37 +59,104 @@ class DefKey(str, Enum):
 # Defines the RDE versions CSE makes use of.
 # Different RDE versions may be used as CSE
 # is compatible with multiple VCD API versions.
+# NOTE: Value for RDESchemaVersions Enum will be updated on
+# each minor version RDE update.
+# NOTE: New Entry for RDESchemaVersions will be added on
+# each major version RDE change.
 @unique
 class RDESchemaVersions(str, Enum):
     RDE_1_X = '1.0.0'
     RDE_2_X = '2.0.0'
 
 
+class CommonInterfaceMetadata(str, Enum):
+    VENDOR = Vendor.VMWARE.value
+    NSS = Nss.KUBERNETES.value
+    VERSION = '1.0.0'
+    NAME = "Kubernetes"
+
+    @classmethod
+    def get_id(cls):
+        return f"{DEF_INTERFACE_ID_PREFIX}:{cls.VENDOR}:{cls.NSS}:{cls.VERSION}"  # noqa: E501
+
+
+class NativeEntityTypeMetadata_1_0_0(str, Enum):
+    VENDOR = Vendor.CSE.value
+    NSS = DEF_NATIVE_ENTITY_TYPE_NSS
+    VERSION = '1.0.0'
+    NAME = 'nativeClusterEntityType'
+
+    @classmethod
+    def get_id(cls):
+        return f"{DEF_ENTITY_TYPE_ID_PREFIX}:{cls.VENDOR}:{cls.NSS}:{cls.VERSION}"  # noqa: E501
+
+
+class NativeEntityTypeMetadata_2_0_0(str, Enum):
+    VENDOR = Vendor.CSE.value
+    NSS = DEF_NATIVE_ENTITY_TYPE_NSS
+    VERSION = '2.0.0'
+    SCHEMA_FILE = 'schema_2_0_0.json'
+    NAME = 'nativeClusterEntityType'
+
+    @classmethod
+    def get_id(cls):
+        return f"{DEF_ENTITY_TYPE_ID_PREFIX}:{cls.VENDOR}:{cls.NSS}:{cls.VERSION}"  # noqa: E501
+
+
+class TKGEntityTypeMetadata_1_0_0(str, Enum):
+    VENDOR = Vendor.VMWARE.value
+    NSS = TKG_ENTITY_TYPE_NSS
+    VERSION = '1.0.0'
+    NAME = "TKG Cluster"
+
+    @classmethod
+    def get_id(cls):
+        return f"{DEF_ENTITY_TYPE_ID_PREFIX}:{cls.VENDOR}:{cls.NSS}:{cls.VERSION}"  # noqa: E501
+
+
+# TODO: Replace MAP_API_VERSION_TO_KEYS with MAP_RDE_VERSION_TO_ITS_METADATA
 MAP_API_VERSION_TO_KEYS = {
     35.0: {
-        DefKey.INTERFACE_VENDOR: DEF_VMWARE_VENDOR,
-        DefKey.INTERFACE_NSS: DEF_VMWARE_INTERFACE_NSS,
-        DefKey.INTERFACE_VERSION: DEF_VMWARE_INTERFACE_VERSION,
-        DefKey.INTERFACE_NAME: DEF_VMWARE_INTERFACE_NAME,
-        DefKey.ENTITY_TYPE_VENDOR: DEF_CSE_VENDOR,
-        DefKey.ENTITY_TYPE_NSS: DEF_NATIVE_ENTITY_TYPE_NSS,
-        DefKey.ENTITY_TYPE_VERSION: DEF_NATIVE_ENTITY_TYPE_VERSION,
-        DefKey.ENTITY_TYPE_NAME: DEF_NATIVE_ENTITY_TYPE_NAME,
+        DefKey.INTERFACE_VENDOR: CommonInterfaceMetadata.VENDOR,
+        DefKey.INTERFACE_NSS: CommonInterfaceMetadata.NSS,
+        DefKey.INTERFACE_VERSION: CommonInterfaceMetadata.VERSION,
+        DefKey.INTERFACE_NAME: CommonInterfaceMetadata.NAME,
+        DefKey.ENTITY_TYPE_VENDOR: NativeEntityTypeMetadata_1_0_0.VENDOR,
+        DefKey.ENTITY_TYPE_NSS: NativeEntityTypeMetadata_1_0_0.NSS,
+        DefKey.ENTITY_TYPE_VERSION: NativeEntityTypeMetadata_1_0_0.VERSION,
+        DefKey.ENTITY_TYPE_NAME: NativeEntityTypeMetadata_1_0_0.NAME,
         DefKey.ENTITY_TYPE_SCHEMA_VERSION: 'api_v35',
     },
     36.0: {
-        DefKey.INTERFACE_VENDOR: DEF_VMWARE_VENDOR,
-        DefKey.INTERFACE_NSS: DEF_VMWARE_INTERFACE_NSS,
-        DefKey.INTERFACE_VERSION: DEF_VMWARE_INTERFACE_VERSION,
-        DefKey.INTERFACE_NAME: DEF_VMWARE_INTERFACE_NAME,
-        DefKey.ENTITY_TYPE_VENDOR: DEF_CSE_VENDOR,
-        DefKey.ENTITY_TYPE_NSS: DEF_NATIVE_ENTITY_TYPE_NSS,
-        DefKey.ENTITY_TYPE_VERSION: DEF_NATIVE_ENTITY_TYPE_VERSION,
-        DefKey.ENTITY_TYPE_NAME: DEF_NATIVE_ENTITY_TYPE_NAME,
+        DefKey.INTERFACE_VENDOR: CommonInterfaceMetadata.VENDOR,
+        DefKey.INTERFACE_NSS: CommonInterfaceMetadata.NSS,
+        DefKey.INTERFACE_VERSION: CommonInterfaceMetadata.VERSION,
+        DefKey.INTERFACE_NAME: CommonInterfaceMetadata.NAME,
+        DefKey.ENTITY_TYPE_VENDOR: NativeEntityTypeMetadata_2_0_0.VENDOR,
+        DefKey.ENTITY_TYPE_NSS: NativeEntityTypeMetadata_2_0_0.NSS,
+        DefKey.ENTITY_TYPE_VERSION: NativeEntityTypeMetadata_2_0_0.VERSION,
+        DefKey.ENTITY_TYPE_NAME: NativeEntityTypeMetadata_2_0_0.NAME,
         DefKey.ENTITY_TYPE_SCHEMA_VERSION: 'api_v35',
     }
 }
 
+
+@unique
+class RDEMetadataKey(str, Enum):
+    ENTITY_TYPE_METADATA = 'entity_type_metadata'
+    INTERFACES_METADATA_LIST = "interfaces_metadata_list"
+
+
+MAP_RDE_VERSION_TO_ITS_METADATA = {
+    RDESchemaVersions.RDE_1_X: {
+        RDEMetadataKey.ENTITY_TYPE_METADATA: NativeEntityTypeMetadata_1_0_0,
+        RDEMetadataKey.INTERFACES_METADATA_LIST: [CommonInterfaceMetadata]
+    },
+    RDESchemaVersions.RDE_2_X: {
+        RDEMetadataKey.ENTITY_TYPE_METADATA: NativeEntityTypeMetadata_2_0_0,
+        RDEMetadataKey.INTERFACES_METADATA_LIST: [CommonInterfaceMetadata]
+    }
+}
 
 # Dictionary indicating RDE version to use
 # for the VCD API version

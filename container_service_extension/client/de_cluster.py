@@ -20,12 +20,11 @@ from container_service_extension.common.constants.shared_constants import CSE_PA
 import container_service_extension.common.utils.pyvcloud_utils as vcd_utils
 import container_service_extension.exception.exceptions as cse_exceptions
 import container_service_extension.logging.logger as logger
-from container_service_extension.rde.constants import DEF_VMWARE_INTERFACE_NSS
-from container_service_extension.rde.constants import DEF_VMWARE_INTERFACE_VERSION  # noqa: E501
-from container_service_extension.rde.constants import DEF_VMWARE_VENDOR
-import container_service_extension.rde.entity_service as def_entity_svc
+import container_service_extension.rde.common.entity_service as def_entity_svc
+from container_service_extension.rde.constants import CommonInterfaceMetadata
 import container_service_extension.rde.models.common_models as common_models
 import container_service_extension.rde.models.rde_1_0_0 as rde_1_0_0
+import container_service_extension.rde.utils as def_utils
 
 
 DUPLICATE_CLUSTER_ERROR_MSG = "Duplicate clusters found. Please use --k8-runtime for the unique identification"  # noqa: E501
@@ -54,6 +53,9 @@ class DECluster:
                 logger_wire=logger_wire)
         self._nativeCluster = DEClusterNative(client)
         self._tkgCluster = DEClusterTKG(client)
+        self._server_rde_version = \
+            def_utils.get_rde_version_by_vcd_api_version(
+                float(self._cloudapi_client.get_api_version()))
 
     def list_clusters(self, vdc=None, org=None, **kwargs):
         """Get collection of clusters using DEF API.
@@ -90,9 +92,9 @@ class DECluster:
             try:
                 while has_more_results:
                     clusters_page_results = entity_svc.get_all_entities_per_page_by_interface(  # noqa: E501
-                        vendor=DEF_VMWARE_VENDOR,
-                        nss=DEF_VMWARE_INTERFACE_NSS,
-                        version=DEF_VMWARE_INTERFACE_VERSION,
+                        vendor=CommonInterfaceMetadata.VENDOR,
+                        nss=CommonInterfaceMetadata.NSS,
+                        version=CommonInterfaceMetadata.VERSION,
                         filters=filters,
                         page_number=page_number,
                         page_size=page_size)
@@ -154,9 +156,10 @@ class DECluster:
         # NOTE: The following can throw error if invoked by users who
         # doesn't have the necessary rights.
         try:
-            native_def_entity = entity_svc.get_native_entity_by_name(
-                name=cluster_name,
-                filters=filters)
+            native_def_entity = \
+                entity_svc.get_native_rde_by_name_and_rde_version(
+                    cluster_name, self._server_rde_version,
+                    filters=filters)
         except cse_exceptions.DefSchemaServiceError:
             # NOTE: 500 status code is returned which is not ideal
             # when user doesn't have native rights

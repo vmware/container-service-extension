@@ -8,17 +8,11 @@ from enum import Enum
 from enum import unique
 
 import container_service_extension.common.constants.shared_constants as shared_constants  # noqa: E501
-import container_service_extension.rde.constants as def_constants
-import container_service_extension.rde.utils as def_utils
+
 
 # Client environment variables
 ENV_CSE_CLIENT_WIRE_LOGGING = 'CSE_CLIENT_WIRE_LOGGING'
 ENV_CSE_TKG_PLUS_ENABLED = 'CSE_TKG_PLUS_ENABLED'
-
-TKG_ENTITY_TYPE_ID = def_utils.generate_entity_type_id(
-    def_constants.DEF_VMWARE_VENDOR,
-    def_constants.TKG_ENTITY_TYPE_NSS,
-    def_constants.TKG_ENTITY_TYPE_VERSION)
 
 
 # if cse_server_running key is set to false in profiles.yaml, CSE CLI can

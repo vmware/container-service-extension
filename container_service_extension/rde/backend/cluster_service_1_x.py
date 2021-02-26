@@ -45,11 +45,10 @@ import container_service_extension.lib.telemetry.constants as telemetry_constant
 import container_service_extension.lib.telemetry.telemetry_handler as telemetry_handler  # noqa: E501
 from container_service_extension.logging.logger import SERVER_LOGGER as LOGGER
 import container_service_extension.rde.acl_service as acl_service
+import container_service_extension.rde.common.entity_service as def_entity_svc
 import container_service_extension.rde.constants as def_constants
-import container_service_extension.rde.entity_service as def_entity_svc
 import container_service_extension.rde.models.common_models as common_models
 import container_service_extension.rde.models.rde_1_0_0 as rde_1_0_0
-import container_service_extension.rde.utils as def_utils
 import container_service_extension.security.context.operation_context as ctx
 import container_service_extension.server.abstract_broker as abstract_broker
 import container_service_extension.server.compute_policy_manager as compute_policy_manager  # noqa: E501
@@ -110,7 +109,7 @@ class ClusterService(abstract_broker.AbstractBroker):
                 telemetry_constants.PayloadKey.SOURCE_DESCRIPTION: thread_local_data.get_thread_local_data(ThreadLocalData.USER_AGENT)  # noqa: E501
             }
         )
-        ent_type: common_models.DefEntityType = def_utils.get_registered_def_entity_type()  # noqa: E501
+        ent_type: common_models.DefEntityType = server_utils.get_registered_def_entity_type()  # noqa: E501
         return self.entity_svc.get_entities_per_page_by_entity_type(
             vendor=ent_type.vendor,
             nss=ent_type.nss,
@@ -134,7 +133,7 @@ class ClusterService(abstract_broker.AbstractBroker):
             cse_params={telemetry_constants.PayloadKey.FILTER_KEYS: ','.join(filters.keys())}  # noqa: E501
         )
 
-        ent_type: common_models.DefEntityType = def_utils.get_registered_def_entity_type()  # noqa: E501
+        ent_type: common_models.DefEntityType = server_utils.get_registered_def_entity_type()  # noqa: E501
 
         return self.entity_svc.list_entities_by_entity_type(
             vendor=ent_type.vendor,
@@ -228,9 +227,10 @@ class ClusterService(abstract_broker.AbstractBroker):
         #  based clusters
 
         # create the corresponding defined entity .
-        entity_type_id = def_utils.get_registered_def_entity_type().id
+        native_entity_type: common_models.DefEntityType = \
+            server_utils.get_registered_def_entity_type()
         def_entity = common_models.DefEntity(entity=cluster_spec,
-                                             entityType=entity_type_id)
+                                             entityType=native_entity_type.id)
         def_entity.entity.status.phase = str(
             DefEntityPhase(DefEntityOperation.CREATE,
                            DefEntityOperationStatus.IN_PROGRESS))
@@ -254,10 +254,14 @@ class ClusterService(abstract_broker.AbstractBroker):
         def_entity.entity.status.task_href = self.task_resource.get('href')
         try:
             self.entity_svc.create_entity(
-                entity_type_id,
+                native_entity_type.id,
                 entity=def_entity,
                 tenant_org_context=org_context)
-            def_entity = self.entity_svc.get_native_entity_by_name(cluster_name)  # noqa: E501
+
+            def_entity = \
+                self.entity_svc.get_native_rde_by_name_and_rde_version(
+                    cluster_name,
+                    native_entity_type.version)  # noqa: E501
         except Exception as err:
             msg = f"Error creating the cluster '{cluster_name}'"
             LOGGER.error(f"{msg}: {err}")
