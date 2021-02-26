@@ -69,7 +69,8 @@ def construct_cluster_spec_from_entity_status(entity_status: Union[rde_1_0_0.Sta
     :return: Cluster Specification of respective rde_version_in_use
     :raises NotImplementedError
     """
-    if rde_version_in_use == def_constants.RDESchemaVersions.RDE_2_X.value:
+    # TODO: Refactor this multiple if to rde_version -> handler pattern
+    if rde_version_in_use == '2.0.0':
         return construct_2_0_0_cluster_spec_from_entity_status(entity_status)
     raise NotImplementedError(f"constructing cluster spec from entity status for {rde_version_in_use} is"  # noqa:
                               f" not implemented ")
