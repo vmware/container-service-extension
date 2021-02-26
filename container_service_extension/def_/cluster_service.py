@@ -35,6 +35,7 @@ import container_service_extension.operation_context as ctx
 import container_service_extension.pyvcloud_utils as vcd_utils
 from container_service_extension.server_constants import ClusterMetadataKey
 from container_service_extension.server_constants import CSE_CLUSTER_KUBECONFIG_PATH # noqa: E501
+from container_service_extension.server_constants import EXPOSE_CLUSTER_NAME_FRAGMENT  # noqa: E501
 from container_service_extension.server_constants import EXPOSE_CLUSTER_RIGHTS
 from container_service_extension.server_constants import LocalTemplateKey
 from container_service_extension.server_constants import NETWORK_URN_PREFIX
@@ -2119,7 +2120,7 @@ def _expose_cluster(client: vcd_client.Client, org_name: str, ovdc_name: str,
         return None
     try:
         nsxt_gateway_svc.add_dnat_rule(
-            name=cluster_name + '_dnat',
+            name=f"{cluster_name}_{EXPOSE_CLUSTER_NAME_FRAGMENT}",
             internal_address=internal_ip,
             external_address=expose_ip)
     except Exception as err:

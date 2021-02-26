@@ -510,6 +510,9 @@ EXPOSE_CLUSTER_RIGHTS = [
     'Organization vDC Gateway: Configure NAT'
 ]
 
+# Expose cluster name to be appended to cluster name for dnat rule
+EXPOSE_CLUSTER_NAME_FRAGMENT = 'expose_dnat'
+
 
 @unique
 class VdcNetworkInfoKey(str, Enum):
