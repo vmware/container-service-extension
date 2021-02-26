@@ -6,7 +6,7 @@ import re
 import string
 import threading
 import time
-from typing import Dict, List, Union
+from typing import Dict, List
 import urllib
 
 import pkg_resources
@@ -297,7 +297,8 @@ class ClusterService(abstract_broker.AbstractBroker):
         # Get the existing defined entity for the given cluster id
         curr_entity: common_models.DefEntity = self.entity_svc.get_entity(cluster_id)  # noqa: E501
         cluster_name: str = curr_entity.name
-        current_spec = self.construct_cluster_spec_from_entity_status(curr_entity.entity.status)  # noqa: E501
+        current_spec = def_utils.construct_cluster_spec_from_entity_status(
+            curr_entity.entity.status, def_constants.RDESchemaVersions.RDE_2_X)  # noqa: E501
         curr_worker_count: int = current_spec.workers.count
         curr_nfs_count: int = current_spec.nfs.count
         state: str = curr_entity.state
@@ -330,7 +331,7 @@ class ClusterService(abstract_broker.AbstractBroker):
                 f"valid state to be resized. Please contact the administrator")
 
         # Record telemetry details
-        telemetry_data: common_models.DefEntity = common_models.DefEntity(id=cluster_id, entity=cluster_spec)  # noqa: E501
+        telemetry_data: common_models.DefEntity = common_models.DefEntity(entityType=def_utils.get_registered_def_entity_type().id, id=cluster_id, entity=cluster_spec)  # noqa: E501
         telemetry_handler.record_user_action_details(
             cse_operation=telemetry_constants.CseOperation.V35_CLUSTER_APPLY,
             cse_params={
@@ -429,9 +430,8 @@ class ClusterService(abstract_broker.AbstractBroker):
                 telemetry_constants.PayloadKey.SOURCE_DESCRIPTION: thread_local_data.get_thread_local_data(ThreadLocalData.USER_AGENT)  # noqa: E501
             }
         )
-
-        return self._get_cluster_upgrade_plan(curr_entity.entity.spec.k8_distribution.template_name, # noqa: E501
-                                              curr_entity.entity.spec.k8_distribution.template_revision) # noqa: E501
+        return self._get_cluster_upgrade_plan(curr_entity.entity.status.cloud_properties.k8_distribution.template_name,  # noqa: E501
+                                              curr_entity.entity.status.cloud_properties.k8_distribution.template_revision)  # noqa: E501
 
     def upgrade_cluster(self, cluster_id: str,
                         upgrade_spec: rde_2_0_0.NativeEntity):
@@ -463,8 +463,8 @@ class ClusterService(abstract_broker.AbstractBroker):
 
         # check that the specified template is a valid upgrade target
         template = {}
-        valid_templates = self._get_cluster_upgrade_plan(curr_entity.entity.spec.k8_distribution.template_name, # noqa: E501
-                                                         curr_entity.entity.spec.k8_distribution.template_revision) # noqa: E501
+        valid_templates = self._get_cluster_upgrade_plan(curr_entity.entity.status.cloud_properties.k8_distribution.template_name, # noqa: E501
+                                                         curr_entity.entity.status.cloud_properties.k8_distribution.template_revision) # noqa: E501
 
         for t in valid_templates:
             if (t[LocalTemplateKey.NAME], str(t[LocalTemplateKey.REVISION])) == (new_template_name, str(new_template_revision)): # noqa: E501
@@ -914,7 +914,8 @@ class ClusterService(abstract_broker.AbstractBroker):
             curr_entity: common_models.DefEntity = self.entity_svc.get_entity(
                 cluster_id)
             cluster_name: str = curr_entity.name
-            current_spec = self.construct_cluster_spec_from_entity_status(curr_entity.entity.status)  # noqa: E501
+            current_spec = def_utils.construct_cluster_spec_from_entity_status(
+                curr_entity.entity.status, def_constants.RDESchemaVersions.RDE_2_X)  # noqa: E501
             curr_worker_count: int = current_spec.workers.count
             curr_nfs_count: int = current_spec.nfs.count
             template_name = current_spec.k8_distribution.template_name  # noqa: E501
@@ -1026,7 +1027,8 @@ class ClusterService(abstract_broker.AbstractBroker):
             curr_entity: common_models.DefEntity = self.entity_svc.get_entity(cluster_id)  # noqa: E501
             vapp_href = curr_entity.externalId
             cluster_name = curr_entity.entity.metadata.cluster_name
-            current_spec = self.construct_cluster_spec_from_entity_status(curr_entity.entity.status)  # noqa: E501
+            current_spec = def_utils.construct_cluster_spec_from_entity_status(
+                curr_entity.entity.status, def_constants.RDESchemaVersions.RDE_2_X)  # noqa: E501
             org_name = curr_entity.entity.metadata.org_name
             ovdc_name = curr_entity.entity.metadata.ovdc_name
             curr_worker_count: int = current_spec.workers.count
@@ -1363,8 +1365,9 @@ class ClusterService(abstract_broker.AbstractBroker):
             self.context.client.get_task_monitor().wait_for_status(task)
 
             # update defined entity of the cluster
-            curr_entity.entity.status.cloud_properties.k8_distribution.template_name = template[LocalTemplateKey.NAME]  # noqa: E501
-            curr_entity.entity.status.cloud_properties.k8_distribution.template_revision = int(template[LocalTemplateKey.REVISION])  # noqa: E501
+            curr_entity.entity.status.cloud_properties.k8_distribution = \
+                rde_2_0_0.Distribution(template_name=template[LocalTemplateKey.NAME],  # noqa: E501
+                                       template_revision=int(template[LocalTemplateKey.REVISION]))  # noqa: E501
             curr_entity.entity.status.cni = \
                 _create_k8s_software_string(template[LocalTemplateKey.CNI],
                                             template[LocalTemplateKey.CNI_VERSION]) # noqa: E501
@@ -1649,44 +1652,6 @@ class ClusterService(abstract_broker.AbstractBroker):
                 stack_trace=stack_trace
             )
 
-    @staticmethod
-    def construct_cluster_spec_from_entity_status(entity_status: Union[rde_2_0_0.Status, dict]) -> rde_2_0_0.ClusterSpec:  # noqa: E501
-        """Construct cluster specification from entity status using rde_2_0_0 model.
-
-        :param rde_2_0_0.Status entity_status: Entity Status as defined in rde_2_0_0  # noqa: E501
-        :return: Cluster Specification as defined in rde_2_0_0 model
-        """
-        cluster_spec = rde_2_0_0.ClusterSpec()
-        if isinstance(entity_status, dict):
-            entity_status = rde_2_0_0.Status(**entity_status)
-
-        cluster_spec.control_plane.count = 1
-        cluster_spec.control_plane.sizing_class = entity_status.nodes.control_plane.sizing_class  # noqa: E501
-        cluster_spec.control_plane.storage_profile = entity_status.nodes.control_plane.storage_profile  # noqa: E501
-
-        cluster_spec.workers.count = len(entity_status.nodes.workers)  # noqa: E501
-        if cluster_spec.workers.count == 0:
-            cluster_spec.workers.sizing_class = None
-            cluster_spec.workers.storage_profile = '*'
-        else:
-            cluster_spec.workers.sizing_class = entity_status.nodes.workers[0].sizing_class  # noqa: E501
-            cluster_spec.workers.storage_profile = entity_status.nodes.workers[0].storage_profile  # noqa: E501
-
-        cluster_spec.nfs.count = len(entity_status.nodes.nfs)
-        if cluster_spec.nfs.count == 0:
-            cluster_spec.nfs.sizing_class = None
-            cluster_spec.nfs.storage_profile = '*'
-        else:
-            cluster_spec.nfs.sizing_class = entity_status.nodes.nfs[0].sizing_class  # noqa: E501
-            cluster_spec.nfs.storage_profile = entity_status.nodes.nfs[0].storage_profile  # noqa: E501
-
-        cluster_spec.k8_distribution.template_name = entity_status.cloud_properties.k8_distribution.template_name  # noqa: E501
-        cluster_spec.k8_distribution.template_revision = entity_status.cloud_properties.k8_distribution.template_revision  # noqa: E501
-        cluster_spec.settings.network = entity_status.cloud_properties.ovdc_network_name  # noqa: E501
-        cluster_spec.settings.ssh_key = entity_status.cloud_properties.ssh_key  # noqa: E501
-        cluster_spec.settings.rollback_on_failure = entity_status.cloud_properties.rollback_on_failure  # noqa: E501
-        return cluster_spec
-
 
 def _get_nodes_details(sysadmin_client, vapp):
     """Get the details of the nodes given a vapp.
@@ -1724,6 +1689,7 @@ def _get_nodes_details(sysadmin_client, vapp):
                 policy_name = vm.ComputePolicy.VmSizingPolicy.get('name')
                 sizing_class = compute_policy_manager.\
                     get_cse_policy_display_name(policy_name)
+            storage_profile = None
             if hasattr(vm, 'StorageProfile'):
                 storage_profile: str = vm.StorageProfile.get('name')
             if vm_name.startswith(NodeType.CONTROL_PLANE):
