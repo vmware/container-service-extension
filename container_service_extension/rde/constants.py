@@ -56,14 +56,6 @@ class DefKey(str, Enum):
     ENTITY_TYPE_SCHEMA_VERSION = 'schema_version'
 
 
-# Addition of new entries to this enum will also require updating
-# MAP_RDE_VERSION_TO_ITS_METADATA
-@unique
-class RDEVersion(str, Enum):
-    RDE_1_0_0 = '1.0.0'
-    RDE_2_0_0 = '2.0.0'
-
-
 # Defines the RDE version CSE server uses at runtime.
 # RDE version used by a given CSE version can differ based on the VCD
 # environment it is configured with.
@@ -74,10 +66,12 @@ class RDEVersion(str, Enum):
 # increment of RDE, example: RDE_2_X = '2.1.0'.
 # 2. A New Entry must be added on each major version increment of
 # RDE, example RDE_3_X = '3.0.0'
+#
+# Any updates to this enum may also require updating MAP_RDE_VERSION_TO_ITS_METADATA  # noqa: E501
 @unique
 class RuntimeRDEVersion(str, Enum):
-    RDE_1_X = RDEVersion.RDE_1_0_0
-    RDE_2_X = RDEVersion.RDE_2_0_0
+    RDE_1_X = '1.0.0'
+    RDE_2_X = '2.0.0'
 
 
 class CommonInterfaceMetadata(str, Enum):
@@ -158,47 +152,50 @@ class RDEMetadataKey(str, Enum):
     INTERFACES_METADATA_LIST = "interfaces_metadata_list"
 
 
-# Key: Represents the RDE version
+# Key: Represents the Runtime RDE version used by CSE server for any given enviroment.  # noqa: E501
 # Value: Interface and Entity type metadata of the specified RDE version.
 MAP_RDE_VERSION_TO_ITS_METADATA = {
-    RDEVersion.RDE_1_0_0: {
+    RuntimeRDEVersion.RDE_1_X: {
         RDEMetadataKey.ENTITY_TYPE_METADATA: NativeEntityTypeMetadata_1_0_0,
         RDEMetadataKey.INTERFACES_METADATA_LIST: [CommonInterfaceMetadata]
     },
-    RDEVersion.RDE_2_0_0: {
+    RuntimeRDEVersion.RDE_2_X: {
         RDEMetadataKey.ENTITY_TYPE_METADATA: NativeEntityTypeMetadata_2_0_0,
         RDEMetadataKey.INTERFACES_METADATA_LIST: [CommonInterfaceMetadata]
     }
 }
 
-# Dictionary indicating RDE version to use
-# for the VCD API version
+# Dictionary indicating RDE version to use for a given VCD API version.
 # Based on the VCD-version CSE server is configured with,
 # CSE server dynamically determines the RDE-version-to-use at runtime.
 # Below dictionary essentially answers this question:
 # "When CSE is configured with VCD of a given api-version, what is the
 # compatible RDE-version CSE-server must use on that VCD?"
-# Key represents the VCD api-version CSE is configured with.
-# Value represents the RDE-version CSE-server must use for that VCD
-#   environment.
+#
+# Key: represents the VCD api-version CSE is configured with.
+# Value: represents the RDE-version CSE-server uses for that VCD environment.
+#
 # This map must be carefully updated for every major/minor/patch version
 # increments of RDE for each official CSE release. Below are few examples on
 #  how this map could be updated.
 # NOTE: The RDE version used by the VCD API version can be different in other
 #   CSE releases.
-# Example -
+
+# Examples:
 # Mapping for CSE 3.1:
-# MAP_VCD_API_VERSION_TO_RDE_SCHEMA_VERSION = {
+# MAP_VCD_API_VERSION_TO_RDE_VERSION = {
 #     35.0: 1.0.0,
 #     36.0: 2.0.0
 # }
+#
 # If CSE 3.2 introduces Minor version bump in RDE (i.e 2.1) and is released
-#   alongside vCD 10.4 (API Version 37), mapping would be -
+#   alongside vCD 10.4 (API Version 37), mapping would become -
 # MAP_VCD_API_VERSION_TO_RDE_SCHEMA_VERSION = {
 # 35.0: 1.0.0,
 # 36.0: 2.1.0 (Note the RDE version change),
 # 37.0: 2.1.0 (Newly introduced RDE),
 # }
+#
 # If CSE 3.2 introduces Major version bump in RDE (i.e 3.0) and is released
 #   alongside vCD 10.4 (API version 37), mapping would be -
 # MAP_VCD_API_VERSION_TO_RDE_SCHEMA_VERSION = {
