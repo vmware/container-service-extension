@@ -61,7 +61,7 @@ def get_rde_metadata(rde_version: str) -> dict:
     return def_constants.MAP_RDE_VERSION_TO_ITS_METADATA[rde_version]
 
 
-def construct_cluster_spec_from_entity_status(entity_status: Union[rde_1_0_0.Status, rde_2_0_0.Status, dict], rde_version_in_use: str) -> Union[rde_1_0_0.ClusterSpec, rde_2_0_0.ClusterSpec]:  # noqa: E501
+def construct_cluster_spec_from_entity_status(entity_status: Union[rde_1_0_0.Status, rde_2_0_0.Status], rde_version_in_use: str) -> Union[rde_1_0_0.ClusterSpec, rde_2_0_0.ClusterSpec]:  # noqa: E501
     """Construct cluster specification from entity status of given rde version.
 
     :param rde_X_X_X Status entity_status: Entity Status of rde of given version  # noqa: E501
@@ -71,20 +71,18 @@ def construct_cluster_spec_from_entity_status(entity_status: Union[rde_1_0_0.Sta
     """
     # TODO: Refactor this multiple if to rde_version -> handler pattern
     if rde_version_in_use == '2.0.0':
-        return construct_2_0_0_cluster_spec_from_entity_status(entity_status)
+        return construct_2_x_cluster_spec_from_entity_status(entity_status)
     raise NotImplementedError(f"constructing cluster spec from entity status for {rde_version_in_use} is"  # noqa:
                               f" not implemented ")
 
 
-def construct_2_0_0_cluster_spec_from_entity_status(entity_status: Union[rde_2_0_0.Status, dict]) -> rde_2_0_0.ClusterSpec:  # noqa:
+def construct_2_x_cluster_spec_from_entity_status(entity_status: rde_2_0_0.Status) -> rde_2_0_0.ClusterSpec:  # noqa:
     """Construct cluster specification from entity status using rde_2_0_0 model.
 
     :param rde_2_0_0.Status entity_status: Entity Status as defined in rde_2_0_0  # noqa: E501
     :return: Cluster Specification as defined in rde_2_0_0 model
     """
-    if isinstance(entity_status, dict):
-        entity_status = rde_2_0_0.Status(**entity_status)
-
+    # Currently only single control-plane is supported.
     control_plane = rde_2_0_0.ControlPlane(
         sizing_class=entity_status.nodes.control_plane.sizing_class,
         storage_profile=entity_status.nodes.control_plane.storage_profile,
