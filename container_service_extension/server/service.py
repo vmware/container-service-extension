@@ -500,18 +500,20 @@ class Service(object, metaclass=Singleton):
 
             schema_svc = def_schema_svc.DefSchemaService(cloudapi_client)
             # TODO make use of self._rde_version to load Interface and Type
-            def_metadata_dict: dict = def_utils.get_def_metadata(server_rde_version)
+            def_metadata_dict: dict = def_utils.get_def_metadata(server_rde_version)  # noqa: E501
             entity_type_metadata: Enum = \
-                def_metadata_dict[def_constants.RDEMetadataKey.ENTITY_TYPE_METADATA]
+                def_metadata_dict[def_constants.RDEMetadataKey.ENTITY_TYPE_METADATA]  # noqa: E501
             interfaces_metadata_list: List[Enum] = \
-                def_metadata_dict[def_constants.RDEMetadataKey.INTERFACES_METADATA_LIST]
+                def_metadata_dict[def_constants.RDEMetadataKey.INTERFACES_METADATA_LIST]  # noqa: E501
 
             for interface_metadata in interfaces_metadata_list:
                 # TODO change _kubernetesInterface to an array once additional
                 # interface for CSE is added.
-                self._kubernetesInterface = schema_svc.get_interface(interface_metadata.get_id())
+                self._kubernetesInterface = \
+                    schema_svc.get_interface(interface_metadata.get_id())
 
-            self._nativeEntityType = schema_svc.get_entity_type(entity_type_metadata.get_id())
+            self._nativeEntityType = \
+                schema_svc.get_entity_type(entity_type_metadata.get_id())
 
             msg = "Successfully loaded defined entity schema to global context"
             msg_update_callback.general(msg)

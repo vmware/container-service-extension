@@ -25,10 +25,12 @@ DEF_ERROR_MESSAGE_KEY = 'message'
 DEF_RESOLVED_STATE = 'RESOLVED'
 TKG_ENTITY_TYPE_NSS = 'tkgcluster'
 
+
 @unique
 class Vendors(str, Enum):
     CSE = 'cse'
     VMWARE = 'vmware'
+
 
 @unique
 class Nss(str, Enum):
@@ -36,8 +38,10 @@ class Nss(str, Enum):
     NATIVE_ClUSTER = 'nativeCluster'
     TKG = 'tkgcluster'
 
+
 DEF_NATIVE_ENTITY_TYPE_RIGHT_BUNDLE = \
     f'{Vendors.CSE.value}:{Nss.NATIVE_ClUSTER.value} Entitlement'
+
 
 @unique
 class DefKey(str, Enum):
@@ -69,7 +73,7 @@ class CommonInterfaceMetadata(str, Enum):
 
     @classmethod
     def get_id(cls):
-        return f"{DEF_INTERFACE_ID_PREFIX}:{cls.VENDOR}:{cls.NSS}:{cls.VERSION}"
+        return f"{DEF_INTERFACE_ID_PREFIX}:{cls.VENDOR}:{cls.NSS}:{cls.VERSION}"  # noqa: E501
 
 
 class NativeEntityTypeMetadata_1_x(str, Enum):
@@ -80,7 +84,7 @@ class NativeEntityTypeMetadata_1_x(str, Enum):
 
     @classmethod
     def get_id(cls):
-        return f"{DEF_ENTITY_TYPE_ID_PREFIX}:{cls.VENDOR}:{cls.NSS}:{cls.VERSION}"
+        return f"{DEF_ENTITY_TYPE_ID_PREFIX}:{cls.VENDOR}:{cls.NSS}:{cls.VERSION}"  # noqa: E501
 
 
 class NativeEntityTypeMetadata_2_x(str, Enum):
@@ -92,7 +96,7 @@ class NativeEntityTypeMetadata_2_x(str, Enum):
 
     @classmethod
     def get_id(cls):
-        return f"{DEF_ENTITY_TYPE_ID_PREFIX}:{cls.VENDOR}:{cls.NSS}:{cls.VERSION}"
+        return f"{DEF_ENTITY_TYPE_ID_PREFIX}:{cls.VENDOR}:{cls.NSS}:{cls.VERSION}"  # noqa: E501
 
 
 class TKGEntityTypeMetadata_1_x(str, Enum):
@@ -103,10 +107,10 @@ class TKGEntityTypeMetadata_1_x(str, Enum):
 
     @classmethod
     def get_id(cls):
-        return f"{DEF_ENTITY_TYPE_ID_PREFIX}:{cls.VENDOR}:{cls.NSS}:{cls.VERSION}"
+        return f"{DEF_ENTITY_TYPE_ID_PREFIX}:{cls.VENDOR}:{cls.NSS}:{cls.VERSION}"  # noqa: E501
 
 
-# TODO: Remove the usage of MAP_API_VERSION_TO_KEYS 
+# TODO: Remove the usage of MAP_API_VERSION_TO_KEYS
 MAP_API_VERSION_TO_KEYS = {
     35.0: {
         DefKey.INTERFACE_VENDOR: CommonInterfaceMetadata.VENDOR,

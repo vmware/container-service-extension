@@ -5,8 +5,7 @@
 from dataclasses import dataclass
 from typing import List
 
-import container_service_extension.common.constants.shared_constants as shared_constants
-from container_service_extension.rde import constants as def_constants
+import container_service_extension.common.constants.shared_constants as shared_constants  # noqa: E501
 from container_service_extension.rde.models.abstractNativeEntity import AbstractNativeEntity  # noqa: E501
 
 

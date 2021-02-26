@@ -2,8 +2,8 @@
 # Copyright (c) 2020 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 
-from enum import Enum
 from dataclasses import asdict
+from enum import Enum
 import functools
 import json
 from typing import List
@@ -302,7 +302,7 @@ class DefEntityService():
         for entity in \
             self.list_entities_by_entity_type(vendor=native_entity_type_metadata.VENDOR,  # noqa: E501
                                               nss=native_entity_type_metadata.NSS,  # noqa: E501
-                                              version=native_entity_type_metadata.VERSION,
+                                              version=native_entity_type_metadata.VERSION,  # noqa: E501
                                               filters=filters):
             return entity
 

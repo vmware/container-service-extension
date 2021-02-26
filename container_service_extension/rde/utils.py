@@ -3,8 +3,6 @@
 # SPDX-License-Identifier: BSD-2-Clause
 
 """Utility methods to help interaction with defined entities framework."""
-from enum import Enum
-
 import container_service_extension.exception.exceptions as excptn
 from container_service_extension.lib.cloudapi.cloudapi_client import CloudApiClient  # noqa: E501
 import container_service_extension.rde.constants as def_constants
