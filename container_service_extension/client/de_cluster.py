@@ -21,7 +21,7 @@ import container_service_extension.common.utils.pyvcloud_utils as vcd_utils
 import container_service_extension.exception.exceptions as cse_exceptions
 import container_service_extension.logging.logger as logger
 from container_service_extension.rde.constants import CommonInterfaceMetadata
-import container_service_extension.rde.entity_service as def_entity_svc
+import container_service_extension.common.entity_service as def_entity_svc
 import container_service_extension.rde.models.common_models as common_models
 import container_service_extension.rde.models.rde_1_0_0 as rde_1_0_0
 import container_service_extension.rde.utils as def_utils

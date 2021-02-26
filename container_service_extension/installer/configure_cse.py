@@ -56,7 +56,7 @@ from container_service_extension.logging.logger import SERVER_NSXT_WIRE_LOGGER
 from container_service_extension.mqi.mqtt_extension_manager import \
     MQTTExtensionManager
 import container_service_extension.rde.constants as def_constants
-import container_service_extension.rde.entity_service as def_entity_svc
+import container_service_extension.common.entity_service as def_entity_svc
 import container_service_extension.rde.models.common_models as common_models
 import container_service_extension.rde.models.rde_1_0_0 as rde_1_0_0
 import container_service_extension.rde.schema_service as def_schema_svc
