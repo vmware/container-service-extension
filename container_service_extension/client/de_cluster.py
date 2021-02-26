@@ -17,10 +17,10 @@ import container_service_extension.client.tkgclient.rest as tkg_rest
 import container_service_extension.client.utils as client_utils
 from container_service_extension.common.constants.shared_constants import CSE_PAGINATION_DEFAULT_PAGE_SIZE, PaginationKey  # noqa: E501
 from container_service_extension.common.constants.shared_constants import CSE_PAGINATION_FIRST_PAGE_NUMBER  # noqa: E501
-import container_service_extension.common.entity_service as def_entity_svc
 import container_service_extension.common.utils.pyvcloud_utils as vcd_utils
 import container_service_extension.exception.exceptions as cse_exceptions
 import container_service_extension.logging.logger as logger
+import container_service_extension.rde.common.entity_service as def_entity_svc
 from container_service_extension.rde.constants import CommonInterfaceMetadata
 import container_service_extension.rde.models.common_models as common_models
 import container_service_extension.rde.models.rde_1_0_0 as rde_1_0_0
