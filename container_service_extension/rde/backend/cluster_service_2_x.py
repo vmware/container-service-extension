@@ -298,7 +298,7 @@ class ClusterService(abstract_broker.AbstractBroker):
         curr_entity: common_models.DefEntity = self.entity_svc.get_entity(cluster_id)  # noqa: E501
         cluster_name: str = curr_entity.name
         current_spec = def_utils.construct_cluster_spec_from_entity_status(
-            curr_entity.entity.status, "2.0.0")  # noqa: E501
+            curr_entity.entity.status, server_utils.get_rde_version_in_use())  # noqa: E501
         curr_worker_count: int = current_spec.workers.count
         curr_nfs_count: int = current_spec.nfs.count
         state: str = curr_entity.state
@@ -915,7 +915,7 @@ class ClusterService(abstract_broker.AbstractBroker):
                 cluster_id)
             cluster_name: str = curr_entity.name
             current_spec = def_utils.construct_cluster_spec_from_entity_status(
-                curr_entity.entity.status, "2.0.0")  # noqa: E501
+                curr_entity.entity.status, server_utils.get_rde_version_in_use())  # noqa: E501
             curr_worker_count: int = current_spec.workers.count
             curr_nfs_count: int = current_spec.nfs.count
             template_name = current_spec.k8_distribution.template_name  # noqa: E501
@@ -1028,7 +1028,7 @@ class ClusterService(abstract_broker.AbstractBroker):
             vapp_href = curr_entity.externalId
             cluster_name = curr_entity.entity.metadata.cluster_name
             current_spec = def_utils.construct_cluster_spec_from_entity_status(
-                curr_entity.entity.status, "2.0.0")  # noqa: E501
+                curr_entity.entity.status, server_utils.get_rde_version_in_use())  # noqa: E501
             org_name = curr_entity.entity.metadata.org_name
             ovdc_name = curr_entity.entity.metadata.ovdc_name
             curr_worker_count: int = current_spec.workers.count
