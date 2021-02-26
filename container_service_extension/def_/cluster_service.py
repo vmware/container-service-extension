@@ -616,13 +616,7 @@ class ClusterService(abstract_broker.AbstractBroker):
                 self.context.sysadmin_client, vapp, check_tools=True)
 
             # Handle exposing cluster
-            # expose_ip = None
-            # control_plane_vm_name = _get_node_names(vapp, NodeType.CONTROL_PLANE)[0]  # noqa: E501
-            # control_plane_vm_resource = vapp.get_vm(control_plane_vm_name)
-            # control_plane_vm = vcd_vm.VM(self.context.client,
-            #                              resource=control_plane_vm_resource)
-            # control_plane_nics = control_plane_vm.list_nics()
-            # print(control_plane_nics)
+            expose_ip = None
             if intent_to_expose and float(api_version) >= float(vcd_client.ApiVersion.VERSION_36.value):  # noqa: E501
                 expose_ip = _expose_cluster(
                     client=self.context.client,
@@ -715,6 +709,8 @@ class ClusterService(abstract_broker.AbstractBroker):
             # Update defined entity with exposed ip
             if expose_ip and def_entity.entity.status.nodes:
                 def_entity.entity.status.nodes.control_plane.ip = expose_ip
+                def_entity.entity.status.expose = True
+
             self.entity_svc.update_entity(cluster_id, def_entity)
             self.entity_svc.resolve_entity(cluster_id)
 
@@ -1841,9 +1837,12 @@ def _init_cluster(sysadmin_client: vcd_client.Client, vapp, template_name,
                                                   template_revision,
                                                   ScriptFile.CONTROL_PLANE)
         script = utils.read_data_file(script_filepath, logger=LOGGER)
+
+        # Expose cluster if given external ip
         if expose_ip:
             script = script.replace(
                 'kubeadm init', f'kubeadm init --control-plane-endpoint=\"{expose_ip}:6443\"')  # noqa: E501
+
         node_names = _get_node_names(vapp, NodeType.CONTROL_PLANE)
         result = _execute_script_in_nodes(sysadmin_client, vapp=vapp,
                                           node_names=node_names, script=script)
@@ -2070,6 +2069,25 @@ def _user_has_edit_gateway_rights(user_rights: list):
     return False
 
 
+def _get_gateway(client, cloudapi_client, network_resource, ovdc: VDC):
+    routed_vdc_network = vdc_network.VdcNetwork(
+        client=client,
+        resource=network_resource)
+    network_id = utils.extract_id_from_href(routed_vdc_network.href)
+    network_urn_id = f'{NETWORK_URN_PREFIX}:{network_id}'
+    try:
+        vdc_network_response = _get_vdc_network_response(
+            cloudapi_client, network_urn_id)
+    except Exception:
+        return None
+    gateway_name = vdc_network_response[VdcNetworkInfoKey.VALUES][0][
+        VdcNetworkInfoKey.CONNECTION][VdcNetworkInfoKey.ROUTER_REF][
+        VdcNetworkInfoKey.NAME]
+    gateway_href = _get_gateway_href(ovdc, gateway_name)
+    gateway = vcd_gateway.Gateway(client, name=gateway_name, href=gateway_href)
+    return gateway
+
+
 def _expose_cluster(client: vcd_client.Client, org_name: str, ovdc_name: str,
                     network_name: str, cluster_name: str, internal_ip: str):
     # Check if routed org vdc network
@@ -2086,23 +2104,12 @@ def _expose_cluster(client: vcd_client.Client, org_name: str, ovdc_name: str,
         return None
 
     # Check if NSX-T backed gateway
-    # TODO: make helper for getting gateway
-    routed_vdc_network = vdc_network.VdcNetwork(
+    gateway = _get_gateway(
         client=client,
-        resource=routed_network_resource)
-    network_id = utils.extract_id_from_href(routed_vdc_network.href)
-    network_urn_id = f'{NETWORK_URN_PREFIX}:{network_id}'
-    try:
-        vdc_network_response = _get_vdc_network_response(
-            cloudapi_client, network_urn_id)
-    except Exception:
-        return None
-    gateway_name = vdc_network_response[VdcNetworkInfoKey.VALUES][0][
-        VdcNetworkInfoKey.CONNECTION][VdcNetworkInfoKey.ROUTER_REF][
-        VdcNetworkInfoKey.NAME]
-    gateway_href = _get_gateway_href(ovdc, gateway_name)
-    gateway = vcd_gateway.Gateway(client, name=gateway_name, href=gateway_href)
-    if not gateway.is_nsxt_backed():
+        cloudapi_client=cloudapi_client,
+        network_resource=routed_network_resource,
+        ovdc=ovdc)
+    if not gateway or not gateway.is_nsxt_backed():
         return None
 
     # Auto reserve ip and add dnat rule

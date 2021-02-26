@@ -146,11 +146,12 @@ class Status:
     docker_version: str = None
     os: str = None
     nodes: Nodes = None
+    expose: bool = False
 
     def __init__(self, phase: str = None,
                  cni: str = None, task_href: str = None,
                  kubernetes: str = None, docker_version: str = None,
-                 os: str = None, nodes: Nodes = None):
+                 os: str = None, nodes: Nodes = None, expose: bool = False):
         self.phase = phase
         self.cni = cni
         self.task_href = task_href
@@ -158,6 +159,7 @@ class Status:
         self.docker_version = docker_version
         self.os = os
         self.nodes = Nodes(**nodes) if isinstance(nodes, dict) else nodes
+        self.expose = expose
 
 
 @dataclass()
