@@ -20,7 +20,7 @@ import container_service_extension.exception.exceptions as cse_exceptions
 import container_service_extension.logging.logger as logger
 import container_service_extension.rde.acl_service as cluster_acl_svc
 from container_service_extension.rde.constants import CLUSTER_ACL_LIST_FIELDS
-from container_service_extension.rde.constants import TKGEntityTypeMetadata_1_x
+from container_service_extension.rde.constants import TKGEntityTypeMetadata_1_0_0  # noqa: E501
 import container_service_extension.rde.models.common_models as common_models
 
 
@@ -107,7 +107,7 @@ class DEClusterTKG:
         while has_more_results:
             (entities, status, headers, additional_details) = \
                 self._tkg_client_api.list_tkg_clusters(
-                    TKGEntityTypeMetadata_1_x.get_id(),
+                    TKGEntityTypeMetadata_1_0_0.get_id(),
                     _return_http_data_only=False,
                     object_filter=filter_string,
                     query_params=query_params)
@@ -143,7 +143,7 @@ class DEClusterTKG:
         filter_string = utils.construct_filter_string(filters)
         response = \
             self._tkg_client_api.list_tkg_clusters(
-                TKGEntityTypeMetadata_1_x.get_id(),
+                TKGEntityTypeMetadata_1_0_0.get_id(),
                 object_filter=filter_string)
         tkg_entities = []
         tkg_def_entities = []

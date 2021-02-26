@@ -48,7 +48,7 @@ class DefEntityType:
     id: str = None
     externalId: str = None
     readonly: bool = False
-    vendor: str = def_constants.Vendors.CSE.value
+    vendor: str = def_constants.Vendor.CSE.value
     nss: str = def_constants.DEF_NATIVE_ENTITY_TYPE_NSS
 
     def get_id(self):

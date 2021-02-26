@@ -27,7 +27,7 @@ TKG_ENTITY_TYPE_NSS = 'tkgcluster'
 
 
 @unique
-class Vendors(str, Enum):
+class Vendor(str, Enum):
     CSE = 'cse'
     VMWARE = 'vmware'
 
@@ -40,7 +40,7 @@ class Nss(str, Enum):
 
 
 DEF_NATIVE_ENTITY_TYPE_RIGHT_BUNDLE = \
-    f'{Vendors.CSE.value}:{Nss.NATIVE_ClUSTER.value} Entitlement'
+    f'{Vendor.CSE.value}:{Nss.NATIVE_ClUSTER.value} Entitlement'
 
 
 @unique
@@ -66,7 +66,7 @@ class RDESchemaVersions(str, Enum):
 
 
 class CommonInterfaceMetadata(str, Enum):
-    VENDOR = Vendors.VMWARE.value
+    VENDOR = Vendor.VMWARE.value
     NSS = Nss.KUBERNETES.value
     VERSION = '1.0.0'
     NAME = "Kubernetes"
@@ -76,8 +76,8 @@ class CommonInterfaceMetadata(str, Enum):
         return f"{DEF_INTERFACE_ID_PREFIX}:{cls.VENDOR}:{cls.NSS}:{cls.VERSION}"  # noqa: E501
 
 
-class NativeEntityTypeMetadata_1_x(str, Enum):
-    VENDOR = Vendors.CSE.value
+class NativeEntityTypeMetadata_1_0_0(str, Enum):
+    VENDOR = Vendor.CSE.value
     NSS = DEF_NATIVE_ENTITY_TYPE_NSS
     VERSION = '1.0.0'
     NAME = 'nativeClusterEntityType'
@@ -87,11 +87,11 @@ class NativeEntityTypeMetadata_1_x(str, Enum):
         return f"{DEF_ENTITY_TYPE_ID_PREFIX}:{cls.VENDOR}:{cls.NSS}:{cls.VERSION}"  # noqa: E501
 
 
-class NativeEntityTypeMetadata_2_x(str, Enum):
-    VENDOR = Vendors.CSE.value
+class NativeEntityTypeMetadata_2_0_0(str, Enum):
+    VENDOR = Vendor.CSE.value
     NSS = DEF_NATIVE_ENTITY_TYPE_NSS
     VERSION = '2.0.0'
-    SCHEMA_FILE = 'schema_1_0_0.json'
+    SCHEMA_FILE = 'schema_2_0_0.json'
     NAME = 'nativeClusterEntityType'
 
     @classmethod
@@ -99,8 +99,8 @@ class NativeEntityTypeMetadata_2_x(str, Enum):
         return f"{DEF_ENTITY_TYPE_ID_PREFIX}:{cls.VENDOR}:{cls.NSS}:{cls.VERSION}"  # noqa: E501
 
 
-class TKGEntityTypeMetadata_1_x(str, Enum):
-    VENDOR = Vendors.VMWARE.value
+class TKGEntityTypeMetadata_1_0_0(str, Enum):
+    VENDOR = Vendor.VMWARE.value
     NSS = TKG_ENTITY_TYPE_NSS
     VERSION = '1.0.0'
     NAME = "TKG Cluster"
@@ -110,17 +110,17 @@ class TKGEntityTypeMetadata_1_x(str, Enum):
         return f"{DEF_ENTITY_TYPE_ID_PREFIX}:{cls.VENDOR}:{cls.NSS}:{cls.VERSION}"  # noqa: E501
 
 
-# TODO: Remove the usage of MAP_API_VERSION_TO_KEYS
+# TODO: Replace MAP_API_VERSION_TO_KEYS with MAP_RDE_VERSION_TO_ITS_METADATA
 MAP_API_VERSION_TO_KEYS = {
     35.0: {
         DefKey.INTERFACE_VENDOR: CommonInterfaceMetadata.VENDOR,
         DefKey.INTERFACE_NSS: CommonInterfaceMetadata.NSS,
         DefKey.INTERFACE_VERSION: CommonInterfaceMetadata.VERSION,
         DefKey.INTERFACE_NAME: CommonInterfaceMetadata.NAME,
-        DefKey.ENTITY_TYPE_VENDOR: NativeEntityTypeMetadata_1_x.VENDOR,
-        DefKey.ENTITY_TYPE_NSS: NativeEntityTypeMetadata_1_x.NSS,
-        DefKey.ENTITY_TYPE_VERSION: NativeEntityTypeMetadata_1_x.VERSION,
-        DefKey.ENTITY_TYPE_NAME: NativeEntityTypeMetadata_1_x.NAME,
+        DefKey.ENTITY_TYPE_VENDOR: NativeEntityTypeMetadata_1_0_0.VENDOR,
+        DefKey.ENTITY_TYPE_NSS: NativeEntityTypeMetadata_1_0_0.NSS,
+        DefKey.ENTITY_TYPE_VERSION: NativeEntityTypeMetadata_1_0_0.VERSION,
+        DefKey.ENTITY_TYPE_NAME: NativeEntityTypeMetadata_1_0_0.NAME,
         DefKey.ENTITY_TYPE_SCHEMA_VERSION: 'api_v35',
     },
     36.0: {
@@ -128,10 +128,10 @@ MAP_API_VERSION_TO_KEYS = {
         DefKey.INTERFACE_NSS: CommonInterfaceMetadata.NSS,
         DefKey.INTERFACE_VERSION: CommonInterfaceMetadata.VERSION,
         DefKey.INTERFACE_NAME: CommonInterfaceMetadata.NAME,
-        DefKey.ENTITY_TYPE_VENDOR: NativeEntityTypeMetadata_2_x.VENDOR,
-        DefKey.ENTITY_TYPE_NSS: NativeEntityTypeMetadata_2_x.NSS,
-        DefKey.ENTITY_TYPE_VERSION: NativeEntityTypeMetadata_2_x.VERSION,
-        DefKey.ENTITY_TYPE_NAME: NativeEntityTypeMetadata_2_x.NAME,
+        DefKey.ENTITY_TYPE_VENDOR: NativeEntityTypeMetadata_2_0_0.VENDOR,
+        DefKey.ENTITY_TYPE_NSS: NativeEntityTypeMetadata_2_0_0.NSS,
+        DefKey.ENTITY_TYPE_VERSION: NativeEntityTypeMetadata_2_0_0.VERSION,
+        DefKey.ENTITY_TYPE_NAME: NativeEntityTypeMetadata_2_0_0.NAME,
         DefKey.ENTITY_TYPE_SCHEMA_VERSION: 'api_v35',
     }
 }
@@ -143,13 +143,13 @@ class RDEMetadataKey(str, Enum):
     INTERFACES_METADATA_LIST = "interfaces_metadata_list"
 
 
-MAP_RDE_VERSION_TO_DEF_METADATA = {
+MAP_RDE_VERSION_TO_ITS_METADATA = {
     RDESchemaVersions.RDE_1_X: {
-        RDEMetadataKey.ENTITY_TYPE_METADATA: NativeEntityTypeMetadata_1_x,
+        RDEMetadataKey.ENTITY_TYPE_METADATA: NativeEntityTypeMetadata_1_0_0,
         RDEMetadataKey.INTERFACES_METADATA_LIST: [CommonInterfaceMetadata]
     },
     RDESchemaVersions.RDE_2_X: {
-        RDEMetadataKey.ENTITY_TYPE_METADATA: NativeEntityTypeMetadata_1_x,
+        RDEMetadataKey.ENTITY_TYPE_METADATA: NativeEntityTypeMetadata_2_0_0,
         RDEMetadataKey.INTERFACES_METADATA_LIST: [CommonInterfaceMetadata]
     }
 }

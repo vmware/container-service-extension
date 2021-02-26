@@ -53,5 +53,5 @@ def get_rde_version_by_vcd_api_version(vcd_api_version: float) -> str:
     return def_constants.MAP_VCD_API_VERSION_TO_RDE_VERSION[vcd_api_version]  # noqa: E501
 
 
-def get_def_metadata(rde_version: str) -> dict:
-    return def_constants.MAP_RDE_VERSION_TO_DEF_METADATA[rde_version]
+def get_rde_metadata(rde_version: str) -> dict:
+    return def_constants.MAP_RDE_VERSION_TO_ITS_METADATA[rde_version]

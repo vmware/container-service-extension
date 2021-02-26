@@ -499,8 +499,7 @@ class Service(object, metaclass=Singleton):
             msg_update_callback.general(f"Using RDE version: {server_rde_version}")  # noqa: E501
 
             schema_svc = def_schema_svc.DefSchemaService(cloudapi_client)
-            # TODO make use of self._rde_version to load Interface and Type
-            def_metadata_dict: dict = def_utils.get_def_metadata(server_rde_version)  # noqa: E501
+            def_metadata_dict: dict = def_utils.get_rde_metadata(server_rde_version)  # noqa: E501
             entity_type_metadata: Enum = \
                 def_metadata_dict[def_constants.RDEMetadataKey.ENTITY_TYPE_METADATA]  # noqa: E501
             interfaces_metadata_list: List[Enum] = \
