@@ -59,6 +59,10 @@ class DefKey(str, Enum):
 # Defines the RDE versions CSE makes use of.
 # Different RDE versions may be used as CSE
 # is compatible with multiple VCD API versions.
+# NOTE: Value for RDESchemaVersions Enum will be updated on
+# each minor version RDE update.
+# NOTE: New Entry for RDESchemaVersions will be added on
+# each major version RDE change.
 @unique
 class RDESchemaVersions(str, Enum):
     RDE_1_X = '1.0.0'

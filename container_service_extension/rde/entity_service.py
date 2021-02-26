@@ -289,7 +289,6 @@ class DefEntityService():
         """Get native RDE given its name and RDE version.
 
         This function is used commonly by CSE CLI client and CSE server
-
         :param str name: Name of the native cluster.
         :param str version: RDE version
         :rtype: DefEntity
