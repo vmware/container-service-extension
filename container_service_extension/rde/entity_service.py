@@ -2,6 +2,7 @@
 # Copyright (c) 2020 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 
+from enum import Enum
 from dataclasses import asdict
 import functools
 import json
@@ -296,11 +297,12 @@ class DefEntityService():
         if not filters:
             filters = {}
         filters[def_constants.ClusterEntityFilterKey.CLUSTER_NAME.value] = name
-        DefInfo = def_constants.MAP_RDE_VERSION_TO_KEYS[version]
+        native_entity_type_metadata: Enum = \
+            def_utils.get_entity_type_metadata_by_rde_version(version)
         for entity in \
-            self.list_entities_by_entity_type(vendor=DefInfo[def_constants.DEF_CSE_VENDOR],  # noqa: E501
-                                              nss=DefInfo[def_constants.DEF_NATIVE_ENTITY_TYPE_NSS],  # noqa: E501
-                                              version=version,
+            self.list_entities_by_entity_type(vendor=native_entity_type_metadata.VENDOR,  # noqa: E501
+                                              nss=native_entity_type_metadata.NSS,  # noqa: E501
+                                              version=native_entity_type_metadata.VERSION,
                                               filters=filters):
             return entity
 

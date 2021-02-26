@@ -15,11 +15,11 @@ class DefInterface:
     """Provides interface for the defined entity type."""
 
     name: str
-    vendor: str = def_constants.DEF_VMWARE_VENDOR
-    nss: str = def_constants.DEF_VMWARE_INTERFACE_NSS
-    version: str = def_constants.DEF_VMWARE_INTERFACE_VERSION
     id: str = None
     readonly: bool = False
+    vendor: str = def_constants.CommonInterfaceMetadata.VENDOR
+    nss: str = def_constants.CommonInterfaceMetadata.NSS
+    version: str = def_constants.CommonInterfaceMetadata.VERSION
 
     def get_id(self):
         """Get or generate interface id.
@@ -44,12 +44,12 @@ class DefEntityType:
     description: str
     schema: dict
     interfaces: list
-    vendor: str = def_constants.DEF_CSE_VENDOR
-    nss: str = def_constants.DEF_NATIVE_ENTITY_TYPE_NSS
     version: str
     id: str = None
     externalId: str = None
     readonly: bool = False
+    vendor: str = def_constants.Vendors.CSE.value
+    nss: str = def_constants.DEF_NATIVE_ENTITY_TYPE_NSS
 
     def get_id(self):
         """Get or generate entity type id.
