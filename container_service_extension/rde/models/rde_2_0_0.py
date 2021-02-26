@@ -49,7 +49,7 @@ class Distribution:
 
 @dataclass()
 class Settings:
-    network: str = None
+    network: str
     ssh_key: str = None
     rollback_on_failure: bool = True
 
@@ -86,7 +86,7 @@ class CloudProperties:
     ovdc_name: str = None
     ovdc_network_name: str = None
     k8_distribution: Distribution = None
-    ssh_key: str = None
+    ssh_key: str = None  # TODO contemplate the need to keep this attribute
     rollback_on_failure: bool = True
 
     def __init__(self, org_name: str = None, ovdc_name: str = None, ovdc_network_name: str = None,  # noqa: E501
@@ -137,17 +137,17 @@ class ClusterSpec:
     them into the expected class instances.
     """
 
-    control_plane: ControlPlane = None
-    workers: Workers = None
-    nfs: Nfs = None
-    k8_distribution: Distribution = None
-    settings: Settings = None
+    control_plane: ControlPlane
+    workers: Workers
+    nfs: Nfs
+    k8_distribution: Distribution
+    settings: Settings
 
-    def __init__(self, settings: Settings = None, k8_distribution: Distribution = None,  # noqa: E501
+    def __init__(self, settings: Settings, k8_distribution: Distribution = None,  # noqa: E501
                  control_plane: ControlPlane = None, workers: Workers = None,
                  nfs: Nfs = None, **kwargs):
         self.settings = Settings(**settings) \
-            if isinstance(settings, dict) else settings or Settings()
+            if isinstance(settings, dict) else settings
         self.control_plane = ControlPlane(**control_plane) \
             if isinstance(control_plane, dict) else control_plane or ControlPlane()  # noqa: E501
         self.workers = Workers(**workers) \

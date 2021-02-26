@@ -250,7 +250,7 @@
                 },
                 "additionalProperties": true
             },
-            "apiversion": {
+            "api_version": {
                 "type": "string",
                 "description":"Yet to be defined."
             }
