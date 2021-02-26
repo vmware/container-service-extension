@@ -5,7 +5,7 @@
 from dataclasses import dataclass
 from typing import List
 
-from container_service_extension.rde import constants as def_constants
+import container_service_extension.common.constants.shared_constants as shared_constants  # noqa: E501
 from container_service_extension.rde.models.abstractNativeEntity import AbstractNativeEntity  # noqa: E501
 
 
@@ -180,11 +180,11 @@ class NativeEntity(AbstractNativeEntity):
     metadata: Metadata
     spec: ClusterSpec
     status: Status = Status()
-    kind: str = def_constants.DEF_NATIVE_ENTITY_TYPE_NSS
+    kind: str = shared_constants.ClusterEntityKind.NATIVE.value
     api_version: str = ''
 
     def __init__(self, metadata: Metadata, spec: ClusterSpec, status=Status(),
-                 kind: str = def_constants.DEF_VMWARE_INTERFACE_NSS,
+                 kind: str = shared_constants.ClusterEntityKind.NATIVE.value,
                  api_version: str = ''):
 
         self.metadata = Metadata(**metadata) \

@@ -11,6 +11,7 @@ import semantic_version
 import container_service_extension.common.constants.server_constants as server_constants  # noqa: E501
 import container_service_extension.common.constants.shared_constants as shared_constants  # noqa: E501
 import container_service_extension.common.utils.core_utils as utils
+import container_service_extension.rde.models.common_models as common_models
 
 
 def get_installed_cse_version():
@@ -52,6 +53,18 @@ def get_rde_version_in_use() -> str:
     # is installed
     config = get_server_runtime_config()
     return config['service']['rde_version_in_use']
+
+
+def get_registered_def_entity_type() -> common_models.DefEntityType:
+    """Fetch the native cluster entity type loaded during server startup."""
+    from container_service_extension.server.service import Service
+    return Service().get_native_cluster_entity_type()
+
+
+def get_registered_def_interface() -> common_models.DefInterface:
+    """Fetch the native cluster interface loaded during server startup."""
+    from container_service_extension.server.service import Service
+    return Service().get_kubernetes_interface()
 
 
 def get_default_k8_distribution():

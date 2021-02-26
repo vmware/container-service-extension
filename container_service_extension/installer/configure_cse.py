@@ -55,8 +55,8 @@ from container_service_extension.logging.logger import SERVER_CLOUDAPI_WIRE_LOGG
 from container_service_extension.logging.logger import SERVER_NSXT_WIRE_LOGGER
 from container_service_extension.mqi.mqtt_extension_manager import \
     MQTTExtensionManager
+import container_service_extension.rde.common.entity_service as def_entity_svc
 import container_service_extension.rde.constants as def_constants
-import container_service_extension.rde.entity_service as def_entity_svc
 import container_service_extension.rde.models.common_models as common_models
 import container_service_extension.rde.models.rde_1_0_0 as rde_1_0_0
 import container_service_extension.rde.schema_service as def_schema_svc
@@ -761,6 +761,7 @@ def _register_def_schema(client: Client,
                                                                     logger_wire=logger_wire) # noqa: E501
     schema_file = None
     try:
+        # TODO change the code to use MAP_RDE_VERSION_TO_KEYS
         def_utils.raise_error_if_def_not_supported(cloudapi_client)
         schema_svc = def_schema_svc.DefSchemaService(cloudapi_client)
         keys_map = def_constants.MAP_API_VERSION_TO_KEYS[float(client.get_api_version())] # noqa: E501
@@ -2409,7 +2410,8 @@ def _create_def_entity_for_existing_clusters(
         entity_svc.create_entity(native_entity_type.id, entity=def_entity,
                                  tenant_org_context=org_id)
 
-        def_entity = entity_svc.get_native_entity_by_name(cluster['name'])
+        def_entity = entity_svc.get_native_rde_by_name_and_rde_version(
+            cluster['name'], '1.0.0')
         def_entity_id = def_entity.id
         def_entity.externalId = cluster['vapp_href']
 
