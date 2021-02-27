@@ -43,19 +43,6 @@ DEF_NATIVE_ENTITY_TYPE_RIGHT_BUNDLE = \
     f'{Vendor.CSE.value}:{Nss.NATIVE_ClUSTER.value} Entitlement'
 
 
-@unique
-class DefKey(str, Enum):
-    INTERFACE_VENDOR = 'interface_vendor'
-    INTERFACE_NSS = 'interface_nss'
-    INTERFACE_VERSION = 'interface_version'
-    INTERFACE_NAME = 'interface_name'
-    ENTITY_TYPE_VENDOR = 'entity_type_vendor'
-    ENTITY_TYPE_NAME = 'entity_type_name'
-    ENTITY_TYPE_NSS = 'entity_type_nss'
-    ENTITY_TYPE_VERSION = 'entity_type_version'
-    ENTITY_TYPE_SCHEMA_VERSION = 'schema_version'
-
-
 # Defines the RDE versions CSE makes use of.
 # Different RDE versions may be used as CSE
 # is compatible with multiple VCD API versions.
