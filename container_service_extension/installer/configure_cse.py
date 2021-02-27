@@ -788,7 +788,7 @@ def _register_def_schema(client: Client,
         for interface_metadata in interfaces_metadata_list:
             try:
                 schema_svc.get_interface(interface_metadata.get_id())
-                if interface_metadata is def_constants.CommonInterfaceMetadata:
+                if interface_metadata == def_constants.CommonInterfaceMetadata:
                     msg = f"Built in kubernetes interface {interface_metadata.NAME} present"  # noqa: E501
                 else:
                     msg = f"Skipping creation of interface {interface_metadata.NAME}." \
@@ -797,10 +797,10 @@ def _register_def_schema(client: Client,
                 INSTALL_LOGGER.info(msg)
             except cse_exception.DefSchemaServiceError:
                 # If built-in interface is missing, raise an Exception.
-                if interface_metadata is def_constants.CommonInterfaceMetadata:
+                if interface_metadata == def_constants.CommonInterfaceMetadata:
                     msg = f"Built in interface {interface_metadata.NAME} not present."  # noqa: E501
                     msg_update_callback.error(msg)
-                    INSTALL_LOGGER(msg)
+                    INSTALL_LOGGER.error(msg)
                     raise
                 # Create other interfaces if not present
                 interface: common_models.DefInterface = \
