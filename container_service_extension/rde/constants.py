@@ -43,19 +43,6 @@ DEF_NATIVE_ENTITY_TYPE_RIGHT_BUNDLE = \
     f'{Vendor.CSE.value}:{Nss.NATIVE_ClUSTER.value} Entitlement'
 
 
-@unique
-class DefKey(str, Enum):
-    INTERFACE_VENDOR = 'interface_vendor'
-    INTERFACE_NSS = 'interface_nss'
-    INTERFACE_VERSION = 'interface_version'
-    INTERFACE_NAME = 'interface_name'
-    ENTITY_TYPE_VENDOR = 'entity_type_vendor'
-    ENTITY_TYPE_NAME = 'entity_type_name'
-    ENTITY_TYPE_NSS = 'entity_type_nss'
-    ENTITY_TYPE_VERSION = 'entity_type_version'
-    ENTITY_TYPE_SCHEMA_VERSION = 'schema_version'
-
-
 # Defines the RDE version CSE server uses at runtime.
 # RDE version used by a given CSE version can differ based on the VCD
 # environment it is configured with.
@@ -89,6 +76,7 @@ class NativeEntityTypeMetadata_1_0_0(str, Enum):
     VENDOR = Vendor.CSE.value
     NSS = DEF_NATIVE_ENTITY_TYPE_NSS
     VERSION = '1.0.0'
+    SCHEMA_FILE = 'schema_1_0_0.json'
     NAME = 'nativeClusterEntityType'
 
     @classmethod
@@ -117,33 +105,6 @@ class TKGEntityTypeMetadata_1_0_0(str, Enum):
     @classmethod
     def get_id(cls):
         return f"{DEF_ENTITY_TYPE_ID_PREFIX}:{cls.VENDOR}:{cls.NSS}:{cls.VERSION}"  # noqa: E501
-
-
-# TODO: Replace MAP_API_VERSION_TO_KEYS with MAP_RDE_VERSION_TO_ITS_METADATA
-MAP_API_VERSION_TO_KEYS = {
-    35.0: {
-        DefKey.INTERFACE_VENDOR: CommonInterfaceMetadata.VENDOR,
-        DefKey.INTERFACE_NSS: CommonInterfaceMetadata.NSS,
-        DefKey.INTERFACE_VERSION: CommonInterfaceMetadata.VERSION,
-        DefKey.INTERFACE_NAME: CommonInterfaceMetadata.NAME,
-        DefKey.ENTITY_TYPE_VENDOR: NativeEntityTypeMetadata_1_0_0.VENDOR,
-        DefKey.ENTITY_TYPE_NSS: NativeEntityTypeMetadata_1_0_0.NSS,
-        DefKey.ENTITY_TYPE_VERSION: NativeEntityTypeMetadata_1_0_0.VERSION,
-        DefKey.ENTITY_TYPE_NAME: NativeEntityTypeMetadata_1_0_0.NAME,
-        DefKey.ENTITY_TYPE_SCHEMA_VERSION: 'api_v35',
-    },
-    36.0: {
-        DefKey.INTERFACE_VENDOR: CommonInterfaceMetadata.VENDOR,
-        DefKey.INTERFACE_NSS: CommonInterfaceMetadata.NSS,
-        DefKey.INTERFACE_VERSION: CommonInterfaceMetadata.VERSION,
-        DefKey.INTERFACE_NAME: CommonInterfaceMetadata.NAME,
-        DefKey.ENTITY_TYPE_VENDOR: NativeEntityTypeMetadata_2_0_0.VENDOR,
-        DefKey.ENTITY_TYPE_NSS: NativeEntityTypeMetadata_2_0_0.NSS,
-        DefKey.ENTITY_TYPE_VERSION: NativeEntityTypeMetadata_2_0_0.VERSION,
-        DefKey.ENTITY_TYPE_NAME: NativeEntityTypeMetadata_2_0_0.NAME,
-        DefKey.ENTITY_TYPE_SCHEMA_VERSION: 'api_v35',
-    }
-}
 
 
 @unique
