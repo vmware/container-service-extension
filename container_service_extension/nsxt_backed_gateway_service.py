@@ -9,10 +9,13 @@ import pyvcloud.vcd.client as vcd_client
 import pyvcloud.vcd.gateway as vcd_gateway
 
 import container_service_extension.cloudapi.constants as cloudapi_constants
+from container_service_extension.logger import SERVER_LOGGER
 import container_service_extension.pyvcloud_utils as pyvcloud_utils
 import container_service_extension.server_constants as server_constants
 from container_service_extension.server_constants import NsxtGatewayRequestKey
+from container_service_extension.server_constants import NsxtNATRuleKey
 import container_service_extension.shared_constants as shared_constants
+from container_service_extension.shared_constants import PaginationKey
 import container_service_extension.utils as server_utils
 
 
@@ -116,9 +119,13 @@ class NsxtBackedGatewayService:
         gateway_id = server_utils.extract_id_from_href(self._gateway.href)
         self._gateway_urn = f'{server_constants.GATEWAY_URN_PREFIX}:' \
                             f'{gateway_id}'
-        self._gateway_relative_path = \
+        gateway_relative_path = \
             f'{cloudapi_constants.CloudApiResource.EDGE_GATEWAYS}/' \
             f'{self._gateway_urn}'
+        self._gateway_relative_path = gateway_relative_path
+        self._nat_rules_relative_path = \
+            f'{gateway_relative_path}/{server_constants.NATS_PATH_FRAGMENT}/' \
+            f'{server_constants.RULES_PATH_FRAGMENT}'
 
     def quick_ip_allocation(self):
         """Allocate one ip using the edge quick ip allocation feature."""
@@ -202,14 +209,10 @@ class NsxtBackedGatewayService:
             server_constants.NsxtNATRuleKey.DNAT_EXTERNAL_PORT: dnat_external_port  # noqa: E501
         }
 
-        nat_rules_relative_path = \
-            f'{cloudapi_constants.CloudApiResource.EDGE_GATEWAYS}/' \
-            f'{self._gateway_urn}/{server_constants.NATS_PATH_FRAGMENT}/' \
-            f'{server_constants.RULES_PATH_FRAGMENT}'
         self._cloudapi_client.do_request(
             method=shared_constants.RequestMethod.POST,
             cloudapi_version=cloudapi_constants.CloudApiVersion.VERSION_1_0_0,
-            resource_url_relative_path=nat_rules_relative_path,
+            resource_url_relative_path=self._nat_rules_relative_path,
             payload=post_body,
             content_type='application/json')
 
@@ -240,3 +243,57 @@ class NsxtBackedGatewayService:
             available_ip_count = available_ip_value[NsxtGatewayRequestKey.TOTAL_IP_COUNT]  # noqa: E501
             network_to_available_ip_dict[(gateway_ip, prefix_length)] = int(available_ip_count)  # noqa: E501
         return network_to_available_ip_dict
+
+    def delete_dnat_rule(self, rule_name):
+        nat_rule_id = self._get_dnat_rule_id(rule_name)
+        if not nat_rule_id:
+            return
+
+        try:
+            self._cloudapi_client.do_request(
+                method=shared_constants.RequestMethod.DELETE,
+                cloudapi_version=cloudapi_constants.CloudApiVersion.VERSION_1_0_0,  # noqa: E501
+                resource_url_relative_path=f"{self._nat_rules_relative_path}/{nat_rule_id}")  # noqa: E501
+        except Exception as err:
+            SERVER_LOGGER.info(f'Failed to delete dnat rule: {str(err)}')
+            return
+
+    def _get_dnat_rule_id(self, rule_name):
+        try:
+            nat_rules = self._list_nat_rules()
+        except Exception:
+            return None
+
+        for nat_rule in nat_rules:
+            if nat_rule[NsxtNATRuleKey.NAME] == rule_name:
+                return nat_rule[NsxtNATRuleKey.ID]
+        return None
+
+    def _get_nat_rules_response(self,
+                                page_num=server_constants.DEFAULT_FIRST_PAGE,
+                                page_size=server_constants.NAT_DEFAULT_PAGE_SIZE):  # noqa: E501
+        nat_rules_query_path = f"{self._nat_rules_relative_path}?" \
+                               f"{PaginationKey.PAGE_NUMBER}={page_num}" \
+                               f"&{PaginationKey.PAGE_SIZE}={page_size}"
+        return self._cloudapi_client.do_request(
+            method=shared_constants.RequestMethod.GET,
+            cloudapi_version=cloudapi_constants.CloudApiVersion.VERSION_1_0_0,
+            resource_url_relative_path=nat_rules_query_path)
+
+    def _list_nat_rules(self):
+        """List nat rule dictionaries.
+
+        :return: Generator of nat rule dictionaries.
+        :rtype: Generator[dict]
+        """
+        page_num = 0
+        while True:
+            page_num += 1
+            response_body = self._get_nat_rules_response(
+                page_num=page_num,
+                page_size=server_constants.NAT_DEFAULT_PAGE_SIZE)
+            values = response_body[PaginationKey.VALUES]
+            if len(values) == 0:
+                break
+            for nat_rule in values:
+                yield nat_rule
