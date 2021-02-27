@@ -1,10 +1,12 @@
 # container-service-extension
 # Copyright (c) 2017 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
+from enum import Enum
 import importlib
 import importlib.resources as pkg_resources
 import json
 import time
+from typing import List
 
 import pika
 import pyvcloud.vcd.api_extension as api_extension
@@ -759,49 +761,87 @@ def _register_def_schema(client: Client,
     cloudapi_client = vcd_utils.get_cloudapi_client_from_vcd_client(client=client, # noqa: E501
                                                                     logger_debug=INSTALL_LOGGER, # noqa: E501
                                                                     logger_wire=logger_wire) # noqa: E501
+    # TODO update CSE install to create client from max_vcd_api_version
     schema_file = None
+    vcd_supported_api_versions = \
+        set(client.get_supported_versions_list())
+    cse_supported_api_versions = \
+        set(server_constants.SUPPORTED_VCD_API_VERSIONS)
+    common_supported_api_versions = \
+        list(cse_supported_api_versions.intersection(vcd_supported_api_versions))  # noqa: E501
+    max_vcd_api_version_supported = \
+        max([float(x) for x in common_supported_api_versions])
     try:
-        # TODO change the code to use MAP_RDE_VERSION_TO_KEYS
         def_utils.raise_error_if_def_not_supported(cloudapi_client)
         schema_svc = def_schema_svc.DefSchemaService(cloudapi_client)
-        keys_map = def_constants.MAP_API_VERSION_TO_KEYS[float(client.get_api_version())] # noqa: E501
-        kubernetes_interface = common_models.DefInterface(
-            name=keys_map[def_constants.DefKey.INTERFACE_NAME],
-            vendor=keys_map[def_constants.DefKey.INTERFACE_VENDOR],
-            nss=keys_map[def_constants.DefKey.INTERFACE_NSS],
-            version=keys_map[def_constants.DefKey.INTERFACE_VERSION],
-            readonly=False)
-        try:
-            # k8s interface should always be present
-            schema_svc.get_interface(kubernetes_interface.get_id())
-        except cse_exception.DefSchemaServiceError:
-            msg = "Failed to obtain built-in defined entity interface " \
-                  f"{keys_map[def_constants.DefKey.INTERFACE_NAME]}"
-            msg_update_callback.error(msg)
-            INSTALL_LOGGER.error(msg)
-            raise
+        rde_version: str = \
+            def_utils.get_rde_version_by_vcd_api_version(
+                max_vcd_api_version_supported)
 
-        schema_module = importlib.import_module(
-            f'{def_constants.DEF_SCHEMA_DIRECTORY}.{keys_map[def_constants.DefKey.ENTITY_TYPE_SCHEMA_VERSION]}') # noqa: E501
-        schema_file = pkg_resources.open_text(schema_module, def_constants.DEF_ENTITY_TYPE_SCHEMA_FILE) # noqa: E501
-        native_entity_type = common_models.DefEntityType(
-            name=keys_map[def_constants.DefKey.ENTITY_TYPE_NAME],
-            description='',
-            vendor=keys_map[def_constants.DefKey.ENTITY_TYPE_VENDOR],
-            nss=keys_map[def_constants.DefKey.ENTITY_TYPE_NSS],
-            version=keys_map[def_constants.DefKey.ENTITY_TYPE_VERSION],
-            schema=json.load(schema_file),
-            interfaces=[kubernetes_interface.get_id()],
-            readonly=False)
+        msg_update_callback.general(f"Using RDE version: {rde_version}")
+        # Obtain RDE metadata needed to initialize CSE
+        rde_metadata: dict = def_utils.get_rde_metadata(rde_version)
 
+        # Handle Interfaces creation.
+        interfaces_metadata_list: List[Enum] = \
+            rde_metadata[def_constants.RDEMetadataKey.INTERFACES_METADATA_LIST]
+        for interface_metadata in interfaces_metadata_list:
+            try:
+                schema_svc.get_interface(interface_metadata.get_id())
+                if interface_metadata is def_constants.CommonInterfaceMetadata:
+                    msg = f"Built in kubernetes interface {interface_metadata.NAME} present"  # noqa: E501
+                else:
+                    msg = f"Skipping creation of interface {interface_metadata.NAME}." \
+                          "Interface already exists."  # noqa: E501
+                msg_update_callback.general(msg)
+                INSTALL_LOGGER.info(msg)
+            except cse_exception.DefSchemaServiceError:
+                # If built-in interface is missing, raise an Exception.
+                if interface_metadata is def_constants.CommonInterfaceMetadata:
+                    msg = f"Built in interface {interface_metadata.NAME} not present."  # noqa: E501
+                    msg_update_callback.error(msg)
+                    INSTALL_LOGGER(msg)
+                    raise
+                # Create other interfaces if not present
+                interface: common_models.DefInterface = \
+                    common_models.DefInterface(
+                        name=interface_metadata.NAME,
+                        vendor=interface_metadata.VENDOR,
+                        nss=interface_metadata.NSS,
+                        version=interface_metadata.VERSION,
+                        readonly=False)
+                schema_svc.create_interface(interface)
+                msg = f"Successfully registered interface {interface.name}."
+                # TODO define behaviors on the interfaces.
+
+        # Handle Native Entity type creation.
+        entity_type_metadata: Enum = \
+            rde_metadata[def_constants.RDEMetadataKey.ENTITY_TYPE_METADATA]
+        schema_module = importlib.import_module(def_constants.DEF_SCHEMA_DIRECTORY) # noqa: E501
+        schema_file = pkg_resources.open_text(schema_module,
+                                              entity_type_metadata.SCHEMA_FILE) # noqa: E501
         msg = ""
         try:
-            schema_svc.get_entity_type(native_entity_type.get_id())
-            msg = "Skipping creation of Defined Entity Type. Defined Entity Type already exists." # noqa: E501
+            schema_svc.get_entity_type(entity_type_metadata.get_id())
+            msg = "Skipping creation of Native Entity Type. Native Entity Type already exists." # noqa: E501
         except cse_exception.DefSchemaServiceError:
             # TODO handle this part only if the entity type was not found
+            # Entity Type can be use multiple interfaces.
+            # Get the list of interfaces used.
+            interfaces_id_list = \
+                [interface_metadata.get_id() for interface_metadata in interfaces_metadata_list]  # noqa: E501
+            native_entity_type: common_models.DefEntityType = \
+                common_models.DefEntityType(
+                    name=entity_type_metadata.NAME,
+                    description='',
+                    vendor=entity_type_metadata.VENDOR,
+                    nss=entity_type_metadata.NSS,
+                    version=entity_type_metadata.VERSION,
+                    schema=json.load(schema_file),
+                    interfaces=interfaces_id_list,
+                    readonly=False)
             native_entity_type = schema_svc.create_entity_type(native_entity_type)  # noqa: E501
-            msg = "Successfully registered defined entity type\n"
+            msg = f"Successfully registered Native entity type {native_entity_type.name}\n"  # noqa: E501
 
             entity_svc = def_entity_svc.DefEntityService(cloudapi_client)
             entity_svc.create_acl_for_entity(
@@ -810,6 +850,8 @@ def _register_def_schema(client: Client,
                 access_level_id=server_constants.AclAccessLevelId.AccessLevelReadWrite, # noqa: E501
                 member_id=server_constants.AclMemberId.SystemOrgId)
             msg += "Successfully added ReadWrite ACL for native defined entity to System Org" # noqa: E501
+
+        # TODO override Config behaviors
 
         msg_update_callback.general(msg)
         INSTALL_LOGGER.info(msg)
@@ -2295,6 +2337,7 @@ def _create_def_entity_for_existing_clusters(
         is_tkg_plus_enabled,
         msg_update_callback=utils.NullPrinter(),
         log_wire=False):
+    # TODO handle def enitty chnages when upgrading from CSE 3.0
     msg = "Making old CSE k8s clusters compatible with CSE 3.0"
     msg_update_callback.info(msg)
     INSTALL_LOGGER.info(msg)
@@ -2307,12 +2350,11 @@ def _create_def_entity_for_existing_clusters(
     entity_svc = def_entity_svc.DefEntityService(cloudapi_client)
 
     schema_svc = def_schema_svc.DefSchemaService(cloudapi_client)
-    keys_map = def_constants.MAP_API_VERSION_TO_KEYS[float(client.get_api_version())] # noqa: E501
-    entity_type_id = def_utils.generate_entity_type_id(
-        vendor=keys_map[def_constants.DefKey.ENTITY_TYPE_VENDOR],
-        nss=keys_map[def_constants.DefKey.ENTITY_TYPE_NSS],
-        version=keys_map[def_constants.DefKey.ENTITY_TYPE_VERSION])
-    native_entity_type = schema_svc.get_entity_type(entity_type_id)
+    server_rde_version: str = \
+        def_utils.get_rde_version_by_vcd_api_version(float(client.get_api_version()))  # noqa: E501
+    rde_metadata: dict = def_utils.get_rde_metadata(server_rde_version)
+    entity_type_metadata = rde_metadata[def_constants.RDEMetadataKey.ENTITY_TYPE_METADATA]  # noqa: E501
+    native_entity_type = schema_svc.get_entity_type(entity_type_metadata.get_id())  # noqa: E501
 
     for cluster in cse_clusters:
         msg = f"Processing cluster '{cluster['name']}'"
