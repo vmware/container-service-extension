@@ -3,7 +3,6 @@
 # SPDX-License-Identifier: BSD-2-Clause
 
 """Constants used for interaction with defined entity framework."""
-
 from enum import Enum
 from enum import unique
 
@@ -20,10 +19,8 @@ DEF_NATIVE_ENTITY_TYPE_NSS = 'nativeCluster'
 DEF_ENTITY_TYPE_ID_PREFIX = 'urn:vcloud:type'
 DEF_API_MIN_VERSION = 35.0
 DEF_SCHEMA_DIRECTORY = 'cse_def_schema'
-DEF_ENTITY_TYPE_SCHEMA_FILE = 'schema.json'
 DEF_ERROR_MESSAGE_KEY = 'message'
 DEF_RESOLVED_STATE = 'RESOLVED'
-TKG_ENTITY_TYPE_NSS = 'tkgcluster'
 
 
 @unique
@@ -37,6 +34,12 @@ class Nss(str, Enum):
     KUBERNETES = 'k8s'
     NATIVE_ClUSTER = 'nativeCluster'
     TKG = 'tkgcluster'
+
+
+@unique
+class SchemaFile(str, Enum):
+    SCHEMA_1_0_0 = 'schema_1_0_0.json'
+    SCHEMA_2_0_0 = 'schema_2_0_0.json'
 
 
 DEF_NATIVE_ENTITY_TYPE_RIGHT_BUNDLE = \
@@ -54,77 +57,18 @@ DEF_NATIVE_ENTITY_TYPE_RIGHT_BUNDLE = \
 # 2. A New Entry must be added on each major version increment of
 # RDE, example RDE_3_X = '3.0.0'
 #
-# Any updates to this enum may also require updating MAP_RDE_VERSION_TO_ITS_METADATA  # noqa: E501
+# Any updates to this enum may also require updating common_models.MAP_RDE_VERSION_TO_ITS_METADATA  # noqa: E501
 @unique
 class RuntimeRDEVersion(str, Enum):
     RDE_1_X = '1.0.0'
     RDE_2_X = '2.0.0'
 
 
-class CommonInterfaceMetadata(str, Enum):
-    VENDOR = Vendor.VMWARE.value
-    NSS = Nss.KUBERNETES.value
-    VERSION = '1.0.0'
-    NAME = "Kubernetes"
-
-    @classmethod
-    def get_id(cls):
-        return f"{DEF_INTERFACE_ID_PREFIX}:{cls.VENDOR}:{cls.NSS}:{cls.VERSION}"  # noqa: E501
-
-
-class NativeEntityTypeMetadata_1_0_0(str, Enum):
-    VENDOR = Vendor.CSE.value
-    NSS = DEF_NATIVE_ENTITY_TYPE_NSS
-    VERSION = '1.0.0'
-    SCHEMA_FILE = 'schema_1_0_0.json'
-    NAME = 'nativeClusterEntityType'
-
-    @classmethod
-    def get_id(cls):
-        return f"{DEF_ENTITY_TYPE_ID_PREFIX}:{cls.VENDOR}:{cls.NSS}:{cls.VERSION}"  # noqa: E501
-
-
-class NativeEntityTypeMetadata_2_0_0(str, Enum):
-    VENDOR = Vendor.CSE.value
-    NSS = DEF_NATIVE_ENTITY_TYPE_NSS
-    VERSION = '2.0.0'
-    SCHEMA_FILE = 'schema_2_0_0.json'
-    NAME = 'nativeClusterEntityType'
-
-    @classmethod
-    def get_id(cls):
-        return f"{DEF_ENTITY_TYPE_ID_PREFIX}:{cls.VENDOR}:{cls.NSS}:{cls.VERSION}"  # noqa: E501
-
-
-class TKGEntityTypeMetadata_1_0_0(str, Enum):
-    VENDOR = Vendor.VMWARE.value
-    NSS = TKG_ENTITY_TYPE_NSS
-    VERSION = '1.0.0'
-    NAME = "TKG Cluster"
-
-    @classmethod
-    def get_id(cls):
-        return f"{DEF_ENTITY_TYPE_ID_PREFIX}:{cls.VENDOR}:{cls.NSS}:{cls.VERSION}"  # noqa: E501
-
-
 @unique
 class RDEMetadataKey(str, Enum):
-    ENTITY_TYPE_METADATA = 'entity_type_metadata'
-    INTERFACES_METADATA_LIST = "interfaces_metadata_list"
+    ENTITY_TYPE = 'entity_type_metadata'
+    INTERFACES = "interfaces_metadata_list"
 
-
-# Key: Represents the Runtime RDE version used by CSE server for any given enviroment.  # noqa: E501
-# Value: Interface and Entity type metadata of the specified RDE version.
-MAP_RDE_VERSION_TO_ITS_METADATA = {
-    RuntimeRDEVersion.RDE_1_X: {
-        RDEMetadataKey.ENTITY_TYPE_METADATA: NativeEntityTypeMetadata_1_0_0,
-        RDEMetadataKey.INTERFACES_METADATA_LIST: [CommonInterfaceMetadata]
-    },
-    RuntimeRDEVersion.RDE_2_X: {
-        RDEMetadataKey.ENTITY_TYPE_METADATA: NativeEntityTypeMetadata_2_0_0,
-        RDEMetadataKey.INTERFACES_METADATA_LIST: [CommonInterfaceMetadata]
-    }
-}
 
 # Dictionary indicating RDE version to use for a given VCD API version.
 # Based on the VCD-version CSE server is configured with,

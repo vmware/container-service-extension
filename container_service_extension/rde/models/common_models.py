@@ -2,12 +2,19 @@
 # Copyright (c) 2021 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 from dataclasses import asdict, dataclass
+from enum import Enum
+from enum import unique
 from typing import List
 
+
 from container_service_extension.common.constants import shared_constants as shared_constants  # noqa: E501
-from container_service_extension.rde import constants as def_constants, utils as def_utils  # noqa: E501
+from container_service_extension.rde import utils as def_utils
+from container_service_extension.rde.constants import \
+    DEF_ENTITY_TYPE_ID_PREFIX, DEF_INTERFACE_ID_PREFIX, RDEMetadataKey, \
+    RuntimeRDEVersion, SchemaFile, Vendor, Nss
 from container_service_extension.rde.models.abstractNativeEntity import AbstractNativeEntity  # noqa: E501
 from container_service_extension.rde.models.rde_factory import get_rde_model
+from container_service_extension.rde.utils import load_rde_schema
 
 
 @dataclass(frozen=True)
@@ -17,9 +24,9 @@ class DefInterface:
     name: str
     id: str = None
     readonly: bool = False
-    vendor: str = def_constants.CommonInterfaceMetadata.VENDOR
-    nss: str = def_constants.CommonInterfaceMetadata.NSS
-    version: str = def_constants.CommonInterfaceMetadata.VERSION
+    vendor: str = Vendor.CSE.value
+    nss: str = Nss.KUBERNETES.value
+    version: str = '1.0.0'
 
     def get_id(self):
         """Get or generate interface id.
@@ -48,8 +55,8 @@ class DefEntityType:
     id: str = None
     externalId: str = None
     readonly: bool = False
-    vendor: str = def_constants.Vendor.CSE.value
-    nss: str = def_constants.DEF_NATIVE_ENTITY_TYPE_NSS
+    vendor: str = Vendor.CSE.value
+    nss: str = Nss.NATIVE_ClUSTER.value
 
     def get_id(self):
         """Get or generate entity type id.
@@ -244,3 +251,60 @@ class TKGEntity:
             if isinstance(status, dict) else status
         self.metadata = TKGMetadata(**metadata) \
             if isinstance(metadata, dict) else metadata
+
+
+@unique
+class K8Interface(Enum):
+    VCD_INTERFACE = DefInterface(name='Kubernetes', vendor=Vendor.VMWARE.value,
+                                 nss=Nss.KUBERNETES.value, version='1.0.0',
+                                 id=f"{DEF_INTERFACE_ID_PREFIX}:{Vendor.VMWARE.value}:{Nss.KUBERNETES.value}:1.0.0")  # noqa: E501
+    CSE_INTERFACE = DefInterface(name='CSE_K8s_interface', vendor=Vendor.CSE.value,  # noqa: E501
+                                 nss=Nss.KUBERNETES.value, version='1.0.0',
+                                 id=f"{DEF_INTERFACE_ID_PREFIX}:{Vendor.CSE.value}:{Nss.KUBERNETES.value}:1.0.0")  # noqa: E501
+
+
+@unique
+class EntityType(Enum):
+    NATIVE_ENTITY_TYPE_1_0_0 = DefEntityType(name='nativeClusterEntityType',
+                                             id=f"{DEF_ENTITY_TYPE_ID_PREFIX}:{Vendor.CSE.value}:{Nss.NATIVE_ClUSTER}:1.0.0",  # noqa: E501
+                                             schema=load_rde_schema(SchemaFile.SCHEMA_1_0_0),  # noqa: E501
+                                             interfaces=[K8Interface.VCD_INTERFACE.value.id],  # noqa: E501
+                                             version='1.0.0',
+                                             vendor=Vendor.CSE.value,
+                                             nss=Nss.NATIVE_ClUSTER.value,
+                                             description='')
+    NATIVE_ENTITY_TYPE_2_0_0 = DefEntityType(name='nativeClusterEntityType',
+                                             id=f"{DEF_ENTITY_TYPE_ID_PREFIX}:{Vendor.CSE.value}:{Nss.NATIVE_ClUSTER}:2.0.0",  # noqa: E501
+                                             schema=load_rde_schema(
+                                                 SchemaFile.SCHEMA_2_0_0),
+                                             interfaces=[
+                                                 K8Interface.VCD_INTERFACE.value.id,  # noqa: E501
+                                                 K8Interface.CSE_INTERFACE.value.id],  # noqa: E501
+                                             version='2.0.0',
+                                             vendor=Vendor.CSE.value,
+                                             nss=Nss.NATIVE_ClUSTER.value,
+                                             description='')
+    TKG_ENTITY_TYPE_1_0_0 = DefEntityType(name='TKG Cluster',
+                                          id=f"{DEF_ENTITY_TYPE_ID_PREFIX}:{Vendor.VMWARE.value}:{Nss.TKG}:1.0.0",  # noqa: E501
+                                          schema='',
+                                          interfaces=[K8Interface.VCD_INTERFACE.value.id],  # noqa: E501
+                                          version='1.0.0',
+                                          vendor=Vendor.VMWARE.value,
+                                          nss=Nss.TKG.value,
+                                          description='')
+
+
+# Key: Represents the Runtime RDE version used by CSE server for any given environment.  # noqa: E501
+# Value: Interface and Entity type metadata of the specified RDE version.
+MAP_RDE_VERSION_TO_ITS_METADATA = {
+    RuntimeRDEVersion.RDE_1_X: {
+        RDEMetadataKey.ENTITY_TYPE: EntityType.NATIVE_ENTITY_TYPE_1_0_0.value,
+        RDEMetadataKey.INTERFACES: [K8Interface.VCD_INTERFACE.value]
+    },
+    RuntimeRDEVersion.RDE_2_X: {
+        RDEMetadataKey.ENTITY_TYPE: EntityType.NATIVE_ENTITY_TYPE_2_0_0.value,
+        RDEMetadataKey.INTERFACES: [K8Interface.VCD_INTERFACE.value,
+                                    K8Interface.CSE_INTERFACE.value]
+    }
+}
+

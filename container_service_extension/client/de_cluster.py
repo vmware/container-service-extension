@@ -21,7 +21,6 @@ import container_service_extension.common.utils.pyvcloud_utils as vcd_utils
 import container_service_extension.exception.exceptions as cse_exceptions
 import container_service_extension.logging.logger as logger
 import container_service_extension.rde.common.entity_service as def_entity_svc
-from container_service_extension.rde.constants import CommonInterfaceMetadata
 import container_service_extension.rde.models.common_models as common_models
 import container_service_extension.rde.models.rde_1_0_0 as rde_1_0_0
 import container_service_extension.rde.utils as def_utils
@@ -92,9 +91,9 @@ class DECluster:
             try:
                 while has_more_results:
                     clusters_page_results = entity_svc.get_all_entities_per_page_by_interface(  # noqa: E501
-                        vendor=CommonInterfaceMetadata.VENDOR,
-                        nss=CommonInterfaceMetadata.NSS,
-                        version=CommonInterfaceMetadata.VERSION,
+                        vendor=common_models.K8Interface.VCD_INTERFACE.value.vendor,  # noqa: E501
+                        nss=common_models.K8Interface.VCD_INTERFACE.value.nss,
+                        version=common_models.K8Interface.VCD_INTERFACE.value.version,  # noqa: E501
                         filters=filters,
                         page_number=page_number,
                         page_size=page_size)

@@ -2,8 +2,13 @@
 # Copyright (c) 2021 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 from dataclasses import dataclass
+from enum import Enum
+from enum import unique
 
 from container_service_extension.common.constants.server_constants import AclAccessLevelId, ExtensionType, MQTT_EXTENSION_URN   # noqa: E501
+
+KUBE_CONFIG_BEHAVIOR_INTERFACE_ID = 'urn:vcloud:behavior-interface:createKubeConfig:vmware:k8s:1.0.0'  # noqa: E501
+KUBE_CONFIG_BEHAVIOR_INTERFACE_NAME = 'createKubeConfig'
 
 
 @dataclass()
@@ -57,3 +62,13 @@ class Behavior:
 class BehaviorAclEntry:
     behaviorId: str
     accessLevelId: AclAccessLevelId
+
+
+@unique
+class BehaviorOperation(Behavior, Enum):
+    CREATE_CLUSTER = Behavior(name='Create_cluster', description='Creates native cluster')  # noqa: E501
+    UPDATE_CLUSTER = Behavior(name='Update_cluster', description='Updates native cluster')  # noqa: E501
+    DELETE_CLUSTER = Behavior(name='Delete_cluster', description='Deletes native cluster')  # noqa: E501
+    GET_KUBE_CONFIG = Behavior(name=KUBE_CONFIG_BEHAVIOR_INTERFACE_NAME,
+                               id=KUBE_CONFIG_BEHAVIOR_INTERFACE_ID)
+

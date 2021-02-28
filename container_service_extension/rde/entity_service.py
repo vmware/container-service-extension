@@ -298,7 +298,7 @@ class DefEntityService():
             filters = {}
         filters[def_constants.ClusterEntityFilterKey.CLUSTER_NAME.value] = name
         native_entity_type_metadata: Enum = \
-            def_utils.get_rde_metadata(version)[def_constants.RDEMetadataKey.ENTITY_TYPE_METADATA]  # noqa: E501
+            def_utils.get_rde_metadata(version)[def_constants.RDEMetadataKey.ENTITY_TYPE]  # noqa: E501
         for entity in \
             self.list_entities_by_entity_type(vendor=native_entity_type_metadata.VENDOR,  # noqa: E501
                                               nss=native_entity_type_metadata.NSS,  # noqa: E501
