@@ -16,10 +16,10 @@ from container_service_extension.exception.exception_handler import handle_excep
 import container_service_extension.exception.exceptions as cse_exception
 from container_service_extension.logging.logger import SERVER_LOGGER as LOGGER
 import container_service_extension.security.context.operation_context as ctx
-import container_service_extension.server.request_handlers.native_cluster_handler as native_cluster_handler  # noqa: E501
-import container_service_extension.server.request_handlers.ovdc_handler as ovdc_handler  # noqa: E501
-import container_service_extension.server.request_handlers.pks_cluster_handler as pks_cluster_handler  # noqa: E501
-import container_service_extension.server.request_handlers.pks_ovdc_handler as pks_ovdc_handler  # noqa: E501
+import container_service_extension.server.request_handlers.legacy.native_cluster_handler as native_cluster_handler  # noqa: E501
+import container_service_extension.server.request_handlers.legacy.ovdc_handler as ovdc_handler  # noqa: E501
+import container_service_extension.server.request_handlers.pks.pks_cluster_handler as pks_cluster_handler  # noqa: E501
+import container_service_extension.server.request_handlers.pks.pks_ovdc_handler as pks_ovdc_handler  # noqa: E501
 import container_service_extension.server.request_handlers.system_handler as system_handler  # noqa: E501
 import container_service_extension.server.request_handlers.template_handler as template_handler  # noqa: E501 E501
 import container_service_extension.server.request_handlers.v35.def_cluster_handler as v35_cluster_handler  # noqa: E501
@@ -558,8 +558,8 @@ CSE_REQUEST_DISPATCHER_LIST = [
     *ORG_VDC_HANDLERS
 ]
 
-for entry in CSE_REQUEST_DISPATCHER_LIST:
-    entry['url_tokens'] = entry['url'].split('/')
+for url_entry in CSE_REQUEST_DISPATCHER_LIST:
+    url_entry['url_tokens'] = url_entry['url'].split('/')
 
 
 def _parse_accept_header(accept_header: str):
@@ -676,14 +676,14 @@ def process_request(message):
     The request URI, api version and HTTP verb are used to determine the
     request operation and the corresponding handler.
 
-    Additionaly support for payload verification, query param verification
+    Additionally support for payload verification, query param verification
     will be added in a later point of time.
 
     URL template matching is also performed to compute values of url template
     parameters. These computed values, request body and query params are all
     sent to handlers in form of a dictionary.
 
-    :param dict message: message recived over AMQP/MQTT bus representing the
+    :param dict message: message received over AMQP/MQTT bus representing the
         incoming REST request.
 
     :returns: response computed by the handler after processing the request
@@ -714,6 +714,8 @@ def process_request(message):
         request_body = json.loads(raw_body)
 
     found = False
+    operation = None
+    handler_method = None
     url_data = {}
     for entry in CSE_REQUEST_DISPATCHER_LIST:
         if found:
