@@ -143,7 +143,7 @@ class DEClusterTKG:
         filter_string = utils.construct_filter_string(filters)
         response = \
             self._tkg_client_api.list_tkg_clusters(
-                TKGEntityTypeMetadata_1_0_0.get_id(),
+                f"{TKGEntityTypeMetadata_1_0_0.VENDOR}/{TKGEntityTypeMetadata_1_0_0.NSS}/{TKGEntityTypeMetadata_1_0_0.VERSION}",  # noqa: E501
                 object_filter=filter_string)
         tkg_entities = []
         tkg_def_entities = []
