@@ -740,12 +740,11 @@ def _register_def_schema(client: Client,
                          config=None,
                          msg_update_callback=utils.NullPrinter(),
                          log_wire=False):
-    """Register defined entity interface and defined entity type.
+    """Register RDE constructs.
 
-    If vCD api version is >= 35, register the vCD api version based
-    defined entity interface and defined entity type. Read the schema present
-    in the location dictated by api version to register the
-    defined entity type.
+    This is supported only for VCD API version >=35.
+    Based on the RDE version in use, it will register the required RDE
+    constructs to VCD.
 
     :param pyvcloud.vcd.client.Client client:
     :param core_utils.ConsoleMessagePrinter msg_update_callback: Callback object.  # noqa: E501
@@ -844,22 +843,24 @@ def _register_def_schema(client: Client,
             pass
 
 
-def _set_acls_on_behaviors(cloudapi_client, behavior_acl_metadata,
+def _set_acls_on_behaviors(cloudapi_client,
+                           map_entitytypeid_to_behavior_acls: dict[str, List[BehaviorAclEntry]],  # noqa: E501
                            msg_update_callback):
     behavior_svc = BehaviorService(cloudapi_client=cloudapi_client)
     msg = ""
-    for entity_type_id, behavior_acls in behavior_acl_metadata.items():
+    for entity_type_id, behavior_acls in map_entitytypeid_to_behavior_acls.items():  # noqa: E501
         msg += f"Setting ACLs on behaviors of the entity type '{entity_type_id}'"  # noqa: E501
         behavior_svc.update_behavior_acls_on_entity_type(entity_type_id, behavior_acls)  # noqa: E501
     msg_update_callback.general(msg)
     INSTALL_LOGGER.info(msg)
 
 
-def _override_behaviors(cloudapi_client, override_behavior_metadata,
+def _override_behaviors(cloudapi_client,
+                        map_interfaceid_to_behaviors: dict[str, List[Behavior]],  # noqa: E501
                         msg_update_callback):
     behavior_svc = BehaviorService(cloudapi_client=cloudapi_client)
     msg = ""
-    for entity_type_id, behaviors in override_behavior_metadata.items():
+    for entity_type_id, behaviors in map_interfaceid_to_behaviors.items():
         for behavior in behaviors:
             msg += f"Overriding behavior '{behavior.id}' on entity type '{entity_type_id}'"  # noqa: E501
             behavior_svc.override_behavior_on_entity_type(behavior, entity_type_id)  # noqa: E501
@@ -867,11 +868,12 @@ def _override_behaviors(cloudapi_client, override_behavior_metadata,
     INSTALL_LOGGER.info(msg)
 
 
-def _register_behaviors(cloudapi_client, map_interface_to_behaviors,
+def _register_behaviors(cloudapi_client,
+                        map_interfaceid_to_behaviors: dict[str, List[Behavior]],  # noqa: E501
                         msg_update_callback):
     behavior_svc = BehaviorService(cloudapi_client=cloudapi_client)
     msg = ""
-    for interface_id, behaviors in map_interface_to_behaviors.items():
+    for interface_id, behaviors in map_interfaceid_to_behaviors.items():
         for behavior in behaviors:
             try:
                 behavior_svc.get_behavior_on_interface_by_id(behavior.id, interface_id)  # noqa: E501
@@ -886,7 +888,9 @@ def _register_behaviors(cloudapi_client, map_interface_to_behaviors,
     INSTALL_LOGGER.info(msg)
 
 
-def _register_native_entity_type(cloudapi_client, entity_type, msg_update_callback):  # noqa: E501
+def _register_native_entity_type(cloudapi_client,
+                                 entity_type: common_models.DefEntityType,
+                                 msg_update_callback):
     schema_svc = def_schema_svc.DefSchemaService(cloudapi_client)
     msg = ""
     try:
@@ -908,7 +912,9 @@ def _register_native_entity_type(cloudapi_client, entity_type, msg_update_callba
     INSTALL_LOGGER.info(msg)
 
 
-def _register_interfaces(cloudapi_client, interfaces, msg_update_callback):
+def _register_interfaces(cloudapi_client,
+                         interfaces: List[common_models.DefInterface],
+                         msg_update_callback):
     schema_svc = def_schema_svc.DefSchemaService(cloudapi_client)
     for interface in interfaces:
         try:

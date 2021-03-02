@@ -296,7 +296,7 @@ class EntityType(Enum):
 
 
 # Key: Represents the Runtime RDE version used by CSE server for any given environment.  # noqa: E501
-# Value: Interface and Entity type metadata of the specified RDE version.
+# Value: Details about all of the RDE constructs related to the specified RDE version.  # noqa: E501
 MAP_RDE_VERSION_TO_ITS_METADATA = {
 
     RuntimeRDEVersion.RDE_1_X: {
