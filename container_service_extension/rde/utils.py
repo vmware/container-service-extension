@@ -3,6 +3,7 @@
 # SPDX-License-Identifier: BSD-2-Clause
 
 """Utility methods to help interaction with defined entities framework."""
+import math
 from typing import Union
 
 import container_service_extension.exception.exceptions as excptn
@@ -54,7 +55,8 @@ def generate_entity_type_id(vendor, nss, version):
 
 
 def get_rde_version_by_vcd_api_version(vcd_api_version: float) -> str:
-    return def_constants.MAP_VCD_API_VERSION_TO_RDE_VERSION[vcd_api_version]  # noqa: E501
+    major_vcd_api_version = math.floor(vcd_api_version)
+    return def_constants.MAP_VCD_API_VERSION_TO_RDE_VERSION[major_vcd_api_version]  # noqa: E501
 
 
 def get_rde_metadata(rde_version: str) -> dict:

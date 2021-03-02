@@ -320,7 +320,7 @@ class DefEntityService():
             resource_url_relative_path=f"{CloudApiResource.ENTITIES}/"
                                        f"{entity_id}")
 
-    def resolve_entity(self, entity_id: str) -> DefEntity:
+    def resolve_entity(self, entity_id: str, entity_type_id: str = None) -> DefEntity:  # noqa: E501
         """Resolve the entity.
 
         Validates the entity against the schema. Based on the result, entity
@@ -330,6 +330,9 @@ class DefEntityService():
         :return: Defined entity with its state updated.
         :rtype: DefEntity
         """
+        if not entity_type_id:
+            rde: DefEntity = self.get_entity(entity_id)
+            entity_type_id = rde.entityType
         response_body = self._cloudapi_client.do_request(
             method=RequestMethod.POST,
             cloudapi_version=CloudApiVersion.VERSION_1_0_0,
@@ -337,7 +340,7 @@ class DefEntityService():
                                        f"{entity_id}/{CloudApiResource.ENTITY_RESOLVE}")  # noqa: E501
         msg = response_body[def_constants.DEF_ERROR_MESSAGE_KEY]
         del response_body[def_constants.DEF_ERROR_MESSAGE_KEY]
-        entity = DefEntity(**response_body)
+        entity = DefEntity(entityType=entity_type_id, **response_body)
         # TODO: Just record the error message; revisit after HTTP response code
         # is good enough to decide if exception should be thrown or not
         if entity.state != def_constants.DEF_RESOLVED_STATE:

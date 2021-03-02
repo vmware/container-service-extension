@@ -6,22 +6,9 @@
           "properties": {
               "name": {"type": "string"},
               "ip": {"type": "string"},
-              "sizing_class": {"type": "string"},
-              "storage_profile": {"type": "string"}
+              "sizing_class": {"type": "string"}
           },
-          "additionalProperties": true
-      },
-      "k8_distribution": {
-          "type": "object",
-          "required": [
-             "template_name",
-             "template_revision"
-          ],
-          "properties": {
-             "template_name":  { "type": "string"},
-             "template_revision": { "type": "integer"}
-          },
-          "additionalProperties": true
+          "additionalproperties": true
       }
   },
   "type": "object",
@@ -68,8 +55,7 @@
                           "type": "string",
                           "description":"The storage-profile with which worker nodes need to be provisioned in a given \"ovdc\". The specified storage-profile is expected to be available on the given ovdc."
                       }
-                  },
-                  "additionalProperties": true
+                  }
               },
               "control_plane": {
                   "type": "object",
@@ -92,8 +78,7 @@
                           "type": "string",
                           "description":"The storage-profile with which control-plane needs to be provisioned in a given \"ovdc\". The specified storage-profile is expected to be available on the given ovdc."
                       }
-                  },
-                  "additionalProperties": true
+                  }
               },
               "nfs": {
                   "type": "object",
@@ -116,8 +101,7 @@
                           "type": "string",
                           "description":"The storage-profile with which nfs needs to be provisioned in a given \"ovdc\". The specified storage-profile is expected to be available on the given ovdc."
                       }
-                  },
-                  "additionalProperties": true
+                  }
               },
               "settings": {
                   "type": "object",
@@ -137,14 +121,24 @@
                           "type": "boolean",
                           "description":"On any cluster operation failure, if the value is set to true, affected node VMs will be automatically deleted."
                       }
-                  },
-                  "additionalProperties": true
+                  }
               },
               "k8_distribution": {
-                "$ref": "#/definitions/k8_distribution"
+                  "type": "object",
+                  "required": [
+                      "template_name",
+                      "template_revision"
+                  ],
+                  "properties": {
+                      "template_name": {
+                          "type": "string"
+                      },
+                      "template_revision": {
+                          "type": "integer"
+                      }
+                  }
               }
-          },
-          "additionalProperties": true
+          }
       },
       "status": {
           "type": "object",
@@ -169,63 +163,25 @@
                   "type": "string"
               },
               "nodes": {
-                "type": "object",
-                "required": [
-                  "control_plane"
-                ],
-                "properties": {
-                  "control_plane": {
-                    "$ref": "#/definitions/node"
-                  },
-                  "workers": {
-                    "type": "array",
-                    "items": {
-                      "$ref": "#/definitions/node"
-                    },
-                    "default": []
-                  },
-                  "nfs": {
-                    "type": "array",
-                    "items": {
-                      "$ref": "#/definitions/node"
-                    },
-                    "default": []
+                  "type": "object",
+                  "required": ["control_plane"],
+                  "properties": {
+                      "control_plane": {
+                          "$ref": "#/definitions/node"
+                      },
+                      "workers": {
+                          "type": "array",
+                          "items": {"$ref": "#/definitions/node"},
+                          "default": []
+                      },
+                      "nfs": {
+                          "type": "array",
+                          "items": {"$ref": "#/definitions/node"},
+                          "default": []
+                      }
                   }
-                },
-                "additionalProperties": true
-              },
-              "cloud_properties": {
-                "type": "object",
-                "description": "The details specific to Cloud Director in which the cluster is hosted.",
-                "properties": {
-                  "org_name": {
-                    "type": "string",
-                    "description":"The name of the Organization in which cluster needs to be created or managed."
-                  },
-                  "ovdc_name": {
-                    "type": "string",
-                    "description":"The name of the Organization Virtual data center in which the cluster need to be created or managed."
-                  },
-                  "ovdc_network_name": {
-                    "type":  "string",
-                    "description": "The name of the Organization Virtual data center network to which cluster is connected."
-                  },
-                  "k8_distribution": {
-                    "$ref": "#/definitions/k8_distribution"
-                  },
-                  "ssh_key": {
-                    "type": "string",
-                    "description":"The ssh key that users can use to log into the node VMs without explicitly providing passwords."
-                  },
-                  "rollback_on_failure": {
-                    "type": "boolean",
-                    "description":"On any cluster operation failure, if the value is set to true, affected node VMs will be automatically deleted."
-                  }
-                },
-                "additionalProperties": true
-              }
           },
-          "additionalProperties": true
+          "additionalproperties": true
       },
       "metadata": {
           "type": "object",
@@ -247,14 +203,13 @@
                   "type": "string",
                   "description":"The name of the cluster."
               }
-          },
-          "additionalProperties": true
+          }
       },
       "apiversion": {
           "type": "string",
           "description":"Yet to be defined."
       }
   },
-  "additionalProperties": false
-
+  "additionalproperties": false
+}
 }
