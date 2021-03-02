@@ -13,6 +13,7 @@ from container_service_extension.lib.telemetry.constants import CseOperation
 from container_service_extension.lib.telemetry.telemetry_handler import \
     record_user_action_telemetry
 import container_service_extension.security.context.operation_context as ctx
+import container_service_extension.server.request_handlers.request_utils as req_utils  # noqa: E501
 from container_service_extension.server.vcdbroker import VcdBroker
 
 
@@ -32,7 +33,9 @@ def cluster_create(request_data, op_ctx: ctx.OperationContext):
     :return: Dict
     """
     vcd_broker = VcdBroker(op_ctx)
-    return vcd_broker.create_cluster(data=request_data)
+    data = req_utils.flatten_request_data(
+        request_data, [RequestKey.INPUT_SPEC])
+    return vcd_broker.create_cluster(data=data)
 
 
 @record_user_action_telemetry(cse_operation=CseOperation.CLUSTER_RESIZE)
@@ -49,7 +52,9 @@ def cluster_resize(request_data, op_ctx: ctx.OperationContext):
     :return: Dict
     """
     vcd_broker = VcdBroker(op_ctx)
-    return vcd_broker.resize_cluster(data=request_data)
+    data = req_utils.flatten_request_data(
+        request_data, [RequestKey.INPUT_SPEC, RequestKey.QUERY_PARAMS])
+    return vcd_broker.resize_cluster(data=data)
 
 
 @record_user_action_telemetry(cse_operation=CseOperation.CLUSTER_DELETE)
@@ -64,7 +69,9 @@ def cluster_delete(request_data, op_ctx: ctx.OperationContext):
     :return: Dict
     """
     vcd_broker = VcdBroker(op_ctx)
-    return vcd_broker.delete_cluster(data=request_data)
+    data = req_utils.flatten_request_data(
+        request_data, [RequestKey.INPUT_SPEC, RequestKey.QUERY_PARAMS])
+    return vcd_broker.delete_cluster(data=data)
 
 
 @record_user_action_telemetry(cse_operation=CseOperation.CLUSTER_INFO)
@@ -79,7 +86,9 @@ def cluster_info(request_data, op_ctx: ctx.OperationContext):
     :return: Dict
     """
     vcd_broker = VcdBroker(op_ctx)
-    return vcd_broker.get_cluster_info(data=request_data)
+    data = req_utils.flatten_request_data(
+        request_data, [RequestKey.QUERY_PARAMS])
+    return vcd_broker.get_cluster_info(data=data)
 
 
 @record_user_action_telemetry(cse_operation=CseOperation.CLUSTER_CONFIG)
@@ -94,7 +103,9 @@ def cluster_config(request_data, op_ctx: ctx.OperationContext):
     :return: Dict
     """
     vcd_broker = VcdBroker(op_ctx)
-    return vcd_broker.get_cluster_config(data=request_data)
+    data = req_utils.flatten_request_data(
+        request_data, [RequestKey.QUERY_PARAMS])
+    return vcd_broker.get_cluster_config(data=data)
 
 
 @record_user_action_telemetry(cse_operation=CseOperation.CLUSTER_UPGRADE_PLAN)
@@ -106,7 +117,9 @@ def cluster_upgrade_plan(request_data, op_ctx: ctx.OperationContext):
     :return: List[Tuple(str, str)]
     """
     vcd_broker = VcdBroker(op_ctx)
-    return vcd_broker.get_cluster_upgrade_plan(data=request_data)
+    data = req_utils.flatten_request_data(
+        request_data, [RequestKey.QUERY_PARAMS])
+    return vcd_broker.get_cluster_upgrade_plan(data=data)
 
 
 @record_user_action_telemetry(cse_operation=CseOperation.CLUSTER_UPGRADE)
@@ -118,7 +131,9 @@ def cluster_upgrade(request_data, op_ctx: ctx.OperationContext):
     :return: Dict
     """
     vcd_broker = VcdBroker(op_ctx)
-    return vcd_broker.upgrade_cluster(data=request_data)
+    data = req_utils.flatten_request_data(
+        request_data, [RequestKey.INPUT_SPEC, RequestKey.QUERY_PARAMS])
+    return vcd_broker.upgrade_cluster(data=data)
 
 
 def _retain_cluster_list_common_properties(cluster_list: list, properties_to_retain: list = None) -> list:  # noqa: E501
@@ -144,12 +159,13 @@ def native_cluster_list(request_data, op_ctx: ctx.OperationContext):
     :return: List
     """
     vcd_broker = VcdBroker(op_ctx)
-    page_number = int(request_data.get(PaginationKey.PAGE_NUMBER, CSE_PAGINATION_FIRST_PAGE_NUMBER))  # noqa: E501
-    page_size = int(request_data.get(PaginationKey.PAGE_SIZE, CSE_PAGINATION_DEFAULT_PAGE_SIZE))  # noqa: E501
+    data = req_utils.flatten_request_data(
+        request_data, [RequestKey.QUERY_PARAMS])
+    page_number = int(data.get(PaginationKey.PAGE_NUMBER, CSE_PAGINATION_FIRST_PAGE_NUMBER))  # noqa: E501
+    page_size = int(data.get(PaginationKey.PAGE_SIZE, CSE_PAGINATION_DEFAULT_PAGE_SIZE))  # noqa: E501
 
-    vcd_clusters_info = vcd_broker.get_clusters_by_page(data=request_data,
-                                                        page_number=page_number,  # noqa: E501
-                                                        page_size=page_size)
+    vcd_clusters_info = vcd_broker.get_clusters_by_page(
+        data=data, page_number=page_number, page_size=page_size)
     properties_to_retain = [
         'name',
         'vdc',
@@ -187,8 +203,9 @@ def cluster_list(request_data, op_ctx: ctx.OperationContext):
     :return: List
     """
     vcd_broker = VcdBroker(op_ctx)
-
-    vcd_clusters_info = vcd_broker.list_clusters(data=request_data)
+    data = req_utils.flatten_request_data(
+        request_data, [RequestKey.QUERY_PARAMS])
+    vcd_clusters_info = vcd_broker.list_clusters(data=data)
 
     properties_to_retain = [
         'name',
@@ -218,7 +235,9 @@ def node_create(request_data, op_ctx: ctx.OperationContext):
     :return: Dict
     """
     vcd_broker = VcdBroker(op_ctx)
-    return vcd_broker.create_nodes(data=request_data)
+    data = req_utils.flatten_request_data(
+        request_data, [RequestKey.INPUT_SPEC])
+    return vcd_broker.create_nodes(data=data)
 
 
 @record_user_action_telemetry(cse_operation=CseOperation.NODE_DELETE)
@@ -233,7 +252,9 @@ def node_delete(request_data, op_ctx: ctx.OperationContext):
     :return: Dict
     """
     vcd_broker = VcdBroker(op_ctx)
-    return vcd_broker.delete_nodes(data=request_data)
+    data = req_utils.flatten_request_data(
+        request_data, [RequestKey.INPUT_SPEC])
+    return vcd_broker.delete_nodes(data=data)
 
 
 @record_user_action_telemetry(cse_operation=CseOperation.NODE_INFO)
@@ -248,4 +269,6 @@ def node_info(request_data, op_ctx: ctx.OperationContext):
     :return: Dict
     """
     vcd_broker = VcdBroker(op_ctx)
-    return vcd_broker.get_node_info(data=request_data)
+    data = req_utils.flatten_request_data(
+        request_data, [RequestKey.QUERY_PARAMS])
+    return vcd_broker.get_node_info(data=data)

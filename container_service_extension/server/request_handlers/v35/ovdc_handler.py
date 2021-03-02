@@ -66,7 +66,7 @@ def org_vdc_list(data, operation_context: ctx.OperationContext):
     :return: Dictionary containing paginated response with Org VDC runtime info
     :rtype: dict
     """
-    query_params = data.get(RequestKey.V35_QUERY, {})
+    query_params = data.get(RequestKey.QUERY_PARAMS, {})
     page_number = int(query_params.get(PaginationKey.PAGE_NUMBER,
                                        CSE_PAGINATION_FIRST_PAGE_NUMBER))
     page_size = int(query_params.get(PaginationKey.PAGE_SIZE,

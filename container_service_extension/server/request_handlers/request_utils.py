@@ -50,6 +50,35 @@ INVALID_VALUE_TO_MINOR_ERROR_CODE_MAPPING = {
 }
 
 
+def flatten_request_data(request_data, keys_to_flatten):
+    """.
+
+    Assumes that inner dicts don't have any key specified in keys_to_flatten.
+    """
+    processed_data = {}
+    keys_not_to_flatten = set(request_data.keys()) - set(keys_to_flatten)
+
+    for key in keys_to_flatten:
+        if key in request_data:
+            val = request_data[key]
+            if isinstance(val, dict):
+                processed_data.update(val)
+
+    # The order of updates is important, to make sure that we don't
+    # accidentally overwrite some value while flattening the inner dicts
+    # the value for a key at a top level dict should take precedence over
+    # the value with same key in an inner dict
+    for key in keys_not_to_flatten:
+        processed_data[key] = request_data[key]
+
+    # remove None values
+    for k in processed_data.keys():
+        if processed_data[key] is None:
+            del processed_data[key]
+
+    return processed_data
+
+
 def validate_payload(payload, required_keys):
     """Validate a given payload is good for a particular request.
 

@@ -175,7 +175,7 @@ def native_cluster_list(data: dict, op_ctx: ctx.OperationContext):
     rde_in_use = server_utils.get_rde_version_in_use()
     svc = cluster_service_factory.ClusterServiceFactory(op_ctx). \
         get_cluster_service(rde_in_use)
-    filters = data.get(RequestKey.V35_QUERY, {})
+    filters = data.get(RequestKey.QUERY_PARAMS, {})
     page_number = int(filters.get(PaginationKey.PAGE_NUMBER,
                                   CSE_PAGINATION_FIRST_PAGE_NUMBER))
     page_size = int(filters.get(PaginationKey.PAGE_SIZE,
@@ -210,7 +210,7 @@ def cluster_acl_info(data: dict, op_ctx: ctx.OperationContext):
     svc = cluster_service_factory.ClusterServiceFactory(op_ctx). \
         get_cluster_service(rde_in_use)
     cluster_id = data[RequestKey.CLUSTER_ID]
-    query = data.get(RequestKey.V35_QUERY, {})
+    query = data.get(RequestKey.QUERY_PARAMS, {})
     page = int(query.get(PaginationKey.PAGE_NUMBER, CSE_PAGINATION_FIRST_PAGE_NUMBER))  # noqa: E501
     page_size = int(query.get(PaginationKey.PAGE_SIZE, CSE_PAGINATION_DEFAULT_PAGE_SIZE))  # noqa: E501
     result: dict = svc.get_cluster_acl_info(cluster_id, page, page_size)
@@ -249,7 +249,7 @@ def cluster_list(data: dict, op_ctx: ctx.OperationContext):
 
     # response should not be paginated
     return [asdict(def_entity) for def_entity in
-            svc.list_clusters(data.get(RequestKey.V35_QUERY, {}))]
+            svc.list_clusters(data.get(RequestKey.QUERY_PARAMS, {}))]
 
 
 @request_utils.v35_api_exception_handler

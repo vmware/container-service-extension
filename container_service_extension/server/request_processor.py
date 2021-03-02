@@ -301,7 +301,8 @@ def process_request(message):
     if message['queryString']:
         query_params = dict(parse_qsl(message['queryString']))
         if is_cse_3_0_request:
-            request_data[shared_constants.RequestKey.V35_QUERY] = query_params
+            request_data[shared_constants.RequestKey.QUERY_PARAMS] = \
+                query_params
         else:
             request_data.update(query_params)
         LOGGER.debug(f"query parameters: {query_params}")
