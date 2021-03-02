@@ -60,6 +60,10 @@ import container_service_extension.rde.models.common_models as common_models
 import container_service_extension.rde.models.rde_1_0_0 as rde_1_0_0
 import container_service_extension.rde.schema_service as def_schema_svc
 import container_service_extension.rde.utils as def_utils
+from container_service_extension.rde.behaviors.behavior_model import Behavior, \
+    BehaviorAclEntry
+from container_service_extension.rde.behaviors.behavior_service import \
+    BehaviorService
 from container_service_extension.security.context.user_context import UserContext  # noqa: E501
 import container_service_extension.server.compute_policy_manager as compute_policy_manager # noqa: E501
 from container_service_extension.server.vcdbroker import get_all_clusters as get_all_cse_clusters # noqa: E501
@@ -734,18 +738,6 @@ def _update_user_role_with_right_bundle(right_bundle_name,
     return True
 
 
-def _create_behaviors_on_interface(interface_id):
-    pass
-
-
-def _set_acls_on_behaviors(entity_type_id):
-    pass
-
-
-def _override_behaviors(entity_type_id, behavior_interface_id):
-    pass
-
-
 def _register_def_schema(client: Client,
                          config=None,
                          msg_update_callback=utils.NullPrinter(),
@@ -763,7 +755,7 @@ def _register_def_schema(client: Client,
     """
     if config is None:
         config = {}
-    msg = "Registering defined entity schema"
+    msg = "Registering Runtime defined entity schema"
     msg_update_callback.info(msg)
     INSTALL_LOGGER.info(msg)
     logger_wire = SERVER_CLOUDAPI_WIRE_LOGGER if log_wire else NULL_LOGGER
@@ -782,7 +774,6 @@ def _register_def_schema(client: Client,
         max([float(x) for x in common_supported_api_versions])
     try:
         def_utils.raise_error_if_def_not_supported(cloudapi_client)
-        schema_svc = def_schema_svc.DefSchemaService(cloudapi_client)
         rde_version: str = \
             def_utils.get_rde_version_by_vcd_api_version(
                 max_vcd_api_version_supported)
@@ -791,53 +782,30 @@ def _register_def_schema(client: Client,
         # Obtain RDE metadata needed to initialize CSE
         rde_metadata: dict = def_utils.get_rde_metadata(rde_version)
 
-        # Handle Interfaces creation.
+        # Register Interface(s)
         interfaces: List[common_models.DefInterface] = \
             rde_metadata[def_constants.RDEMetadataKey.INTERFACES]
-        for interface in interfaces:
-            try:
-                schema_svc.get_interface(interface.id)
-                if interface.id == common_models.K8Interface.VCD_INTERFACE.value.id:  # noqa: E501
-                    msg = f"Built in kubernetes interface '{interface.id}' found."  # noqa: E501
-                else:
-                    msg = f"Skipping creation of interface '{interface.id}'." \
-                          " Interface already exists."  # noqa: E501
-                msg_update_callback.general(msg)
-                INSTALL_LOGGER.info(msg)
-            except cse_exception.DefSchemaServiceError:
-                # If built-in interface is missing, raise an Exception.
-                if interface.id == common_models.K8Interface.VCD_INTERFACE.value.id:  # noqa: E501
-                    msg = f"Built in interface '{interface.name}' not present."  # noqa: E501
-                    msg_update_callback.error(msg)
-                    INSTALL_LOGGER.error(msg)
-                    raise
-                # Create other interfaces if not present
-                schema_svc.create_interface(interface)
-                msg = f"Successfully registered interface '{interface.name}'."
-                # TODO define behaviors on the interfaces.
+        _register_interfaces(cloudapi_client, interfaces, msg_update_callback)
 
-        # Handle Native Entity type creation.
+        # Register Native EntityType
         entity_type: common_models.DefEntityType = \
             rde_metadata[def_constants.RDEMetadataKey.ENTITY_TYPE]
-        msg = ""
-        try:
-            schema_svc.get_entity_type(entity_type.id)
-            msg = f"Skipping creation of Native Entity Type '{entity_type.id}'. Native Entity Type already exists."  # noqa: E501
-        except cse_exception.DefSchemaServiceError:
-            # TODO handle this part only if the entity type was not found
-            native_entity_type = schema_svc.create_entity_type(entity_type)
-            msg = f"Successfully registered Native entity type '{native_entity_type.id}'\n"  # noqa: E501
-            entity_svc = def_entity_svc.DefEntityService(cloudapi_client)
-            entity_svc.create_acl_for_entity(
-                native_entity_type.get_id(),
-                grant_type=server_constants.AclGrantType.MembershipACLGrant,
-                access_level_id=server_constants.AclAccessLevelId.AccessLevelReadWrite, # noqa: E501
-                member_id=server_constants.AclMemberId.SystemOrgId)
-            msg += "Successfully " \
-                   "added ReadWrite ACL for native defined entity to System Org" # noqa: E501
+        _register_native_entity_type(cloudapi_client, entity_type, msg_update_callback)  # noqa: E501
 
-        # TODO override Config behaviors
-        # TODO Add ACLs for all the behaviors
+        # Register Behavior(s)
+        behavior_metadata: dict[str, List[Behavior]] = rde_metadata.get(
+            def_constants.RDEMetadataKey.MAP_INTERFACE_TO_BEHAVIORS, {})
+        _register_behaviors(cloudapi_client, behavior_metadata, msg_update_callback)  # noqa: E501
+
+        # Override Behavior(s)
+        override_behavior_metadata: dict[str, List[Behavior]] = \
+            rde_metadata.get(def_constants.RDEMetadataKey.MAP_INTERFACE_TO_OVERRIDE_BEHAVIORS, {})  # noqa: E501
+        _override_behaviors(cloudapi_client, override_behavior_metadata, msg_update_callback)  # noqa: E501
+
+        # Set ACL(s) for all the behavior(s)
+        behavior_acl_metadata: dict[str, List[BehaviorAclEntry]] = \
+            rde_metadata.get(def_constants.RDEMetadataKey.MAP_BEHAVIOR_TO_ACL, {})  # noqa: E501
+        _set_acls_on_behaviors(cloudapi_client, behavior_acl_metadata, msg_update_callback)  # noqa: E501
 
         msg_update_callback.general(msg)
         INSTALL_LOGGER.info(msg)
@@ -879,6 +847,84 @@ def _register_def_schema(client: Client,
             schema_file.close()
         except Exception:
             pass
+
+
+def _set_acls_on_behaviors(cloudapi_client, behavior_acl_metadata, msg_update_callback):
+    behavior_svc = BehaviorService(cloudapi_client=cloudapi_client)
+    msg = ""
+    for entity_type_id, behavior_acls in behavior_acl_metadata.items():
+        behavior_svc.update_behavior_acls_on_entity_type(entity_type_id,
+                                                         behavior_acls)  # noqa: E501
+    msg_update_callback.general(msg)
+    INSTALL_LOGGER.info(msg)
+
+
+def _override_behaviors(cloudapi_client, override_behavior_metadata, msg_update_callback):
+    behavior_svc = BehaviorService(cloudapi_client=cloudapi_client)
+    msg = ""
+    for entity_type_id, behaviors in override_behavior_metadata.items():
+        for behavior in behaviors:
+            behavior_svc.override_behavior_on_entity_type(behavior,
+                                                          entity_type_id)  # noqa: E501
+    msg_update_callback.general(msg)
+    INSTALL_LOGGER.info(msg)
+
+
+def _register_behaviors(cloudapi_client, map_interface_to_behaviors, msg_update_callback):
+    behavior_svc = BehaviorService(cloudapi_client=cloudapi_client)
+    msg = ""
+    for interface_id, behaviors in map_interface_to_behaviors.items():
+        for behavior in behaviors:
+            behavior_svc.create_behavior_on_interface(behavior, interface_id)
+    msg_update_callback.general(msg)
+    INSTALL_LOGGER.info(msg)
+
+
+def _register_native_entity_type(cloudapi_client, entity_type, msg_update_callback):  # noqa: E501
+    schema_svc = def_schema_svc.DefSchemaService(cloudapi_client)
+    msg = ""
+    try:
+        schema_svc.get_entity_type(entity_type.id)
+        msg = f"Skipping creation of Native Entity Type '{entity_type.id}'. Native Entity Type already exists."  # noqa: E501
+    except cse_exception.DefSchemaServiceError:
+        # TODO handle this part only if the entity type was not found
+        native_entity_type = schema_svc.create_entity_type(entity_type)
+        msg = f"Successfully registered Native entity type '{native_entity_type.id}'\n"  # noqa: E501
+        entity_svc = def_entity_svc.DefEntityService(cloudapi_client)
+        entity_svc.create_acl_for_entity(
+            native_entity_type.get_id(),
+            grant_type=server_constants.AclGrantType.MembershipACLGrant,
+            access_level_id=server_constants.AclAccessLevelId.AccessLevelReadWrite,
+            # noqa: E501
+            member_id=server_constants.AclMemberId.SystemOrgId)
+        msg += "Successfully " \
+               "added ReadWrite ACL for native defined entity to System Org"  # noqa: E501
+    msg_update_callback.general(msg)
+    INSTALL_LOGGER.info(msg)
+
+
+def _register_interfaces(cloudapi_client, interfaces, msg_update_callback):
+    schema_svc = def_schema_svc.DefSchemaService(cloudapi_client)
+    for interface in interfaces:
+        try:
+            schema_svc.get_interface(interface.id)
+            if interface.id == common_models.K8Interface.VCD_INTERFACE.value.id:  # noqa: E501
+                msg = f"Built in kubernetes interface '{interface.id}' found."  # noqa: E501
+            else:
+                msg = f"Skipping creation of interface '{interface.id}'." \
+                      " Interface already exists."  # noqa: E501
+            msg_update_callback.general(msg)
+            INSTALL_LOGGER.info(msg)
+        except cse_exception.DefSchemaServiceError:
+            # If built-in interface is missing, raise an Exception.
+            if interface.id == common_models.K8Interface.VCD_INTERFACE.value.id:  # noqa: E501
+                msg = f"Built in interface '{interface.name}' not present."  # noqa: E501
+                msg_update_callback.error(msg)
+                INSTALL_LOGGER.error(msg)
+                raise
+            # Create other interfaces if not present
+            schema_svc.create_interface(interface)
+            msg = f"Successfully registered interface '{interface.name}'."
 
 
 def _register_right(client, right_name, description, category, bundle_key,

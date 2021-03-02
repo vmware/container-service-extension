@@ -6,9 +6,30 @@ from enum import Enum
 from enum import unique
 
 from container_service_extension.common.constants.server_constants import AclAccessLevelId, ExtensionType, MQTT_EXTENSION_URN   # noqa: E501
+from container_service_extension.rde.constants import Vendor, Nss
 
-KUBE_CONFIG_BEHAVIOR_INTERFACE_ID = 'urn:vcloud:behavior-interface:createKubeConfig:vmware:k8s:1.0.0'  # noqa: E501
+BEHAVIOR_INTERFACE_ID_PREFIX = 'urn:vcloud:behavior-interface'
 KUBE_CONFIG_BEHAVIOR_INTERFACE_NAME = 'createKubeConfig'
+KUBE_CONFIG_BEHAVIOR_INTERFACE_ID = f"{BEHAVIOR_INTERFACE_ID_PREFIX}:" \
+                                    f"{KUBE_CONFIG_BEHAVIOR_INTERFACE_NAME}:" \
+                                    f"{Vendor.VMWARE.value}:" \
+                                    f"{Nss.KUBERNETES.value}:1.0.0"
+CREATE_CLUSTER_BEHAVIOR_NAME = 'createCluster'
+CREATE_CLUSTER_BEHAVIOR_INTERFACE_ID = f"{BEHAVIOR_INTERFACE_ID_PREFIX}:" \
+                                       f"{CREATE_CLUSTER_BEHAVIOR_NAME}:" \
+                                       f"{Vendor.CSE.value}:" \
+                                       f"{Nss.KUBERNETES.value}:1.0.0"
+UPDATE_CLUSTER_BEHAVIOR_NAME = 'updateCluster'
+UPDATE_CLUSTER_BEHAVIOR_INTERFACE_ID = f"{BEHAVIOR_INTERFACE_ID_PREFIX}:" \
+                                       f"{UPDATE_CLUSTER_BEHAVIOR_NAME}:" \
+                                       f"{Vendor.CSE.value}:" \
+                                       f"{Nss.KUBERNETES.value}:1.0.0"
+DELETE_CLUSTER_BEHAVIOR_NAME = 'deleteCluster'
+DELETE_CLUSTER_BEHAVIOR_INTERFACE_ID = f"{BEHAVIOR_INTERFACE_ID_PREFIX}:" \
+                                       f"{DELETE_CLUSTER_BEHAVIOR_NAME}:" \
+                                       f"{Vendor.CSE.value}:" \
+                                       f"{Nss.KUBERNETES.value}:1.0.0"
+
 
 
 @dataclass()
@@ -65,10 +86,28 @@ class BehaviorAclEntry:
 
 
 @unique
-class BehaviorOperation(Behavior, Enum):
-    CREATE_CLUSTER = Behavior(name='Create_cluster', description='Creates native cluster')  # noqa: E501
-    UPDATE_CLUSTER = Behavior(name='Update_cluster', description='Updates native cluster')  # noqa: E501
-    DELETE_CLUSTER = Behavior(name='Delete_cluster', description='Deletes native cluster')  # noqa: E501
+class BehaviorOperation(Enum):
+    CREATE_CLUSTER = Behavior(name=CREATE_CLUSTER_BEHAVIOR_NAME,
+                              description='Creates native cluster',
+                              id=CREATE_CLUSTER_BEHAVIOR_INTERFACE_ID)
+    UPDATE_CLUSTER = Behavior(name=UPDATE_CLUSTER_BEHAVIOR_NAME,
+                              description='Updates native cluster',
+                              id=UPDATE_CLUSTER_BEHAVIOR_INTERFACE_ID)
+    DELETE_CLUSTER = Behavior(name=DELETE_CLUSTER_BEHAVIOR_NAME,
+                              description='Deletes native cluster',
+                              id=DELETE_CLUSTER_BEHAVIOR_INTERFACE_ID)
     GET_KUBE_CONFIG = Behavior(name=KUBE_CONFIG_BEHAVIOR_INTERFACE_NAME,
                                id=KUBE_CONFIG_BEHAVIOR_INTERFACE_ID)
+
+
+@unique
+class BehaviorAcl(Enum):
+    CREATE_CLUSTER_ACL = BehaviorAclEntry(CREATE_CLUSTER_BEHAVIOR_INTERFACE_ID,
+                                          AclAccessLevelId.AccessLevelReadWrite)  # noqa: E501
+    UPDATE_CLUSTER_ACL = BehaviorAclEntry(UPDATE_CLUSTER_BEHAVIOR_INTERFACE_ID,
+                                          AclAccessLevelId.AccessLevelReadWrite),  # noqa: E501
+    DELETE_CLUSTER_ACL = BehaviorAclEntry(DELETE_CLUSTER_BEHAVIOR_INTERFACE_ID,
+                                          AclAccessLevelId.AccessLevelFullControl),  # noqa: E501
+    KUBE_CONFIG_ACL = BehaviorAclEntry(KUBE_CONFIG_BEHAVIOR_INTERFACE_ID,
+                                       AclAccessLevelId.AccessLevelReadOnly)
 

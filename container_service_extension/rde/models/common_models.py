@@ -9,6 +9,8 @@ from typing import List
 
 from container_service_extension.common.constants import shared_constants as shared_constants  # noqa: E501
 from container_service_extension.rde import utils as def_utils
+from container_service_extension.rde.behaviors.behavior_model import \
+    BehaviorOperation, BehaviorAcl
 from container_service_extension.rde.constants import \
     DEF_ENTITY_TYPE_ID_PREFIX, DEF_INTERFACE_ID_PREFIX, RDEMetadataKey, \
     RuntimeRDEVersion, SchemaFile, Vendor, Nss
@@ -297,14 +299,34 @@ class EntityType(Enum):
 # Key: Represents the Runtime RDE version used by CSE server for any given environment.  # noqa: E501
 # Value: Interface and Entity type metadata of the specified RDE version.
 MAP_RDE_VERSION_TO_ITS_METADATA = {
+
     RuntimeRDEVersion.RDE_1_X: {
+        RDEMetadataKey.INTERFACES: [K8Interface.VCD_INTERFACE.value],
         RDEMetadataKey.ENTITY_TYPE: EntityType.NATIVE_ENTITY_TYPE_1_0_0.value,
-        RDEMetadataKey.INTERFACES: [K8Interface.VCD_INTERFACE.value]
     },
+
     RuntimeRDEVersion.RDE_2_X: {
-        RDEMetadataKey.ENTITY_TYPE: EntityType.NATIVE_ENTITY_TYPE_2_0_0.value,
         RDEMetadataKey.INTERFACES: [K8Interface.VCD_INTERFACE.value,
-                                    K8Interface.CSE_INTERFACE.value]
+                                    K8Interface.CSE_INTERFACE.value],
+        RDEMetadataKey.ENTITY_TYPE: EntityType.NATIVE_ENTITY_TYPE_2_0_0.value,
+
+        RDEMetadataKey.MAP_INTERFACE_TO_BEHAVIORS: {
+            K8Interface.CSE_INTERFACE.value.id:
+                [BehaviorOperation.CREATE_CLUSTER.value,
+                 BehaviorOperation.UPDATE_CLUSTER.value,
+                 BehaviorOperation.DELETE_CLUSTER.value]
+        },
+        RDEMetadataKey.MAP_INTERFACE_TO_OVERRIDE_BEHAVIORS: {
+            EntityType.NATIVE_ENTITY_TYPE_2_0_0.value.id:
+                [BehaviorOperation.GET_KUBE_CONFIG.value]
+        },
+        RDEMetadataKey.MAP_BEHAVIOR_TO_ACL: {
+            EntityType.NATIVE_ENTITY_TYPE_2_0_0.value.id:
+                [BehaviorAcl.CREATE_CLUSTER_ACL.value,
+                 BehaviorAcl.UPDATE_CLUSTER_ACL.value,
+                 BehaviorAcl.DELETE_CLUSTER_ACL.value,
+                 BehaviorAcl.KUBE_CONFIG_ACL.value]
+        }
     }
 }
 

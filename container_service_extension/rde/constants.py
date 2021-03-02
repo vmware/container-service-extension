@@ -66,8 +66,11 @@ class RuntimeRDEVersion(str, Enum):
 
 @unique
 class RDEMetadataKey(str, Enum):
-    ENTITY_TYPE = 'entity_type_metadata'
-    INTERFACES = "interfaces_metadata_list"
+    ENTITY_TYPE = 'entity_type'
+    INTERFACES = 'interfaces'
+    MAP_INTERFACE_TO_BEHAVIORS = 'map_from_interface_id_to_behaviors'
+    MAP_INTERFACE_TO_OVERRIDE_BEHAVIORS = 'map_from_interface_id_to_behaviors_to_override'  # noqa: E501
+    MAP_BEHAVIOR_TO_ACL = 'map_from_behavior_id_to_behavior_acls'
 
 
 # Dictionary indicating RDE version to use for a given VCD API version.

@@ -129,6 +129,15 @@ def construct_2_x_cluster_spec_from_entity_status(entity_status: rde_2_0_0.Statu
 
 
 def load_rde_schema(schema_file: str) -> dict:
-    schema_module = importlib.import_module(def_constants.DEF_SCHEMA_DIRECTORY)  # noqa: E501
-    schema_file = pkg_resources.open_text(schema_module, schema_file)
-    return json.load(schema_file)
+    try:
+        schema_module = importlib.import_module(def_constants.DEF_SCHEMA_DIRECTORY)  # noqa: E501
+        schema_file = pkg_resources.open_text(schema_module, schema_file)
+        return json.load(schema_file)
+    except (ImportError, ModuleNotFoundError, FileNotFoundError) as e:
+        raise e
+    finally:
+        try:
+            schema_file.close()
+        except Exception:
+            pass
+
