@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: BSD-2-Clause
 
 import time
-from typing import List
+from typing import Dict, List
 
 import pika
 import pyvcloud.vcd.api_extension as api_extension
@@ -790,17 +790,17 @@ def _register_def_schema(client: Client,
         _register_native_entity_type(cloudapi_client, entity_type, msg_update_callback)  # noqa: E501
 
         # Register Behavior(s)
-        behavior_metadata: dict[str, List[Behavior]] = rde_metadata.get(
+        behavior_metadata: Dict[str, List[Behavior]] = rde_metadata.get(
             def_constants.RDEMetadataKey.MAP_INTERFACE_TO_BEHAVIORS, {})
         _register_behaviors(cloudapi_client, behavior_metadata, msg_update_callback)  # noqa: E501
 
         # Override Behavior(s)
-        override_behavior_metadata: dict[str, List[Behavior]] = \
+        override_behavior_metadata: Dict[str, List[Behavior]] = \
             rde_metadata.get(def_constants.RDEMetadataKey.MAP_INTERFACE_TO_OVERRIDE_BEHAVIORS, {})  # noqa: E501
         _override_behaviors(cloudapi_client, override_behavior_metadata, msg_update_callback)  # noqa: E501
 
         # Set ACL(s) for all the behavior(s)
-        behavior_acl_metadata: dict[str, List[BehaviorAclEntry]] = \
+        behavior_acl_metadata: Dict[str, List[BehaviorAclEntry]] = \
             rde_metadata.get(def_constants.RDEMetadataKey.MAP_BEHAVIOR_TO_ACL, {})  # noqa: E501
         _set_acls_on_behaviors(cloudapi_client, behavior_acl_metadata, msg_update_callback)  # noqa: E501
 
@@ -844,7 +844,7 @@ def _register_def_schema(client: Client,
 
 
 def _set_acls_on_behaviors(cloudapi_client,
-                           map_entitytypeid_to_behavior_acls: dict[str, List[BehaviorAclEntry]],  # noqa: E501
+                           map_entitytypeid_to_behavior_acls: Dict[str, List[BehaviorAclEntry]],  # noqa: E501
                            msg_update_callback):
     behavior_svc = BehaviorService(cloudapi_client=cloudapi_client)
     msg = ""
@@ -856,7 +856,7 @@ def _set_acls_on_behaviors(cloudapi_client,
 
 
 def _override_behaviors(cloudapi_client,
-                        map_interfaceid_to_behaviors: dict[str, List[Behavior]],  # noqa: E501
+                        map_interfaceid_to_behaviors: Dict[str, List[Behavior]],  # noqa: E501
                         msg_update_callback):
     behavior_svc = BehaviorService(cloudapi_client=cloudapi_client)
     msg = ""
@@ -869,7 +869,7 @@ def _override_behaviors(cloudapi_client,
 
 
 def _register_behaviors(cloudapi_client,
-                        map_interfaceid_to_behaviors: dict[str, List[Behavior]],  # noqa: E501
+                        map_interfaceid_to_behaviors: Dict[str, List[Behavior]],  # noqa: E501
                         msg_update_callback):
     behavior_svc = BehaviorService(cloudapi_client=cloudapi_client)
     msg = ""
