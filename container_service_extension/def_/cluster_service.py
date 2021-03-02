@@ -37,6 +37,7 @@ from container_service_extension.server_constants import ClusterMetadataKey
 from container_service_extension.server_constants import CSE_CLUSTER_KUBECONFIG_PATH # noqa: E501
 from container_service_extension.server_constants import EXPOSE_CLUSTER_NAME_FRAGMENT  # noqa: E501
 from container_service_extension.server_constants import EXPOSE_CLUSTER_RIGHTS
+from container_service_extension.server_constants import IP_PORT_REGEX
 from container_service_extension.server_constants import LocalTemplateKey
 from container_service_extension.server_constants import NETWORK_URN_PREFIX
 from container_service_extension.server_constants import NodeType
@@ -617,17 +618,21 @@ class ClusterService(abstract_broker.AbstractBroker):
                 self.context.sysadmin_client, vapp, check_tools=True)
 
             # Handle exposing cluster
-            expose_ip = None
+            expose_ip: str = ''
             if intent_to_expose and float(api_version) >= float(vcd_client.ApiVersion.VERSION_36.value):  # noqa: E501
-                expose_ip = _expose_cluster(
-                    client=self.context.client,
-                    org_name=org_name,
-                    ovdc_name=ovdc_name,
-                    network_name=cluster_spec.spec.settings.network,
-                    cluster_name=cluster_name,
-                    internal_ip=control_plane_ip)
-                if expose_ip:
-                    control_plane_ip = expose_ip
+                try:
+                    expose_ip = _expose_cluster(
+                        client=self.context.client,
+                        org_name=org_name,
+                        ovdc_name=ovdc_name,
+                        network_name=cluster_spec.spec.settings.network,
+                        cluster_name=cluster_name,
+                        internal_ip=control_plane_ip)
+                    if expose_ip:
+                        control_plane_ip = expose_ip
+                except Exception as err:
+                    LOGGER.error(f'Exposing cluster failed: {str(err)}')
+                    expose_ip = ''
 
             _init_cluster(self.context.sysadmin_client,
                           vapp,
@@ -1841,8 +1846,7 @@ def _init_cluster(sysadmin_client: vcd_client.Client, vapp, template_name,
 
         # Expose cluster if given external ip
         if expose_ip:
-            script = script.replace(
-                'kubeadm init', f'kubeadm init --control-plane-endpoint=\"{expose_ip}:6443\"')  # noqa: E501
+            script = _form_expose_ip_init_cluster_script(script, expose_ip)
 
         node_names = _get_node_names(vapp, NodeType.CONTROL_PLANE)
         result = _execute_script_in_nodes(sysadmin_client, vapp=vapp,
@@ -1858,6 +1862,40 @@ def _init_cluster(sysadmin_client: vcd_client.Client, vapp, template_name,
         LOGGER.error(err, exc_info=True)
         raise E.ClusterInitializationError(
             f"Couldn't initialize cluster: {str(err)}")
+
+
+def _form_expose_ip_init_cluster_script(script: str, expose_ip: str):
+    """Form init cluster script with expose ip control plane endpoint option.
+
+    If the '--control-plane-endpoint' option is already present, this option
+    will be replaced with this option specifying the exposed ip. If this option
+    is not specified, the '--control-plane-endpoint' option will be added.
+
+    :param str script: the init cluster script
+    :param str expose_ip: the ip to expose the cluster
+
+    :return: the updated init cluster script
+    :rtype: str
+    """
+    # Get line with 'kubeadm init'
+    kubeadm_init_match: re.Match = re.search('kubeadm init .+\n', script)
+    if not kubeadm_init_match:
+        return script
+    kubeadm_init_line: str = kubeadm_init_match.group(0)
+
+    # Either add or replace the control plane endpoint option
+    expose_control_plane_endpoint_option = f'--control-plane-endpoint=\"{expose_ip}:6443\"'  # noqa: E501
+    expose_kubeadm_init_line = re.sub(
+        f'--control-plane-endpoint={IP_PORT_REGEX}',
+        expose_control_plane_endpoint_option,
+        kubeadm_init_line)
+    if kubeadm_init_line == expose_kubeadm_init_line:  # no option was replaced
+        expose_kubeadm_init_line = kubeadm_init_line.replace(
+            'kubeadm init',
+            f'kubeadm init --control-plane-endpoint=\"{expose_ip}:6443\"')
+
+    # Replace current kubeadm init line with line containing expose_ip
+    return script.replace(kubeadm_init_line, expose_kubeadm_init_line)
 
 
 def _join_cluster(sysadmin_client: vcd_client.Client, vapp, template_name,
@@ -2059,15 +2097,15 @@ def _get_gateway_href(vdc: VDC, gateway_name):
     return None
 
 
-def _user_has_edit_gateway_rights(user_rights: list):
+def _get_missing_expose_cluster_rights(user_rights: list):
     """Check if user has rights to edit gateway."""
     missing_rights = set(EXPOSE_CLUSTER_RIGHTS)
     for right in user_rights:
         if right in missing_rights:
             missing_rights.remove(right)
             if len(missing_rights) == 0:
-                return True
-    return False
+                return []
+    return missing_rights
 
 
 def _get_gateway(client, cloudapi_client, network_resource, ovdc: VDC):
@@ -2096,34 +2134,41 @@ def _expose_cluster(client: vcd_client.Client, org_name: str, ovdc_name: str,
     try:
         routed_network_resource = ovdc.get_routed_orgvdc_network(network_name)
     except EntityNotFoundException:
-        return None
-
-    # Check user has gateway view and edit rights
-    cloudapi_client = vcd_utils.get_cloudapi_client_from_vcd_client(client)
-    user_ctx = user_context.UserContext(client, cloudapi_client)
-    if not _user_has_edit_gateway_rights(user_ctx.rights):
-        return None
+        raise Exception(f'No routed network found named: {network_name} '
+                        f'in ovdc {ovdc_name} and org {org_name}')
 
     # Check if NSX-T backed gateway
+    cloudapi_client = vcd_utils.get_cloudapi_client_from_vcd_client(client)
     gateway = _get_gateway(
         client=client,
         cloudapi_client=cloudapi_client,
         network_resource=routed_network_resource,
         ovdc=ovdc)
-    if not gateway or not gateway.is_nsxt_backed():
-        return None
+    if not gateway:
+        raise Exception(f'No gateway found for network: {network_name}')
+    if not gateway.is_nsxt_backed():
+        raise Exception('Gateway is not NSX-T backed for exposing cluster.')
+
+    # Check user has gateway view and edit rights
+    user_ctx = user_context.UserContext(client, cloudapi_client)
+    missing_expose_cluster_rights = _get_missing_expose_cluster_rights(user_ctx.rights)  # noqa: E501
+    if missing_expose_cluster_rights:
+        raise Exception(f'User is missing the following right to expose the '
+                        f'cluster: {missing_expose_cluster_rights}')
 
     # Auto reserve ip and add dnat rule
     nsxt_gateway_svc = NsxtBackedGatewayService(gateway, client)
     expose_ip = nsxt_gateway_svc.quick_ip_allocation()
     if not expose_ip:
-        return None
+        raise Exception('Unable to reserve ip using quick ip allocation.')
     try:
         nsxt_gateway_svc.add_dnat_rule(
             name=f"{cluster_name}_{EXPOSE_CLUSTER_NAME_FRAGMENT}",
             internal_address=internal_ip,
             external_address=expose_ip)
     except Exception as err:
-        print(err)
-        return None
+        # Note: we would normally need to un-allocate the expose_ip. Since
+        # there will be an ipam solution to get the ip in a future PR,
+        # this logic is not currently needed
+        raise Exception(f'Unable to add dnat rule with error: {str(err)}')
     return expose_ip

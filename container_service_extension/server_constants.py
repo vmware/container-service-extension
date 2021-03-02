@@ -520,3 +520,7 @@ class VdcNetworkInfoKey(str, Enum):
     CONNECTION = 'connection'
     ROUTER_REF = 'routerRef'
     NAME = 'name'
+
+
+# Regex for ip: port
+IP_PORT_REGEX = '[0-9]+(?:\\.[0-9]+){3}(:[0-9]+)?'
