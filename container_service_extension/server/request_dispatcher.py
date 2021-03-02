@@ -199,7 +199,7 @@ LEGACY_CLUSTER_HANDLERS = [
         },
         RequestMethod.PUT: {
             ('33.0', '34.0'): {
-                'allowed_params': ['org', 'vdc'],
+                'allowed_params': [],
                 'required_params': [],
                 'verify_payload': False,
                 'payload_type': '*',
@@ -259,7 +259,7 @@ LEGACY_NATIVE_CLUSTER_HANDLERS = [
         'url': "cse/nativeclusters",
         RequestMethod.GET: {
             ('33.0', '34.0'): {
-                'allowed_params': ['org', 'vdc'],
+                'allowed_params': ['org', 'vdc', 'pageSize', 'page'],
                 'required_params': [],
                 'operation': CseOperation.NATIVE_CLUSTER_LIST,
                 'handler': native_cluster_handler.native_cluster_list
@@ -370,7 +370,7 @@ LEGACY_ORG_VDC_HANDLERS = [
         'url': "cse/orgvdcs",
         RequestMethod.GET: {
             ('33.0', '34.0'): {
-                'allowed_params': [],
+                'allowed_params': ['pageSize', 'page'],
                 'required_params': [],
                 'operation': CseOperation.ORG_VDC_LIST,
                 'handler': ovdc_handler.org_vdc_list

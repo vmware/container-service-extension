@@ -2,7 +2,6 @@
 # Copyright (c) 2020 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 
-from container_service_extension.common.constants.server_constants import CseOperation as CseOperationInfo  # noqa: E501
 from container_service_extension.common.constants.server_constants import K8S_PROVIDER_KEY  # noqa: E501
 from container_service_extension.common.constants.shared_constants import CSE_PAGINATION_DEFAULT_PAGE_SIZE  # noqa: E501
 from container_service_extension.common.constants.shared_constants import CSE_PAGINATION_FIRST_PAGE_NUMBER  # noqa: E501
@@ -53,7 +52,7 @@ def cluster_resize(request_data, op_ctx: ctx.OperationContext):
     """
     vcd_broker = VcdBroker(op_ctx)
     data = req_utils.flatten_request_data(
-        request_data, [RequestKey.INPUT_SPEC, RequestKey.QUERY_PARAMS])
+        request_data, [RequestKey.INPUT_SPEC])
     return vcd_broker.resize_cluster(data=data)
 
 
@@ -70,7 +69,7 @@ def cluster_delete(request_data, op_ctx: ctx.OperationContext):
     """
     vcd_broker = VcdBroker(op_ctx)
     data = req_utils.flatten_request_data(
-        request_data, [RequestKey.INPUT_SPEC, RequestKey.QUERY_PARAMS])
+        request_data, [RequestKey.QUERY_PARAMS])
     return vcd_broker.delete_cluster(data=data)
 
 
@@ -132,7 +131,7 @@ def cluster_upgrade(request_data, op_ctx: ctx.OperationContext):
     """
     vcd_broker = VcdBroker(op_ctx)
     data = req_utils.flatten_request_data(
-        request_data, [RequestKey.INPUT_SPEC, RequestKey.QUERY_PARAMS])
+        request_data, [RequestKey.INPUT_SPEC])
     return vcd_broker.upgrade_cluster(data=data)
 
 
@@ -159,13 +158,22 @@ def native_cluster_list(request_data, op_ctx: ctx.OperationContext):
     :return: List
     """
     vcd_broker = VcdBroker(op_ctx)
+
+    base_url = request_data['url']
+    query_params = request_data[RequestKey.QUERY_PARAMS]
+    page_number = int(query_params.get(PaginationKey.PAGE_NUMBER, CSE_PAGINATION_FIRST_PAGE_NUMBER))  # noqa: E501
+    page_size = int(query_params.get(PaginationKey.PAGE_SIZE, CSE_PAGINATION_DEFAULT_PAGE_SIZE))  # noqa: E501 =
+    query_params_others = {}
+    for k, v in query_params.items():
+        if k not in [PaginationKey.PAGE_NUMBER, PaginationKey.PAGE_SIZE]:
+            query_params_others[k] = v
+
     data = req_utils.flatten_request_data(
         request_data, [RequestKey.QUERY_PARAMS])
-    page_number = int(data.get(PaginationKey.PAGE_NUMBER, CSE_PAGINATION_FIRST_PAGE_NUMBER))  # noqa: E501
-    page_size = int(data.get(PaginationKey.PAGE_SIZE, CSE_PAGINATION_DEFAULT_PAGE_SIZE))  # noqa: E501
 
     vcd_clusters_info = vcd_broker.get_clusters_by_page(
         data=data, page_number=page_number, page_size=page_size)
+
     properties_to_retain = [
         'name',
         'vdc',
@@ -178,18 +186,13 @@ def native_cluster_list(request_data, op_ctx: ctx.OperationContext):
     result = _retain_cluster_list_common_properties(clusters,
                                                     properties_to_retain)
 
-    # Extract the query params
-    query_keys = [RequestKey.ORG_NAME, RequestKey.OVDC_NAME]
-    query_params = {k: request_data[k] for k in query_keys if request_data.get(k) is not None}  # noqa: E501
-
-    base_url = f"{op_ctx.client.get_api_uri().strip('/')}" \
-               f"{CseOperationInfo.NATIVE_CLUSTER_LIST.api_path_format}"
     return server_utils.create_links_and_construct_paginated_result(
-        base_url, result,
+        base_url,
+        result,
         vcd_clusters_info[PaginationKey.RESULT_TOTAL],
         page_number=page_number,
         page_size=page_size,
-        query_params=query_params)
+        query_params=query_params_others)
 
 
 @record_user_action_telemetry(cse_operation=CseOperation.CLUSTER_LIST)
