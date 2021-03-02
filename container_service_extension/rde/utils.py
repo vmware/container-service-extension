@@ -9,7 +9,11 @@ import json
 import math
 from typing import Union
 
+from container_service_extension.common.constants.server_constants import FlattenedClusterSpecKey  # noqa: E501
+from container_service_extension.common.constants.server_constants import VALID_UPDATE_FIELDS  # noqa: E501
+import container_service_extension.common.utils.core_utils as core_utils
 import container_service_extension.exception.exceptions as excptn
+from container_service_extension.exception.exceptions import BadRequestError
 from container_service_extension.lib.cloudapi.cloudapi_client import CloudApiClient  # noqa: E501
 import container_service_extension.rde.constants as def_constants
 import container_service_extension.rde.models.rde_1_0_0 as rde_1_0_0
@@ -142,3 +146,15 @@ def load_rde_schema(schema_file: str) -> dict:
             schema_file.close()
         except Exception:
             pass
+
+
+def find_diff_fields(input_spec: dict, reference_spec: dict, exclude_fields: list = None) -> list:  # noqa: E501
+    if exclude_fields is None:
+        exclude_fields = []
+    input_dict = core_utils.flatten_dictionary(input_spec)
+    reference_dict = core_utils.flatten_dictionary(reference_spec)
+    exclude_key_set = set(exclude_fields)
+    key_set_for_validation = set(input_dict.keys()) - exclude_key_set
+    return [key for key in key_set_for_validation
+            if input_dict.get(key) != reference_dict.get(key)]
+
