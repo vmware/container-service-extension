@@ -253,6 +253,21 @@ LEGACY_CLUSTER_HANDLERS = [
     }
 ]
 
+# /cse/nativeclusters end points
+LEGACY_NATIVE_CLUSTER_HANDLERS = [
+    {
+        'url': "cse/nativeclusters",
+        RequestMethod.GET: {
+            ('33.0', '34.0'): {
+                'allowed_params': ['org', 'vdc'],
+                'required_params': [],
+                'operation': CseOperation.NATIVE_CLUSTER_LIST,
+                'handler': native_cluster_handler.native_cluster_list
+            }
+        },
+    }
+]
+
 # /cse/cluster/{id}/nodes end points
 LEGACY_NODE_HANDLERS = [
     {
@@ -550,6 +565,7 @@ CSE_REQUEST_DISPATCHER_LIST = [
     *TEMPLATE_HANDLERS,
     *PKS_HANDLERS,
     *LEGACY_CLUSTER_HANDLERS,
+    *LEGACY_NATIVE_CLUSTER_HANDLERS,
     *LEGACY_NODE_HANDLERS,
     *LEGACY_OVDC_HANDLERS,
     *LEGACY_ORG_VDC_HANDLERS,
