@@ -337,7 +337,7 @@ class DefEntityService():
                                        f"{entity_id}/{CloudApiResource.ENTITY_RESOLVE}")  # noqa: E501
         msg = response_body[def_constants.DEF_ERROR_MESSAGE_KEY]
         del response_body[def_constants.DEF_ERROR_MESSAGE_KEY]
-        entity = DefEntity(**response_body)
+        entity = DefEntity(entityType=self.get_entity(entity_id).entityType, **response_body)  # noqa: E501
         # TODO: Just record the error message; revisit after HTTP response code
         # is good enough to decide if exception should be thrown or not
         if entity.state != def_constants.DEF_RESOLVED_STATE:
