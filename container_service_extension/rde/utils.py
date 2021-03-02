@@ -140,4 +140,3 @@ def load_rde_schema(schema_file: str) -> dict:
             schema_file.close()
         except Exception:
             pass
-

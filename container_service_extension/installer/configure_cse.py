@@ -54,18 +54,16 @@ from container_service_extension.logging.logger import SERVER_CLOUDAPI_WIRE_LOGG
 from container_service_extension.logging.logger import SERVER_NSXT_WIRE_LOGGER
 from container_service_extension.mqi.mqtt_extension_manager import \
     MQTTExtensionManager
+from container_service_extension.rde.behaviors.behavior_model import Behavior, BehaviorAclEntry  # noqa: E501
+from container_service_extension.rde.behaviors.behavior_service import BehaviorService  # noqa: E501
 import container_service_extension.rde.common.entity_service as def_entity_svc
 import container_service_extension.rde.constants as def_constants
 import container_service_extension.rde.models.common_models as common_models
 import container_service_extension.rde.models.rde_1_0_0 as rde_1_0_0
 import container_service_extension.rde.schema_service as def_schema_svc
 import container_service_extension.rde.utils as def_utils
-from container_service_extension.rde.behaviors.behavior_model import Behavior, \
-    BehaviorAclEntry
-from container_service_extension.rde.behaviors.behavior_service import \
-    BehaviorService
 from container_service_extension.security.context.user_context import UserContext  # noqa: E501
-import container_service_extension.server.compute_policy_manager as compute_policy_manager # noqa: E501
+import container_service_extension.server.compute_policy_manager as compute_policy_manager  # noqa: E501
 from container_service_extension.server.vcdbroker import get_all_clusters as get_all_cse_clusters # noqa: E501
 
 API_FILTER_PATTERNS = [
@@ -807,9 +805,6 @@ def _register_def_schema(client: Client,
             rde_metadata.get(def_constants.RDEMetadataKey.MAP_BEHAVIOR_TO_ACL, {})  # noqa: E501
         _set_acls_on_behaviors(cloudapi_client, behavior_acl_metadata, msg_update_callback)  # noqa: E501
 
-        msg_update_callback.general(msg)
-        INSTALL_LOGGER.info(msg)
-
         # Update user's role with right bundle associated with native defined
         # entity
         if(_update_user_role_with_right_bundle(
@@ -849,34 +844,45 @@ def _register_def_schema(client: Client,
             pass
 
 
-def _set_acls_on_behaviors(cloudapi_client, behavior_acl_metadata, msg_update_callback):
+def _set_acls_on_behaviors(cloudapi_client, behavior_acl_metadata,
+                           msg_update_callback):
     behavior_svc = BehaviorService(cloudapi_client=cloudapi_client)
     msg = ""
     for entity_type_id, behavior_acls in behavior_acl_metadata.items():
-        behavior_svc.update_behavior_acls_on_entity_type(entity_type_id,
-                                                         behavior_acls)  # noqa: E501
+        msg += f"Setting ACLs on behaviors of the entity type '{entity_type_id}'"  # noqa: E501
+        behavior_svc.update_behavior_acls_on_entity_type(entity_type_id, behavior_acls)  # noqa: E501
     msg_update_callback.general(msg)
     INSTALL_LOGGER.info(msg)
 
 
-def _override_behaviors(cloudapi_client, override_behavior_metadata, msg_update_callback):
+def _override_behaviors(cloudapi_client, override_behavior_metadata,
+                        msg_update_callback):
     behavior_svc = BehaviorService(cloudapi_client=cloudapi_client)
     msg = ""
     for entity_type_id, behaviors in override_behavior_metadata.items():
         for behavior in behaviors:
-            behavior_svc.override_behavior_on_entity_type(behavior,
-                                                          entity_type_id)  # noqa: E501
+            msg += f"Overriding behavior '{behavior.id}' on entity type '{entity_type_id}'"  # noqa: E501
+            behavior_svc.override_behavior_on_entity_type(behavior, entity_type_id)  # noqa: E501
     msg_update_callback.general(msg)
     INSTALL_LOGGER.info(msg)
 
 
-def _register_behaviors(cloudapi_client, map_interface_to_behaviors, msg_update_callback):
+def _register_behaviors(cloudapi_client, map_interface_to_behaviors,
+                        msg_update_callback):
     behavior_svc = BehaviorService(cloudapi_client=cloudapi_client)
     msg = ""
     for interface_id, behaviors in map_interface_to_behaviors.items():
         for behavior in behaviors:
-            behavior_svc.create_behavior_on_interface(behavior, interface_id)
-    msg_update_callback.general(msg)
+            try:
+                behavior_svc.get_behavior_on_interface_by_id(behavior.id, interface_id)  # noqa: E501
+                msg += f"Skipping creation of behavior '{behavior.id}' on " \
+                       f"interface '{interface_id}'.Behavior already found.\n"
+            except Exception:
+                # TODO Implement Exception handling in behavior_service.py
+                behavior_svc.create_behavior_on_interface(behavior, interface_id)  # noqa: E501
+                msg += f"Successfully registered the behavior " \
+                       f"'{behavior.id}' on interface '{interface_id}'."
+    msg_update_callback.general(msg.rstrip())
     INSTALL_LOGGER.info(msg)
 
 
@@ -894,8 +900,7 @@ def _register_native_entity_type(cloudapi_client, entity_type, msg_update_callba
         entity_svc.create_acl_for_entity(
             native_entity_type.get_id(),
             grant_type=server_constants.AclGrantType.MembershipACLGrant,
-            access_level_id=server_constants.AclAccessLevelId.AccessLevelReadWrite,
-            # noqa: E501
+            access_level_id=server_constants.AclAccessLevelId.AccessLevelReadWrite,  # noqa: E501
             member_id=server_constants.AclMemberId.SystemOrgId)
         msg += "Successfully " \
                "added ReadWrite ACL for native defined entity to System Org"  # noqa: E501

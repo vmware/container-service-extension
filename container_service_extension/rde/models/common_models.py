@@ -9,11 +9,10 @@ from typing import List
 
 from container_service_extension.common.constants import shared_constants as shared_constants  # noqa: E501
 from container_service_extension.rde import utils as def_utils
-from container_service_extension.rde.behaviors.behavior_model import \
-    BehaviorOperation, BehaviorAcl
+from container_service_extension.rde.behaviors.behavior_model import BehaviorAcl, BehaviorOperation  # noqa: E501
 from container_service_extension.rde.constants import \
-    DEF_ENTITY_TYPE_ID_PREFIX, DEF_INTERFACE_ID_PREFIX, RDEMetadataKey, \
-    RuntimeRDEVersion, SchemaFile, Vendor, Nss
+    DEF_ENTITY_TYPE_ID_PREFIX, DEF_INTERFACE_ID_PREFIX, Nss, RDEMetadataKey, \
+    RuntimeRDEVersion, SchemaFile, Vendor
 from container_service_extension.rde.models.abstractNativeEntity import AbstractNativeEntity  # noqa: E501
 from container_service_extension.rde.models.rde_factory import get_rde_model
 from container_service_extension.rde.utils import load_rde_schema
@@ -329,4 +328,3 @@ MAP_RDE_VERSION_TO_ITS_METADATA = {
         }
     }
 }
-

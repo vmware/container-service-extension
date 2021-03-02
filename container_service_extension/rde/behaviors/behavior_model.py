@@ -6,7 +6,7 @@ from enum import Enum
 from enum import unique
 
 from container_service_extension.common.constants.server_constants import AclAccessLevelId, ExtensionType, MQTT_EXTENSION_URN   # noqa: E501
-from container_service_extension.rde.constants import Vendor, Nss
+from container_service_extension.rde.constants import Nss, Vendor
 
 BEHAVIOR_INTERFACE_ID_PREFIX = 'urn:vcloud:behavior-interface'
 KUBE_CONFIG_BEHAVIOR_INTERFACE_NAME = 'createKubeConfig'
@@ -29,7 +29,6 @@ DELETE_CLUSTER_BEHAVIOR_INTERFACE_ID = f"{BEHAVIOR_INTERFACE_ID_PREFIX}:" \
                                        f"{DELETE_CLUSTER_BEHAVIOR_NAME}:" \
                                        f"{Vendor.CSE.value}:" \
                                        f"{Nss.KUBERNETES.value}:1.0.0"
-
 
 
 @dataclass()
@@ -97,7 +96,8 @@ class BehaviorOperation(Enum):
                               description='Deletes native cluster',
                               id=DELETE_CLUSTER_BEHAVIOR_INTERFACE_ID)
     GET_KUBE_CONFIG = Behavior(name=KUBE_CONFIG_BEHAVIOR_INTERFACE_NAME,
-                               id=KUBE_CONFIG_BEHAVIOR_INTERFACE_ID)
+                               id=KUBE_CONFIG_BEHAVIOR_INTERFACE_ID,
+                               ref=KUBE_CONFIG_BEHAVIOR_INTERFACE_ID)
 
 
 @unique
@@ -105,9 +105,8 @@ class BehaviorAcl(Enum):
     CREATE_CLUSTER_ACL = BehaviorAclEntry(CREATE_CLUSTER_BEHAVIOR_INTERFACE_ID,
                                           AclAccessLevelId.AccessLevelReadWrite)  # noqa: E501
     UPDATE_CLUSTER_ACL = BehaviorAclEntry(UPDATE_CLUSTER_BEHAVIOR_INTERFACE_ID,
-                                          AclAccessLevelId.AccessLevelReadWrite),  # noqa: E501
+                                          AclAccessLevelId.AccessLevelReadWrite)  # noqa: E501
     DELETE_CLUSTER_ACL = BehaviorAclEntry(DELETE_CLUSTER_BEHAVIOR_INTERFACE_ID,
-                                          AclAccessLevelId.AccessLevelFullControl),  # noqa: E501
+                                          AclAccessLevelId.AccessLevelFullControl)  # noqa: E501
     KUBE_CONFIG_ACL = BehaviorAclEntry(KUBE_CONFIG_BEHAVIOR_INTERFACE_ID,
                                        AclAccessLevelId.AccessLevelReadOnly)
-
