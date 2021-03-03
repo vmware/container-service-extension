@@ -66,7 +66,7 @@ def _gateway_body_to_subnet_values(gateway_body: dict):
         NsxtGatewayRequestKey.SUBNETS][NsxtGatewayRequestKey.VALUES]
 
 
-def _subnet_value_to_ip_ranges(subnet_value: dict):
+def _subnet_value_to_ip_ranges_values(subnet_value: dict):
     return subnet_value[NsxtGatewayRequestKey.IP_RANGES][NsxtGatewayRequestKey.VALUES]  # noqa: E501
 
 
@@ -92,9 +92,30 @@ def _get_ip_range_set(ip_ranges: list):
     return ip_range_set
 
 
+def _append_ip_range_to_ip_set(to_add_ip_set: set, ip_ranges: list):
+    """Get set of ip addresses.
+
+    :param set to_add_ip_set: set to add ips to
+    :param list ip_ranges: list of dictionaries, each containing a start and
+        end ip address
+
+    :return: set of ip addresses
+    :rtype: set
+    """
+    for ip_range in ip_ranges:
+        start_ip = ipaddress.ip_address(ip_range[NsxtGatewayRequestKey.START_ADDRESS])  # noqa: E501
+        end_ip = ipaddress.ip_address(ip_range[NsxtGatewayRequestKey.END_ADDRESS])  # noqa: E501
+
+        # Add to ip range set
+        curr_ip = start_ip
+        while curr_ip <= end_ip:
+            to_add_ip_set.add(format(curr_ip))
+            curr_ip += 1
+
+
 def _get_ip_address_difference(updated_subnet_value, orig_subnet_value):
-    updated_ip_ranges = _subnet_value_to_ip_ranges(updated_subnet_value)
-    orig_ip_ranges = _subnet_value_to_ip_ranges(orig_subnet_value)
+    updated_ip_ranges = _subnet_value_to_ip_ranges_values(updated_subnet_value)
+    orig_ip_ranges = _subnet_value_to_ip_ranges_values(orig_subnet_value)
 
     updated_ip_range_set = _get_ip_range_set(updated_ip_ranges)
     orig_ip_range_set = _get_ip_range_set(orig_ip_ranges)
@@ -240,3 +261,30 @@ class NsxtBackedGatewayService:
             available_ip_count = available_ip_value[NsxtGatewayRequestKey.TOTAL_IP_COUNT]  # noqa: E501
             network_to_available_ip_dict[(gateway_ip, prefix_length)] = int(available_ip_count)  # noqa: E501
         return network_to_available_ip_dict
+
+    def _get_used_ip_addresses_response(self):
+        used_ip_address_path = f'{self._gateway_relative_path}/' \
+                               f'{cloudapi_constants.CloudApiResource.USED_IP_ADDRESSES}'  # noqa: E501
+        return self._cloudapi_client.do_request(
+            method=shared_constants.RequestMethod.GET,
+            cloudapi_version=cloudapi_constants.CloudApiVersion.VERSION_1_0_0,
+            resource_url_relative_path=used_ip_address_path)
+
+    def get_available_ip(self):
+        # Get all ips
+        get_gateway_response = self._get_gateway()
+        subnet_values = _gateway_body_to_subnet_values(get_gateway_response)
+        available_ips_set = set()
+        for subnet_value in subnet_values:
+            ip_ranges: list = _subnet_value_to_ip_ranges_values(subnet_value)
+            _append_ip_range_to_ip_set(available_ips_set, ip_ranges)
+
+        # Filter out used ip ranges
+        used_ip_response = self._get_used_ip_addresses_response()
+        for used_ip_value in used_ip_response[NsxtGatewayRequestKey.VALUES]:
+            ip_address: str = used_ip_value[NsxtGatewayRequestKey.IP_ADDRESS]
+            available_ips_set.remove(ip_address)
+
+        if len(available_ips_set) == 0:
+            raise Exception('No available ips.')
+        return available_ips_set.pop()
