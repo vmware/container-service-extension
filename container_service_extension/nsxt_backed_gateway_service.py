@@ -254,6 +254,11 @@ class NsxtBackedGatewayService:
                 method=shared_constants.RequestMethod.DELETE,
                 cloudapi_version=cloudapi_constants.CloudApiVersion.VERSION_1_0_0,  # noqa: E501
                 resource_url_relative_path=f"{self._nat_rules_relative_path}/{nat_rule_id}")  # noqa: E501
+            delete_response = self._cloudapi_client.get_last_response()
+            task_href = delete_response.headers._store['location'][1]
+            task_monitor = self._client.get_task_monitor()
+            task = task_monitor._get_task_status(task_href)
+            task_monitor.wait_for_status(task)
         except Exception as err:
             SERVER_LOGGER.info(f'Failed to delete dnat rule: {str(err)}')
             return
