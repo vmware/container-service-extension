@@ -93,25 +93,28 @@ def _get_ip_range_set(ip_ranges: list):
     return ip_range_set
 
 
-def _append_ip_range_to_ip_set(to_add_ip_set: set, ip_ranges: list):
-    """Get set of ip addresses.
+def _get_available_ip_in_ip_ranges(used_ips: set, ip_ranges: list):
+    """Get an available ip from the passed in ip ranges.
 
-    :param set to_add_ip_set: set to add ips to
+    :param set used_ips: set of used ips.
     :param list ip_ranges: list of dictionaries, each containing a start and
         end ip address
 
-    :return: set of ip addresses
-    :rtype: set
+    :return: available ip. Empty string returned if no available ip.
+    :rtype: str
     """
     for ip_range in ip_ranges:
         start_ip = ipaddress.ip_address(ip_range[NsxtGatewayRequestKey.START_ADDRESS])  # noqa: E501
         end_ip = ipaddress.ip_address(ip_range[NsxtGatewayRequestKey.END_ADDRESS])  # noqa: E501
 
-        # Add to ip range set
+        # Search through ips
         curr_ip = start_ip
         while curr_ip <= end_ip:
-            to_add_ip_set.add(format(curr_ip))
+            curr_ip_str = format(curr_ip)
+            if curr_ip_str not in used_ips:
+                return curr_ip_str
             curr_ip += 1
+    return ''
 
 
 def _get_ip_address_difference(updated_subnet_value, orig_subnet_value):
@@ -264,7 +267,7 @@ class NsxtBackedGatewayService:
         return network_to_available_ip_dict
 
     def _get_used_ip_addresses_response(self,
-                                        page_num=server_constants.USED_IP_DEFAULT_PAGE_NUM,  # noqa: E501
+                                        page_num=server_constants.DEFAULT_FIRST_PAGE,  # noqa: E501
                                         page_size=server_constants.USED_IP_ADDRESS_PAGE_SIZE):  # noqa:E 501
         used_ip_address_path = \
             f'{self._gateway_relative_path}/' \
@@ -295,18 +298,21 @@ class NsxtBackedGatewayService:
                 yield used_ip_value_dict[NsxtGatewayRequestKey.IP_ADDRESS]
 
     def get_available_ip(self):
-        # Get all ips
+        """Get an available ip.
+
+        :return: available ip. Empty string returned if no available ip.
+        :rtype: str
+        """
+        # Get all used ips
+        used_ips: set = {used_ip for used_ip in self._list_used_ip_addresses()}
+
+        # Iterate through ip ranges and find first available ip
         get_gateway_response = self._get_gateway()
         subnet_values = _gateway_body_to_subnet_values(get_gateway_response)
-        available_ips_set = set()
         for subnet_value in subnet_values:
             ip_ranges: list = _subnet_value_to_ip_ranges_values(subnet_value)
-            _append_ip_range_to_ip_set(available_ips_set, ip_ranges)
 
-        # Filter out used ip ranges
-        for used_ip_address in self._list_used_ip_addresses():
-            available_ips_set.remove(used_ip_address)
-
-        if len(available_ips_set) == 0:
-            raise Exception('No available ips.')
-        return available_ips_set.pop()
+            available_ip = _get_available_ip_in_ip_ranges(used_ips, ip_ranges)
+            if available_ip:
+                return available_ip
+        return ''

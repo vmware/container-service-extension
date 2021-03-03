@@ -500,6 +500,8 @@ class PKSOvdcInfoKey(str, Enum):
     AVAILABLE_PKS_PLANS = 'available pks plans'
 
 
+# default first page
+DEFAULT_FIRST_PAGE = 1
+
 # Pagination constants for used IP addresses
-USED_IP_DEFAULT_PAGE_NUM = 1
 USED_IP_ADDRESS_PAGE_SIZE = 10
