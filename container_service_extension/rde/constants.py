@@ -70,52 +70,6 @@ class RDEVersion(str, Enum):
     RDE_2_0_0 = '2.0.0'
 
 
-class CommonInterfaceMetadata(str, Enum):
-    VENDOR = Vendor.VMWARE.value
-    NSS = Nss.KUBERNETES.value
-    VERSION = '1.0.0'
-    NAME = "Kubernetes"
-
-    @classmethod
-    def get_id(cls):
-        return f"{DEF_INTERFACE_ID_PREFIX}:{cls.VENDOR}:{cls.NSS}:{cls.VERSION}"  # noqa: E501
-
-
-class NativeEntityTypeMetadata_1_0_0(str, Enum):
-    VENDOR = Vendor.CSE.value
-    NSS = DEF_NATIVE_ENTITY_TYPE_NSS
-    VERSION = '1.0.0'
-    SCHEMA_FILE = 'schema_1_0_0.json'
-    NAME = 'nativeClusterEntityType'
-
-    @classmethod
-    def get_id(cls):
-        return f"{DEF_ENTITY_TYPE_ID_PREFIX}:{cls.VENDOR}:{cls.NSS}:{cls.VERSION}"  # noqa: E501
-
-
-class NativeEntityTypeMetadata_2_0_0(str, Enum):
-    VENDOR = Vendor.CSE.value
-    NSS = DEF_NATIVE_ENTITY_TYPE_NSS
-    VERSION = '2.0.0'
-    SCHEMA_FILE = 'schema_2_0_0.json'
-    NAME = 'nativeClusterEntityType'
-
-    @classmethod
-    def get_id(cls):
-        return f"{DEF_ENTITY_TYPE_ID_PREFIX}:{cls.VENDOR}:{cls.NSS}:{cls.VERSION}"  # noqa: E501
-
-
-class TKGEntityTypeMetadata_1_0_0(str, Enum):
-    VENDOR = Vendor.VMWARE.value
-    NSS = TKG_ENTITY_TYPE_NSS
-    VERSION = '1.0.0'
-    NAME = "TKG Cluster"
-
-    @classmethod
-    def get_id(cls):
-        return f"{DEF_ENTITY_TYPE_ID_PREFIX}:{cls.VENDOR}:{cls.NSS}:{cls.VERSION}"  # noqa: E501
-
-
 @unique
 class RDEMetadataKey(str, Enum):
     ENTITY_TYPE = 'entity_type'
