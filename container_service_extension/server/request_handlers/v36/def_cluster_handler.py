@@ -39,7 +39,6 @@ def cluster_update(data: dict, op_ctx: ctx.OperationContext):
     NativeEntityClass = rde_factory.get_rde_model(rde_in_use)
     cluster_entity: AbstractNativeEntity = \
         NativeEntityClass(**data[RequestKey.INPUT_SPEC])  # noqa: E501
-    print(asdict(cluster_entity))
     curr_entity = svc.entity_svc.get_entity(cluster_id)
     cluster_entity_status = curr_entity.entity.status
     current_entity_spec = construct_cluster_spec_from_entity_status(
