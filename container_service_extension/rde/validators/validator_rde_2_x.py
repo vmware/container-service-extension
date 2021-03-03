@@ -24,6 +24,9 @@ class Validator_2_0_0(AbstractValidator):
         :return: is validation is successful or failure
         :rtype: bool
         """
+        # TODO: validators for rest of the CSE operations in V36 will be
+        #  implemented as and when v36/def_cluster_handler.py get other handler
+        #  functions
         if operation == CseOperation.V36_CLUSTER_UPDATE:
             return validate_cluster_update_request_and_check_cluster_upgrade(request_spec, current_spec)  # noqa: E501
         raise NotImplementedError(f"Validator for {operation.name} not found")

@@ -78,12 +78,12 @@ def construct_cluster_spec_from_entity_status(entity_status: Union[rde_1_0_0.Sta
     """
     # TODO: Refactor this multiple if to rde_version -> handler pattern
     if rde_version_in_use == def_constants.RDEVersion.RDE_2_0_0.value:
-        return construct_2_x_cluster_spec_from_entity_status(entity_status)
+        return construct_2_0_0_cluster_spec_from_entity_status(entity_status)
     raise NotImplementedError(f"constructing cluster spec from entity status for {rde_version_in_use} is"  # noqa:
                               f" not implemented ")
 
 
-def construct_2_x_cluster_spec_from_entity_status(entity_status: rde_2_0_0.Status) -> rde_2_0_0.ClusterSpec:  # noqa:
+def construct_2_0_0_cluster_spec_from_entity_status(entity_status: rde_2_0_0.Status) -> rde_2_0_0.ClusterSpec:  # noqa:
     """Construct cluster specification from entity status using rde_2_0_0 model.
 
     :param rde_2_0_0.Status entity_status: Entity Status as defined in rde_2_0_0  # noqa: E501
