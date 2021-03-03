@@ -722,12 +722,6 @@ def process_request(message):
     api_version = _get_api_version_from_accept_header(
         api_version_header=api_version_header)
 
-    # This will take care of invalid accept headers, since the deduced
-    # api version in that case would be 0.0.
-    if api_version not in server_constants.SUPPORTED_VCD_API_VERSIONS:
-        raise cse_exception.NotAcceptableRequestError(
-            error_message="Invalid Accept header specified.")
-
     # Convert to upper case for matching the ENUM values
     method = RequestMethod(message['method'].upper())
 
