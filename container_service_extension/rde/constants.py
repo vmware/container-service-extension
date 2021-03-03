@@ -61,6 +61,12 @@ class RuntimeRDEVersion(str, Enum):
     RDE_2_X = '2.0.0'
 
 
+@unique
+class RDEVersion(str, Enum):
+    RDE_1_0_0 = '1.0.0'
+    RDE_2_0_0 = '2.0.0'
+
+
 class CommonInterfaceMetadata(str, Enum):
     VENDOR = Vendor.VMWARE.value
     NSS = Nss.KUBERNETES.value

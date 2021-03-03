@@ -39,17 +39,16 @@ def cluster_update(data: dict, op_ctx: ctx.OperationContext):
     NativeEntityClass = rde_factory.get_rde_model(rde_in_use)
     cluster_entity: AbstractNativeEntity = \
         NativeEntityClass(**data[RequestKey.INPUT_SPEC])  # noqa: E501
+    print(asdict(cluster_entity))
     curr_entity = svc.entity_svc.get_entity(cluster_id)
     cluster_entity_status = curr_entity.entity.status
     current_entity_spec = construct_cluster_spec_from_entity_status(
         cluster_entity_status, server_utils.get_rde_version_in_use())
 
-    is_upgrade_operation = rde_validator_factory.get_validator(
-        rde_constants.RuntimeRDEVersion.RDE_2_X).validate(
+    rde_validator_factory.get_validator(
+        rde_constants.RDEVersion.RDE_2_0_0).validate(
         asdict(cluster_entity.spec),
         asdict(current_entity_spec),
         server_constants.CseOperation.V36_CLUSTER_UPDATE)
 
-    if is_upgrade_operation:
-        return asdict(svc.upgrade_cluster(cluster_id, cluster_entity))
-    return asdict(svc.resize_cluster(cluster_id, cluster_entity))
+    return asdict(svc.update_cluster(cluster_id, cluster_entity))

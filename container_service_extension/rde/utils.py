@@ -6,11 +6,8 @@
 import math
 from typing import Union
 
-from container_service_extension.common.constants.server_constants import FlattenedClusterSpecKey  # noqa: E501
-from container_service_extension.common.constants.server_constants import VALID_UPDATE_FIELDS  # noqa: E501
 import container_service_extension.common.utils.core_utils as core_utils
 import container_service_extension.exception.exceptions as excptn
-from container_service_extension.exception.exceptions import BadRequestError
 from container_service_extension.lib.cloudapi.cloudapi_client import CloudApiClient  # noqa: E501
 import container_service_extension.rde.constants as def_constants
 import container_service_extension.rde.models.rde_1_0_0 as rde_1_0_0
@@ -96,7 +93,8 @@ def construct_2_x_cluster_spec_from_entity_status(entity_status: rde_2_0_0.Statu
 
     workers_count = len(entity_status.nodes.workers)
     if workers_count == 0:
-        workers = rde_2_0_0.Workers(sizing_class=None, storage_profile='*',
+        workers = rde_2_0_0.Workers(sizing_class='System Default',
+                                    storage_profile='*',
                                     count=workers_count)
     else:
         workers = rde_2_0_0.Workers(
@@ -106,13 +104,13 @@ def construct_2_x_cluster_spec_from_entity_status(entity_status: rde_2_0_0.Statu
 
     nfs_count = len(entity_status.nodes.nfs)
     if nfs_count == 0:
-        nfs = rde_2_0_0.Nfs(sizing_class=None, storage_profile='*',
+        nfs = rde_2_0_0.Nfs(sizing_class='System Default', storage_profile='*',
                             count=nfs_count)
     else:
         nfs = rde_2_0_0.Nfs(
             sizing_class=entity_status.nodes.nfs[0].sizing_class,  # noqa: E501
             storage_profile=entity_status.nodes.nfs[
-                0].storage_profile)
+                0].storage_profile, count=nfs_count)
 
     k8_distribution = rde_2_0_0.Distribution(
         template_name=entity_status.cloud_properties.k8_distribution.template_name,  # noqa: E501
@@ -128,46 +126,6 @@ def construct_2_x_cluster_spec_from_entity_status(entity_status: rde_2_0_0.Statu
                                  control_plane=control_plane,
                                  workers=workers,
                                  nfs=nfs)
-
-
-def validate_cluster_update_request_and_check_cluster_upgrade(input_spec: dict, reference_spec: dict) -> bool:  # noqa: E501
-    """Validate the desired spec with curr spec and check if upgrade operation.
-
-    :param dict input_spec: input spec
-    :param dict reference_spec: reference spec to validate the desired spec
-    :return: true if cluster operation is upgrade and false if operation is
-        resize
-    :rtype: bool
-    :raises: BadRequestError for invalid payload.
-    """
-    diff_fields = \
-        find_diff_fields(input_spec, reference_spec, exclude_fields=[])
-
-    # Raise exception if empty diff
-    if not diff_fields:
-        raise BadRequestError("No change in cluster specification")  # noqa: E501
-
-    # Raise exception if fields which cannot be changed are updated
-    keys_with_invalid_value = [k for k in diff_fields if k not in VALID_UPDATE_FIELDS]  # noqa: E501
-    if len(keys_with_invalid_value) > 0:
-        err_msg = f"Invalid input values found in {sorted(keys_with_invalid_value)}"  # noqa: E501
-        raise BadRequestError(err_msg)
-
-    is_resize_operation = False
-    if FlattenedClusterSpecKey.WORKERS_COUNT.value in diff_fields or \
-            FlattenedClusterSpecKey.NFS_COUNT.value in diff_fields:
-        is_resize_operation = True
-    is_upgrade_operation = False
-    if FlattenedClusterSpecKey.TEMPLATE_NAME.value in diff_fields or \
-            FlattenedClusterSpecKey.TEMPLATE_REVISION.value in diff_fields:
-        is_upgrade_operation = True
-
-    # Raise exception if resize and upgrade are performed at the same time
-    if is_resize_operation and is_upgrade_operation:
-        err_msg = "Cannot resize and upgrade the cluster at the same time"
-        raise BadRequestError(err_msg)
-
-    return is_upgrade_operation
 
 
 def find_diff_fields(input_spec: dict, reference_spec: dict, exclude_fields: list = None) -> list:  # noqa: E501
