@@ -813,7 +813,7 @@ def process_request(message):
     # update request_data with request_body
     if request_body:
         request_data[RequestKey.INPUT_SPEC] = request_body
-        LOGGER.debug(f"request body: {request_data}")
+        LOGGER.debug(f"request body: {request_body}")
 
     # update request_data with url template param key-values
     request_data.update(url_data)
