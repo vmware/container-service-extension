@@ -68,9 +68,9 @@ class RuntimeRDEVersion(str, Enum):
 class RDEMetadataKey(str, Enum):
     ENTITY_TYPE = 'entity_type'
     INTERFACES = 'interfaces'
-    MAP_INTERFACE_TO_BEHAVIORS = 'map_from_interface_id_to_behaviors'
-    MAP_INTERFACE_TO_OVERRIDE_BEHAVIORS = 'map_from_interface_id_to_behaviors_to_override'  # noqa: E501
-    MAP_BEHAVIOR_TO_ACL = 'map_from_behavior_id_to_behavior_acls'
+    INTERFACE_TO_BEHAVIORS_MAP = 'map_from_interface_id_to_behaviors'
+    ENTITY_TYPE_TO_OVERRIDABLE_BEHAVIORS_MAP = 'map_from_entitytype_id_to_behaviors_to_override'  # noqa: E501
+    BEHAVIOR_TO_ACL_MAP = 'map_from_behavior_id_to_behavior_acls'
 
 
 # Dictionary indicating RDE version to use for a given VCD API version.

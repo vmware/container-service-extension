@@ -309,17 +309,17 @@ MAP_RDE_VERSION_TO_ITS_METADATA = {
                                     K8Interface.CSE_INTERFACE.value],
         RDEMetadataKey.ENTITY_TYPE: EntityType.NATIVE_ENTITY_TYPE_2_0_0.value,
 
-        RDEMetadataKey.MAP_INTERFACE_TO_BEHAVIORS: {
+        RDEMetadataKey.INTERFACE_TO_BEHAVIORS_MAP: {
             K8Interface.CSE_INTERFACE.value.id:
                 [BehaviorOperation.CREATE_CLUSTER.value,
                  BehaviorOperation.UPDATE_CLUSTER.value,
                  BehaviorOperation.DELETE_CLUSTER.value]
         },
-        RDEMetadataKey.MAP_INTERFACE_TO_OVERRIDE_BEHAVIORS: {
+        RDEMetadataKey.ENTITY_TYPE_TO_OVERRIDABLE_BEHAVIORS_MAP: {
             EntityType.NATIVE_ENTITY_TYPE_2_0_0.value.id:
                 [BehaviorOperation.GET_KUBE_CONFIG.value]
         },
-        RDEMetadataKey.MAP_BEHAVIOR_TO_ACL: {
+        RDEMetadataKey.BEHAVIOR_TO_ACL_MAP: {
             EntityType.NATIVE_ENTITY_TYPE_2_0_0.value.id:
                 [BehaviorAcl.CREATE_CLUSTER_ACL.value,
                  BehaviorAcl.UPDATE_CLUSTER_ACL.value,
