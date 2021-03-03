@@ -627,6 +627,7 @@ class ClusterService(abstract_broker.AbstractBroker):
                         ovdc_name=ovdc_name,
                         network_name=cluster_spec.spec.settings.network,
                         cluster_name=cluster_name,
+                        cluster_id=cluster_id,
                         internal_ip=control_plane_ip)
                     if expose_ip:
                         control_plane_ip = expose_ip
@@ -2128,7 +2129,8 @@ def _get_gateway(client, cloudapi_client, network_resource, ovdc: VDC):
 
 
 def _expose_cluster(client: vcd_client.Client, org_name: str, ovdc_name: str,
-                    network_name: str, cluster_name: str, internal_ip: str):
+                    network_name: str, cluster_name: str, cluster_id: str,
+                    internal_ip: str):
     # Check if routed org vdc network
     ovdc = vcd_utils.get_vdc(client, org_name=org_name, vdc_name=ovdc_name)
     try:
@@ -2162,8 +2164,11 @@ def _expose_cluster(client: vcd_client.Client, org_name: str, ovdc_name: str,
     if not expose_ip:
         raise Exception('Unable to reserve ip using quick ip allocation.')
     try:
+        # Dnat rule name includes cluster name to show users the cluster
+        # rule corresponds to. The cluster id is used to make the name unique.
+        dnat_rule_name = f"{cluster_name}_{cluster_id}_{EXPOSE_CLUSTER_NAME_FRAGMENT}"  # noqa: E501
         nsxt_gateway_svc.add_dnat_rule(
-            name=f"{cluster_name}_{EXPOSE_CLUSTER_NAME_FRAGMENT}",
+            name=dnat_rule_name,
             internal_address=internal_ip,
             external_address=expose_ip)
     except Exception as err:
