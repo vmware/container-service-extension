@@ -551,6 +551,7 @@ class ClusterService(abstract_broker.AbstractBroker):
         desired_template_revision = update_spec.spec.k8_distribution.template_revision  # noqa: E501
         if current_template_name != desired_template_name or current_template_revision != desired_template_revision:  # noqa: E501
             return self.upgrade_cluster(cluster_id, update_spec)
+        e.CseServerError("update not supported for the specified input specification")  # noqa: E501
 
     def get_cluster_acl_info(self, cluster_id, page: int, page_size: int):
         """Get cluster ACL info based on the defined entity ACL."""
