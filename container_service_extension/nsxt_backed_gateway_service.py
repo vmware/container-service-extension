@@ -13,6 +13,7 @@ import container_service_extension.pyvcloud_utils as pyvcloud_utils
 import container_service_extension.server_constants as server_constants
 from container_service_extension.server_constants import NsxtGatewayRequestKey
 import container_service_extension.shared_constants as shared_constants
+from container_service_extension.shared_constants import PaginationKey
 import container_service_extension.utils as server_utils
 
 
@@ -262,13 +263,36 @@ class NsxtBackedGatewayService:
             network_to_available_ip_dict[(gateway_ip, prefix_length)] = int(available_ip_count)  # noqa: E501
         return network_to_available_ip_dict
 
-    def _get_used_ip_addresses_response(self):
-        used_ip_address_path = f'{self._gateway_relative_path}/' \
-                               f'{cloudapi_constants.CloudApiResource.USED_IP_ADDRESSES}'  # noqa: E501
+    def _get_used_ip_addresses_response(self,
+                                        page_num=server_constants.USED_IP_DEFAULT_PAGE_NUM,  # noqa: E501
+                                        page_size=server_constants.USED_IP_ADDRESS_PAGE_SIZE):  # noqa:E 501
+        used_ip_address_path = \
+            f'{self._gateway_relative_path}/' \
+            f'{cloudapi_constants.CloudApiResource.USED_IP_ADDRESSES}?' \
+            f'{PaginationKey.PAGE_NUMBER}={page_num}&' \
+            f'{PaginationKey.PAGE_SIZE}={page_size}'
         return self._cloudapi_client.do_request(
             method=shared_constants.RequestMethod.GET,
             cloudapi_version=cloudapi_constants.CloudApiVersion.VERSION_1_0_0,
             resource_url_relative_path=used_ip_address_path)
+
+    def _list_used_ip_addresses(self):
+        """List ip addresses.
+
+        :return: Generator of ip addresses.
+        :rtype: Generator[str]
+        """
+        page_num = 0
+        while True:
+            page_num += 1
+            response_body = self._get_used_ip_addresses_response(
+                page_num=page_num,
+                page_size=server_constants.USED_IP_ADDRESS_PAGE_SIZE)
+            values = response_body[PaginationKey.VALUES]
+            if len(values) == 0:
+                break
+            for used_ip_value_dict in values:
+                yield used_ip_value_dict[NsxtGatewayRequestKey.IP_ADDRESS]
 
     def get_available_ip(self):
         # Get all ips
@@ -280,10 +304,8 @@ class NsxtBackedGatewayService:
             _append_ip_range_to_ip_set(available_ips_set, ip_ranges)
 
         # Filter out used ip ranges
-        used_ip_response = self._get_used_ip_addresses_response()
-        for used_ip_value in used_ip_response[NsxtGatewayRequestKey.VALUES]:
-            ip_address: str = used_ip_value[NsxtGatewayRequestKey.IP_ADDRESS]
-            available_ips_set.remove(ip_address)
+        for used_ip_address in self._list_used_ip_addresses():
+            available_ips_set.remove(used_ip_address)
 
         if len(available_ips_set) == 0:
             raise Exception('No available ips.')

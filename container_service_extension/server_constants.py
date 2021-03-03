@@ -498,3 +498,8 @@ class OvdcInfoKey(str, Enum):
 class PKSOvdcInfoKey(str, Enum):
     PKS_API_SERVER = 'pks api server'
     AVAILABLE_PKS_PLANS = 'available pks plans'
+
+
+# Pagination constants for used IP addresses
+USED_IP_DEFAULT_PAGE_NUM = 1
+USED_IP_ADDRESS_PAGE_SIZE = 10
