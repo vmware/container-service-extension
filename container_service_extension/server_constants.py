@@ -502,14 +502,6 @@ class PKSOvdcInfoKey(str, Enum):
 # Network urn prefix
 NETWORK_URN_PREFIX = 'urn:vcloud:network'
 
-# Expose network rights
-EXPOSE_CLUSTER_RIGHTS = [
-    'Organization vDC Gateway: View',
-    'Organization vDC Gateway: Update',
-    'Organization vDC Gateway: View NAT',
-    'Organization vDC Gateway: Configure NAT'
-]
-
 # Expose cluster name to be appended to cluster name for dnat rule
 EXPOSE_CLUSTER_NAME_FRAGMENT = 'expose_dnat'
 

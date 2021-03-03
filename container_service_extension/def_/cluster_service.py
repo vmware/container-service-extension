@@ -36,7 +36,6 @@ import container_service_extension.pyvcloud_utils as vcd_utils
 from container_service_extension.server_constants import ClusterMetadataKey
 from container_service_extension.server_constants import CSE_CLUSTER_KUBECONFIG_PATH # noqa: E501
 from container_service_extension.server_constants import EXPOSE_CLUSTER_NAME_FRAGMENT  # noqa: E501
-from container_service_extension.server_constants import EXPOSE_CLUSTER_RIGHTS
 from container_service_extension.server_constants import IP_PORT_REGEX
 from container_service_extension.server_constants import LocalTemplateKey
 from container_service_extension.server_constants import NETWORK_URN_PREFIX
@@ -52,7 +51,6 @@ from container_service_extension.shared_constants import DefEntityPhase
 from container_service_extension.shared_constants import RequestMethod
 import container_service_extension.telemetry.constants as telemetry_constants
 import container_service_extension.telemetry.telemetry_handler as telemetry_handler  # noqa: E501
-import container_service_extension.user_context as user_context
 import container_service_extension.utils as utils
 import container_service_extension.vsphere_utils as vs_utils
 
@@ -540,8 +538,7 @@ class ClusterService(abstract_broker.AbstractBroker):
             template_revision = cluster_spec.spec.k8_distribution.template_revision  # noqa: E501
             ssh_key = cluster_spec.spec.settings.ssh_key
             rollback = cluster_spec.spec.settings.rollback_on_failure
-            intent_to_expose = cluster_spec.spec.intent_to_expose
-            api_version = cluster_spec.api_version
+            expose = cluster_spec.spec.expose
             vapp = None
             org = vcd_utils.get_org(self.context.client, org_name=org_name)
             vdc = vcd_utils.get_vdc(self.context.client,
@@ -619,7 +616,7 @@ class ClusterService(abstract_broker.AbstractBroker):
 
             # Handle exposing cluster
             expose_ip: str = ''
-            if intent_to_expose and float(api_version) >= float(vcd_client.ApiVersion.VERSION_36.value):  # noqa: E501
+            if expose:
                 try:
                     expose_ip = _expose_cluster(
                         client=self.context.client,
@@ -716,7 +713,7 @@ class ClusterService(abstract_broker.AbstractBroker):
             # Update defined entity with exposed ip
             if expose_ip and def_entity.entity.status.nodes:
                 def_entity.entity.status.nodes.control_plane.ip = expose_ip
-                def_entity.entity.status.expose = True
+                def_entity.entity.status.exposed = True
 
             self.entity_svc.update_entity(cluster_id, def_entity)
             self.entity_svc.resolve_entity(cluster_id)
@@ -2098,17 +2095,6 @@ def _get_gateway_href(vdc: VDC, gateway_name):
     return None
 
 
-def _get_missing_expose_cluster_rights(user_rights: list):
-    """Check if user has rights to edit gateway."""
-    missing_rights = set(EXPOSE_CLUSTER_RIGHTS)
-    for right in user_rights:
-        if right in missing_rights:
-            missing_rights.remove(right)
-            if len(missing_rights) == 0:
-                return []
-    return missing_rights
-
-
 def _get_gateway(client, cloudapi_client, network_resource, ovdc: VDC):
     routed_vdc_network = vdc_network.VdcNetwork(
         client=client,
@@ -2150,13 +2136,6 @@ def _expose_cluster(client: vcd_client.Client, org_name: str, ovdc_name: str,
         raise Exception(f'No gateway found for network: {network_name}')
     if not gateway.is_nsxt_backed():
         raise Exception('Gateway is not NSX-T backed for exposing cluster.')
-
-    # Check user has gateway view and edit rights
-    user_ctx = user_context.UserContext(client, cloudapi_client)
-    missing_expose_cluster_rights = _get_missing_expose_cluster_rights(user_ctx.rights)  # noqa: E501
-    if missing_expose_cluster_rights:
-        raise Exception(f'User is missing the following right to expose the '
-                        f'cluster: {missing_expose_cluster_rights}')
 
     # Auto reserve ip and add dnat rule
     nsxt_gateway_svc = NsxtBackedGatewayService(gateway, client)
