@@ -9,6 +9,7 @@ import json
 import math
 from typing import Union
 
+import container_service_extension.common.utils.core_utils as core_utils
 import container_service_extension.exception.exceptions as excptn
 from container_service_extension.lib.cloudapi.cloudapi_client import CloudApiClient  # noqa: E501
 import container_service_extension.rde.constants as def_constants
@@ -76,13 +77,13 @@ def construct_cluster_spec_from_entity_status(entity_status: Union[rde_1_0_0.Sta
     :raises NotImplementedError
     """
     # TODO: Refactor this multiple if to rde_version -> handler pattern
-    if rde_version_in_use == '2.0.0':
-        return construct_2_x_cluster_spec_from_entity_status(entity_status)
+    if rde_version_in_use == def_constants.RDEVersion.RDE_2_0_0.value:
+        return construct_2_0_0_cluster_spec_from_entity_status(entity_status)
     raise NotImplementedError(f"constructing cluster spec from entity status for {rde_version_in_use} is"  # noqa:
                               f" not implemented ")
 
 
-def construct_2_x_cluster_spec_from_entity_status(entity_status: rde_2_0_0.Status) -> rde_2_0_0.ClusterSpec:  # noqa:
+def construct_2_0_0_cluster_spec_from_entity_status(entity_status: rde_2_0_0.Status) -> rde_2_0_0.ClusterSpec:  # noqa:
     """Construct cluster specification from entity status using rde_2_0_0 model.
 
     :param rde_2_0_0.Status entity_status: Entity Status as defined in rde_2_0_0  # noqa: E501
@@ -96,7 +97,7 @@ def construct_2_x_cluster_spec_from_entity_status(entity_status: rde_2_0_0.Statu
 
     workers_count = len(entity_status.nodes.workers)
     if workers_count == 0:
-        workers = rde_2_0_0.Workers(sizing_class=None, storage_profile='*',
+        workers = rde_2_0_0.Workers(sizing_class=None, storage_profile=None,
                                     count=workers_count)
     else:
         workers = rde_2_0_0.Workers(
@@ -106,13 +107,13 @@ def construct_2_x_cluster_spec_from_entity_status(entity_status: rde_2_0_0.Statu
 
     nfs_count = len(entity_status.nodes.nfs)
     if nfs_count == 0:
-        nfs = rde_2_0_0.Nfs(sizing_class=None, storage_profile='*',
+        nfs = rde_2_0_0.Nfs(sizing_class=None, storage_profile=None,
                             count=nfs_count)
     else:
         nfs = rde_2_0_0.Nfs(
             sizing_class=entity_status.nodes.nfs[0].sizing_class,  # noqa: E501
             storage_profile=entity_status.nodes.nfs[
-                0].storage_profile)
+                0].storage_profile, count=nfs_count)
 
     k8_distribution = rde_2_0_0.Distribution(
         template_name=entity_status.cloud_properties.k8_distribution.template_name,  # noqa: E501
@@ -142,3 +143,14 @@ def load_rde_schema(schema_file: str) -> dict:
             schema_file.close()
         except Exception:
             pass
+
+
+def find_diff_fields(input_spec: dict, reference_spec: dict, exclude_fields: list = None) -> list:  # noqa: E501
+    if exclude_fields is None:
+        exclude_fields = []
+    input_dict = core_utils.flatten_dictionary(input_spec)
+    reference_dict = core_utils.flatten_dictionary(reference_spec)
+    exclude_key_set = set(exclude_fields)
+    key_set_for_validation = set(input_dict.keys()) - exclude_key_set
+    return [key for key in key_set_for_validation
+            if input_dict.get(key) and input_dict.get(key) != reference_dict.get(key)]  # noqa: E501
