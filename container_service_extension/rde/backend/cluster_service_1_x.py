@@ -326,7 +326,10 @@ class ClusterService(abstract_broker.AbstractBroker):
                 f"valid state to be resized. Please contact the administrator")
 
         # Record telemetry details
-        telemetry_data: common_models.DefEntity = common_models.DefEntity(id=cluster_id, entity=cluster_spec)  # noqa: E501
+        telemetry_data: common_models.DefEntity = common_models.DefEntity(
+            id=cluster_id,
+            entityType=server_utils.get_registered_def_entity_type().id,
+            entity=cluster_spec)  # noqa: E501
         telemetry_handler.record_user_action_details(
             cse_operation=telemetry_constants.CseOperation.V35_CLUSTER_APPLY,
             cse_params={
