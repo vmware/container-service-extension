@@ -73,7 +73,7 @@ PKS_HANDLERS = [
         'url': "pks/clusters",
         RequestMethod.GET: {
             tuple(server_constants.SUPPORTED_VCD_API_VERSIONS): {
-                'allowed_params': ['org', 'vdc'],
+                'allowed_params': ['org_name', 'ovdc_name'],
                 'required_params': [],
                 'operation': CseOperation.PKS_CLUSTER_LIST,
                 'handler': pks_cluster_handler.cluster_list
@@ -94,7 +94,7 @@ PKS_HANDLERS = [
         'url': f"pks/cluster/${RequestKey.CLUSTER_NAME}",
         RequestMethod.GET: {
             tuple(server_constants.SUPPORTED_VCD_API_VERSIONS): {
-                'allowed_params': ['org', 'vdc'],
+                'allowed_params': ['org_name', 'ovdc_name'],
                 'required_params': [],
                 'operation': CseOperation.PKS_CLUSTER_INFO,
                 'handler': pks_cluster_handler.cluster_info
@@ -102,7 +102,7 @@ PKS_HANDLERS = [
         },
         RequestMethod.PUT: {
             tuple(server_constants.SUPPORTED_VCD_API_VERSIONS): {
-                'allowed_params': ['org', 'vdc'],
+                'allowed_params': ['org_name', 'ovdc_name'],
                 'required_params': [],
                 'verify_payload': False,
                 'payload_type': '*',
@@ -112,7 +112,7 @@ PKS_HANDLERS = [
         },
         RequestMethod.DELETE: {
             tuple(server_constants.SUPPORTED_VCD_API_VERSIONS): {
-                'allowed_params': ['org', 'vdc'],
+                'allowed_params': ['org_name', 'ovdc_name'],
                 'required_params': [],
                 'operation': CseOperation.PKS_CLUSTER_DELETE,
                 'handler': pks_cluster_handler.cluster_delete
@@ -123,7 +123,7 @@ PKS_HANDLERS = [
         'url': f"pks/cluster/${RequestKey.CLUSTER_NAME}/config",
         RequestMethod.GET: {
             tuple(server_constants.SUPPORTED_VCD_API_VERSIONS): {
-                'allowed_params': ['org', 'vdc'],
+                'allowed_params': ['org_name', 'ovdc_name'],
                 'required_params': [],
                 'operation': CseOperation.PKS_CLUSTER_CONFIG,
                 'handler': pks_cluster_handler.cluster_config
@@ -138,6 +138,17 @@ PKS_HANDLERS = [
                 'required_params': [],
                 'operation': CseOperation.PKS_OVDC_LIST,
                 'handler': pks_ovdc_handler.ovdc_list
+            }
+        }
+    },
+    {
+        'url': "pks/orgvdcs",
+        RequestMethod.GET: {
+            tuple(server_constants.SUPPORTED_VCD_API_VERSIONS): {
+                'allowed_params': ['page', 'pageSize'],
+                'required_params': [],
+                'operation': CseOperation.PKS_ORG_VDC_LIST,
+                'handler': pks_ovdc_handler.org_vdc_list
             }
         }
     },
@@ -170,7 +181,7 @@ LEGACY_CLUSTER_HANDLERS = [
         'url': "cse/clusters",
         RequestMethod.GET: {
             ('33.0', '34.0'): {
-                'allowed_params': ['org', 'vdc'],
+                'allowed_params': ['org_name', 'ovdc_name'],
                 'required_params': [],
                 'operation': CseOperation.CLUSTER_LIST,
                 'handler': native_cluster_handler.cluster_list
@@ -191,7 +202,7 @@ LEGACY_CLUSTER_HANDLERS = [
         'url': f"cse/cluster/${RequestKey.CLUSTER_NAME}",
         RequestMethod.GET: {
             ('33.0', '34.0'): {
-                'allowed_params': ['org', 'vdc'],
+                'allowed_params': ['org_name', 'ovdc_name'],
                 'required_params': [],
                 'operation': CseOperation.CLUSTER_INFO,
                 'handler': native_cluster_handler.cluster_info
@@ -209,7 +220,7 @@ LEGACY_CLUSTER_HANDLERS = [
         },
         RequestMethod.DELETE: {
             ('33.0', '34.0'): {
-                'allowed_params': ['org', 'vdc'],
+                'allowed_params': ['org_name', 'ovdc_name'],
                 'required_params': [],
                 'operation': CseOperation.CLUSTER_DELETE,
                 'handler': native_cluster_handler.cluster_delete
@@ -220,7 +231,7 @@ LEGACY_CLUSTER_HANDLERS = [
         'url': f"cse/cluster/${RequestKey.CLUSTER_NAME}/config",
         RequestMethod.GET: {
             ('33.0', '34.0'): {
-                'allowed_params': ['org', 'vdc'],
+                'allowed_params': ['org_name', 'ovdc_name'],
                 'required_params': [],
                 'operation': CseOperation.CLUSTER_CONFIG,
                 'handler': native_cluster_handler.cluster_config
@@ -231,7 +242,7 @@ LEGACY_CLUSTER_HANDLERS = [
         'url': f"cse/cluster/${RequestKey.CLUSTER_NAME}/upgrade-plan",
         RequestMethod.GET: {
             ('33.0', '34.0'): {
-                'allowed_params': ['org', 'vdc'],
+                'allowed_params': ['org_name', 'ovdc_name'],
                 'required_params': [],
                 'operation': CseOperation.CLUSTER_UPGRADE_PLAN,
                 'handler': native_cluster_handler.cluster_upgrade_plan
@@ -259,7 +270,7 @@ LEGACY_NATIVE_CLUSTER_HANDLERS = [
         'url': "cse/nativeclusters",
         RequestMethod.GET: {
             ('33.0', '34.0'): {
-                'allowed_params': ['org', 'vdc', 'pageSize', 'page'],
+                'allowed_params': ['org_name', 'ovdc_name', 'pageSize', 'page'],  # noqa: E501
                 'required_params': [],
                 'operation': CseOperation.NATIVE_CLUSTER_LIST,
                 'handler': native_cluster_handler.native_cluster_list
@@ -297,7 +308,7 @@ LEGACY_NODE_HANDLERS = [
         'url': f"cse/nodes/${RequestKey.NODE_NAME}",
         RequestMethod.GET: {
             ('33.0', '34.0'): {
-                'allowed_params': ['cluster_name', 'org', 'vdc'],
+                'allowed_params': ['cluster_name', 'org_name', 'ovdc_name'],
                 'required_params': ['cluster_name'],
                 'operation': CseOperation.NODE_INFO,
                 'handler': native_cluster_handler.node_info

@@ -45,14 +45,16 @@ def cluster_list(request_data, op_ctx: ctx.OperationContext):
     """
     _raise_error_if_pks_not_enabled()
 
-    cse_params = copy.deepcopy(request_data)
+    data = req_utils.flatten_request_data(
+        request_data, [RequestKey.QUERY_PARAMS])
+
+    cse_params = copy.deepcopy(data)
     cse_params[PayloadKey.SOURCE_DESCRIPTION] = thread_local_data.get_thread_local_data(ThreadLocalData.USER_AGENT)  # noqa: E501
     telemetry_handler.record_user_action_details(
         cse_operation=CseOperation.PKS_CLUSTER_LIST,
         cse_params=cse_params)
 
-    pks_clusters_info = pks_broker_manager.list_clusters(request_data,
-                                                         op_ctx)
+    pks_clusters_info = pks_broker_manager.list_clusters(data, op_ctx)
     common_cluster_properties = [
         'name',
         'vdc',
@@ -83,10 +85,14 @@ def cluster_info(request_data, op_ctx: ctx.OperationContext):
     :return: Dict
     """
     _raise_error_if_pks_not_enabled()
-    cluster, _ = _get_cluster_info(request_data, op_ctx)  # noqa: E501
+
+    data = req_utils.flatten_request_data(
+        request_data, [RequestKey.QUERY_PARAMS])
+
+    cluster, _ = _get_cluster_info(data, op_ctx)  # noqa: E501
     telemetry_handler.record_user_action_details(
         cse_operation=CseOperation.PKS_CLUSTER_INFO,
-        cse_params=_get_telemetry_data(request_data, cluster))
+        cse_params=_get_telemetry_data(data, cluster))
     return cluster
 
 
@@ -120,16 +126,20 @@ def cluster_create(request_data, op_ctx: ctx.OperationContext):
     :return: Dict
     """
     _raise_error_if_pks_not_enabled()
+
+    data = req_utils.flatten_request_data(
+        request_data, [RequestKey.INPUT_SPEC])
+
     required = [
         RequestKey.CLUSTER_NAME
     ]
-    req_utils.validate_payload(request_data, required)
+    req_utils.validate_payload(data, required)
 
-    cluster_name = request_data[RequestKey.CLUSTER_NAME]
-    request_data['is_org_admin_search'] = True
+    cluster_name = data[RequestKey.CLUSTER_NAME]
+    data['is_org_admin_search'] = True
 
     try:
-        _get_cluster_and_broker(request_data, op_ctx, telemetry=False)
+        _get_cluster_and_broker(data, op_ctx, telemetry=False)
         raise ClusterAlreadyExistsError(f"Cluster {cluster_name} "
                                         f"already exists.")
     except ClusterNotFoundError:
@@ -138,19 +148,19 @@ def cluster_create(request_data, op_ctx: ctx.OperationContext):
     k8s_metadata = \
         ovdc_utils.get_ovdc_k8s_provider_metadata(
             op_ctx.sysadmin_client,
-            org_name=request_data[RequestKey.ORG_NAME],
-            ovdc_name=request_data[RequestKey.OVDC_NAME],
+            org_name=data[RequestKey.ORG_NAME],
+            ovdc_name=data[RequestKey.OVDC_NAME],
             include_credentials=True,
             include_nsxt_info=True)
     broker = _get_broker_from_k8s_metadata(k8s_metadata, op_ctx)
-    request_data[RequestKey.PKS_PLAN_NAME] = k8s_metadata[PKS_PLANS_KEY][0]
-    request_data[RequestKey.PKS_EXT_HOST] = \
+    data[RequestKey.PKS_PLAN_NAME] = k8s_metadata[PKS_PLANS_KEY][0]
+    data[RequestKey.PKS_EXT_HOST] = \
         f"{cluster_name}.{k8s_metadata[PKS_CLUSTER_DOMAIN_KEY]}"
-    cluster = broker.create_cluster(data=request_data)
+    cluster = broker.create_cluster(data=data)
     # Record telemetry data
     telemetry_handler.record_user_action_details(
         cse_operation=CseOperation.PKS_CLUSTER_CREATE,
-        cse_params=_get_telemetry_data(request_data, cluster))
+        cse_params=_get_telemetry_data(data, cluster))
     return cluster
 
 
@@ -186,12 +196,16 @@ def cluster_resize(request_data, op_ctx: ctx.OperationContext):
     :return: Dict
     """
     _raise_error_if_pks_not_enabled()
-    cluster, broker = _get_cluster_info(request_data, op_ctx, telemetry=False)  # noqa: E501
+
+    data = req_utils.flatten_request_data(
+        request_data, [RequestKey.INPUT_SPEC])
+
+    cluster, broker = _get_cluster_info(data, op_ctx, telemetry=False)  # noqa: E501
     # Record telemetry data
     telemetry_handler.record_user_action_details(
         cse_operation=CseOperation.PKS_CLUSTER_RESIZE,
-        cse_params=_get_telemetry_data(request_data, cluster))
-    return broker.resize_cluster(data=request_data)
+        cse_params=_get_telemetry_data(data, cluster))
+    return broker.resize_cluster(data=data)
 
 
 def _get_cluster_info(request_data, op_ctx, **kwargs):

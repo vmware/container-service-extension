@@ -31,13 +31,16 @@ def system_update(request_data, op_ctx: ctx.OperationContext):
 
     :return: Dictionary with system update status.
     """
+    data = req_utils.flatten_request_data(
+        request_data, [RequestKey.INPUT_SPEC])
+
     required = [
         RequestKey.SERVER_ACTION
     ]
-    req_utils.validate_payload(request_data, required)
+    req_utils.validate_payload(data, required)
 
     # Telemetry data preparation
-    server_action = request_data.get(RequestKey.SERVER_ACTION)
+    server_action = data.get(RequestKey.SERVER_ACTION)
     cse_operation = server_action or 'invalid server action'
     if server_action == 'enable':
         cse_operation = CseOperation.SYSTEM_ENABLE
@@ -52,7 +55,7 @@ def system_update(request_data, op_ctx: ctx.OperationContext):
         import container_service_extension.server.service as service
         try:
             result = service.Service().update_status(
-                request_data.get(RequestKey.SERVER_ACTION))
+                data.get(RequestKey.SERVER_ACTION))
             status = OperationStatus.SUCCESS
             return result
         finally:
