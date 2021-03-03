@@ -521,6 +521,37 @@ class ClusterService(abstract_broker.AbstractBroker):
                                     template=template)
         return curr_entity
 
+    def update_cluster(self, cluster_id: str, update_spec: rde_2_0_0.NativeEntity):  # noqa: E501
+        """Start the update cluster operation (resize or upgrade).
+
+        Updating cluster is an asynchronous task, so the returned
+        `result['task_href']` can be polled to get updates on task progress.
+
+        :param str cluster_id: id of the cluster to be updated
+        :param rde_2_0_0.NativeEntity update_spec: cluster spec with new
+        worker/nfs node count or new kubernetes distribution and revision
+
+        :return: Defined entity with update in progress set
+        :rtype: def_models.DefEntity representing the cluster
+        """
+        curr_entity = self.entity_svc.get_entity(cluster_id)
+        current_spec = def_utils.construct_cluster_spec_from_entity_status(
+            curr_entity.entity.status, server_utils.get_rde_version_in_use())
+        current_workers_count = current_spec.workers.count
+        current_nfs_count = current_spec.nfs.count
+        desired_workers_count = update_spec.spec.workers.count
+        desired_nfs_count = update_spec.spec.nfs.count
+
+        if current_workers_count != desired_workers_count or current_nfs_count != desired_nfs_count:  # noqa: E501
+            return self.resize_cluster(cluster_id, update_spec)
+
+        current_template_name = current_spec.k8_distribution.template_name
+        current_template_revision = current_spec.k8_distribution.template_revision  # noqa: E501
+        desired_template_name = update_spec.spec.k8_distribution.template_name
+        desired_template_revision = update_spec.spec.k8_distribution.template_revision  # noqa: E501
+        if current_template_name != desired_template_name or current_template_revision != desired_template_revision:  # noqa: E501
+            return self.upgrade_cluster(cluster_id, update_spec)
+
     def get_cluster_acl_info(self, cluster_id, page: int, page_size: int):
         """Get cluster ACL info based on the defined entity ACL."""
         telemetry_params = {

@@ -9,11 +9,8 @@ import json
 import math
 from typing import Union
 
-from container_service_extension.common.constants.server_constants import FlattenedClusterSpecKey  # noqa: E501
-from container_service_extension.common.constants.server_constants import VALID_UPDATE_FIELDS  # noqa: E501
 import container_service_extension.common.utils.core_utils as core_utils
 import container_service_extension.exception.exceptions as excptn
-from container_service_extension.exception.exceptions import BadRequestError
 from container_service_extension.lib.cloudapi.cloudapi_client import CloudApiClient  # noqa: E501
 import container_service_extension.rde.constants as def_constants
 import container_service_extension.rde.models.rde_1_0_0 as rde_1_0_0
@@ -100,7 +97,8 @@ def construct_2_x_cluster_spec_from_entity_status(entity_status: rde_2_0_0.Statu
 
     workers_count = len(entity_status.nodes.workers)
     if workers_count == 0:
-        workers = rde_2_0_0.Workers(sizing_class=None, storage_profile='*',
+        workers = rde_2_0_0.Workers(sizing_class='System Default',
+                                    storage_profile='*',
                                     count=workers_count)
     else:
         workers = rde_2_0_0.Workers(
@@ -110,13 +108,13 @@ def construct_2_x_cluster_spec_from_entity_status(entity_status: rde_2_0_0.Statu
 
     nfs_count = len(entity_status.nodes.nfs)
     if nfs_count == 0:
-        nfs = rde_2_0_0.Nfs(sizing_class=None, storage_profile='*',
+        nfs = rde_2_0_0.Nfs(sizing_class='System Default', storage_profile='*',
                             count=nfs_count)
     else:
         nfs = rde_2_0_0.Nfs(
             sizing_class=entity_status.nodes.nfs[0].sizing_class,  # noqa: E501
             storage_profile=entity_status.nodes.nfs[
-                0].storage_profile)
+                0].storage_profile, count=nfs_count)
 
     k8_distribution = rde_2_0_0.Distribution(
         template_name=entity_status.cloud_properties.k8_distribution.template_name,  # noqa: E501

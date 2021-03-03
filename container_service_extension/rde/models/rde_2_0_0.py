@@ -32,7 +32,7 @@ class ControlPlane:
 
 @dataclass()
 class Workers:
-    sizing_class: str = None
+    sizing_class: str = "System Default"
     storage_profile: str = None
     count: int = 1
 
@@ -150,9 +150,15 @@ class ClusterSpec:
             if isinstance(settings, dict) else settings
         self.control_plane = ControlPlane(**control_plane) \
             if isinstance(control_plane, dict) else control_plane or ControlPlane()  # noqa: E501
+        if self.control_plane.sizing_class is None:
+            self.control_plane.sizing_class = "System Default"
         self.workers = Workers(**workers) \
             if isinstance(workers, dict) else workers or Workers()
+        if self.workers.sizing_class is None:
+            self.workers.sizing_class = "System Default"
         self.nfs = Nfs(**nfs) if isinstance(nfs, dict) else nfs or Nfs()
+        if self.nfs.sizing_class is None:
+            self.nfs.sizing_class = "System Default"
         self.k8_distribution = Distribution(**k8_distribution) \
             if isinstance(k8_distribution, dict) else k8_distribution or Distribution()  # noqa: E501
 
