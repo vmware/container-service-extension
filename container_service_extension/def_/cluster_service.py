@@ -2114,6 +2114,15 @@ def _get_gateway(client, cloudapi_client, network_resource, ovdc: VDC):
     return gateway
 
 
+def _form_expose_dnat_rule_name(cluster_name: str, cluster_id: str):
+    """Form dnat rule name for expose cluster.
+
+    Dnat rule name includes cluster name to show users the cluster rule
+    corresponds to. The cluster id is used to make the name unique
+    """
+    return f"{cluster_name}_{cluster_id}_{EXPOSE_CLUSTER_NAME_FRAGMENT}"
+
+
 def _expose_cluster(client: vcd_client.Client, org_name: str, ovdc_name: str,
                     network_name: str, cluster_name: str, cluster_id: str,
                     internal_ip: str):
@@ -2143,9 +2152,7 @@ def _expose_cluster(client: vcd_client.Client, org_name: str, ovdc_name: str,
     if not expose_ip:
         raise Exception('Unable to reserve ip using quick ip allocation.')
     try:
-        # Dnat rule name includes cluster name to show users the cluster
-        # rule corresponds to. The cluster id is used to make the name unique.
-        dnat_rule_name = f"{cluster_name}_{cluster_id}_{EXPOSE_CLUSTER_NAME_FRAGMENT}"  # noqa: E501
+        dnat_rule_name = _form_expose_dnat_rule_name(cluster_name, cluster_id)
         nsxt_gateway_svc.add_dnat_rule(
             name=dnat_rule_name,
             internal_address=internal_ip,
