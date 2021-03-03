@@ -305,7 +305,7 @@ LEGACY_NODE_HANDLERS = [
         },
     },
     {
-        'url': f"cse/nodes/${RequestKey.NODE_NAME}",
+        'url': f"cse/node/${RequestKey.NODE_NAME}",
         RequestMethod.GET: {
             ('33.0', '34.0'): {
                 'allowed_params': ['cluster_name', 'org_name', 'ovdc_name'],
@@ -331,7 +331,7 @@ LEGACY_OVDC_HANDLERS = [
         },
     },
     {
-        'url': f"cse/ovdcs/${RequestKey.OVDC_ID}",
+        'url': f"cse/ovdc/${RequestKey.OVDC_ID}",
         RequestMethod.GET: {
             ('33.0', '34.0'): {
                 'allowed_params': [],
@@ -352,7 +352,7 @@ LEGACY_OVDC_HANDLERS = [
         }
     },
     {
-        'url': f"cse/ovdcs/${RequestKey.OVDC_ID}/compute-policies",
+        'url': f"cse/ovdc/${RequestKey.OVDC_ID}/compute-policies",
         RequestMethod.GET: {
             ('33.0', '34.0'): {
                 'allowed_params': [],
