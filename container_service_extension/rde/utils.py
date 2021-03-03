@@ -97,8 +97,7 @@ def construct_2_x_cluster_spec_from_entity_status(entity_status: rde_2_0_0.Statu
 
     workers_count = len(entity_status.nodes.workers)
     if workers_count == 0:
-        workers = rde_2_0_0.Workers(sizing_class='System Default',
-                                    storage_profile='*',
+        workers = rde_2_0_0.Workers(sizing_class=None, storage_profile=None,
                                     count=workers_count)
     else:
         workers = rde_2_0_0.Workers(
@@ -108,7 +107,7 @@ def construct_2_x_cluster_spec_from_entity_status(entity_status: rde_2_0_0.Statu
 
     nfs_count = len(entity_status.nodes.nfs)
     if nfs_count == 0:
-        nfs = rde_2_0_0.Nfs(sizing_class='System Default', storage_profile='*',
+        nfs = rde_2_0_0.Nfs(sizing_class=None, storage_profile=None,
                             count=nfs_count)
     else:
         nfs = rde_2_0_0.Nfs(
@@ -154,5 +153,4 @@ def find_diff_fields(input_spec: dict, reference_spec: dict, exclude_fields: lis
     exclude_key_set = set(exclude_fields)
     key_set_for_validation = set(input_dict.keys()) - exclude_key_set
     return [key for key in key_set_for_validation
-            if input_dict.get(key) != reference_dict.get(key)]
-
+            if input_dict.get(key) and input_dict.get(key) != reference_dict.get(key)]  # noqa: E501
