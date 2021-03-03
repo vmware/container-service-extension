@@ -500,21 +500,22 @@ class Service(object, metaclass=Singleton):
 
             schema_svc = def_schema_svc.DefSchemaService(cloudapi_client)
             def_metadata_dict: dict = def_utils.get_rde_metadata(server_rde_version)  # noqa: E501
-            entity_type_metadata: Enum = \
-                def_metadata_dict[def_constants.RDEMetadataKey.ENTITY_TYPE_METADATA]  # noqa: E501
-            interfaces_metadata_list: List[Enum] = \
-                def_metadata_dict[def_constants.RDEMetadataKey.INTERFACES_METADATA_LIST]  # noqa: E501
+            entity_type: common_models.DefEntityType = \
+                def_metadata_dict[def_constants.RDEMetadataKey.ENTITY_TYPE]  # noqa: E501
+            interfaces: List[common_models.DefInterface] = \
+                def_metadata_dict[def_constants.RDEMetadataKey.INTERFACES]  # noqa: E501
 
-            for interface_metadata in interfaces_metadata_list:
+            for interface in interfaces:
                 # TODO change _kubernetesInterface to an array once additional
                 # interface for CSE is added.
                 self._kubernetesInterface = \
-                    schema_svc.get_interface(interface_metadata.get_id())
+                    schema_svc.get_interface(interface.get_id())
 
             self._nativeEntityType = \
-                schema_svc.get_entity_type(entity_type_metadata.get_id())
+                schema_svc.get_entity_type(entity_type.get_id())
 
-            msg = "Successfully loaded defined entity schema to global context"
+            msg = f"Successfully loaded defined entity schema " \
+                  f"{entity_type.get_id()} to global context"
             msg_update_callback.general(msg)
             logger.SERVER_LOGGER.debug(msg)
         except cse_exception.DefNotSupportedException:

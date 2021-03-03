@@ -3,6 +3,9 @@
 # SPDX-License-Identifier: BSD-2-Clause
 
 """Utility methods to help interaction with defined entities framework."""
+import importlib
+from importlib import resources as pkg_resources
+import json
 import math
 from typing import Union
 
@@ -60,7 +63,8 @@ def get_rde_version_by_vcd_api_version(vcd_api_version: float) -> str:
 
 
 def get_rde_metadata(rde_version: str) -> dict:
-    return def_constants.MAP_RDE_VERSION_TO_ITS_METADATA[rde_version]
+    from container_service_extension.rde.models.common_models import MAP_RDE_VERSION_TO_ITS_METADATA  # noqa: E501
+    return MAP_RDE_VERSION_TO_ITS_METADATA[rde_version]
 
 
 def construct_cluster_spec_from_entity_status(entity_status: Union[rde_1_0_0.Status, rde_2_0_0.Status], rde_version_in_use: str) -> Union[rde_1_0_0.ClusterSpec, rde_2_0_0.ClusterSpec]:  # noqa: E501
@@ -124,3 +128,17 @@ def construct_2_x_cluster_spec_from_entity_status(entity_status: rde_2_0_0.Statu
                                  control_plane=control_plane,
                                  workers=workers,
                                  nfs=nfs)
+
+
+def load_rde_schema(schema_file: str) -> dict:
+    try:
+        schema_module = importlib.import_module(def_constants.DEF_SCHEMA_DIRECTORY)  # noqa: E501
+        schema_file = pkg_resources.open_text(schema_module, schema_file)
+        return json.load(schema_file)
+    except (ImportError, ModuleNotFoundError, FileNotFoundError) as e:
+        raise e
+    finally:
+        try:
+            schema_file.close()
+        except Exception:
+            pass
