@@ -134,7 +134,7 @@ PKS_HANDLERS = [
         'url': "pks/ovdcs",
         RequestMethod.GET: {
             tuple(server_constants.SUPPORTED_VCD_API_VERSIONS): {
-                'allowed_params': [],
+                'allowed_params': ['list_pks_plans'],
                 'required_params': [],
                 'operation': CseOperation.PKS_OVDC_LIST,
                 'handler': pks_ovdc_handler.ovdc_list
@@ -145,7 +145,7 @@ PKS_HANDLERS = [
         'url': "pks/orgvdcs",
         RequestMethod.GET: {
             tuple(server_constants.SUPPORTED_VCD_API_VERSIONS): {
-                'allowed_params': ['page', 'pageSize'],
+                'allowed_params': ['list_pks_plans', 'page', 'pageSize'],
                 'required_params': [],
                 'operation': CseOperation.PKS_ORG_VDC_LIST,
                 'handler': pks_ovdc_handler.org_vdc_list
@@ -279,7 +279,7 @@ LEGACY_NATIVE_CLUSTER_HANDLERS = [
     }
 ]
 
-# /cse/cluster/{id}/nodes end points
+# /cse/nodes end points
 LEGACY_NODE_HANDLERS = [
     {
         'url': "cse/nodes",
