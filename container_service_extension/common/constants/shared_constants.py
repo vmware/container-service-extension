@@ -119,10 +119,10 @@ class RequestKey(str, Enum):
     # common/multiple request keys
     ORG_NAME = 'org_name'
     OVDC_NAME = 'ovdc_name'
+    INPUT_SPEC = 'spec_body'
+    QUERY_PARAMS = 'query_filter'
 
     # keys related to cluster requests
-    INPUT_SPEC = 'spec_body'
-    V35_QUERY = 'query_filter'
     CLUSTER_NAME = 'cluster_name'
     CLUSTER_ID = 'cluster_id'
     MB_MEMORY = 'mb_memory'

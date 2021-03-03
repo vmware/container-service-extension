@@ -17,14 +17,14 @@ from container_service_extension.exception.exception_handler import handle_excep
 import container_service_extension.exception.exceptions as cse_exception
 from container_service_extension.logging.logger import SERVER_LOGGER as LOGGER
 import container_service_extension.security.context.operation_context as ctx
-import container_service_extension.server.request_handlers.native_cluster_handler as native_cluster_handler  # noqa: E501
-import container_service_extension.server.request_handlers.ovdc_handler as ovdc_handler  # noqa: E501
-import container_service_extension.server.request_handlers.pks_cluster_handler as pks_cluster_handler  # noqa: E501
-import container_service_extension.server.request_handlers.pks_ovdc_handler as pks_ovdc_handler  # noqa: E501
+import container_service_extension.server.request_handlers.legacy.native_cluster_handler as native_cluster_handler  # noqa: E501
+import container_service_extension.server.request_handlers.legacy.ovdc_handler as ovdc_handler  # noqa: E501
+import container_service_extension.server.request_handlers.pks.pks_cluster_handler as pks_cluster_handler  # noqa: E501
+import container_service_extension.server.request_handlers.pks.pks_ovdc_handler as pks_ovdc_handler  # noqa: E501
 import container_service_extension.server.request_handlers.system_handler as system_handler  # noqa: E501
 import container_service_extension.server.request_handlers.template_handler as template_handler  # noqa: E501 E501
-import container_service_extension.server.request_handlers.v35.def_cluster_handler as v35_cluster_handler # noqa: E501
-import container_service_extension.server.request_handlers.v35.ovdc_handler as v35_ovdc_handler # noqa: E501
+import container_service_extension.server.request_handlers.v35.def_cluster_handler as v35_cluster_handler  # noqa: E501
+import container_service_extension.server.request_handlers.v35.ovdc_handler as v35_ovdc_handler  # noqa: E501
 import container_service_extension.server.request_handlers.v36.def_cluster_handler as v36_cluster_handler  # noqa: E501
 
 
@@ -172,7 +172,7 @@ def _parse_accept_header(accept_header: str):
 
     :param str accept_header: value of 'Accept' header sent by client
 
-    :returns: accept header that is servicable by CSE
+    :returns: accept header that is serviceable by CSE
 
     :raises NotAcceptableRequestError: If none of the accept headers matches
         what CSE is looking for.
@@ -301,7 +301,8 @@ def process_request(message):
     if message['queryString']:
         query_params = dict(parse_qsl(message['queryString']))
         if is_cse_3_0_request:
-            request_data[shared_constants.RequestKey.V35_QUERY] = query_params
+            request_data[shared_constants.RequestKey.QUERY_PARAMS] = \
+                query_params
         else:
             request_data.update(query_params)
         LOGGER.debug(f"query parameters: {query_params}")

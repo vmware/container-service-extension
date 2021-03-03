@@ -50,13 +50,17 @@ def ovdc_update(request_data, op_ctx: ctx.OperationContext):
     """
     # TODO the data flow here should be better understood.
     # org_name and ovdc_name seem redundant if we already have ovdc_id
+
+    data = req_utils.flatten_request_data(
+        request_data, [RequestKey.INPUT_SPEC])
+
     required = [
         RequestKey.ORG_NAME,
         RequestKey.OVDC_NAME,
         RequestKey.K8S_PROVIDER,
         RequestKey.OVDC_ID
     ]
-    validated_data = request_data
+    validated_data = data
     req_utils.validate_payload(validated_data, required)
 
     k8s_provider = validated_data[RequestKey.K8S_PROVIDER]
@@ -148,12 +152,16 @@ def org_vdc_list(request_data, op_ctx: ctx.OperationContext):
     :rtype: dict
     """
     # NOTE: Response sent out by this handler should be paginated
+
+    data = req_utils.flatten_request_data(
+        request_data, [RequestKey.QUERY_PARAMS])
+
     defaults = {
         RequestKey.LIST_PKS_PLANS: False,
         PaginationKey.PAGE_NUMBER: CSE_PAGINATION_FIRST_PAGE_NUMBER,
         PaginationKey.PAGE_SIZE: CSE_PAGINATION_DEFAULT_PAGE_SIZE
     }
-    validated_data = {**defaults, **request_data}
+    validated_data = {**defaults, **data}
 
     page_number = int(validated_data[PaginationKey.PAGE_NUMBER])
     page_size = int(validated_data[PaginationKey.PAGE_SIZE])
@@ -263,10 +271,14 @@ def ovdc_list(request_data, op_ctx: ctx.OperationContext):
     :rtype: list
     """
     # NOTE: response sent out by this handler should not be paginated
+
+    data = req_utils.flatten_request_data(
+        request_data, [RequestKey.QUERY_PARAMS])
+
     defaults = {
         RequestKey.LIST_PKS_PLANS: False,
     }
-    validated_data = {**defaults, **request_data}
+    validated_data = {**defaults, **data}
 
     list_pks_plans = utils.str_to_bool(validated_data[RequestKey.LIST_PKS_PLANS]) # noqa: E501
 
