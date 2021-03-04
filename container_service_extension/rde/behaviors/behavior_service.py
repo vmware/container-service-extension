@@ -2,14 +2,52 @@
 # Copyright (c) 2021 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 from dataclasses import asdict
+import functools
+import json
 from typing import Iterator, List
 
+from requests.exceptions import HTTPError
+
 import container_service_extension.common.constants.shared_constants as cse_shared_constants  # noqa: E501
+import container_service_extension.exception.exceptions as cse_exceptions
+from container_service_extension.exception.minor_error_codes import MinorErrorCode  # noqa: E501
 from container_service_extension.lib.cloudapi.cloudapi_client import CloudApiClient  # noqa: E501
 from container_service_extension.lib.cloudapi.constants import CloudApiResource
 from container_service_extension.lib.cloudapi.constants import CloudApiVersion
+from container_service_extension.logging.logger import SERVER_LOGGER as LOGGER
 from container_service_extension.rde.behaviors.behavior_model import Behavior, BehaviorAclEntry  # noqa: E501
 import container_service_extension.rde.utils as def_utils
+
+
+def handle_behavior_service_exception(func):
+    """Decorate to trap exceptions and process them.
+
+    Raise errors of type HTTPError as DefSchemaServiceError.
+    Re-raise any other exception as it is.
+
+    This decorator should be applied only on method of schema_service.py
+
+    :param method func: decorated function
+
+    :return: reference to the function that executes the decorated function
+        and traps exceptions raised by it.
+    """
+    @functools.wraps(func)
+    def exception_handler_wrapper(*args, **kwargs):
+        try:
+            result = func(*args, **kwargs)
+        except HTTPError as error:
+            response_dict = json.loads(error.response.text)
+            error_message = response_dict.get('message')
+            LOGGER.error(error_message)
+            raise cse_exceptions.BehaviorServiceError(
+                error_message=error_message,
+                minor_error_code=MinorErrorCode.DEFAULT_ERROR_CODE)
+        except Exception as error:
+            LOGGER.error(error)
+            raise error
+        return result
+    return exception_handler_wrapper
 
 
 class BehaviorService:
@@ -17,6 +55,7 @@ class BehaviorService:
         def_utils.raise_error_if_def_not_supported(cloudapi_client)
         self._cloudapi_client = cloudapi_client
 
+    @handle_behavior_service_exception
     def create_behavior_on_interface(self, behavior: Behavior, interface_id) -> Behavior:  # noqa: E501
         """Create Behavior on the specified Interface.
 
@@ -34,6 +73,7 @@ class BehaviorService:
             payload=asdict(behavior))
         return Behavior(**response_body)
 
+    @handle_behavior_service_exception
     def update_behavior_on_interface(self, behavior: Behavior, interface_id) -> Behavior:  # noqa: E501
         """Update the behavior on the specified interface Id.
 
@@ -52,6 +92,7 @@ class BehaviorService:
             payload=asdict(behavior))
         return Behavior(**response_body)
 
+    @handle_behavior_service_exception
     def list_behaviors_on_interface(self, interface_id) -> Iterator[Behavior]:
         """List all the behaviors on the specified interface.
 
@@ -74,6 +115,7 @@ class BehaviorService:
             else:
                 break
 
+    @handle_behavior_service_exception
     def get_behavior_on_interface_by_id(self, behavior_id, interface_id) -> Behavior:  # noqa: E501
         """Get the behavior details by its ID on the given interface.
 
@@ -90,6 +132,7 @@ class BehaviorService:
                                        f"/{behavior_id}")
         return Behavior(**response_body)
 
+    @handle_behavior_service_exception
     def get_behavior_on_interface_by_name(self, behavior_name, interface_id) -> Behavior:  # noqa: E501
         """Get the behavior details by its name on the given interface.
 
@@ -104,6 +147,7 @@ class BehaviorService:
             if behavior.name == behavior_name:
                 return behavior
 
+    @handle_behavior_service_exception
     def delete_behavior_on_interface(self, behavior_id: str, interface_id: str):  # noqa: E501
         """Delete the behavior by its Id on the specified interface.
 
@@ -120,6 +164,7 @@ class BehaviorService:
                                        f"/{CloudApiResource.BEHAVIORS}"
                                        f"/{behavior_id}")
 
+    @handle_behavior_service_exception
     def create_behavior_on_entity_type(self, behavior: Behavior, entity_type_id) -> Behavior:  # noqa: E501
         """Create a behavior directly on the entity type.
 
@@ -140,6 +185,7 @@ class BehaviorService:
             payload=asdict(behavior))
         return Behavior(**response_body)
 
+    @handle_behavior_service_exception
     def override_behavior_on_entity_type(self, behavior: Behavior, entity_type_id) -> Behavior:  # noqa: E501
         """Override the behavior-interface on the specified entity type.
 
@@ -159,6 +205,7 @@ class BehaviorService:
             payload=asdict(behavior))
         return Behavior(**response_body)
 
+    @handle_behavior_service_exception
     def list_behaviors_on_entity_type(self, entity_type_id) -> Iterator[Behavior]:  # noqa: E501
         """List behaviors on the specified entity type.
 
@@ -183,6 +230,7 @@ class BehaviorService:
             else:
                 break
 
+    @handle_behavior_service_exception
     def get_behavior_on_entity_type_by_id(self, behavior_interface_id, entity_type_id) -> Behavior:  # noqa: E501
         """Get the behavior on the entity type id.
 
@@ -201,6 +249,7 @@ class BehaviorService:
                                        f"/{behavior_interface_id}")
         return Behavior(**response_body)
 
+    @handle_behavior_service_exception
     def get_behavior_on_entity_type_by_name(self, behavior_name, entity_type_id) -> Behavior:  # noqa: E501
         """Get the behavior by it's name on the specified entity type.
 
@@ -215,6 +264,7 @@ class BehaviorService:
             if behavior.name == behavior_name:
                 return behavior
 
+    @handle_behavior_service_exception
     def delete_behavior_on_entity_type(self, behavior_interface_id, entity_type_id):  # noqa: E501
         """Delete the behavior on the entity type.
 
@@ -233,6 +283,7 @@ class BehaviorService:
                                        f"/{CloudApiResource.BEHAVIORS}"
                                        f"/{behavior_interface_id}")
 
+    @handle_behavior_service_exception
     def list_behavior_acls_on_entity_type(self, entity_type_id: str) -> Iterator[BehaviorAclEntry]:  # noqa: E501
         """Get the list of access controls of the individual behaviors.
 
@@ -257,6 +308,7 @@ class BehaviorService:
             else:
                 break
 
+    @handle_behavior_service_exception
     def update_behavior_acls_on_entity_type(self, entity_type_id: str,
                                             behavior_acl_list: List[BehaviorAclEntry]):  # noqa: E501
         """Update the list of behavior access controls.
@@ -280,6 +332,7 @@ class BehaviorService:
             payload={"values": [asdict(acl) for acl in behavior_acl_list]})
         return [BehaviorAclEntry(**acl) for acl in response_body['values']]
 
+    @handle_behavior_service_exception
     def invoke_behavior(self, entity_id: str, behavior_interface_id: str,
                         arguments: dict = None):
         """Invoke behavior on the RDE.

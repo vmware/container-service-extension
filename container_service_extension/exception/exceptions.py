@@ -250,5 +250,9 @@ class DefSchemaServiceError(InternalServerRequestError):
     """Raised on any of defined schema service error."""
 
 
+class BehaviorServiceError(InternalServerRequestError):
+    """Raised on any RDE Behavior operation failure."""
+
+
 class MQTTExtensionError(CseServerError):
     """Raised on any error when setting up the MQTT extension."""

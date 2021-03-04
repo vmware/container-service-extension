@@ -849,21 +849,33 @@ def _set_acls_on_behaviors(cloudapi_client,
     behavior_svc = BehaviorService(cloudapi_client=cloudapi_client)
     for entity_type_id, behavior_acls in map_entitytypeid_to_behavior_acls.items():  # noqa: E501
         msg = f"Setting ACLs on behaviors of the entity type '{entity_type_id}'"  # noqa: E501
-        behavior_svc.update_behavior_acls_on_entity_type(entity_type_id, behavior_acls)  # noqa: E501
-        msg_update_callback.general(msg)
-        INSTALL_LOGGER.info(msg)
+        try:
+            behavior_svc.update_behavior_acls_on_entity_type(entity_type_id, behavior_acls)  # noqa: E501
+            msg_update_callback.general(msg)
+            INSTALL_LOGGER.info(msg)
+        except cse_exception.BehaviorServiceError as e:
+            msg = f"Failed to set ACLs on behaviors of the entity type '{entity_type_id}'"  # noqa: E501
+            msg_update_callback.error(msg)
+            INSTALL_LOGGER.error(msg)
+            raise e
 
 
 def _override_behaviors(cloudapi_client,
-                        map_interfaceid_to_behaviors: Dict[str, List[Behavior]],  # noqa: E501
+                        map_entitytypeid_to_behaviors: Dict[str, List[Behavior]],  # noqa: E501
                         msg_update_callback=utils.NullPrinter()):
     behavior_svc = BehaviorService(cloudapi_client=cloudapi_client)
-    for entity_type_id, behaviors in map_interfaceid_to_behaviors.items():
+    for entity_type_id, behaviors in map_entitytypeid_to_behaviors.items():
         for behavior in behaviors:
             msg = f"Overriding behavior '{behavior.id}' on entity type '{entity_type_id}'"  # noqa: E501
-            behavior_svc.override_behavior_on_entity_type(behavior, entity_type_id)  # noqa: E501
-            msg_update_callback.general(msg)
-            INSTALL_LOGGER.info(msg)
+            try:
+                behavior_svc.override_behavior_on_entity_type(behavior, entity_type_id)  # noqa: E501
+                msg_update_callback.general(msg)
+                INSTALL_LOGGER.info(msg)
+            except cse_exception.BehaviorServiceError as e:
+                msg = f"Failed to override behavior '{behavior.id}' on entity type '{entity_type_id}'"  # noqa: E501
+                msg_update_callback.error(msg)
+                INSTALL_LOGGER.error(msg)
+                raise e
 
 
 def _register_behaviors(cloudapi_client,
@@ -878,12 +890,11 @@ def _register_behaviors(cloudapi_client,
                       f"interface '{interface_id}'.Behavior already found.\n"
                 msg_update_callback.general(msg.rstrip())
                 INSTALL_LOGGER.info(msg)
-            except Exception:
-                # TODO Implement Exception handling in behavior_service.py
+            except cse_exception.BehaviorServiceError:
                 behavior_svc.create_behavior_on_interface(behavior, interface_id)  # noqa: E501
                 msg = f"Successfully registered the behavior " \
                       f"'{behavior.id}' on interface '{interface_id}'."
-                msg_update_callback.general(msg.rstrip())
+                msg_update_callback.general(msg)
                 INSTALL_LOGGER.info(msg)
 
 
