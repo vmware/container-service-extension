@@ -368,11 +368,11 @@ def install_cse(config_file_name, config, skip_template_creation,
         INSTALL_LOGGER.info(msg)
 
         ext_type = _get_existing_extension_type(client)
-        if ext_type != server_constants.ExtensionType.NONE:
-            ext_found_msg = f"{ext_type} extension found. Use `cse upgrade` " \
-                            f"instead of 'cse install'."
-            INSTALL_LOGGER.error(ext_found_msg)
-            raise Exception(ext_found_msg)
+        # if ext_type != server_constants.ExtensionType.NONE:
+        #     ext_found_msg = f"{ext_type} extension found. Use `cse upgrade` " \
+        #                     f"instead of 'cse install'."
+        #     INSTALL_LOGGER.error(ext_found_msg)
+        #     raise Exception(ext_found_msg)
 
         # register cse def schema on VCD
         _register_def_schema(client=client, config=config,
@@ -734,7 +734,29 @@ def _update_user_role_with_right_bundle(right_bundle_name,
     logger_debug.info(msg)
 
     return True
-
+def _delete_stuff_for_demo(cloudapi_client, rde_metadata):
+    b_svc = BehaviorService(cloudapi_client)
+    entity_type_id = rde_metadata[def_constants.RDEMetadataKey.ENTITY_TYPE].id
+    cse_interface_id = rde_metadata[def_constants.RDEMetadataKey.INTERFACES][1].id
+    # delete behaviors on native entity type
+    behaviors_on_cse_interface = rde_metadata[def_constants.RDEMetadataKey.INTERFACE_TO_BEHAVIORS_MAP][
+        common_models.K8Interface.CSE_INTERFACE.value.id]
+    for b in behaviors_on_cse_interface:
+        try:
+            b_svc.delete_behavior_on_interface(b.id, cse_interface_id)
+        except Exception:
+            pass
+    overridden_behavior = rde_metadata[def_constants.RDEMetadataKey.ENTITY_TYPE_TO_OVERRIDABLE_BEHAVIORS_MAP][entity_type_id][0]
+    #b_svc.delete_behavior_on_entity_type(overridden_behavior.id, entity_type_id)
+    schema_svc = def_schema_svc.DefSchemaService(cloudapi_client)
+    try:
+        schema_svc.delete_entity_type(entity_type_id)
+    except Exception:
+        pass
+    try:
+        schema_svc.delete_interface(cse_interface_id)
+    except Exception:
+        pass
 
 def _register_def_schema(client: Client,
                          config=None,
@@ -778,6 +800,9 @@ def _register_def_schema(client: Client,
         msg_update_callback.general(f"Using RDE version: {rde_version}")
         # Obtain RDE metadata needed to initialize CSE
         rde_metadata: dict = def_utils.get_rde_metadata(rde_version)
+
+        # _delete_stuff_for_demo(cloudapi_client, rde_metadata)
+        # return
 
         # Register Interface(s)
         interfaces: List[common_models.DefInterface] = \
@@ -855,10 +880,10 @@ def _set_acls_on_behaviors(cloudapi_client,
 
 
 def _override_behaviors(cloudapi_client,
-                        map_interfaceid_to_behaviors: Dict[str, List[Behavior]],  # noqa: E501
+                        map_entitytypeid_to_behaviors: Dict[str, List[Behavior]],  # noqa: E501
                         msg_update_callback=utils.NullPrinter()):
     behavior_svc = BehaviorService(cloudapi_client=cloudapi_client)
-    for entity_type_id, behaviors in map_interfaceid_to_behaviors.items():
+    for entity_type_id, behaviors in map_entitytypeid_to_behaviors.items():
         for behavior in behaviors:
             msg = f"Overriding behavior '{behavior.id}' on entity type '{entity_type_id}'"  # noqa: E501
             behavior_svc.override_behavior_on_entity_type(behavior, entity_type_id)  # noqa: E501
@@ -878,8 +903,7 @@ def _register_behaviors(cloudapi_client,
                       f"interface '{interface_id}'.Behavior already found.\n"
                 msg_update_callback.general(msg.rstrip())
                 INSTALL_LOGGER.info(msg)
-            except Exception:
-                # TODO Implement Exception handling in behavior_service.py
+            except cse_exception.BehaviorServiceError:
                 behavior_svc.create_behavior_on_interface(behavior, interface_id)  # noqa: E501
                 msg = f"Successfully registered the behavior " \
                       f"'{behavior.id}' on interface '{interface_id}'."
