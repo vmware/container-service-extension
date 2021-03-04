@@ -779,9 +779,6 @@ def _register_def_schema(client: Client,
         # Obtain RDE metadata needed to initialize CSE
         rde_metadata: dict = def_utils.get_rde_metadata(rde_version)
 
-        # _delete_stuff_for_demo(cloudapi_client, rde_metadata)
-        # return
-
         # Register Interface(s)
         interfaces: List[common_models.DefInterface] = \
             rde_metadata[def_constants.RDEMetadataKey.INTERFACES]
