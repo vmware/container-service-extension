@@ -184,7 +184,8 @@ LEGACY_CLUSTER_HANDLERS = [
                 'allowed_params': ['org_name', 'ovdc_name'],
                 'required_params': [],
                 'operation': CseOperation.CLUSTER_LIST,
-                'handler': native_cluster_handler.cluster_list
+                'handler': native_cluster_handler.cluster_list,
+                'feature_flags': ['legacy_api']
             }
         },
         RequestMethod.POST: {
@@ -194,7 +195,8 @@ LEGACY_CLUSTER_HANDLERS = [
                 'verify_payload': False,
                 'payload_type': '*',
                 'operation': CseOperation.CLUSTER_CREATE,
-                'handler': native_cluster_handler.cluster_create
+                'handler': native_cluster_handler.cluster_create,
+                'feature_flags': ['legacy_api']
             }
         }
     },
@@ -205,7 +207,8 @@ LEGACY_CLUSTER_HANDLERS = [
                 'allowed_params': ['org_name', 'ovdc_name'],
                 'required_params': [],
                 'operation': CseOperation.CLUSTER_INFO,
-                'handler': native_cluster_handler.cluster_info
+                'handler': native_cluster_handler.cluster_info,
+                'feature_flags': ['legacy_api']
             }
         },
         RequestMethod.PUT: {
@@ -215,7 +218,8 @@ LEGACY_CLUSTER_HANDLERS = [
                 'verify_payload': False,
                 'payload_type': '*',
                 'operation': CseOperation.CLUSTER_RESIZE,
-                'handler': native_cluster_handler.cluster_resize
+                'handler': native_cluster_handler.cluster_resize,
+                'feature_flags': ['legacy_api']
             },
         },
         RequestMethod.DELETE: {
@@ -223,7 +227,8 @@ LEGACY_CLUSTER_HANDLERS = [
                 'allowed_params': ['org_name', 'ovdc_name'],
                 'required_params': [],
                 'operation': CseOperation.CLUSTER_DELETE,
-                'handler': native_cluster_handler.cluster_delete
+                'handler': native_cluster_handler.cluster_delete,
+                'feature_flags': ['legacy_api']
             }
         }
     },
@@ -234,7 +239,8 @@ LEGACY_CLUSTER_HANDLERS = [
                 'allowed_params': ['org_name', 'ovdc_name'],
                 'required_params': [],
                 'operation': CseOperation.CLUSTER_CONFIG,
-                'handler': native_cluster_handler.cluster_config
+                'handler': native_cluster_handler.cluster_config,
+                'feature_flags': ['legacy_api']
             }
         }
     },
@@ -245,7 +251,8 @@ LEGACY_CLUSTER_HANDLERS = [
                 'allowed_params': ['org_name', 'ovdc_name'],
                 'required_params': [],
                 'operation': CseOperation.CLUSTER_UPGRADE_PLAN,
-                'handler': native_cluster_handler.cluster_upgrade_plan
+                'handler': native_cluster_handler.cluster_upgrade_plan,
+                'feature_flags': ['legacy_api']
             }
         }
     },
@@ -258,7 +265,8 @@ LEGACY_CLUSTER_HANDLERS = [
                 'verify_payload': False,
                 'payload_type': '*',
                 'operation': CseOperation.CLUSTER_UPGRADE,
-                'handler': native_cluster_handler.cluster_upgrade
+                'handler': native_cluster_handler.cluster_upgrade,
+                'feature_flags': ['legacy_api']
             }
         }
     }
@@ -273,7 +281,8 @@ LEGACY_NATIVE_CLUSTER_HANDLERS = [
                 'allowed_params': ['org_name', 'ovdc_name', 'pageSize', 'page'],  # noqa: E501
                 'required_params': [],
                 'operation': CseOperation.NATIVE_CLUSTER_LIST,
-                'handler': native_cluster_handler.native_cluster_list
+                'handler': native_cluster_handler.native_cluster_list,
+                'feature_flags': ['legacy_api']
             }
         },
     }
@@ -290,7 +299,8 @@ LEGACY_NODE_HANDLERS = [
                 'verify_payload': False,
                 'payload_type': '*',
                 'operation': CseOperation.NODE_CREATE,
-                'handler': native_cluster_handler.node_create
+                'handler': native_cluster_handler.node_create,
+                'feature_flags': ['legacy_api']
             }
         },
         RequestMethod.DELETE: {
@@ -300,7 +310,8 @@ LEGACY_NODE_HANDLERS = [
                 'verify_payload': False,
                 'payload_type': '*',
                 'operation': CseOperation.NODE_DELETE,
-                'handler': native_cluster_handler.node_delete
+                'handler': native_cluster_handler.node_delete,
+                'feature_flags': ['legacy_api']
             }
         },
     },
@@ -311,7 +322,8 @@ LEGACY_NODE_HANDLERS = [
                 'allowed_params': ['cluster_name', 'org_name', 'ovdc_name'],
                 'required_params': ['cluster_name'],
                 'operation': CseOperation.NODE_INFO,
-                'handler': native_cluster_handler.node_info
+                'handler': native_cluster_handler.node_info,
+                'feature_flags': ['legacy_api']
             }
         },
     }
@@ -326,7 +338,8 @@ LEGACY_OVDC_HANDLERS = [
                 'allowed_params': [],
                 'required_params': [],
                 'operation': CseOperation.OVDC_LIST,
-                'handler': ovdc_handler.ovdc_list
+                'handler': ovdc_handler.ovdc_list,
+                'feature_flags': ['legacy_api']
             }
         },
     },
@@ -337,7 +350,8 @@ LEGACY_OVDC_HANDLERS = [
                 'allowed_params': [],
                 'required_params': [],
                 'operation': CseOperation.OVDC_INFO,
-                'handler': ovdc_handler.ovdc_info
+                'handler': ovdc_handler.ovdc_info,
+                'feature_flags': ['legacy_api']
             }
         },
         RequestMethod.PUT: {
@@ -347,7 +361,8 @@ LEGACY_OVDC_HANDLERS = [
                 'verify_payload': False,
                 'payload_type': '*',
                 'operation': CseOperation.OVDC_UPDATE,
-                'handler': ovdc_handler.ovdc_update
+                'handler': ovdc_handler.ovdc_update,
+                'feature_flags': ['legacy_api']
             }
         }
     },
@@ -358,7 +373,8 @@ LEGACY_OVDC_HANDLERS = [
                 'allowed_params': [],
                 'required_params': [],
                 'operation': CseOperation.OVDC_COMPUTE_POLICY_LIST,
-                'handler': ovdc_handler.ovdc_compute_policy_list
+                'handler': ovdc_handler.ovdc_compute_policy_list,
+                'feature_flags': ['legacy_api']
             }
         },
         RequestMethod.PUT: {
@@ -368,7 +384,8 @@ LEGACY_OVDC_HANDLERS = [
                 'verify_payload': False,
                 'payload_type': '*',
                 'operation': CseOperation.OVDC_COMPUTE_POLICY_UPDATE,
-                'handler': ovdc_handler.ovdc_compute_policy_update
+                'handler': ovdc_handler.ovdc_compute_policy_update,
+                'feature_flags': ['legacy_api']
             }
         }
     }
@@ -384,7 +401,8 @@ LEGACY_ORG_VDC_HANDLERS = [
                 'allowed_params': ['pageSize', 'page'],
                 'required_params': [],
                 'operation': CseOperation.ORG_VDC_LIST,
-                'handler': ovdc_handler.org_vdc_list
+                'handler': ovdc_handler.org_vdc_list,
+                'feature_flags': ['legacy_api']
             }
         },
     }
@@ -399,7 +417,8 @@ CLUSTER_HANDLERS = [
                 'allowed_params': [],  # how to handle open list of query params?  # noqa: E501
                 'required_params': [],
                 'operation': CseOperation.V35_CLUSTER_LIST,
-                'handler': v35_cluster_handler.cluster_list
+                'handler': v35_cluster_handler.cluster_list,
+                'feature_flags': ['non_legacy_api']
             }
         },
         RequestMethod.POST: {
@@ -409,7 +428,8 @@ CLUSTER_HANDLERS = [
                 'verify_payload': False,
                 'payload_type': '*',
                 'operation': CseOperation.V35_CLUSTER_CREATE,
-                'handler': v35_cluster_handler.cluster_create
+                'handler': v35_cluster_handler.cluster_create,
+                'feature_flags': ['non_legacy_api']
             }
         },
     },
@@ -420,7 +440,8 @@ CLUSTER_HANDLERS = [
                 'allowed_params': [],
                 'required_params': [],
                 'operation': CseOperation.V35_CLUSTER_LIST,
-                'handler': v35_cluster_handler.cluster_list
+                'handler': v35_cluster_handler.cluster_list,
+                'feature_flags': ['non_legacy_api']
             }
         },
         RequestMethod.PUT: {
@@ -430,7 +451,8 @@ CLUSTER_HANDLERS = [
                 'verify_payload': False,
                 'payload_type': '*',
                 'operation': CseOperation.V35_CLUSTER_RESIZE,
-                'handler': v35_cluster_handler.cluster_resize
+                'handler': v35_cluster_handler.cluster_resize,
+                'feature_flags': ['non_legacy_api']
             },
             ('36.0',): {
                 'allowed_params': [],
@@ -438,7 +460,8 @@ CLUSTER_HANDLERS = [
                 'verify_payload': False,
                 'payload_type': '*',
                 'operation': CseOperation.V36_CLUSTER_UPDATE,
-                'handler': v36_cluster_handler.cluster_update
+                'handler': v36_cluster_handler.cluster_update,
+                'feature_flags': ['non_legacy_api']
             }
         },
         RequestMethod.DELETE: {
@@ -446,7 +469,8 @@ CLUSTER_HANDLERS = [
                 'allowed_params': [],
                 'required_params': [],
                 'operation': CseOperation.V35_CLUSTER_DELETE,
-                'handler': v35_cluster_handler.cluster_delete
+                'handler': v35_cluster_handler.cluster_delete,
+                'feature_flags': ['non_legacy_api']
             }
         }
     },
@@ -457,7 +481,8 @@ CLUSTER_HANDLERS = [
                 'allowed_params': [],
                 'required_params': [],
                 'operation': CseOperation.V35_CLUSTER_CONFIG,
-                'handler': v35_cluster_handler.cluster_config
+                'handler': v35_cluster_handler.cluster_config,
+                'feature_flags': ['non_legacy_api']
             }
         },
     },
@@ -468,7 +493,8 @@ CLUSTER_HANDLERS = [
                 'allowed_params': [],
                 'required_params': [],
                 'operation': CseOperation.V35_CLUSTER_UPGRADE_PLAN,
-                'handler': v35_cluster_handler.cluster_upgrade_plan
+                'handler': v35_cluster_handler.cluster_upgrade_plan,
+                'feature_flags': ['non_legacy_api']
             }
         },
     },
@@ -481,7 +507,8 @@ CLUSTER_HANDLERS = [
                 'verify_payload': False,
                 'payload_type': '*',
                 'operation': CseOperation.V35_CLUSTER_UPGRADE,
-                'handler': v35_cluster_handler.cluster_upgrade
+                'handler': v35_cluster_handler.cluster_upgrade,
+                'feature_flags': ['non_legacy_api']
             }
         },
     },
@@ -492,7 +519,8 @@ CLUSTER_HANDLERS = [
                 'allowed_params': [],
                 'required_params': [],
                 'operation': CseOperation.V35_NODE_DELETE,
-                'handler': v35_cluster_handler.nfs_node_delete
+                'handler': v35_cluster_handler.nfs_node_delete,
+                'feature_flags': ['non_legacy_api']
             }
         },
     },
@@ -503,7 +531,8 @@ CLUSTER_HANDLERS = [
                 'allowed_params': [],
                 'required_params': [],
                 'operation': CseOperation.V35_CLUSTER_ACL_LIST,
-                'handler': v35_cluster_handler.cluster_acl_info
+                'handler': v35_cluster_handler.cluster_acl_info,
+                'feature_flags': ['non_legacy_api']
             }
         },
         RequestMethod.PUT: {
@@ -513,7 +542,8 @@ CLUSTER_HANDLERS = [
                 'verify_payload': False,
                 'payload_type': '*',
                 'operation': CseOperation.V35_CLUSTER_ACL_UPDATE,
-                'handler': v35_cluster_handler.cluster_acl_update
+                'handler': v35_cluster_handler.cluster_acl_update,
+                'feature_flags': ['non_legacy_api']
             }
         },
     }
@@ -528,7 +558,8 @@ OVDC_HANDLERS = [
                 'allowed_params': [],
                 'required_params': [],
                 'operation': CseOperation.V35_OVDC_LIST,
-                'handler': v35_ovdc_handler.ovdc_list
+                'handler': v35_ovdc_handler.ovdc_list,
+                'feature_flags': ['non_legacy_api']
             }
         },
     },
@@ -539,7 +570,8 @@ OVDC_HANDLERS = [
                 'allowed_params': [],
                 'required_params': [],
                 'operation': CseOperation.V35_OVDC_INFO,
-                'handler': v35_ovdc_handler.ovdc_info
+                'handler': v35_ovdc_handler.ovdc_info,
+                'feature_flags': ['non_legacy_api']
             }
         },
         RequestMethod.PUT: {
@@ -549,7 +581,8 @@ OVDC_HANDLERS = [
                 'verify_payload': False,
                 'payload_type': '*',
                 'operation': CseOperation.V35_OVDC_UPDATE,
-                'handler': v35_ovdc_handler.ovdc_update
+                'handler': v35_ovdc_handler.ovdc_update,
+                'feature_flags': ['non_legacy_api']
             }
         },
     }
@@ -565,7 +598,8 @@ ORG_VDC_HANDLERS = [
                 'allowed_params': [],
                 'required_params': [],
                 'operation': CseOperation.V35_ORG_VDC_LIST,
-                'handler': v35_ovdc_handler.org_vdc_list
+                'handler': v35_ovdc_handler.org_vdc_list,
+                'feature_flags': ['non_legacy_api']
             }
         },
     }
@@ -745,6 +779,9 @@ def process_request(message):
         raw_body = base64.b64decode(message['body']).decode(sys.getfilesystemencoding())  # noqa: E501
         request_body = json.loads(raw_body)
 
+    import container_service_extension.server.service as cse_service
+    server_config = cse_service.Service().get_service_config()
+
     found = False
     operation = None
     handler_method = None
@@ -785,11 +822,22 @@ def process_request(message):
                 error_message="Invalid api version specified. Expected "
                               f"api version '{supported_api_versions}'.")
 
-        operation = matched_handler['operation']
-        handler_method = matched_handler['handler']
+        required_feature_flags = matched_handler.get('feature_flags', {})
+        feature_flags_satisfied = True
+        for feature_flag in required_feature_flags:
+            value = server_config['feature_flags'].get(feature_flag, False)
+            if not value:
+                feature_flags_satisfied = False
+                break
 
-        # ToDo: Extra validation based on allowed query params, content type etc.  # noqa: E501
-        found = True
+        if feature_flags_satisfied:
+            operation = matched_handler['operation']
+            handler_method = matched_handler['handler']
+
+            # ToDo: Extra validation based on allowed query params, content type etc.  # noqa: E501
+            found = True
+        else:
+            break
 
     if not found:
         raise cse_exception.NotFoundRequestError()
