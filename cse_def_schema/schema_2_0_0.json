@@ -7,7 +7,21 @@
                     "name": {"type": "string"},
                     "ip": {"type": "string"},
                     "sizing_class": {"type": "string"},
-                    "storage_profile": {"type": "string"}
+                    "storage_profile": {"type": "string"},
+                    "node_type": {
+                        "type": "string",
+                        "enum": [
+                            "control_plane",
+                            "worker"
+                        ]
+                    },
+                    "annotations": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "default": []
+                    }
                 },
                 "additionalProperties": true
             },
@@ -22,6 +36,55 @@
                    "template_revision": { "type": "integer"}
                 },
                 "additionalProperties": true
+            },
+            "ingress": {
+                "type": "object",
+                "required": [
+                    "virtual_ip_subnet",
+                    "http_port",
+                    "https_port"
+                ],
+                "properties": {
+                    "virtual_ip_subnet": {
+                        "type": "string"
+                    },
+                    "http_port": {
+                        "type": "integer"
+                    },
+                    "https_port": {
+                        "type": "integer"
+                    },
+                    "one_arm": {
+                        "type": "object",
+                        "properties": {
+                            "start_ip_address": {
+                                "type": "string"
+                            },
+                            "end_ip_address": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "ingress_status": {
+                "type": "object",
+                "required": [
+                    "virtual_ip",
+                    "external_port",
+                    "internal_port"
+                ],
+                "properties": {
+                    "virtual_ip": {
+                        "type": "string"
+                    },
+                    "external_port": {
+                        "type": "integer"
+                    },
+                    "internal_port": {
+                        "type": "integer"
+                    }
+                }
             }
         },
         "type": "object",
@@ -84,6 +147,23 @@
                                 "maximum": 1,
                                 "minimum": 1
                             },
+                            "load_balancer": {
+                                "type": "object",
+                                "properties": {
+                                    "load_balancer_type": {
+                                        "type": "string"
+                                    },
+                                    "virtual_ip": {
+                                        "type": "string"
+                                    },
+                                    "external_port": {
+                                        "type": "integer"
+                                    },
+                                    "internal_port": {
+                                        "type": "integer"
+                                    }
+                                }
+                            },
                             "sizing_class": {
                                 "type": "string",
                                 "description":"The compute sizing policy with which control-plane node needs to be provisioned in a given \"ovdc\". The specified sizing policy is expected to be pre-published to the given ovdc."
@@ -94,6 +174,9 @@
                             }
                         },
                         "additionalProperties": true
+                    },
+                    "cni": {
+                        "type": "string"
                     },
                     "nfs": {
                         "type": "object",
@@ -119,16 +202,47 @@
                         },
                         "additionalProperties": true
                     },
+                    "vip_subnet": {
+                        "type": "string",
+                        "description": "The subnet from which Virtual IPs are to be allocated to loadbalancer."
+                    },
+                    "cloud_provider_enabled": {
+                        "type": "string",
+                        "description": "If there is a non-empty value, the kubelet uses the value as an argument for `--cloud-provider`"
+                    },
+                    "auth": {
+                        "oneOf": [
+                            {
+                                "type": "object",
+                                "properties": {
+                                    "user_id": {
+                                        "type": "string"
+                                    },
+                                    "secret": {
+                                        "type": "string"
+                                    }
+                                }
+                            },
+                            {
+                                "token": {
+                                    "type": "string"
+                                }
+                            }
+                        ]
+                    },
+                    "default_ingress": {
+                        "type": "string"
+                    },
+                    "ingresses": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/definitions/ingress"
+                        },
+                        "default": []
+                    },
                     "settings": {
                         "type": "object",
-                        "required": [
-                            "network"
-                        ],
                         "properties": {
-                            "network": {
-                                "type": "string",
-                                "description":"Name of the Organization's virtual data center network"
-                            },
                             "ssh_key": {
                                 "type": "string",
                                 "description":"The ssh key that users can use to log into the node VMs without explicitly providing passwords."
@@ -167,6 +281,13 @@
                     },
                     "docker_version": {
                         "type": "string"
+                    },
+                    "ingresses": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/definitions/ingress_status"
+                        },
+                        "default": []
                     },
                     "nodes": {
                       "type": "object",
@@ -232,7 +353,8 @@
                 "required": [
                     "org_name",
                     "ovdc_name",
-                    "cluster_name"
+                    "cluster_name",
+                    "network"
                 ],
                 "properties": {
                     "org_name": {
@@ -246,6 +368,10 @@
                     "cluster_name": {
                         "type": "string",
                         "description":"The name of the cluster."
+                    },
+                    "network": {
+                        "type": "string",
+                        "description":"Name of the Organization's virtual data center network"
                     }
                 },
                 "additionalProperties": true
