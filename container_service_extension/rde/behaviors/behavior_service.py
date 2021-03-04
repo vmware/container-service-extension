@@ -1,11 +1,12 @@
 # container-service-extension
 # Copyright (c) 2021 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
-import json
 from dataclasses import asdict
 import functools
-from requests.exceptions import HTTPError
+import json
 from typing import Iterator, List
+
+from requests.exceptions import HTTPError
 
 import container_service_extension.common.constants.shared_constants as cse_shared_constants  # noqa: E501
 import container_service_extension.exception.exceptions as cse_exceptions
