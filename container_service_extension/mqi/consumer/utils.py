@@ -15,7 +15,7 @@ from container_service_extension.common.constants.shared_constants import RESPON
 import container_service_extension.common.thread_local_data as thread_local_data  # noqa: E501
 from container_service_extension.exception.exceptions import CseRequestError
 from container_service_extension.logging.logger import SERVER_LOGGER as LOGGER
-import container_service_extension.server.request_processor as request_processor  # noqa: E501
+import container_service_extension.server.request_dispatcher as request_dispatcher  # noqa: E501
 
 
 # Note : Only being used by AMQP to reject request that has been already
@@ -53,7 +53,7 @@ def get_response_fields(request_msg, fsencoding, is_mqtt):
 
         thread_local_data.set_thread_local_data(ThreadLocalData.REQUEST_ID, request_id)  # noqa: E501
         thread_local_data.set_thread_local_data(ThreadLocalData.USER_AGENT, msg_json['headers'].get('User-Agent'))  # noqa: E501
-        result = request_processor.process_request(msg_json)
+        result = request_dispatcher.process_request(msg_json)
         status_code = result['status_code']
         reply_body = result['body']
 

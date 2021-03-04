@@ -3,7 +3,6 @@
 # SPDX-License-Identifier: BSD-2-Clause
 
 from dataclasses import asdict
-from enum import Enum
 import functools
 import json
 from typing import List
@@ -23,6 +22,7 @@ from container_service_extension.lib.cloudapi.constants import CloudApiVersion
 from container_service_extension.logging.logger import SERVER_LOGGER as LOGGER
 import container_service_extension.rde.constants as def_constants
 from container_service_extension.rde.models.common_models import DefEntity
+from container_service_extension.rde.models.common_models import DefEntityType
 from container_service_extension.rde.models.common_models import GenericClusterEntity   # noqa: E501
 import container_service_extension.rde.utils as def_utils
 
@@ -298,12 +298,12 @@ class DefEntityService():
         if not filters:
             filters = {}
         filters[def_constants.ClusterEntityFilterKey.CLUSTER_NAME.value] = name
-        native_entity_type_metadata: Enum = \
+        native_entity_type: DefEntityType = \
             def_utils.get_rde_metadata(version)[def_constants.RDEMetadataKey.ENTITY_TYPE]  # noqa: E501
         for entity in \
-            self.list_entities_by_entity_type(vendor=native_entity_type_metadata.VENDOR,  # noqa: E501
-                                              nss=native_entity_type_metadata.NSS,  # noqa: E501
-                                              version=native_entity_type_metadata.VERSION,  # noqa: E501
+            self.list_entities_by_entity_type(vendor=native_entity_type.vendor,  # noqa: E501
+                                              nss=native_entity_type.nss,  # noqa: E501
+                                              version=native_entity_type.version,  # noqa: E501
                                               filters=filters):
             return entity
 

@@ -16,23 +16,23 @@ from container_service_extension.exception.exception_handler import handle_excep
 import container_service_extension.exception.exceptions as cse_exception
 from container_service_extension.logging.logger import SERVER_LOGGER as LOGGER
 import container_service_extension.security.context.operation_context as ctx
-import container_service_extension.server.request_handlers.native_cluster_handler as native_cluster_handler  # noqa: E501
-import container_service_extension.server.request_handlers.ovdc_handler as ovdc_handler  # noqa: E501
-import container_service_extension.server.request_handlers.pks_cluster_handler as pks_cluster_handler  # noqa: E501
-import container_service_extension.server.request_handlers.pks_ovdc_handler as pks_ovdc_handler  # noqa: E501
+import \
+    container_service_extension.server.request_handlers.legacy.native_cluster_handler as native_cluster_handler  # noqa: E501
+import container_service_extension.server.request_handlers.legacy.ovdc_handler as ovdc_handler  # noqa: E501
+import container_service_extension.server.request_handlers.pks.pks_cluster_handler as pks_cluster_handler  # noqa: E501
+import container_service_extension.server.request_handlers.pks.pks_ovdc_handler as pks_ovdc_handler  # noqa: E501
 import container_service_extension.server.request_handlers.system_handler as system_handler  # noqa: E501
 import container_service_extension.server.request_handlers.template_handler as template_handler  # noqa: E501 E501
 import container_service_extension.server.request_handlers.v35.def_cluster_handler as v35_cluster_handler  # noqa: E501
 import container_service_extension.server.request_handlers.v35.ovdc_handler as v35_ovdc_handler  # noqa: E501
 import container_service_extension.server.request_handlers.v36.def_cluster_handler as v36_cluster_handler  # noqa: E501
 
-
 # /system end points
 SYSTEM_HANDLERS = [
     {
         'url': "cse/system",
         RequestMethod.GET: {
-            ('*', ): {
+            ('*',): {
                 'allowed_params': [],
                 'required_params': [],
                 'operation': CseOperation.SYSTEM_INFO,
@@ -73,7 +73,7 @@ PKS_HANDLERS = [
         'url': "pks/clusters",
         RequestMethod.GET: {
             tuple(server_constants.SUPPORTED_VCD_API_VERSIONS): {
-                'allowed_params': ['org', 'vdc'],
+                'allowed_params': ['org_name', 'ovdc_name'],
                 'required_params': [],
                 'operation': CseOperation.PKS_CLUSTER_LIST,
                 'handler': pks_cluster_handler.cluster_list
@@ -94,7 +94,7 @@ PKS_HANDLERS = [
         'url': f"pks/cluster/${RequestKey.CLUSTER_NAME}",
         RequestMethod.GET: {
             tuple(server_constants.SUPPORTED_VCD_API_VERSIONS): {
-                'allowed_params': ['org', 'vdc'],
+                'allowed_params': ['org_name', 'ovdc_name'],
                 'required_params': [],
                 'operation': CseOperation.PKS_CLUSTER_INFO,
                 'handler': pks_cluster_handler.cluster_info
@@ -102,7 +102,7 @@ PKS_HANDLERS = [
         },
         RequestMethod.PUT: {
             tuple(server_constants.SUPPORTED_VCD_API_VERSIONS): {
-                'allowed_params': ['org', 'vdc'],
+                'allowed_params': ['org_name', 'ovdc_name'],
                 'required_params': [],
                 'verify_payload': False,
                 'payload_type': '*',
@@ -112,7 +112,7 @@ PKS_HANDLERS = [
         },
         RequestMethod.DELETE: {
             tuple(server_constants.SUPPORTED_VCD_API_VERSIONS): {
-                'allowed_params': ['org', 'vdc'],
+                'allowed_params': ['org_name', 'ovdc_name'],
                 'required_params': [],
                 'operation': CseOperation.PKS_CLUSTER_DELETE,
                 'handler': pks_cluster_handler.cluster_delete
@@ -123,7 +123,7 @@ PKS_HANDLERS = [
         'url': f"pks/cluster/${RequestKey.CLUSTER_NAME}/config",
         RequestMethod.GET: {
             tuple(server_constants.SUPPORTED_VCD_API_VERSIONS): {
-                'allowed_params': ['org', 'vdc'],
+                'allowed_params': ['org_name', 'ovdc_name'],
                 'required_params': [],
                 'operation': CseOperation.PKS_CLUSTER_CONFIG,
                 'handler': pks_cluster_handler.cluster_config
@@ -134,10 +134,21 @@ PKS_HANDLERS = [
         'url': "pks/ovdcs",
         RequestMethod.GET: {
             tuple(server_constants.SUPPORTED_VCD_API_VERSIONS): {
-                'allowed_params': [],
+                'allowed_params': ['list_pks_plans'],
                 'required_params': [],
                 'operation': CseOperation.PKS_OVDC_LIST,
                 'handler': pks_ovdc_handler.ovdc_list
+            }
+        }
+    },
+    {
+        'url': "pks/orgvdcs",
+        RequestMethod.GET: {
+            tuple(server_constants.SUPPORTED_VCD_API_VERSIONS): {
+                'allowed_params': ['list_pks_plans', 'page', 'pageSize'],
+                'required_params': [],
+                'operation': CseOperation.PKS_ORG_VDC_LIST,
+                'handler': pks_ovdc_handler.org_vdc_list
             }
         }
     },
@@ -170,7 +181,7 @@ LEGACY_CLUSTER_HANDLERS = [
         'url': "cse/clusters",
         RequestMethod.GET: {
             ('33.0', '34.0'): {
-                'allowed_params': ['org', 'vdc'],
+                'allowed_params': ['org_name', 'ovdc_name'],
                 'required_params': [],
                 'operation': CseOperation.CLUSTER_LIST,
                 'handler': native_cluster_handler.cluster_list
@@ -191,7 +202,7 @@ LEGACY_CLUSTER_HANDLERS = [
         'url': f"cse/cluster/${RequestKey.CLUSTER_NAME}",
         RequestMethod.GET: {
             ('33.0', '34.0'): {
-                'allowed_params': ['org', 'vdc'],
+                'allowed_params': ['org_name', 'ovdc_name'],
                 'required_params': [],
                 'operation': CseOperation.CLUSTER_INFO,
                 'handler': native_cluster_handler.cluster_info
@@ -199,7 +210,7 @@ LEGACY_CLUSTER_HANDLERS = [
         },
         RequestMethod.PUT: {
             ('33.0', '34.0'): {
-                'allowed_params': ['org', 'vdc'],
+                'allowed_params': [],
                 'required_params': [],
                 'verify_payload': False,
                 'payload_type': '*',
@@ -209,7 +220,7 @@ LEGACY_CLUSTER_HANDLERS = [
         },
         RequestMethod.DELETE: {
             ('33.0', '34.0'): {
-                'allowed_params': ['org', 'vdc'],
+                'allowed_params': ['org_name', 'ovdc_name'],
                 'required_params': [],
                 'operation': CseOperation.CLUSTER_DELETE,
                 'handler': native_cluster_handler.cluster_delete
@@ -220,7 +231,7 @@ LEGACY_CLUSTER_HANDLERS = [
         'url': f"cse/cluster/${RequestKey.CLUSTER_NAME}/config",
         RequestMethod.GET: {
             ('33.0', '34.0'): {
-                'allowed_params': ['org', 'vdc'],
+                'allowed_params': ['org_name', 'ovdc_name'],
                 'required_params': [],
                 'operation': CseOperation.CLUSTER_CONFIG,
                 'handler': native_cluster_handler.cluster_config
@@ -231,7 +242,7 @@ LEGACY_CLUSTER_HANDLERS = [
         'url': f"cse/cluster/${RequestKey.CLUSTER_NAME}/upgrade-plan",
         RequestMethod.GET: {
             ('33.0', '34.0'): {
-                'allowed_params': ['org', 'vdc'],
+                'allowed_params': ['org_name', 'ovdc_name'],
                 'required_params': [],
                 'operation': CseOperation.CLUSTER_UPGRADE_PLAN,
                 'handler': native_cluster_handler.cluster_upgrade_plan
@@ -253,7 +264,22 @@ LEGACY_CLUSTER_HANDLERS = [
     }
 ]
 
-# /cse/cluster/{id}/nodes end points
+# /cse/nativeclusters end points
+LEGACY_NATIVE_CLUSTER_HANDLERS = [
+    {
+        'url': "cse/nativeclusters",
+        RequestMethod.GET: {
+            ('33.0', '34.0'): {
+                'allowed_params': ['org_name', 'ovdc_name', 'pageSize', 'page'],  # noqa: E501
+                'required_params': [],
+                'operation': CseOperation.NATIVE_CLUSTER_LIST,
+                'handler': native_cluster_handler.native_cluster_list
+            }
+        },
+    }
+]
+
+# /cse/nodes end points
 LEGACY_NODE_HANDLERS = [
     {
         'url': "cse/nodes",
@@ -279,10 +305,10 @@ LEGACY_NODE_HANDLERS = [
         },
     },
     {
-        'url': f"cse/nodes/${RequestKey.NODE_NAME}",
+        'url': f"cse/node/${RequestKey.NODE_NAME}",
         RequestMethod.GET: {
             ('33.0', '34.0'): {
-                'allowed_params': ['cluster_name', 'org', 'vdc'],
+                'allowed_params': ['cluster_name', 'org_name', 'ovdc_name'],
                 'required_params': ['cluster_name'],
                 'operation': CseOperation.NODE_INFO,
                 'handler': native_cluster_handler.node_info
@@ -305,7 +331,7 @@ LEGACY_OVDC_HANDLERS = [
         },
     },
     {
-        'url': f"cse/ovdcs/${RequestKey.OVDC_ID}",
+        'url': f"cse/ovdc/${RequestKey.OVDC_ID}",
         RequestMethod.GET: {
             ('33.0', '34.0'): {
                 'allowed_params': [],
@@ -326,7 +352,7 @@ LEGACY_OVDC_HANDLERS = [
         }
     },
     {
-        'url': f"cse/ovdcs/${RequestKey.OVDC_ID}/compute-policies",
+        'url': f"cse/ovdc/${RequestKey.OVDC_ID}/compute-policies",
         RequestMethod.GET: {
             ('33.0', '34.0'): {
                 'allowed_params': [],
@@ -355,7 +381,7 @@ LEGACY_ORG_VDC_HANDLERS = [
         'url': "cse/orgvdcs",
         RequestMethod.GET: {
             ('33.0', '34.0'): {
-                'allowed_params': [],
+                'allowed_params': ['pageSize', 'page'],
                 'required_params': [],
                 'operation': CseOperation.ORG_VDC_LIST,
                 'handler': ovdc_handler.org_vdc_list
@@ -369,7 +395,7 @@ CLUSTER_HANDLERS = [
     {
         'url': "cse/3.0/clusters",
         RequestMethod.GET: {
-            ('35.0', ): {
+            ('35.0',): {
                 'allowed_params': [],  # how to handle open list of query params?  # noqa: E501
                 'required_params': [],
                 'operation': CseOperation.V35_CLUSTER_LIST,
@@ -377,7 +403,7 @@ CLUSTER_HANDLERS = [
             }
         },
         RequestMethod.POST: {
-            ('35.0', ): {
+            ('35.0',): {
                 'allowed_params': [],
                 'required_params': [],
                 'verify_payload': False,
@@ -390,7 +416,7 @@ CLUSTER_HANDLERS = [
     {
         'url': f"cse/3.0/cluster/${RequestKey.CLUSTER_ID}",
         RequestMethod.GET: {
-            ('35.0', ): {
+            ('35.0',): {
                 'allowed_params': [],
                 'required_params': [],
                 'operation': CseOperation.V35_CLUSTER_LIST,
@@ -398,7 +424,7 @@ CLUSTER_HANDLERS = [
             }
         },
         RequestMethod.PUT: {
-            ('35.0', ): {
+            ('35.0',): {
                 'allowed_params': [],
                 'required_params': [],
                 'verify_payload': False,
@@ -406,7 +432,7 @@ CLUSTER_HANDLERS = [
                 'operation': CseOperation.V35_CLUSTER_RESIZE,
                 'handler': v35_cluster_handler.cluster_resize
             },
-            ('36.0', ): {
+            ('36.0',): {
                 'allowed_params': [],
                 'required_params': [],
                 'verify_payload': False,
@@ -416,7 +442,7 @@ CLUSTER_HANDLERS = [
             }
         },
         RequestMethod.DELETE: {
-            ('35.0', ): {
+            ('35.0',): {
                 'allowed_params': [],
                 'required_params': [],
                 'operation': CseOperation.V35_CLUSTER_DELETE,
@@ -427,7 +453,7 @@ CLUSTER_HANDLERS = [
     {
         'url': f"cse/3.0/cluster/${RequestKey.CLUSTER_ID}/config",
         RequestMethod.GET: {
-            ('35.0', ): {
+            ('35.0',): {
                 'allowed_params': [],
                 'required_params': [],
                 'operation': CseOperation.V35_CLUSTER_CONFIG,
@@ -438,7 +464,7 @@ CLUSTER_HANDLERS = [
     {
         'url': f"cse/3.0/cluster/${RequestKey.CLUSTER_ID}/upgrade-plan",
         RequestMethod.GET: {
-            ('35.0', ): {
+            ('35.0',): {
                 'allowed_params': [],
                 'required_params': [],
                 'operation': CseOperation.V35_CLUSTER_UPGRADE_PLAN,
@@ -449,7 +475,7 @@ CLUSTER_HANDLERS = [
     {
         'url': f"cse/3.0/cluster/${RequestKey.CLUSTER_ID}/action/upgrade",
         RequestMethod.POST: {
-            ('35.0', ): {
+            ('35.0',): {
                 'allowed_params': [],
                 'required_params': [],
                 'verify_payload': False,
@@ -462,7 +488,7 @@ CLUSTER_HANDLERS = [
     {
         'url': f"cse/3.0/cluster/${RequestKey.CLUSTER_ID}/nfs/${RequestKey.NODE_NAME}",  # noqa: E501
         RequestMethod.DELETE: {
-            ('35.0', ): {
+            ('35.0',): {
                 'allowed_params': [],
                 'required_params': [],
                 'operation': CseOperation.V35_NODE_DELETE,
@@ -473,7 +499,7 @@ CLUSTER_HANDLERS = [
     {
         'url': f"cse/3.0/cluster/${RequestKey.CLUSTER_ID}/acl",
         RequestMethod.GET: {
-            ('35.0', ): {
+            ('35.0',): {
                 'allowed_params': [],
                 'required_params': [],
                 'operation': CseOperation.V35_CLUSTER_ACL_LIST,
@@ -481,7 +507,7 @@ CLUSTER_HANDLERS = [
             }
         },
         RequestMethod.PUT: {
-            ('35.0', ): {
+            ('35.0',): {
                 'allowed_params': [],
                 'required_params': [],
                 'verify_payload': False,
@@ -498,7 +524,7 @@ OVDC_HANDLERS = [
     {
         'url': "cse/3.0/ovdcs",
         RequestMethod.GET: {
-            ('35.0', ): {
+            ('35.0',): {
                 'allowed_params': [],
                 'required_params': [],
                 'operation': CseOperation.V35_OVDC_LIST,
@@ -509,7 +535,7 @@ OVDC_HANDLERS = [
     {
         'url': f"cse/3.0/ovdc/${RequestKey.OVDC_ID}",
         RequestMethod.GET: {
-            ('35.0', ): {
+            ('35.0',): {
                 'allowed_params': [],
                 'required_params': [],
                 'operation': CseOperation.V35_OVDC_INFO,
@@ -517,7 +543,7 @@ OVDC_HANDLERS = [
             }
         },
         RequestMethod.PUT: {
-            ('35.0', ): {
+            ('35.0',): {
                 'allowed_params': [],
                 'required_params': [],
                 'verify_payload': False,
@@ -535,7 +561,7 @@ ORG_VDC_HANDLERS = [
     {
         'url': "cse/3.0/orgvdcs",
         RequestMethod.GET: {
-            ('35.0', ): {
+            ('35.0',): {
                 'allowed_params': [],
                 'required_params': [],
                 'operation': CseOperation.V35_ORG_VDC_LIST,
@@ -550,6 +576,7 @@ CSE_REQUEST_DISPATCHER_LIST = [
     *TEMPLATE_HANDLERS,
     *PKS_HANDLERS,
     *LEGACY_CLUSTER_HANDLERS,
+    *LEGACY_NATIVE_CLUSTER_HANDLERS,
     *LEGACY_NODE_HANDLERS,
     *LEGACY_OVDC_HANDLERS,
     *LEGACY_ORG_VDC_HANDLERS,
@@ -558,8 +585,8 @@ CSE_REQUEST_DISPATCHER_LIST = [
     *ORG_VDC_HANDLERS
 ]
 
-for entry in CSE_REQUEST_DISPATCHER_LIST:
-    entry['url_tokens'] = entry['url'].split('/')
+for url_entry in CSE_REQUEST_DISPATCHER_LIST:
+    url_entry['url_tokens'] = url_entry['url'].split('/')
 
 
 def _parse_accept_header(accept_header: str):
@@ -676,14 +703,14 @@ def process_request(message):
     The request URI, api version and HTTP verb are used to determine the
     request operation and the corresponding handler.
 
-    Additionaly support for payload verification, query param verification
+    Additionally support for payload verification, query param verification
     will be added in a later point of time.
 
     URL template matching is also performed to compute values of url template
     parameters. These computed values, request body and query params are all
     sent to handlers in form of a dictionary.
 
-    :param dict message: message recived over AMQP/MQTT bus representing the
+    :param dict message: message received over AMQP/MQTT bus representing the
         incoming REST request.
 
     :returns: response computed by the handler after processing the request
@@ -697,6 +724,7 @@ def process_request(message):
 
     # Convert to upper case for matching the ENUM values
     method = RequestMethod(message['method'].upper())
+
     url = message['requestUri']
     url_tokens = url.split("/")
     # ignore the vcd host and /api in the url
@@ -709,11 +737,17 @@ def process_request(message):
 
     request_body = None
     # Should we do a content-type check? and allow only application/json content?  # noqa: E501
-    if len(message['body']) > 0:
+    # Process request body only for requests with HTTP verbs that allow body
+    if method in [RequestMethod.POST,
+                  RequestMethod.PUT,
+                  RequestMethod.DELETE] and \
+            len(message['body']) > 0:
         raw_body = base64.b64decode(message['body']).decode(sys.getfilesystemencoding())  # noqa: E501
         request_body = json.loads(raw_body)
 
     found = False
+    operation = None
+    handler_method = None
     url_data = {}
     for entry in CSE_REQUEST_DISPATCHER_LIST:
         if found:
@@ -769,26 +803,21 @@ def process_request(message):
                               'Contact the System Administrator.')
 
     # create request data dict from incoming message data
-    request_data = {
-        'url': url
-    }
-
-    # ToDo: Device better way to send request body to handlers.
-    if request_body:
-        # update request_data with request_body
-        LOGGER.debug(f"request body: {request_data}")
+    request_data = {}
 
     # update request data dict with query params data
-    # ToDo: Device better way to send request query params to handlers.
     if query_params:
-        # update request_data with query_params
+        request_data[RequestKey.QUERY_PARAMS] = query_params
         LOGGER.debug(f"query parameters: {query_params}")
 
-    # update request spec with operation specific data in the url
-    request_data.update(url_data)
+    # update request_data with request_body
+    if request_body:
+        request_data[RequestKey.INPUT_SPEC] = request_body
+        LOGGER.debug(f"request body: {request_body}")
 
-    # remove None values from request payload
-    data = {k: v for k, v in request_data.items() if v is not None}
+    # update request_data with url template param key-values
+    request_data.update(url_data)
+    request_data['url'] = url
 
     # extract out the authorization token
     tenant_auth_token = message['headers'].get('x-vcloud-authorization')
@@ -806,7 +835,7 @@ def process_request(message):
                                          request_id=message['id'])
 
     try:
-        body_content = handler_method(data, operation_ctx)
+        body_content = handler_method(request_data, operation_ctx)
     finally:
         if not operation_ctx.is_async:
             operation_ctx.end()
