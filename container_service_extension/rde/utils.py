@@ -68,18 +68,20 @@ def get_rde_metadata(rde_version: str) -> dict:
     return MAP_RDE_VERSION_TO_ITS_METADATA[rde_version]
 
 
-def construct_cluster_spec_from_entity_status(entity_status: Union[rde_1_0_0.Status, rde_2_0_0.Status], rde_version_in_use: str) -> Union[rde_1_0_0.ClusterSpec, rde_2_0_0.ClusterSpec]:  # noqa: E501
+def construct_cluster_spec_from_entity_status(entity_status: Union[rde_1_0_0.Status, rde_2_0_0.Status], rde_version: str) -> Union[rde_1_0_0.ClusterSpec, rde_2_0_0.ClusterSpec]:  # noqa: E501
     """Construct cluster specification from entity status of given rde version.
 
     :param rde_X_X_X Status entity_status: Entity Status of rde of given version  # noqa: E501
-    :param str rde_version_in_use: which version of schema
+    :param str rde_version: which version of schema
     :return: Cluster Specification of respective rde_version_in_use
     :raises NotImplementedError
     """
     # TODO: Refactor this multiple if to rde_version -> handler pattern
-    if rde_version_in_use == def_constants.RDEVersion.RDE_2_0_0.value:
+    if rde_version == def_constants.RDEVersion.RDE_2_0_0.value:
         return construct_2_0_0_cluster_spec_from_entity_status(entity_status)
-    raise NotImplementedError(f"constructing cluster spec from entity status for {rde_version_in_use} is"  # noqa:
+    # elif rde_version == def_constants.RDEVersion.RDE_2_1_0:
+    #    return construct_2_1_0_cluster_spec_from_entity_status(entity_status)
+    raise NotImplementedError(f"constructing cluster spec from entity status for {rde_version} is"  # noqa:
                               f" not implemented ")
 
 

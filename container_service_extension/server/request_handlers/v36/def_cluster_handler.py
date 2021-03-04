@@ -42,7 +42,7 @@ def cluster_update(data: dict, op_ctx: ctx.OperationContext):
     curr_entity = svc.entity_svc.get_entity(cluster_id)
     cluster_entity_status = curr_entity.entity.status
     current_entity_spec = construct_cluster_spec_from_entity_status(
-        cluster_entity_status, server_utils.get_rde_version_in_use())
+        cluster_entity_status, rde_constants.RDEVersion.RDE_2_0_0.value)
 
     rde_validator_factory.get_validator(
         rde_constants.RDEVersion.RDE_2_0_0).validate(
