@@ -2,11 +2,14 @@
 # Copyright (c) 2021 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 
+from dataclasses import asdict
 
 from container_service_extension.common.constants.server_constants import CseOperation  # noqa: E501
 from container_service_extension.common.constants.server_constants import FlattenedClusterSpecKey  # noqa: E501
 from container_service_extension.common.constants.server_constants import VALID_UPDATE_FIELDS  # noqa: E501
 from container_service_extension.exception.exceptions import BadRequestError
+import container_service_extension.rde.constants as rde_constants
+from container_service_extension.rde.models.abstractNativeEntity import AbstractNativeEntity  # noqa: E501
 import container_service_extension.rde.utils as rde_utils
 from container_service_extension.rde.validators.abstract_validator import AbstractValidator  # noqa: E501
 
@@ -15,20 +18,24 @@ class Validator_2_0_0(AbstractValidator):
     def __init__(self):
         pass
 
-    def validate(self, request_spec: dict, current_spec: dict, operation: CseOperation) -> bool:  # noqa: E501
+    def validate(self, input_entity: AbstractNativeEntity, current_entity: AbstractNativeEntity, operation: CseOperation) -> bool:  # noqa: E501
         """Validate the input_spec against current_status of the cluster.
 
-        :param dict request_spec: Request spec of the cluster
-        :param dict current_spec: Current status of the cluster
+        :param dict input_entity: Request spec of the cluster
+        :param dict current_entity: Current status of the cluster
         :param CseOperation operation: CSE operation key
-        :return: is validation is successful or failure
+        :return: is validation successful or failure
         :rtype: bool
         """
         # TODO: validators for rest of the CSE operations in V36 will be
         #  implemented as and when v36/def_cluster_handler.py get other handler
         #  functions
+        input_entity_spec = input_entity.spec
+        current_entity_status = current_entity.status
+        current_entity_spec = rde_utils.\
+            construct_cluster_spec_from_entity_status(current_entity_status, rde_constants.RDEVersion.RDE_2_0_0.value)  # noqa: E501
         if operation == CseOperation.V36_CLUSTER_UPDATE:
-            return validate_cluster_update_request_and_check_cluster_upgrade(request_spec, current_spec)  # noqa: E501
+            return validate_cluster_update_request_and_check_cluster_upgrade(asdict(input_entity_spec), asdict(current_entity_spec))  # noqa: E501
         raise NotImplementedError(f"Validator for {operation.name} not found")
 
 
