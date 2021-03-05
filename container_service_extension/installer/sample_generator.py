@@ -116,8 +116,8 @@ SAMPLE_SERVICE_CONFIG = {
         'log_wire': False,
         'telemetry': {
             'enable': True
-        }
-
+        },
+        'legacy_mode': False
     }
 }
 

@@ -191,6 +191,41 @@ def get_validated_config(config_file_name,
     # Store telemetry instance id, url and collector id in config
     store_telemetry_settings(config)
 
+    # Compute common supported api versions by the CSE server and vCD
+    sysadmin_client = None
+    try:
+        sysadmin_client = Client(
+            config['vcd']['host'],
+            verify_ssl_certs=config['vcd']['verify'],
+            log_file=log_wire_file,
+            log_requests=log_wire,
+            log_headers=log_wire,
+            log_bodies=log_wire)
+        sysadmin_client.set_credentials(BasicLoginCredentials(
+            config['vcd']['username'],
+            SYSTEM_ORG_NAME,
+            config['vcd']['password']))
+
+        vcd_supported_api_versions = \
+            set(sysadmin_client.get_supported_versions_list())
+        cse_supported_api_versions = set(SUPPORTED_VCD_API_VERSIONS)
+        common_supported_api_versions = \
+            list(cse_supported_api_versions.intersection(vcd_supported_api_versions))  # noqa: E501
+        config['service']['supported_api_versions'] = \
+            common_supported_api_versions
+    finally:
+        if sysadmin_client:
+            sysadmin_client.logout()
+
+    # Convert legacy_mode flag in service_section to corresponding
+    # feature flags
+    is_legacy_mode = config['service']['legacy_mode']
+    if 'feature_flags' not in config:
+        config['feature_flags'] = {}
+    config['feature_flags']['legacy_api'] = str_to_bool(is_legacy_mode)
+    config['feature_flags']['non_legacy_api'] = \
+        not str_to_bool(is_legacy_mode)
+
     return config
 
 

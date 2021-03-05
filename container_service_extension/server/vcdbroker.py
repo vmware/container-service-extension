@@ -181,7 +181,10 @@ class VcdBroker(abstract_broker.AbstractBroker):
             self.context.client,
             org_name=validated_data[RequestKey.ORG_NAME],
             ovdc_name=validated_data[RequestKey.OVDC_NAME])
-        raw_clusters = raw_clusters_info[PaginationKey.VALUES]
+        if isinstance(raw_clusters_info, list):
+            raw_clusters = raw_clusters_info
+        else:
+            raw_clusters = raw_clusters_info[PaginationKey.VALUES]
 
         return _extract_cse_cluster_list_info(self.context.sysadmin_client,
                                               raw_clusters)
