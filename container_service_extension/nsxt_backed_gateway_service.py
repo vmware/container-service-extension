@@ -247,7 +247,7 @@ class NsxtBackedGatewayService:
     def delete_dnat_rule(self, rule_name):
         nat_rule_id = self._get_dnat_rule_id(rule_name)
         if not nat_rule_id:
-            return
+            raise Exception(f'No dnat rule found with name: {rule_name}')
 
         try:
             self._cloudapi_client.do_request(
@@ -264,26 +264,44 @@ class NsxtBackedGatewayService:
             return
 
     def _get_dnat_rule_id(self, rule_name):
+        """Get dnat rule id.
+
+        :param str rule_name: dnat rule name
+
+        :return: rule id
+        :rtype: str
+        """
         try:
             nat_rules = self._list_nat_rules()
         except Exception:
-            return None
+            return ''
 
         for nat_rule in nat_rules:
             if nat_rule[NsxtNATRuleKey.NAME] == rule_name:
                 return nat_rule[NsxtNATRuleKey.ID]
-        return None
+        return ''
 
     def _get_nat_rules_response(self,
-                                page_num=server_constants.DEFAULT_FIRST_PAGE,
+                                cursor=None,
                                 page_size=server_constants.NAT_DEFAULT_PAGE_SIZE):  # noqa: E501
-        nat_rules_query_path = f"{self._nat_rules_relative_path}?" \
-                               f"{PaginationKey.PAGE_NUMBER}={page_num}" \
-                               f"&{PaginationKey.PAGE_SIZE}={page_size}"
-        return self._cloudapi_client.do_request(
+        """Get the nat rules response.
+
+        :param str cursor: cursor param for the next page.
+        :param int page_size: page size
+
+        :return: response body, cursor
+        :rtype: tuple
+        """
+        nat_rules_query_path = f'{self._nat_rules_relative_path}?' \
+                               f'{PaginationKey.PAGE_SIZE}={page_size}'
+        if cursor:
+            nat_rules_query_path += f'&{PaginationKey.CURSOR}={cursor}'
+        response_body = self._cloudapi_client.do_request(
             method=shared_constants.RequestMethod.GET,
             cloudapi_version=cloudapi_constants.CloudApiVersion.VERSION_1_0_0,
             resource_url_relative_path=nat_rules_query_path)
+        cursor = self._cloudapi_client.get_cursor_param()
+        return response_body, cursor
 
     def _list_nat_rules(self):
         """List nat rule dictionaries.
@@ -291,14 +309,15 @@ class NsxtBackedGatewayService:
         :return: Generator of nat rule dictionaries.
         :rtype: Generator[dict]
         """
-        page_num = 0
+        cursor = None
         while True:
-            page_num += 1
-            response_body = self._get_nat_rules_response(
-                page_num=page_num,
+            response_body, cursor = self._get_nat_rules_response(
+                cursor=cursor,
                 page_size=server_constants.NAT_DEFAULT_PAGE_SIZE)
             values = response_body[PaginationKey.VALUES]
             if len(values) == 0:
                 break
             for nat_rule in values:
                 yield nat_rule
+            if not cursor:
+                break
