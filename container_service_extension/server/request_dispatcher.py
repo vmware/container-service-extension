@@ -439,8 +439,8 @@ CLUSTER_HANDLERS = [
             ('35.0',): {
                 'allowed_params': [],
                 'required_params': [],
-                'operation': CseOperation.V35_CLUSTER_LIST,
-                'handler': v35_cluster_handler.cluster_list,
+                'operation': CseOperation.V35_CLUSTER_INFO,
+                'handler': v35_cluster_handler.cluster_info,
                 'feature_flags': ['non_legacy_api']
             }
         },
@@ -844,8 +844,7 @@ def process_request(message):
 
     # /system operations are excluded from these checks
     if operation not in (CseOperation.SYSTEM_INFO, CseOperation.SYSTEM_UPDATE):
-        from container_service_extension.server.service import Service
-        if not Service().is_running():
+        if not cse_service.Service().is_running():
             raise cse_exception.BadRequestError(
                 error_message='CSE service is disabled. '
                               'Contact the System Administrator.')
