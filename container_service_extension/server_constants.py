@@ -390,6 +390,7 @@ class NsxtGatewayRequestKey(str, Enum):
     START_ADDRESS = 'startAddress'
     END_ADDRESS = 'endAddress'
     STATUS = 'status'
+    IP_ADDRESS = 'ipAddress'
 
 
 # CSE Service Role Name
@@ -497,3 +498,10 @@ class OvdcInfoKey(str, Enum):
 class PKSOvdcInfoKey(str, Enum):
     PKS_API_SERVER = 'pks api server'
     AVAILABLE_PKS_PLANS = 'available pks plans'
+
+
+# default first page
+DEFAULT_FIRST_PAGE = 1
+
+# Pagination constants for used IP addresses
+USED_IP_ADDRESS_PAGE_SIZE = 10
