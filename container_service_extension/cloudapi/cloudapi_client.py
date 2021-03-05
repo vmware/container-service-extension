@@ -154,6 +154,10 @@ class CloudApiClient(object):
                 cursor_url = link[ResponseKeys.URL]
                 parsed_result: parse.ParseResult = parse.urlparse(cursor_url)
                 parsed_query_map = parse.parse_qs(parsed_result.query)
+
+                # The parse_qs function maps each query key to a list,
+                # so we assume there is at most one cursor param and get that
+                # element if the list is not empty
                 cursor_list = parsed_query_map.get('cursor')
                 if cursor_list:
                     return cursor_list[0]
