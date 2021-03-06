@@ -18,9 +18,59 @@ import container_service_extension.security.context.operation_context as ctx
 import container_service_extension.server.request_handlers.request_utils as request_utils  # noqa: E501
 
 
+@telemetry_handler.record_user_action_telemetry(cse_operation=telemetry_constants.CseOperation.V36_CLUSTER_LIST)  # noqa: E501
+@request_utils.cluster_api_exception_handler
+def cluster_list(data: dict, op_ctx: ctx.OperationContext):
+    """Request handler for cluster list operation.
+
+    :return: List
+    """
+    rde_in_use = server_utils.get_rde_version_in_use()
+    svc = cluster_service_factory.ClusterServiceFactory(op_ctx). \
+        get_cluster_service(rde_in_use)
+    # response should not be paginated
+    return [asdict(def_entity) for def_entity in
+            svc.list_clusters(data.get(RequestKey.QUERY_PARAMS, {}))]
+
+
+@telemetry_handler.record_user_action_telemetry(cse_operation=telemetry_constants.CseOperation.V36_CLUSTER_INFO)  # noqa: E501
+@request_utils.cluster_api_exception_handler
+def cluster_info(data: dict, op_ctx: ctx.OperationContext):
+    """Request handler for cluster info operation.
+
+    Required data: cluster_name
+    Optional data and default values: org_name=None, ovdc_name=None
+
+    (data validation handled in broker)
+
+    :return: Dict
+    """
+    rde_in_use = server_utils.get_rde_version_in_use()
+    svc = cluster_service_factory.ClusterServiceFactory(op_ctx). \
+        get_cluster_service(rde_in_use)
+    cluster_id = data[RequestKey.CLUSTER_ID]
+    return asdict(svc.get_cluster_info(cluster_id))
+
+
+@telemetry_handler.record_user_action_telemetry(cse_operation=telemetry_constants.CseOperation.V36_CLUSTER_CONFIG)  # noqa: E501
+@request_utils.cluster_api_exception_handler
+def cluster_config(data: dict, op_ctx: ctx.OperationContext):
+    """Request handler for cluster config operation.
+
+    Required data: cluster_id
+
+    :return: Dict
+    """
+    rde_in_use = server_utils.get_rde_version_in_use()
+    svc = cluster_service_factory.ClusterServiceFactory(op_ctx). \
+        get_cluster_service(rde_in_use)
+    cluster_id = data[RequestKey.CLUSTER_ID]
+    return svc.get_cluster_config(cluster_id)
+
+
 # TODO change api exception handler.
-@telemetry_handler.record_user_action_telemetry(cse_operation=telemetry_constants.CseOperation.V36_CLUSTER_UPDATE)  # noqa: E501
-@request_utils.v35_api_exception_handler
+@telemetry_handler.record_user_action_telemetry(cse_operation=telemetry_constants.CseOperation.V36_CLUSTER_LIST)  # noqa: E501
+@request_utils.cluster_api_exception_handler
 def cluster_update(data: dict, op_ctx: ctx.OperationContext):
     """Request handler for cluster resize operation.
 
@@ -44,3 +94,35 @@ def cluster_update(data: dict, op_ctx: ctx.OperationContext):
         validate(cluster_entity, current_entity, server_constants.CseOperation.V36_CLUSTER_UPDATE)  # noqa: E501
 
     return asdict(svc.update_cluster(cluster_id, cluster_entity))
+
+
+@telemetry_handler.record_user_action_telemetry(cse_operation=telemetry_constants.CseOperation.V36_CLUSTER_UPGRADE_PLAN)  # noqa: E501
+@request_utils.cluster_api_exception_handler
+def cluster_upgrade_plan(data, op_ctx: ctx.OperationContext):
+    """Request handler for cluster upgrade-plan operation.
+
+    :return: List[Tuple(str, str)]
+    """
+    rde_in_use = server_utils.get_rde_version_in_use()
+    svc = cluster_service_factory.ClusterServiceFactory(op_ctx). \
+        get_cluster_service(rde_in_use)
+    return svc.get_cluster_upgrade_plan(data[RequestKey.CLUSTER_ID])
+
+
+@telemetry_handler.record_user_action_telemetry(cse_operation=telemetry_constants.CseOperation.V36_CLUSTER_DELETE)  # noqa: E501
+@request_utils.cluster_api_exception_handler
+def cluster_delete(data: dict, op_ctx: ctx.OperationContext):
+    """Request handler for cluster delete operation.
+
+    Required data: cluster_name
+    Optional data and default values: org_name=None, ovdc_name=None
+
+    (data validation handled in broker)
+
+    :return: Dict
+    """
+    rde_in_use = server_utils.get_rde_version_in_use()
+    svc = cluster_service_factory.ClusterServiceFactory(op_ctx). \
+        get_cluster_service(rde_in_use)
+    cluster_id = data[RequestKey.CLUSTER_ID]
+    return asdict(svc.delete_cluster(cluster_id))

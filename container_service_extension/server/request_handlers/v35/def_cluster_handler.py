@@ -24,7 +24,7 @@ _OPERATION_KEY = 'operation'
 
 
 @telemetry_handler.record_user_action_telemetry(cse_operation=telemetry_constants.CseOperation.V35_CLUSTER_APPLY)  # noqa: E501
-@request_utils.v35_api_exception_handler
+@request_utils.cluster_api_exception_handler
 def cluster_create(data: dict, op_ctx: ctx.OperationContext):
     """Request handler for cluster create operation.
 
@@ -44,7 +44,7 @@ def cluster_create(data: dict, op_ctx: ctx.OperationContext):
 
 
 @telemetry_handler.record_user_action_telemetry(cse_operation=telemetry_constants.CseOperation.V35_CLUSTER_APPLY)  # noqa: E501
-@request_utils.v35_api_exception_handler
+@request_utils.cluster_api_exception_handler
 def cluster_resize(data: dict, op_ctx: ctx.OperationContext):
     """Request handler for cluster resize operation.
 
@@ -71,7 +71,7 @@ def cluster_resize(data: dict, op_ctx: ctx.OperationContext):
 
 
 @telemetry_handler.record_user_action_telemetry(cse_operation=telemetry_constants.CseOperation.V35_CLUSTER_DELETE)  # noqa: E501
-@request_utils.v35_api_exception_handler
+@request_utils.cluster_api_exception_handler
 def cluster_delete(data: dict, op_ctx: ctx.OperationContext):
     """Request handler for cluster delete operation.
 
@@ -90,7 +90,7 @@ def cluster_delete(data: dict, op_ctx: ctx.OperationContext):
 
 
 @telemetry_handler.record_user_action_telemetry(cse_operation=telemetry_constants.CseOperation.V35_CLUSTER_INFO)  # noqa: E501
-@request_utils.v35_api_exception_handler
+@request_utils.cluster_api_exception_handler
 def cluster_info(data: dict, op_ctx: ctx.OperationContext):
     """Request handler for cluster info operation.
 
@@ -105,11 +105,12 @@ def cluster_info(data: dict, op_ctx: ctx.OperationContext):
     svc = cluster_service_factory.ClusterServiceFactory(op_ctx). \
         get_cluster_service(rde_in_use)
     cluster_id = data[RequestKey.CLUSTER_ID]
+    print(f"cluster info v35 for:{cluster_id}")
     return asdict(svc.get_cluster_info(cluster_id))
 
 
 @telemetry_handler.record_user_action_telemetry(cse_operation=telemetry_constants.CseOperation.V35_CLUSTER_CONFIG)  # noqa: E501
-@request_utils.v35_api_exception_handler
+@request_utils.cluster_api_exception_handler
 def cluster_config(data: dict, op_ctx: ctx.OperationContext):
     """Request handler for cluster config operation.
 
@@ -125,7 +126,7 @@ def cluster_config(data: dict, op_ctx: ctx.OperationContext):
 
 
 @telemetry_handler.record_user_action_telemetry(cse_operation=telemetry_constants.CseOperation.V35_CLUSTER_UPGRADE_PLAN)  # noqa: E501
-@request_utils.v35_api_exception_handler
+@request_utils.cluster_api_exception_handler
 def cluster_upgrade_plan(data, op_ctx: ctx.OperationContext):
     """Request handler for cluster upgrade-plan operation.
 
@@ -138,7 +139,7 @@ def cluster_upgrade_plan(data, op_ctx: ctx.OperationContext):
 
 
 @telemetry_handler.record_user_action_telemetry(cse_operation=telemetry_constants.CseOperation.V35_CLUSTER_UPGRADE)  # noqa: E501
-@request_utils.v35_api_exception_handler
+@request_utils.cluster_api_exception_handler
 def cluster_upgrade(data, op_ctx: ctx.OperationContext):
     """Request handler for cluster upgrade operation.
 
@@ -165,7 +166,7 @@ def cluster_upgrade(data, op_ctx: ctx.OperationContext):
 
 # TODO: Record telemetry in a different telemetry handler
 @telemetry_handler.record_user_action_telemetry(cse_operation=telemetry_constants.CseOperation.V35_CLUSTER_UPGRADE)  # noqa: E501
-@request_utils.v35_api_exception_handler
+@request_utils.cluster_api_exception_handler
 def native_cluster_list(data: dict, op_ctx: ctx.OperationContext):
     """Request handler for cluster list operation.
 
@@ -202,7 +203,7 @@ def native_cluster_list(data: dict, op_ctx: ctx.OperationContext):
 
 
 @telemetry_handler.record_user_action_telemetry(cse_operation=telemetry_constants.CseOperation.V35_CLUSTER_ACL_LIST)  # noqa: E501
-@request_utils.v35_api_exception_handler
+@request_utils.cluster_api_exception_handler
 def cluster_acl_info(data: dict, op_ctx: ctx.OperationContext):
     """Request handler for cluster acl list operation."""
     rde_in_use = server_utils.get_rde_version_in_use()
@@ -224,7 +225,7 @@ def cluster_acl_info(data: dict, op_ctx: ctx.OperationContext):
 
 
 @telemetry_handler.record_user_action_telemetry(cse_operation=telemetry_constants.CseOperation.V35_CLUSTER_ACL_UPDATE)  # noqa: E501
-@request_utils.v35_api_exception_handler
+@request_utils.cluster_api_exception_handler
 def cluster_acl_update(data: dict, op_ctx: ctx.OperationContext):
     """Request handler for cluster acl update operation."""
     rde_in_use = server_utils.get_rde_version_in_use()
@@ -236,7 +237,7 @@ def cluster_acl_update(data: dict, op_ctx: ctx.OperationContext):
 
 
 @telemetry_handler.record_user_action_telemetry(cse_operation=telemetry_constants.CseOperation.V35_CLUSTER_LIST)  # noqa: E501
-@request_utils.v35_api_exception_handler
+@request_utils.cluster_api_exception_handler
 def cluster_list(data: dict, op_ctx: ctx.OperationContext):
     """Request handler for cluster list operation.
 
@@ -251,7 +252,7 @@ def cluster_list(data: dict, op_ctx: ctx.OperationContext):
             svc.list_clusters(data.get(RequestKey.QUERY_PARAMS, {}))]
 
 
-@request_utils.v35_api_exception_handler
+@request_utils.cluster_api_exception_handler
 def node_create(request_data, op_ctx: ctx.OperationContext):
     """Request handler for node create operation.
 
@@ -269,7 +270,7 @@ def node_create(request_data, op_ctx: ctx.OperationContext):
 
 
 @telemetry_handler.record_user_action_telemetry(cse_operation=telemetry_constants.CseOperation.V35_NODE_DELETE)  # noqa: E501
-@request_utils.v35_api_exception_handler
+@request_utils.cluster_api_exception_handler
 def nfs_node_delete(data, op_ctx: ctx.OperationContext):
     """Request handler for node delete operation.
 
@@ -298,7 +299,7 @@ def nfs_node_delete(data, op_ctx: ctx.OperationContext):
     return asdict(svc.delete_nodes(cluster_id, [node_name]))
 
 
-@request_utils.v35_api_exception_handler
+@request_utils.cluster_api_exception_handler
 def node_info(request_data, op_ctx: ctx.OperationContext):
     """Request handler for node info operation.
 

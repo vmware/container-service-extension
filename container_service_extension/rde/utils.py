@@ -155,4 +155,4 @@ def find_diff_fields(input_spec: dict, reference_spec: dict, exclude_fields: lis
     exclude_key_set = set(exclude_fields)
     key_set_for_validation = set(input_dict.keys()) - exclude_key_set
     return [key for key in key_set_for_validation
-            if input_dict.get(key) and input_dict.get(key) != reference_dict.get(key)]  # noqa: E501
+            if input_dict.get(key) is not None and input_dict.get(key) != reference_dict.get(key)]  # noqa: E501

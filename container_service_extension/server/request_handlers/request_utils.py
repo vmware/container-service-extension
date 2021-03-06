@@ -134,7 +134,7 @@ def validate_request_payload(input_spec: dict, reference_spec: dict,
         raise BadRequestError(error_msg)
 
 
-def v35_api_exception_handler(func):
+def cluster_api_exception_handler(func):
     """Decorate to trap exceptions and process them.
 
     Raise errors of type KeyError, TypeError, ValueError as
