@@ -4,6 +4,8 @@ from container_service_extension.rde.behaviors.behavior_model import BehaviorOpe
 import container_service_extension.server.behavior_handler as handler
 from container_service_extension.security.context.behavior_operation_context import \
     BehaviorOperationContext, UserContext
+from container_service_extension.security.context.operation_context import \
+    OperationContext
 
 MAP_BEHAVIOR_ID_TO_HANDLER_METHOD = {
     BehaviorOperation.CREATE_CLUSTER.value.id: handler.create_cluster,
@@ -22,15 +24,21 @@ def process_request(msg_json):
     entity: dict = payload['entity']
     entity_type_id: str = payload['typeId']
     arguments: dict = payload['arguments']
-    behavior_ctx = BehaviorOperationContext(auth_token='123',
-                                            behavior_id=behavior_id,
+    # TODO Below properties are yet to be added by Extensibility team
+    auth_token: str = msg_json['headers'].get('auth_token', None)
+    api_version: str = msg_json['headers'].get('api_version', None)
+    request_id: str = msg_json['headers'].get('request_id', None)
+    op_ctx = OperationContext(auth_token=auth_token, is_jwt=True, request_id=request_id)  # noqa: E501
+    behavior_ctx = BehaviorOperationContext(behavior_id=behavior_id,
                                             task_id=task_id,
                                             entity_id=entity_id,
                                             payload=payload,
-                                            api_version='36.0',
+                                            api_version=api_version,
                                             entity=entity,
                                             user_context=usr_ctx,
-                                            entity_type_id=entity_type_id)
+                                            entity_type_id=entity_type_id,
+                                            request_id=request_id,
+                                            op_ctx=op_ctx)
     return MAP_BEHAVIOR_ID_TO_HANDLER_METHOD[behavior_id](behavior_ctx)
 
 
