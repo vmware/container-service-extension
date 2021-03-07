@@ -15,7 +15,7 @@ import container_service_extension.mqi.consumer.constants as constants
 from container_service_extension.mqi.consumer.consumer_thread_pool_executor \
     import ConsumerThreadPoolExecutor
 import container_service_extension.mqi.consumer.utils as utils
-import container_service_extension.rde.behaviors.behavior_dispatcher as behavior_dispatcher  # noqa: E501
+import container_service_extension.server.behavior_dispatcher as behavior_dispatcher  # noqa: E501
 
 
 class MQTTConsumer:
