@@ -344,7 +344,6 @@ class ClusterService(abstract_broker.AbstractBroker):
         cluster_name: str = curr_entity.name
         org_name: str = curr_entity.entity.metadata.org_name
         ovdc_name: str = curr_entity.entity.metadata.ovdc_name
-        network_name: str = curr_entity.entity.spec.settings.network
         phase: DefEntityPhase = DefEntityPhase.from_phase(
             curr_entity.entity.status.phase)
 
@@ -363,15 +362,6 @@ class ClusterService(abstract_broker.AbstractBroker):
         # call, session becomes None
         msg = f"Deleting cluster '{cluster_name}' ({cluster_id})"
         self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
-
-        # Handle deleting dnat rule is cluster is exposed
-        if curr_entity.entity.status.exposed:
-            _handle_delete_expose_dnat_rule(client=self.context.client,
-                                            org_name=org_name,
-                                            ovdc_name=ovdc_name,
-                                            network_name=network_name,
-                                            cluster_name=cluster_name,
-                                            cluster_id=cluster_id)
 
         curr_entity.entity.status.task_href = self.task_resource.get('href')
         curr_entity.entity.status.phase = str(
@@ -1104,6 +1094,18 @@ class ClusterService(abstract_broker.AbstractBroker):
             self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
             _delete_vapp(
                 self.context.client, org_name, ovdc_name, cluster_name)
+
+            # Handle deleting dnat rule is cluster is exposed
+            if def_entity and def_entity.entity.status.exposed:
+                network_name: str = def_entity.entity.spec.settings.network
+                cluster_id = def_entity.id
+                _handle_delete_expose_dnat_rule(client=self.context.client,
+                                                org_name=org_name,
+                                                ovdc_name=ovdc_name,
+                                                network_name=network_name,
+                                                cluster_name=cluster_name,
+                                                cluster_id=cluster_id)
+
             msg = f"Deleted cluster '{cluster_name}'"
             self._update_task(vcd_client.TaskStatus.SUCCESS, message=msg)
         except Exception as err:
