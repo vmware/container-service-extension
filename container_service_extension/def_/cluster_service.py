@@ -521,6 +521,7 @@ class ClusterService(abstract_broker.AbstractBroker):
     @utils.run_async
     def _create_cluster_async(self, cluster_id: str,
                               cluster_spec: def_models.NativeEntity):
+        vapp = None
         try:
             cluster_name = cluster_spec.metadata.cluster_name
             org_name = cluster_spec.metadata.org_name
@@ -748,21 +749,59 @@ class ClusterService(abstract_broker.AbstractBroker):
                     LOGGER.error("Failed to delete the defined entity for "
                                  f"cluster '{cluster_name}'", exc_info=True)
             else:
-                self._fail_operation_and_resolve_entity(
-                    cluster_id, DefEntityOperation.CREATE, vapp)
+                # TODO Avoid many try-except block. Check if it is a good
+                # practice
+                try:
+                    self._fail_operation(cluster_id, DefEntityOperation.CREATE)
+                except Exception:
+                    msg = f"Failed to update defined entitty status for cluster {cluster_id}"  # noqa: E501
+                    LOGGER.error(msg, exc_info=True)
+                # NOTE: sync of the defined entitty should happen before call
+                # to resolve defined entity to prevent possible missing values
+                # in the defined entity
+                try:
+                    self._sync_def_entity(cluster_id, vapp=vapp)
+                except Exception:
+                    msg = f"Failed to sync defined entity for cluster {cluster_id}"  # noqa: E501
+                    LOGGER.error(msg, exc_info=True)
+                try:
+                    self.entity_svc.resolve_entity(cluster_id)
+                except Exception:
+                    msg = f"Failed to resolve defined entity for cluster {cluster_id}"  # noqa: E501
+                    LOGGER.error(msg, exc_info=True)
             self._update_task(vcd_client.TaskStatus.ERROR,
                               message=msg,
                               error_message=str(err))
         except Exception as err:
             msg = f"Unknown error creating cluster '{cluster_name}'"
             LOGGER.error(msg, exc_info=True)
-            self._fail_operation_and_resolve_entity(cluster_id,
-                                                    DefEntityOperation.CREATE,
-                                                    vapp)
+            # TODO Avoid many try-except block. Check if it is a good
+            # practice
+            try:
+                self._fail_operation(cluster_id, DefEntityOperation.CREATE)
+            except Exception:
+                msg = f"Failed to update defined entitty status for cluster {cluster_id}"  # noqa: E501
+                LOGGER.error(msg, exc_info=True)
+            # NOTE: sync of the defined entitty should happen before call
+            # to resolve defined entity to prevent possible missing values in
+            # the defined entity
+            try:
+                self._sync_def_entity(cluster_id, vapp=vapp)
+            except Exception:
+                msg = f"Failed to sync defined entity for cluster {cluster_id}"  # noqa: E501
+                LOGGER.error(msg, exc_info=True)
+            try:
+                self.entity_svc.resolve_entity(cluster_id)
+            except Exception:
+                msg = f"Failed to resolve defined entity for cluster {cluster_id}"  # noqa: E501
+                LOGGER.error(msg, exc_info=True)
             self._update_task(vcd_client.TaskStatus.ERROR,
                               message=msg,
                               error_message=str(err))
         finally:
+            # TODO re-organize updating defined entity and task update as per
+            # https://stackoverflow.com/questions/49099637/how-to-determine-if-an-exception-was-raised-once-youre-in-the-finally-block
+            # noqa: E501
             self.context.end()
 
     @utils.run_async
@@ -820,6 +859,9 @@ class ClusterService(abstract_broker.AbstractBroker):
             # the child threads had set the status to ERROR.
             curr_task_status = self.task_resource.get('status')
             if curr_task_status == vcd_client.TaskStatus.ERROR.value:
+                # NOTE: Possible repetition of operation.
+                # _create_node_async() and _delete_node_async() also
+                # sets status to failed
                 curr_entity.entity.status.phase = str(
                     DefEntityPhase(DefEntityOperation.UPDATE,
                                    DefEntityOperationStatus.FAILED))
@@ -838,12 +880,31 @@ class ClusterService(abstract_broker.AbstractBroker):
                   f" ({cluster_id})"
             LOGGER.error(f"{msg}",
                          exc_info=True)
-            self._fail_operation_and_resolve_entity(cluster_id,
-                                                    DefEntityOperation.UPDATE)
+            # TODO: Avoid many try-except block. Check if it is a good practice
+            try:
+                self._fail_operation(
+                    cluster_id,
+                    DefEntityOperation.UPDATE)
+            except Exception:
+                msg = f"Failed to update defined entity status " \
+                      f" for cluster {cluster_id}"
+                LOGGER.error(f"{msg}", exc_info=True)
+
+            # NOTE: Since the defined entity is assumed to be
+            # resolved during cluster creation, there is no need
+            # to resolve the defined entity again
+            try:
+                self._sync_def_entity(cluster_id)
+            except Exception:
+                msg = f"Failed to sync defined entity for cluster {cluster_id}"  # noqa: E501
+                LOGGER.error(msg, exc_info=True)
             self._update_task(vcd_client.TaskStatus.ERROR,
                               message=msg,
                               error_message=str(err))
         finally:
+            # TODO re-organize updating defined entity and task update as per
+            # https://stackoverflow.com/questions/49099637/how-to-determine-if-an-exception-was-raised-once-youre-in-the-finally-block
+            # noqa: E501
             self.context.end()
 
     @utils.run_async
@@ -864,6 +925,7 @@ class ClusterService(abstract_broker.AbstractBroker):
         Let the caller monitor thread or method to set SUCCESS task status,
          end the client context
         """
+        vapp = None
         try:
             # get the current state of the defined entity
             curr_entity: def_models.DefEntity = self.entity_svc.get_entity(cluster_id)  # noqa: E501
@@ -975,16 +1037,43 @@ class ClusterService(abstract_broker.AbstractBroker):
                     LOGGER.error(f"Failed to delete nodes {err.node_names} "
                                  f"from cluster '{cluster_name}'",
                                  exc_info=True)
-            self._fail_operation_and_resolve_entity(
-                cluster_id, DefEntityOperation.UPDATE, vapp)
+            try:
+                self._fail_operation(
+                    cluster_id, DefEntityOperation.UPDATE)
+            except Exception:
+                msg = f"Failed to update defined entity status " \
+                      f" for cluster {cluster_id}"
+                LOGGER.error(msg, exc_info=True)
+
+            # NOTE: Since the defined entity is assumed to be
+            # resolved during cluster creation, there is no need
+            # to resolve the defined entity again
+            try:
+                self._sync_def_entity(cluster_id, vapp=vapp)
+            except Exception:
+                msg = f"Failed to sync defined entity for cluster {cluster_id}"  # noqa: E501
+                LOGGER.error(msg, exc_info=True)
             self._update_task(vcd_client.TaskStatus.ERROR,
                               message=msg,
                               error_message=str(err))
         except Exception as err:
             LOGGER.error(err, exc_info=True)
             msg = f"Error adding nodes to cluster '{cluster_name}'"
-            self._fail_operation_and_resolve_entity(
-                cluster_id, DefEntityOperation.UPDATE, vapp)
+            try:
+                self._fail_operation(
+                    cluster_id, DefEntityOperation.UPDATE)
+            except Exception:
+                msg = f"Failed to update defined entity status " \
+                      f" for cluster {cluster_id}"
+                LOGGER.error(msg, exc_info=True)
+            # NOTE: Since the defined entity is assumed to be
+            # resolved during cluster creation, there is no need
+            # to resolve the defined entity again
+            try:
+                self._sync_def_entity(cluster_id, vapp=vapp)
+            except Exception:
+                msg = f"Failed to sync defined entity for cluster {cluster_id}"  # noqa: E501
+                LOGGER.error(msg, exc_info=True)
             self._update_task(vcd_client.TaskStatus.ERROR,
                               message=msg,
                               error_message=str(err))
@@ -1015,6 +1104,9 @@ class ClusterService(abstract_broker.AbstractBroker):
                               message=msg,
                               error_message=str(err))
         finally:
+            # TODO re-organize updating defined entity and task update as per
+            # https://stackoverflow.com/questions/49099637/how-to-determine-if-an-exception-was-raised-once-youre-in-the-finally-block
+            # noqa: E501
             self.context.end()
 
     def _get_cluster_upgrade_plan(self, source_template_name,
@@ -1041,6 +1133,7 @@ class ClusterService(abstract_broker.AbstractBroker):
     def _upgrade_cluster_async(self, *args,
                                cluster_id: str,
                                template):
+        vapp = None
         try:
             curr_entity: def_models.DefEntity = self.entity_svc.get_entity(cluster_id) # noqa: E501
             cluster_name = curr_entity.entity.metadata.cluster_name
@@ -1201,13 +1294,29 @@ class ClusterService(abstract_broker.AbstractBroker):
             msg = f"Unexpected error while upgrading cluster " \
                   f"'{cluster_name}'"
             LOGGER.error(f"{msg}", exc_info=True)
-            self._fail_operation_and_resolve_entity(cluster_id,
-                                                    DefEntityOperation.UPGRADE,
-                                                    vapp)
+            try:
+                self._fail_operation(
+                    cluster_id,
+                    DefEntityOperation.UPGRADE)
+            except Exception:
+                msg = f"Failed to update defined entity status " \
+                      f" for cluster {cluster_id}"
+                LOGGER.error(f"{msg}", exc_info=True)
+            # NOTE: Since the defined entity is assumed to be
+            # resolved during cluster creation, there is no need
+            # to resolve the defined entity again
+            try:
+                self._sync_def_entity(cluster_id, vapp=vapp)
+            except Exception:
+                msg = f"Failed to sync defined entity of the cluster {cluster_id}" # noqa: E501
+                LOGGER.error(f"{msg}", exc_info=True)
             self._update_task(vcd_client.TaskStatus.ERROR,
                               message=msg, error_message=str(err))
 
         finally:
+            # TODO re-organize updating defined entity and task update as per
+            # https://stackoverflow.com/questions/49099637/how-to-determine-if-an-exception-was-raised-once-youre-in-the-finally-block
+            # noqa: E501
             self.context.end()
 
     @utils.run_async
@@ -1251,12 +1360,29 @@ class ClusterService(abstract_broker.AbstractBroker):
                   f"{cluster_name} ({cluster_id})"
             LOGGER.error(f"{msg}",
                          exc_info=True)
-            self._fail_operation_and_resolve_entity(cluster_id,
-                                                    DefEntityOperation.UPDATE)
+            try:
+                self._fail_operation(
+                    cluster_id,
+                    DefEntityOperation.UPDATE)
+            except Exception:
+                msg = f"Failed to update defined entity status " \
+                      f" for cluster {cluster_id}"
+                LOGGER.error(f"{msg}", exc_info=True)
+            # NOTE: Since the defined entity is assumed to be
+            # resolved during cluster creation, there is no need
+            # to resolve the defined entity again
+            try:
+                self._sync_def_entity(cluster_id)
+            except Exception:
+                msg = f"Failed to sync defined entity of the cluster {cluster_id}" # noqa: E501
+                LOGGER.error(f"{msg}", exc_info=True)
             self._update_task(vcd_client.TaskStatus.ERROR,
                               message=msg,
                               error_message=str(err))
         finally:
+            # TODO re-organize updating defined entity and task update as per
+            # https://stackoverflow.com/questions/49099637/how-to-determine-if-an-exception-was-raised-once-youre-in-the-finally-block
+            # noqa: E501
             self.context.end()
 
     @utils.run_async
@@ -1330,15 +1456,30 @@ class ClusterService(abstract_broker.AbstractBroker):
             msg = f"Unexpected error while deleting nodes {nodes_to_del}"
             LOGGER.error(f"{msg}",
                          exc_info=True)
-            self._fail_operation_and_resolve_entity(cluster_id,
-                                                    DefEntityOperation.UPDATE,
-                                                    vapp)
+            try:
+                self._fail_operation(
+                    cluster_id,
+                    DefEntityOperation.UPDATE)
+            except Exception:
+                msg = f"Failed to update defined entity status " \
+                      f" for cluster {cluster_id}"
+                LOGGER.error(f"{msg}", exc_info=True)
+            # NOTE: Since the defined entity is assumed to be
+            # resolved during cluster creation, there is no need
+            # to resolve the defined entity again
+            try:
+                self._sync_def_entity(cluster_id, vapp=vapp)
+            except Exception:
+                msg = f"Failed to sync defined entity of the cluster {cluster_id}" # noqa: E501
+                LOGGER.error(f"{msg}", exc_info=True)
             self._update_task(vcd_client.TaskStatus.ERROR,
                               message=msg,
                               error_message=str(err))
 
     def _sync_def_entity(self, cluster_id, curr_entity=None, vapp=None):
         """Sync the defined entity with the latest vApp status."""
+        # NOTE: Do not use this function to update defined entities unless
+        # it is sure that the underlying VApp for the cluster exists.
         if not curr_entity:
             curr_entity: def_models.DefEntity = self.entity_svc.get_entity(
                 cluster_id)
@@ -1353,25 +1494,11 @@ class ClusterService(abstract_broker.AbstractBroker):
             curr_entity.entity.status.nodes = curr_nodes_status
         return self.entity_svc.update_entity(cluster_id, curr_entity)
 
-    def _fail_operation_and_resolve_entity(self, cluster_id: str,
-                                           op: DefEntityOperation,
-                                           vapp=None):
-        try:
-            # get the current state of the defined entity
-            def_entity: def_models.DefEntity = self.entity_svc.get_entity(cluster_id)  # noqa: E501
-
-            # sync the defined entity with the latest status of cluster vApp
-            # and fail the operation.
-            def_entity.entity.status.phase = \
-                str(DefEntityPhase(op, DefEntityOperationStatus.FAILED))
-            self.entity_svc.update_entity(cluster_id, def_entity)
-            self.entity_svc.resolve_entity(cluster_id)
-            self._sync_def_entity(cluster_id, def_entity)
-        except Exception as err:
-            msg = f"Failed to resolve defined entity for cluster {cluster_id}"
-            LOGGER.error(f"{msg}", exc_info=True)
-            self._update_task(vcd_client.TaskStatus.ERROR,
-                              message=msg, error_message=str(err))
+    def _fail_operation(self, cluster_id: str, op: DefEntityOperation):
+        def_entity: def_models.DefEntity = self.entity_svc.get_entity(cluster_id)  # noqa: E501
+        def_entity.entity.status.phase = \
+            str(DefEntityPhase(op, DefEntityOperationStatus.FAILED))
+        self.entity_svc.update_entity(cluster_id, def_entity)
 
     def _update_task(self, status, message='', error_message=None,
                      stack_trace=''):

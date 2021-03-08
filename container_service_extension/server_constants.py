@@ -374,6 +374,7 @@ class NsxtNATRuleKey(str, Enum):
     LOGGING = 'logging'
     APPLICATION_PORT_PROFILE = 'applicationPortProfile'
     DNAT_EXTERNAL_PORT = 'dnatExternalPort'
+    ID = 'id'
 
 
 @unique
@@ -390,6 +391,7 @@ class NsxtGatewayRequestKey(str, Enum):
     START_ADDRESS = 'startAddress'
     END_ADDRESS = 'endAddress'
     STATUS = 'status'
+    IP_ADDRESS = 'ipAddress'
 
 
 # CSE Service Role Name
@@ -516,3 +518,12 @@ class VdcNetworkInfoKey(str, Enum):
 
 # Regex for ip: port
 IP_PORT_REGEX = '[0-9]+(?:\\.[0-9]+){3}(:[0-9]+)?'
+
+# Default first page
+DEFAULT_FIRST_PAGE = 1
+
+# Nat rules pagination constants
+NAT_DEFAULT_PAGE_SIZE = 25
+
+# Pagination constants for used IP addresses
+USED_IP_ADDRESS_PAGE_SIZE = 10
