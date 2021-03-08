@@ -750,6 +750,8 @@ class ClusterService(abstract_broker.AbstractBroker):
                         network_name=network_name,
                         cluster_name=cluster_name,
                         cluster_id=cluster_id)
+                    LOGGER.info(f'Deleted dnat rule for cluster {cluster_name}'
+                                f'({cluster_id})')
 
                 try:
                     # Delete the corresponding defined entity
