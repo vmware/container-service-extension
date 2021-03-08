@@ -522,6 +522,7 @@ class ClusterService(abstract_broker.AbstractBroker):
     def _create_cluster_async(self, cluster_id: str,
                               cluster_spec: def_models.NativeEntity):
         vapp = None
+        expose_ip: str = ''
         try:
             cluster_name = cluster_spec.metadata.cluster_name
             org_name = cluster_spec.metadata.org_name
@@ -616,7 +617,6 @@ class ClusterService(abstract_broker.AbstractBroker):
                 self.context.sysadmin_client, vapp, check_tools=True)
 
             # Handle exposing cluster
-            expose_ip: str = ''
             if expose:
                 try:
                     expose_ip = _expose_cluster(
@@ -741,6 +741,16 @@ class ClusterService(abstract_broker.AbstractBroker):
                 except Exception:
                     LOGGER.error(f"Failed to delete cluster '{cluster_name}'",
                                  exc_info=True)
+
+                if expose_ip:
+                    _handle_delete_expose_dnat_rule(
+                        client=self.context.client,
+                        org_name=org_name,
+                        ovdc_name=ovdc_name,
+                        network_name=network_name,
+                        cluster_name=cluster_name,
+                        cluster_id=cluster_id)
+
                 try:
                     # Delete the corresponding defined entity
                     self.sysadmin_entity_svc.resolve_entity(cluster_id)
