@@ -152,8 +152,8 @@ class NsxtBackedGatewayService:
             f'{self._gateway_urn}'
         self._gateway_relative_path = gateway_relative_path
         self._nat_rules_relative_path = \
-            f'{gateway_relative_path}/{server_constants.NATS_PATH_FRAGMENT}/' \
-            f'{server_constants.RULES_PATH_FRAGMENT}'
+            f'{gateway_relative_path}/{nsxt_constants.NATS_PATH_FRAGMENT}/' \
+            f'{nsxt_constants.RULES_PATH_FRAGMENT}'
 
     def quick_ip_allocation(self):
         """Allocate one ip using the edge quick ip allocation feature.

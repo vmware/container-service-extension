@@ -8,7 +8,7 @@ from urllib import parse
 
 import requests
 
-from container_service_extension.cloudapi.constants import ResponseKeys
+from container_service_extension.lib.cloudapi.constants import ResponseKeys
 
 
 class CloudApiClient(object):
