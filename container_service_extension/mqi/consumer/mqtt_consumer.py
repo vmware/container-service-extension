@@ -15,6 +15,7 @@ import container_service_extension.mqi.consumer.constants as constants
 from container_service_extension.mqi.consumer.consumer_thread_pool_executor \
     import ConsumerThreadPoolExecutor
 import container_service_extension.mqi.consumer.utils as utils
+from container_service_extension.rde.behaviors.behavior_model import BehaviorErrorPayload  # noqa: E501
 import container_service_extension.server.behavior_dispatcher as behavior_dispatcher  # noqa: E501
 
 
@@ -37,16 +38,20 @@ class MQTTConsumer:
         self.fsencoding = sys.getfilesystemencoding()
         self._mqtt_client = None
         self._ctpe = ConsumerThreadPoolExecutor(self.num_processors)
-        self._behavior_tpe = ConsumerThreadPoolExecutor(50)
+        self._behavior_tpe = ConsumerThreadPoolExecutor(constants.BEHAVIOR_THREAD_SIZE)  # noqa: E501
         self._publish_lock = Lock()
         self._is_closing = False
 
-    def form_behavior_response_json(self, task_id, entity_id, payload):
+    def form_behavior_response_json(self, task_id, entity_id, payload,
+                                    status='success'):
+        if isinstance(payload, BehaviorErrorPayload):
+            status = 'error'
         response_json = {
             "type": "BEHAVIOR_RESPONSE",
             "headers": {
                 "taskId": task_id,
-                "entityId": entity_id
+                "entityId": entity_id,
+                "status": status
             },
             "payload": payload
         }
@@ -80,7 +85,12 @@ class MQTTConsumer:
         return response_json
 
     def process_behavior_message(self, msg_json):
-        response_json = behavior_dispatcher.process_behavior_request(msg_json)
+        payload = behavior_dispatcher.process_behavior_request(msg_json)
+        task_id: str = msg_json['headers']['taskId']
+        entity_id: str = msg_json['headers']['entityId']
+        response_json = self.form_behavior_response_json(task_id=task_id,
+                                                         entity_id=entity_id,
+                                                         payload=payload)
         self.send_response(response_json)
         LOGGER.debug(f'MQTT response: {response_json}')
 

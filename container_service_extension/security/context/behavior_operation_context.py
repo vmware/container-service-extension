@@ -26,8 +26,3 @@ class BehaviorOperationContext:
     request_id: str
     op_ctx: OperationContext
     user_context: BehaviorUserContext
-
-
-
-
-
