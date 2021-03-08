@@ -19,27 +19,6 @@ from container_service_extension.shared_constants import PaginationKey
 import container_service_extension.utils as server_utils
 
 
-def _get_available_subnet_info(subnet_values, network_to_available_ip_dict):
-    """Get subnet with available ips.
-
-    :param arr subnet_values: array of dicts containing subnet info
-    :param dict network_to_available_ip_dict: dict mapping
-        (gateway_ip, prefix_length) to available ip count
-
-    :return: subnet value index, subnet gateway ip, subnet prefix length.
-        An index of -1 is returned if no subnet has available ips.
-    """
-    # Get external network
-    for index, subnet in enumerate(subnet_values):
-        gateway_ip = subnet[NsxtGatewayRequestKey.GATEWAY]
-        prefix_length = subnet[NsxtGatewayRequestKey.PREFIX_LENGTH]
-        available_ip_count = network_to_available_ip_dict. \
-            get((gateway_ip, prefix_length), 0)
-        if available_ip_count > 0:
-            return index, gateway_ip, prefix_length
-    return -1, None, None
-
-
 def _get_updated_subnet_value(updated_get_gateway_response, gateway_ip,
                               prefix_length):
     """Get the updated subnet value given the updated gateway response."""
@@ -156,26 +135,34 @@ class NsxtBackedGatewayService:
         # Get current edge gateway body to use for PUT request body
         put_request_body = self._get_gateway()
 
-        # Edit PUT request body
+        # Find subnet with available ips
         subnet_values = _gateway_body_to_subnet_values(put_request_body)
-        external_network_id = _gateway_body_to_external_address_id(put_request_body)  # noqa: E501
-        network_to_available_ip_dict = self._get_external_network_available_ip_dict(external_network_id)  # noqa: E501
-        subnet_index, gateway_ip, prefix_length = _get_available_subnet_info(subnet_values, network_to_available_ip_dict)  # noqa: E501
-        if subnet_index == -1:
-            raise Exception('No subnet found with available ips)')
-        request_subnet_value = subnet_values[subnet_index]
-        orig_subnet_value = copy.deepcopy(request_subnet_value)
-        request_subnet_value[NsxtGatewayRequestKey.TOTAL_IP_COUNT] = \
-            int(request_subnet_value[NsxtGatewayRequestKey.TOTAL_IP_COUNT]) + 1
-        request_subnet_value[NsxtGatewayRequestKey.AUTO_ALLOCATE_IP_RANGES] = True  # noqa: E501
+        gateway_ip = prefix_length = orig_subnet_value = None
+        for subnet_index in range(len(subnet_values)):
+            # Edit subnet value in PUT request body
+            request_subnet_value = subnet_values[subnet_index]
+            orig_subnet_value = copy.deepcopy(request_subnet_value)
+            request_subnet_value[NsxtGatewayRequestKey.TOTAL_IP_COUNT] = \
+                int(request_subnet_value[NsxtGatewayRequestKey.TOTAL_IP_COUNT]) + 1  # noqa: E501
+            request_subnet_value[NsxtGatewayRequestKey.AUTO_ALLOCATE_IP_RANGES] = True  # noqa: E501
 
-        # Sent request for quick ip allocation
-        self._cloudapi_client.do_request(
-            method=shared_constants.RequestMethod.PUT,
-            cloudapi_version=cloudapi_constants.CloudApiVersion.VERSION_1_0_0,
-            resource_url_relative_path=self._gateway_relative_path,
-            payload=put_request_body,
-            content_type='application/json')
+            # Sent request for quick ip allocation
+            try:
+                self._cloudapi_client.do_request(
+                    method=shared_constants.RequestMethod.PUT,
+                    cloudapi_version=cloudapi_constants.CloudApiVersion.VERSION_1_0_0,  # noqa: E501
+                    resource_url_relative_path=self._gateway_relative_path,
+                    payload=put_request_body,
+                    content_type='application/json')
+                gateway_ip = request_subnet_value[NsxtGatewayRequestKey.GATEWAY]  # noqa: E501
+                prefix_length = request_subnet_value[NsxtGatewayRequestKey.PREFIX_LENGTH]  # noqa: E501
+                break
+            except Exception:
+                if subnet_index == len(subnet_values) - 1:
+                    raise Exception('No subnet found with available ips')
+
+                # Reset put request body
+                subnet_values[subnet_index] = orig_subnet_value
 
         # Ensure gateway response status is realized
         while True:

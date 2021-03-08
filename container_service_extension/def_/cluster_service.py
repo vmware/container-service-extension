@@ -11,14 +11,18 @@ import urllib
 
 import pkg_resources
 import pyvcloud.vcd.client as vcd_client
+from pyvcloud.vcd.exceptions import EntityNotFoundException
+import pyvcloud.vcd.gateway as vcd_gateway
 import pyvcloud.vcd.org as vcd_org
 import pyvcloud.vcd.task as vcd_task
 import pyvcloud.vcd.vapp as vcd_vapp
 from pyvcloud.vcd.vdc import VDC
+import pyvcloud.vcd.vdc_network as vdc_network
 import pyvcloud.vcd.vm as vcd_vm
 import semantic_version as semver
 
 import container_service_extension.abstract_broker as abstract_broker
+import container_service_extension.cloudapi.constants as cloudapi_constants
 import container_service_extension.compute_policy_manager as compute_policy_manager  # noqa: E501
 import container_service_extension.def_.entity_service as def_entity_svc
 import container_service_extension.def_.models as def_models
@@ -26,19 +30,25 @@ import container_service_extension.def_.utils as def_utils
 import container_service_extension.exceptions as E
 import container_service_extension.local_template_manager as ltm
 from container_service_extension.logger import SERVER_LOGGER as LOGGER
+from container_service_extension.nsxt_backed_gateway_service import NsxtBackedGatewayService  # noqa: E501
 import container_service_extension.operation_context as ctx
 import container_service_extension.pyvcloud_utils as vcd_utils
 from container_service_extension.server_constants import ClusterMetadataKey
 from container_service_extension.server_constants import CSE_CLUSTER_KUBECONFIG_PATH # noqa: E501
+from container_service_extension.server_constants import EXPOSE_CLUSTER_NAME_FRAGMENT  # noqa: E501
+from container_service_extension.server_constants import IP_PORT_REGEX
 from container_service_extension.server_constants import LocalTemplateKey
+from container_service_extension.server_constants import NETWORK_URN_PREFIX
 from container_service_extension.server_constants import NodeType
 from container_service_extension.server_constants import ScriptFile
 from container_service_extension.server_constants import SYSTEM_ORG_NAME
+from container_service_extension.server_constants import VdcNetworkInfoKey
 from container_service_extension.shared_constants import CSE_PAGINATION_DEFAULT_PAGE_SIZE  # noqa: E501
 from container_service_extension.shared_constants import CSE_PAGINATION_FIRST_PAGE_NUMBER  # noqa: E501
 from container_service_extension.shared_constants import DefEntityOperation
 from container_service_extension.shared_constants import DefEntityOperationStatus  # noqa: E501
 from container_service_extension.shared_constants import DefEntityPhase
+from container_service_extension.shared_constants import RequestMethod
 import container_service_extension.telemetry.constants as telemetry_constants
 import container_service_extension.telemetry.telemetry_handler as telemetry_handler  # noqa: E501
 import container_service_extension.utils as utils
@@ -529,6 +539,8 @@ class ClusterService(abstract_broker.AbstractBroker):
             template_revision = cluster_spec.spec.k8_distribution.template_revision  # noqa: E501
             ssh_key = cluster_spec.spec.settings.ssh_key
             rollback = cluster_spec.spec.settings.rollback_on_failure
+            expose = cluster_spec.spec.expose
+            vapp = None
             org = vcd_utils.get_org(self.context.client, org_name=org_name)
             vdc = vcd_utils.get_vdc(self.context.client,
                                     vdc_name=ovdc_name,
@@ -600,11 +612,33 @@ class ClusterService(abstract_broker.AbstractBroker):
             LOGGER.debug(msg)
             self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
             vapp.reload()
+            control_plane_ip = _get_control_plane_ip(
+                self.context.sysadmin_client, vapp, check_tools=True)
+
+            # Handle exposing cluster
+            expose_ip: str = ''
+            if expose:
+                try:
+                    expose_ip = _expose_cluster(
+                        client=self.context.client,
+                        org_name=org_name,
+                        ovdc_name=ovdc_name,
+                        network_name=cluster_spec.spec.settings.network,
+                        cluster_name=cluster_name,
+                        cluster_id=cluster_id,
+                        internal_ip=control_plane_ip)
+                    if expose_ip:
+                        control_plane_ip = expose_ip
+                except Exception as err:
+                    LOGGER.error(f'Exposing cluster failed: {str(err)}')
+                    expose_ip = ''
+
             _init_cluster(self.context.sysadmin_client,
                           vapp,
                           template[LocalTemplateKey.NAME],
-                          template[LocalTemplateKey.REVISION])
-            control_plane_ip = _get_control_plane_ip(self.context.sysadmin_client, vapp)  # noqa: E501
+                          template[LocalTemplateKey.REVISION],
+                          expose_ip=expose_ip)
+
             task = vapp.set_metadata('GENERAL', 'READWRITE', 'cse.master.ip',
                                      control_plane_ip)
             self.context.client.get_task_monitor().wait_for_status(task)
@@ -676,6 +710,11 @@ class ClusterService(abstract_broker.AbstractBroker):
                                DefEntityOperationStatus.SUCCEEDED))
             def_entity.entity.status.nodes = _get_nodes_details(
                 self.context.sysadmin_client, vapp)
+
+            # Update defined entity with exposed ip
+            if expose_ip and def_entity.entity.status.nodes:
+                def_entity.entity.status.nodes.control_plane.ip = expose_ip
+                def_entity.entity.status.exposed = True
 
             self.entity_svc.update_entity(cluster_id, def_entity)
             self.entity_svc.resolve_entity(cluster_id)
@@ -1896,7 +1935,8 @@ def _get_node_names(vapp, node_type):
     return [vm.get('name') for vm in vapp.get_all_vms() if vm.get('name').startswith(node_type)] # noqa: E501
 
 
-def _get_control_plane_ip(sysadmin_client: vcd_client.Client, vapp):
+def _get_control_plane_ip(sysadmin_client: vcd_client.Client, vapp,
+                          check_tools=False):
     vcd_utils.raise_error_if_user_not_from_system_org(sysadmin_client)
 
     LOGGER.debug(f"Getting control_plane IP for vapp: "
@@ -1907,7 +1947,7 @@ def _get_control_plane_ip(sysadmin_client: vcd_client.Client, vapp):
     node_names = _get_node_names(vapp, NodeType.CONTROL_PLANE)
     result = _execute_script_in_nodes(sysadmin_client, vapp=vapp,
                                       node_names=node_names, script=script,
-                                      check_tools=False)
+                                      check_tools=check_tools)
     errors = _get_script_execution_errors(result)
     if errors:
         raise E.ScriptExecutionError(f"Get control plane IP script execution "
@@ -1920,7 +1960,7 @@ def _get_control_plane_ip(sysadmin_client: vcd_client.Client, vapp):
 
 
 def _init_cluster(sysadmin_client: vcd_client.Client, vapp, template_name,
-                  template_revision):
+                  template_revision, expose_ip=None):
     vcd_utils.raise_error_if_user_not_from_system_org(sysadmin_client)
 
     try:
@@ -1928,6 +1968,11 @@ def _init_cluster(sysadmin_client: vcd_client.Client, vapp, template_name,
                                                   template_revision,
                                                   ScriptFile.CONTROL_PLANE)
         script = utils.read_data_file(script_filepath, logger=LOGGER)
+
+        # Expose cluster if given external ip
+        if expose_ip:
+            script = _form_expose_ip_init_cluster_script(script, expose_ip)
+
         node_names = _get_node_names(vapp, NodeType.CONTROL_PLANE)
         result = _execute_script_in_nodes(sysadmin_client, vapp=vapp,
                                           node_names=node_names, script=script)
@@ -1942,6 +1987,40 @@ def _init_cluster(sysadmin_client: vcd_client.Client, vapp, template_name,
         LOGGER.error(err, exc_info=True)
         raise E.ClusterInitializationError(
             f"Couldn't initialize cluster: {str(err)}")
+
+
+def _form_expose_ip_init_cluster_script(script: str, expose_ip: str):
+    """Form init cluster script with expose ip control plane endpoint option.
+
+    If the '--control-plane-endpoint' option is already present, this option
+    will be replaced with this option specifying the exposed ip. If this option
+    is not specified, the '--control-plane-endpoint' option will be added.
+
+    :param str script: the init cluster script
+    :param str expose_ip: the ip to expose the cluster
+
+    :return: the updated init cluster script
+    :rtype: str
+    """
+    # Get line with 'kubeadm init'
+    kubeadm_init_match: re.Match = re.search('kubeadm init .+\n', script)
+    if not kubeadm_init_match:
+        return script
+    kubeadm_init_line: str = kubeadm_init_match.group(0)
+
+    # Either add or replace the control plane endpoint option
+    expose_control_plane_endpoint_option = f'--control-plane-endpoint=\"{expose_ip}:6443\"'  # noqa: E501
+    expose_kubeadm_init_line = re.sub(
+        f'--control-plane-endpoint={IP_PORT_REGEX}',
+        expose_control_plane_endpoint_option,
+        kubeadm_init_line)
+    if kubeadm_init_line == expose_kubeadm_init_line:  # no option was replaced
+        expose_kubeadm_init_line = kubeadm_init_line.replace(
+            'kubeadm init',
+            f'kubeadm init --control-plane-endpoint=\"{expose_ip}:6443\"')
+
+    # Replace current kubeadm init line with line containing expose_ip
+    return script.replace(kubeadm_init_line, expose_kubeadm_init_line)
 
 
 def _join_cluster(sysadmin_client: vcd_client.Client, vapp, template_name,
@@ -2123,3 +2202,91 @@ def _create_k8s_software_string(software_name: str, software_version: str) -> st
     :rtype: str
     """
     return f"{software_name} {software_version}"
+
+
+def _get_vdc_network_response(cloudapi_client, network_urn_id: str):
+    relative_path = f'{cloudapi_constants.CloudApiResource.ORG_VDC_NETWORKS}' \
+                    f'?filter=id=={network_urn_id}'
+    response = cloudapi_client.do_request(
+        method=RequestMethod.GET,
+        cloudapi_version=cloudapi_constants.CloudApiVersion.VERSION_1_0_0,
+        resource_url_relative_path=relative_path)
+    return response
+
+
+def _get_gateway_href(vdc: VDC, gateway_name):
+    edge_gateways = vdc.list_edge_gateways()
+    for gateway_dict in edge_gateways:
+        if gateway_dict['name'] == gateway_name:
+            return gateway_dict['href']
+    return None
+
+
+def _get_gateway(client, cloudapi_client, network_resource, ovdc: VDC):
+    routed_vdc_network = vdc_network.VdcNetwork(
+        client=client,
+        resource=network_resource)
+    network_id = utils.extract_id_from_href(routed_vdc_network.href)
+    network_urn_id = f'{NETWORK_URN_PREFIX}:{network_id}'
+    try:
+        vdc_network_response = _get_vdc_network_response(
+            cloudapi_client, network_urn_id)
+    except Exception:
+        return None
+    gateway_name = vdc_network_response[VdcNetworkInfoKey.VALUES][0][
+        VdcNetworkInfoKey.CONNECTION][VdcNetworkInfoKey.ROUTER_REF][
+        VdcNetworkInfoKey.NAME]
+    gateway_href = _get_gateway_href(ovdc, gateway_name)
+    gateway = vcd_gateway.Gateway(client, name=gateway_name, href=gateway_href)
+    return gateway
+
+
+def _form_expose_dnat_rule_name(cluster_name: str, cluster_id: str):
+    """Form dnat rule name for expose cluster.
+
+    Dnat rule name includes cluster name to show users the cluster rule
+    corresponds to. The cluster id is used to make the name unique
+    """
+    return f"{cluster_name}_{cluster_id}_{EXPOSE_CLUSTER_NAME_FRAGMENT}"
+
+
+def _expose_cluster(client: vcd_client.Client, org_name: str, ovdc_name: str,
+                    network_name: str, cluster_name: str, cluster_id: str,
+                    internal_ip: str):
+    # Check if routed org vdc network
+    ovdc = vcd_utils.get_vdc(client, org_name=org_name, vdc_name=ovdc_name)
+    try:
+        routed_network_resource = ovdc.get_routed_orgvdc_network(network_name)
+    except EntityNotFoundException:
+        raise Exception(f'No routed network found named: {network_name} '
+                        f'in ovdc {ovdc_name} and org {org_name}')
+
+    # Check if NSX-T backed gateway
+    cloudapi_client = vcd_utils.get_cloudapi_client_from_vcd_client(client)
+    gateway = _get_gateway(
+        client=client,
+        cloudapi_client=cloudapi_client,
+        network_resource=routed_network_resource,
+        ovdc=ovdc)
+    if not gateway:
+        raise Exception(f'No gateway found for network: {network_name}')
+    if not gateway.is_nsxt_backed():
+        raise Exception('Gateway is not NSX-T backed for exposing cluster.')
+
+    # Auto reserve ip and add dnat rule
+    nsxt_gateway_svc = NsxtBackedGatewayService(gateway, client)
+    expose_ip = nsxt_gateway_svc.quick_ip_allocation()
+    if not expose_ip:
+        raise Exception('Unable to reserve ip using quick ip allocation.')
+    try:
+        dnat_rule_name = _form_expose_dnat_rule_name(cluster_name, cluster_id)
+        nsxt_gateway_svc.add_dnat_rule(
+            name=dnat_rule_name,
+            internal_address=internal_ip,
+            external_address=expose_ip)
+    except Exception as err:
+        # Note: we would normally need to un-allocate the expose_ip. Since
+        # there will be an ipam solution to get the ip in a future PR,
+        # this logic is not currently needed
+        raise Exception(f'Unable to add dnat rule with error: {str(err)}')
+    return expose_ip
