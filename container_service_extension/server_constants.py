@@ -391,6 +391,7 @@ class NsxtGatewayRequestKey(str, Enum):
     START_ADDRESS = 'startAddress'
     END_ADDRESS = 'endAddress'
     STATUS = 'status'
+    IP_ADDRESS = 'ipAddress'
 
 
 # CSE Service Role Name
@@ -505,3 +506,6 @@ DEFAULT_FIRST_PAGE = 1
 
 # Nat rules pagination constants
 NAT_DEFAULT_PAGE_SIZE = 25
+
+# Pagination constants for used IP addresses
+USED_IP_ADDRESS_PAGE_SIZE = 10

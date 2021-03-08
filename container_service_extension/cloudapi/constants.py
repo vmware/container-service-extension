@@ -34,3 +34,4 @@ class ResponseKeys(str, Enum):
     LINK = 'link'
     REL = 'rel'
     URL = 'url'
+    USED_IP_ADDRESSES = 'usedIpAddresses'
