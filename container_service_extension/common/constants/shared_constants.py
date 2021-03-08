@@ -164,6 +164,7 @@ class PaginationKey(str, Enum):
     PREV_PAGE_URI = 'previousPageUri'
     RESULT_TOTAL = 'resultTotal'
     VALUES = 'values'
+    CURSOR = 'cursor'
 
 
 @unique
