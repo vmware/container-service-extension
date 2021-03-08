@@ -10,6 +10,7 @@ from pyvcloud.vcd.utils import retrieve_compute_policy_id_from_href
 from pyvcloud.vcd.vm import VM
 import requests
 
+from container_service_extension.common.constants.shared_constants import PaginationKey  # noqa: E501
 from container_service_extension.common.constants.shared_constants import RequestMethod  # noqa: E501
 import container_service_extension.common.utils.core_utils as utils
 import container_service_extension.common.utils.pyvcloud_utils as vcd_utils
@@ -64,10 +65,12 @@ class ComputePolicyManager:
             # endpoint. Mere presence of the /cloudapi uri is not enough, we
             # need to make sure that this cloud api client will be of actual
             # use to us.
+            request_uri = f"{cloudapi_constants.CloudApiResource.VDC_COMPUTE_POLICIES}?"  \
+                          f"{PaginationKey.PAGE_SIZE}=1"  # noqa: E501
             self._cloudapi_client.do_request(
                 method=RequestMethod.GET,
                 cloudapi_version=self._cloudapi_version,
-                resource_url_relative_path=f"{cloudapi_constants.CloudApiResource.VDC_COMPUTE_POLICIES}") # noqa: E501
+                resource_url_relative_path=request_uri) # noqa: E501
         except requests.exceptions.HTTPError as err:
             logger.SERVER_LOGGER.error(err)
             self._is_operation_supported = False
