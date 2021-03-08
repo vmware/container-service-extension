@@ -588,3 +588,13 @@ class OvdcInfoKey(str, Enum):
 class PKSOvdcInfoKey(str, Enum):
     PKS_API_SERVER = 'pks api server'
     AVAILABLE_PKS_PLANS = 'available pks plans'
+
+
+# Default first page
+DEFAULT_FIRST_PAGE = 1
+
+# Nat rules pagination constants
+NAT_DEFAULT_PAGE_SIZE = 25
+
+# Pagination constants for used IP addresses
+USED_IP_ADDRESS_PAGE_SIZE = 10

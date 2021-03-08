@@ -4,8 +4,11 @@
 
 from copy import deepcopy
 import json
+from urllib import parse
 
 import requests
+
+from container_service_extension.lib.cloudapi.constants import ResponseKeys
 
 
 class CloudApiClient(object):
@@ -127,3 +130,37 @@ class CloudApiClient(object):
         response.raise_for_status()
         if response.text:
             return json.loads(response.text)
+
+    def get_cursor_param(self) -> str:
+        """Get cursor param from response header links.
+
+        Example: Finding the next page link
+        'https://XXX.com/cloudapi/1.0.0/edgeGateways/{gateway-id}}/nat/rules?cursor=abcde
+        would return 'abcde'
+
+        :return: cursor param
+        :rtype: str
+        """  # noqa: E501
+        last_response_headers = self.get_last_response_headers()
+        if not last_response_headers:
+            return ''
+
+        # Find link corresponding to the next page
+        unparsed_links = last_response_headers[ResponseKeys.LINK]
+        parsed_links = requests.utils.parse_header_links(unparsed_links)
+        for link in parsed_links:
+            if link[ResponseKeys.REL] == 'nextPage':
+                # Parse cursor param
+                cursor_url = link[ResponseKeys.URL]
+                parsed_result: parse.ParseResult = parse.urlparse(cursor_url)
+                parsed_query_map = parse.parse_qs(parsed_result.query)
+
+                # The parse_qs function maps each query key to a list,
+                # so we assume there is at most one cursor param and get that
+                # element if the list is not empty
+                cursor_list = parsed_query_map.get('cursor')
+                if cursor_list:
+                    return cursor_list[0]
+                else:
+                    return ''
+        return ''
