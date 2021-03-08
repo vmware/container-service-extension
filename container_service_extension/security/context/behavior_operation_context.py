@@ -1,13 +1,14 @@
+# container-service-extension
+# Copyright (c) 2021 VMware, Inc. All Rights Reserved.
+# SPDX-License-Identifier: BSD-2-Clause
+
 from dataclasses import dataclass
 
-from container_service_extension.rde.models.abstractNativeEntity import \
-    AbstractNativeEntity
-from container_service_extension.security.context.operation_context import \
-    OperationContext
+from container_service_extension.security.context.operation_context import OperationContext  # noqa: E501
 
 
 @dataclass
-class UserContext:
+class BehaviorUserContext:
     userId: str
     orgId: str
     rights: list
@@ -18,13 +19,13 @@ class BehaviorOperationContext:
     behavior_id: str
     task_id: str
     entity_id: str
-    entity: AbstractNativeEntity
+    entity: dict
     entity_type_id: str
-    user_context: UserContext
     payload: dict
     api_version: str
     request_id: str
     op_ctx: OperationContext
+    user_context: BehaviorUserContext
 
 
 

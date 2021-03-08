@@ -80,7 +80,7 @@ class MQTTConsumer:
         return response_json
 
     def process_behavior_message(self, msg_json):
-        response_json = behavior_dispatcher.process_request(msg_json)
+        response_json = behavior_dispatcher.process_behavior_request(msg_json)
         self.send_response(response_json)
         LOGGER.debug(f'MQTT response: {response_json}')
 
