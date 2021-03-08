@@ -105,7 +105,6 @@ def cluster_info(data: dict, op_ctx: ctx.OperationContext):
     svc = cluster_service_factory.ClusterServiceFactory(op_ctx). \
         get_cluster_service(rde_in_use)
     cluster_id = data[RequestKey.CLUSTER_ID]
-    print(f"cluster info v35 for:{cluster_id}")
     return asdict(svc.get_cluster_info(cluster_id))
 
 

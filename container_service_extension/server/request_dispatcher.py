@@ -437,6 +437,15 @@ CLUSTER_HANDLERS = [
                 'operation': CseOperation.V35_CLUSTER_CREATE,
                 'handler': v35_cluster_handler.cluster_create,
                 'feature_flags': ['non_legacy_api']
+            },
+            ('36.0',): {
+                'allowed_params': [],
+                'required_params': [],
+                'verify_payload': False,
+                'payload_type': '*',
+                'operation': CseOperation.V36_CLUSTER_CREATE,
+                'handler': v36_cluster_handler.cluster_create,
+                'feature_flags': ['non_legacy_api']
             }
         },
     },
@@ -556,6 +565,13 @@ CLUSTER_HANDLERS = [
                 'operation': CseOperation.V35_NODE_DELETE,
                 'handler': v35_cluster_handler.nfs_node_delete,
                 'feature_flags': ['non_legacy_api']
+            },
+            ('36.0',): {
+                'allowed_params': [],
+                'required_params': [],
+                'operation': CseOperation.V36_NODE_DELETE,
+                'handler': v36_cluster_handler.nfs_node_delete,
+                'feature_flags': ['non_legacy_api']
             }
         },
     },
@@ -568,6 +584,13 @@ CLUSTER_HANDLERS = [
                 'operation': CseOperation.V35_CLUSTER_ACL_LIST,
                 'handler': v35_cluster_handler.cluster_acl_info,
                 'feature_flags': ['non_legacy_api']
+            },
+            ('36.0',): {
+                'allowed_params': [],
+                'required_params': [],
+                'operation': CseOperation.V36_CLUSTER_ACL_LIST,
+                'handler': v36_cluster_handler.cluster_acl_info,
+                'feature_flags': ['non_legacy_api']
             }
         },
         RequestMethod.PUT: {
@@ -578,6 +601,15 @@ CLUSTER_HANDLERS = [
                 'payload_type': '*',
                 'operation': CseOperation.V35_CLUSTER_ACL_UPDATE,
                 'handler': v35_cluster_handler.cluster_acl_update,
+                'feature_flags': ['non_legacy_api']
+            },
+            ('36.0',): {
+                'allowed_params': [],
+                'required_params': [],
+                'verify_payload': False,
+                'payload_type': '*',
+                'operation': CseOperation.V36_CLUSTER_ACL_UPDATE,
+                'handler': v36_cluster_handler.cluster_acl_update,
                 'feature_flags': ['non_legacy_api']
             }
         },

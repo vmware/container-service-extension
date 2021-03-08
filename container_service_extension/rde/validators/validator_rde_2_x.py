@@ -21,8 +21,8 @@ class Validator_2_0_0(AbstractValidator):
     def validate(self, input_entity: AbstractNativeEntity, current_entity: AbstractNativeEntity, operation: CseOperation) -> bool:  # noqa: E501
         """Validate the input_spec against current_status of the cluster.
 
-        :param dict input_entity: Request spec of the cluster
-        :param dict current_entity: Current status of the cluster
+        :param AbstractNativeEntity input_entity: Request spec of the cluster
+        :param AbstractNativeEntity current_entity: Current status of the cluster  # noqa: E501
         :param CseOperation operation: CSE operation key
         :return: is validation successful or failure
         :rtype: bool
