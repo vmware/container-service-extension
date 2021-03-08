@@ -374,6 +374,7 @@ class NsxtNATRuleKey(str, Enum):
     LOGGING = 'logging'
     APPLICATION_PORT_PROFILE = 'applicationPortProfile'
     DNAT_EXTERNAL_PORT = 'dnatExternalPort'
+    ID = 'id'
 
 
 @unique
@@ -500,8 +501,11 @@ class PKSOvdcInfoKey(str, Enum):
     AVAILABLE_PKS_PLANS = 'available pks plans'
 
 
-# default first page
+# Default first page
 DEFAULT_FIRST_PAGE = 1
+
+# Nat rules pagination constants
+NAT_DEFAULT_PAGE_SIZE = 25
 
 # Pagination constants for used IP addresses
 USED_IP_ADDRESS_PAGE_SIZE = 10
