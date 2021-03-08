@@ -131,7 +131,7 @@ class CloudApiClient(object):
         if response.text:
             return json.loads(response.text)
 
-    def get_cursor_param(self):
+    def get_cursor_param(self) -> str:
         """Get cursor param from response header links.
 
         Example: Finding the next page link

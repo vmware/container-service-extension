@@ -2275,7 +2275,7 @@ def _expose_cluster(client: vcd_client.Client, org_name: str, ovdc_name: str,
 
     # Auto reserve ip and add dnat rule
     nsxt_gateway_svc = NsxtBackedGatewayService(gateway, client)
-    expose_ip = nsxt_gateway_svc.quick_ip_allocation()
+    expose_ip = nsxt_gateway_svc.get_available_ip()
     if not expose_ip:
         raise Exception('Unable to reserve ip using quick ip allocation.')
     try:
