@@ -69,10 +69,10 @@ def get_rde_metadata(rde_version: str) -> dict:
 
 
 def construct_cluster_spec_from_entity_status(entity_status: Union[rde_1_0_0.Status, rde_2_0_0.Status], rde_version: str) -> Union[rde_1_0_0.ClusterSpec, rde_2_0_0.ClusterSpec]:  # noqa: E501
-    """Construct cluster specification from entity status of given rde version.
+    """Construct cluster spec of the specified rde version from the current status of the cluster.
 
     :param rde_X_X_X Status entity_status: Entity Status of rde of given version  # noqa: E501
-    :param str rde_version: which version of schema
+    :param str rde_version: RDE version of the spec to be created from the status # noqa: E501
     :return: Cluster Specification of respective rde_version_in_use
     :raises NotImplementedError
     """
