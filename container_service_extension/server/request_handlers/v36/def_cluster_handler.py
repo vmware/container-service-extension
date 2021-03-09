@@ -17,6 +17,7 @@ import container_service_extension.lib.telemetry.telemetry_handler as telemetry_
 import container_service_extension.rde.backend.cluster_service_factory as cluster_service_factory  # noqa: E501
 import container_service_extension.rde.constants as rde_constants
 from container_service_extension.rde.models.abstractNativeEntity import AbstractNativeEntity  # noqa: E501
+import container_service_extension.rde.models.rde_2_0_0 as rde_2_0_0
 import container_service_extension.rde.models.rde_factory as rde_factory
 import container_service_extension.rde.validators.validator_factory as rde_validator_factory  # noqa: E501
 import container_service_extension.security.context.operation_context as ctx
@@ -31,6 +32,10 @@ def cluster_create(data: dict, op_ctx: ctx.OperationContext):
     :return: Defined entity of the native cluster
     :rtype: container_service_extension.def_.models.DefEntity
     """
+    # Construct rde 2.0.0 model to ensure that this is a valid spec
+    # Any exception will be propagated to exception handler
+    rde_2_0_0.NativeEntity(**data[RequestKey.INPUT_SPEC])
+
     rde_in_use = server_utils.get_rde_version_in_use()
     svc = cluster_service_factory.ClusterServiceFactory(op_ctx). \
         get_cluster_service(rde_in_use)

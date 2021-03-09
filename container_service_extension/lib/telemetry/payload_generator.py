@@ -832,7 +832,7 @@ def get_payload_for_v36_cluster_acl_list(cluster_acl_list_info):
     page = cluster_acl_list_info[shared_constants.PaginationKey.PAGE_NUMBER]
     page_size = cluster_acl_list_info[shared_constants.PaginationKey.PAGE_SIZE]
     return {
-        PayloadKey.TYPE: CseOperation.V35_CLUSTER_ACL_LIST.telemetry_table,
+        PayloadKey.TYPE: CseOperation.V36_CLUSTER_ACL_LIST.telemetry_table,
         PayloadKey.CLUSTER_ID: uuid_hash(cluster_id),
         PayloadKey.PAGE: str(page),
         PayloadKey.PAGE_SIZE: str(page_size),
@@ -861,7 +861,7 @@ def get_payload_for_v36_cluster_acl_update(cluster_acl_update_info: dict):
         }
         filtered_acl_info.append(filtered_entry)
     return {
-        PayloadKey.TYPE: CseOperation.V35_CLUSTER_ACL_UPDATE.telemetry_table,
+        PayloadKey.TYPE: CseOperation.V36_CLUSTER_ACL_UPDATE.telemetry_table,
         PayloadKey.CLUSTER_ID: uuid_hash(cluster_id),
         PayloadKey.ACCESS_SETTING: json.dumps(filtered_acl_info),
         PayloadKey.SOURCE_ID: SourceMap.get_source_id(cluster_acl_update_info.get(PayloadKey.SOURCE_DESCRIPTION)),  # noqa: E501
