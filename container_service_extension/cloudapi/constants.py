@@ -29,10 +29,10 @@ class CloudApiResource(str, Enum):
     EDGE_GATEWAYS = 'edgeGateways'
     EXTERNAL_NETWORKS = 'externalNetworks'
     ORG_VDC_NETWORKS = 'orgVdcNetworks'
+    USED_IP_ADDRESSES = 'usedIpAddresses'
 
 
 class ResponseKeys(str, Enum):
     LINK = 'link'
     REL = 'rel'
     URL = 'url'
-    USED_IP_ADDRESSES = 'usedIpAddresses'

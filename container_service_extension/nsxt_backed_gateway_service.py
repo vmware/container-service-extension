@@ -1,9 +1,7 @@
 # container-service-extension
 # Copyright (c) 2021 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
-import copy
 import ipaddress
-import time
 
 import pyvcloud.vcd.client as vcd_client
 import pyvcloud.vcd.gateway as vcd_gateway
@@ -17,22 +15,6 @@ from container_service_extension.server_constants import NsxtNATRuleKey
 import container_service_extension.shared_constants as shared_constants
 from container_service_extension.shared_constants import PaginationKey
 import container_service_extension.utils as server_utils
-
-
-def _get_updated_subnet_value(updated_get_gateway_response, gateway_ip,
-                              prefix_length):
-    """Get the updated subnet value given the updated gateway response."""
-    updated_subnet_values = _gateway_body_to_subnet_values(updated_get_gateway_response)  # noqa: E501
-    for subnet in updated_subnet_values:
-        if subnet[NsxtGatewayRequestKey.GATEWAY] == gateway_ip and \
-                subnet[NsxtGatewayRequestKey.PREFIX_LENGTH] == prefix_length:
-            return subnet
-    return None
-
-
-def _gateway_body_to_external_address_id(gateway_body: dict):
-    return gateway_body[NsxtGatewayRequestKey.EDGE_GATEWAY_UPLINKS][
-        server_constants.NSXT_BACKED_GATEWAY_UPLINK_INDEX][NsxtGatewayRequestKey.UPLINK_ID]  # noqa: E501
 
 
 def _gateway_body_to_subnet_values(gateway_body: dict):
@@ -98,16 +80,6 @@ def _get_available_ip_in_ip_ranges(used_ips: set, ip_ranges: list):
     return ''
 
 
-def _get_ip_address_difference(updated_subnet_value, orig_subnet_value):
-    updated_ip_ranges = _subnet_value_to_ip_ranges_values(updated_subnet_value)
-    orig_ip_ranges = _subnet_value_to_ip_ranges_values(orig_subnet_value)
-
-    updated_ip_range_set = _get_ip_range_set(updated_ip_ranges)
-    orig_ip_range_set = _get_ip_range_set(orig_ip_ranges)
-
-    return list(updated_ip_range_set - orig_ip_range_set)
-
-
 class NsxtBackedGatewayService:
     """Service functions for an NSX-T backed Edge Gateway."""
 
@@ -129,62 +101,6 @@ class NsxtBackedGatewayService:
         self._nat_rules_relative_path = \
             f'{gateway_relative_path}/{server_constants.NATS_PATH_FRAGMENT}/' \
             f'{server_constants.RULES_PATH_FRAGMENT}'
-
-    def quick_ip_allocation(self):
-        """Allocate one ip using the edge quick ip allocation feature."""
-        # Get current edge gateway body to use for PUT request body
-        put_request_body = self._get_gateway()
-
-        # Find subnet with available ips
-        subnet_values = _gateway_body_to_subnet_values(put_request_body)
-        gateway_ip = prefix_length = orig_subnet_value = None
-        for subnet_index in range(len(subnet_values)):
-            # Edit subnet value in PUT request body
-            request_subnet_value = subnet_values[subnet_index]
-            orig_subnet_value = copy.deepcopy(request_subnet_value)
-            request_subnet_value[NsxtGatewayRequestKey.TOTAL_IP_COUNT] = \
-                int(request_subnet_value[NsxtGatewayRequestKey.TOTAL_IP_COUNT]) + 1  # noqa: E501
-            request_subnet_value[NsxtGatewayRequestKey.AUTO_ALLOCATE_IP_RANGES] = True  # noqa: E501
-
-            # Sent request for quick ip allocation
-            try:
-                self._cloudapi_client.do_request(
-                    method=shared_constants.RequestMethod.PUT,
-                    cloudapi_version=cloudapi_constants.CloudApiVersion.VERSION_1_0_0,  # noqa: E501
-                    resource_url_relative_path=self._gateway_relative_path,
-                    payload=put_request_body,
-                    content_type='application/json')
-                gateway_ip = request_subnet_value[NsxtGatewayRequestKey.GATEWAY]  # noqa: E501
-                prefix_length = request_subnet_value[NsxtGatewayRequestKey.PREFIX_LENGTH]  # noqa: E501
-                break
-            except Exception:
-                if subnet_index == len(subnet_values) - 1:
-                    raise Exception('No subnet found with available ips')
-
-                # Reset put request body
-                subnet_values[subnet_index] = orig_subnet_value
-
-        # Ensure gateway response status is realized
-        while True:
-            updated_get_gateway_response = self._get_gateway()
-            if updated_get_gateway_response[NsxtGatewayRequestKey.STATUS] != \
-                    server_constants.NSXT_GATEWAY_REALIZED_STATUS:
-                time.sleep(server_constants.NSXT_PUT_REQUEST_WAIT_TIME)
-            else:
-                break
-
-        # Determine quick ip allocated address
-        updated_subnet_value = _get_updated_subnet_value(
-            updated_get_gateway_response, gateway_ip, prefix_length)
-        if not updated_subnet_value:
-            raise Exception(f'Updated subnet value with gateway '
-                            f'({gateway_ip}) and prefix length '
-                            f'({prefix_length}) not found')
-        ip_address_diff = _get_ip_address_difference(updated_subnet_value,
-                                                     orig_subnet_value)
-        if not ip_address_diff:
-            return None
-        return ip_address_diff[0]
 
     def add_dnat_rule(self,
                       name,
@@ -364,7 +280,7 @@ class NsxtBackedGatewayService:
             for used_ip_value_dict in values:
                 yield used_ip_value_dict[NsxtGatewayRequestKey.IP_ADDRESS]
 
-    def get_available_ip(self):
+    def get_available_ip(self) -> str:
         """Get an available ip.
 
         :return: available ip. Empty string returned if no available ip.
