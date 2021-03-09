@@ -45,6 +45,43 @@ def cluster_create(data: dict, op_ctx: ctx.OperationContext):
 
 @telemetry_handler.record_user_action_telemetry(cse_operation=telemetry_constants.CseOperation.V36_CLUSTER_LIST)  # noqa: E501
 @request_utils.cluster_api_exception_handler
+def native_cluster_list(data: dict, op_ctx: ctx.OperationContext):
+    """Request handler for cluster list operation.
+
+    :return: List
+    """
+    rde_in_use = server_utils.get_rde_version_in_use()
+    svc = cluster_service_factory.ClusterServiceFactory(op_ctx). \
+        get_cluster_service(rde_in_use)
+    filters = data.get(RequestKey.QUERY_PARAMS, {})
+    page_number = int(filters.get(PaginationKey.PAGE_NUMBER,
+                                  CSE_PAGINATION_FIRST_PAGE_NUMBER))
+    page_size = int(filters.get(PaginationKey.PAGE_SIZE,
+                                CSE_PAGINATION_DEFAULT_PAGE_SIZE))
+
+    # remove page number and page size from the filters as it is treated
+    # differently from other filters
+    if PaginationKey.PAGE_NUMBER in filters:
+        del filters[PaginationKey.PAGE_NUMBER]
+    if PaginationKey.PAGE_SIZE in filters:
+        del filters[PaginationKey.PAGE_SIZE]
+
+    # response needs to paginated
+    result = svc.get_clusters_by_page(filters=filters)
+    clusters = [asdict(def_entity) for def_entity in result[PaginationKey.VALUES]]  # noqa: E501
+
+    uri = data['url']
+    return server_utils.create_links_and_construct_paginated_result(
+        uri,
+        clusters,
+        result_total=result[PaginationKey.RESULT_TOTAL],
+        page_number=page_number,
+        page_size=page_size,
+        query_params=filters)
+
+
+@telemetry_handler.record_user_action_telemetry(cse_operation=telemetry_constants.CseOperation.V36_CLUSTER_LIST)  # noqa: E501
+@request_utils.cluster_api_exception_handler
 def cluster_list(data: dict, op_ctx: ctx.OperationContext):
     """Request handler for cluster list operation.
 

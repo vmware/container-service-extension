@@ -318,7 +318,8 @@ class CseOperation(Enum):
     V35_NODE_INFO = ('get info of DEF node', 'NOT IMPLEMENTED')
 
     V36_CLUSTER_CREATE = ('create DEF v36 cluster', '/cse/3.0/clusters', requests.codes.accepted)  # noqa: E501
-    V36_CLUSTER_LIST = ('list DEF clusters', '/cse/3.0/cluster/%s', requests.codes.accepted)  # noqa: E501
+    V36_CLUSTER_LIST = ('list V36 DEF clusters', '/cse/3.0/clusters')  # noqa: E501
+    V36_NATIVE_CLUSTER_LIST = ('list paginated V36 DEF clusters', '/cse/3.0/nativeclusters')  # noqa: E501
     V36_CLUSTER_INFO = ('get info of DEF V36 clusters', '/cse/3.0/cluster/%s')
     V36_CLUSTER_CONFIG = ('get config of DEF V36 cluster', '/cse/3.0/cluster/%s/config')  # noqa: E501
     V36_CLUSTER_UPDATE = ('update DEF V36 cluster', '/cse/3.0/cluster/%s', requests.codes.accepted)  # noqa: E501

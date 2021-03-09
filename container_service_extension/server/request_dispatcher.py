@@ -450,6 +450,18 @@ CLUSTER_HANDLERS = [
         },
     },
     {
+        'url': "cse/3.0/nativeclusters",
+        RequestMethod.GET: {
+            ('36.0',): {
+                'allowed_params': ['org_name', 'ovdc_name', 'pageSize', 'page'],  # noqa: E501
+                'required_params': [],
+                'operation': CseOperation.V36_NATIVE_CLUSTER_LIST,
+                'handler': v36_cluster_handler.native_cluster_list,
+                'feature_flags': ['non_legacy_api']
+            }
+        },
+    },
+    {
         'url': f"cse/3.0/cluster/${RequestKey.CLUSTER_ID}",
         RequestMethod.GET: {
             ('35.0',): {
