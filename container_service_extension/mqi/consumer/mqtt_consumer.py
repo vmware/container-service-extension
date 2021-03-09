@@ -37,7 +37,7 @@ class MQTTConsumer:
         self.fsencoding = sys.getfilesystemencoding()
         self._mqtt_client = None
         self._ctpe = ConsumerThreadPoolExecutor(self.num_processors)
-        self._behavior_tpe = ConsumerThreadPoolExecutor(constants.BEHAVIOR_THREAD_SIZE)  # noqa: E501
+        self._behavior_tpe = ConsumerThreadPoolExecutor(constants.BEHAVIOR_THREAD_POOL_SIZE)  # noqa: E501
         self._publish_lock = Lock()
         self._is_closing = False
 
