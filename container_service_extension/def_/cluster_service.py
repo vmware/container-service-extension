@@ -522,6 +522,7 @@ class ClusterService(abstract_broker.AbstractBroker):
     def _create_cluster_async(self, cluster_id: str,
                               cluster_spec: def_models.NativeEntity):
         vapp = None
+        expose_ip: str = ''
         try:
             cluster_name = cluster_spec.metadata.cluster_name
             org_name = cluster_spec.metadata.org_name
@@ -616,7 +617,6 @@ class ClusterService(abstract_broker.AbstractBroker):
                 self.context.sysadmin_client, vapp, check_tools=True)
 
             # Handle exposing cluster
-            expose_ip: str = ''
             if expose:
                 try:
                     expose_ip = _expose_cluster(
@@ -741,6 +741,23 @@ class ClusterService(abstract_broker.AbstractBroker):
                 except Exception:
                     LOGGER.error(f"Failed to delete cluster '{cluster_name}'",
                                  exc_info=True)
+
+                if expose_ip:
+                    try:
+                        _handle_delete_expose_dnat_rule(
+                            client=self.context.client,
+                            org_name=org_name,
+                            ovdc_name=ovdc_name,
+                            network_name=network_name,
+                            cluster_name=cluster_name,
+                            cluster_id=cluster_id)
+                        LOGGER.info(f'Deleted dnat rule for cluster '
+                                    f'{cluster_name} ({cluster_id})')
+                    except Exception as err:
+                        LOGGER.error(f'Failed to delete dnat rule for '
+                                     f'{cluster_name} ({cluster_id}) with '
+                                     f'error: {str(err)}')
+
                 try:
                     # Delete the corresponding defined entity
                     self.sysadmin_entity_svc.resolve_entity(cluster_id)
@@ -1094,7 +1111,30 @@ class ClusterService(abstract_broker.AbstractBroker):
             self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
             _delete_vapp(
                 self.context.client, org_name, ovdc_name, cluster_name)
+
+            # Handle deleting dnat rule is cluster is exposed
+            exposed: bool = bool(def_entity) and def_entity.entity.status.exposed  # noqa: E501
+            dnat_delete_success: bool = False
+            if exposed:
+                network_name: str = def_entity.entity.spec.settings.network
+                cluster_id = def_entity.id
+                try:
+                    _handle_delete_expose_dnat_rule(
+                        client=self.context.client,
+                        org_name=org_name,
+                        ovdc_name=ovdc_name,
+                        network_name=network_name,
+                        cluster_name=cluster_name,
+                        cluster_id=cluster_id)
+                    dnat_delete_success = True
+                except Exception as err:
+                    LOGGER.error(f'Failed to delete dnat rule for '
+                                 f'{cluster_name} ({cluster_id}) with error: '
+                                 f'{str(err)}')
+
             msg = f"Deleted cluster '{cluster_name}'"
+            if exposed and not dnat_delete_success:
+                msg += ' with failed dnat rule deletion'
             self._update_task(vcd_client.TaskStatus.SUCCESS, message=msg)
         except Exception as err:
             msg = f"Unexpected error while deleting cluster {cluster_name}"
@@ -2222,10 +2262,20 @@ def _get_gateway_href(vdc: VDC, gateway_name):
     return None
 
 
-def _get_gateway(client, cloudapi_client, network_resource, ovdc: VDC):
+def _get_gateway(client: vcd_client.Client, org_name: str, ovdc_name: str,
+                 network_name: str):
+    # Check if routed org vdc network
+    cloudapi_client = vcd_utils.get_cloudapi_client_from_vcd_client(client)
+    ovdc = vcd_utils.get_vdc(client, org_name=org_name, vdc_name=ovdc_name)
+    try:
+        routed_network_resource = ovdc.get_routed_orgvdc_network(network_name)
+    except EntityNotFoundException:
+        raise Exception(f'No routed network found named: {network_name} '
+                        f'in ovdc {ovdc_name} and org {org_name}')
+
     routed_vdc_network = vdc_network.VdcNetwork(
         client=client,
-        resource=network_resource)
+        resource=routed_network_resource)
     network_id = utils.extract_id_from_href(routed_vdc_network.href)
     network_urn_id = f'{NETWORK_URN_PREFIX}:{network_id}'
     try:
@@ -2241,6 +2291,22 @@ def _get_gateway(client, cloudapi_client, network_resource, ovdc: VDC):
     return gateway
 
 
+def _get_nsxt_backed_gateway_service(client: vcd_client.Client, org_name: str,
+                                     ovdc_name: str, network_name: str):
+    # Check if NSX-T backed gateway
+    gateway: vcd_gateway.Gateway = _get_gateway(
+        client=client,
+        org_name=org_name,
+        ovdc_name=ovdc_name,
+        network_name=network_name)
+    if not gateway:
+        raise Exception(f'No gateway found for network: {network_name}')
+    if not gateway.is_nsxt_backed():
+        raise Exception('Gateway is not NSX-T backed for exposing cluster.')
+
+    return NsxtBackedGatewayService(gateway, client)
+
+
 def _form_expose_dnat_rule_name(cluster_name: str, cluster_id: str):
     """Form dnat rule name for expose cluster.
 
@@ -2253,28 +2319,10 @@ def _form_expose_dnat_rule_name(cluster_name: str, cluster_id: str):
 def _expose_cluster(client: vcd_client.Client, org_name: str, ovdc_name: str,
                     network_name: str, cluster_name: str, cluster_id: str,
                     internal_ip: str):
-    # Check if routed org vdc network
-    ovdc = vcd_utils.get_vdc(client, org_name=org_name, vdc_name=ovdc_name)
-    try:
-        routed_network_resource = ovdc.get_routed_orgvdc_network(network_name)
-    except EntityNotFoundException:
-        raise Exception(f'No routed network found named: {network_name} '
-                        f'in ovdc {ovdc_name} and org {org_name}')
-
-    # Check if NSX-T backed gateway
-    cloudapi_client = vcd_utils.get_cloudapi_client_from_vcd_client(client)
-    gateway = _get_gateway(
-        client=client,
-        cloudapi_client=cloudapi_client,
-        network_resource=routed_network_resource,
-        ovdc=ovdc)
-    if not gateway:
-        raise Exception(f'No gateway found for network: {network_name}')
-    if not gateway.is_nsxt_backed():
-        raise Exception('Gateway is not NSX-T backed for exposing cluster.')
 
     # Auto reserve ip and add dnat rule
-    nsxt_gateway_svc = NsxtBackedGatewayService(gateway, client)
+    nsxt_gateway_svc = _get_nsxt_backed_gateway_service(
+        client, org_name, ovdc_name, network_name)
     expose_ip = nsxt_gateway_svc.get_available_ip()
     if not expose_ip:
         raise Exception(f'No available ips found for cluster {cluster_name} ({cluster_id})')  # noqa: E501
@@ -2287,3 +2335,16 @@ def _expose_cluster(client: vcd_client.Client, org_name: str, ovdc_name: str,
     except Exception as err:
         raise Exception(f'Unable to add dnat rule with error: {str(err)}')
     return expose_ip
+
+
+def _handle_delete_expose_dnat_rule(client: vcd_client.Client,
+                                    org_name: str,
+                                    ovdc_name: str,
+                                    network_name: str,
+                                    cluster_name: str,
+                                    cluster_id: str):
+    nsxt_gateway_svc = _get_nsxt_backed_gateway_service(
+        client, org_name, ovdc_name, network_name)
+    expose_dnat_rule_name = _form_expose_dnat_rule_name(cluster_name,
+                                                        cluster_id)
+    nsxt_gateway_svc.delete_dnat_rule(expose_dnat_rule_name)
