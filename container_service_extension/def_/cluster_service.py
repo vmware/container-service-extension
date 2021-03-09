@@ -1113,7 +1113,9 @@ class ClusterService(abstract_broker.AbstractBroker):
                 self.context.client, org_name, ovdc_name, cluster_name)
 
             # Handle deleting dnat rule is cluster is exposed
-            if def_entity and def_entity.entity.status.exposed:
+            exposed: bool = bool(def_entity) and def_entity.entity.status.exposed  # noqa: E501
+            dnat_delete_success: bool = False
+            if exposed:
                 network_name: str = def_entity.entity.spec.settings.network
                 cluster_id = def_entity.id
                 try:
@@ -1124,12 +1126,15 @@ class ClusterService(abstract_broker.AbstractBroker):
                         network_name=network_name,
                         cluster_name=cluster_name,
                         cluster_id=cluster_id)
+                    dnat_delete_success = True
                 except Exception as err:
                     LOGGER.error(f'Failed to delete dnat rule for '
                                  f'{cluster_name} ({cluster_id}) with error: '
                                  f'{str(err)}')
 
             msg = f"Deleted cluster '{cluster_name}'"
+            if exposed and not dnat_delete_success:
+                msg += ' with failed dnat rule deletion'
             self._update_task(vcd_client.TaskStatus.SUCCESS, message=msg)
         except Exception as err:
             msg = f"Unexpected error while deleting cluster {cluster_name}"
