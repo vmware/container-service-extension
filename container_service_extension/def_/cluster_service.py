@@ -2323,9 +2323,9 @@ def _expose_cluster(client: vcd_client.Client, org_name: str, ovdc_name: str,
     # Auto reserve ip and add dnat rule
     nsxt_gateway_svc = _get_nsxt_backed_gateway_service(
         client, org_name, ovdc_name, network_name)
-    expose_ip = nsxt_gateway_svc.quick_ip_allocation()
+    expose_ip = nsxt_gateway_svc.get_available_ip()
     if not expose_ip:
-        raise Exception('Unable to reserve ip using quick ip allocation.')
+        raise Exception(f'No available ips found for cluster {cluster_name} ({cluster_id})')  # noqa: E501
     try:
         dnat_rule_name = _form_expose_dnat_rule_name(cluster_name, cluster_id)
         nsxt_gateway_svc.add_dnat_rule(
@@ -2333,9 +2333,6 @@ def _expose_cluster(client: vcd_client.Client, org_name: str, ovdc_name: str,
             internal_address=internal_ip,
             external_address=expose_ip)
     except Exception as err:
-        # Note: we would normally need to un-allocate the expose_ip. Since
-        # there will be an ipam solution to get the ip in a future PR,
-        # this logic is not currently needed
         raise Exception(f'Unable to add dnat rule with error: {str(err)}')
     return expose_ip
 
