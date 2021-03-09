@@ -2,9 +2,11 @@
 # Copyright (c) 2021 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 
+from dataclasses import asdict
 import json
 
-from container_service_extension.rde.behaviors.behavior_model import BehaviorOperation  # noqa: E501
+from container_service_extension.rde.behaviors.behavior_model import \
+    BehaviorErrorPayload, BehaviorOperation
 from container_service_extension.security.context.behavior_operation_context \
     import BehaviorOperationContext, BehaviorUserContext
 from container_service_extension.security.context.operation_context import OperationContext  # noqa: E501
@@ -47,5 +49,10 @@ def process_behavior_request(msg_json):
                                             entity_type_id=entity_type_id,
                                             request_id=request_id,
                                             op_ctx=op_ctx)
+
     # Invoke the handler method.
-    return MAP_BEHAVIOR_ID_TO_HANDLER_METHOD[behavior_id](behavior_ctx)
+    return_payload = MAP_BEHAVIOR_ID_TO_HANDLER_METHOD[behavior_id](behavior_ctx)  # noqa: E501
+    if isinstance(return_payload, BehaviorErrorPayload):
+        return 'error', asdict(return_payload)
+    else:
+        return 'success', return_payload

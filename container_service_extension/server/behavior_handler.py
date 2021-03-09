@@ -11,8 +11,7 @@ from container_service_extension.security.context.behavior_operation_context imp
 # Get the validator based on the api_version and payload_version.
 # 2. Based on the rde_in_use, convert the entity if necessary
 # 3. Based on the rde_in_use, call the appropriate backend method.
-# 4. Return the HTTP equivalent return code(s) to indicate the success (or)
-# failure.
+# 4. Return either success_payload_string (or) instance of BehaviorErrorPayload
 
 # As of today (Mar 8, 2021), we do not anticipate the need to maintain
 # multiple handlers based on api_version. This can be evaluated on the need basis.  # noqa: E501

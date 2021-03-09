@@ -15,7 +15,6 @@ import container_service_extension.mqi.consumer.constants as constants
 from container_service_extension.mqi.consumer.consumer_thread_pool_executor \
     import ConsumerThreadPoolExecutor
 import container_service_extension.mqi.consumer.utils as utils
-from container_service_extension.rde.behaviors.behavior_model import BehaviorErrorPayload  # noqa: E501
 import container_service_extension.server.behavior_dispatcher as behavior_dispatcher  # noqa: E501
 
 
@@ -42,10 +41,7 @@ class MQTTConsumer:
         self._publish_lock = Lock()
         self._is_closing = False
 
-    def form_behavior_response_json(self, task_id, entity_id, payload,
-                                    status='success'):
-        if isinstance(payload, BehaviorErrorPayload):
-            status = 'error'
+    def form_behavior_response_json(self, task_id, entity_id, payload, status):
         response_json = {
             "type": "BEHAVIOR_RESPONSE",
             "headers": {
@@ -85,12 +81,13 @@ class MQTTConsumer:
         return response_json
 
     def process_behavior_message(self, msg_json):
-        payload = behavior_dispatcher.process_behavior_request(msg_json)
+        status, payload = behavior_dispatcher.process_behavior_request(msg_json)  # noqa: E501
         task_id: str = msg_json['headers']['taskId']
         entity_id: str = msg_json['headers']['entityId']
         response_json = self.form_behavior_response_json(task_id=task_id,
                                                          entity_id=entity_id,
-                                                         payload=payload)
+                                                         payload=payload,
+                                                         status=status)
         self.send_response(response_json)
         LOGGER.debug(f'MQTT response: {response_json}')
 
@@ -203,6 +200,3 @@ class MQTTConsumer:
 
     def get_num_total_threads(self):
         return self._ctpe.get_num_total_threads()
-
-    def create_cluster(self, task_id, entity_id, entity, args):
-        return "cluster creation successful"

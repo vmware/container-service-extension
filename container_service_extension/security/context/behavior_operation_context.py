@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from container_service_extension.security.context.operation_context import OperationContext  # noqa: E501
 
 
-@dataclass
+@dataclass(frozen=True)
 class BehaviorUserContext:
     userId: str
     orgId: str
