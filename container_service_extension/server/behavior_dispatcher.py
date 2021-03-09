@@ -52,6 +52,6 @@ def process_behavior_request(msg_json):
     # Invoke the handler method.
     response_payload = MAP_BEHAVIOR_ID_TO_HANDLER_METHOD[behavior_id](behavior_ctx)  # noqa: E501
     if isinstance(response_payload, BehaviorErrorPayload):
-        return 'error', asdict(response_payload)
+        return 'error', json.dumps(asdict(response_payload))
     else:
         return 'success', response_payload
