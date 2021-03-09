@@ -25,10 +25,10 @@ import yaml
 from container_service_extension.common.constants.server_constants import CONFIG_DECRYPTION_ERROR_MSG  # noqa: E501
 from container_service_extension.common.constants.server_constants import LocalTemplateKey  # noqa: E501
 from container_service_extension.common.constants.server_constants import RemoteTemplateKey  # noqa: E501
-from container_service_extension.common.constants.server_constants import SUPPORTED_VCD_API_VERSIONS  # noqa: E501
 from container_service_extension.common.constants.server_constants import SYSTEM_ORG_NAME  # noqa: E501
 from container_service_extension.common.constants.shared_constants import ClusterEntityKind  # noqa: E501
 from container_service_extension.common.constants.shared_constants import RequestMethod  # noqa: E501
+from container_service_extension.common.constants.shared_constants import SUPPORTED_VCD_API_VERSIONS  # noqa: E501
 import container_service_extension.common.utils.core_utils as utils
 import container_service_extension.common.utils.pyvcloud_utils as vcd_utils
 import container_service_extension.common.utils.server_utils as server_utils

@@ -6,7 +6,7 @@ from pyvcloud.vcd.client import ApiVersion
 import yaml
 
 from container_service_extension.common.constants.server_constants import MQTT_MIN_API_VERSION  # noqa: E501
-from container_service_extension.common.constants.server_constants import SUPPORTED_VCD_API_VERSIONS  # noqa: E501
+from container_service_extension.common.constants.shared_constants import SUPPORTED_VCD_API_VERSIONS  # noqa: E501
 
 
 INSTRUCTIONS_FOR_PKS_CONFIG_FILE = "\

@@ -8,6 +8,9 @@ from enum import Enum
 from enum import unique
 
 
+# vCD API versions supported by CSE
+SUPPORTED_VCD_API_VERSIONS = ['33.0', '34.0', '35.0', '36.0']
+
 CSE_URL_FRAGMENT = 'cse'
 PKS_URL_FRAGMENT = 'pks'
 CSE_3_0_URL_FRAGMENT = '3.0'
@@ -20,7 +23,9 @@ UNKNOWN_ERROR_MESSAGE = "Unknown error. Please contact your System " \
                         "Administrator"
 
 RESPONSE_MESSAGE_KEY = "message"
-CSE_SERVER_API_VERSION = 'cse_server_api_version'
+CSE_SERVER_API_VERSION = "cse_server_api_version"
+CSE_SERVER_SUPPORTED_API_VERSIONS = "cse_server_supported_api_versions"
+CSE_SERVER_LEGACY_MODE = "cse_server_running_in_legacy_mode"
 
 
 class ClusterEntityKind(Enum):

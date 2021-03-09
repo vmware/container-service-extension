@@ -215,7 +215,10 @@ class Service(object, metaclass=Singleton):
 
     def info(self, get_sysadmin_info=False):
         result = utils.get_cse_info()
-        result[shared_constants.CSE_SERVER_API_VERSION] = server_utils.get_server_api_version()  # noqa: E501
+        server_config = server_utils.get_server_runtime_config()
+        result[shared_constants.CSE_SERVER_API_VERSION] = server_config['vcd']['api_version']  # noqa: E501
+        result[shared_constants.CSE_SERVER_SUPPORTED_API_VERSIONS] = server_config['service']['supported_api_versions']  # noqa: E501
+        result[shared_constants.CSE_SERVER_LEGACY_MODE] = server_config['service']['legacy_mode']  # noqa: E501
         if get_sysadmin_info:
             result['all_consumer_threads'] = 0 if self.consumer is None else \
                 self.consumer.get_num_total_threads()
