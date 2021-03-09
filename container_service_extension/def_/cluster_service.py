@@ -2285,8 +2285,5 @@ def _expose_cluster(client: vcd_client.Client, org_name: str, ovdc_name: str,
             internal_address=internal_ip,
             external_address=expose_ip)
     except Exception as err:
-        # Note: we would normally need to un-allocate the expose_ip. Since
-        # there will be an ipam solution to get the ip in a future PR,
-        # this logic is not currently needed
         raise Exception(f'Unable to add dnat rule with error: {str(err)}')
     return expose_ip
