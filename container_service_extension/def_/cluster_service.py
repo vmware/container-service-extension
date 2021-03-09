@@ -743,15 +743,20 @@ class ClusterService(abstract_broker.AbstractBroker):
                                  exc_info=True)
 
                 if expose_ip:
-                    _handle_delete_expose_dnat_rule(
-                        client=self.context.client,
-                        org_name=org_name,
-                        ovdc_name=ovdc_name,
-                        network_name=network_name,
-                        cluster_name=cluster_name,
-                        cluster_id=cluster_id)
-                    LOGGER.info(f'Deleted dnat rule for cluster {cluster_name}'
-                                f'({cluster_id})')
+                    try:
+                        _handle_delete_expose_dnat_rule(
+                            client=self.context.client,
+                            org_name=org_name,
+                            ovdc_name=ovdc_name,
+                            network_name=network_name,
+                            cluster_name=cluster_name,
+                            cluster_id=cluster_id)
+                        LOGGER.info(f'Deleted dnat rule for cluster '
+                                    f'{cluster_name} ({cluster_id})')
+                    except Exception as err:
+                        LOGGER.error(f'Failed to delete dnat rule for '
+                                     f'{cluster_name} ({cluster_id}) with '
+                                     f'error: {str(err)}')
 
                 try:
                     # Delete the corresponding defined entity
@@ -1111,12 +1116,18 @@ class ClusterService(abstract_broker.AbstractBroker):
             if def_entity and def_entity.entity.status.exposed:
                 network_name: str = def_entity.entity.spec.settings.network
                 cluster_id = def_entity.id
-                _handle_delete_expose_dnat_rule(client=self.context.client,
-                                                org_name=org_name,
-                                                ovdc_name=ovdc_name,
-                                                network_name=network_name,
-                                                cluster_name=cluster_name,
-                                                cluster_id=cluster_id)
+                try:
+                    _handle_delete_expose_dnat_rule(
+                        client=self.context.client,
+                        org_name=org_name,
+                        ovdc_name=ovdc_name,
+                        network_name=network_name,
+                        cluster_name=cluster_name,
+                        cluster_id=cluster_id)
+                except Exception as err:
+                    LOGGER.error(f'Failed to delete dnat rule for '
+                                 f'{cluster_name} ({cluster_id}) with error: '
+                                 f'{str(err)}')
 
             msg = f"Deleted cluster '{cluster_name}'"
             self._update_task(vcd_client.TaskStatus.SUCCESS, message=msg)
