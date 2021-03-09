@@ -38,7 +38,7 @@ class ExecutionProperties:
     invocation_timeout: int = 216000
 
     def __init__(self, serviceId: str = MQTT_EXTENSION_URN,
-                 invocation_timeout: int = 216000, **kwargs):
+                 invocation_timeout: int = 86400, **kwargs):
         self.serviceId = serviceId
         self.invocation_timeout = invocation_timeout
 

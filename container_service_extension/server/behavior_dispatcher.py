@@ -34,8 +34,7 @@ def process_behavior_request(msg_json):
     entity_type_id: str = payload['typeId']
     api_version: str = payload['_metadata']['apiVersion']
     auth_token: str = payload['_metadata']['actAsToken']
-    # TODO requestId is yet to be submitted by Extensibility.
-    request_id: str = payload['_metadata'].get('requestId', None)
+    request_id: str = payload['_metadata']['requestId']
 
     # Initializing Behavior operation context
     op_ctx = OperationContext(auth_token=auth_token, is_jwt=True, request_id=request_id)  # noqa: E501
