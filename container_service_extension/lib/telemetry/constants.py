@@ -90,6 +90,7 @@ class CseOperation(Enum):
     V36_CLUSTER_LIST = ('DEF cluster list', 'CLUSTER', 'V36_LIST', 'CSE_V36_CLUSTER_LIST')  # noqa: E501
     V36_CLUSTER_APPLY = ('DEF cluster create', 'CLUSTER', 'V36_APPLY', 'CSE_V36_CLUSTER_APPLY')  # noqa: E501
     V36_CLUSTER_UPGRADE_PLAN = ('DEF cluster upgrade plan', 'CLUSTER', 'V36_UPGRADE_PLAN', 'CSE_V36_CLUSTER_UPGRADE_PLAN')  # noqa: E501
+    V36_CLUSTER_UPGRADE = ('DEF cluster upgrade', 'CLUSTER', 'V36_UPGRADE', 'CSE_V36_CLUSTER_UPGRADE')  # noqa: E501
     V36_CLUSTER_UPDATE = ('DEF cluster update', 'CLUSTER', 'V36_APPLY', 'CSE_V36_CLUSTER_APPLY')  # noqa: E501
     V36_CLUSTER_DELETE = ('DEF cluster delete', 'CLUSTER', 'V36_DELETE', 'CSE_V36_CLUSTER_DELETE')  # noqa: E501
     V36_NODE_DELETE = ('DEF nfs node delete', 'NODE', 'V36_DELETE', 'CSE_V36_NODE_DELETE')  # noqa: E501

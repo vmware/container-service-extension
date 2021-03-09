@@ -809,6 +809,27 @@ def get_payload_for_v36_cluster_upgrade_plan(params):
     }
 
 
+def get_payload_for_v36_cluster_upgrade(params):
+    """Construct telemetry payload of v35 cluster upgrade.
+
+    :param dict params: defined entity instance, telemetry source_description
+
+    :return: json telemetry data for the operation
+
+    :type: dict
+    """
+    def_entity = params.get(CLUSTER_ENTITY)
+    return {
+        PayloadKey.TYPE: CseOperation.V36_CLUSTER_UPGRADE.telemetry_table,
+        PayloadKey.CLUSTER_ID: uuid_hash(pyvcd_utils.extract_id(def_entity.id)),  # noqa: E501
+        PayloadKey.CLUSTER_KIND: def_entity.entity.kind,
+        PayloadKey.TEMPLATE_NAME: def_entity.entity.spec.k8_distribution.template_name,  # noqa: E501
+        PayloadKey.TEMPLATE_REVISION: def_entity.entity.spec.k8_distribution.template_revision,  # noqa: E501
+        PayloadKey.SOURCE_ID: SourceMap.get_source_id(params.get(PayloadKey.SOURCE_DESCRIPTION)),  # noqa: E501
+        PayloadKey.SOURCE_DESCRIPTION: params.get(PayloadKey.SOURCE_DESCRIPTION)  # noqa: E501
+    }
+
+
 def get_payload_for_v36_node_delete(params):
     """Construct telemetry payload of v36 cluster info.
 
