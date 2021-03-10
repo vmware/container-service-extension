@@ -119,10 +119,10 @@ class RequestKey(str, Enum):
     # common/multiple request keys
     ORG_NAME = 'org_name'
     OVDC_NAME = 'ovdc_name'
+    INPUT_SPEC = 'spec_body'
+    QUERY_PARAMS = 'query_filter'
 
     # keys related to cluster requests
-    INPUT_SPEC = 'spec_body'
-    V35_QUERY = 'query_filter'
     CLUSTER_NAME = 'cluster_name'
     CLUSTER_ID = 'cluster_id'
     MB_MEMORY = 'mb_memory'
@@ -164,6 +164,7 @@ class PaginationKey(str, Enum):
     PREV_PAGE_URI = 'previousPageUri'
     RESULT_TOTAL = 'resultTotal'
     VALUES = 'values'
+    CURSOR = 'cursor'
 
 
 @unique
@@ -185,3 +186,34 @@ class AccessControlKey(str, Enum):
 class ClusterAclKey(str, Enum):
     ACCESS_SETTING = 'accessSetting'
     UPDATE_ACL_ENTRIES = 'update_acl_entries'
+
+
+@unique
+class ClusterDetailsKey(str, Enum):
+    CLUSTER_ID = 'cluster_id'
+    CNI_NAME = 'cni'
+    CNI_VERSION = 'cni_version'
+    CSE_VERSION = 'cse_version'
+    DOCKER_VERSION = 'docker_version'
+    KUBERNETES_RUNTIME = 'kubernetes'
+    KUBERNETES_VERSION = 'kubernetes_version'
+    LEADER_ENDPOINT = 'leader_endpoint'
+    CONTROL_PLANE_NODE_LIST = 'master_nodes'
+    CLUSTER_NAME = 'name'
+    NETWORK_NAME = 'network_name'
+    NFS_NODE_LIST = 'nfs_nodes'
+    WORKER_NODE_LIST = 'nodes'
+    VM_COUNT = 'number_of_vms'
+    ORG_NAME = 'org_name'
+    ORG_HREF = 'org_href'
+    OS = 'os'
+    OWNER_NAME = 'owner_name'
+    STATUS = 'status'
+    STORAGE_PROFILE_NAME = 'storage_profile_name'
+    TEMPLATE_NAME = 'template_name'
+    TEMPLATE_REVISION = 'template_revision'
+    VAPP_HREF = 'vapp_href'
+    VAPP_ID = 'vapp_id'
+    VDC_HREF = 'vdc_href'
+    VDC_ID = 'vdc_id'
+    VDC_NAME = 'vdc_name'

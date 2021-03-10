@@ -10,6 +10,7 @@ import threading
 from threading import Thread
 import time
 import traceback
+from typing import List
 
 import click
 from pyvcloud.vcd.client import ApiVersion as vCDApiVersion
@@ -189,10 +190,6 @@ class Service(object, metaclass=Singleton):
         self.consumer = None
         self.consumer_thread = None
         self._consumer_watchdog = None
-        self._rde_schema_version = None
-
-    def get_rde_version_in_use(self):
-        return self.config['service']['rde_version_in_use']
 
     def get_service_config(self):
         return self.config
@@ -285,16 +282,6 @@ class Service(object, metaclass=Singleton):
         sysadmin_client = None
         try:
             sysadmin_client = vcd_utils.get_sys_admin_client()
-
-            vcd_supported_api_versions = \
-                set(sysadmin_client.get_supported_versions_list())
-            cse_supported_api_versions = \
-                set(server_constants.SUPPORTED_VCD_API_VERSIONS)
-            common_supported_api_versions = \
-                list(cse_supported_api_versions.intersection(vcd_supported_api_versions))  # noqa: E501
-            self.config['service']['supported_api_versions'] = \
-                common_supported_api_versions
-
             verify_version_compatibility(sysadmin_client,
                                          self.config['vcd']['api_version'],
                                          server_utils.should_use_mqtt_protocol(self.config))  # noqa: E501
@@ -498,20 +485,27 @@ class Service(object, metaclass=Singleton):
                 max([float(x) for x in self.config['service']['supported_api_versions']])  # noqa: E501
             self.config['service']['rde_version_in_use'] = \
                 def_utils.get_rde_version_by_vcd_api_version(max_vcd_api_version_supported)  # noqa: E501
-            msg_update_callback.general(f"Using RDE version: {self.get_rde_version_in_use()}")  # noqa: E501
+            server_rde_version = server_utils.get_rde_version_in_use()
+            msg_update_callback.general(f"Using RDE version: {server_rde_version}")  # noqa: E501
 
             schema_svc = def_schema_svc.DefSchemaService(cloudapi_client)
-            # TODO make use of self._rde_version to load Interface and Type
-            keys_map = def_constants.MAP_API_VERSION_TO_KEYS[float(sysadmin_client.get_api_version())] # noqa: E501
-            interface_id = def_utils.generate_interface_id(vendor=keys_map[def_constants.DefKey.INTERFACE_VENDOR], # noqa: E501
-                                                           nss=keys_map[def_constants.DefKey.INTERFACE_NSS], # noqa: E501
-                                                           version=keys_map[def_constants.DefKey.INTERFACE_VERSION]) # noqa: E501
-            entity_type_id = def_utils.generate_entity_type_id(vendor=keys_map[def_constants.DefKey.ENTITY_TYPE_VENDOR], # noqa: E501
-                                                               nss=keys_map[def_constants.DefKey.ENTITY_TYPE_NSS], # noqa: E501
-                                                               version=keys_map[def_constants.DefKey.ENTITY_TYPE_VERSION]) # noqa: E501
-            self._kubernetesInterface = schema_svc.get_interface(interface_id)
-            self._nativeEntityType = schema_svc.get_entity_type(entity_type_id)
-            msg = "Successfully loaded defined entity schema to global context"
+            def_metadata_dict: dict = def_utils.get_rde_metadata(server_rde_version)  # noqa: E501
+            entity_type: common_models.DefEntityType = \
+                def_metadata_dict[def_constants.RDEMetadataKey.ENTITY_TYPE]  # noqa: E501
+            interfaces: List[common_models.DefInterface] = \
+                def_metadata_dict[def_constants.RDEMetadataKey.INTERFACES]  # noqa: E501
+
+            for interface in interfaces:
+                # TODO change _kubernetesInterface to an array once additional
+                # interface for CSE is added.
+                self._kubernetesInterface = \
+                    schema_svc.get_interface(interface.get_id())
+
+            self._nativeEntityType = \
+                schema_svc.get_entity_type(entity_type.get_id())
+
+            msg = f"Successfully loaded defined entity schema " \
+                  f"{entity_type.get_id()} to global context"
             msg_update_callback.general(msg)
             logger.SERVER_LOGGER.debug(msg)
         except cse_exception.DefNotSupportedException:

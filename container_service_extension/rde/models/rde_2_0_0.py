@@ -5,7 +5,7 @@
 from dataclasses import dataclass
 from typing import List
 
-import container_service_extension.rde.constants as def_constants
+import container_service_extension.common.constants.shared_constants as shared_constants  # noqa: E501
 from container_service_extension.rde.models.abstractNativeEntity import AbstractNativeEntity  # noqa: E501
 
 
@@ -42,7 +42,7 @@ class Distribution:
     template_name: str = ""
     template_revision: int = 0
 
-    def __init__(self, template_name: str, template_revision: int, **kwargs):
+    def __init__(self, template_name: str = '', template_revision: int = 0, **kwargs):  # noqa: E501
         self.template_name = template_name
         self.template_revision = template_revision
 
@@ -59,6 +59,7 @@ class Node:
     name: str
     ip: str
     sizing_class: str = None
+    storage_profile: str = None
 
 
 @dataclass()
@@ -84,12 +85,20 @@ class CloudProperties:
     org_name: str = None
     ovdc_name: str = None
     ovdc_network_name: str = None
+    k8_distribution: Distribution = None
+    ssh_key: str = None  # TODO contemplate the need to keep this attribute
+    rollback_on_failure: bool = True
 
-    def __init__(self, org_name: str, ovdc_name: int, ovdc_network_name: str,
-                 **kwargs):
+    def __init__(self, org_name: str = None, ovdc_name: str = None, ovdc_network_name: str = None,  # noqa: E501
+                 k8_distribution: Distribution = None, ssh_key: str = None,
+                 rollback_on_failure: bool = True, **kwargs):
         self.org_name = org_name
         self.ovdc_name = ovdc_name
         self.ovdc_network_name = ovdc_network_name
+        self.k8_distribution = Distribution(**k8_distribution) \
+            if isinstance(k8_distribution, dict) else k8_distribution or Distribution()  # noqa: E501
+        self.ssh_key = ssh_key
+        self.rollback_on_failure = rollback_on_failure
 
 
 @dataclass()
@@ -117,7 +126,7 @@ class Status:
         self.nodes = Nodes(**nodes) if isinstance(nodes, dict) else nodes
         self.cloud_properties = CloudProperties(
             **cloud_properties) if isinstance(cloud_properties, dict) \
-            else cloud_properties
+            else cloud_properties or CloudProperties()
 
 
 @dataclass()
@@ -197,11 +206,11 @@ class NativeEntity(AbstractNativeEntity):
     metadata: Metadata
     spec: ClusterSpec
     status: Status = Status()
-    kind: str = def_constants.DEF_NATIVE_ENTITY_TYPE_NSS
+    kind: str = shared_constants.ClusterEntityKind.NATIVE.value
     api_version: str = ''
 
     def __init__(self, metadata: Metadata, spec: ClusterSpec, status=Status(),
-                 kind: str = def_constants.DEF_VMWARE_INTERFACE_NSS,
+                 kind: str = shared_constants.ClusterEntityKind.NATIVE.value,
                  api_version: str = '', **kwargs):
 
         self.metadata = Metadata(**metadata) \

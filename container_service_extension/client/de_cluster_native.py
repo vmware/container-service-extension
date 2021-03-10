@@ -15,9 +15,10 @@ import container_service_extension.common.constants.shared_constants as shared_c
 import container_service_extension.common.utils.pyvcloud_utils as vcd_utils
 import container_service_extension.exception.exceptions as cse_exceptions
 import container_service_extension.logging.logger as logger
-import container_service_extension.rde.entity_service as def_entity_svc
+import container_service_extension.rde.common.entity_service as def_entity_svc
 import container_service_extension.rde.models.common_models as common_models
 import container_service_extension.rde.models.rde_1_0_0 as rde_1_0_0
+import container_service_extension.rde.utils as def_utils
 
 
 class DEClusterNative:
@@ -40,6 +41,9 @@ class DEClusterNative:
                 logger_wire=logger_wire)
         self._native_cluster_api = NativeClusterApi(client)
         self._client = client
+        self._server_rde_version = \
+            def_utils.get_rde_version_by_vcd_api_version(
+                float(client.get_api_version()))
 
     def create_cluster(self, cluster_entity: rde_1_0_0.NativeEntity):
         """Create a new Kubernetes cluster.
@@ -75,7 +79,9 @@ class DEClusterNative:
             return self.get_cluster_info_by_id(cluster_id)
         filters = client_utils.construct_filters(org=org, vdc=vdc)
         entity_svc = def_entity_svc.DefEntityService(self._cloudapi_client)
-        def_entity = entity_svc.get_native_entity_by_name(name=cluster_name, filters=filters)  # noqa: E501
+        def_entity = \
+            entity_svc.get_native_rde_by_name_and_rde_version(
+                cluster_name, self._server_rde_version, filters=filters)  # noqa: E501
         logger.CLIENT_LOGGER.debug(f"Defined entity info from server:{def_entity}")  # noqa: E501
         if not def_entity:
             logger.CLIENT_LOGGER.error(f"Cannot find native cluster with name {cluster_name}")  # noqa: E501
@@ -135,7 +141,8 @@ class DEClusterNative:
         """
         filters = client_utils.construct_filters(org=org, vdc=vdc)
         entity_svc = def_entity_svc.DefEntityService(self._cloudapi_client)
-        def_entity = entity_svc.get_native_entity_by_name(name=cluster_name, filters=filters)  # noqa: E501
+        def_entity = entity_svc.get_native_rde_by_name_and_rde_version(
+            cluster_name, self._server_rde_version, filters=filters)
         if def_entity:
             return self.delete_nfs_by_cluster_id(def_entity.id, node_name)
         raise cse_exceptions.ClusterNotFoundError(f"Cluster '{cluster_name}' not found.")  # noqa: E501
@@ -189,7 +196,8 @@ class DEClusterNative:
         """
         filters = client_utils.construct_filters(org=org, vdc=vdc)
         entity_svc = def_entity_svc.DefEntityService(self._cloudapi_client)
-        def_entity = entity_svc.get_native_entity_by_name(name=cluster_name, filters=filters)  # noqa: E501
+        def_entity = entity_svc.get_native_rde_by_name_and_rde_version(
+            cluster_name, self._server_rde_version, filters=filters)
         if def_entity:
             return self.get_upgrade_plan_by_cluster_id(def_entity.id)
         raise cse_exceptions.ClusterNotFoundError(f"Cluster '{cluster_name}' not found.")  # noqa: E501
@@ -219,7 +227,8 @@ class DEClusterNative:
         """
         filters = client_utils.construct_filters(org=org_name, vdc=ovdc_name)
         entity_svc = def_entity_svc.DefEntityService(self._cloudapi_client)
-        current_entity = entity_svc.get_native_entity_by_name(name=cluster_name, filters=filters)  # noqa: E501
+        current_entity = entity_svc.get_native_rde_by_name_and_rde_version(
+            cluster_name, self._server_rde_version, filters=filters)
         if current_entity:
             current_entity.entity.spec.k8_distribution.template_name = template_name  # noqa: E501
             current_entity.entity.spec.k8_distribution.template_revision = template_revision  # noqa: E501
@@ -255,7 +264,8 @@ class DEClusterNative:
             # If cluster id doesn't exist, an exception will be raised
             def_entity = entity_svc.get_entity(cluster_id)
         else:
-            def_entity = entity_svc.get_native_entity_by_name(cluster_name)
+            def_entity = entity_svc.get_native_rde_by_name_and_rde_version(
+                cluster_name, self._server_rde_version)
         if not def_entity:
             cluster_entity = self._native_cluster_api.create_cluster(cluster_spec)  # noqa: E501
         else:
@@ -267,7 +277,8 @@ class DEClusterNative:
     def get_cluster_id_by_name(self, cluster_name, org=None, vdc=None):
         filters = client_utils.construct_filters(org=org, vdc=vdc)
         entity_svc = def_entity_svc.DefEntityService(self._cloudapi_client)
-        def_entity = entity_svc.get_native_entity_by_name(name=cluster_name, filters=filters)  # noqa: E501
+        def_entity = entity_svc.get_native_rde_by_name_and_rde_version(
+            cluster_name, self._server_rde_version, filters=filters)
         if not def_entity:
             raise cse_exceptions.ClusterNotFoundError(f"Cluster '{cluster_name}' not found.")  # noqa: E501
         return def_entity.id

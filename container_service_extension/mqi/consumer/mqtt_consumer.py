@@ -15,6 +15,7 @@ import container_service_extension.mqi.consumer.constants as constants
 from container_service_extension.mqi.consumer.consumer_thread_pool_executor \
     import ConsumerThreadPoolExecutor
 import container_service_extension.mqi.consumer.utils as utils
+import container_service_extension.server.behavior_dispatcher as behavior_dispatcher  # noqa: E501
 
 
 class MQTTConsumer:
@@ -36,8 +37,21 @@ class MQTTConsumer:
         self.fsencoding = sys.getfilesystemencoding()
         self._mqtt_client = None
         self._ctpe = ConsumerThreadPoolExecutor(self.num_processors)
+        self._behavior_tpe = ConsumerThreadPoolExecutor(constants.BEHAVIOR_THREAD_POOL_SIZE)  # noqa: E501
         self._publish_lock = Lock()
         self._is_closing = False
+
+    def form_behavior_response_json(self, task_id, entity_id, payload, status):
+        response_json = {
+            "type": "BEHAVIOR_RESPONSE",
+            "headers": {
+                "taskId": task_id,
+                "entityId": entity_id,
+                "status": status
+            },
+            "payload": payload
+        }
+        return response_json
 
     def form_response_json(self, request_id, status_code, reply_body_str,
                            task_path=None):
@@ -65,6 +79,17 @@ class MQTTConsumer:
                 and task_path is not None:
             response_json['httpResponse']['headers']['Location'] = task_path
         return response_json
+
+    def process_behavior_message(self, msg_json):
+        status, payload = behavior_dispatcher.process_behavior_request(msg_json)  # noqa: E501
+        task_id: str = msg_json['headers']['taskId']
+        entity_id: str = msg_json['headers']['entityId']
+        response_json = self.form_behavior_response_json(task_id=task_id,
+                                                         entity_id=entity_id,
+                                                         payload=payload,
+                                                         status=status)
+        self.send_response(response_json)
+        LOGGER.debug(f'MQTT response: {response_json}')
 
     def process_mqtt_message(self, msg):
         msg_json, reply_body, status_code, req_id = utils.get_response_fields(
@@ -119,8 +144,15 @@ class MQTTConsumer:
             # No longer processing messages if server is closing
             if self._is_closing:
                 return
-
-            if self._ctpe.max_threads_busy():
+            msg_json = json.loads(msg.payload.decode(self.fsencoding))
+            if msg_json['type'] == 'BEHAVIOR_INVOCATION':
+                if self._behavior_tpe.max_threads_busy():
+                    # TODO Find out from Extensibility on what is recommended.
+                    self.send_too_many_requests_response(msg)
+                else:
+                    self._behavior_tpe.submit(
+                        lambda: self.process_behavior_message(msg_json=msg_json))  # noqa: E501
+            elif self._ctpe.max_threads_busy():
                 self.send_too_many_requests_response(msg)
             else:
                 self._ctpe.submit(lambda: self.process_mqtt_message(msg))

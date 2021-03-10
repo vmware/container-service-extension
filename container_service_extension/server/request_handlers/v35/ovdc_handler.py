@@ -2,7 +2,6 @@
 # Copyright (c) 2019 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 
-from container_service_extension.common.constants.server_constants import CseOperation as CseServerOperationInfo  # noqa: E501
 from container_service_extension.common.constants.shared_constants import CSE_PAGINATION_DEFAULT_PAGE_SIZE  # noqa: E501
 from container_service_extension.common.constants.shared_constants import CSE_PAGINATION_FIRST_PAGE_NUMBER  # noqa: E501
 from container_service_extension.common.constants.shared_constants import PaginationKey  # noqa: E501
@@ -56,6 +55,7 @@ def ovdc_list(data, operation_context: ctx.OperationContext):
     return ovdc_service.list_ovdc(operation_context)
 
 
+# TODO: Record telemetry in a different telemetry handler
 @record_user_action_telemetry(cse_operation=CseOperation.OVDC_LIST)
 @request_utils.v35_api_exception_handler
 def org_vdc_list(data, operation_context: ctx.OperationContext):
@@ -65,7 +65,7 @@ def org_vdc_list(data, operation_context: ctx.OperationContext):
     :return: Dictionary containing paginated response with Org VDC runtime info
     :rtype: dict
     """
-    query_params = data.get(RequestKey.V35_QUERY, {})
+    query_params = data.get(RequestKey.QUERY_PARAMS, {})
     page_number = int(query_params.get(PaginationKey.PAGE_NUMBER,
                                        CSE_PAGINATION_FIRST_PAGE_NUMBER))
     page_size = int(query_params.get(PaginationKey.PAGE_SIZE,
@@ -73,8 +73,7 @@ def org_vdc_list(data, operation_context: ctx.OperationContext):
     result = ovdc_service.list_org_vdcs(operation_context,
                                         page_number=page_number,
                                         page_size=page_size)
-    api_path = CseServerOperationInfo.V35_ORG_VDC_LIST.api_path_format
-    base_uri = f"{operation_context.client.get_api_uri().strip('/')}{api_path}"
+    base_uri = data['url']
     return server_utils.create_links_and_construct_paginated_result(
         base_uri,
         result[PaginationKey.VALUES],

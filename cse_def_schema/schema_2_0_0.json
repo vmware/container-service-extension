@@ -6,9 +6,22 @@
                 "properties": {
                     "name": {"type": "string"},
                     "ip": {"type": "string"},
-                    "sizing_class": {"type": "string"}
+                    "sizing_class": {"type": "string"},
+                    "storage_profile": {"type": "string"}
                 },
-                "additionalproperties": true
+                "additionalProperties": true
+            },
+            "k8_distribution": {
+                "type": "object",
+                "required": [
+                   "template_name",
+                   "template_revision"
+                ],
+                "properties": {
+                   "template_name":  { "type": "string"},
+                   "template_revision": { "type": "integer"}
+                },
+                "additionalProperties": true
             }
         },
         "type": "object",
@@ -55,7 +68,8 @@
                                 "type": "string",
                                 "description":"The storage-profile with which worker nodes need to be provisioned in a given \"ovdc\". The specified storage-profile is expected to be available on the given ovdc."
                             }
-                        }
+                        },
+                        "additionalProperties": true
                     },
                     "control_plane": {
                         "type": "object",
@@ -78,7 +92,8 @@
                                 "type": "string",
                                 "description":"The storage-profile with which control-plane needs to be provisioned in a given \"ovdc\". The specified storage-profile is expected to be available on the given ovdc."
                             }
-                        }
+                        },
+                        "additionalProperties": true
                     },
                     "nfs": {
                         "type": "object",
@@ -101,7 +116,8 @@
                                 "type": "string",
                                 "description":"The storage-profile with which nfs needs to be provisioned in a given \"ovdc\". The specified storage-profile is expected to be available on the given ovdc."
                             }
-                        }
+                        },
+                        "additionalProperties": true
                     },
                     "settings": {
                         "type": "object",
@@ -121,24 +137,14 @@
                                 "type": "boolean",
                                 "description":"On any cluster operation failure, if the value is set to true, affected node VMs will be automatically deleted."
                             }
-                        }
+                        },
+                        "additionalProperties": true
                     },
                     "k8_distribution": {
-                        "type": "object",
-                        "required": [
-                            "template_name",
-                            "template_revision"
-                        ],
-                        "properties": {
-                            "template_name": {
-                                "type": "string"
-                            },
-                            "template_revision": {
-                                "type": "integer"
-                            }
-                        }
+                      "$ref": "#/definitions/k8_distribution"
                     }
-                }
+                },
+                "additionalProperties": true
             },
             "status": {
                 "type": "object",
@@ -185,7 +191,8 @@
                           },
                           "default": []
                         }
-                      }
+                      },
+                      "additionalProperties": true
                     },
                     "cloud_properties": {
                       "type": "object",
@@ -202,11 +209,23 @@
                         "ovdc_network_name": {
                           "type":  "string",
                           "description": "The name of the Organization Virtual data center network to which cluster is connected."
+                        },
+                        "k8_distribution": {
+                          "$ref": "#/definitions/k8_distribution"
+                        },
+                        "ssh_key": {
+                          "type": "string",
+                          "description":"The ssh key that users can use to log into the node VMs without explicitly providing passwords."
+                        },
+                        "rollback_on_failure": {
+                          "type": "boolean",
+                          "description":"On any cluster operation failure, if the value is set to true, affected node VMs will be automatically deleted."
                         }
-                      }
+                      },
+                      "additionalProperties": true
                     }
                 },
-                "additionalproperties": true
+                "additionalProperties": true
             },
             "metadata": {
                 "type": "object",
@@ -228,13 +247,14 @@
                         "type": "string",
                         "description":"The name of the cluster."
                     }
-                }
+                },
+                "additionalProperties": true
             },
-            "apiversion": {
+            "api_version": {
                 "type": "string",
                 "description":"Yet to be defined."
             }
         },
-        "additionalproperties": false
+        "additionalProperties": false
 
 }

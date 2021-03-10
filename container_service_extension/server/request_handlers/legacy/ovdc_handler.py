@@ -49,13 +49,16 @@ def ovdc_update(request_data, op_ctx: ctx.OperationContext):
     """
     # TODO the data flow here should be better understood.
     # org_name and ovdc_name seem redundant if we already have ovdc_id
+    data = req_utils.flatten_request_data(
+        request_data, [RequestKey.INPUT_SPEC, RequestKey.QUERY_PARAMS])
+
     required = [
         RequestKey.ORG_NAME,
         RequestKey.OVDC_NAME,
         RequestKey.K8S_PROVIDER,
         RequestKey.OVDC_ID
     ]
-    validated_data = request_data
+    validated_data = data
     req_utils.validate_payload(validated_data, required)
 
     k8s_provider = validated_data[RequestKey.K8S_PROVIDER]
@@ -140,8 +143,12 @@ def ovdc_list(request_data, op_ctx: ctx.OperationContext):
     """
     # NOTE: Response sent out by this function should not be
     # paginated
+
+    data = req_utils.flatten_request_data(
+        request_data, [RequestKey.QUERY_PARAMS])
+
     # Record telemetry data
-    cse_params = copy.deepcopy(request_data)
+    cse_params = copy.deepcopy(data)
     record_user_action_details(cse_operation=CseOperation.OVDC_LIST,
                                cse_params=cse_params)
 
@@ -149,6 +156,7 @@ def ovdc_list(request_data, op_ctx: ctx.OperationContext):
     return _get_cse_ovdc_list(op_ctx.sysadmin_client, org_vdcs)
 
 
+# TODO: Record telemetry in a different telemetry handler
 @record_user_action_telemetry(cse_operation=CseOperation.OVDC_LIST)
 def org_vdc_list(request_data, op_ctx: ctx.OperationContext):
     """Request handler for orgvdc list operation.
@@ -157,17 +165,21 @@ def org_vdc_list(request_data, op_ctx: ctx.OperationContext):
     :return: Dictionary containing list of org VDC K8s provider metadata
     :rtype: dict
     """
-    # NOTE: Response sent out by this funciton should be paginated
+    # NOTE: Response sent out by this function should be paginated
+    data = req_utils.flatten_request_data(
+        request_data, [RequestKey.QUERY_PARAMS])
+
     defaults = {
         PaginationKey.PAGE_NUMBER: CSE_PAGINATION_FIRST_PAGE_NUMBER,
         PaginationKey.PAGE_SIZE: CSE_PAGINATION_DEFAULT_PAGE_SIZE
     }
-    validated_data = {**defaults, **request_data}
+    validated_data = {**defaults, **data}
 
     page_number = int(validated_data[PaginationKey.PAGE_NUMBER])
     page_size = int(validated_data[PaginationKey.PAGE_SIZE])
 
     # Record telemetry data
+    # TODO: enhance telemetry to record the page number and page size data.
     cse_params = copy.deepcopy(validated_data)
     cse_params[PayloadKey.SOURCE_DESCRIPTION] = thread_local_data.get_thread_local_data(ThreadLocalData.USER_AGENT)  # noqa: E501
     record_user_action_details(cse_operation=CseOperation.OVDC_LIST,
@@ -238,6 +250,9 @@ def ovdc_compute_policy_update(request_data,
 
     :return: Dictionary with task href.
     """
+    data = req_utils.flatten_request_data(
+        request_data, [RequestKey.INPUT_SPEC])
+
     required = [
         RequestKey.OVDC_ID,
         RequestKey.COMPUTE_POLICY_ACTION,
@@ -246,7 +261,7 @@ def ovdc_compute_policy_update(request_data,
     defaults = {
         RequestKey.REMOVE_COMPUTE_POLICY_FROM_VMS: False,
     }
-    validated_data = {**defaults, **request_data}
+    validated_data = {**defaults, **data}
     req_utils.validate_payload(validated_data, required)
 
     action = validated_data[RequestKey.COMPUTE_POLICY_ACTION]

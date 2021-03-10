@@ -66,6 +66,7 @@ class NsxtNATRuleKey(str, Enum):
     LOGGING = 'logging'
     APPLICATION_PORT_PROFILE = 'applicationPortProfile'
     DNAT_EXTERNAL_PORT = 'dnatExternalPort'
+    ID = 'id'
 
 
 @unique

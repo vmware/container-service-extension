@@ -17,14 +17,14 @@ from container_service_extension.exception.exception_handler import handle_excep
 import container_service_extension.exception.exceptions as cse_exception
 from container_service_extension.logging.logger import SERVER_LOGGER as LOGGER
 import container_service_extension.security.context.operation_context as ctx
-import container_service_extension.server.request_handlers.native_cluster_handler as native_cluster_handler  # noqa: E501
-import container_service_extension.server.request_handlers.ovdc_handler as ovdc_handler  # noqa: E501
-import container_service_extension.server.request_handlers.pks_cluster_handler as pks_cluster_handler  # noqa: E501
-import container_service_extension.server.request_handlers.pks_ovdc_handler as pks_ovdc_handler  # noqa: E501
+import container_service_extension.server.request_handlers.legacy.native_cluster_handler as native_cluster_handler  # noqa: E501
+import container_service_extension.server.request_handlers.legacy.ovdc_handler as ovdc_handler  # noqa: E501
+import container_service_extension.server.request_handlers.pks.pks_cluster_handler as pks_cluster_handler  # noqa: E501
+import container_service_extension.server.request_handlers.pks.pks_ovdc_handler as pks_ovdc_handler  # noqa: E501
 import container_service_extension.server.request_handlers.system_handler as system_handler  # noqa: E501
 import container_service_extension.server.request_handlers.template_handler as template_handler  # noqa: E501 E501
-import container_service_extension.server.request_handlers.v35.def_cluster_handler as v35_cluster_handler # noqa: E501
-import container_service_extension.server.request_handlers.v35.ovdc_handler as v35_ovdc_handler # noqa: E501
+import container_service_extension.server.request_handlers.v35.def_cluster_handler as v35_cluster_handler  # noqa: E501
+import container_service_extension.server.request_handlers.v35.ovdc_handler as v35_ovdc_handler  # noqa: E501
 import container_service_extension.server.request_handlers.v36.def_cluster_handler as v36_cluster_handler  # noqa: E501
 
 
@@ -34,6 +34,7 @@ Following are the valid api endpoints.
 
 API version 33.0 and 34.0
 --------------------------
+GET /cse/nativeclusters
 GET /cse/clusters?org={org name}&vdc={vdc name}
 POST /cse/clusters
 GET /cse/cluster/{cluster name}?org={org name}&vdc={vdc name}
@@ -57,6 +58,7 @@ PUT /cse/ovdc/{ovdc_id}/compute-policies
 
 API version 35.0
 ----------------
+GET /cse/3.0/nativeclusters
 GET /cse/3.0/clusters
 Entities can be filtered by nested properties as defined per the schema
 GET /cse/3.0/clusters?entity.kind={native}&entity.metadata.org_name={org name}
@@ -102,6 +104,7 @@ OPERATION_TO_HANDLER = {
     CseOperation.CLUSTER_CREATE: native_cluster_handler.cluster_create,
     CseOperation.CLUSTER_DELETE: native_cluster_handler.cluster_delete,
     CseOperation.CLUSTER_INFO: native_cluster_handler.cluster_info,
+    CseOperation.NATIVE_CLUSTER_LIST: native_cluster_handler.native_cluster_list,  # noqa: E501
     CseOperation.CLUSTER_LIST: native_cluster_handler.cluster_list,
     CseOperation.CLUSTER_RESIZE: native_cluster_handler.cluster_resize,
     CseOperation.CLUSTER_UPGRADE_PLAN: native_cluster_handler.cluster_upgrade_plan,  # noqa: E501
@@ -114,6 +117,7 @@ OPERATION_TO_HANDLER = {
     CseOperation.V35_CLUSTER_CREATE: v35_cluster_handler.cluster_create,
     CseOperation.V35_CLUSTER_DELETE: v35_cluster_handler.cluster_delete,
     CseOperation.V35_CLUSTER_INFO: v35_cluster_handler.cluster_info,
+    CseOperation.V35_NATIVE_CLUSTER_LIST: v35_cluster_handler.native_cluster_list,  # noqa: E501
     CseOperation.V35_CLUSTER_LIST: v35_cluster_handler.cluster_list,
     CseOperation.V35_CLUSTER_RESIZE: v35_cluster_handler.cluster_resize,
     CseOperation.V35_CLUSTER_UPGRADE_PLAN: v35_cluster_handler.cluster_upgrade_plan,  # noqa: E501
@@ -168,7 +172,7 @@ def _parse_accept_header(accept_header: str):
 
     :param str accept_header: value of 'Accept' header sent by client
 
-    :returns: accept header that is servicable by CSE
+    :returns: accept header that is serviceable by CSE
 
     :raises NotAcceptableRequestError: If none of the accept headers matches
         what CSE is looking for.
@@ -297,7 +301,8 @@ def process_request(message):
     if message['queryString']:
         query_params = dict(parse_qsl(message['queryString']))
         if is_cse_3_0_request:
-            request_data[shared_constants.RequestKey.V35_QUERY] = query_params
+            request_data[shared_constants.RequestKey.QUERY_PARAMS] = \
+                query_params
         else:
             request_data.update(query_params)
         LOGGER.debug(f"query parameters: {query_params}")
@@ -486,10 +491,30 @@ def _get_v35_plus_url_data(method: str, url: str, api_version: str):
     if operation_type == OperationType.OVDC:
         return _get_v35_plus_ovdc_url_data(method, tokens)
 
+    if operation_type == OperationType.NATIVE_CLUSTER:
+        return _get_v35_plus_native_cluster_url_data(method, tokens)
+
     if operation_type == OperationType.ORG_VDCS:
-        return _get_v35_org_vdc_url_data(method, tokens)
+        return _get_v35_plus_org_vdc_url_data(method, tokens)
 
     raise cse_exception.NotFoundRequestError()
+
+
+def _get_v35_plus_native_cluster_url_data(method: str, tokens: list):
+    """Parse tokens from url and http method to get v35 native cluster data.
+
+    Returns a dictionary with operation and url data.
+
+    :param RequestMethod method: http verb
+    :param str[] tokens: http url
+
+    :rtype: dict
+    """
+    num_tokens = len(tokens)
+    if num_tokens == 5:
+        if method == shared_constants.RequestMethod.GET:
+            return {_OPERATION_KEY: CseOperation.V35_NATIVE_CLUSTER_LIST}
+        raise cse_exception.MethodNotAllowedRequestError()
 
 
 def _get_v35_plus_cluster_url_data(method: str, tokens: list, api_version: str) -> dict:  # noqa: E501
@@ -604,7 +629,7 @@ def _get_v35_plus_ovdc_url_data(method: str, tokens: list):
         raise cse_exception.MethodNotAllowedRequestError()
 
 
-def _get_v35_org_vdc_url_data(method: str, tokens: list):
+def _get_v35_plus_org_vdc_url_data(method: str, tokens: list):
     """Parse tokens from url and http method to get v35 ovdc specific data.
 
     Returns a dictionary with operation and url data.
@@ -629,6 +654,15 @@ def _get_legacy_url_data(method: str, url: str, api_version: str):
     operation_type = tokens[3].lower()
     if operation_type.endswith('s'):
         operation_type = operation_type[:-1]
+
+    if operation_type == OperationType.NATIVE_CLUSTER:
+        if api_version not in (VcdApiVersion.VERSION_33.value,
+                               VcdApiVersion.VERSION_35.value):
+            raise cse_exception.NotFoundRequestError()
+        if num_tokens == 4:
+            if method == shared_constants.RequestMethod.GET:
+                return {_OPERATION_KEY: CseOperation.NATIVE_CLUSTER_LIST}
+            raise cse_exception.MethodNotAllowedRequestError()
 
     if operation_type == OperationType.CLUSTER:
         if api_version not in (VcdApiVersion.VERSION_33.value,

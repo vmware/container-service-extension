@@ -19,6 +19,9 @@ class CloudApiResource(str, Enum):
     PVDC_COMPUTE_POLICIES = 'pvdcComputePolicies'
     EXTENSION_UI = 'extensions/ui'
     INTERFACES = 'interfaces'
+    BEHAVIOR_INVOCATION = 'invocations'
+    BEHAVIORS = 'behaviors'
+    BEHAVIOR_ACLS = 'behaviorAccessControls'
     ENTITY_TYPES = 'entityTypes'
     ENTITY_TYPES_TOKEN = 'types'
     ENTITIES = 'entities'
@@ -30,3 +33,9 @@ class CloudApiResource(str, Enum):
     EDGE_GATEWAYS = 'edgeGateways'
     EXTERNAL_NETWORKS = 'externalNetworks'
     USED_IP_ADDRESSES = 'usedIpAddresses'
+
+
+class ResponseKeys(str, Enum):
+    LINK = 'link'
+    REL = 'rel'
+    URL = 'url'
