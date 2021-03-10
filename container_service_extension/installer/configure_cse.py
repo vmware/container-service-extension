@@ -946,6 +946,8 @@ def _register_interfaces(cloudapi_client,
             # Create other interfaces if not present
             schema_svc.create_interface(interface)
             msg = f"Successfully registered interface '{interface.name}'."
+            msg_update_callback.general(msg)
+            INSTALL_LOGGER.info(msg)
 
 
 def _register_right(client, right_name, description, category, bundle_key,

@@ -14,6 +14,10 @@ MQTT_CLIENT_ID = 'cseMQTT'
 MQTT_CONNECT_PORT = 443
 TRANSPORT_WSS = 'websockets'
 QOS_LEVEL = 2  # No duplicate messages
+# Behavior invocations are long-running synchronous tasks. Dedicated
+# thread-pool for behaviors will prevent hogging MQTT's main thread-pool
+# (MQTTConsumer._ctpe).
+BEHAVIOR_THREAD_POOL_SIZE = 64
 
 # Used by only AMQP consumer
 MAX_PROCESSING_REQUEST_CACHE_SIZE = 1000

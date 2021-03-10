@@ -38,7 +38,7 @@ class ExecutionProperties:
     invocation_timeout: int = 216000
 
     def __init__(self, serviceId: str = MQTT_EXTENSION_URN,
-                 invocation_timeout: int = 216000, **kwargs):
+                 invocation_timeout: int = 86400, **kwargs):
         self.serviceId = serviceId
         self.invocation_timeout = invocation_timeout
 
@@ -110,3 +110,10 @@ class BehaviorAcl(Enum):
                                           AclAccessLevelId.AccessLevelFullControl)  # noqa: E501
     KUBE_CONFIG_ACL = BehaviorAclEntry(KUBE_CONFIG_BEHAVIOR_INTERFACE_ID,
                                        AclAccessLevelId.AccessLevelReadOnly)
+
+
+@dataclass
+class BehaviorErrorPayload:
+    majorErrorCode: str = '400'
+    minorErrorCode: str = None
+    message: str = None
