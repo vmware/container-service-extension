@@ -10,7 +10,6 @@ import yaml
 
 from container_service_extension.common.constants.server_constants import ScriptFile  # noqa: E501
 from container_service_extension.common.constants.server_constants import TemplateScriptFile  # noqa: E501
-from container_service_extension.common.constants.server_constants import TEMPLATE_SCRIPT_LIST  # noqa: E501
 from container_service_extension.common.utils.core_utils import download_file
 from container_service_extension.common.utils.core_utils import NullPrinter
 import container_service_extension.installer.templates.local_template_manager as ltm  # noqa: E501
@@ -88,16 +87,17 @@ class RemoteTemplateManager():
         :param str script_file_name:
         """
         base_url = self._get_base_url_from_remote_template_cookbook_url()
-        revisioned_template_name = ltm.get_revisioned_template_name(template_name, revision)
+        revisioned_template_name = \
+            ltm.get_revisioned_template_name(template_name, revision)
         if legacy_mode:
             return base_url + \
                 f"/{REMOTE_SCRIPTS_DIR}" \
                 f"/{revisioned_template_name}" \
                 f"/{script_file_name}"
         return base_url + \
-                f"/{REMOTE_SCRIPTS_V2_DIR}" \
-                f"/{revisioned_template_name}" \
-                f"/{script_file_name}"
+            f"/{REMOTE_SCRIPTS_V2_DIR}" \
+            f"/{revisioned_template_name}" \
+            f"/{script_file_name}"
 
     def get_remote_template_cookbook(self):
         """Get the remote template cookbook as a dictionary.
@@ -135,8 +135,9 @@ class RemoteTemplateManager():
             scripts_to_download = ScriptFile
         for script_file in scripts_to_download:
             remote_script_url = \
-                self._get_remote_script_url(template_name, revision,
-                                            script_file, legacy_mode=legacy_mode)
+                self._get_remote_script_url(
+                    template_name, revision,
+                    script_file, legacy_mode=legacy_mode)
 
             local_script_filepath = ltm.get_script_filepath(
                 template_name, revision, script_file)
