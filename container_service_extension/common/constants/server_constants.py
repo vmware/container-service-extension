@@ -227,6 +227,13 @@ class ScriptFile(str, Enum):
     WORKER_K8S_UPGRADE = 'cluster-upgrade/worker-k8s-upgrade.sh'
 
 
+TEMPLATE_SCRIPT_LIST = [ScriptFile.CUST, ScriptFile.INIT,
+                        ScriptFile.DOCKER_UPGRADE,
+                        ScriptFile.CONTROL_PLANE_CNI_APPLY,
+                        ScriptFile.CONTROL_PLANE_K8S_UPGRADE,
+                        ScriptFile.WORKER_K8S_UPGRADE]
+
+
 @unique
 class LocalTemplateKey(str, Enum):
     """Enumerate the keys that define a template."""
