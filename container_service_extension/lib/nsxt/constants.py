@@ -83,3 +83,4 @@ class NsxtGatewayRequestKey(str, Enum):
     START_ADDRESS = 'startAddress'
     END_ADDRESS = 'endAddress'
     STATUS = 'status'
+    IP_ADDRESS = 'ipAddress'
