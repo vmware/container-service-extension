@@ -187,7 +187,7 @@ class ClusterService(abstract_broker.AbstractBroker):
 
         return result.content.decode()
 
-    def create_cluster(self, cluster_spec: rde_2_x):
+    def create_cluster(self, cluster_spec: rde_2_x.NativeEntity):
         """Start the cluster creation operation.
 
         Creates corresponding defined entity in vCD for every native cluster.
@@ -292,7 +292,7 @@ class ClusterService(abstract_broker.AbstractBroker):
         return def_entity
 
     def resize_cluster(self, cluster_id: str,
-                       cluster_spec: rde_2_x):
+                       cluster_spec: rde_2_x.NativeEntity):
         """Start the resize cluster operation.
 
         :param str cluster_id: Defined entity Id of the cluster
@@ -445,14 +445,14 @@ class ClusterService(abstract_broker.AbstractBroker):
                                               curr_entity.entity.status.cloud_properties.k8_distribution.template_revision)  # noqa: E501
 
     def upgrade_cluster(self, cluster_id: str,
-                        upgrade_spec: rde_2_x):
+                        upgrade_spec: rde_2_x.NativeEntity):
         """Start the upgrade cluster operation.
 
         Upgrading cluster is an asynchronous task, so the returned
         `result['task_href']` can be polled to get updates on task progress.
 
         :param str cluster_id: id of the cluster to be upgraded
-        :param rde_2_x upgrade_spec: cluster spec with new
+        :param rde_2_x.NativeEntity upgrade_spec: cluster spec with new
             kubernetes distribution and revision
 
         :return: Defined entity with upgrade in progress set
@@ -526,14 +526,14 @@ class ClusterService(abstract_broker.AbstractBroker):
                                     template=template)
         return curr_entity
 
-    def update_cluster(self, cluster_id: str, update_spec: rde_2_x):  # noqa: E501
+    def update_cluster(self, cluster_id: str, update_spec: rde_2_x.NativeEntity):  # noqa: E501
         """Start the update cluster operation (resize or upgrade).
 
         Updating cluster is an asynchronous task, so the returned
         `result['task_href']` can be polled to get updates on task progress.
 
         :param str cluster_id: id of the cluster to be updated
-        :param rde_2_x update_spec: cluster spec with new
+        :param rde_2_x.NativeEntity update_spec: cluster spec with new
         worker/nfs node count or new kubernetes distribution and revision
 
         :return: Defined entity with update in progress set
@@ -676,7 +676,7 @@ class ClusterService(abstract_broker.AbstractBroker):
 
     @thread_utils.run_async
     def _create_cluster_async(self, cluster_id: str,
-                              cluster_spec: rde_2_x):
+                              cluster_spec: rde_2_x.NativeEntity):
         try:
             cluster_name = cluster_spec.metadata.cluster_name
             org_name = cluster_spec.metadata.org_name
@@ -1048,7 +1048,7 @@ class ClusterService(abstract_broker.AbstractBroker):
 
     @thread_utils.run_async
     def _create_nodes_async(self, cluster_id: str,
-                            cluster_spec: rde_2_x):
+                            cluster_spec: rde_2_x.NativeEntity):
         """Create worker and/or nfs nodes in vCD.
 
         This method is executed by a thread in an asynchronous manner.
@@ -1528,7 +1528,7 @@ class ClusterService(abstract_broker.AbstractBroker):
 
     @thread_utils.run_async
     def _delete_nodes_async(self, cluster_id: str,
-                            cluster_spec: rde_2_x = None,
+                            cluster_spec: rde_2_x.NativeEntity = None,
                             nodes_to_del=None):
         """Delete worker and/or nfs nodes in vCD.
 
