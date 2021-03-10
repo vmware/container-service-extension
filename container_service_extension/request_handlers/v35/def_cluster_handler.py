@@ -51,7 +51,8 @@ def cluster_resize(data: dict, op_ctx: ctx.OperationContext):
     request_utils.validate_request_payload(
         asdict(cluster_entity_spec.spec), asdict(curr_entity.entity.spec),
         exclude_fields=[FlattenedClusterSpecKey.WORKERS_COUNT.value,
-                        FlattenedClusterSpecKey.NFS_COUNT.value])
+                        FlattenedClusterSpecKey.NFS_COUNT.value,
+                        FlattenedClusterSpecKey.EXPOSE.value])
     return asdict(svc.resize_cluster(cluster_id, cluster_entity_spec))
 
 

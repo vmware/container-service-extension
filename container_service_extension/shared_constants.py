@@ -173,6 +173,7 @@ class FlattenedClusterSpecKey(Enum):
     NFS_COUNT = 'nfs.count'
     TEMPLATE_NAME = 'k8_distribution.template_name'
     TEMPLATE_REVISION = 'k8_distribution.template_revision'
+    EXPOSE = 'expose'
 
 
 @dataclass
