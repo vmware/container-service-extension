@@ -1669,7 +1669,7 @@ class ClusterService(abstract_broker.AbstractBroker):
 
         # Output new kubeconfig
         script = f"#!/usr/bin/env bash\n" \
-                 f"echo {internal_ip_kubeconfig} > " \
+                 f"echo \'{internal_ip_kubeconfig}\' > " \
                  f"{CSE_CLUSTER_KUBECONFIG_PATH}\n"
         node_names = _get_node_names(vapp, NodeType.CONTROL_PLANE)
         result = _execute_script_in_nodes(self.context.sysadmin_client,
