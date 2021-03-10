@@ -6,6 +6,7 @@ import re
 import string
 import threading
 import time
+import traceback
 from typing import Dict, List
 import urllib
 
@@ -687,6 +688,7 @@ class ClusterService(abstract_broker.AbstractBroker):
             nfs_count = cluster_spec.spec.nfs.count
             nfs_sizing_class = cluster_spec.spec.nfs.sizing_class
             nfs_storage_profile = cluster_spec.spec.nfs.storage_profile
+            cloud_provider_enabled = cluster_spec.spec.vcloud.cloud_provider
             network_name = cluster_spec.spec.settings.network
             template_name = cluster_spec.spec.k8_distribution.template_name
             template_revision = cluster_spec.spec.k8_distribution.template_revision  # noqa: E501
@@ -767,7 +769,8 @@ class ClusterService(abstract_broker.AbstractBroker):
             _init_cluster(self.context.sysadmin_client,
                           vapp,
                           template[LocalTemplateKey.KUBERNETES_VERSION],
-                          template[LocalTemplateKey.CNI_VERSION])
+                          template[LocalTemplateKey.CNI_VERSION],
+                          cloud_provider_enabled)
             control_plane_ip = _get_control_plane_ip(self.context.sysadmin_client, vapp)  # noqa: E501
             task = vapp.set_metadata('GENERAL', 'READWRITE', 'cse.master.ip',
                                      control_plane_ip)
@@ -803,7 +806,8 @@ class ClusterService(abstract_broker.AbstractBroker):
             _join_cluster(self.context.sysadmin_client,
                           vapp,
                           template[LocalTemplateKey.NAME],
-                          template[LocalTemplateKey.REVISION])
+                          template[LocalTemplateKey.REVISION],
+                          cloud_provider_enabled=cloud_provider_enabled)
 
             if nfs_count > 0:
                 msg = f"Creating {nfs_count} NFS nodes for cluster " \
@@ -1079,6 +1083,7 @@ class ClusterService(abstract_broker.AbstractBroker):
             # viz., template, storage_profile, and network among others.
             worker_storage_profile = current_spec.workers.storage_profile # noqa: E501
             worker_sizing_class = current_spec.workers.sizing_class
+            cloud_provider_enabled = current_spec.spec.vcloud.cloud_provider
             nfs_storage_profile = current_spec.nfs.storage_profile
             nfs_sizing_class = current_spec.nfs.sizing_class
             network_name = current_spec.settings.network
@@ -1086,6 +1091,7 @@ class ClusterService(abstract_broker.AbstractBroker):
             rollback = current_spec.settings.rollback_on_failure
             template_name = current_spec.k8_distribution.template_name  # noqa: E501
             template_revision = current_spec.k8_distribution.template_revision  # noqa: E501
+
             template = _get_template(template_name, template_revision)
 
             # compute the values of workers and nfs to be added or removed
@@ -1130,7 +1136,8 @@ class ClusterService(abstract_broker.AbstractBroker):
                               vapp,
                               template[LocalTemplateKey.NAME],
                               template[LocalTemplateKey.REVISION],
-                              target_nodes)
+                              target_nodes,
+                              cloud_provider_enabled=cloud_provider_enabled)
                 msg = f"Added {num_workers_to_add} node(s) to cluster " \
                       f"{cluster_name}({cluster_id})"
                 self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
@@ -2102,15 +2109,19 @@ def _get_control_plane_ip(sysadmin_client: vcd_client.Client, vapp):
 
 
 def _init_cluster(sysadmin_client: vcd_client.Client, vapp, k8s_version,
-                  cni_version):
+                  cni_version, cloud_provider_enabled: bool):
     vcd_utils.raise_error_if_user_not_from_system_org(sysadmin_client)
 
     try:
         templated_script = get_cluster_script_file_contents(
             ClusterScriptFile.CONTROL_PLANE, ClusterScriptFile.VERSION_2_X)
+        cloud_provider_external_args = ""
+        if cloud_provider_enabled:
+            cloud_provider_external_args = "--cloud-provider=external"
         script = templated_script.format(
             k8s_version=k8s_version,
-            cni_version=cni_version)
+            cni_version=cni_version,
+            cloud_provider_external_args=cloud_provider_external_args)
         node_names = _get_node_names(vapp, NodeType.CONTROL_PLANE)
         result = _execute_script_in_nodes(sysadmin_client, vapp=vapp,
                                           node_names=node_names, script=script)
@@ -2119,7 +2130,7 @@ def _init_cluster(sysadmin_client: vcd_client.Client, vapp, k8s_version,
             raise E.ScriptExecutionError(
                 f"Initialize cluster script execution failed on node "
                 f"{node_names}:{errors}")
-        if result[0][0] != 0:
+        if len(result) > 0 and len(result[0]) > 2 and result[0][0] != 0:
             raise E.ClusterInitializationError(f"Couldn't initialize cluster:\n{result[0][2].content.decode()}") # noqa: E501
     except Exception as err:
         LOGGER.error(err, exc_info=True)
@@ -2128,7 +2139,8 @@ def _init_cluster(sysadmin_client: vcd_client.Client, vapp, k8s_version,
 
 
 def _join_cluster(sysadmin_client: vcd_client.Client, vapp, template_name,
-                  template_revision, target_nodes=None):
+                  template_revision, target_nodes=None,
+                  cloud_provider_enabled: bool = False):
     vcd_utils.raise_error_if_user_not_from_system_org(sysadmin_client)
     try:
 
@@ -2152,10 +2164,14 @@ def _join_cluster(sysadmin_client: vcd_client.Client, vapp, template_name,
 
         templated_script = get_cluster_script_file_contents(
             ClusterScriptFile.NODE, ClusterScriptFile.VERSION_2_X)
+        cloud_provider_external_args = ""
+        if cloud_provider_enabled:
+            cloud_provider_external_args = "--cloud-provider=external"
         script = templated_script.format(
             ip_port=join_info[2],
             token=join_info[4],
-            discovery_token_ca_cert_hash=join_info[6])
+            discovery_token_ca_cert_hash=join_info[6],
+            cloud_provider_external_args=cloud_provider_external_args)
 
         node_names = _get_node_names(vapp, NodeType.WORKER)
         if target_nodes is not None:
@@ -2170,7 +2186,7 @@ def _join_cluster(sysadmin_client: vcd_client.Client, vapp, template_name,
                 "Join cluster script execution failed "
                 f"on worker node  {node_names}:{errors}")
         for result in worker_results:
-            if result[0] != 0:
+            if len(result) > 2 and result[0] != 0:
                 raise E.ClusterJoiningError(f"Couldn't join cluster:"
                                             f"\n{result[2].content.decode()}")
     except Exception as err:
@@ -2195,19 +2211,28 @@ def _wait_until_ready_to_exec(vs, vm, password, tries=30):
     script = "#!/usr/bin/env bash\n" \
              "uname -a\n"
     for _ in range(tries):
-        result = vs.execute_script_in_guest(
-            vm, 'root', password, script,
-            target_file=None,
-            wait_for_completion=True,
-            wait_time=5,
-            get_output=True,
-            delete_script=True,
-            callback=_wait_for_guest_execution_callback)
-        if result[0] == 0:
-            ready = True
-            break
-        LOGGER.info(f"Script returned {result[0]}; VM is not "
-                    f"ready to execute scripts, yet")
+        result: List = []
+        try:
+            result = vs.execute_script_in_guest(
+                vm, 'root', password, script,
+                target_file=None,
+                wait_for_completion=True,
+                wait_time=5,
+                get_output=True,
+                delete_script=True,
+                callback=_wait_for_guest_execution_callback)
+        except Exception as exp:
+            LOGGER.info(f"Script failed with exception [{exp}]; indicating "
+                        f"that the VM not yet ready.")
+        if len(result) > 0:
+            if result[0] == 0:
+                ready = True
+                break
+            else:
+                LOGGER.info(f"Script returned {result[0]}; VM is not "
+                            f"ready to execute scripts, yet")
+        else:
+            LOGGER.info("VM is not yet ready to execute scripts")
         time.sleep(2)
 
     if not ready:
@@ -2221,6 +2246,10 @@ def _execute_script_in_nodes(sysadmin_client: vcd_client.Client,
     all_results = []
     for node_name in node_names:
         try:
+            result: List = []
+            result_stdout = ""
+            result_stderr = ""
+
             LOGGER.debug(f"will try to execute script on {node_name}:\n"
                          f"{script}")
 
@@ -2234,9 +2263,9 @@ def _execute_script_in_nodes(sysadmin_client: vcd_client.Client,
                 LOGGER.debug(f"waiting for tools on {node_name}")
                 vs.wait_until_tools_ready(
                     vm,
-                    sleep=5,
+                    sleep=10,
                     callback=_wait_for_tools_ready_callback)
-                _wait_until_ready_to_exec(vs, vm, password)
+            _wait_until_ready_to_exec(vs, vm, password)
             LOGGER.debug(f"about to execute script on {node_name} "
                          f"(vm={vm}), wait={wait}")
             if wait:
@@ -2248,8 +2277,9 @@ def _execute_script_in_nodes(sysadmin_client: vcd_client.Client,
                     get_output=True,
                     delete_script=True,
                     callback=_wait_for_guest_execution_callback)
-                result_stdout = result[1].content.decode()
-                result_stderr = result[2].content.decode()
+                if len(result) > 2:
+                    result_stdout = result[1].content.decode()
+                    result_stderr = result[2].content.decode()
             else:
                 result = [
                     vs.execute_program_in_guest(vm, 'root', password, script,
@@ -2258,11 +2288,14 @@ def _execute_script_in_nodes(sysadmin_client: vcd_client.Client,
                 ]
                 result_stdout = ''
                 result_stderr = ''
-            LOGGER.debug(result[0])
+            if len(result) != 0:
+                LOGGER.debug(result[0])
             LOGGER.debug(result_stderr)
             LOGGER.debug(result_stdout)
             all_results.append(result)
         except Exception as err:
+            LOGGER.debug(f"Error executing script. Exception: [{err}], "
+                         f"Traceback: [{traceback.format_exc()}]")
             raise E.ScriptExecutionError(f"Error executing script in node {node_name}: {str(err)}")  # noqa: E501
 
     return all_results
@@ -2299,7 +2332,10 @@ def _run_script_in_nodes(sysadmin_client: vcd_client.Client, vapp_href,
 
 
 def _get_script_execution_errors(results):
-    return [result[2].content.decode() for result in results if result[0] != 0]
+    if len(results) > 2:
+        return [
+            result[2].content.decode() for result in results if result[0] != 0]
+    return []
 
 
 def _create_k8s_software_string(software_name: str, software_version: str) -> str: # noqa: E501

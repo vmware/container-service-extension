@@ -48,6 +48,14 @@ class Distribution:
 
 
 @dataclass()
+class VCloud:
+    cloud_provider: bool = True
+
+    def __init__(self, cloud_provider: bool = False):
+        self.cloud_provider = cloud_provider
+
+
+@dataclass()
 class Settings:
     network: str
     ssh_key: str = None
@@ -142,10 +150,11 @@ class ClusterSpec:
     nfs: Nfs
     k8_distribution: Distribution
     settings: Settings
+    vcloud: VCloud
 
     def __init__(self, settings: Settings, k8_distribution: Distribution = None,  # noqa: E501
                  control_plane: ControlPlane = None, workers: Workers = None,
-                 nfs: Nfs = None, **kwargs):
+                 nfs: Nfs = None, vcloud: VCloud = None, **kwargs):
         self.settings = Settings(**settings) \
             if isinstance(settings, dict) else settings
         self.control_plane = ControlPlane(**control_plane) \
@@ -155,6 +164,8 @@ class ClusterSpec:
         self.nfs = Nfs(**nfs) if isinstance(nfs, dict) else nfs or Nfs()
         self.k8_distribution = Distribution(**k8_distribution) \
             if isinstance(k8_distribution, dict) else k8_distribution or Distribution()  # noqa: E501
+        self.vcloud = VCloud(**vcloud) \
+            if isinstance(vcloud, dict) else vcloud or VCloud()
 
 
 @dataclass()
@@ -186,6 +197,8 @@ class NativeEntity(AbstractNativeEntity):
             "k8_distribution": {
                 "template_name": "k81.17",
                 "template_revision": 1
+            }
+            "vcloud": {
             }
         },
         "status": {

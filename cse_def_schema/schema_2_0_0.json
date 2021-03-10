@@ -95,6 +95,10 @@
                         },
                         "additionalProperties": true
                     },
+                    "vcloud": {
+                        "type": "object",
+                        "description": "Settings for vcd cloud provider"
+                    },
                     "nfs": {
                         "type": "object",
                         "description":"The desired nfs state of the cluster. The properties \"sizing_class\" and \"storage_profile\" can be specified only during the cluster creation phase. These properties will no longer be modifiable in further update operations like \"resize\" and \"upgrade\".",
