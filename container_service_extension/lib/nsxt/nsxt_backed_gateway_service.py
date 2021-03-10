@@ -95,12 +95,13 @@ def _get_ip_range_set(ip_ranges: list):
     return ip_range_set
 
 
-def _get_available_ip_in_ip_ranges(used_ips: set, ip_ranges: list):
+def _get_available_ip_in_ip_ranges(ip_ranges: list, used_ips: set):
     """Get an available ip from the passed in ip ranges.
 
-    :param set used_ips: set of used ips.
     :param list ip_ranges: list of dictionaries, each containing a start and
         end ip address
+    :param set used_ips: set of used ips.
+
 
     :return: available ip. Empty string returned if no available ip.
     :rtype: str
@@ -318,7 +319,7 @@ class NsxtBackedGatewayService:
         for subnet_value in subnet_values:
             ip_ranges: list = _subnet_value_to_ip_ranges_values(subnet_value)
 
-            available_ip = _get_available_ip_in_ip_ranges(used_ips, ip_ranges)
+            available_ip = _get_available_ip_in_ip_ranges(ip_ranges, used_ips)
             if available_ip:
                 return available_ip
         return ''
