@@ -48,7 +48,7 @@ import container_service_extension.rde.acl_service as acl_service
 import container_service_extension.rde.common.entity_service as def_entity_svc
 import container_service_extension.rde.constants as def_constants
 import container_service_extension.rde.models.common_models as common_models
-import container_service_extension.rde.models.rde_2_0_0 as rde_2_0_0
+import container_service_extension.rde.models.rde_2_0_0 as rde_2_x
 import container_service_extension.rde.utils as def_utils
 import container_service_extension.security.context.operation_context as ctx
 import container_service_extension.server.abstract_broker as abstract_broker
@@ -64,6 +64,8 @@ class ClusterService(abstract_broker.AbstractBroker):
         self.context: ctx.OperationContext = None
         # populates above attributes
         super().__init__(op_ctx)
+
+        # TODO find an elegant way to dynamically pick the module rde_2_x
 
         self.task = None
         self.task_resource = None
@@ -185,7 +187,7 @@ class ClusterService(abstract_broker.AbstractBroker):
 
         return result.content.decode()
 
-    def create_cluster(self, cluster_spec: rde_2_0_0.NativeEntity):
+    def create_cluster(self, cluster_spec: rde_2_x):
         """Start the cluster creation operation.
 
         Creates corresponding defined entity in vCD for every native cluster.
@@ -290,7 +292,7 @@ class ClusterService(abstract_broker.AbstractBroker):
         return def_entity
 
     def resize_cluster(self, cluster_id: str,
-                       cluster_spec: rde_2_0_0.NativeEntity):
+                       cluster_spec: rde_2_x):
         """Start the resize cluster operation.
 
         :param str cluster_id: Defined entity Id of the cluster
@@ -443,14 +445,14 @@ class ClusterService(abstract_broker.AbstractBroker):
                                               curr_entity.entity.status.cloud_properties.k8_distribution.template_revision)  # noqa: E501
 
     def upgrade_cluster(self, cluster_id: str,
-                        upgrade_spec: rde_2_0_0.NativeEntity):
+                        upgrade_spec: rde_2_x):
         """Start the upgrade cluster operation.
 
         Upgrading cluster is an asynchronous task, so the returned
         `result['task_href']` can be polled to get updates on task progress.
 
         :param str cluster_id: id of the cluster to be upgraded
-        :param rde_2_0_0.NativeEntity upgrade_spec: cluster spec with new
+        :param rde_2_x upgrade_spec: cluster spec with new
             kubernetes distribution and revision
 
         :return: Defined entity with upgrade in progress set
@@ -524,14 +526,14 @@ class ClusterService(abstract_broker.AbstractBroker):
                                     template=template)
         return curr_entity
 
-    def update_cluster(self, cluster_id: str, update_spec: rde_2_0_0.NativeEntity):  # noqa: E501
+    def update_cluster(self, cluster_id: str, update_spec: rde_2_x):  # noqa: E501
         """Start the update cluster operation (resize or upgrade).
 
         Updating cluster is an asynchronous task, so the returned
         `result['task_href']` can be polled to get updates on task progress.
 
         :param str cluster_id: id of the cluster to be updated
-        :param rde_2_0_0.NativeEntity update_spec: cluster spec with new
+        :param rde_2_x update_spec: cluster spec with new
         worker/nfs node count or new kubernetes distribution and revision
 
         :return: Defined entity with update in progress set
@@ -674,7 +676,7 @@ class ClusterService(abstract_broker.AbstractBroker):
 
     @thread_utils.run_async
     def _create_cluster_async(self, cluster_id: str,
-                              cluster_spec: rde_2_0_0.NativeEntity):
+                              cluster_spec: rde_2_x):
         try:
             cluster_name = cluster_spec.metadata.cluster_name
             org_name = cluster_spec.metadata.org_name
@@ -1046,7 +1048,7 @@ class ClusterService(abstract_broker.AbstractBroker):
 
     @thread_utils.run_async
     def _create_nodes_async(self, cluster_id: str,
-                            cluster_spec: rde_2_0_0.NativeEntity):
+                            cluster_spec: rde_2_x):
         """Create worker and/or nfs nodes in vCD.
 
         This method is executed by a thread in an asynchronous manner.
@@ -1407,8 +1409,8 @@ class ClusterService(abstract_broker.AbstractBroker):
 
             # update defined entity of the cluster
             curr_entity.entity.status.cloud_properties.k8_distribution = \
-                rde_2_0_0.Distribution(template_name=template[LocalTemplateKey.NAME],  # noqa: E501
-                                       template_revision=int(template[LocalTemplateKey.REVISION]))  # noqa: E501
+                rde_2_x.Distribution(template_name=template[LocalTemplateKey.NAME],  # noqa: E501
+                                     template_revision=int(template[LocalTemplateKey.REVISION]))  # noqa: E501
             curr_entity.entity.status.cni = \
                 _create_k8s_software_string(template[LocalTemplateKey.CNI],
                                             template[LocalTemplateKey.CNI_VERSION]) # noqa: E501
@@ -1526,7 +1528,7 @@ class ClusterService(abstract_broker.AbstractBroker):
 
     @thread_utils.run_async
     def _delete_nodes_async(self, cluster_id: str,
-                            cluster_spec: rde_2_0_0.NativeEntity = None,
+                            cluster_spec: rde_2_x = None,
                             nodes_to_del=None):
         """Delete worker and/or nfs nodes in vCD.
 
@@ -1734,14 +1736,14 @@ def _get_nodes_details(sysadmin_client, vapp):
             if hasattr(vm, 'StorageProfile'):
                 storage_profile: str = vm.StorageProfile.get('name')
             if vm_name.startswith(NodeType.CONTROL_PLANE):
-                control_plane = rde_2_0_0.Node(name=vm_name, ip=ip,
-                                               sizing_class=sizing_class,
-                                               storage_profile=storage_profile)
+                control_plane = rde_2_x.Node(name=vm_name, ip=ip,
+                                             sizing_class=sizing_class,
+                                             storage_profile=storage_profile)
             elif vm_name.startswith(NodeType.WORKER):
                 workers.append(
-                    rde_2_0_0.Node(name=vm_name, ip=ip,
-                                   sizing_class=sizing_class,
-                                   storage_profile=storage_profile))
+                    rde_2_x.Node(name=vm_name, ip=ip,
+                                 sizing_class=sizing_class,
+                                 storage_profile=storage_profile))
             elif vm_name.startswith(NodeType.NFS):
                 exports = None
                 try:
@@ -1753,12 +1755,12 @@ def _get_nodes_details(sysadmin_client, vapp):
                     LOGGER.error(f"Failed to retrieve the NFS exports of "
                                  f"node {vm_name} of cluster {vapp.name} ",
                                  exc_info=True)
-                nfs_nodes.append(rde_2_0_0.NfsNode(name=vm_name, ip=ip,
-                                                   sizing_class=sizing_class,
-                                                   storage_profile=storage_profile,  # noqa: E501
-                                                   exports=exports))
-        return rde_2_0_0.Nodes(control_plane=control_plane, workers=workers,
-                               nfs=nfs_nodes)
+                nfs_nodes.append(rde_2_x.NfsNode(name=vm_name, ip=ip,
+                                                 sizing_class=sizing_class,
+                                                 storage_profile=storage_profile,  # noqa: E501
+                                                 exports=exports))
+        return rde_2_x.Nodes(control_plane=control_plane, workers=workers,
+                             nfs=nfs_nodes)
     except Exception as err:
         LOGGER.error("Failed to retrieve the status of the nodes of the "
                      f"cluster {vapp.name}: {err}", exc_info=True)
