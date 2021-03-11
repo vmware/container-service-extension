@@ -290,15 +290,21 @@ class ClusterService(abstract_broker.AbstractBroker):
         num_workers_to_add: int = desired_worker_count - curr_worker_count
         num_nfs_to_add: int = desired_nfs_count - curr_nfs_count
 
-        # Check if the desired worker and nfs count is valid
-        if num_workers_to_add == 0 and num_nfs_to_add == 0:
+        # Check for unexposing the cluster
+        desired_expose_state: bool = cluster_spec.spec.expose
+        is_exposed: bool = curr_entity.entity.status.exposed
+        unexpose: bool = is_exposed and not desired_expose_state
+
+        # Check if the desired worker and nfs count is valid and raise
+        # an exception if the cluster does not need to be unexposed
+        if not unexpose and num_workers_to_add == 0 and num_nfs_to_add == 0:
             raise E.CseServerError(f"Cluster '{cluster_name}' already has "
                                    f"{desired_worker_count} workers and "
                                    f"{desired_nfs_count} nfs nodes.")
-        elif desired_worker_count < 0:
+        elif not unexpose and desired_worker_count < 0:
             raise E.CseServerError(
                 f"Worker count must be >= 0 (received {desired_worker_count})")
-        elif num_nfs_to_add < 0:
+        elif not unexpose and num_nfs_to_add < 0:
             raise E.CseServerError("Scaling down nfs nodes is not supported")
 
         # check if cluster is in a valid state
@@ -317,6 +323,8 @@ class ClusterService(abstract_broker.AbstractBroker):
         msg = f"Resizing the cluster '{cluster_name}' ({cluster_id}) to the " \
               f"desired worker count {desired_worker_count} and " \
               f"nfs count {desired_nfs_count}"
+        if unexpose:
+            msg += " and unexposing the cluster"
         self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
         curr_entity.entity.status.task_href = self.task_resource.get('href')
         curr_entity.entity.status.phase = str(
@@ -332,7 +340,7 @@ class ClusterService(abstract_broker.AbstractBroker):
             raise
         # trigger async operation
         self.context.is_async = True
-        self._monitor_resize(cluster_id=cluster_id,
+        self._monitor_update(cluster_id=cluster_id,
                              cluster_spec=cluster_spec)
         return curr_entity
 
@@ -711,10 +719,11 @@ class ClusterService(abstract_broker.AbstractBroker):
             def_entity.entity.status.nodes = _get_nodes_details(
                 self.context.sysadmin_client, vapp)
 
-            # Update defined entity with exposed ip
-            if expose_ip and def_entity.entity.status.nodes:
-                def_entity.entity.status.nodes.control_plane.ip = expose_ip
+            # Update defined entity with exposed status and exposed ip
+            if expose_ip:
                 def_entity.entity.status.exposed = True
+                if def_entity.entity.status.nodes:
+                    def_entity.entity.status.nodes.control_plane.ip = expose_ip
 
             self.entity_svc.update_entity(cluster_id, def_entity)
             self.entity_svc.resolve_entity(cluster_id)
@@ -822,17 +831,21 @@ class ClusterService(abstract_broker.AbstractBroker):
             self.context.end()
 
     @utils.run_async
-    def _monitor_resize(self, cluster_id, cluster_spec):
-        """Triggers and monitors one or more async threads of resize.
+    def _monitor_update(self, cluster_id, cluster_spec):
+        """Triggers and monitors one or more async threads of update.
 
         This method (or) thread triggers two async threads (for node
         addition and deletion) in parallel. It waits for both the threads to
         join before calling the resize operation complete.
 
+
         Performs below once child threads join back.
         - updates the defined entity
         - updates the task status to SUCCESS
         - ends the client context
+
+        If the cluster is exposed and the spec shows to unexpose the cluster,
+        it will be de-exposed.
         """
         try:
             curr_entity: def_models.DefEntity = self.entity_svc.get_entity(
@@ -872,6 +885,49 @@ class ClusterService(abstract_broker.AbstractBroker):
                 if t.getName().endswith(curr_thread_id):
                     t.join()
 
+            # Handle deleting the dnat rule if the cluster was exposed and
+            # the user's current desire is to un-expose the cluster
+            desired_expose_state: bool = cluster_spec.spec.expose
+            is_exposed: bool = curr_entity.entity.status.exposed
+            unexpose: bool = is_exposed and not desired_expose_state
+            unexpose_success: bool = False
+            if unexpose:
+                org_name: str = curr_entity.entity.metadata.org_name
+                ovdc_name: str = curr_entity.entity.metadata.ovdc_name
+                network_name: str = curr_entity.entity.spec.settings.network
+                try:
+                    # Get internal ip
+                    vapp_href = curr_entity.externalId
+                    vapp = vcd_vapp.VApp(self.context.client,
+                                         href=vapp_href)
+                    control_plane_internal_ip = _get_control_plane_ip(
+                        sysadmin_client=self.context.sysadmin_client,
+                        vapp=vapp,
+                        check_tools=True)
+
+                    # update kubeconfig with internal ip
+                    self._replace_kubeconfig_expose_ip(
+                        internal_ip=control_plane_internal_ip,
+                        cluster_id=cluster_id,
+                        vapp=vapp)
+
+                    # Delete dnat rule
+                    _handle_delete_expose_dnat_rule(
+                        client=self.context.client,
+                        org_name=org_name,
+                        ovdc_name=ovdc_name,
+                        network_name=network_name,
+                        cluster_name=cluster_name,
+                        cluster_id=cluster_id)
+
+                    # Update RDE control plane ip to be internal ip
+                    curr_entity.entity.status.nodes.control_plane.ip = control_plane_internal_ip  # noqa: E501
+                    curr_entity.entity.status.exposed = False
+                    unexpose_success = True
+                except Exception as err:
+                    LOGGER.error(
+                        f'Failed to unexpose cluster with error: {str(err)}')  # noqa: E501
+
             # update the defined entity and the task status. Check if one of
             # the child threads had set the status to ERROR.
             curr_task_status = self.task_resource.get('status')
@@ -886,6 +942,11 @@ class ClusterService(abstract_broker.AbstractBroker):
                 msg = f"Resized the cluster '{cluster_name}' ({cluster_id}) " \
                       f"to the desired worker count {desired_worker_count} " \
                       f"and nfs count {desired_nfs_count}"
+                if unexpose_success:
+                    msg += " and un-exposed the cluster"
+                elif unexpose and not unexpose_success:
+                    msg += " and failed to un-expose the cluster"
+
                 self._update_task(vcd_client.TaskStatus.SUCCESS, message=msg)
                 curr_entity.entity.status.phase = str(
                     DefEntityPhase(DefEntityOperation.UPDATE,
@@ -1596,6 +1657,32 @@ class ClusterService(abstract_broker.AbstractBroker):
                 error_message=error_message,
                 stack_trace=stack_trace
             )
+
+    def _replace_kubeconfig_expose_ip(self, internal_ip: str, cluster_id: str,
+                                      vapp: vcd_vapp.VApp):
+        # Form kubeconfig with internal ip
+        expose_kubeconfig = self.get_cluster_config(cluster_id)
+        internal_ip_kubeconfig = re.sub(
+            pattern=IP_PORT_REGEX,
+            repl=f'{internal_ip}:6443',
+            string=expose_kubeconfig)
+
+        # Output new kubeconfig
+        script = f"#!/usr/bin/env bash\n" \
+                 f"echo \'{internal_ip_kubeconfig}\' > " \
+                 f"{CSE_CLUSTER_KUBECONFIG_PATH}\n"
+        node_names = _get_node_names(vapp, NodeType.CONTROL_PLANE)
+        result = _execute_script_in_nodes(self.context.sysadmin_client,
+                                          vapp=vapp,
+                                          node_names=node_names,
+                                          script=script,
+                                          check_tools=True)
+
+        errors = _get_script_execution_errors(result)
+        if errors:
+            raise E.ScriptExecutionError(
+                f"Failed to overwrite kubeconfig with internal ip: "
+                f"{internal_ip}: {errors}")
 
 
 def _get_nodes_details(sysadmin_client, vapp):
