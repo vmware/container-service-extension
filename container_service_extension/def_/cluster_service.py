@@ -832,7 +832,7 @@ class ClusterService(abstract_broker.AbstractBroker):
 
     @utils.run_async
     def _monitor_update(self, cluster_id, cluster_spec):
-        """Triggers and monitors one or more async threads of resize.
+        """Triggers and monitors one or more async threads of update.
 
         This method (or) thread triggers two async threads (for node
         addition and deletion) in parallel. It waits for both the threads to
@@ -845,7 +845,7 @@ class ClusterService(abstract_broker.AbstractBroker):
         - ends the client context
 
         If the cluster is exposed and the spec shows to unexpose the cluster,
-        the cluster is unexposed.
+        it will be de-exposed.
         """
         try:
             curr_entity: def_models.DefEntity = self.entity_svc.get_entity(
@@ -943,9 +943,9 @@ class ClusterService(abstract_broker.AbstractBroker):
                       f"to the desired worker count {desired_worker_count} " \
                       f"and nfs count {desired_nfs_count}"
                 if unexpose_success:
-                    msg += " and unexposing the cluster"
+                    msg += " and un-exposed the cluster"
                 elif unexpose and not unexpose_success:
-                    msg += " and failed unexposing the cluster"
+                    msg += " and failed to un-expose the cluster"
 
                 self._update_task(vcd_client.TaskStatus.SUCCESS, message=msg)
                 curr_entity.entity.status.phase = str(
