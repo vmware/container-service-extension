@@ -79,12 +79,11 @@ class RDEMetadataKey(str, Enum):
     BEHAVIOR_TO_ACL_MAP = 'map_from_behavior_id_to_behavior_acls'
 
 
-# Dictionary indicating RDE version to use for a given VCD API version.
-# Based on the VCD-version CSE server is configured with,
-# CSE server dynamically determines the RDE-version-to-use at runtime.
-# Below dictionary essentially answers this question:
+# Below map essentially answers this question:
 # "When CSE is configured with VCD of a given api-version, what is the
 # compatible RDE-version CSE-server must use on that VCD?"
+# Based on the VCD-version CSE server is configured with,
+# CSE server dynamically determines the RDE-version-to-use at runtime.
 #
 # Key: represents the VCD api-version CSE is configured with.
 # Value: represents the RDE-version CSE-server uses for that VCD environment.
@@ -117,9 +116,28 @@ class RDEMetadataKey(str, Enum):
 # 36.0: 2.0.0,
 # 37.0: 3.0.0 (Newly introduced RDE)
 # }
-MAP_VCD_API_VERSION_TO_RDE_VERSION = {
+MAP_VCD_API_VERSION_TO_RUNTIME_RDE_VERSION = {
     35.0: RuntimeRDEVersion.RDE_1_X.value,
     36.0: RuntimeRDEVersion.RDE_2_X.value
+}
+
+# Below map answers the question - "what is the RDE version introduced by CSE
+# at a given VCD api version?"
+#
+# Key: represents the VCD api_version.
+# Value: RDE version that is introduced at the specified api version.
+#
+# For every new RDE version, a new entry must be added to this map.
+# Example: Say, at 37 api version, RDE version 2.1 is introduced.
+# The map will change to the below.
+# MAP_VCD_API_VERSION_TO_RDE_VERSION = {
+#     35.0: RDEVersion.RDE_1_0_0,
+#     36.0: RDEVersion.RDE_2_0_0,
+#     37.0: RDEVersion.RDE_3_0_0
+# }
+MAP_VCD_API_VERSION_TO_RDE_VERSION = {
+    35.0: RDEVersion.RDE_1_0_0,
+    36.0: RDEVersion.RDE_2_0_0
 }
 
 

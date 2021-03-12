@@ -4,11 +4,15 @@
 
 from dataclasses import asdict
 
-from container_service_extension.common.constants.server_constants import CseOperation  # noqa: E501
+import semantic_version
+
 from container_service_extension.common.constants.server_constants import FlattenedClusterSpecKey  # noqa: E501
 from container_service_extension.common.constants.server_constants import VALID_UPDATE_FIELDS  # noqa: E501
+from container_service_extension.common.utils import server_utils
 from container_service_extension.exception.exceptions import BadRequestError
 import container_service_extension.rde.constants as rde_constants
+from container_service_extension.rde.behaviors.behavior_model import \
+    BehaviorOperation
 from container_service_extension.rde.models.abstractNativeEntity import AbstractNativeEntity  # noqa: E501
 import container_service_extension.rde.utils as rde_utils
 from container_service_extension.rde.validators.abstract_validator import AbstractValidator  # noqa: E501
@@ -18,15 +22,30 @@ class Validator_2_0_0(AbstractValidator):
     def __init__(self):
         pass
 
-    def validate(self, input_entity: AbstractNativeEntity, current_entity: AbstractNativeEntity, operation: CseOperation) -> bool:  # noqa: E501
+    def validate(self, api_version, input_entity: AbstractNativeEntity,
+                 current_entity: AbstractNativeEntity = None,
+                 operation: BehaviorOperation = None) -> bool:  # noqa: E501
         """Validate the input_spec against current_status of the cluster.
 
+        :param api_version:
         :param AbstractNativeEntity input_entity: Request spec of the cluster
         :param AbstractNativeEntity current_entity: Current status of the cluster  # noqa: E501
-        :param CseOperation operation: CSE operation key
+        :param BehaviorOperation operation: CSE operation key
         :return: is validation successful or failure
         :rtype: bool
         """
+        # Reject the request if rde_in_use is less than rde version introduced
+        # at the specified api version.
+        rde_version_introduced_at_api_version = \
+        rde_constants.MAP_VCD_API_VERSION_TO_RDE_VERSION[
+            api_version]  # noqa: E501
+        rde_in_use = server_utils.get_rde_version_in_use()
+        rde_version_introduced_at_api_version: semantic_version.Version = \
+            semantic_version.Version(rde_version_introduced_at_api_version)
+        if rde_in_use < rde_version_introduced_at_api_version:
+            raise BadRequestError(
+                error_message='Server cannot handle requests at the specified api-version')  # noqa: E501
+
         # TODO: validators for rest of the CSE operations in V36 will be
         #  implemented as and when v36/def_cluster_handler.py get other handler
         #  functions
@@ -34,7 +53,7 @@ class Validator_2_0_0(AbstractValidator):
         current_entity_status = current_entity.status
         current_entity_spec = rde_utils.\
             construct_cluster_spec_from_entity_status(current_entity_status, rde_constants.RDEVersion.RDE_2_0_0.value)  # noqa: E501
-        if operation == CseOperation.V36_CLUSTER_UPDATE:
+        if operation == BehaviorOperation.UPDATE_CLUSTER:
             return validate_cluster_update_request_and_check_cluster_upgrade(asdict(input_entity_spec), asdict(current_entity_spec))  # noqa: E501
         raise NotImplementedError(f"Validator for {operation.name} not found")
 

@@ -16,6 +16,8 @@ import container_service_extension.lib.telemetry.constants as telemetry_constant
 import container_service_extension.lib.telemetry.telemetry_handler as telemetry_handler  # noqa: E501
 import container_service_extension.rde.backend.cluster_service_factory as cluster_service_factory  # noqa: E501
 import container_service_extension.rde.constants as rde_constants
+from container_service_extension.rde.behaviors.behavior_model import \
+    BehaviorOperation
 from container_service_extension.rde.models.abstractNativeEntity import AbstractNativeEntity  # noqa: E501
 import container_service_extension.rde.models.rde_2_0_0 as rde_2_0_0
 import container_service_extension.rde.models.rde_factory as rde_factory
@@ -156,8 +158,13 @@ def cluster_update(data: dict, op_ctx: ctx.OperationContext):
     cluster_entity: AbstractNativeEntity = \
         NativeEntityClass(**data[RequestKey.INPUT_SPEC])  # noqa: E501
     current_entity: AbstractNativeEntity = svc.entity_svc.get_entity(cluster_id).entity  # noqa: E501
-    rde_validator_factory.get_validator(rde_constants.RDEVersion.RDE_2_0_0).\
-        validate(cluster_entity, current_entity, server_constants.CseOperation.V36_CLUSTER_UPDATE)  # noqa: E501
+
+    # Validate the input
+    rde_validator_factory.get_validator(
+        rde_version=rde_constants.RDEVersion.RDE_2_0_0). \
+        validate(op_ctx.client.get_api_version(), cluster_entity,
+                 current_entity,
+                 BehaviorOperation.UPDATE_CLUSTER)
 
     return asdict(svc.update_cluster(cluster_id, cluster_entity))
 
