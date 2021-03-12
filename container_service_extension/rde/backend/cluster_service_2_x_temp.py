@@ -53,8 +53,6 @@ import container_service_extension.rde.utils as def_utils
 import container_service_extension.security.context.operation_context as ctx
 import container_service_extension.server.abstract_broker as abstract_broker
 import container_service_extension.server.compute_policy_manager as compute_policy_manager  # noqa: E501
-from container_service_extension.rde.behaviors.behavior_model import \
-    BehaviorErrorPayload
 from container_service_extension.security.context.behavior_operation_context import \
     BehaviorOperationContext
 
@@ -261,12 +259,7 @@ class ClusterService(abstract_broker.AbstractBroker):
         except Exception as err:
             msg = f"Error updating the cluster '{cluster_name}' with the status"  # noqa: E501
             LOGGER.error(f"{msg}: {err}")
-            self._update_task(vcd_client.TaskStatus.ERROR,
-                              message=msg,
-                              error_message=str(err))
-            return BehaviorErrorPayload()
-        # TODO Close the clients at the end of behavior execution.
-        # self.context.is_async = True
+            raise
         telemetry_handler.record_user_action_details(
             cse_operation=telemetry_constants.CseOperation.V35_CLUSTER_APPLY,
             cse_params={

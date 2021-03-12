@@ -113,18 +113,8 @@ class BehaviorAcl(Enum):
 
 
 @dataclass
-class BehaviorErrorPayload:
+class BehaviorErrorPayload():
     majorErrorCode: str = '400'
     minorErrorCode: str = None
     message: str = None
-
-
-@dataclass
-class BadRequestError(BehaviorErrorPayload):
-    majorErrorCode: str = '400'
-
-
-@dataclass
-class InternalServerError(BehaviorErrorPayload):
-    majorErrorCode: str = '500'
 

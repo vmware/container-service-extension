@@ -5,6 +5,7 @@
 from dataclasses import asdict
 import json
 
+from container_service_extension.exception.exceptions import CseRequestError
 from container_service_extension.rde.behaviors.behavior_model import \
     BehaviorErrorPayload, BehaviorOperation
 from container_service_extension.security.context.behavior_operation_context \
@@ -49,9 +50,12 @@ def process_behavior_request(msg_json):
                                             request_id=request_id,
                                             op_ctx=op_ctx)
 
-    # Invoke the handler method.
-    response_payload = MAP_BEHAVIOR_ID_TO_HANDLER_METHOD[behavior_id](behavior_ctx)  # noqa: E501
-    if isinstance(response_payload, BehaviorErrorPayload):
-        return 'error', json.dumps(asdict(response_payload))
-    else:
-        return 'success', response_payload
+    # Invoke the handler method and return the response in the string format.
+    try:
+        return MAP_BEHAVIOR_ID_TO_HANDLER_METHOD[behavior_id](behavior_ctx)  # noqa: E501
+    except CseRequestError as e:
+        error_payload = BehaviorErrorPayload(majorErrorCode=e.status_code,
+                                             minorErrorCode=e.minor_error_code,
+                                             message=e.error_message)
+        return json.dumps(asdict(error_payload))
+
