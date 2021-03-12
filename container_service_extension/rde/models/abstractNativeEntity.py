@@ -7,13 +7,12 @@ import abc
 
 class AbstractNativeEntity(abc.ABC):
 
+    @classmethod
     @abc.abstractmethod
-    def validate(self, request_spec: dict, current_spec: dict, operation: str):
-        """Validate the input_spec against current_spec.
+    def from_native_entity(cls, native_entity):
+        pass
 
-        :param dict request_spec: Request spec of the cluster
-        :param dict current_spec: Current status of the cluster
-        :param str operation: POST/PUT/DEL
-        :retur bool:
-        """
+    @classmethod
+    @abc.abstractmethod
+    def from_cluster_data(cls, cluster: dict, kind: str):
         pass

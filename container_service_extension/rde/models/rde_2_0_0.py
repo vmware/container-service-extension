@@ -5,8 +5,10 @@
 from dataclasses import dataclass
 from typing import List
 
+import container_service_extension.common.constants.server_constants as server_constants  # noqa: E501
 import container_service_extension.common.constants.shared_constants as shared_constants  # noqa: E501
 from container_service_extension.rde.models.abstractNativeEntity import AbstractNativeEntity  # noqa: E501
+import container_service_extension.rde.models.rde_1_0_0 as rde_1_0_0
 
 
 @dataclass()
@@ -220,13 +222,112 @@ class NativeEntity(AbstractNativeEntity):
         self.kind = kind
         self.api_version = api_version
 
-    def validate(self, request_spec: dict, current_spec: dict, operation: str):
-        """Validate the input_spec against current_spec.
+    @classmethod
+    def from_native_entity(cls, native_entity: AbstractNativeEntity):
+        """Construct rde_2.0.0 native entity.
 
-        :param dict request_spec: Request spec of the cluster
-        :param dict current_spec: Current status of the cluster
-        :param str operation: POST/PUT/DEL
-        :retur bool:
+        :param AbstractNativeEntity native_entity: input native entity
+        :return: native entity
+        :rtype: rde_2.0.0.NativeEntity
         """
-        # TODO Change the signature of the method as you see it fit.
-        raise NotImplementedError
+        if isinstance(native_entity, rde_1_0_0.NativeEntity):
+            rde_1_x_entity: rde_1_0_0.NativeEntity = native_entity
+
+            cloud_properties = CloudProperties(org_name=rde_1_x_entity.metadata.org_name,  # noqa: E501
+                                               ovdc_name=rde_1_x_entity.metadata.ovdc_name,  # noqa: E501
+                                               ovdc_network_name=rde_1_x_entity.spec.settings.network,  # noqa: E501
+                                               k8_distribution=rde_1_x_entity.spec.k8_distribution,  # noqa: E501
+                                               ssh_key=rde_1_x_entity.spec.settings.ssh_key,  # noqa: E501
+                                               rollback_on_failure=rde_1_x_entity.spec.settings.rollback_on_failure)  # noqa: E501
+
+            status = Status(phase=rde_1_x_entity.status.phase,
+                            cni=rde_1_x_entity.status.cni,
+                            task_href=rde_1_x_entity.status.task_href,
+                            kubernetes=rde_1_x_entity.status.kubernetes,
+                            docker_version=rde_1_x_entity.status.docker_version,  # noqa: E501
+                            os=rde_1_x_entity.status.os,
+                            nodes=rde_1_x_entity.status.nodes,
+                            cloud_properties=cloud_properties)
+            rde_2_entity = cls(metadata=rde_1_x_entity.metadata,
+                               spec=rde_1_x_entity.spec,
+                               status=status,
+                               kind=rde_1_x_entity.kind,
+                               api_version=rde_1_x_entity.api_version)
+            return rde_2_entity
+
+    @classmethod
+    def from_cluster_data(cls, cluster: dict, kind: str):
+        """Construct rde_2.0.0 native entity.
+
+        :param dict cluster: cluster metadata
+        :param str kind: cluster kind
+        :return: native entity
+        :rtype: rde_2.0.0.NativeEntity
+        """
+        worker_nodes = []
+        for item in cluster['nodes']:
+            worker_nodes.append(
+                Node(name=item['name'], ip=item['ipAddress']))
+        nfs_nodes = []
+        for item in cluster['nfs_nodes']:
+            nfs_nodes.append(NfsNode(
+                name=item['name'],
+                ip=item['ipAddress'],
+                exports=item['exports']))
+
+        k8_distribution = Distribution(
+            template_name=cluster['template_name'],
+            template_revision=int(cluster['template_revision']))
+
+        cloud_properties = CloudProperties(org_name=cluster['org_name'],
+                                           ovdc_name=cluster['vdc_name'],
+                                           ovdc_network_name=cluster['network_name'],  # noqa: E501
+                                           k8_distribution=k8_distribution,
+                                           ssh_key='')
+        cluster_entity = cls(
+            kind=kind,
+            spec=ClusterSpec(
+                workers=Workers(
+                    count=len(cluster['nodes']),
+                    storage_profile=cluster['storage_profile_name']
+                ),
+                control_plane=ControlPlane(
+                    count=len(cluster['master_nodes']),
+                    storage_profile=cluster['storage_profile_name']
+                ),
+                nfs=Nfs(
+                    count=len(cluster['nfs_nodes']),
+                    storage_profile=cluster['storage_profile_name']
+                ),
+                settings=Settings(
+                    network=cluster['network_name'],
+                    ssh_key=""
+                ),
+                k8_distribution=k8_distribution
+            ),
+            status=Status(
+                phase=str(server_constants.DefEntityPhase(
+                    server_constants.DefEntityOperation.CREATE,
+                    server_constants.DefEntityOperationStatus.SUCCEEDED)
+                ),
+                kubernetes=f"{cluster['kubernetes']} {cluster['kubernetes_version']}", # noqa: E501
+                cni=f"{cluster['cni']} {cluster['cni_version']}",
+                os=cluster['os'],
+                docker_version=cluster['docker_version'],
+                nodes=Nodes(
+                    control_plane=Node(
+                        name=cluster['master_nodes'][0]['name'],
+                        ip=cluster['master_nodes'][0]['ipAddress']),
+                    workers=worker_nodes,
+                    nfs=nfs_nodes
+                ),
+                cloud_properties=cloud_properties
+            ),
+            metadata=Metadata(
+                org_name=cluster['org_name'],
+                ovdc_name=cluster['vdc_name'],
+                cluster_name=cluster['name']
+            ),
+            api_version=""
+        )
+        return cluster_entity
