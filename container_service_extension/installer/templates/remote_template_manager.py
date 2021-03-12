@@ -9,12 +9,15 @@ import requests
 import yaml
 
 from container_service_extension.common.constants.server_constants import ScriptFile  # noqa: E501
+from container_service_extension.common.constants.server_constants import TemplateScriptFile  # noqa: E501
 from container_service_extension.common.utils.core_utils import download_file
 from container_service_extension.common.utils.core_utils import NullPrinter
 import container_service_extension.installer.templates.local_template_manager as ltm  # noqa: E501
 from container_service_extension.logging.logger import NULL_LOGGER
 
+REMOTE_TEMPLATE_COOKBOOK_V2_FILENAME = 'template_v2.yaml'
 REMOTE_TEMPLATE_COOKBOOK_FILENAME = 'template.yaml'
+REMOTE_SCRIPTS_V2_DIR = 'scripts_v2'
 REMOTE_SCRIPTS_DIR = 'scripts'
 
 
@@ -58,12 +61,13 @@ class RemoteTemplateManager():
 
     def _get_base_url_from_remote_template_cookbook_url(self):
         tokens = self.url.split('/')
-        if tokens[-1] == REMOTE_TEMPLATE_COOKBOOK_FILENAME:
+        if tokens[-1] in [REMOTE_TEMPLATE_COOKBOOK_V2_FILENAME,
+                          REMOTE_TEMPLATE_COOKBOOK_FILENAME]:
             return '/'.join(tokens[:-1])
         raise ValueError("Invalid url for template cookbook.")
 
     def _get_remote_script_url(self, template_name, revision,
-                               script_file_name):
+                               script_file_name, legacy_mode=False):
         """.
 
         The scripts of all templates are kept relative to templates.yaml,
@@ -83,9 +87,16 @@ class RemoteTemplateManager():
         :param str script_file_name:
         """
         base_url = self._get_base_url_from_remote_template_cookbook_url()
+        revisioned_template_name = \
+            ltm.get_revisioned_template_name(template_name, revision)
+        if legacy_mode:
+            return base_url + \
+                f"/{REMOTE_SCRIPTS_DIR}" \
+                f"/{revisioned_template_name}" \
+                f"/{script_file_name}"
         return base_url + \
-            f"/{REMOTE_SCRIPTS_DIR}" \
-            f"/{ltm.get_revisioned_template_name(template_name, revision)}" \
+            f"/{REMOTE_SCRIPTS_V2_DIR}" \
+            f"/{revisioned_template_name}" \
             f"/{script_file_name}"
 
     def get_remote_template_cookbook(self):
@@ -105,7 +116,8 @@ class RemoteTemplateManager():
         return self.cookbook
 
     def download_template_scripts(self, template_name, revision,
-                                  force_overwrite=False):
+                                  force_overwrite=False,
+                                  legacy_mode=False):
         """Download all scripts of a template to local scripts folder.
 
         :param str template_name:
@@ -116,10 +128,16 @@ class RemoteTemplateManager():
         # Multiple codepaths enter into this. Hence all scripts are downloaded.
         # When vcdbroker.py id deprecated, the scripts should loop through
         # TemplateScriptFile to download scripts.
-        for script_file in ScriptFile:
+        scripts_to_download = TemplateScriptFile
+        if legacy_mode:
+            # if server configuration is indicating legacy_mode,
+            # download cluster-scripts from template repository.
+            scripts_to_download = ScriptFile
+        for script_file in scripts_to_download:
             remote_script_url = \
-                self._get_remote_script_url(template_name, revision,
-                                            script_file)
+                self._get_remote_script_url(
+                    template_name, revision,
+                    script_file, legacy_mode=legacy_mode)
 
             local_script_filepath = ltm.get_script_filepath(
                 template_name, revision, script_file)

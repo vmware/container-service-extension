@@ -690,6 +690,206 @@ def get_payload_for_v35_node_delete(params):
     }
 
 
+def get_payload_for_v36_cluster_list(params):
+    """Construct telemetry payload of v36 cluster list.
+
+    :param dict params: parameters provided to the operation
+
+    :return: json telemetry data for the operation
+
+    :type: dict
+    """
+    return {
+        PayloadKey.TYPE: CseOperation.V36_CLUSTER_LIST.telemetry_table,
+        PayloadKey.FILTER_KEYS: params.get(PayloadKey.FILTER_KEYS),
+        PayloadKey.SOURCE_ID: SourceMap.get_source_id(params.get(PayloadKey.SOURCE_DESCRIPTION)),  # noqa: E501
+        PayloadKey.SOURCE_DESCRIPTION: params.get(PayloadKey.SOURCE_DESCRIPTION)  # noqa: E501
+    }
+
+
+def get_payload_for_v36_cluster_info(params):
+    """Construct telemetry payload of v36 cluster info.
+
+    :param dict params: parameters provided to the operation
+
+    :return: json telemetry data for the operation
+
+    :type: dict
+    """
+    return {
+        PayloadKey.TYPE: CseOperation.V36_CLUSTER_INFO.telemetry_table,
+        PayloadKey.CLUSTER_ID: uuid_hash(pyvcd_utils.extract_id(params.get(PayloadKey.CLUSTER_ID))),  # noqa: E501
+        PayloadKey.SOURCE_ID: SourceMap.get_source_id(params.get(PayloadKey.SOURCE_DESCRIPTION)),  # noqa: E501
+        PayloadKey.SOURCE_DESCRIPTION: params.get(PayloadKey.SOURCE_DESCRIPTION)  # noqa: E501
+    }
+
+
+def get_payload_for_v36_cluster_config(params):
+    """Construct telemetry payload of v36 cluster config.
+
+    :param dict params: defined entity instance, telemetry source_description
+
+    :return: json telemetry data for the operation
+
+    :type: dict
+    """
+    def_entity = params.get(CLUSTER_ENTITY)
+    return {
+        PayloadKey.TYPE: CseOperation.V36_CLUSTER_CONFIG.telemetry_table,
+        PayloadKey.CLUSTER_ID: uuid_hash(pyvcd_utils.extract_id(def_entity.id)),  # noqa: E501
+        PayloadKey.CLUSTER_KIND: def_entity.entity.kind,
+        PayloadKey.TEMPLATE_NAME: def_entity.entity.spec.k8_distribution.template_name,  # noqa: E501
+        PayloadKey.TEMPLATE_REVISION: def_entity.entity.spec.k8_distribution.template_revision,  # noqa: E501
+        PayloadKey.SOURCE_ID: SourceMap.get_source_id(params.get(PayloadKey.SOURCE_DESCRIPTION)),  # noqa: E501
+        PayloadKey.SOURCE_DESCRIPTION: params.get(PayloadKey.SOURCE_DESCRIPTION)  # noqa: E501
+    }
+
+
+def get_payload_for_v36_cluster_apply(params):
+    """Construct telemetry payload of v36 cluster apply.
+
+    :param dict params: defined entity instance, telemetry source_description
+
+    :return: json telemetry data for the operation
+
+    :type: dict
+    """
+    def_entity = params.get(CLUSTER_ENTITY)
+    return {
+        PayloadKey.TYPE: CseOperation.V36_CLUSTER_APPLY.telemetry_table,
+        PayloadKey.CLUSTER_ID: uuid_hash(pyvcd_utils.extract_id(def_entity.id)),  # noqa: E501
+        PayloadKey.CLUSTER_KIND: def_entity.entity.kind,
+        PayloadKey.TEMPLATE_NAME: def_entity.entity.spec.k8_distribution.template_name,  # noqa: E501
+        PayloadKey.TEMPLATE_REVISION: def_entity.entity.spec.k8_distribution.template_revision,  # noqa: E501
+        PayloadKey.NUMBER_OF_MASTER_NODES: def_entity.entity.spec.control_plane.count,  # noqa: E501
+        PayloadKey.NUMBER_OF_WORKER_NODES: def_entity.entity.spec.workers.count,  # noqa: E501
+        PayloadKey.NUMBER_OF_NFS_NODES: def_entity.entity.spec.nfs.count,  # noqa: E501
+        PayloadKey.WAS_SSH_KEY_SPECIFIED: bool(def_entity.entity.spec.settings.ssh_key),  # noqa: E501
+        PayloadKey.WAS_ROLLBACK_ENABLED: bool(def_entity.entity.spec.settings.rollback_on_failure),  # noqa: E501
+        PayloadKey.SOURCE_ID: SourceMap.get_source_id(params.get(PayloadKey.SOURCE_DESCRIPTION)),  # noqa: E501
+        PayloadKey.SOURCE_DESCRIPTION: params.get(PayloadKey.SOURCE_DESCRIPTION)  # noqa: E501
+    }
+
+
+def get_payload_for_v36_cluster_delete(params):
+    """Construct telemetry payload of v36 cluster delete.
+
+    :param dict params: defined entity instance, telemetry source_description
+
+    :return: json telemetry data for the operation
+
+    :type: dict
+    """
+    def_entity = params.get(CLUSTER_ENTITY)
+    return {
+        PayloadKey.TYPE: CseOperation.V36_CLUSTER_DELETE.telemetry_table,
+        PayloadKey.CLUSTER_ID: uuid_hash(pyvcd_utils.extract_id(def_entity.id)),  # noqa: E501
+        PayloadKey.CLUSTER_KIND: def_entity.entity.kind,
+        PayloadKey.SOURCE_ID: SourceMap.get_source_id(params.get(PayloadKey.SOURCE_DESCRIPTION)),  # noqa: E501
+        PayloadKey.SOURCE_DESCRIPTION: params.get(PayloadKey.SOURCE_DESCRIPTION)  # noqa: E501
+    }
+
+
+def get_payload_for_v36_cluster_upgrade_plan(params):
+    """Construct telemetry payload of v36 cluster upgrade plan.
+
+    :param dict params: defined entity instance, telemetry source_description
+
+    :return: json telemetry data for the operation
+
+    :type: dict
+    """
+    def_entity = params.get(CLUSTER_ENTITY)
+    return {
+        PayloadKey.TYPE: CseOperation.V36_CLUSTER_UPGRADE_PLAN.telemetry_table,
+        PayloadKey.CLUSTER_ID: uuid_hash(pyvcd_utils.extract_id(def_entity.id)),  # noqa: E501
+        PayloadKey.CLUSTER_KIND: def_entity.entity.kind,
+        PayloadKey.SOURCE_ID: SourceMap.get_source_id(params.get(PayloadKey.SOURCE_DESCRIPTION)),  # noqa: E501
+        PayloadKey.SOURCE_DESCRIPTION: params.get(PayloadKey.SOURCE_DESCRIPTION)  # noqa: E501
+    }
+
+
+def get_payload_for_v36_cluster_upgrade(params):
+    """Construct telemetry payload of v35 cluster upgrade.
+
+    :param dict params: defined entity instance, telemetry source_description
+
+    :return: json telemetry data for the operation
+
+    :type: dict
+    """
+    def_entity = params.get(CLUSTER_ENTITY)
+    return {
+        PayloadKey.TYPE: CseOperation.V36_CLUSTER_UPGRADE.telemetry_table,
+        PayloadKey.CLUSTER_ID: uuid_hash(pyvcd_utils.extract_id(def_entity.id)),  # noqa: E501
+        PayloadKey.CLUSTER_KIND: def_entity.entity.kind,
+        PayloadKey.TEMPLATE_NAME: def_entity.entity.spec.k8_distribution.template_name,  # noqa: E501
+        PayloadKey.TEMPLATE_REVISION: def_entity.entity.spec.k8_distribution.template_revision,  # noqa: E501
+        PayloadKey.SOURCE_ID: SourceMap.get_source_id(params.get(PayloadKey.SOURCE_DESCRIPTION)),  # noqa: E501
+        PayloadKey.SOURCE_DESCRIPTION: params.get(PayloadKey.SOURCE_DESCRIPTION)  # noqa: E501
+    }
+
+
+def get_payload_for_v36_node_delete(params):
+    """Construct telemetry payload of v36 cluster info.
+
+    :param dict params: parameters provided to the operation
+
+    :return: json telemetry data for the operation
+
+    :type: dict
+    """
+    return {
+        PayloadKey.TYPE: CseOperation.V36_NODE_DELETE.telemetry_table,
+        PayloadKey.CLUSTER_ID: uuid_hash(pyvcd_utils.extract_id(params.get(PayloadKey.CLUSTER_ID))),  # noqa: E501
+        PayloadKey.NODE_NAME: params.get(PayloadKey.NODE_NAME),
+        PayloadKey.SOURCE_ID: SourceMap.get_source_id(params.get(PayloadKey.SOURCE_DESCRIPTION)),  # noqa: E501
+        PayloadKey.SOURCE_DESCRIPTION: params.get(PayloadKey.SOURCE_DESCRIPTION)  # noqa: E501
+    }
+
+
+def get_payload_for_v36_cluster_acl_list(cluster_acl_list_info):
+    cluster_id = cluster_acl_list_info[RequestKey.CLUSTER_ID]
+    page = cluster_acl_list_info[shared_constants.PaginationKey.PAGE_NUMBER]
+    page_size = cluster_acl_list_info[shared_constants.PaginationKey.PAGE_SIZE]
+    return {
+        PayloadKey.TYPE: CseOperation.V36_CLUSTER_ACL_LIST.telemetry_table,
+        PayloadKey.CLUSTER_ID: uuid_hash(cluster_id),
+        PayloadKey.PAGE: str(page),
+        PayloadKey.PAGE_SIZE: str(page_size),
+        PayloadKey.SOURCE_ID: SourceMap.get_source_id(cluster_acl_list_info.get(PayloadKey.SOURCE_DESCRIPTION)),  # noqa: E501
+        PayloadKey.SOURCE_DESCRIPTION: cluster_acl_list_info.get(PayloadKey.SOURCE_DESCRIPTION)   # noqa: E501
+    }
+
+
+def get_payload_for_v36_cluster_acl_update(cluster_acl_update_info: dict):
+    """Construct payload for v36 cluster acl update.
+
+    :param dict cluster_acl_update_info: a dict containing two entries:
+        1. "cluster_id" mapped to the cluster id
+        2. "update_acl_entries" mapped to a list of
+            def_models.ClusterAclEntry's
+    """
+    cluster_id = cluster_acl_update_info[RequestKey.CLUSTER_ID]
+    update_acl_entries: list = cluster_acl_update_info[ClusterAclKey.UPDATE_ACL_ENTRIES]  # noqa: E501
+
+    # Remove username from being sent
+    filtered_acl_info = []
+    for entry in update_acl_entries:
+        filtered_entry = {
+            AccessControlKey.MEMBER_ID: entry.memberId,
+            AccessControlKey.ACCESS_LEVEL_ID: entry.accessLevelId  # noqa: E501
+        }
+        filtered_acl_info.append(filtered_entry)
+    return {
+        PayloadKey.TYPE: CseOperation.V36_CLUSTER_ACL_UPDATE.telemetry_table,
+        PayloadKey.CLUSTER_ID: uuid_hash(cluster_id),
+        PayloadKey.ACCESS_SETTING: json.dumps(filtered_acl_info),
+        PayloadKey.SOURCE_ID: SourceMap.get_source_id(cluster_acl_update_info.get(PayloadKey.SOURCE_DESCRIPTION)),  # noqa: E501
+        PayloadKey.SOURCE_DESCRIPTION: cluster_acl_update_info.get(PayloadKey.SOURCE_DESCRIPTION)  # noqa: E501
+    }
+
+
 def get_payload_for_pks_list_clusters(params):
     """Construct telemetry payload of list cluster operation.
 

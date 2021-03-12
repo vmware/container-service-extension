@@ -8,14 +8,11 @@ import time
 import pyvcloud.vcd.client as vcd_client
 import pyvcloud.vcd.gateway as vcd_gateway
 
-import container_service_extension.common.constants.server_constants as \
-    server_constants
-import container_service_extension.common.constants.shared_constants as \
-    shared_constants
+import container_service_extension.common.constants.server_constants as server_constants  # noqa: E501
+import container_service_extension.common.constants.shared_constants as shared_constants  # noqa: E501
 from container_service_extension.common.constants.shared_constants import PaginationKey  # noqa: E501
 import container_service_extension.common.utils.core_utils as core_utils
-import container_service_extension.common.utils.pyvcloud_utils as \
-    pyvcloud_utils
+import container_service_extension.common.utils.pyvcloud_utils as pyvcloud_utils  # noqa: E501
 import container_service_extension.lib.cloudapi.constants as cloudapi_constants
 import container_service_extension.lib.nsxt.constants as nsxt_constants
 from container_service_extension.lib.nsxt.constants import \
@@ -99,12 +96,13 @@ def _get_ip_range_set(ip_ranges: list):
     return ip_range_set
 
 
-def _get_available_ip_in_ip_ranges(used_ips: set, ip_ranges: list):
+def _get_available_ip_in_ip_ranges(ip_ranges: list, used_ips: set):
     """Get an available ip from the passed in ip ranges.
 
-    :param set used_ips: set of used ips.
     :param list ip_ranges: list of dictionaries, each containing a start and
         end ip address
+    :param set used_ips: set of used ips.
+
 
     :return: available ip. Empty string returned if no available ip.
     :rtype: str
@@ -399,8 +397,7 @@ class NsxtBackedGatewayService:
         subnet_values = _gateway_body_to_subnet_values(get_gateway_response)
         for subnet_value in subnet_values:
             ip_ranges: list = _subnet_value_to_ip_ranges_values(subnet_value)
-
-            available_ip = _get_available_ip_in_ip_ranges(used_ips, ip_ranges)
+            available_ip = _get_available_ip_in_ip_ranges(ip_ranges, used_ips)
             if available_ip:
                 return available_ip
         return ''

@@ -41,7 +41,8 @@ class CommandNameKey(str, Enum):
 
 # List of unsupported commands by Api Version
 UNSUPPORTED_COMMANDS_BY_VERSION = {
-    vcd_client.ApiVersion.VERSION_35.value: [GroupKey.NODE]
+    vcd_client.ApiVersion.VERSION_35.value: [GroupKey.NODE],
+    vcd_client.ApiVersion.VERSION_36.value: [GroupKey.NODE]
 }
 
 

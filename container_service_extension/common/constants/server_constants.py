@@ -317,7 +317,17 @@ class CseOperation(Enum):
     V35_NODE_DELETE = ('delete DEF node', '/cse/3.0/cluster/%s/nfs/%s', requests.codes.accepted)  # noqa: E501
     V35_NODE_INFO = ('get info of DEF node', 'NOT IMPLEMENTED')
 
-    V36_CLUSTER_UPDATE = ('update DEF cluster', '/cse/3.0/cluster/%s', requests.codes.accepted)  # noqa: E501
+    V36_CLUSTER_CREATE = ('create DEF v36 cluster', '/cse/3.0/clusters', requests.codes.accepted)  # noqa: E501
+    V36_CLUSTER_LIST = ('list V36 DEF clusters', '/cse/3.0/clusters')  # noqa: E501
+    V36_NATIVE_CLUSTER_LIST = ('list paginated V36 DEF clusters', '/cse/3.0/nativeclusters')  # noqa: E501
+    V36_CLUSTER_INFO = ('get info of DEF V36 clusters', '/cse/3.0/cluster/%s')
+    V36_CLUSTER_CONFIG = ('get config of DEF V36 cluster', '/cse/3.0/cluster/%s/config')  # noqa: E501
+    V36_CLUSTER_UPDATE = ('update DEF V36 cluster', '/cse/3.0/cluster/%s', requests.codes.accepted)  # noqa: E501
+    V36_CLUSTER_DELETE = ('delete DEF V36 cluster', '/cse/3.0/cluster/%s', requests.codes.accepted)  # noqa: E501
+    V36_CLUSTER_UPGRADE_PLAN = ('get supported V36 DEF cluster upgrade paths', '/cse/3.0/cluster/%s/upgrade-plan')  # noqa: E501
+    V36_NODE_DELETE = ('delete V36 DEF node', '/cse/3.0/cluster/%s/nfs/%s', requests.codes.accepted)  # noqa: E501
+    V36_CLUSTER_ACL_LIST = ('list V36 cluster acl', '/cse/3.0/cluster/%s/acl')
+    V36_CLUSTER_ACL_UPDATE = ('update V36 cluster acl', '/cse/3.0/cluster/%s/acl', requests.codes.no_content)  # noqa: E501
 
     OVDC_UPDATE = ('enable or disable ovdc for k8s', '/cse/ovdc/%s', requests.codes.accepted)  # noqa: E501
     OVDC_INFO = ('get info of ovdc', '/cse/ovdc/%s')

@@ -1162,7 +1162,8 @@ def _install_all_templates(
             retain_temp_vapp=retain_temp_vapp,
             ssh_key=ssh_key,
             is_tkg_plus_enabled=server_utils.is_tkg_plus_enabled(config),
-            msg_update_callback=msg_update_callback)
+            msg_update_callback=msg_update_callback,
+            legacy_mode=config['service']['legacy_mode'])
 
 
 def install_template(template_name, template_revision, config_file_name,
@@ -1260,7 +1261,8 @@ def install_template(template_name, template_revision, config_file_name,
                     retain_temp_vapp=retain_temp_vapp,
                     ssh_key=ssh_key,
                     is_tkg_plus_enabled=server_utils.is_tkg_plus_enabled(config),  # noqa: E501
-                    msg_update_callback=msg_update_callback)
+                    msg_update_callback=msg_update_callback,
+                    legacy_mode=config['service'].get('legacy_mode'))
 
         if not found_template:
             msg = f"Template '{template_name}' at revision " \
@@ -1292,7 +1294,7 @@ def _install_single_template(
         client, remote_template_manager, template, org_name,
         vdc_name, catalog_name, network_name, ip_allocation_mode,
         storage_profile, force_update, retain_temp_vapp,
-        ssh_key, is_tkg_plus_enabled=False,
+        ssh_key, is_tkg_plus_enabled=False, legacy_mode=False,
         msg_update_callback=utils.NullPrinter()):
     # NOTE: For CSE 3.0, if the template is a TKG+ template
     # and `enable_tkg_plus` is set to false,
@@ -1314,7 +1316,7 @@ def _install_single_template(
     remote_template_manager.download_template_scripts(
         template_name=template[server_constants.RemoteTemplateKey.NAME],
         revision=template[server_constants.RemoteTemplateKey.REVISION],
-        force_overwrite=force_update)
+        force_overwrite=force_update, legacy_mode=legacy_mode)
     catalog_item_name = ltm.get_revisioned_template_name(
         template[server_constants.RemoteTemplateKey.NAME],
         template[server_constants.RemoteTemplateKey.REVISION])
