@@ -1163,7 +1163,7 @@ def _install_all_templates(
             ssh_key=ssh_key,
             is_tkg_plus_enabled=server_utils.is_tkg_plus_enabled(config),
             msg_update_callback=msg_update_callback,
-            legacy_mode=config['service'].get('legacy_mode'))
+            legacy_mode=config['service']['legacy_mode'])
 
 
 def install_template(template_name, template_revision, config_file_name,

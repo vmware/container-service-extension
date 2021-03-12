@@ -514,7 +514,7 @@ class Service(object, metaclass=Singleton):
             msg_update_callback.info(msg)
             logger.SERVER_LOGGER.debug(msg)
         except cse_exception.DefSchemaServiceError as e:
-            msg = f"Error while loading defined entity schema: {e.minor_error_code}"  # noqa: E501
+            msg = f"Error while loading defined entity schema: {e.error_message}"  # noqa: E501
             msg_update_callback.error(msg)
             logger.SERVER_LOGGER.debug(msg)
             raise e
