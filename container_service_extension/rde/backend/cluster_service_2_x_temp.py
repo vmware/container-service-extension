@@ -85,7 +85,7 @@ class ClusterService(abstract_broker.AbstractBroker):
         returning the defined entity.
         """
         telemetry_handler.record_user_action_details(
-            cse_operation=telemetry_constants.CseOperation.V35_CLUSTER_INFO,
+            cse_operation=telemetry_constants.CseOperation.V36_CLUSTER_INFO,
             cse_params={
                 telemetry_constants.PayloadKey.CLUSTER_ID: cluster_id,
                 telemetry_constants.PayloadKey.SOURCE_DESCRIPTION: thread_local_data.get_thread_local_data(ThreadLocalData.USER_AGENT)  # noqa: E501
@@ -108,7 +108,7 @@ class ClusterService(abstract_broker.AbstractBroker):
             filters = {}
 
         telemetry_handler.record_user_action_details(
-            cse_operation=telemetry_constants.CseOperation.V35_CLUSTER_LIST,
+            cse_operation=telemetry_constants.CseOperation.V36_CLUSTER_LIST,
             cse_params={
                 telemetry_constants.PayloadKey.FILTER_KEYS: ','.join(filters.keys()),  # noqa: E501
                 telemetry_constants.PayloadKey.SOURCE_DESCRIPTION: thread_local_data.get_thread_local_data(ThreadLocalData.USER_AGENT)  # noqa: E501
@@ -134,8 +134,11 @@ class ClusterService(abstract_broker.AbstractBroker):
             filters = {}
 
         telemetry_handler.record_user_action_details(
-            cse_operation=telemetry_constants.CseOperation.V35_CLUSTER_LIST,
-            cse_params={telemetry_constants.PayloadKey.FILTER_KEYS: ','.join(filters.keys())}  # noqa: E501
+            cse_operation=telemetry_constants.CseOperation.V36_CLUSTER_LIST,
+            cse_params={
+                telemetry_constants.PayloadKey.FILTER_KEYS: ','.join(filters.keys()),  # noqa: E501
+                telemetry_constants.PayloadKey.SOURCE_DESCRIPTION: thread_local_data.get_thread_local_data(ThreadLocalData.USER_AGENT)  # noqa: E501
+            }
         )
 
         ent_type: common_models.DefEntityType = server_utils.get_registered_def_entity_type()  # noqa: E501
@@ -160,7 +163,7 @@ class ClusterService(abstract_broker.AbstractBroker):
                 f"valid state for this operation. Please contact the administrator")  # noqa: E501
 
         telemetry_handler.record_user_action_details(
-            cse_operation=telemetry_constants.CseOperation.V35_CLUSTER_CONFIG,
+            cse_operation=telemetry_constants.CseOperation.V36_CLUSTER_CONFIG,
             cse_params={
                 CLUSTER_ENTITY: curr_entity,
                 telemetry_constants.PayloadKey.SOURCE_DESCRIPTION: thread_local_data.get_thread_local_data(ThreadLocalData.USER_AGENT)  # noqa: E501
@@ -261,7 +264,7 @@ class ClusterService(abstract_broker.AbstractBroker):
             LOGGER.error(f"{msg}: {err}")
             raise
         telemetry_handler.record_user_action_details(
-            cse_operation=telemetry_constants.CseOperation.V35_CLUSTER_APPLY,
+            cse_operation=telemetry_constants.CseOperation.V36_CLUSTER_APPLY,
             cse_params={
                 CLUSTER_ENTITY: entity,
                 telemetry_constants.PayloadKey.SOURCE_DESCRIPTION: thread_local_data.get_thread_local_data(ThreadLocalData.USER_AGENT)  # noqa: E501
@@ -322,7 +325,7 @@ class ClusterService(abstract_broker.AbstractBroker):
             id=cluster_id,
             entity=cluster_spec)
         telemetry_handler.record_user_action_details(
-            cse_operation=telemetry_constants.CseOperation.V35_CLUSTER_APPLY,
+            cse_operation=telemetry_constants.CseOperation.V36_CLUSTER_APPLY,
             cse_params={
                 CLUSTER_ENTITY: telemetry_data,
                 telemetry_constants.PayloadKey.SOURCE_DESCRIPTION: thread_local_data.get_thread_local_data(ThreadLocalData.USER_AGENT)  # noqa: E501
@@ -370,7 +373,7 @@ class ClusterService(abstract_broker.AbstractBroker):
                 f"valid state to be deleted. Please contact administrator.")
 
         telemetry_handler.record_user_action_details(
-            cse_operation=telemetry_constants.CseOperation.V35_CLUSTER_DELETE,
+            cse_operation=telemetry_constants.CseOperation.V36_CLUSTER_DELETE,
             cse_params={
                 CLUSTER_ENTITY: curr_entity,
                 telemetry_constants.PayloadKey.SOURCE_DESCRIPTION: thread_local_data.get_thread_local_data(ThreadLocalData.USER_AGENT)  # noqa: E501
@@ -413,7 +416,7 @@ class ClusterService(abstract_broker.AbstractBroker):
         """
         curr_entity = self.entity_svc.get_entity(cluster_id)
         telemetry_handler.record_user_action_details(
-            cse_operation=telemetry_constants.CseOperation.V35_CLUSTER_UPGRADE_PLAN,  # noqa: E501
+            cse_operation=telemetry_constants.CseOperation.V36_CLUSTER_UPGRADE_PLAN,  # noqa: E501
             cse_params={
                 CLUSTER_ENTITY: curr_entity,
                 telemetry_constants.PayloadKey.SOURCE_DESCRIPTION: thread_local_data.get_thread_local_data(ThreadLocalData.USER_AGENT)  # noqa: E501
@@ -468,7 +471,7 @@ class ClusterService(abstract_broker.AbstractBroker):
                 f"cluster '{cluster_name}'.")
 
         telemetry_handler.record_user_action_details(
-            telemetry_constants.CseOperation.V35_CLUSTER_UPGRADE,
+            telemetry_constants.CseOperation.V36_CLUSTER_UPGRADE,
             cse_params={
                 CLUSTER_ENTITY: curr_entity,
                 telemetry_constants.PayloadKey.SOURCE_DESCRIPTION: thread_local_data.get_thread_local_data(ThreadLocalData.USER_AGENT)  # noqa: E501
@@ -545,7 +548,7 @@ class ClusterService(abstract_broker.AbstractBroker):
             telemetry_constants.PayloadKey.SOURCE_DESCRIPTION: thread_local_data.get_thread_local_data(ThreadLocalData.USER_AGENT)  # noqa: E501
         }
         telemetry_handler.record_user_action_details(
-            telemetry_constants.CseOperation.V35_CLUSTER_ACL_LIST,
+            telemetry_constants.CseOperation.V36_CLUSTER_ACL_LIST,
             cse_params=telemetry_params)
 
         acl_svc = acl_service.ClusterACLService(cluster_id,
@@ -587,7 +590,7 @@ class ClusterService(abstract_broker.AbstractBroker):
             telemetry_constants.PayloadKey.SOURCE_DESCRIPTION: thread_local_data.get_thread_local_data(ThreadLocalData.USER_AGENT)  # noqa: E501
         }
         telemetry_handler.record_user_action_details(
-            telemetry_constants.CseOperation.V35_CLUSTER_ACL_UPDATE,
+            telemetry_constants.CseOperation.V36_CLUSTER_ACL_UPDATE,
             cse_params=telemetry_params)
 
         # Get previous def entity acl
