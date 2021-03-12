@@ -1,7 +1,6 @@
 # container-service-extension
 # Copyright (c) 2017 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
-
 import time
 from typing import Dict, List
 
@@ -59,7 +58,7 @@ from container_service_extension.rde.behaviors.behavior_service import BehaviorS
 import container_service_extension.rde.common.entity_service as def_entity_svc
 import container_service_extension.rde.constants as def_constants
 import container_service_extension.rde.models.common_models as common_models
-import container_service_extension.rde.models.rde_1_0_0 as rde_1_0_0
+from container_service_extension.rde.models.rde_factory import get_rde_model
 import container_service_extension.rde.schema_service as def_schema_svc
 import container_service_extension.rde.utils as def_utils
 from container_service_extension.security.context.user_context import UserContext  # noqa: E501
@@ -761,19 +760,12 @@ def _register_def_schema(client: Client,
                                                                     logger_wire=logger_wire) # noqa: E501
     # TODO update CSE install to create client from max_vcd_api_version
     schema_file = None
-    vcd_supported_api_versions = \
-        set(client.get_supported_versions_list())
-    cse_supported_api_versions = \
-        set(server_constants.SUPPORTED_VCD_API_VERSIONS)
-    common_supported_api_versions = \
-        list(cse_supported_api_versions.intersection(vcd_supported_api_versions))  # noqa: E501
-    max_vcd_api_version_supported = \
-        max([float(x) for x in common_supported_api_versions])
+    max_vcd_api_version_supported = _get_computed_target_vcd_version(client=client)  # noqa: E501
     try:
         def_utils.raise_error_if_def_not_supported(cloudapi_client)
         rde_version: str = \
             def_utils.get_rde_version_by_vcd_api_version(
-                max_vcd_api_version_supported)
+                float(max_vcd_api_version_supported))
 
         msg_update_callback.general(f"Using RDE version: {rde_version}")
         # Obtain RDE metadata needed to initialize CSE
@@ -1372,7 +1364,7 @@ def _install_single_template(
 def upgrade_cse(config_file_name, config, skip_template_creation,
                 ssh_key, retain_temp_vapp, admin_password,
                 msg_update_callback=utils.NullPrinter()):
-    """Handle logistics for upgrading CSE to v3.0.
+    """Handle logistics for upgrading CSE to 3.1.
 
     Handles decision making for configuring AMQP exchange/settings,
     defined entity schema registration for vCD api version >= 35,
@@ -1452,7 +1444,7 @@ def upgrade_cse(config_file_name, config, skip_template_creation,
             msg_update_callback.general(msg)
             INSTALL_LOGGER.info(msg)
 
-        target_vcd_api_version = config['vcd']['api_version']
+        target_vcd_api_version: str = _get_computed_target_vcd_version(client=client)  # noqa: E501
         target_cse_version = server_utils.get_installed_cse_version()
 
         telemetry_data = {
@@ -1478,50 +1470,29 @@ def upgrade_cse(config_file_name, config, skip_template_creation,
         # then CSE X.Y.Z+ should also be allowed to upgrade to CSE X'.Y'.Z'
         # irrespective of when these patches were released.
 
-        # Upgrading from Unknown version is allowed only in
-        # CSE 3.0.0 (2.6.0.devX for the time being)
-
-        update_path_not_valid_msg = "CSE upgrade "
-        if ext_cse_version == server_constants.UNKNOWN_CSE_VERSION or \
-                ext_vcd_api_version == server_constants.UNKNOWN_VCD_API_VERSION: # noqa: E501
-            update_path_not_valid_msg += "to "
-        else:
-            update_path_not_valid_msg += \
-                f"path (CSE '{ext_cse_version}', vCD " \
-                f"api 'v{ext_vcd_api_version}') -> "
+        legacy_mode = config['service']['legacy_mode']
+        update_path_not_valid_msg = "CSE upgrade path (CSE '{ext_cse_version}', vCD api 'v{ext_vcd_api_version}') -> "  # noqa: E501
         update_path_not_valid_msg += f"(CSE '{target_cse_version}', vCD api " \
-                                     f"'v{target_vcd_api_version}') is not " \
-                                     "supported."
+                                     f"'v{target_vcd_api_version}', " \
+                                     f"legacy_mode:{legacy_mode}) " \
+                                     f"is not supported."
 
         if target_cse_version < ext_cse_version or \
                 float(target_vcd_api_version) < float(ext_vcd_api_version):
             raise Exception(update_path_not_valid_msg)
+        if ext_vcd_api_version in (vCDApiVersion.VERSION_35.value, vCDApiVersion.VERSION_36.value) and config['service']['legacy_mode']:  # noqa: E501
+            raise Exception(update_path_not_valid_msg)  # noqa: E501
 
         # CSE version info in extension description is only applicable for
-        # CSE 2.6.02b.dev and CSE 3.0.0+ versions.
-        cse_2_6_any_patch = semantic_version.SimpleSpec('>=2.6.0,<2.7.0')
-        cse_3_0_any_previous_patch = semantic_version.SimpleSpec('>=3.0.0,<=3.0.1')  # noqa: E501
-        allow_upgrade = \
-            ext_cse_version == server_constants.UNKNOWN_CSE_VERSION or \
-            cse_2_6_any_patch.match(ext_cse_version) or \
-            cse_3_0_any_previous_patch.match(ext_cse_version)
+        # CSE 3.0.0+ versions.
+        cse_3_0_any_patch = semantic_version.SimpleSpec('>=3.0.0,<3.1.0')  # noqa: E501
+        allow_upgrade = cse_3_0_any_patch.match(ext_cse_version)
 
         if not allow_upgrade:
             raise Exception(update_path_not_valid_msg)
 
-        if target_vcd_api_version in (vCDApiVersion.VERSION_33.value,
-                                      vCDApiVersion.VERSION_34.value):
-            _legacy_upgrade_to_33_34(
-                client=client,
-                config=config,
-                ext_vcd_api_version=ext_vcd_api_version,
-                skip_template_creation=skip_template_creation,
-                ssh_key=ssh_key,
-                retain_temp_vapp=retain_temp_vapp,
-                admin_password=admin_password,
-                msg_update_callback=msg_update_callback)
-        elif target_vcd_api_version in (vCDApiVersion.VERSION_35.value):
-            _upgrade_to_35(
+        if target_vcd_api_version in (vCDApiVersion.VERSION_35.value, vCDApiVersion.VERSION_35.value):  # noqa: E501
+            _upgrade_to_rde_cluster(
                 client=client,
                 config=config,
                 ext_vcd_api_version=ext_vcd_api_version,
@@ -1611,59 +1582,11 @@ def _update_cse_amqp_extension(client, routing_key, exchange,
     INSTALL_LOGGER.info(msg)
 
 
-def _legacy_upgrade_to_33_34(client, config, ext_vcd_api_version,
-                             skip_template_creation, ssh_key,
-                             retain_temp_vapp, admin_password,
-                             msg_update_callback=utils.NullPrinter()):
-    # create amqp exchange if it doesn't exist
-    amqp = config['amqp']
-    _create_amqp_exchange(amqp['exchange'], amqp['host'], amqp['port'],
-                          amqp['vhost'], amqp['username'],
-                          amqp['password'],
-                          msg_update_callback=msg_update_callback)
-
-    if skip_template_creation:
-        msg = "Skipping creation of templates."
-        msg_update_callback.info(msg)
-        INSTALL_LOGGER.info(msg)
-    else:
-        # Recreate all supported templates
-        _install_all_templates(
-            client=client,
-            config=config,
-            force_create=True,
-            retain_temp_vapp=retain_temp_vapp,
-            ssh_key=retain_temp_vapp,
-            msg_update_callback=msg_update_callback)
-
-    # Fix cluster metadata and admin password
-    clusters = get_all_cse_clusters(client)
-
-    _fix_cluster_metadata(
-        client=client,
-        config=config,
-        cse_clusters=clusters,
-        msg_update_callback=msg_update_callback)
-    _fix_cluster_admin_password(
-        client=client,
-        cse_clusters=clusters,
-        new_admin_password=admin_password,
-        msg_update_callback=msg_update_callback)
-
-    # update cse api extension
-    _update_cse_amqp_extension(
-        client=client,
-        routing_key=amqp['routing_key'],
-        exchange=amqp['exchange'],
-        target_vcd_api_version=config['vcd']['api_version'],
-        msg_update_callback=msg_update_callback)
-
-
-def _upgrade_to_35(client, config, ext_vcd_api_version,
-                   skip_template_creation, ssh_key, retain_temp_vapp,
-                   admin_password, msg_update_callback=utils.NullPrinter(),
-                   log_wire=False):
-    """Handle upgrade to api version 35.
+def _upgrade_to_rde_cluster(client, config, ext_vcd_api_version,
+                            skip_template_creation, ssh_key, retain_temp_vapp,
+                            admin_password, msg_update_callback=utils.NullPrinter(),  # noqa: E501
+                            log_wire=False):
+    """Handle upgrade to supported api version and rde.
 
     :raises: MultipleRecordsException: (when using mqtt) if more than one
         service with the given name and namespace are found when trying to
@@ -1687,26 +1610,6 @@ def _upgrade_to_35(client, config, ext_vcd_api_version,
         config=config,
         msg_update_callback=msg_update_callback,
         log_wire=log_wire)
-
-    if skip_template_creation:
-        msg = "Skipping creation of templates."
-        msg_update_callback.info(msg)
-        INSTALL_LOGGER.info(msg)
-        _assign_placement_policies_to_existing_templates(
-            client=client,
-            config=config,
-            is_tkg_plus_enabled=is_tkg_plus_enabled,
-            log_wire=utils.str_to_bool(config['service'].get('log_wire')),
-            msg_update_callback=msg_update_callback)
-    else:
-        # Recreate all supported templates
-        _install_all_templates(
-            client=client,
-            config=config,
-            force_create=True,
-            retain_temp_vapp=retain_temp_vapp,
-            ssh_key=retain_temp_vapp,
-            msg_update_callback=msg_update_callback)
 
     msg = "Loading all CSE clusters for processing..."
     INSTALL_LOGGER.info(msg)
@@ -2404,10 +2307,10 @@ def _create_def_entity_for_existing_clusters(
 
     schema_svc = def_schema_svc.DefSchemaService(cloudapi_client)
     server_rde_version: str = \
-        def_utils.get_rde_version_by_vcd_api_version(float(client.get_api_version()))  # noqa: E501
+        def_utils.get_rde_version_by_vcd_api_version(float(_get_computed_target_vcd_version(client=client)))  # noqa: E501
     rde_metadata: dict = def_utils.get_rde_metadata(server_rde_version)
     entity_type_metadata = rde_metadata[def_constants.RDEMetadataKey.ENTITY_TYPE]  # noqa: E501
-    native_entity_type = schema_svc.get_entity_type(entity_type_metadata.get_id())  # noqa: E501
+    target_entity_type = schema_svc.get_entity_type(entity_type_metadata.get_id())  # noqa: E501
 
     for cluster in cse_clusters:
         msg = f"Processing cluster '{cluster['name']}'"
@@ -2417,14 +2320,35 @@ def _create_def_entity_for_existing_clusters(
         cluster_id = cluster['cluster_id']
         try:
             def_entity = entity_svc.get_entity(cluster_id)
-            msg = f"Skipping cluster '{cluster['name']}' since it has " \
-                  "already been processed."
-            INSTALL_LOGGER.info(msg)
-            msg_update_callback.info(msg)
+            source_rde_version = def_entity.entityType.split(":")[-1]
+            if semantic_version.Version(source_rde_version) < semantic_version.Version(server_rde_version):  # noqa: E501
+                msg = f"Upgrading {def_entity.name} from {source_rde_version} to {server_rde_version}"  # noqa: E501
+                INSTALL_LOGGER.info(msg)
+                msg_update_callback.info(msg)
+                # Get the right rde model for getting new defined entity
+                TargetNativeEntity = get_rde_model(server_rde_version)
+                cluster_entity = TargetNativeEntity.from_native_entity(def_entity.entity)  # noqa: E501
+                new_entity = common_models.DefEntity(entity=cluster_entity,
+                                                     entityType=target_entity_type.id)  # noqa: E501
+                org_resource = vcd_utils.get_org(client, org_name=cluster['org_name'])  # noqa: E501
+                org_id = org_resource.href.split('/')[-1]
+                entity_svc.create_entity(entity_type_id=target_entity_type.id,
+                                         entity=new_entity,
+                                         tenant_org_context=org_id)
+                created_entity = entity_svc.get_native_rde_by_name_and_rde_version(cluster['name'], server_rde_version)  # noqa: E501
+                entity_svc.resolve_entity(entity_id=created_entity.id)
+                # Remove old defined entity
+                entity_svc.delete_entity(entity_id=def_entity.id)
+            else:
+                msg = f"Skipping cluster '{cluster['name']}' " \
+                    f"since it has already been processed."
+                INSTALL_LOGGER.info(msg)
+                msg_update_callback.info(msg)
             continue
         except Exception as err:
             INSTALL_LOGGER.debug(str(err))
 
+        # The code below creates defined-entity for api 33/34 native clusters
         try:
             policy_name = _get_placement_policy_name_from_template_name(
                 cluster['template_name'])
@@ -2449,64 +2373,17 @@ def _create_def_entity_for_existing_clusters(
         elif policy_name == shared_constants.TKG_PLUS_CLUSTER_RUNTIME_INTERNAL_NAME:  # noqa: E501
             kind = shared_constants.ClusterEntityKind.TKG_PLUS.value
 
-        worker_nodes = []
-        for item in cluster['nodes']:
-            worker_nodes.append(
-                rde_1_0_0.Node(name=item['name'], ip=item['ipAddress']))
-        nfs_nodes = []
-        for item in cluster['nfs_nodes']:
-            nfs_nodes.append(rde_1_0_0.NfsNode(
-                name=item['name'],
-                ip=item['ipAddress'],
-                exports=item['exports']))
-
-        cluster_entity = rde_1_0_0.NativeEntity(
-            kind=kind,
-            spec=rde_1_0_0.ClusterSpec(
-                workers=rde_1_0_0.Workers(
-                    count=len(cluster['nodes']),
-                    storage_profile=cluster['storage_profile_name']),
-                control_plane=rde_1_0_0.ControlPlane(
-                    count=len(cluster['master_nodes']),
-                    storage_profile=cluster['storage_profile_name']),
-                nfs=rde_1_0_0.Nfs(
-                    count=len(cluster['nfs_nodes']),
-                    storage_profile=cluster['storage_profile_name']),
-                settings=rde_1_0_0.Settings(
-                    network=cluster['network_name'],
-                    ssh_key=""),  # Impossible to get this value from clusters
-                k8_distribution=rde_1_0_0.Distribution(
-                    template_name=cluster['template_name'],
-                    template_revision=int(cluster['template_revision']))),
-            status=rde_1_0_0.Status(
-                phase=str(server_constants.DefEntityPhase(
-                    server_constants.DefEntityOperation.CREATE,
-                    server_constants.DefEntityOperationStatus.SUCCEEDED)),
-                kubernetes=f"{cluster['kubernetes']} {cluster['kubernetes_version']}", # noqa: E501
-                cni=f"{cluster['cni']} {cluster['cni_version']}",
-                os=cluster['os'],
-                docker_version=cluster['docker_version'],
-                nodes=rde_1_0_0.Nodes(
-                    control_plane=rde_1_0_0.Node(
-                        name=cluster['master_nodes'][0]['name'],
-                        ip=cluster['master_nodes'][0]['ipAddress']),
-                    workers=worker_nodes,
-                    nfs=nfs_nodes)),
-            metadata=rde_1_0_0.Metadata(
-                org_name=cluster['org_name'],
-                ovdc_name=cluster['vdc_name'],
-                cluster_name=cluster['name']),
-            api_version="")
-
+        TargetNativeEntity = get_rde_model(server_rde_version)
+        cluster_entity = TargetNativeEntity.from_cluster_data(cluster=cluster, kind=kind)  # noqa: E501
         org_resource = vcd_utils.get_org(client, org_name=cluster['org_name'])
         org_id = org_resource.href.split('/')[-1]
         def_entity = common_models.DefEntity(entity=cluster_entity,
-                                             entityType=native_entity_type.id)
-        entity_svc.create_entity(native_entity_type.id, entity=def_entity,
+                                             entityType=target_entity_type.id)
+        entity_svc.create_entity(target_entity_type.id, entity=def_entity,
                                  tenant_org_context=org_id)
 
         def_entity = entity_svc.get_native_rde_by_name_and_rde_version(
-            cluster['name'], '1.0.0')
+            cluster['name'], server_rde_version)
         def_entity_id = def_entity.id
         def_entity.externalId = cluster['vapp_href']
 
@@ -2586,6 +2463,14 @@ def _print_users_in_need_of_def_rights(
         msg = msg + org_users_msg
         msg_update_callback.info(msg)
         INSTALL_LOGGER.info(msg)
+
+
+def _get_computed_target_vcd_version(client: Client) -> str:
+    vcd_supported_api_versions = set(client.get_supported_versions_list())
+    cse_supported_api_versions = set(server_constants.SUPPORTED_VCD_API_VERSIONS)  # noqa: E501
+    common_supported_api_versions = list(cse_supported_api_versions.intersection(vcd_supported_api_versions))  # noqa: E501
+    target_vcd_api_version = max([float(x) for x in common_supported_api_versions])  # noqa: E501
+    return str(target_vcd_api_version)
 
 
 def configure_nsxt_for_cse(nsxt_servers, log_wire=False, msg_update_callback=utils.NullPrinter()):  # noqa: E501
