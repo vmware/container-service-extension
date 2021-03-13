@@ -22,7 +22,7 @@ class BehaviorOperationContext:
     entity: dict
     entity_type_id: str
     payload: dict
-    api_version: str
+    api_version: float
     request_id: str
     op_ctx: OperationContext
     user_context: BehaviorUserContext

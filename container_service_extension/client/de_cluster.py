@@ -53,7 +53,7 @@ class DECluster:
         self._nativeCluster = DEClusterNative(client)
         self._tkgCluster = DEClusterTKG(client)
         self._server_rde_version = \
-            def_utils.get_rde_version_by_vcd_api_version(
+            def_utils.get_runtime_rde_version_by_vcd_api_version(
                 float(self._cloudapi_client.get_api_version()))
 
     def list_clusters(self, vdc=None, org=None, **kwargs):

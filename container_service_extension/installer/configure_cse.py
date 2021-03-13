@@ -772,7 +772,7 @@ def _register_def_schema(client: Client,
     try:
         def_utils.raise_error_if_def_not_supported(cloudapi_client)
         rde_version: str = \
-            def_utils.get_rde_version_by_vcd_api_version(
+            def_utils.get_runtime_rde_version_by_vcd_api_version(
                 max_vcd_api_version_supported)
 
         msg_update_callback.general(f"Using RDE version: {rde_version}")
@@ -2408,7 +2408,7 @@ def _create_def_entity_for_existing_clusters(
 
     schema_svc = def_schema_svc.DefSchemaService(cloudapi_client)
     server_rde_version: str = \
-        def_utils.get_rde_version_by_vcd_api_version(float(client.get_api_version()))  # noqa: E501
+        def_utils.get_runtime_rde_version_by_vcd_api_version(float(client.get_api_version()))  # noqa: E501
     rde_metadata: dict = def_utils.get_rde_metadata(server_rde_version)
     entity_type_metadata = rde_metadata[def_constants.RDEMetadataKey.ENTITY_TYPE]  # noqa: E501
     native_entity_type = schema_svc.get_entity_type(entity_type_metadata.get_id())  # noqa: E501

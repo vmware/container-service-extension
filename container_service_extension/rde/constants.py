@@ -136,8 +136,8 @@ MAP_VCD_API_VERSION_TO_RUNTIME_RDE_VERSION = {
 #     37.0: RDEVersion.RDE_3_0_0
 # }
 MAP_VCD_API_VERSION_TO_RDE_VERSION = {
-    35.0: RDEVersion.RDE_1_0_0,
-    36.0: RDEVersion.RDE_2_0_0
+    35.0: RDEVersion.RDE_1_0_0.value,
+    36.0: RDEVersion.RDE_2_0_0.value
 }
 
 

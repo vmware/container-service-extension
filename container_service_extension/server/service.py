@@ -484,7 +484,7 @@ class Service(object, metaclass=Singleton):
             max_vcd_api_version_supported = \
                 max([float(x) for x in self.config['service']['supported_api_versions']])  # noqa: E501
             self.config['service']['rde_version_in_use'] = \
-                def_utils.get_rde_version_by_vcd_api_version(max_vcd_api_version_supported)  # noqa: E501
+                def_utils.get_runtime_rde_version_by_vcd_api_version(max_vcd_api_version_supported)  # noqa: E501
             server_rde_version = server_utils.get_rde_version_in_use()
             msg_update_callback.general(f"Using RDE version: {server_rde_version}")  # noqa: E501
 

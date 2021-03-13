@@ -4,6 +4,8 @@
 
 import abc
 
+from container_service_extension.lib.cloudapi.cloudapi_client import \
+    CloudApiClient
 from container_service_extension.rde.behaviors.behavior_model import \
     BehaviorOperation
 from container_service_extension.rde.models.abstractNativeEntity import AbstractNativeEntity  # noqa: E501
@@ -14,14 +16,13 @@ class AbstractValidator(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def validate(self, api_version, input_entity: AbstractNativeEntity,
-                 current_entity: AbstractNativeEntity = None,
-                 operation: BehaviorOperation = None) -> bool:
+    def validate(self, cloudapi_client: CloudApiClient, entity_id: str = None,
+                 entity: dict = None, operation: BehaviorOperation = None) -> bool:
         """Validate the input_spec against current_spec.
 
-        :param api_version:
-        :param AbstractNativeEntity input_entity: Request spec of the cluster
-        :param AbstractNativeEntity current_entity: Current status of the cluster  # noqa: E501
+        :param cloudapi_client: cloud api client
+        :param dict entity: entity to be validated
+        :param entity_id: entity id to be validated
         :param BehaviorOperation operation: CSE operation key
         :return: is validation successful or failure
         :rtype: bool

@@ -6,7 +6,15 @@
 import functools
 
 from container_service_extension.common.utils import server_utils
+from container_service_extension.lib.cloudapi.cloudapi_client import \
+    CloudApiClient
 from container_service_extension.rde.backend import cluster_service_factory
+import container_service_extension.rde.constants as rde_constants
+import container_service_extension.rde.validators.validator_factory as rde_validator_factory  # noqa: E501
+from container_service_extension.rde.models import rde_factory
+from container_service_extension.rde.models.abstractNativeEntity import \
+    AbstractNativeEntity
+import container_service_extension.rde.utils as rde_utils
 from container_service_extension.security.context.behavior_operation_context import BehaviorOperationContext  # noqa: E501
 import container_service_extension.exception.exceptions as cse_exception
 from container_service_extension.logging.logger import SERVER_LOGGER as LOGGER
@@ -51,21 +59,25 @@ def exception_handler(func):
 
 @exception_handler
 def create_cluster(behavior_ctx: BehaviorOperationContext):
-    entity_id = behavior_ctx.entity_id
-    entity = behavior_ctx.entity
-    api_version = behavior_ctx.api_version
-    # TODO Get validator based on (api_version, payload_version) and validate the entity.  # noqa: E501
-    rde_in_use = server_utils.get_rde_version_in_use()
-    svc = cluster_service_factory.ClusterServiceFactory(behavior_ctx).\
-        get_cluster_service(rde_in_use)
+    entity_id: str = behavior_ctx.entity_id
+    entity: dict = behavior_ctx.entity
+    cloudapi_client: CloudApiClient = behavior_ctx.op_ctx.cloudapi_client
+    api_version: float = behavior_ctx.api_version
+
+    # Validate the input
+    rde_version_introduced_at_api_version = rde_utils.get_rde_version_introduced_at_api_version(api_version)  # noqa: E501
+    rde_validator_factory.get_validator(
+        rde_version=rde_version_introduced_at_api_version). \
+        validate(cloudapi_client=cloudapi_client, entity=entity)
+
     # TODO Based on the rde_in_use, convert the entity if necessary.
-    # TODO Based on the rde_in_use, call the right cluster_service.py file.
-    # error: bool = True
-    # if error:
-    #     return BehaviorErrorPayload(majorErrorCode='400',
-    #                                 minorErrorCode='Input validation failed',
-    #                                 message='Input RDE version 1.0 is not supported at api_version 36')  # noqa: E501
-    return "Cluster creation successful"
+
+    # Call the backend to initiate the cluster creation.
+    rde_in_use = server_utils.get_rde_version_in_use()
+    svc = cluster_service_factory.ClusterServiceFactory(behavior_ctx).get_cluster_service(rde_in_use)  # noqa: E501
+    NativeEntityClass: AbstractNativeEntity = rde_factory.get_rde_model(rde_in_use)  # noqa: E501
+    input_entity: AbstractNativeEntity = NativeEntityClass(**entity)
+    return svc.create_cluster(entity_id=entity_id, entity=input_entity)
 
 
 @exception_handler
@@ -114,3 +126,4 @@ def get_kubeconfig(behavior_ctx: BehaviorOperationContext):
     #                                 minorErrorCode='Cannot reach the cluster',  # noqa: E501
     #                                 message='Cannot reach the cluster')
     return "Returning the kubeconfig"
+

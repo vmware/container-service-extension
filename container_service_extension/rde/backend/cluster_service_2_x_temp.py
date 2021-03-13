@@ -63,10 +63,7 @@ class ClusterService(abstract_broker.AbstractBroker):
     def __init__(self, op_ctx: BehaviorOperationContext):
         # TODO(DEF) Once all the methods are modified to use defined entities,
         #  the param OperationContext needs to be replaced by cloudapiclient.
-        self.context: ctx.OperationContext = BehaviorOperationContext.op_ctx
-        # populates above attributes
-        super().__init__(op_ctx)
-
+        self.context: ctx.OperationContext = op_ctx.op_ctx
         self.behavior_task_id = op_ctx.task_id
         self.behavior_task_href = self.context.client.get_api_uri() + f"/task/{self.behavior_task_id}"  # noqa: E501
         self.task = None
@@ -228,8 +225,8 @@ class ClusterService(abstract_broker.AbstractBroker):
                 f"Cluster '{cluster_name}' already exists.")
 
         # check that requested/default template is valid
-        template = _get_template(
-            name=template_name, revision=template_revision)
+        # template = _get_template(
+        #     name=template_name, revision=template_revision)
 
         # TODO(DEF) design and implement telemetry VCDA-1564 defined entity
         #  based clusters
@@ -237,14 +234,14 @@ class ClusterService(abstract_broker.AbstractBroker):
         entity.status.phase = str(
             DefEntityPhase(DefEntityOperation.CREATE,
                            DefEntityOperationStatus.IN_PROGRESS))
-        entity.status.kubernetes = \
-            _create_k8s_software_string(template[LocalTemplateKey.KUBERNETES],
-                                        template[LocalTemplateKey.KUBERNETES_VERSION]) # noqa: E501
-        entity.status.cni = \
-            _create_k8s_software_string(template[LocalTemplateKey.CNI],
-                                        template[LocalTemplateKey.CNI_VERSION])
-        entity.status.docker_version = template[LocalTemplateKey.DOCKER_VERSION] # noqa: E501
-        entity.status.os = template[LocalTemplateKey.OS]
+        # entity.status.kubernetes = \
+        #     _create_k8s_software_string(template[LocalTemplateKey.KUBERNETES],
+        #                                 template[LocalTemplateKey.KUBERNETES_VERSION]) # noqa: E501
+        # entity.status.cni = \
+        #     _create_k8s_software_string(template[LocalTemplateKey.CNI],
+        #                                 template[LocalTemplateKey.CNI_VERSION])
+        # entity.status.docker_version = template[LocalTemplateKey.DOCKER_VERSION] # noqa: E501
+        # entity.status.os = template[LocalTemplateKey.OS]
         entity.status.cloud_properties.k8_distribution.template_name = template_name  # noqa: E501
         entity.status.cloud_properties.k8_distribution.template_revision = template_revision  # noqa: E501
         entity.status.cloud_properties.org_name = org_name
@@ -270,6 +267,7 @@ class ClusterService(abstract_broker.AbstractBroker):
                 telemetry_constants.PayloadKey.SOURCE_DESCRIPTION: thread_local_data.get_thread_local_data(ThreadLocalData.USER_AGENT)  # noqa: E501
             }
         )
+        return "cluster creation successful"
         self._create_cluster_async(entity_id, entity)
 
     def resize_cluster(self, cluster_id: str,
