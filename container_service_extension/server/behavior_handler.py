@@ -52,6 +52,8 @@ def exception_handler(func):
             raise cse_exception.BadRequestError(error_message=str(error))
         except Exception as error:
             LOGGER.error(error)
+            if not isinstance(error, cse_exception.CseRequestError):
+                raise cse_exception.InternalServerRequestError(error_message=str(error))  # noqa: E501
             raise error
         return result
     return exception_handler_wrapper
@@ -77,7 +79,7 @@ def create_cluster(behavior_ctx: BehaviorOperationContext):
     svc = cluster_service_factory.ClusterServiceFactory(behavior_ctx).get_cluster_service(rde_in_use)  # noqa: E501
     NativeEntityClass: AbstractNativeEntity = rde_factory.get_rde_model(rde_in_use)  # noqa: E501
     input_entity: AbstractNativeEntity = NativeEntityClass(**entity)
-    return svc.create_cluster(entity_id=entity_id, entity=input_entity)
+    return svc.create_cluster(entity_id=entity_id, input_native_entity=input_entity)  # noqa: E501
 
 
 @exception_handler

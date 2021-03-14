@@ -52,10 +52,14 @@ def process_behavior_request(msg_json):
 
     # Invoke the handler method and return the response in the string format.
     try:
-        return MAP_BEHAVIOR_ID_TO_HANDLER_METHOD[behavior_id](behavior_ctx)  # noqa: E501
+        return 'success', MAP_BEHAVIOR_ID_TO_HANDLER_METHOD[behavior_id](behavior_ctx)  # noqa: E501
     except CseRequestError as e:
         error_payload = BehaviorErrorPayload(majorErrorCode=e.status_code,
                                              minorErrorCode=e.minor_error_code,
                                              message=e.error_message)
-        return json.dumps(asdict(error_payload))
+        return 'error', json.dumps(asdict(error_payload))
+    except Exception as e:
+        error_payload = BehaviorErrorPayload(majorErrorCode=500,
+                                             message=str(e))
+        return 'error', json.dumps(asdict(error_payload))
 

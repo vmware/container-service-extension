@@ -67,22 +67,6 @@ class CseRequestError(CseServerError):
         return self.error_message
 
 
-class ClusterOperationError(CseServerError):
-    """Base class for all cluster operation related exceptions."""
-
-
-class ClusterAlreadyExistsError(CseServerError):
-    """Raised when creating a cluster that already exists."""
-
-
-class ClusterNotFoundError(CseServerError):
-    """Raised when cluster is not found in the environment."""
-
-
-class CseDuplicateClusterError(CseServerError):
-    """Raised when multiple vCD clusters of same name detected."""
-
-
 class NodeNotFoundError(CseServerError):
     """Raised when a node is not found in the environment."""
 
@@ -116,6 +100,22 @@ class InternalServerRequestError(CseRequestError):
     def __init__(self, error_message=None, minor_error_code=None):
         super().__init__(requests.codes.internal_server_error, error_message,
                          minor_error_code)
+
+
+class ClusterOperationError(InternalServerRequestError):
+    """Base class for all cluster operation related exceptions."""
+
+
+class ClusterAlreadyExistsError(InternalServerRequestError):
+    """Raised when creating a cluster that already exists."""
+
+
+class ClusterNotFoundError(InternalServerRequestError):
+    """Raised when cluster is not found in the environment."""
+
+
+class CseDuplicateClusterError(InternalServerRequestError):
+    """Raised when multiple vCD clusters of same name detected."""
 
 
 class MethodNotAllowedRequestError(CseRequestError):

@@ -186,7 +186,7 @@ class ClusterService(abstract_broker.AbstractBroker):
 
         return result.content.decode()
 
-    def create_cluster(self, entity_id: str, entity: rde_2_0_0.NativeEntity):
+    def create_cluster(self, entity_id: str, input_native_entity: rde_2_0_0.NativeEntity):
         """Start the cluster creation operation.
 
         Creates corresponding defined entity in vCD for every native cluster.
@@ -198,14 +198,14 @@ class ClusterService(abstract_broker.AbstractBroker):
         :return: Defined entity of the cluster
         :rtype: common_models.DefEntity
         """
-        cluster_name = entity.metadata.cluster_name
-        org_name = entity.metadata.org_name
-        ovdc_name = entity.metadata.ovdc_name
-        template_name = entity.spec.k8_distribution.template_name
-        template_revision = entity.spec.k8_distribution.template_revision
+        cluster_name = input_native_entity.metadata.cluster_name
+        org_name = input_native_entity.metadata.org_name
+        ovdc_name = input_native_entity.metadata.ovdc_name
+        template_name = input_native_entity.spec.k8_distribution.template_name
+        template_revision = input_native_entity.spec.k8_distribution.template_revision
         if not (template_name or template_revision):
             default_dist = server_utils.get_default_k8_distribution()
-            entity.spec.k8_distribution = default_dist
+            input_native_entity.spec.k8_distribution = default_dist
             template_name = default_dist.template_name
             template_revision = default_dist.template_revision
 
@@ -225,37 +225,37 @@ class ClusterService(abstract_broker.AbstractBroker):
                 f"Cluster '{cluster_name}' already exists.")
 
         # check that requested/default template is valid
-        # template = _get_template(
-        #     name=template_name, revision=template_revision)
+        template = _get_template(
+            name=template_name, revision=template_revision)
 
         # TODO(DEF) design and implement telemetry VCDA-1564 defined entity
         #  based clusters
-
-        entity.status.phase = str(
+        curr_rde: common_models.DefEntity = self.entity_svc.get_entity(entity_id)  # noqa: E501
+        curr_rde.entity.status.phase = str(
             DefEntityPhase(DefEntityOperation.CREATE,
                            DefEntityOperationStatus.IN_PROGRESS))
-        # entity.status.kubernetes = \
-        #     _create_k8s_software_string(template[LocalTemplateKey.KUBERNETES],
-        #                                 template[LocalTemplateKey.KUBERNETES_VERSION]) # noqa: E501
-        # entity.status.cni = \
-        #     _create_k8s_software_string(template[LocalTemplateKey.CNI],
-        #                                 template[LocalTemplateKey.CNI_VERSION])
-        # entity.status.docker_version = template[LocalTemplateKey.DOCKER_VERSION] # noqa: E501
-        # entity.status.os = template[LocalTemplateKey.OS]
-        entity.status.cloud_properties.k8_distribution.template_name = template_name  # noqa: E501
-        entity.status.cloud_properties.k8_distribution.template_revision = template_revision  # noqa: E501
-        entity.status.cloud_properties.org_name = org_name
-        entity.status.cloud_properties.ovdc_name = ovdc_name
-        entity.status.cloud_properties.ovdc_network_name = entity.spec.settings.network  # noqa: E501
-        entity.status.cloud_properties.rollback_on_failure = entity.spec.settings.rollback_on_failure  # noqa: E501
-        entity.status.cloud_properties.ssh_key = entity.spec.settings.ssh_key  # noqa: E501
+        curr_rde.entity.status.kubernetes = \
+            _create_k8s_software_string(template[LocalTemplateKey.KUBERNETES],
+                                        template[LocalTemplateKey.KUBERNETES_VERSION]) # noqa: E501
+        curr_rde.entity.status.cni = \
+            _create_k8s_software_string(template[LocalTemplateKey.CNI],
+                                        template[LocalTemplateKey.CNI_VERSION])
+        curr_rde.entity.status.docker_version = template[LocalTemplateKey.DOCKER_VERSION] # noqa: E501
+        curr_rde.entity.status.os = template[LocalTemplateKey.OS]
+        curr_rde.entity.status.cloud_properties.k8_distribution.template_name = template_name  # noqa: E501
+        curr_rde.entity.status.cloud_properties.k8_distribution.template_revision = template_revision  # noqa: E501
+        curr_rde.entity.status.cloud_properties.org_name = org_name
+        curr_rde.entity.status.cloud_properties.ovdc_name = ovdc_name
+        curr_rde.entity.status.cloud_properties.ovdc_network_name = input_native_entity.spec.settings.network  # noqa: E501
+        curr_rde.entity.status.cloud_properties.rollback_on_failure = input_native_entity.spec.settings.rollback_on_failure  # noqa: E501
+        curr_rde.entity.status.cloud_properties.ssh_key = input_native_entity.spec.settings.ssh_key  # noqa: E501
 
         msg = f"Creating cluster '{cluster_name}' " \
               f"from template '{template_name}' (revision {template_revision})"
-        self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
-        entity.status.task_href = self.task_resource.get('href')
+        # self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
+        curr_rde.entity.status.task_href = self.task_resource.get('href')
         try:
-            self.entity_svc.update_entity(entity_id=entity_id, entity=entity)
+            self.entity_svc.update_entity(entity_id=entity_id, entity=curr_rde)
         except Exception as err:
             msg = f"Error updating the cluster '{cluster_name}' with the status"  # noqa: E501
             LOGGER.error(f"{msg}: {err}")
@@ -263,12 +263,11 @@ class ClusterService(abstract_broker.AbstractBroker):
         telemetry_handler.record_user_action_details(
             cse_operation=telemetry_constants.CseOperation.V36_CLUSTER_APPLY,
             cse_params={
-                CLUSTER_ENTITY: entity,
+                CLUSTER_ENTITY: input_native_entity,
                 telemetry_constants.PayloadKey.SOURCE_DESCRIPTION: thread_local_data.get_thread_local_data(ThreadLocalData.USER_AGENT)  # noqa: E501
             }
         )
-        return "cluster creation successful"
-        self._create_cluster_async(entity_id, entity)
+        self._create_cluster_async(entity_id, input_native_entity)
 
     def resize_cluster(self, cluster_id: str,
                        cluster_spec: rde_2_0_0.NativeEntity):
@@ -653,26 +652,26 @@ class ClusterService(abstract_broker.AbstractBroker):
                                    nodes_to_del=nodes_to_del)
         return curr_entity
 
-    @thread_utils.run_async
+    #@thread_utils.run_async
     def _create_cluster_async(self, cluster_id: str,
-                              cluster_spec: rde_2_0_0.NativeEntity):
+                              input_native_entity: rde_2_0_0.NativeEntity):
         try:
-            cluster_name = cluster_spec.metadata.cluster_name
-            org_name = cluster_spec.metadata.org_name
-            ovdc_name = cluster_spec.metadata.ovdc_name
-            num_workers = cluster_spec.spec.workers.count
-            control_plane_sizing_class = cluster_spec.spec.control_plane.sizing_class  # noqa: E501
-            worker_sizing_class = cluster_spec.spec.workers.sizing_class
-            control_plane_storage_profile = cluster_spec.spec.control_plane.storage_profile  # noqa: E501
-            worker_storage_profile = cluster_spec.spec.workers.storage_profile  # noqa: E501
-            nfs_count = cluster_spec.spec.nfs.count
-            nfs_sizing_class = cluster_spec.spec.nfs.sizing_class
-            nfs_storage_profile = cluster_spec.spec.nfs.storage_profile
-            network_name = cluster_spec.spec.settings.network
-            template_name = cluster_spec.spec.k8_distribution.template_name
-            template_revision = cluster_spec.spec.k8_distribution.template_revision  # noqa: E501
-            ssh_key = cluster_spec.spec.settings.ssh_key
-            rollback = cluster_spec.spec.settings.rollback_on_failure
+            cluster_name = input_native_entity.metadata.cluster_name
+            org_name = input_native_entity.metadata.org_name
+            ovdc_name = input_native_entity.metadata.ovdc_name
+            num_workers = input_native_entity.spec.workers.count
+            control_plane_sizing_class = input_native_entity.spec.control_plane.sizing_class  # noqa: E501
+            worker_sizing_class = input_native_entity.spec.workers.sizing_class
+            control_plane_storage_profile = input_native_entity.spec.control_plane.storage_profile  # noqa: E501
+            worker_storage_profile = input_native_entity.spec.workers.storage_profile  # noqa: E501
+            nfs_count = input_native_entity.spec.nfs.count
+            nfs_sizing_class = input_native_entity.spec.nfs.sizing_class
+            nfs_storage_profile = input_native_entity.spec.nfs.storage_profile
+            network_name = input_native_entity.spec.settings.network
+            template_name = input_native_entity.spec.k8_distribution.template_name
+            template_revision = input_native_entity.spec.k8_distribution.template_revision  # noqa: E501
+            ssh_key = input_native_entity.spec.settings.ssh_key
+            rollback = input_native_entity.spec.settings.rollback_on_failure
             vapp = None
             org = vcd_utils.get_org(self.context.client, org_name=org_name)
             vdc = vcd_utils.get_vdc(self.context.client,
@@ -683,7 +682,7 @@ class ClusterService(abstract_broker.AbstractBroker):
                          f"{ovdc_name} with {num_workers} worker nodes, "
                          f"storage profile={worker_storage_profile}")
             msg = f"Creating cluster vApp {cluster_name} ({cluster_id})"
-            self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
+            # self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
             try:
                 vapp_resource = vdc.create_vapp(
                     cluster_name,
@@ -719,7 +718,7 @@ class ClusterService(abstract_broker.AbstractBroker):
             msg = f"Creating control plane node for cluster '{cluster_name}'" \
                   f" ({cluster_id})"
             LOGGER.debug(msg)
-            self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
+            # self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
             vapp.reload()
             server_config = server_utils.get_server_runtime_config()
             catalog_name = server_config['broker']['catalog']
@@ -743,7 +742,7 @@ class ClusterService(abstract_broker.AbstractBroker):
 
             msg = f"Initializing cluster '{cluster_name}' ({cluster_id})"
             LOGGER.debug(msg)
-            self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
+            # self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
             vapp.reload()
             _init_cluster(self.context.sysadmin_client,
                           vapp,
@@ -757,7 +756,7 @@ class ClusterService(abstract_broker.AbstractBroker):
             msg = f"Creating {num_workers} node(s) for cluster " \
                   f"'{cluster_name}' ({cluster_id})"
             LOGGER.debug(msg)
-            self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
+            # self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
             try:
                 _add_nodes(self.context.sysadmin_client,
                            num_nodes=num_workers,
@@ -779,7 +778,7 @@ class ClusterService(abstract_broker.AbstractBroker):
             msg = f"Adding {num_workers} node(s) to cluster " \
                   f"'{cluster_name}' ({cluster_id})"
             LOGGER.debug(msg)
-            self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
+            # self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
             vapp.reload()
             _join_cluster(self.context.sysadmin_client,
                           vapp,
@@ -813,22 +812,23 @@ class ClusterService(abstract_broker.AbstractBroker):
             # control plane_ip and nodes.
             msg = f"Updating cluster `{cluster_name}` ({cluster_id}) defined entity"  # noqa: E501
             LOGGER.debug(msg)
-            self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
-            def_entity: common_models.DefEntity = self.entity_svc.get_entity(cluster_id)  # noqa: E501
-            def_entity.externalId = vapp_resource.get('href')
-            def_entity.entity.status.phase = str(
+            # self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
+            curr_rde: common_models.DefEntity = self.entity_svc.get_entity(cluster_id)  # noqa: E501
+            curr_rde.externalId = vapp_resource.get('href')
+            curr_rde.entity.status.phase = str(
                 DefEntityPhase(DefEntityOperation.CREATE,
                                DefEntityOperationStatus.SUCCEEDED))
-            def_entity.entity.status.nodes = _get_nodes_details(
+            curr_rde.entity.status.nodes = _get_nodes_details(
                 self.context.sysadmin_client, vapp)
 
-            self.entity_svc.update_entity(cluster_id, def_entity)
+            self.entity_svc.update_entity(cluster_id, curr_rde)
             # self.entity_svc.resolve_entity(cluster_id)
 
             # cluster creation succeeded. Mark the task as success
             msg = f"Created cluster '{cluster_name}' ({cluster_id})"
             LOGGER.debug(msg)
-            self._update_task(vcd_client.TaskStatus.SUCCESS, message=msg)
+            # self._update_task(vcd_client.TaskStatus.SUCCESS, message=msg)
+            return msg
         except (E.ControlPlaneNodeCreationError, E.WorkerNodeCreationError,
                 E.NFSNodeCreationError, E.ClusterJoiningError,
                 E.ClusterInitializationError, E.ClusterOperationError) as err:
@@ -910,9 +910,9 @@ class ClusterService(abstract_broker.AbstractBroker):
                 msg = f"Failed to resolve defined entity for cluster {cluster_id}"  # noqa: E501
                 LOGGER.error(f"{msg}", exc_info=True)
 
-            self._update_task(vcd_client.TaskStatus.ERROR,
-                              message=msg,
-                              error_message=str(err))
+            # self._update_task(vcd_client.TaskStatus.ERROR,
+            #                   message=msg,
+            #                   error_message=str(err))
         finally:
             # TODO re-organize updating defined entity and task update as per
             # https://stackoverflow.com/questions/49099637/how-to-determine-if-an-exception-was-raised-once-youre-in-the-finally-block
