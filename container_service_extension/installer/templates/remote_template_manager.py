@@ -9,6 +9,7 @@ import requests
 import semantic_version
 import yaml
 
+from container_service_extension.common.constants.server_constants import RemoteTemplateKey # noqa: E501
 from container_service_extension.common.constants.server_constants import ScriptFile  # noqa: E501
 from container_service_extension.common.constants.server_constants import TemplateScriptFile  # noqa: E501
 from container_service_extension.common.utils.core_utils import download_file
@@ -62,6 +63,7 @@ class RemoteTemplateManager():
         self.logger = logger
         self.msg_update_callback = msg_update_callback
         self.cookbook = None
+        # self.unsupported_templates = []
 
     def _get_base_url_from_remote_template_cookbook_url(self):
         tokens = self.url.split('/')
@@ -70,7 +72,8 @@ class RemoteTemplateManager():
             return '/'.join(tokens[:-1])
         raise ValueError("Invalid url for template cookbook.")
 
-    def _get_remote_script_url(self, template_name, revision, script_file_name):
+    def _get_remote_script_url(self, template_name, revision,
+                               script_file_name):
         """.
 
         The scripts of all templates are kept relative to templates.yaml,
@@ -120,13 +123,17 @@ class RemoteTemplateManager():
             # template is supported if current CSE version is between
             # min_cse_version and max_cse_version of the template
             template_supported_cse_versions = semantic_version.SimpleSpec(
-                f">={template_description['min_cse_version']},<={template_description['max_cse_version']}")  # noqa: E501
-            self.msg_update_callback.general(f'template: {template_supported_cse_versions} cse: {current_cse_version}')
+                f">={template_description[RemoteTemplateKey.MIN_CSE_VERSION]},"
+                f"<={template_description[RemoteTemplateKey.MAX_CSE_VERSION]}")
+            msg = f"Template {template_description['name']}"
             if template_supported_cse_versions.match(current_cse_version):
-                msg = f"Template {template_description['name']} is supported."
-                self.logger.debug(msg)
-                self.msg_update_callback.general(msg)
+                msg += " is supported"
                 supported_templates.append(template_description)
+            else:
+                msg += " is not supported"
+            msg += f" by CSE {current_cse_version}"
+            self.logger.debug(msg)
+            self.msg_update_callback.general(msg)
         self.cookbook['templates'] = supported_templates
         msg = "Successfully filtered unsupported templates."
         self.logger.debug(msg)

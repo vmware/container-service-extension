@@ -244,6 +244,8 @@ class LocalTemplateKey(str, Enum):
     OS = 'os'
     REVISION = 'revision'
     UPGRADE_FROM = 'upgrade_from'
+    MIN_CSE_VERSION = 'min_cse_version'
+    MAX_CSE_VERSION = 'max_cse_version'
 
 
 @unique
@@ -268,6 +270,8 @@ class RemoteTemplateKey(str, Enum):
     SOURCE_OVA_NAME = 'source_ova_name'
     SOURCE_OVA_SHA256 = 'sha256_ova'
     UPGRADE_FROM = 'upgrade_from'
+    MIN_CSE_VERSION = 'min_cse_version'
+    MAX_CSE_VERSION = 'max_cse_version'
 
 
 # CSE requests

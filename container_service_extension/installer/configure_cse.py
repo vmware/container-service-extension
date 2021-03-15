@@ -1137,7 +1137,6 @@ def _install_all_templates(
         logger=INSTALL_LOGGER,
         msg_update_callback=msg_update_callback)
     remote_template_cookbook = rtm.get_remote_template_cookbook()
-    msg_update_callback.info(f'{remote_template_cookbook}')
 
     # create all templates defined in cookbook
     for template in remote_template_cookbook['templates']:
@@ -1231,7 +1230,7 @@ def install_template(template_name, template_revision, config_file_name,
             remote_template_cookbook_url=config['broker']['remote_template_cookbook_url'], # noqa: E501
             legacy_mode=config['service']['legacy_mode'],
             logger=INSTALL_LOGGER, msg_update_callback=msg_update_callback)
-        # TODO no need to return as cookbook is a class variable in RTM
+
         remote_template_cookbook = rtm.get_remote_template_cookbook()
 
         found_template = False
@@ -1259,8 +1258,9 @@ def install_template(template_name, template_revision, config_file_name,
 
         if not found_template:
             msg = f"Template '{template_name}' at revision " \
-                  f"'{template_revision}' not found in remote template " \
-                  "cookbook."
+                  f"'{template_revision}' not supported by CSE " \
+                  f"{server_utils.get_installed_cse_version()} or " \
+                  f"not found in remote template cookbook."
             msg_update_callback.error(msg)
             INSTALL_LOGGER.error(msg, exc_info=True)
             raise Exception(msg)
