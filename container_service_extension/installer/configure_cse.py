@@ -1489,7 +1489,7 @@ def upgrade_cse(config_file_name, config, skip_template_creation,
 
         # CSE version info in extension description is only applicable for
         # CSE 3.0.0+ versions.
-        cse_3_0_any_patch = semantic_version.SimpleSpec('>=3.0.0,<3.1.0')  # noqa: E501
+        cse_3_0_any_patch = semantic_version.SimpleSpec('>=3.0.0,<=3.1.0')  # noqa: E501
         allow_upgrade = cse_3_0_any_patch.match(ext_cse_version)
 
         if not allow_upgrade:
@@ -1615,12 +1615,25 @@ def _upgrade_to_rde_cluster(client, config, ext_vcd_api_version,
         msg_update_callback=msg_update_callback,
         log_wire=log_wire)
 
-    _assign_placement_policies_to_existing_templates(
-        client=client,
-        config=config,
-        is_tkg_plus_enabled=is_tkg_plus_enabled,
-        log_wire=utils.str_to_bool(config['service'].get('log_wire')),
-        msg_update_callback=msg_update_callback)
+    if skip_template_creation:
+        msg = "Skipping creation of templates."
+        msg_update_callback.info(msg)
+        INSTALL_LOGGER.info(msg)
+        _assign_placement_policies_to_existing_templates(
+            client=client,
+            config=config,
+            is_tkg_plus_enabled=is_tkg_plus_enabled,
+            log_wire=utils.str_to_bool(config['service'].get('log_wire')),
+            msg_update_callback=msg_update_callback)
+    else:
+        # Recreate all supported templates
+        _install_all_templates(
+            client=client,
+            config=config,
+            force_create=True,
+            retain_temp_vapp=retain_temp_vapp,
+            ssh_key=retain_temp_vapp,
+            msg_update_callback=msg_update_callback)
 
     msg = "Loading all CSE clusters for processing..."
     INSTALL_LOGGER.info(msg)
@@ -2480,8 +2493,8 @@ def _get_computed_target_vcd_version(client: Client) -> str:
     vcd_supported_api_versions = set(client.get_supported_versions_list())
     cse_supported_api_versions = set(server_constants.SUPPORTED_VCD_API_VERSIONS)  # noqa: E501
     common_supported_api_versions = list(cse_supported_api_versions.intersection(vcd_supported_api_versions))  # noqa: E501
-    target_vcd_api_version = max([float(x) for x in common_supported_api_versions])  # noqa: E501
-    return str(target_vcd_api_version)
+    runtime_vcd_api_version = max([float(x) for x in common_supported_api_versions])  # noqa: E501
+    return str(runtime_vcd_api_version)
 
 
 def configure_nsxt_for_cse(nsxt_servers, log_wire=False, msg_update_callback=utils.NullPrinter()):  # noqa: E501

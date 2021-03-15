@@ -257,7 +257,7 @@ class NativeEntity(AbstractNativeEntity):
 
     @classmethod
     def from_cluster_data(cls, cluster: dict, kind: str):
-        """Construct rde_2.0.0 native entity.
+        """Construct rde_2.0.0 native entity from non-rde cluster.
 
         :param dict cluster: cluster metadata
         :param str kind: cluster kind
