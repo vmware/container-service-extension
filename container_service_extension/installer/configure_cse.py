@@ -2476,8 +2476,8 @@ def _get_computed_target_vcd_version(client: Client) -> str:
     vcd_supported_api_versions = set(client.get_supported_versions_list())
     cse_supported_api_versions = set(server_constants.SUPPORTED_VCD_API_VERSIONS)  # noqa: E501
     common_supported_api_versions = list(cse_supported_api_versions.intersection(vcd_supported_api_versions))  # noqa: E501
-    target_vcd_api_version = max([float(x) for x in common_supported_api_versions])  # noqa: E501
-    return str(target_vcd_api_version)
+    runtime_vcd_api_version = max([float(x) for x in common_supported_api_versions])  # noqa: E501
+    return str(runtime_vcd_api_version)
 
 
 def configure_nsxt_for_cse(nsxt_servers, log_wire=False, msg_update_callback=utils.NullPrinter()):  # noqa: E501
