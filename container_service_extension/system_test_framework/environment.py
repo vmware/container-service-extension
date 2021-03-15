@@ -109,7 +109,6 @@ def init_environment(config_filepath=BASE_CONFIG_FILEPATH):
                               legacy_mode=config['service']['legacy_mode'])
     template_cookbook = rtm.get_remote_template_cookbook()
     TEMPLATE_DEFINITIONS = template_cookbook['templates']
-    # TODO str to bool
     rtm.download_all_template_scripts(force_overwrite=True)
 
     init_test_vars(config.get('test'))
