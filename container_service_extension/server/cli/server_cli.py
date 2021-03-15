@@ -1078,6 +1078,7 @@ def list_template(ctx, config_file_path, skip_config_decryption,
         if display_option in (DISPLAY_ALL, DISPLAY_DIFF, DISPLAY_REMOTE):
             rtm = RemoteTemplateManager(
                 remote_template_cookbook_url=config_dict['broker']['remote_template_cookbook_url'], # noqa: E501
+                legacy_mode=config_dict['service']['legacy_mode'],
                 logger=SERVER_CLI_LOGGER,
                 msg_update_callback=console_message_printer)
             remote_template_cookbook = rtm.get_remote_template_cookbook()
