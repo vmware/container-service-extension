@@ -44,6 +44,7 @@ def make_request(client: Client,
     if timeout:
         wire_logger.debug(f"Timeout : {timeout}")
 
+    # ToDo: Add back support for timeout later
     response = client._do_request_prim(
         method,
         uri,
@@ -51,8 +52,7 @@ def make_request(client: Client,
         accept_type=accept_type,
         contents=payload,
         media_type=media_type,
-        params=params,
-        timeout=timeout)
+        params=params)
 
     wire_logger.debug(f"Request headers: {response.request.headers}")
 
