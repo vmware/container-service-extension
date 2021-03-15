@@ -51,6 +51,30 @@ class CLIOutputKey(str, Enum):
 
 
 @unique
+class GroupKey(str, Enum):
+    CLUSTER = 'cluster'
+    NODE = 'node'
+    OVDC = 'ovdc'
+    PKS = 'pks'
+    SYSTEM = 'system'
+    TEMPLATE = 'template'
+    VERSION = 'version'
+
+
+@unique
+class CommandNameKey(str, Enum):
+    CONFIG = 'config'
+    CREATE = 'create'
+    DELETE = 'delete'
+    UPGRADE = 'upgrade'
+    UPGRADE_PLAN = 'upgrade-plan'
+    INFO = 'info'
+    NODE = 'node'
+    ENABLE = 'enable'
+    DISABLE = 'disable'
+
+
+@unique
 class TKGEntityFilterKey(str, Enum):
     """Keys to filter TKG cluster entities in CSE CLI.
 

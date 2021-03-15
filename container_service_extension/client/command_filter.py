@@ -2,8 +2,6 @@
 # Copyright (c) 2020 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 
-from enum import Enum
-from enum import unique
 import os
 
 import click
@@ -15,60 +13,36 @@ from container_service_extension.common.utils.core_utils import str_to_bool
 from container_service_extension.logging.logger import CLIENT_LOGGER
 
 
-@unique
-class GroupKey(str, Enum):
-    CLUSTER = 'cluster'
-    NODE = 'node'
-    OVDC = 'ovdc'
-    PKS = 'pks'
-    SYSTEM = 'system'
-    TEMPLATE = 'template'
-    VERSION = 'version'
-
-
-@unique
-class CommandNameKey(str, Enum):
-    CONFIG = 'config'
-    CREATE = 'create'
-    DELETE = 'delete'
-    UPGRADE = 'upgrade'
-    UPGRADE_PLAN = 'upgrade-plan'
-    INFO = 'info'
-    NODE = 'node'
-    ENABLE = 'enable'
-    DISABLE = 'disable'
-
-
 # List of unsupported commands by Api Version
 UNSUPPORTED_COMMANDS_BY_VERSION = {
-    vcd_client.ApiVersion.VERSION_35.value: [GroupKey.NODE],
-    vcd_client.ApiVersion.VERSION_36.value: [GroupKey.NODE]
+    vcd_client.ApiVersion.VERSION_35.value: [cli_constants.GroupKey.NODE],
+    vcd_client.ApiVersion.VERSION_36.value: [cli_constants.GroupKey.NODE]
 }
 
 
 # List of unsupported subcommands by Api Version
 UNSUPPORTED_SUBCOMMANDS_BY_VERSION = {
     vcd_client.ApiVersion.VERSION_33.value: {
-        GroupKey.CLUSTER: ['apply', 'delete-nfs', 'share', 'share-list',
-                           'unshare'],
+        cli_constants.GroupKey.CLUSTER:
+            ['apply', 'delete-nfs', 'share', 'share-list', 'unshare'],
         # TODO(metadata based enablement for < v35): Revisit after decision
         # to support metadata way of enabling for native clusters
-        GroupKey.OVDC: ['enable', 'disable', 'list', 'info']
+        cli_constants.GroupKey.OVDC: ['enable', 'disable', 'list', 'info']
     },
     vcd_client.ApiVersion.VERSION_34.value: {
-        GroupKey.CLUSTER: ['apply', 'delete-nfs', 'share', 'share-list',
-                           'unshare'],
+        cli_constants.GroupKey.CLUSTER: [
+            'apply', 'delete-nfs', 'share', 'share-list', 'unshare'],
         # TODO(metadata based enablement for < v35): Revisit after decision
         # to support metadata way of enabling for native clusters
-        GroupKey.OVDC: ['enable', 'disable', 'list', 'info']
+        cli_constants.GroupKey.OVDC: ['enable', 'disable', 'list', 'info']
     },
     vcd_client.ApiVersion.VERSION_35.value: {
-        GroupKey.CLUSTER: ['create', 'resize'],
-        GroupKey.OVDC: ['compute-policy', 'info']
+        cli_constants.GroupKey.CLUSTER: ['create', 'resize'],
+        cli_constants.GroupKey.OVDC: ['compute-policy', 'info']
     },
     vcd_client.ApiVersion.VERSION_36.value: {
-        GroupKey.CLUSTER: ['create', 'resize', 'upgrade'],
-        GroupKey.OVDC: ['compute-policy', 'info']
+        cli_constants.GroupKey.CLUSTER: ['create', 'resize', 'upgrade'],
+        cli_constants.GroupKey.OVDC: ['compute-policy', 'info']
     }
 }
 
@@ -76,49 +50,53 @@ UNSUPPORTED_SUBCOMMANDS_BY_VERSION = {
 # TODO: All unsupported options depending on the command will go here
 UNSUPPORTED_SUBCOMMAND_OPTIONS_BY_VERSION = {
     vcd_client.ApiVersion.VERSION_33.value: {
-        GroupKey.CLUSTER: {
-            CommandNameKey.CREATE: ['sizing_class'],
-            CommandNameKey.DELETE: ['k8_runtime', 'cluster_id'],
-            CommandNameKey.INFO: ['k8_runtime', 'cluster_id'],
-            CommandNameKey.UPGRADE: ['k8_runtime'],
-            CommandNameKey.UPGRADE_PLAN: ['k8_runtime'],
-            CommandNameKey.CONFIG: ['k8_runtime', 'cluster_id']
+        cli_constants.GroupKey.CLUSTER: {
+            cli_constants.CommandNameKey.CREATE: ['sizing_class'],
+            cli_constants.CommandNameKey.DELETE: ['k8_runtime', 'cluster_id'],
+            cli_constants.CommandNameKey.INFO: ['k8_runtime', 'cluster_id'],
+            cli_constants.CommandNameKey.UPGRADE: ['k8_runtime'],
+            cli_constants.CommandNameKey.UPGRADE_PLAN: ['k8_runtime'],
+            cli_constants.CommandNameKey.CONFIG: ['k8_runtime', 'cluster_id']
         },
     },
 
     vcd_client.ApiVersion.VERSION_34.value: {
-        GroupKey.CLUSTER: {
-            CommandNameKey.CREATE: ['sizing_class'],
-            CommandNameKey.DELETE: ['k8_runtime', 'cluster_id'],
-            CommandNameKey.INFO: ['k8_runtime', 'cluster_id'],
-            CommandNameKey.UPGRADE: ['k8_runtime'],
-            CommandNameKey.UPGRADE_PLAN: ['k8_runtime'],
-            CommandNameKey.CONFIG: ['k8_runtime', 'cluster_id']
+        cli_constants.GroupKey.CLUSTER: {
+            cli_constants.CommandNameKey.CREATE: ['sizing_class'],
+            cli_constants.CommandNameKey.DELETE: ['k8_runtime', 'cluster_id'],
+            cli_constants.CommandNameKey.INFO: ['k8_runtime', 'cluster_id'],
+            cli_constants.CommandNameKey.UPGRADE: ['k8_runtime'],
+            cli_constants.CommandNameKey.UPGRADE_PLAN: ['k8_runtime'],
+            cli_constants.CommandNameKey.CONFIG: ['k8_runtime', 'cluster_id']
         }
     },
 
     vcd_client.ApiVersion.VERSION_35.value: {
-        GroupKey.CLUSTER: {
-            CommandNameKey.CREATE: ['cpu', 'memory']
+        cli_constants.GroupKey.CLUSTER: {
+            cli_constants.CommandNameKey.CREATE: ['cpu', 'memory']
         },
-        GroupKey.OVDC: {
-            CommandNameKey.ENABLE: [] if str_to_bool(
+        cli_constants.GroupKey.OVDC: {
+            cli_constants.CommandNameKey.ENABLE: [] if str_to_bool(
                 os.getenv(cli_constants.ENV_CSE_TKG_PLUS_ENABLED)) else ['enable_tkg_plus'],  # noqa: E501
-            CommandNameKey.DISABLE: [] if str_to_bool(
+            cli_constants.CommandNameKey.DISABLE: [] if str_to_bool(
                 os.getenv(cli_constants.ENV_CSE_TKG_PLUS_ENABLED)) else ['disable_tkg_plus']  # noqa: E501
         }
     }
 }
 
 UNSUPPORTED_COMMANDS_WITH_SERVER_NOT_RUNNING_BY_VERSION = {
-    vcd_client.ApiVersion.VERSION_35.value: [GroupKey.VERSION, GroupKey.OVDC,
-                                             GroupKey.SYSTEM, GroupKey.TEMPLATE,  # noqa: E501
-                                             GroupKey.PKS]
+    vcd_client.ApiVersion.VERSION_35.value: [
+        cli_constants.GroupKey.VERSION,
+        cli_constants.GroupKey.OVDC,
+        cli_constants.GroupKey.SYSTEM,
+        cli_constants.GroupKey.TEMPLATE,
+        cli_constants.GroupKey.PKS
+    ]
 }
 
 UNSUPPORTED_SUBCOMMANDS_WITH_SERVER_NOT_RUNNING_BY_VERSION = {
     vcd_client.ApiVersion.VERSION_35.value: {
-        GroupKey.CLUSTER: ['upgrade', 'upgrade-plan']
+        cli_constants.GroupKey.CLUSTER: ['upgrade', 'upgrade-plan']
     }
 }
 
@@ -131,10 +109,10 @@ class GroupCommandFilter(click.Group):
 
     # TODO(Make get_command hierarchy aware): Since get_command() cannot know
     # the hierarchical context of 'cmd_name', there is a possibility that
-    # there will be unintended command ommition.
-    # Example: If 'node' command is ommited in cse group, and the filter is
+    # there will be unintended command omission.
+    # Example: If 'node' command is omitted in cse group, and the filter is
     # used in pks group (which is part of cse group), then the 'node' command
-    # under pks group also will be ommitted.
+    # under pks group also will be omitted.
     def get_command(self, ctx, cmd_name):
         """Override this click method to customize.
 
