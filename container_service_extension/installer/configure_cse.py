@@ -1143,8 +1143,11 @@ def _install_all_templates(
     # read remote template cookbook, download all scripts
     rtm = RemoteTemplateManager(
         remote_template_cookbook_url=config['broker']['remote_template_cookbook_url'], # noqa: E501
-        logger=INSTALL_LOGGER, msg_update_callback=msg_update_callback)
+        legacy_mode=config['service']['legacy_mode'],
+        logger=INSTALL_LOGGER,
+        msg_update_callback=msg_update_callback)
     remote_template_cookbook = rtm.get_remote_template_cookbook()
+    msg_update_callback.info(f'{remote_template_cookbook}')
 
     # create all templates defined in cookbook
     for template in remote_template_cookbook['templates']:
@@ -1162,8 +1165,7 @@ def _install_all_templates(
             retain_temp_vapp=retain_temp_vapp,
             ssh_key=ssh_key,
             is_tkg_plus_enabled=server_utils.is_tkg_plus_enabled(config),
-            msg_update_callback=msg_update_callback,
-            legacy_mode=config['service']['legacy_mode'])
+            msg_update_callback=msg_update_callback)
 
 
 def install_template(template_name, template_revision, config_file_name,
@@ -1237,7 +1239,9 @@ def install_template(template_name, template_revision, config_file_name,
         # read remote template cookbook
         rtm = RemoteTemplateManager(
             remote_template_cookbook_url=config['broker']['remote_template_cookbook_url'], # noqa: E501
+            legacy_mode=config['service']['legacy_mode'],
             logger=INSTALL_LOGGER, msg_update_callback=msg_update_callback)
+        # TODO no need to return as cookbook is a class variable in RTM
         remote_template_cookbook = rtm.get_remote_template_cookbook()
 
         found_template = False
@@ -1261,8 +1265,7 @@ def install_template(template_name, template_revision, config_file_name,
                     retain_temp_vapp=retain_temp_vapp,
                     ssh_key=ssh_key,
                     is_tkg_plus_enabled=server_utils.is_tkg_plus_enabled(config),  # noqa: E501
-                    msg_update_callback=msg_update_callback,
-                    legacy_mode=config['service'].get('legacy_mode'))
+                    msg_update_callback=msg_update_callback)
 
         if not found_template:
             msg = f"Template '{template_name}' at revision " \
@@ -1316,7 +1319,7 @@ def _install_single_template(
     remote_template_manager.download_template_scripts(
         template_name=template[server_constants.RemoteTemplateKey.NAME],
         revision=template[server_constants.RemoteTemplateKey.REVISION],
-        force_overwrite=force_update, legacy_mode=legacy_mode)
+        force_overwrite=force_update)
     catalog_item_name = ltm.get_revisioned_template_name(
         template[server_constants.RemoteTemplateKey.NAME],
         template[server_constants.RemoteTemplateKey.REVISION])

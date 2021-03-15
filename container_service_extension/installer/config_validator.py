@@ -38,7 +38,8 @@ from container_service_extension.installer.sample_generator import \
     SAMPLE_PKS_ORGS_SECTION, SAMPLE_PKS_PVDCS_SECTION, \
     SAMPLE_PKS_SERVERS_SECTION, SAMPLE_SERVICE_CONFIG, SAMPLE_VCD_CONFIG, \
     SAMPLE_VCS_CONFIG
-from container_service_extension.installer.templates.remote_template_manager import RemoteTemplateManager  # noqa: E501
+from container_service_extension.installer.templates.remote_template_manager \
+    import RemoteTemplateManager
 from container_service_extension.lib.nsxt.dfw_manager import DFWManager
 from container_service_extension.lib.nsxt.ipset_manager import IPSetManager
 from container_service_extension.lib.nsxt.nsxt_client import NSXTClient
@@ -145,8 +146,10 @@ def get_validated_config(config_file_name,
     except requests.exceptions.SSLError as err:
         raise Exception(f"SSL verification failed: {str(err)}")
 
-    _validate_broker_config(config['broker'], msg_update_callback,
-                            logger_debug)
+    _validate_broker_config(config['broker'],
+                            legacy_mode=config['service']['legacy_mode'],
+                            msg_update_callback=msg_update_callback,
+                            logger_debug=logger_debug)
     check_keys_and_value_types(config['service'],
                                SAMPLE_SERVICE_CONFIG['service'],
                                location="config file 'service' section",
@@ -366,6 +369,7 @@ def _validate_vcd_and_vcs_config(vcd_dict,
 
 
 def _validate_broker_config(broker_dict,
+                            legacy_mode=False,
                             msg_update_callback=NullPrinter(),
                             logger_debug=NULL_LOGGER):
     """Ensure that 'broker' section of config is correct.
@@ -396,6 +400,7 @@ def _validate_broker_config(broker_dict,
                          f"should be either 'dhcp' or 'pool'")
 
     rtm = RemoteTemplateManager(remote_template_cookbook_url=broker_dict['remote_template_cookbook_url'], # noqa: E501
+                                legacy_mode=legacy_mode,
                                 logger=logger_debug)
     remote_template_cookbook = rtm.get_remote_template_cookbook()
 
