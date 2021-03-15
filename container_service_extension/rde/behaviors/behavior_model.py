@@ -117,4 +117,3 @@ class BehaviorErrorPayload():
     majorErrorCode: str = '400'
     minorErrorCode: str = None
     message: str = None
-

@@ -62,4 +62,3 @@ def process_behavior_request(msg_json):
         error_payload = BehaviorErrorPayload(majorErrorCode=500,
                                              message=str(e))
         return 'error', json.dumps(asdict(error_payload))
-

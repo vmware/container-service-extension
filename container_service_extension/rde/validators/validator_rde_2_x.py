@@ -10,14 +10,10 @@ from container_service_extension.common.constants.server_constants import Flatte
 from container_service_extension.common.constants.server_constants import VALID_UPDATE_FIELDS  # noqa: E501
 from container_service_extension.common.utils import server_utils
 from container_service_extension.exception.exceptions import BadRequestError
+from container_service_extension.lib.cloudapi.cloudapi_client import CloudApiClient  # noqa: E501
+from container_service_extension.rde.behaviors.behavior_model import BehaviorOperation  # noqa: E501
+from container_service_extension.rde.common.entity_service import DefEntityService  # noqa: E501
 import container_service_extension.rde.constants as rde_constants
-from container_service_extension.lib.cloudapi.cloudapi_client import \
-    CloudApiClient
-import container_service_extension.rde.utils as rde_utils
-from container_service_extension.rde.behaviors.behavior_model import \
-    BehaviorOperation
-from container_service_extension.rde.common.entity_service import \
-    DefEntityService
 from container_service_extension.rde.models import rde_factory
 from container_service_extension.rde.models.abstractNativeEntity import AbstractNativeEntity  # noqa: E501
 import container_service_extension.rde.utils as rde_utils
@@ -30,7 +26,9 @@ class Validator_2_0_0(AbstractValidator):
 
     def validate(self, cloudapi_client: CloudApiClient, entity_id: str = None,
                  entity: dict = None, operation: BehaviorOperation = None) -> bool:  # noqa: E501
-        """Validate the input_spec against current_status of the cluster.
+        """Validate the input entity based on the user specified api_version.
+
+        The validation logic can differ based on the specified operation.
 
         :param cloudapi_client: cloud api client
         :param dict entity: entity to be validated
@@ -51,7 +49,9 @@ class Validator_2_0_0(AbstractValidator):
         if semantic_version.Version(rde_in_use) < \
                 semantic_version.Version(rde_version_introduced_at_api_version):  # noqa: E501
             raise BadRequestError(
-                error_message='Server cannot handle requests at the specified api-version')  # noqa: E501
+                error_message=f"Server cannot handle requests of RDE version "
+                              f"{rde_version_introduced_at_api_version}at the "
+                              f"specified api-version")
 
         # TODO Reject the request if payload_version does not match with
         #  either rde_in_use (or) rde_version_introduced_at_api_version
@@ -77,11 +77,12 @@ class Validator_2_0_0(AbstractValidator):
             current_entity: AbstractNativeEntity = entity_svc.get_entity(entity_id).entity  # noqa: E501
             input_entity_spec = input_entity.spec
             current_entity_status = current_entity.status
-            current_entity_spec = rde_utils. \
-                construct_cluster_spec_from_entity_status(
-                current_entity_status,
-                rde_constants.RDEVersion.RDE_2_0_0.value)  # noqa: E501
-            return validate_cluster_update_request_and_check_cluster_upgrade(asdict(input_entity_spec), asdict(current_entity_spec))  # noqa: E501
+            current_entity_spec = \
+                rde_utils.construct_cluster_spec_from_entity_status(
+                    current_entity_status, rde_constants.RDEVersion.RDE_2_0_0.value)  # noqa: E501
+        return validate_cluster_update_request_and_check_cluster_upgrade(
+            asdict(input_entity_spec),
+            asdict(current_entity_spec))
         raise NotImplementedError(f"Validator for {operation.name} not found")
 
 

@@ -2,15 +2,16 @@
 # Copyright (c) 2021 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 
+from typing import Union
+
 import semantic_version
 
-from typing import Union
 
 from container_service_extension.rde.backend.cluster_service_1_x import ClusterService as ClusterService1X  # noqa: E501
 from container_service_extension.rde.backend.cluster_service_2_x import ClusterService as ClusterService2X  # noqa: E501
 from container_service_extension.rde.backend.cluster_service_2_x_temp import ClusterService as ClusterService2XBehaviors  # noqa: E501
-import container_service_extension.security.context.operation_context as ctx
 from container_service_extension.security.context.behavior_operation_context import BehaviorOperationContext  # noqa: E501
+import container_service_extension.security.context.operation_context as ctx
 
 
 class ClusterServiceFactory:

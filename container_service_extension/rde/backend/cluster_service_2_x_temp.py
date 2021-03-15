@@ -50,11 +50,10 @@ import container_service_extension.rde.constants as def_constants
 import container_service_extension.rde.models.common_models as common_models
 import container_service_extension.rde.models.rde_2_0_0 as rde_2_0_0
 import container_service_extension.rde.utils as def_utils
+from container_service_extension.security.context.behavior_operation_context import BehaviorOperationContext  # noqa: E501
 import container_service_extension.security.context.operation_context as ctx
 import container_service_extension.server.abstract_broker as abstract_broker
 import container_service_extension.server.compute_policy_manager as compute_policy_manager  # noqa: E501
-from container_service_extension.security.context.behavior_operation_context import \
-    BehaviorOperationContext
 
 
 class ClusterService(abstract_broker.AbstractBroker):
@@ -186,7 +185,7 @@ class ClusterService(abstract_broker.AbstractBroker):
 
         return result.content.decode()
 
-    def create_cluster(self, entity_id: str, input_native_entity: rde_2_0_0.NativeEntity):
+    def create_cluster(self, entity_id: str, input_native_entity: rde_2_0_0.NativeEntity):  # noqa: E501
         """Start the cluster creation operation.
 
         Creates corresponding defined entity in vCD for every native cluster.
@@ -202,7 +201,7 @@ class ClusterService(abstract_broker.AbstractBroker):
         org_name = input_native_entity.metadata.org_name
         ovdc_name = input_native_entity.metadata.ovdc_name
         template_name = input_native_entity.spec.k8_distribution.template_name
-        template_revision = input_native_entity.spec.k8_distribution.template_revision
+        template_revision = input_native_entity.spec.k8_distribution.template_revision  # noqa: E501
         if not (template_name or template_revision):
             default_dist = server_utils.get_default_k8_distribution()
             input_native_entity.spec.k8_distribution = default_dist
@@ -652,7 +651,6 @@ class ClusterService(abstract_broker.AbstractBroker):
                                    nodes_to_del=nodes_to_del)
         return curr_entity
 
-    #@thread_utils.run_async
     def _create_cluster_async(self, cluster_id: str,
                               input_native_entity: rde_2_0_0.NativeEntity):
         try:
@@ -668,7 +666,7 @@ class ClusterService(abstract_broker.AbstractBroker):
             nfs_sizing_class = input_native_entity.spec.nfs.sizing_class
             nfs_storage_profile = input_native_entity.spec.nfs.storage_profile
             network_name = input_native_entity.spec.settings.network
-            template_name = input_native_entity.spec.k8_distribution.template_name
+            template_name = input_native_entity.spec.k8_distribution.template_name  # noqa: E501
             template_revision = input_native_entity.spec.k8_distribution.template_revision  # noqa: E501
             ssh_key = input_native_entity.spec.settings.ssh_key
             rollback = input_native_entity.spec.settings.rollback_on_failure
@@ -884,7 +882,7 @@ class ClusterService(abstract_broker.AbstractBroker):
                               message=msg,
                               error_message=str(err))
         except Exception as err:
-            msg = f"Unknown error creating cluster '{cluster_name}'"
+            msg = f"Unknown error creating cluster '{cluster_name}: {str(err)}'"   # noqa: E501
             LOGGER.error(msg, exc_info=True)
             # TODO: Avoid many try-except block. Check if it is a good practice
             try:

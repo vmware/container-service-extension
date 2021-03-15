@@ -6,18 +6,17 @@
 import functools
 
 from container_service_extension.common.utils import server_utils
+import container_service_extension.exception.exceptions as cse_exception
 from container_service_extension.lib.cloudapi.cloudapi_client import \
     CloudApiClient
+from container_service_extension.logging.logger import SERVER_LOGGER as LOGGER
 from container_service_extension.rde.backend import cluster_service_factory
-import container_service_extension.rde.constants as rde_constants
-import container_service_extension.rde.validators.validator_factory as rde_validator_factory  # noqa: E501
 from container_service_extension.rde.models import rde_factory
 from container_service_extension.rde.models.abstractNativeEntity import \
     AbstractNativeEntity
 import container_service_extension.rde.utils as rde_utils
+import container_service_extension.rde.validators.validator_factory as rde_validator_factory  # noqa: E501
 from container_service_extension.security.context.behavior_operation_context import BehaviorOperationContext  # noqa: E501
-import container_service_extension.exception.exceptions as cse_exception
-from container_service_extension.logging.logger import SERVER_LOGGER as LOGGER
 
 
 # Responsibility of the functions in this file:
@@ -128,4 +127,3 @@ def get_kubeconfig(behavior_ctx: BehaviorOperationContext):
     #                                 minorErrorCode='Cannot reach the cluster',  # noqa: E501
     #                                 message='Cannot reach the cluster')
     return "Returning the kubeconfig"
-

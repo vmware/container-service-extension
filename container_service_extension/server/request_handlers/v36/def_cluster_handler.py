@@ -15,9 +15,8 @@ import container_service_extension.common.utils.server_utils as server_utils
 import container_service_extension.lib.telemetry.constants as telemetry_constants  # noqa: E501
 import container_service_extension.lib.telemetry.telemetry_handler as telemetry_handler  # noqa: E501
 import container_service_extension.rde.backend.cluster_service_factory as cluster_service_factory  # noqa: E501
+from container_service_extension.rde.behaviors.behavior_model import BehaviorOperation  # noqa: E501
 import container_service_extension.rde.constants as rde_constants
-from container_service_extension.rde.behaviors.behavior_model import \
-    BehaviorOperation
 from container_service_extension.rde.models.abstractNativeEntity import AbstractNativeEntity  # noqa: E501
 import container_service_extension.rde.models.rde_factory as rde_factory
 import container_service_extension.rde.validators.validator_factory as rde_validator_factory  # noqa: E501
@@ -143,12 +142,9 @@ def cluster_config(data: dict, op_ctx: ctx.OperationContext):
 def cluster_update(data: dict, op_ctx: ctx.OperationContext):
     """Request handler for cluster resize operation.
 
-    Validate data before actual resize is delegated to cluster service.
-
     :return: Defined entity of the native cluster
     :rtype: container_service_extension.def_.models.DefEntity
     """
-
     cluster_id = data[RequestKey.CLUSTER_ID]
     input_entity: dict = data[RequestKey.INPUT_SPEC]
 
