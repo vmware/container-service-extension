@@ -63,7 +63,6 @@ class RemoteTemplateManager():
         self.logger = logger
         self.msg_update_callback = msg_update_callback
         self.cookbook = None
-        # self.unsupported_templates = []
 
     def _get_base_url_from_remote_template_cookbook_url(self):
         tokens = self.url.split('/')
