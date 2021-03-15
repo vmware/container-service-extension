@@ -18,8 +18,11 @@ from container_service_extension.client.constants import CSE_SERVER_RUNNING
 import container_service_extension.common.constants.shared_constants as shared_constants  # noqa: E501
 from container_service_extension.common.constants.shared_constants import CSE_SERVER_API_VERSION  # noqa: E501
 from container_service_extension.common.constants.shared_constants import CSE_SERVER_BUSY_KEY  # noqa: E501
+from container_service_extension.common.constants.shared_constants import CSE_SERVER_LEGACY_MODE  # noqa: E501
+from container_service_extension.common.constants.shared_constants import CSE_SERVER_SUPPORTED_API_VERSIONS  # noqa: E501
 from container_service_extension.common.utils.core_utils import extract_id_from_href  # noqa: E501
 from container_service_extension.exception.exceptions import CseResponseError
+from container_service_extension.logging.logger import CLIENT_LOGGER
 from container_service_extension.logging.logger import NULL_LOGGER
 import container_service_extension.rde.constants as def_constants
 
@@ -53,10 +56,13 @@ def cse_restore_session(ctx, vdc_required=False) -> None:
     """
     # Always override the vcd_client by new client with CSE server api version.
     if type(ctx.obj) is not dict or not ctx.obj.get('client'):
+        CLIENT_LOGGER.debug('Restoring client from profile.')
         profiles = Profiles.load()
         token = profiles.get('token')
         if token is None or len(token) == 0:
-            raise Exception('Can\'t restore session, please login again.')
+            msg = "Can't restore session, please login again."
+            CLIENT_LOGGER.debug(f"Missing Token : {msg}")
+            raise Exception(msg)
         if not profiles.get('verify'):
             if not profiles.get('disable_warnings'):
                 click.secho(
@@ -79,11 +85,13 @@ def cse_restore_session(ctx, vdc_required=False) -> None:
         client.rehydrate_from_token(
             profiles.get('token'), profiles.get('is_jwt_token'))
 
-        ctx.obj = {}
-        ctx.obj['client'] = client
+        ctx.obj = {'client': client}
+    else:
+        CLIENT_LOGGER.debug('Reusing client from context.')
 
     _override_client(ctx)
 
+    # ToDo: No one is using this param. Should we remove it?
     if vdc_required:
         if not ctx.obj['profiles'].get('vdc_in_use') or \
                 not ctx.obj['profiles'].get('vdc_href'):
@@ -104,6 +112,7 @@ def _override_client(ctx) -> None:
     is_cse_server_running = profiles.get(CSE_SERVER_RUNNING, default=True)
     cse_server_api_version = profiles.get(CSE_SERVER_API_VERSION)
     if not is_cse_server_running:
+        CLIENT_LOGGER.debug("CSE server not running as per profile, restricting CLI to only TKG operations.")  # noqa: E501
         restrict_cli_to_tkg_operations()
         ctx.obj['profiles'] = profiles
         return
@@ -113,14 +122,41 @@ def _override_client(ctx) -> None:
         try:
             system = syst.System(ctx.obj['client'])
             sys_info = system.get_info()
-            cse_server_api_version = sys_info.get(CSE_SERVER_API_VERSION)
-            profiles.set(CSE_SERVER_API_VERSION, cse_server_api_version)
+
+            is_cse_server_running_in_legacy_mode = \
+                sys_info.get(CSE_SERVER_LEGACY_MODE)
+            cse_server_supported_api_version = \
+                set(sys_info.get(CSE_SERVER_SUPPORTED_API_VERSIONS))
+            cse_client_supported_api_version = \
+                set(shared_constants.SUPPORTED_VCD_API_VERSIONS)
+
+            common_supported_api_versions = \
+                list(cse_server_supported_api_version.intersection(
+                    cse_client_supported_api_version))
+
+            if is_cse_server_running_in_legacy_mode:
+                common_supported_api_versions = \
+                    [float(x) for x in common_supported_api_versions
+                        if float(x) < 35.0]
+            else:
+                common_supported_api_versions = \
+                    [float(x) for x in common_supported_api_versions
+                        if float(x) >= 35.0]
+            selected_cse_api_version = str(max(common_supported_api_versions))
+            CLIENT_LOGGER.debug(
+                f"Server api versions : {cse_server_supported_api_version}, "
+                f"Client api versions : {cse_client_supported_api_version}, "
+                f"Server in Legacy mode : {is_cse_server_running_in_legacy_mode}, "  # noqa: E501
+                f"Selected api version : {selected_cse_api_version}."
+            )
+            profiles.set(CSE_SERVER_API_VERSION, selected_cse_api_version)
             profiles.set(CSE_SERVER_RUNNING, True)
             profiles.save()
-        except CseResponseError:
-            # If request to CSE server times out
+        except (requests.exceptions.Timeout, CseResponseError) as err:
+            CLIENT_LOGGER.error(err, exc_info=True)
+            CLIENT_LOGGER.debug("Request to CSE server timed out. Restricting CLI to only TKG operations.")  # noqa: E501
+
             profiles.set(CSE_SERVER_RUNNING, False)
-            # restrict CLI for only TKG operations
             restrict_cli_to_tkg_operations()
             ctx.obj['profiles'] = profiles
             profiles.save()

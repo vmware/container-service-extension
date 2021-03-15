@@ -5,6 +5,7 @@
 import pyvcloud.vcd.client as vcd_client
 
 from container_service_extension.client.cse_client.cse_client import CseClient
+from container_service_extension.client.request_maker import make_request
 from container_service_extension.client.response_processor import process_response  # noqa: E501
 import container_service_extension.common.constants.shared_constants as shared_constants  # noqa: E501
 
@@ -16,10 +17,10 @@ class SystemApi(CseClient):
         self._system_uri = f"{self._uri}/system"
 
     def get_system_details(self):
-        response = self._client._do_request_prim(
-            shared_constants.RequestMethod.GET,
-            self._system_uri,
-            self._client._session,
+        response = make_request(
+            client=self._client,
+            uri=self._system_uri,
+            method=shared_constants.RequestMethod.GET,
             accept_type='application/json')
         return process_response(response)
 
