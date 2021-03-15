@@ -28,10 +28,14 @@ class Validator_2_0_0(AbstractValidator):
                  entity: dict = None, operation: BehaviorOperation = None) -> bool:  # noqa: E501
         """Validate the input entity based on the user specified api_version.
 
-        The validation logic can differ based on the specified operation.
+        This method performs
+        1. Basic validation of the entity by simply casting the input entity
+        dict to the model class dictated by the api_version specified in the
+        request.
+        2. Operation (create, update, delete) specific validation.
 
         :param cloudapi_client: cloud api client
-        :param dict entity: entity to be validated
+        :param dict entity: dict form of the native entity to be validated
         :param entity_id: entity id to be validated
         :param BehaviorOperation operation: CSE operation key
         :return: is validation successful or failure

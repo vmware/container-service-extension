@@ -10,7 +10,8 @@ def get_validator(rde_version: str) -> AbstractValidator:  # noqa: E501
     """Get the right instance of input validator.
 
     Factory method to return the Validator based on the RDE version in use.
-    :param str rde_version: rde_version of the entity to be validated.
+    :param str rde_version: rde_version for which the corresponding validator
+    needs to be returned.
     :rtype validator (container_service_extension.rde.validators.abstract_validator.AbstractValidator)  # noqa: E501
     """
     # Get the validator for the specified RDE version.
