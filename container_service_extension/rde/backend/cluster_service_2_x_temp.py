@@ -50,7 +50,7 @@ import container_service_extension.rde.constants as def_constants
 import container_service_extension.rde.models.common_models as common_models
 import container_service_extension.rde.models.rde_2_0_0 as rde_2_0_0
 import container_service_extension.rde.utils as def_utils
-from container_service_extension.security.context.behavior_operation_context import BehaviorOperationContext  # noqa: E501
+from container_service_extension.security.context.behavior_request_context import BehaviorRequestContext  # noqa: E501
 import container_service_extension.security.context.operation_context as ctx
 import container_service_extension.server.abstract_broker as abstract_broker
 import container_service_extension.server.compute_policy_manager as compute_policy_manager  # noqa: E501
@@ -59,7 +59,7 @@ import container_service_extension.server.compute_policy_manager as compute_poli
 class ClusterService(abstract_broker.AbstractBroker):
     """Handles cluster operations for native DEF based clusters."""
 
-    def __init__(self, op_ctx: BehaviorOperationContext):
+    def __init__(self, op_ctx: BehaviorRequestContext):
         # TODO(DEF) Once all the methods are modified to use defined entities,
         #  the param OperationContext needs to be replaced by cloudapiclient.
         self.context: ctx.OperationContext = op_ctx.op_ctx

@@ -16,7 +16,7 @@ from container_service_extension.rde.models.abstractNativeEntity import \
     AbstractNativeEntity
 import container_service_extension.rde.utils as rde_utils
 import container_service_extension.rde.validators.validator_factory as rde_validator_factory  # noqa: E501
-from container_service_extension.security.context.behavior_operation_context import BehaviorOperationContext  # noqa: E501
+from container_service_extension.security.context.behavior_request_context import BehaviorRequestContext  # noqa: E501
 
 
 # Responsibility of the functions in this file:
@@ -59,7 +59,7 @@ def exception_handler(func):
 
 
 @exception_handler
-def create_cluster(behavior_ctx: BehaviorOperationContext):
+def create_cluster(behavior_ctx: BehaviorRequestContext):
     entity_id: str = behavior_ctx.entity_id
     entity: dict = behavior_ctx.entity
     cloudapi_client: CloudApiClient = behavior_ctx.op_ctx.cloudapi_client
@@ -82,7 +82,7 @@ def create_cluster(behavior_ctx: BehaviorOperationContext):
 
 
 @exception_handler
-def update_cluster(behavior_ctx: BehaviorOperationContext):
+def update_cluster(behavior_ctx: BehaviorRequestContext):
     # entity_id = behavior_ctx.entity_id
     # entity = behavior_ctx.entity
     # api_version = behavior_ctx.api_version
@@ -98,7 +98,7 @@ def update_cluster(behavior_ctx: BehaviorOperationContext):
 
 
 @exception_handler
-def delete_cluster(behavior_ctx: BehaviorOperationContext):
+def delete_cluster(behavior_ctx: BehaviorRequestContext):
     # entity_id = behavior_ctx.entity_id
     # entity = behavior_ctx.entity
     # api_version = behavior_ctx.api_version
@@ -114,7 +114,7 @@ def delete_cluster(behavior_ctx: BehaviorOperationContext):
 
 
 @exception_handler
-def get_kubeconfig(behavior_ctx: BehaviorOperationContext):
+def get_kubeconfig(behavior_ctx: BehaviorRequestContext):
     # entity_id = behavior_ctx.entity_id
     # entity = behavior_ctx.entity
     # api_version = behavior_ctx.api_version

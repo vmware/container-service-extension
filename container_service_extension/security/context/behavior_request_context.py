@@ -15,7 +15,7 @@ class BehaviorUserContext:
 
 
 @dataclass(frozen=True)
-class BehaviorOperationContext:
+class BehaviorRequestContext:
     behavior_id: str
     task_id: str
     entity_id: str
