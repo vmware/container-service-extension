@@ -4,11 +4,9 @@
 
 from dataclasses import asdict
 
-import semantic_version
 
 from container_service_extension.common.constants.server_constants import FlattenedClusterSpecKey  # noqa: E501
 from container_service_extension.common.constants.server_constants import VALID_UPDATE_FIELDS  # noqa: E501
-from container_service_extension.common.utils import server_utils
 from container_service_extension.exception.exceptions import BadRequestError
 from container_service_extension.lib.cloudapi.cloudapi_client import CloudApiClient  # noqa: E501
 from container_service_extension.rde.behaviors.behavior_model import BehaviorOperation  # noqa: E501
@@ -49,17 +47,8 @@ class Validator_2_0_0(AbstractValidator):
             raise ValueError('Either entity_id or entity is required to validate.')  # noqa: E501
         entity_svc = DefEntityService(cloudapi_client=cloudapi_client)
 
-        # Reject the request if rde_in_use is less than rde version introduced
-        # at the specified api version.
         api_version: float = float(cloudapi_client.get_api_version())
         rde_version_introduced_at_api_version: str = rde_utils.get_rde_version_introduced_at_api_version(api_version)  # noqa: E501
-        rde_in_use: str = server_utils.get_rde_version_in_use()
-        if semantic_version.Version(rde_in_use) < \
-                semantic_version.Version(rde_version_introduced_at_api_version):  # noqa: E501
-            raise BadRequestError(
-                error_message=f"Server cannot handle requests of RDE version "
-                              f"{rde_version_introduced_at_api_version}at the "
-                              f"specified api-version")
 
         # TODO Reject the request if payload_version does not match with
         #  either rde_in_use (or) rde_version_introduced_at_api_version
