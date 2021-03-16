@@ -44,7 +44,7 @@ def enable_cli_for_all_operations():
     _RESTRICT_CLI_TO_TKG_OPERATIONS = False
 
 
-def cse_restore_session(ctx, vdc_required=False) -> None:
+def cse_restore_session(ctx) -> None:
     """Restores the session with vcd client with right server api version.
 
     Replace the vcd client in ctx.obj with new client created with server api
@@ -91,12 +91,6 @@ def cse_restore_session(ctx, vdc_required=False) -> None:
 
     _override_client(ctx)
 
-    # ToDo: No one is using this param. Should we remove it?
-    if vdc_required:
-        if not ctx.obj['profiles'].get('vdc_in_use') or \
-                not ctx.obj['profiles'].get('vdc_href'):
-            raise Exception('select a virtual datacenter')
-
 
 def _override_client(ctx) -> None:
     """Replace the vcd client in ctx.obj with new one.
@@ -123,32 +117,48 @@ def _override_client(ctx) -> None:
             system = syst.System(ctx.obj['client'])
             sys_info = system.get_info()
 
-            is_cse_server_running_in_legacy_mode = \
-                sys_info.get(CSE_SERVER_LEGACY_MODE)
-            cse_server_supported_api_version = \
-                set(sys_info.get(CSE_SERVER_SUPPORTED_API_VERSIONS))
-            cse_client_supported_api_version = \
-                set(shared_constants.SUPPORTED_VCD_API_VERSIONS)
+            is_pre_cse_3_1_server = False
+            if CSE_SERVER_LEGACY_MODE not in sys_info or \
+                    CSE_SERVER_SUPPORTED_API_VERSIONS not in sys_info:
+                is_pre_cse_3_1_server = True
 
-            common_supported_api_versions = \
-                list(cse_server_supported_api_version.intersection(
-                    cse_client_supported_api_version))
+            if not is_pre_cse_3_1_server:
+                is_cse_server_running_in_legacy_mode = \
+                    sys_info.get(CSE_SERVER_LEGACY_MODE)
+                cse_server_supported_api_versions = \
+                    set(sys_info.get(CSE_SERVER_SUPPORTED_API_VERSIONS))
+                cse_client_supported_api_versions = \
+                    set(shared_constants.SUPPORTED_VCD_API_VERSIONS)
 
-            if is_cse_server_running_in_legacy_mode:
                 common_supported_api_versions = \
-                    [float(x) for x in common_supported_api_versions
-                        if float(x) < 35.0]
+                    list(cse_server_supported_api_versions.intersection(
+                        cse_client_supported_api_versions))
+
+                # ToDo: Instead of float use proper version comparison
+                if is_cse_server_running_in_legacy_mode:
+                    common_supported_api_versions = \
+                        [float(x) for x in common_supported_api_versions
+                            if float(x) < 35.0]
+                else:
+                    common_supported_api_versions = \
+                        [float(x) for x in common_supported_api_versions
+                            if float(x) >= 35.0]
+
+                selected_cse_api_version = \
+                    str(max(common_supported_api_versions))
+                CLIENT_LOGGER.debug(
+                    f"Server api versions : {cse_server_supported_api_versions}, "  # noqa: E501
+                    f"Client api versions : {cse_client_supported_api_versions}, "  # noqa: E501
+                    f"Server in Legacy mode : {is_cse_server_running_in_legacy_mode}, "  # noqa: E501
+                    f"Selected api version : {selected_cse_api_version}."
+                )
             else:
-                common_supported_api_versions = \
-                    [float(x) for x in common_supported_api_versions
-                        if float(x) >= 35.0]
-            selected_cse_api_version = str(max(common_supported_api_versions))
-            CLIENT_LOGGER.debug(
-                f"Server api versions : {cse_server_supported_api_version}, "
-                f"Client api versions : {cse_client_supported_api_version}, "
-                f"Server in Legacy mode : {is_cse_server_running_in_legacy_mode}, "  # noqa: E501
-                f"Selected api version : {selected_cse_api_version}."
-            )
+                selected_cse_api_version = \
+                    sys_info.get(CSE_SERVER_API_VERSION)
+                CLIENT_LOGGER.debug(
+                    "Pre CSE 3.1 server detected. Selected api version : "
+                    f"{selected_cse_api_version}.")
+
             profiles.set(CSE_SERVER_API_VERSION, selected_cse_api_version)
             profiles.set(CSE_SERVER_RUNNING, True)
             profiles.save()
