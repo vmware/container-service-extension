@@ -253,6 +253,7 @@ class NativeEntity(AbstractNativeEntity):
                                status=status,
                                kind=rde_1_x_entity.kind,
                                api_version=rde_1_x_entity.api_version)
+            # TODO - api_version needs revisit when it is going to be in real use in the upcoming tasks  # noqa: E501
             return rde_2_entity
 
     @classmethod

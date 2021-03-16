@@ -1475,28 +1475,27 @@ def upgrade_cse(config_file_name, config, skip_template_creation,
         # irrespective of when these patches were released.
 
         legacy_mode = config['service']['legacy_mode']
-        update_path_not_valid_msg = f"CSE upgrade path (CSE '{ext_cse_version}', vCD api 'v{ext_vcd_api_version}') -> "  # noqa: E501
-        update_path_not_valid_msg += f"(CSE '{target_cse_version}', vCD api " \
-                                     f"'v{target_vcd_api_version}', " \
-                                     f"legacy_mode:{legacy_mode}) " \
-                                     f"is not supported."
+        upgrade_path_not_valid_msg = f"CSE upgrade path (CSE '{ext_cse_version}', vCD api 'v{ext_vcd_api_version}') -> "  # noqa: E501
+        upgrade_path_not_valid_msg += \
+            f"(CSE '{target_cse_version}', vCD api 'v{target_vcd_api_version}' legacy_mode:{legacy_mode}) is not supported."  # noqa: E501
 
         if target_cse_version < ext_cse_version or \
                 float(target_vcd_api_version) < float(ext_vcd_api_version):
-            raise Exception(update_path_not_valid_msg)
-        if ext_vcd_api_version in (vCDApiVersion.VERSION_35.value, vCDApiVersion.VERSION_36.value) and config['service']['legacy_mode']:  # noqa: E501
-            raise Exception(update_path_not_valid_msg)  # noqa: E501
+            raise Exception(upgrade_path_not_valid_msg)
+        if target_vcd_api_version in (vCDApiVersion.VERSION_35.value, vCDApiVersion.VERSION_36.value) and config['service']['legacy_mode']:  # noqa: E501
+            raise Exception(upgrade_path_not_valid_msg)  # noqa: E501
 
         # CSE version info in extension description is only applicable for
         # CSE 3.0.0+ versions.
         cse_3_0_any_patch = semantic_version.SimpleSpec('>=3.0.0,<=3.1.0')  # noqa: E501
         allow_upgrade = cse_3_0_any_patch.match(ext_cse_version)
 
+        # TODO Handle CSE upgrade from 33.0/34.0 -> 34.0 with legacy_mode=True
         if not allow_upgrade:
-            raise Exception(update_path_not_valid_msg)
+            raise Exception(upgrade_path_not_valid_msg)
 
         if target_vcd_api_version in (vCDApiVersion.VERSION_35.value, vCDApiVersion.VERSION_36.value):  # noqa: E501
-            _upgrade_to_rde_cluster(
+            _upgrade_to_cse_3_1(
                 client=client,
                 config=config,
                 ext_vcd_api_version=ext_vcd_api_version,
@@ -1507,7 +1506,7 @@ def upgrade_cse(config_file_name, config, skip_template_creation,
                 msg_update_callback=msg_update_callback,
                 log_wire=log_wire)
         else:
-            raise Exception(update_path_not_valid_msg)
+            raise Exception(upgrade_path_not_valid_msg)
 
         record_user_action(CseOperation.SERVICE_UPGRADE,
                            status=OperationStatus.SUCCESS,
@@ -1586,11 +1585,11 @@ def _update_cse_amqp_extension(client, routing_key, exchange,
     INSTALL_LOGGER.info(msg)
 
 
-def _upgrade_to_rde_cluster(client, config, ext_vcd_api_version,
-                            skip_template_creation, ssh_key, retain_temp_vapp,
-                            admin_password, msg_update_callback=utils.NullPrinter(),  # noqa: E501
-                            log_wire=False):
-    """Handle upgrade to supported api version and rde.
+def _upgrade_to_cse_3_1(client, config, ext_vcd_api_version,
+                        skip_template_creation, ssh_key, retain_temp_vapp,
+                        admin_password, msg_update_callback=utils.NullPrinter(),  # noqa: E501
+                        log_wire=False):
+    """Handle upgrade when VCD supports RDE.
 
     :raises: MultipleRecordsException: (when using mqtt) if more than one
         service with the given name and namespace are found when trying to
@@ -1682,7 +1681,7 @@ def _upgrade_to_rde_cluster(client, config, ext_vcd_api_version,
     # been deployed.
 
     # Create DEF entity for all existing clusters (if missing)
-    _create_def_entity_for_existing_clusters(
+    _create_def_entity_for_existing_clusters_if_needed(
         client=client,
         cse_clusters=clusters,
         msg_update_callback=msg_update_callback,
@@ -2311,14 +2310,14 @@ def _remove_old_cse_sizing_compute_policies(
             INSTALL_LOGGER.error(msg)
 
 
-def _create_def_entity_for_existing_clusters(
+def _create_def_entity_for_existing_clusters_if_needed(
         client,
         cse_clusters,
         is_tkg_plus_enabled,
         msg_update_callback=utils.NullPrinter(),
         log_wire=False):
     # TODO handle def enitty chnages when upgrading from CSE 3.0
-    msg = "Making old CSE k8s clusters compatible with CSE 3.0"
+    msg = "Making old CSE k8s clusters compatible with CSE 3.1"
     msg_update_callback.info(msg)
     INSTALL_LOGGER.info(msg)
 
@@ -2330,9 +2329,9 @@ def _create_def_entity_for_existing_clusters(
     entity_svc = def_entity_svc.DefEntityService(cloudapi_client)
 
     schema_svc = def_schema_svc.DefSchemaService(cloudapi_client)
-    server_rde_version: str = \
+    runtime_rde_version: str = \
         def_utils.get_rde_version_by_vcd_api_version(float(_get_computed_target_vcd_version(client=client)))  # noqa: E501
-    rde_metadata: dict = def_utils.get_rde_metadata(server_rde_version)
+    rde_metadata: dict = def_utils.get_rde_metadata(runtime_rde_version)
     entity_type_metadata = rde_metadata[def_constants.RDEMetadataKey.ENTITY_TYPE]  # noqa: E501
     target_entity_type = schema_svc.get_entity_type(entity_type_metadata.get_id())  # noqa: E501
 
@@ -2345,22 +2344,36 @@ def _create_def_entity_for_existing_clusters(
         try:
             def_entity = entity_svc.get_entity(cluster_id)
             source_rde_version = def_entity.entityType.split(":")[-1]
-            if semantic_version.Version(source_rde_version) < semantic_version.Version(server_rde_version):  # noqa: E501
-                msg = f"Upgrading {def_entity.name} from {source_rde_version} to {server_rde_version}"  # noqa: E501
+            if semantic_version.Version(source_rde_version) < semantic_version.Version(runtime_rde_version):  # noqa: E501
+                msg = f"Upgrading {def_entity.name} from {source_rde_version} to {runtime_rde_version}"  # noqa: E501
                 INSTALL_LOGGER.info(msg)
                 msg_update_callback.info(msg)
                 # Get the right rde model for getting new defined entity
-                TargetNativeEntity = get_rde_model(server_rde_version)
-                cluster_entity = TargetNativeEntity.from_native_entity(def_entity.entity)  # noqa: E501
-                new_entity = common_models.DefEntity(entity=cluster_entity,
-                                                     entityType=target_entity_type.id)  # noqa: E501
+                TargetNativeEntity = get_rde_model(runtime_rde_version)
+                new_native_entity = TargetNativeEntity.from_native_entity(def_entity.entity)  # noqa: E501
+                new_def_entity = common_models.DefEntity(
+                    entity=new_native_entity, entityType=target_entity_type.id)  # noqa: E501
                 org_resource = vcd_utils.get_org(client, org_name=cluster['org_name'])  # noqa: E501
                 org_id = org_resource.href.split('/')[-1]
+                # TODO(): Changing entity type and update entity does not work
                 entity_svc.create_entity(entity_type_id=target_entity_type.id,
-                                         entity=new_entity,
+                                         entity=new_def_entity,
                                          tenant_org_context=org_id)
-                created_entity = entity_svc.get_native_rde_by_name_and_rde_version(cluster['name'], server_rde_version)  # noqa: E501
+                created_entity = entity_svc.get_native_rde_by_name_and_rde_version(cluster['name'], runtime_rde_version)  # noqa: E501
                 entity_svc.resolve_entity(entity_id=created_entity.id)
+
+                # Update cluster metadata with new cluster id
+                tags = {
+                    server_constants.ClusterMetadataKey.CLUSTER_ID: created_entity.id,  # noqa: E501
+                    server_constants.ClusterMetadataKey.CSE_VERSION: server_utils.get_installed_cse_version()  # noqa: E501
+                }
+                vapp = VApp(client, href=cluster['vapp_href'])
+                task = vapp.set_multiple_metadata(tags)
+                client.get_task_monitor().wait_for_status(task)
+                msg = f"Updated cluster id of cluster '{cluster['name']}'"
+                INSTALL_LOGGER.info(msg)
+                msg_update_callback.general(msg)
+
                 # Remove old defined entity
                 entity_svc.delete_entity(entity_id=def_entity.id)
             else:
@@ -2397,7 +2410,7 @@ def _create_def_entity_for_existing_clusters(
         elif policy_name == shared_constants.TKG_PLUS_CLUSTER_RUNTIME_INTERNAL_NAME:  # noqa: E501
             kind = shared_constants.ClusterEntityKind.TKG_PLUS.value
 
-        TargetNativeEntity = get_rde_model(server_rde_version)
+        TargetNativeEntity = get_rde_model(runtime_rde_version)
         cluster_entity = TargetNativeEntity.from_cluster_data(cluster=cluster, kind=kind)  # noqa: E501
         org_resource = vcd_utils.get_org(client, org_name=cluster['org_name'])
         org_id = org_resource.href.split('/')[-1]
@@ -2407,7 +2420,7 @@ def _create_def_entity_for_existing_clusters(
                                  tenant_org_context=org_id)
 
         def_entity = entity_svc.get_native_rde_by_name_and_rde_version(
-            cluster['name'], server_rde_version)
+            cluster['name'], runtime_rde_version)
         def_entity_id = def_entity.id
         def_entity.externalId = cluster['vapp_href']
 
