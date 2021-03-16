@@ -26,12 +26,12 @@ class Validator_2_0_0(AbstractValidator):
 
     def validate(self, cloudapi_client: CloudApiClient, entity_id: str = None,
                  entity: dict = None, operation: BehaviorOperation = None) -> bool:  # noqa: E501
-        """Validate the input entity based on the user specified api_version.
+        """Validate the input request.
 
         This method performs
         1. Basic validation of the entity by simply casting the input entity
         dict to the model class dictated by the api_version specified in the
-        request.
+        request. This is usually performed for the "create" operation.
         2. Operation (create, update, delete) specific validation.
         - create: "entity" is the only required parameter.
         - update: both "entity" and "entity_id" are required parameters.
