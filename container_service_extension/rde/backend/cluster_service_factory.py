@@ -11,7 +11,6 @@ from container_service_extension.rde.backend.cluster_service_1_x import ClusterS
 from container_service_extension.rde.backend.cluster_service_2_x import ClusterService as ClusterService2X  # noqa: E501
 from container_service_extension.rde.backend.cluster_service_2_x_temp import ClusterService as ClusterService2XBehaviors  # noqa: E501
 from container_service_extension.security.context.behavior_request_context import BehaviorRequestContext  # noqa: E501
-import container_service_extension.security.context.operation_context as ctx
 
 
 class ClusterServiceFactory:
