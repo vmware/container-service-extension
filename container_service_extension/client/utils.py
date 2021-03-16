@@ -144,22 +144,22 @@ def _override_client(ctx) -> None:
                         [float(x) for x in common_supported_api_versions
                             if float(x) >= 35.0]
 
-                selected_cse_api_version = \
+                cse_server_api_version = \
                     str(max(common_supported_api_versions))
                 CLIENT_LOGGER.debug(
                     f"Server api versions : {cse_server_supported_api_versions}, "  # noqa: E501
                     f"Client api versions : {cse_client_supported_api_versions}, "  # noqa: E501
                     f"Server in Legacy mode : {is_cse_server_running_in_legacy_mode}, "  # noqa: E501
-                    f"Selected api version : {selected_cse_api_version}."
+                    f"Selected api version : {cse_server_api_version}."
                 )
             else:
-                selected_cse_api_version = \
+                cse_server_api_version = \
                     sys_info.get(CSE_SERVER_API_VERSION)
                 CLIENT_LOGGER.debug(
                     "Pre CSE 3.1 server detected. Selected api version : "
-                    f"{selected_cse_api_version}.")
+                    f"{cse_server_api_version}.")
 
-            profiles.set(CSE_SERVER_API_VERSION, selected_cse_api_version)
+            profiles.set(CSE_SERVER_API_VERSION, cse_server_api_version)
             profiles.set(CSE_SERVER_RUNNING, True)
             profiles.save()
         except (requests.exceptions.Timeout, CseResponseError) as err:
