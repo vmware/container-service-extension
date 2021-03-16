@@ -1488,6 +1488,7 @@ def upgrade_cse(config_file_name, config, skip_template_creation,
         cse_3_0_any_patch = semantic_version.SimpleSpec('>=3.0.0,<=3.1.0')  # noqa: E501
         allow_upgrade = cse_3_0_any_patch.match(ext_cse_version)
 
+        # TODO Handle CSE upgrade from 33.0/34.0 -> 34.0 with legacy_mode=True
         if not allow_upgrade:
             raise Exception(update_path_not_valid_msg)
 
@@ -1586,7 +1587,7 @@ def _upgrade_to_rde_cluster(client, config, ext_vcd_api_version,
                             skip_template_creation, ssh_key, retain_temp_vapp,
                             admin_password, msg_update_callback=utils.NullPrinter(),  # noqa: E501
                             log_wire=False):
-    """Handle upgrade to supported api version and rde.
+    """Handle upgrade when VCD supports RDE.
 
     :raises: MultipleRecordsException: (when using mqtt) if more than one
         service with the given name and namespace are found when trying to
