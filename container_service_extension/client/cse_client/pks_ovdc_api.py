@@ -5,8 +5,6 @@
 import pyvcloud.vcd.client as vcd_client
 
 from container_service_extension.client.cse_client.cse_client import CseClient
-from container_service_extension.client.request_maker import make_request
-from container_service_extension.client.response_processor import process_response  # noqa: E501
 import container_service_extension.common.constants.shared_constants as shared_constants  # noqa: E501
 
 
@@ -26,12 +24,11 @@ class PksOvdcApi(CseClient):
 
     def get_ovdc(self, ovdc_id):
         uri = f"{self._ovdc_uri}/{ovdc_id}"
-        response = make_request(
-            client=self._client,
+        response = self.do_request(
             uri=uri,
             method=shared_constants.RequestMethod.GET,
             accept_type='application/json')
-        return process_response(response)
+        return self.process_response(response)
 
     def update_ovdc_by_ovdc_id(self, ovdc_id, k8s_provider, ovdc_name=None,
                                org_name=None, pks_plan=None, pks_cluster_domain=None):  # noqa: E501
@@ -44,11 +41,10 @@ class PksOvdcApi(CseClient):
             shared_constants.RequestKey.PKS_CLUSTER_DOMAIN: pks_cluster_domain
         }
         uri = f"{self._ovdc_uri}/{ovdc_id}"
-        response = make_request(
-            client=self._client,
+        response = self.do_request(
             uri=uri,
             method=shared_constants.RequestMethod.PUT,
             accept_type='application/json',
             media_type='application/json',
             payload=payload)
-        return process_response(response)
+        return self.process_response(response)
