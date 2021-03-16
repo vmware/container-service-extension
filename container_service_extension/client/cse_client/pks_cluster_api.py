@@ -5,6 +5,7 @@
 import pyvcloud.vcd.client as vcd_client
 
 from container_service_extension.client.cse_client.cse_client import CseClient
+from container_service_extension.client.request_maker import make_request
 import container_service_extension.client.response_processor as response_processor  # noqa: E501
 import container_service_extension.common.constants.shared_constants as shared_constants  # noqa: E501
 
@@ -19,24 +20,24 @@ class PksClusterApi(CseClient):
     def list_clusters(self, filters=None):
         if filters is None:
             filters = {}
-        response = self._client._do_request_prim(
-            shared_constants.RequestMethod.GET,
-            self._clusters_uri,
-            self._client._session,
-            accept_type='application/json',
-            params=filters)
+        response = make_request(
+            client=self._client,
+            uri=self._clusters_uri,
+            method=shared_constants.RequestMethod.GET,
+            params=filters,
+            accept_type='application/json')
         return response_processor.process_response(response)
 
     def get_cluster(self, cluster_name, filters=None):
         if filters is None:
             filters = {}
         uri = f'{self._cluster_uri}/{cluster_name}'
-        response = self._client._do_request_prim(
-            shared_constants.RequestMethod.GET,
-            uri,
-            self._client._session,
-            accept_type='application/json',
-            params=filters)
+        response = make_request(
+            client=self._client,
+            uri=uri,
+            method=shared_constants.RequestMethod.GET,
+            params=filters,
+            accept_type='application/json')
         return response_processor.process_response(response)
 
     def create_cluster(self, cluster_name, ovdc_name, node_count=None, org_name=None):  # noqa: E501
@@ -47,13 +48,13 @@ class PksClusterApi(CseClient):
             shared_constants.RequestKey.ORG_NAME: org_name
         }
         uri = self._clusters_uri
-        response = self._client._do_request_prim(
-            shared_constants.RequestMethod.POST,
-            uri,
-            self._client._session,
-            contents=payload,
+        response = make_request(
+            client=self._client,
+            uri=uri,
+            method=shared_constants.RequestMethod.POST,
+            accept_type='application/json',
             media_type='application/json',
-            accept_type='application/json')
+            payload=payload)
         return response_processor.process_response(response)
 
     def update_cluster(self, cluster_name, node_count, org_name=None,
@@ -65,31 +66,29 @@ class PksClusterApi(CseClient):
             shared_constants.RequestKey.OVDC_NAME: ovdc_name
         }
         uri = f"{self._cluster_uri}/{cluster_name}"
-        response = self._client._do_request_prim(
-            shared_constants.RequestMethod.PUT,
-            uri,
-            self._client._session,
-            contents=payload,
+        response = make_request(
+            client=self._client,
+            uri=uri,
+            method=shared_constants.RequestMethod.PUT,
+            accept_type='application/json',
             media_type='application/json',
-            accept_type='application/json')
+            payload=payload)
         return response_processor.process_response(response)
 
     def delete_cluster(self, cluster_name, org_name=None, ovdc_name=None):
         uri = f"{self._cluster_uri}/{cluster_name}"
-        response = self._client._do_request_prim(
-            shared_constants.RequestMethod.DELETE,
-            uri,
-            self._client._session,
-            media_type='application/json',
+        response = make_request(
+            client=self._client,
+            uri=uri,
+            method=shared_constants.RequestMethod.DELETE,
             accept_type='application/json')
         return response_processor.process_response(response)
 
     def get_cluster_config(self, cluster_name, org_name=None, ovdc_name=None):
         uri = f"{self._cluster_uri}/{cluster_name}/config"
-        response = self._client._do_request_prim(
-            shared_constants.RequestMethod.GET,
-            uri,
-            self._client._session,
-            media_type='application/json',
+        response = make_request(
+            client=self._client,
+            uri=uri,
+            method=shared_constants.RequestMethod.GET,
             accept_type='application/json')
         return response_processor.process_response(response)

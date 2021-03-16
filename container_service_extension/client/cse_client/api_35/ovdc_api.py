@@ -7,6 +7,7 @@ from dataclasses import asdict
 import pyvcloud.vcd.client as vcd_client
 
 from container_service_extension.client.cse_client.cse_client import CseClient
+from container_service_extension.client.request_maker import make_request
 from container_service_extension.client.response_processor import process_response  # noqa: E501
 import container_service_extension.common.constants.shared_constants as shared_constants  # noqa: E501
 import container_service_extension.rde.models.common_models as common_models
@@ -36,20 +37,22 @@ class OvdcApi(CseClient):
 
     def get_ovdc(self, ovdc_id):
         uri = f"{self._ovdc_uri}/{ovdc_id}"
-        response = self._client._do_request_prim(
-            shared_constants.RequestMethod.GET,
-            uri,
-            self._client._session,
+        response = make_request(
+            client=self._client,
+            uri=uri,
+            method=shared_constants.RequestMethod.GET,
             accept_type='application/json')
+
         return common_models.Ovdc(**process_response(response))
 
     def update_ovdc(self, ovdc_id, ovdc_obj: common_models.Ovdc):
         uri = f"{self._ovdc_uri}/{ovdc_id}"
-        resp = self._client._do_request_prim(
-            shared_constants.RequestMethod.PUT,
-            uri,
-            self._client._session,
-            contents=asdict(ovdc_obj),
+        response = make_request(
+            client=self._client,
+            uri=uri,
+            method=shared_constants.RequestMethod.PUT,
+            accept_type='application/json',
             media_type='application/json',
-            accept_type='application/json')
-        return process_response(resp)
+            payload=asdict(ovdc_obj))
+
+        return process_response(response)

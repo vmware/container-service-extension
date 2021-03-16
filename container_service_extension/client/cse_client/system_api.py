@@ -28,11 +28,11 @@ class SystemApi(CseClient):
         payload = {
             shared_constants.RequestKey.SERVER_ACTION: action
         }
-        response = self._client._do_request_prim(
-            shared_constants.RequestMethod.PUT,
-            self._system_uri,
-            self._client._session,
-            contents=payload,
+        response = make_request(
+            client=self._client,
+            uri=self._system_uri,
+            method=shared_constants.RequestMethod.PUT,
+            accept_type='application/json',
             media_type='application/json',
-            accept_type='application/json')
+            payload=payload)
         return process_response(response)

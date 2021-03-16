@@ -5,6 +5,7 @@
 import pyvcloud.vcd.client as vcd_client
 
 from container_service_extension.client.cse_client.cse_client import CseClient
+from container_service_extension.client.request_maker import make_request
 from container_service_extension.client.response_processor import process_response  # noqa: E501
 import container_service_extension.common.constants.shared_constants as shared_constants  # noqa: E501
 
@@ -19,16 +20,16 @@ class PksOvdcApi(CseClient):
     def get_all_ovdcs(self, filters=None):
         if filters is None:
             filters = {}
-        url = f"{self._org_vdcs_uri}?" \
-              f"{shared_constants.PaginationKey.PAGE_SIZE.value}={self._request_page_size}"  # noqa: E501
-        return self.iterate_results(url, filters=filters)
+        filters[shared_constants.PaginationKey.PAGE_SIZE.value] = self._request_page_size  # noqa: E501
+
+        return self.iterate_results(self._org_vdcs_uri, filters=filters)
 
     def get_ovdc(self, ovdc_id):
         uri = f"{self._ovdc_uri}/{ovdc_id}"
-        response = self._client._do_request_prim(
-            shared_constants.RequestMethod.GET,
-            uri,
-            self._client._session,
+        response = make_request(
+            client=self._client,
+            uri=uri,
+            method=shared_constants.RequestMethod.GET,
             accept_type='application/json')
         return process_response(response)
 
@@ -43,11 +44,11 @@ class PksOvdcApi(CseClient):
             shared_constants.RequestKey.PKS_CLUSTER_DOMAIN: pks_cluster_domain
         }
         uri = f"{self._ovdc_uri}/{ovdc_id}"
-        response = self._client._do_request_prim(
-            shared_constants.RequestMethod.PUT,
-            uri,
-            self._client._session,
-            contents=payload,
+        response = make_request(
+            client=self._client,
+            uri=uri,
+            method=shared_constants.RequestMethod.PUT,
+            accept_type='application/json',
             media_type='application/json',
-            accept_type='application/json')
+            payload=payload)
         return process_response(response)

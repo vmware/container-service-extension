@@ -4,6 +4,7 @@
 
 import pyvcloud.vcd.client as vcd_client
 
+from container_service_extension.client.request_maker import make_request
 from container_service_extension.client.response_processor import process_response  # noqa: E501
 import container_service_extension.common.constants.shared_constants as shared_constants  # noqa: E501
 
@@ -40,12 +41,12 @@ class CseClient:
         # cse_client package and the rest of the code.
         url = base_url
         while url:
-            response = self._client._do_request_prim(
-                shared_constants.RequestMethod.GET,
-                url,
-                self._client._session,
-                accept_type='application/json',
-                params=filters)
+            response = make_request(
+                client=self._client,
+                uri=url,
+                method=shared_constants.RequestMethod.GET,
+                params=filters,
+                accept_type='application/json')
             processed_response = process_response(response)
             url = processed_response.get(shared_constants.PaginationKey.NEXT_PAGE_URI)  # noqa: E501
             yield processed_response[shared_constants.PaginationKey.VALUES], bool(url) # noqa: E501
