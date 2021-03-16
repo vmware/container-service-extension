@@ -96,14 +96,14 @@ class RDEMetadataKey(str, Enum):
 
 # Examples:
 # Mapping for CSE 3.1:
-# MAP_VCD_API_VERSION_TO_RDE_VERSION = {
+# MAP_VCD_API_VERSION_TO_RUNTIME_RDE_VERSION = {
 #     35.0: 1.0.0,
 #     36.0: 2.0.0
 # }
 #
 # If CSE 3.2 introduces Minor version bump in RDE (i.e 2.1) and is released
 #   alongside vCD 10.4 (API Version 37), mapping would become -
-# MAP_VCD_API_VERSION_TO_RDE_SCHEMA_VERSION = {
+# MAP_VCD_API_VERSION_TO_RUNTIME_RDE_VERSION = {
 # 35.0: 1.0.0,
 # 36.0: 2.1.0 (Note the RDE version change),
 # 37.0: 2.1.0 (Newly introduced RDE),
@@ -111,7 +111,7 @@ class RDEMetadataKey(str, Enum):
 #
 # If CSE 3.2 introduces Major version bump in RDE (i.e 3.0) and is released
 #   alongside vCD 10.4 (API version 37), mapping would be -
-# MAP_VCD_API_VERSION_TO_RDE_SCHEMA_VERSION = {
+# MAP_VCD_API_VERSION_TO_RUNTIME_RDE_VERSION = {
 # 35.0: 1.0.0,
 # 36.0: 2.0.0,
 # 37.0: 3.0.0 (Newly introduced RDE)

@@ -33,6 +33,10 @@ class Validator_2_0_0(AbstractValidator):
         dict to the model class dictated by the api_version specified in the
         request.
         2. Operation (create, update, delete) specific validation.
+        - create: "entity" is the only required parameter.
+        - update: both "entity" and "entity_id" are required parameters.
+        - delete: "entity_id" is the only required parameter.
+        - kubeconfig: "entity_id" is the only required parameter.
 
         :param cloudapi_client: cloud api client
         :param dict entity: dict form of the native entity to be validated
@@ -67,8 +71,6 @@ class Validator_2_0_0(AbstractValidator):
             get_rde_model(rde_version_introduced_at_api_version)
         if entity:
             input_entity: AbstractNativeEntity = NativeEntityClass(**entity)
-        elif entity_id:
-            input_entity: AbstractNativeEntity = entity_svc.get_entity(entity_id).entity  # noqa: E501
 
         # Return True if the operation is not specified.
         if not operation:
@@ -78,6 +80,8 @@ class Validator_2_0_0(AbstractValidator):
         #  implemented as and when v36/def_cluster_handler.py get other handler
         #  functions
         if operation == BehaviorOperation.UPDATE_CLUSTER:
+            if not entity_id or not entity:
+                raise ValueError('Both entity_id and entity are required to validate the Update operation.')  # noqa: E501
             current_entity: AbstractNativeEntity = entity_svc.get_entity(entity_id).entity  # noqa: E501
             input_entity_spec = input_entity.spec
             current_entity_status = current_entity.status
