@@ -2,8 +2,6 @@
 # Copyright (c) 2021 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 
-from typing import Union
-
 import semantic_version
 
 
