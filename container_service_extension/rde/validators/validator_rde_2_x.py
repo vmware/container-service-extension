@@ -4,11 +4,15 @@
 
 from dataclasses import asdict
 
-from container_service_extension.common.constants.server_constants import CseOperation  # noqa: E501
+
 from container_service_extension.common.constants.server_constants import FlattenedClusterSpecKey  # noqa: E501
 from container_service_extension.common.constants.server_constants import VALID_UPDATE_FIELDS  # noqa: E501
 from container_service_extension.exception.exceptions import BadRequestError
+from container_service_extension.lib.cloudapi.cloudapi_client import CloudApiClient  # noqa: E501
+from container_service_extension.rde.behaviors.behavior_model import BehaviorOperation  # noqa: E501
+from container_service_extension.rde.common.entity_service import DefEntityService  # noqa: E501
 import container_service_extension.rde.constants as rde_constants
+from container_service_extension.rde.models import rde_factory
 from container_service_extension.rde.models.abstractNativeEntity import AbstractNativeEntity  # noqa: E501
 import container_service_extension.rde.utils as rde_utils
 from container_service_extension.rde.validators.abstract_validator import AbstractValidator  # noqa: E501
@@ -18,24 +22,64 @@ class Validator_2_0_0(AbstractValidator):
     def __init__(self):
         pass
 
-    def validate(self, input_entity: AbstractNativeEntity, current_entity: AbstractNativeEntity, operation: CseOperation) -> bool:  # noqa: E501
-        """Validate the input_spec against current_status of the cluster.
+    def validate(self, cloudapi_client: CloudApiClient, entity_id: str = None,
+                 entity: dict = None, operation: BehaviorOperation = None) -> bool:  # noqa: E501
+        """Validate the input request.
 
-        :param AbstractNativeEntity input_entity: Request spec of the cluster
-        :param AbstractNativeEntity current_entity: Current status of the cluster  # noqa: E501
-        :param CseOperation operation: CSE operation key
+        This method performs
+        1. Basic validation of the entity by simply casting the input entity
+        dict to the model class dictated by the api_version specified in the
+        request. This is usually performed for the "create" operation.
+        2. Operation (create, update, delete) specific validation.
+        - create: "entity" is the only required parameter.
+        - update: both "entity" and "entity_id" are required parameters.
+        - delete: "entity_id" is the only required parameter.
+        - kubeconfig: "entity_id" is the only required parameter.
+
+        :param cloudapi_client: cloud api client
+        :param dict entity: dict form of the native entity to be validated
+        :param entity_id: entity id to be validated
+        :param BehaviorOperation operation: CSE operation key
         :return: is validation successful or failure
         :rtype: bool
         """
+        if not entity_id and not entity:
+            raise ValueError('Either entity_id or entity is required to validate.')  # noqa: E501
+        entity_svc = DefEntityService(cloudapi_client=cloudapi_client)
+
+        api_version: float = float(cloudapi_client.get_api_version())
+        rde_version_introduced_at_api_version: str = rde_utils.get_rde_version_introduced_at_api_version(api_version)  # noqa: E501
+
+        # TODO Reject the request if payload_version does not match with
+        #  either rde_in_use (or) rde_version_introduced_at_api_version
+
+        # Cast the entity to the model class based on the user-specified
+        # api_version. This can be considered as a basic request validation.
+        # Any operation specific validation is handled further down
+        NativeEntityClass: AbstractNativeEntity = rde_factory. \
+            get_rde_model(rde_version_introduced_at_api_version)
+        if entity:
+            input_entity: AbstractNativeEntity = NativeEntityClass(**entity)
+
+        # Return True if the operation is not specified.
+        if not operation:
+            return True
+
         # TODO: validators for rest of the CSE operations in V36 will be
         #  implemented as and when v36/def_cluster_handler.py get other handler
         #  functions
-        input_entity_spec = input_entity.spec
-        current_entity_status = current_entity.status
-        current_entity_spec = rde_utils.\
-            construct_cluster_spec_from_entity_status(current_entity_status, rde_constants.RDEVersion.RDE_2_0_0.value)  # noqa: E501
-        if operation == CseOperation.V36_CLUSTER_UPDATE:
-            return validate_cluster_update_request_and_check_cluster_upgrade(asdict(input_entity_spec), asdict(current_entity_spec))  # noqa: E501
+        if operation == BehaviorOperation.UPDATE_CLUSTER:
+            if not entity_id or not entity:
+                raise ValueError('Both entity_id and entity are required to validate the Update operation.')  # noqa: E501
+            current_entity: AbstractNativeEntity = entity_svc.get_entity(entity_id).entity  # noqa: E501
+            input_entity_spec = input_entity.spec
+            current_entity_status = current_entity.status
+            current_entity_spec = \
+                rde_utils.construct_cluster_spec_from_entity_status(
+                    current_entity_status, rde_constants.RDEVersion.RDE_2_0_0.value)  # noqa: E501
+        return validate_cluster_update_request_and_check_cluster_upgrade(
+            asdict(input_entity_spec),
+            asdict(current_entity_spec))
         raise NotImplementedError(f"Validator for {operation.name} not found")
 
 

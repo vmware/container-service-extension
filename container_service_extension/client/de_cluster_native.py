@@ -42,7 +42,7 @@ class DEClusterNative:
         self._native_cluster_api = NativeClusterApi(client)
         self._client = client
         self._server_rde_version = \
-            def_utils.get_rde_version_by_vcd_api_version(
+            def_utils.get_runtime_rde_version_by_vcd_api_version(
                 float(client.get_api_version()))
 
     def create_cluster(self, cluster_entity: rde_1_0_0.NativeEntity):

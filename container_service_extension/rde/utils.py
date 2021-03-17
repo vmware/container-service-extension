@@ -58,9 +58,13 @@ def generate_entity_type_id(vendor, nss, version):
     return f"{def_constants.DEF_ENTITY_TYPE_ID_PREFIX}:{vendor}:{nss}:{version}"  # noqa: E501
 
 
-def get_rde_version_by_vcd_api_version(vcd_api_version: float) -> str:
+def get_runtime_rde_version_by_vcd_api_version(vcd_api_version: float) -> str:
     major_vcd_api_version = math.floor(vcd_api_version)
-    return def_constants.MAP_VCD_API_VERSION_TO_RDE_VERSION[major_vcd_api_version]  # noqa: E501
+    return def_constants.MAP_VCD_API_VERSION_TO_RUNTIME_RDE_VERSION[major_vcd_api_version]  # noqa: E501
+
+
+def get_rde_version_introduced_at_api_version(vcd_api_version: float) -> str:
+    return def_constants.MAP_VCD_API_VERSION_TO_RDE_VERSION[vcd_api_version]
 
 
 def get_rde_metadata(rde_version: str) -> dict:

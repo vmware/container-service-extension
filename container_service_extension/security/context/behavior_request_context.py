@@ -15,14 +15,14 @@ class BehaviorUserContext:
 
 
 @dataclass(frozen=True)
-class BehaviorOperationContext:
+class BehaviorRequestContext:
     behavior_id: str
     task_id: str
     entity_id: str
     entity: dict
     entity_type_id: str
     payload: dict
-    api_version: str
+    api_version: float
     request_id: str
     op_ctx: OperationContext
     user_context: BehaviorUserContext

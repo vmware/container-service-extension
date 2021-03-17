@@ -4,26 +4,33 @@
 
 import semantic_version
 
+
 from container_service_extension.rde.backend.cluster_service_1_x import ClusterService as ClusterService1X  # noqa: E501
 from container_service_extension.rde.backend.cluster_service_2_x import ClusterService as ClusterService2X  # noqa: E501
-import container_service_extension.security.context.operation_context as ctx
+from container_service_extension.rde.backend.cluster_service_2_x_temp import ClusterService as ClusterService2XBehaviors  # noqa: E501
+from container_service_extension.security.context.behavior_request_context import BehaviorRequestContext  # noqa: E501
 
 
 class ClusterServiceFactory:
-    def __init__(self, op_ctx: ctx.OperationContext):
-        self.op_ctx = op_ctx
+    def __init__(self, req_ctx):  # noqa: E501
+        self.req_ctx = req_ctx
 
     def get_cluster_service(self, rde_version_in_use):
         """Get the right instance of backend cluster service.
 
         Factory method to return the ClusterService based on the RDE version in use.
         :param rde_version_in_use (str)
-        :param op_ctx (container_service_extension.security.context.operation_context.OperationContext)
+        :param op_ctx Union[OperationContext, BehaviorRequestContext]
 
         :rtype cluster_service (container_service_extension.server.abstract_broker.AbstractBroker)  # noqa: E501
         """
         rde_version: semantic_version.Version = semantic_version.Version(rde_version_in_use)  # noqa: E501
         if rde_version.major == 1:
-            return ClusterService1X(op_ctx=self.op_ctx)
+            return ClusterService1X(op_ctx=self.req_ctx)
         elif rde_version.major == 2:
-            return ClusterService2X(op_ctx=self.op_ctx)
+            # TODO This if else block needs to be removed once Behavior
+            #  integration is completed.
+            if isinstance(self.req_ctx, BehaviorRequestContext):
+                return ClusterService2XBehaviors(self.req_ctx)
+            else:
+                return ClusterService2X(op_ctx=self.req_ctx)
