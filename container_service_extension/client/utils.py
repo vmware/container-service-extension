@@ -51,7 +51,7 @@ def cse_restore_session(ctx) -> None:
     version. Also saves the server api version in profiles.
 
     :param <click.core.Context> ctx: click context
-    :param bool vdc_required: is vdc required or not
+
     :return:
     """
     # Always override the vcd_client by new client with CSE server api version.
