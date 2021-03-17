@@ -108,7 +108,8 @@ def init_environment(config_filepath=BASE_CONFIG_FILEPATH):
         RemoteTemplateManager(config['broker']['remote_template_cookbook_url'])
     template_cookbook = rtm.get_remote_template_cookbook()
     TEMPLATE_DEFINITIONS = template_cookbook['templates']
-    rtm.download_all_template_scripts(force_overwrite=True)
+    rtm.download_all_template_scripts(force_overwrite=True,
+                                      legacy_mode=config['service']['legacy_mode'])  # noqa: E501
 
     init_test_vars(config.get('test'))
 

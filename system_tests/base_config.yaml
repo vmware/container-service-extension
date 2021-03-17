@@ -57,7 +57,7 @@ service:
   log_wire: false
   telemetry:
     enable: false
-  legacy_mode: True
+  legacy_mode: true
 
 broker:
   catalog: cse                          # public shared catalog within org where the template will be published
