@@ -906,6 +906,8 @@ def process_request(message):
         for feature_flag in required_feature_flags:
             value = server_config['feature_flags'].get(feature_flag, False)
             if not value:
+                LOGGER.debug("Url matched but failed to satisfy feature "
+                             f"flag {feature_flag}")
                 feature_flags_satisfied = False
                 break
 
