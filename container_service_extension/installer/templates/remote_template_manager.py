@@ -138,6 +138,41 @@ class RemoteTemplateManager():
         self.logger.debug(msg)
         self.msg_update_callback.general(msg)
 
+    def _validate_remote_template_cookbook(self):
+        """Checks if the remote template cookbook supplied is valid."""
+        is_cookbook_invalid = False
+        invalid_tempalte_cookbook_msg = f"Invalid template cookbook: {self.url}"
+
+        for template_descriptor in self.cookbook['templates']:
+            is_min_max_key_present = \
+                RemoteTemplateKey.MIN_CSE_VERSION in template_descriptor and \
+                RemoteTemplateKey.MAX_CSE_VERSION in template_descriptor
+            if is_min_max_key_present and self.legacy_mode:
+                # min_cse_version and max_cse_version keys are not supported
+                # in the template descriptor if running in legacy_mode
+                invalid_tempalte_cookbook_msg += \
+                    "min_cse_version and max_cse_version keys are " \
+                    "not supported in the template descriptor " \
+                    "if running in legacy_mode"
+                is_cookbook_invalid = True
+                raise ValueError(invalid_tempalte_cookbook_msg)
+            elif not is_min_max_key_present and not self.legacy_mode:
+                # min_cse_version and max_cse_version keys are required in the
+                # template descriptor if not running in legacy_mode
+                invalid_tempalte_cookbook_msg += \
+                    "min_cse_version and max_cse_version keys are required " \
+                    "in the template descriptor if not running in legacy_mode"
+                is_cookbook_invalid = True
+            # raise Error if cookbook supplied is invalid
+            if is_cookbook_invalid:
+                self.logger.error(invalid_tempalte_cookbook_msg)
+                self.msg_update_callback.error(invalid_tempalte_cookbook_msg)
+                raise ValueError(invalid_tempalte_cookbook_msg)
+
+        msg = f"Template cookbook {self.url} is valid"
+        self.logger.debug(msg)
+        self.msg_update_callback.general(msg)
+
     def get_remote_template_cookbook(self):
         """Get the remote template cookbook as a dictionary.
 
@@ -155,6 +190,7 @@ class RemoteTemplateManager():
             msg = f"Downloaded remote template cookbook from {self.url}"
             self.logger.debug(msg)
             self.msg_update_callback.general(msg)
+            self._validate_remote_template_cookbook()
             self._filter_unsupported_templates()
         return self.cookbook
 
