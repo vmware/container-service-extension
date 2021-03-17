@@ -151,15 +151,19 @@ class RemoteTemplateManager():
             if os.name != 'nt':
                 os.chmod(local_script_filepath, stat.S_IRUSR | stat.S_IWUSR)
 
-    def download_all_template_scripts(self, force_overwrite=False):
+    def download_all_template_scripts(self, force_overwrite=False,
+                                      legacy_mode=False):
         """Download all scripts for all templates mentioned in cookbook.
 
         :param bool force_overwrite: if True, will download the script even if
             it already exists.
+        :param bool legacy_mode: If true, only template scripts will be
+            downloaded.
         """
         remote_template_cookbook = self.get_remote_template_cookbook()
         for template in remote_template_cookbook['templates']:
             template_name = template['name']
             revision = template['revision']
             self.download_template_scripts(template_name, revision,
-                                           force_overwrite=force_overwrite)
+                                           force_overwrite=force_overwrite,
+                                           legacy_mode=legacy_mode)
