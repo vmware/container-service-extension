@@ -139,35 +139,52 @@ class RemoteTemplateManager():
         self.msg_update_callback.general(msg)
 
     def _validate_remote_template_cookbook(self):
-        """Checks if the remote template cookbook supplied is valid."""
-        is_cookbook_invalid = False
-        invalid_tempalte_cookbook_msg = f"Invalid template cookbook: {self.url}"
+        """Check if the remote template cookbook supplied is valid.
 
-        for template_descriptor in self.cookbook['templates']:
+        If CSE is executed in legacy mode, template descriptors in the
+        remote template cookbook are not expected to have min_cse_version and
+        max_cse_version.
+
+        If CSE is executed in non-legacy mode, template descriptors in the
+        remote template cookbook should have min_cse_version and
+        max_cse_version.
+        """
+        invalid_template_cookbook_msg = f"Invalid template cookbook ({self.url}): "  # noqa: E501
+        is_cookbook_invalid = False
+
+        # if there are no templates in the cookbook, the remote template
+        # cookbook is invalid
+        if 'templates' not in self.cookbook:
+            msg = "No 'templates' found."
+            is_cookbook_invalid = True
+
+        for template_descriptor in self.cookbook.get('templates', []):
             is_min_max_key_present = \
                 RemoteTemplateKey.MIN_CSE_VERSION in template_descriptor and \
                 RemoteTemplateKey.MAX_CSE_VERSION in template_descriptor
             if is_min_max_key_present and self.legacy_mode:
                 # min_cse_version and max_cse_version keys are not supported
                 # in the template descriptor if running in legacy_mode
-                invalid_tempalte_cookbook_msg += \
+                invalid_template_cookbook_msg += \
                     "min_cse_version and max_cse_version keys are " \
                     "not supported in the template descriptor " \
-                    "if running in legacy_mode"
+                    "if running in legacy_mode."
                 is_cookbook_invalid = True
-                raise ValueError(invalid_tempalte_cookbook_msg)
+                break
             elif not is_min_max_key_present and not self.legacy_mode:
                 # min_cse_version and max_cse_version keys are required in the
                 # template descriptor if not running in legacy_mode
-                invalid_tempalte_cookbook_msg += \
+                invalid_template_cookbook_msg += \
                     "min_cse_version and max_cse_version keys are required " \
-                    "in the template descriptor if not running in legacy_mode"
+                    "in the template descriptor if not running in legacy_mode."
                 is_cookbook_invalid = True
-            # raise Error if cookbook supplied is invalid
-            if is_cookbook_invalid:
-                self.logger.error(invalid_tempalte_cookbook_msg)
-                self.msg_update_callback.error(invalid_tempalte_cookbook_msg)
-                raise ValueError(invalid_tempalte_cookbook_msg)
+                break
+
+        # raise Error if cookbook supplied is invalid
+        if is_cookbook_invalid:
+            self.logger.error(invalid_template_cookbook_msg)
+            self.msg_update_callback.error(invalid_template_cookbook_msg)
+            raise ValueError(invalid_template_cookbook_msg)
 
         msg = f"Template cookbook {self.url} is valid"
         self.logger.debug(msg)
