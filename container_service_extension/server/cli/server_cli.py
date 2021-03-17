@@ -812,7 +812,6 @@ def run(ctx, config_file_path, pks_config_file_path, skip_check,
             log_wire_file=SERVER_DEBUG_WIRELOG_FILEPATH,
             logger_debug=SERVER_LOGGER,
             msg_update_callback=console_message_printer)
-
         service = cse_service.Service(
             config_file=config_file_path,
             config=config,

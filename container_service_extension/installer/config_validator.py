@@ -157,6 +157,7 @@ def get_validated_config(config_file_name,
                                msg_update_callback=msg_update_callback)
     msg_update_callback.general(
         f"Config file '{config_file_name}' is valid")
+
     if pks_config_file_name:
         check_file_permissions(pks_config_file_name,
                                msg_update_callback=msg_update_callback)
@@ -185,9 +186,6 @@ def get_validated_config(config_file_name,
         config['pks_config'] = pks_config
     else:
         config['pks_config'] = None
-
-    # Store telemetry instance id, url and collector id in config
-    store_telemetry_settings(config)
 
     # Compute common supported api versions by the CSE server and vCD
     sysadmin_client = None
@@ -236,6 +234,11 @@ def get_validated_config(config_file_name,
             [float(x) for x in config['service']['supported_api_versions']
                 if float(x) >= 35.0]
     config['vcd']['api_version'] = str(max(supported_api_versions_float))
+
+    # Store telemetry instance id, url and collector id in config
+    # This steps needs to be done after api_version has been computed
+    # and stored in the config
+    store_telemetry_settings(config)
 
     return config
 

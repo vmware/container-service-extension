@@ -82,9 +82,9 @@ def get_telemetry_instance_id(config_dict, logger_debug=NULL_LOGGER,
     :rtype str (unless no instance id found)
     """
     vcd = config_dict['vcd']
+    client = None
     try:
-        client = Client(vcd['host'], api_version=vcd['api_version'],
-                        verify_ssl_certs=vcd['verify'])
+        client = Client(vcd['host'], verify_ssl_certs=vcd['verify'])
         client.set_credentials(BasicLoginCredentials(
             vcd['username'], SYSTEM_ORG_NAME, vcd['password']))
         if should_use_mqtt_protocol(config_dict):
@@ -110,7 +110,7 @@ def get_telemetry_instance_id(config_dict, logger_debug=NULL_LOGGER,
     except Exception as err:
         msg = f"Cannot retrieve telemetry instance id:{err}"
         msg_update_callback.general(msg)
-        logger_debug.error(msg)
+        logger_debug.error(msg, exc_info=True)
     finally:
         if client is not None:
             client.logout()
