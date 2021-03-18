@@ -225,6 +225,31 @@ class ScriptFile(str, Enum):
 
 
 @unique
+class LegacyLocalTemplatekey(str, Enum):
+    """Enumerate the keys that define a legacy template.
+
+    All the keys for a template except min_cse_version and
+    max_cse_version.
+    """
+    CATALOG_ITEM_NAME = 'catalog_item_name'
+    CNI = 'cni'
+    CNI_VERSION = 'cni_version'
+    COMPUTE_POLICY = 'compute_policy'
+    CPU = 'cpu'
+    DEPRECATED = 'deprecated'
+    DESCRIPTION = 'description'
+    DOCKER_VERSION = 'docker_version'
+    KIND = 'kind'
+    KUBERNETES = 'kubernetes'
+    KUBERNETES_VERSION = 'kubernetes_version'
+    MEMORY = 'mem'
+    NAME = 'name'
+    OS = 'os'
+    REVISION = 'revision'
+    UPGRADE_FROM = 'upgrade_from'
+
+
+@unique
 class LocalTemplateKey(str, Enum):
     """Enumerate the keys that define a template."""
 

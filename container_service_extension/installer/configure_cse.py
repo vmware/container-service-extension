@@ -1062,21 +1062,93 @@ def _setup_placement_policies(client,
         INSTALL_LOGGER.info(msg)
 
 
-def _assign_placement_policies_to_existing_templates(client, config,
-                                                     is_tkg_plus_enabled,
-                                                     log_wire=False,
-                                                     msg_update_callback=utils.NullPrinter()):  # noqa: E501
-    """Read existing templates and assign respective placement policies.
+def _construct_catalog_item_name_to_template_description_map(cookbook: dict) -> dict:
+    """Get a dictionary which maps catalog item name to template description.
 
-    Read metadata of existing templates, get the value for the 'kind' metadata,
-    assign the respective placement policy to the template.
+    :param dict cookbook: template cookbook
+    :return: dictionary with catalog item name as key and template description
+        as value
+    :rtype: dict
+    """
+    catalog_item_name_to_template_description = {}
+    for template in cookbook['template']:
+        # For CSE 3.1, we can safely assume that all the catalog item names are
+        # present in template metadata as CSE 3.1 can only be upgraded from
+        # CSE 3.0
+        catalog_item_name_to_template_description[template[server_constants.LegacyLocalTemplatekey.CATALOG_ITEM_NAME]] = template
+    return catalog_item_name_to_template_description
 
+
+def _update_metadata_for_existing_templates(client: Client, config: dict,
+                                            all_legacy_templates: list,
+                                            msg_update_callback=utils.NullPrinter()):  # noqa: E501
+    """Update template metadata to include new metadata keys.
+
+    Metadata update will happen when CSE is executed in non-legacy mode only
+    for supported templates.
     :param vcdClient.Client client:
-    :param dict config: content of the CSE config file.
-    :param bool is_tkg_plus_enable:
-    :param bool log_wire:
+    :param dict config: server configuration
+    :param list all_legacy_templates: list of all legacy templates
     :param core_utils.ConsoleMessagePrinter msg_update_callback:
     """
+    legacy_mode = config['service']['legacy_mode']
+    cookbook_url = config['broker']['remote_template_cookbook_url']
+    catalog_org_name = config['broker']['org']
+    catalog_name = config['broker']['catalog']
+
+    # Skip updating metadata if CSE is executed in legacy mode.
+    if legacy_mode:
+        msg = "Skipping template metadata update as " \
+              "CSE is executed in legacy mode."
+        INSTALL_LOGGER.debug(msg)
+        msg_update_callback.general(msg)
+        return
+    rtm = RemoteTemplateManager(
+        remote_template_cookbook_url=cookbook_url,
+        legacy_mode=legacy_mode,
+        logger=INSTALL_LOGGER,
+        msg_update_callback=msg_update_callback)
+    # NOTE: get_remote_template_cookbook() will load only
+    # the template descriptors supported by the target CSE version.
+    rtm.get_remote_template_cookbook()
+    catalog_item_to_template_description_map = \
+        _construct_catalog_item_name_to_template_description_map(rtm.cookbook)
+    # List of keys for the new template metadata. This includes
+    # min_cse_version and max_cse_version
+    new_metadata_key_list = [k for k in server_constants.LocalTemplateKey]
+    for template in all_legacy_templates:
+        # Since CSE 3.1 can only be upgraded from CSE 3.0, we can safely assume
+        # that all the templates have catalog_item_name in their metadata
+        catalog_item_name = \
+            template[server_constants.LegacyLocalTemplatekey.CATALOG_ITEM_NAME]
+        if catalog_item_name in catalog_item_to_template_description_map:
+            # Supported template with the template name and revision found
+            # Update template metadata with min_cse_version and max_cse_version
+            template[server_constants.LocalTemplateKey.MIN_CSE_VERSION] = \
+                catalog_item_to_template_description_map[server_constants.RemoteTemplateKey.MIN_CSE_VERSION]
+            template[server_constants.LocalTemplateKey.MAX_CSE_VERSION] = \
+                catalog_item_to_template_description_map[server_constants.RemoteTemplateKey.MAX_CSE_VERSION]
+            ltm.save_metadata(client, catalog_org_name,
+                              catalog_name, catalog_item_name,
+                              template, metadata_key_list=new_metadata_key_list)
+            msg = f"Successfully updated template metadata for {catalog_item_name}"
+            INSTALL_LOGGER.debug(msg)
+            msg_update_callback.general(msg)
+        else:
+            # Template not supported in the target CSE version.
+            # Do not update template metadata
+            msg = f"Template {catalog_item_name} not supported, Skipping " \
+                  f"template metadata update."
+            INSTALL_LOGGER.debug(msg)
+            msg_update_callback.general(msg)
+
+
+def _assign_placement_policies_to_existing_templates(client: Client,
+                                                     config: dict,
+                                                     all_templates: list,
+                                                     is_tkg_plus_enabled: bool,
+                                                     log_wire: bool = False,
+                                                     msg_update_callback=utils.NullPrinter()):
     # NOTE: In CSE 3.0 if `enable_tkg_plus` flag in the config is set to false,
     # And there is an existing TKG+ template, throw an exception on the console
     # and fail the upgrade.
@@ -1086,12 +1158,7 @@ def _assign_placement_policies_to_existing_templates(client, config,
 
     catalog_name = config['broker']['catalog']
     org_name = config['broker']['org']
-    all_templates = \
-        ltm.get_all_k8s_local_template_definition(
-            client,
-            catalog_name=catalog_name,  # noqa: E501
-            org_name=org_name,
-            logger_debug=INSTALL_LOGGER)
+
     for template in all_templates:
         kind = template.get(server_constants.LocalTemplateKey.KIND)
         catalog_item_name = ltm.get_revisioned_template_name(
@@ -1115,7 +1182,7 @@ def _assign_placement_policies_to_existing_templates(client, config,
             INSTALL_LOGGER.error(msg)
             raise cse_exception.CseUpgradeError(msg)
         placement_policy_name = \
-            shared_constants.RUNTIME_DISPLAY_NAME_TO_INTERNAL_NAME_MAP[kind]  # noqa: E501
+            shared_constants.RUNTIME_DISPLAY_NAME_TO_INTERNAL_NAME_MAP[kind]
         template_builder.assign_placement_policy_to_template(
             client,
             placement_policy_name,
@@ -1125,6 +1192,57 @@ def _assign_placement_policies_to_existing_templates(client, config,
             logger=INSTALL_LOGGER,
             log_wire=log_wire,
             msg_update_callback=msg_update_callback)
+
+
+def _process_existing_templates(client: Client, config: dict,
+                                is_tkg_plus_enabled: bool,
+                                log_wire: bool =False,
+                                msg_update_callback=utils.NullPrinter()):  # noqa: E501
+    """Read existing templates and assign respective placement policies.
+
+    Read metadata of existing templates, get the value for the 'kind' metadata,
+    assign the respective placement policy to the template.
+
+    :param vcdClient.Client client:
+    :param dict config: content of the CSE config file.
+    :param bool is_tkg_plus_enable:
+    :param bool log_wire:
+    :param core_utils.ConsoleMessagePrinter msg_update_callback:
+    """
+    catalog_name = config['broker']['catalog']
+    org_name = config['broker']['org']
+
+    all_legacy_templates = \
+        ltm.get_all_k8s_local_template_definition(
+            client,
+            catalog_name=catalog_name,  # noqa: E501
+            org_name=org_name,
+            legacy_mode=True,
+            logger_debug=INSTALL_LOGGER)
+    # update metadata with min_cse_version and max_cse_version for all
+    # legacy templates supported in the target CSE version
+    _update_metadata_for_existing_templates(
+        client,
+        config,
+        all_legacy_templates,
+        msg_update_callback=msg_update_callback)
+
+    # Get only the templates which are supported.
+    all_templates = \
+        ltm.get_all_k8s_local_template_definition(
+            client,
+            catalog_name=catalog_name,  # noqa: E501
+            org_name=org_name,
+            legacy_mode=config['service']['legacy_mode'],
+            logger_debug=INSTALL_LOGGER)
+
+    _assign_placement_policies_to_existing_templates(
+        client,
+        config,
+        all_templates,
+        is_tkg_plus_enabled,
+        log_wire=log_wire,
+        msg_update_callback=msg_update_callback)
 
 
 def _install_all_templates(
@@ -1154,6 +1272,7 @@ def _install_all_templates(
             retain_temp_vapp=retain_temp_vapp,
             ssh_key=ssh_key,
             is_tkg_plus_enabled=server_utils.is_tkg_plus_enabled(config),
+            legacy_mode=config['service']['legacy_mode'],
             msg_update_callback=msg_update_callback)
 
 
@@ -1254,6 +1373,7 @@ def install_template(template_name, template_revision, config_file_name,
                     retain_temp_vapp=retain_temp_vapp,
                     ssh_key=ssh_key,
                     is_tkg_plus_enabled=server_utils.is_tkg_plus_enabled(config),  # noqa: E501
+                    legacy_mode=config['service']['legacy_mode'],
                     msg_update_callback=msg_update_callback)
 
         if not found_template:
@@ -1283,6 +1403,7 @@ def install_template(template_name, template_revision, config_file_name,
             client.logout()
 
 
+# TODO legacy_mode required here?
 def _install_single_template(
         client, remote_template_manager, template, org_name,
         vdc_name, catalog_name, network_name, ip_allocation_mode,
@@ -1305,6 +1426,10 @@ def _install_single_template(
         msg_update_callback.error(msg)
         raise Exception(msg)
     localTemplateKey = server_constants.LocalTemplateKey
+    if legacy_mode:
+        # if legacy_mode, make use of LegacyLocalTemplateKey which
+        # doesn't contain min_cse_version and max_cse_version.
+        localTemplateKey = server_constants.LegacyLocalTemplatekey
     templateBuildKey = server_constants.TemplateBuildKey
     remote_template_manager.download_template_scripts(
         template_name=template[server_constants.RemoteTemplateKey.NAME],
@@ -1318,8 +1443,10 @@ def _install_single_template(
     # the key 'catalog_item_name'
     template_data = dict(template)
     template_data[localTemplateKey.CATALOG_ITEM_NAME] = catalog_item_name
+    template_metadata_keys = [k for k in localTemplateKey]
 
-    missing_keys = [k for k in localTemplateKey if k not in template_data]
+    missing_keys = [k for k in template_metadata_keys
+                    if k not in template_data]
     if len(missing_keys) > 0:
         raise ValueError(f"Invalid template data. Missing keys: {missing_keys}") # noqa: E501
 
@@ -1363,7 +1490,7 @@ def _install_single_template(
                   retain_temp_vapp=retain_temp_vapp)
 
     ltm.save_metadata(client, org_name, catalog_name, catalog_item_name,
-                      template_data)
+                      template_data, metadata_key_list=template_metadata_keys)
 
 
 def upgrade_cse(config_file_name, config, skip_template_creation,
@@ -1626,7 +1753,7 @@ def _upgrade_to_cse_3_1(client, config, ext_vcd_api_version,
         msg = "Skipping creation of templates."
         msg_update_callback.info(msg)
         INSTALL_LOGGER.info(msg)
-        _assign_placement_policies_to_existing_templates(
+        _process_existing_templates(
             client=client,
             config=config,
             is_tkg_plus_enabled=is_tkg_plus_enabled,
@@ -1713,6 +1840,21 @@ def _upgrade_to_cse_3_1(client, config, ext_vcd_api_version,
             exchange=config['amqp']['exchange'],
             target_vcd_api_version=config['vcd']['api_version'],
             msg_update_callback=msg_update_callback)
+
+
+def _update_existing_template_metadata(client, config,
+                                       logger_debug=NULL_LOGGER,
+                                       msg_update_callback=utils.NullPrinter()):
+    """Update metadata with min_cse_version and max_cse_version.
+
+    NOTE: Update the metadata only if CSE is executed in non-legacy mode.
+    """
+    if config['service']['legacy_mode']:
+        # If CSE is executed in non-legacy mode, do nothing
+        msg = "Skipping template metadata update as " \
+              "CSE is running in legacy mode"
+        return
+    all_legacy_templates = ltm.get_all_k8s_local_template_definition()
 
 
 def _get_placement_policy_name_from_template_name(template_name):

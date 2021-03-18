@@ -985,6 +985,7 @@ def upgrade(ctx, config_file_path, skip_config_decryption,
 def list_template(ctx, config_file_path, skip_config_decryption,
                   display_option):
     """List CSE k8s templates."""
+    # TODO(VCDA-2236) Validate legacy_mode in extension
     SERVER_CLI_LOGGER.debug(f"Executing command: {ctx.command_path}")
     console_message_printer = utils.ConsoleMessagePrinter()
     # Not passing the console_message_printer, because we want to suppress
@@ -1011,6 +1012,7 @@ def list_template(ctx, config_file_path, skip_config_decryption,
                                    cse_params=cse_params,
                                    telemetry_settings=config_dict['service']['telemetry'])  # noqa: E501
 
+
         local_templates = []
         if display_option in (DISPLAY_ALL, DISPLAY_DIFF, DISPLAY_LOCAL):
             client = None
@@ -1027,13 +1029,15 @@ def list_template(ctx, config_file_path, skip_config_decryption,
                 org_name = config_dict['broker']['org']
                 catalog_name = config_dict['broker']['catalog']
                 is_tkg_plus_enabled = server_utils.is_tkg_plus_enabled(config_dict)  # noqa: E501
+                legacy_mode = config_dict['service']['legacy_mode']
+
                 local_template_definitions = \
                     ltm.get_all_k8s_local_template_definition(
                         client=client,
                         catalog_name=catalog_name,
+                        legacy_mode=legacy_mode,
                         org_name=org_name,
                         logger_debug=SERVER_CLI_LOGGER)
-
                 default_template_name = \
                     config_dict['broker']['default_template_name']
                 default_template_revision = \
@@ -1079,8 +1083,7 @@ def list_template(ctx, config_file_path, skip_config_decryption,
             rtm = RemoteTemplateManager(
                 remote_template_cookbook_url=config_dict['broker']['remote_template_cookbook_url'], # noqa: E501
                 legacy_mode=config_dict['service']['legacy_mode'],
-                logger=SERVER_CLI_LOGGER,
-                msg_update_callback=console_message_printer)
+                logger=SERVER_CLI_LOGGER)
             remote_template_cookbook = rtm.get_remote_template_cookbook()
             remote_template_definitions = remote_template_cookbook['templates']
             for definition in remote_template_definitions:
@@ -1205,6 +1208,7 @@ def install_cse_template(ctx, template_name, template_revision,
     Use '*' for TEMPLATE_NAME and TEMPLATE_REVISION to install
     all listed templates.
     """
+    # TODO(VCDA-2236) Validate legacy_mode in extension
     # NOTE: For CSE 3.0, if `enable_tkg_plus` flag in config is set to false,
     # Throw an error if TKG+ template creation is issued.
     SERVER_CLI_LOGGER.debug(f"Executing command: {ctx.command_path}")
