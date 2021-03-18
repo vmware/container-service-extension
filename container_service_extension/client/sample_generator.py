@@ -5,10 +5,9 @@ import dataclasses
 
 import yaml
 
-import container_service_extension.def_.models as def_models
-from container_service_extension.logger import CLIENT_LOGGER
-import container_service_extension.shared_constants as shared_constants
-
+import container_service_extension.common.constants.shared_constants as shared_constants  # noqa: E501
+from container_service_extension.logging.logger import CLIENT_LOGGER
+import container_service_extension.rde.models.rde_1_0_0 as rde_1_0_0
 
 SAMPLE_K8_CLUSTER_SPEC_HELP = """# Short description of various properties used in this sample cluster configuration
 # kind: The kind of the Kubernetes cluster.
@@ -93,39 +92,39 @@ def get_sample_cluster_configuration(output=None, k8_runtime=None):
 
 
 def _get_sample_cluster_configuration_by_k8_runtime(k8_runtime):
-    metadata = def_models.Metadata('cluster_name', 'organization_name',
-                                   'org_virtual_datacenter_name')
-    status = def_models.Status()
-    settings = def_models.Settings(network='ovdc_network_name', ssh_key=None)
-    k8_distribution = def_models.Distribution(
+    metadata = rde_1_0_0.Metadata('cluster_name', 'organization_name',
+                                  'org_virtual_datacenter_name')
+    status = rde_1_0_0.Status()
+    settings = rde_1_0_0.Settings(network='ovdc_network_name', ssh_key=None)
+    k8_distribution = rde_1_0_0.Distribution(
         template_name='ubuntu-16.04_k8-1.17_weave-2.6.0',
         template_revision=2
     )
-    control_plane = def_models.ControlPlane(
+    control_plane = rde_1_0_0.ControlPlane(
         count=1,
         sizing_class='Large_sizing_policy_name',
         storage_profile='Gold_storage_profile_name'
     )
-    workers = def_models.Workers(
+    workers = rde_1_0_0.Workers(
         count=2,
         sizing_class='Medium_sizing_policy_name',
         storage_profile='Silver_storage_profile'
     )
 
-    nfs = def_models.Nfs(
+    nfs = rde_1_0_0.Nfs(
         count=0,
         sizing_class='Large_sizing_policy_name',
         storage_profile='Platinum_storage_profile_name'
     )
 
-    cluster_spec = def_models.ClusterSpec(
+    cluster_spec = rde_1_0_0.ClusterSpec(
         control_plane=control_plane,
         k8_distribution=k8_distribution,
         settings=settings,
         workers=workers,
         nfs=nfs
     )
-    cluster_entity = def_models.ClusterEntity(
+    cluster_entity = rde_1_0_0.NativeEntity(
         metadata=metadata,
         spec=cluster_spec,
         status=status,

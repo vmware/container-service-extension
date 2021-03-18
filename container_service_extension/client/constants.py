@@ -2,21 +2,18 @@
 # Copyright (c) 2020 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 
+"""Constants used only in the CSE CLI."""
+
 from enum import Enum
 from enum import unique
 
-import container_service_extension.def_.utils as def_utils
+import container_service_extension.common.constants.shared_constants as shared_constants  # noqa: E501
+
 
 # Client environment variables
 ENV_CSE_CLIENT_WIRE_LOGGING = 'CSE_CLIENT_WIRE_LOGGING'
 ENV_CSE_TKG_PLUS_ENABLED = 'CSE_TKG_PLUS_ENABLED'
 
-TKG_ENTITY_TYPE_ID = def_utils.generate_entity_type_id(
-    def_utils.DEF_VMWARE_VENDOR,
-    def_utils.TKG_ENTITY_TYPE_NSS,
-    def_utils.TKG_ENTITY_TYPE_VERSION)
-
-TKG_CLUSTER_RUNTIME = 'TkgCluster'
 
 # if cse_server_running key is set to false in profiles.yaml, CSE CLI can
 # only be used to work with TKG clusters. This key is set when the first call
@@ -30,6 +27,15 @@ TKG_RESPONSE_MESSAGES_BY_STATUS_CODE = {
     500: "Unexpected error occurred"
 }
 
+# Fields for cluster acl request
+CLUSTER_ACL_UPDATE_REQUEST_FIELDS = \
+    [shared_constants.AccessControlKey.ACCESS_LEVEL_ID,
+     shared_constants.AccessControlKey.MEMBER_ID,
+     shared_constants.AccessControlKey.USERNAME]
+
+# CLI pagination constant to be consistent with UI pagination
+CLI_ENTRIES_PER_PAGE = 10
+
 
 @unique
 class CLIOutputKey(str, Enum):
@@ -42,6 +48,30 @@ class CLIOutputKey(str, Enum):
     K8S_VERSION = "K8s Version"
     STATUS = "Status"
     OWNER = "Owner"
+
+
+@unique
+class GroupKey(str, Enum):
+    CLUSTER = 'cluster'
+    NODE = 'node'
+    OVDC = 'ovdc'
+    PKS = 'pks'
+    SYSTEM = 'system'
+    TEMPLATE = 'template'
+    VERSION = 'version'
+
+
+@unique
+class CommandNameKey(str, Enum):
+    CONFIG = 'config'
+    CREATE = 'create'
+    DELETE = 'delete'
+    UPGRADE = 'upgrade'
+    UPGRADE_PLAN = 'upgrade-plan'
+    INFO = 'info'
+    NODE = 'node'
+    ENABLE = 'enable'
+    DISABLE = 'disable'
 
 
 @unique

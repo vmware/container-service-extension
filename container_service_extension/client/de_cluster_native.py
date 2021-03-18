@@ -11,11 +11,14 @@ import yaml
 import container_service_extension.client.constants as cli_constants
 from container_service_extension.client.cse_client.api_35.native_cluster_api import NativeClusterApi  # noqa: E501
 import container_service_extension.client.utils as client_utils
-from container_service_extension.def_ import models as def_models
-import container_service_extension.def_.entity_service as def_entity_svc
-import container_service_extension.exceptions as cse_exceptions
-import container_service_extension.logger as logger
-import container_service_extension.pyvcloud_utils as vcd_utils
+import container_service_extension.common.constants.shared_constants as shared_constants  # noqa: E501
+import container_service_extension.common.utils.pyvcloud_utils as vcd_utils
+import container_service_extension.exception.exceptions as cse_exceptions
+import container_service_extension.logging.logger as logger
+import container_service_extension.rde.common.entity_service as def_entity_svc
+import container_service_extension.rde.models.common_models as common_models
+import container_service_extension.rde.models.rde_1_0_0 as rde_1_0_0
+import container_service_extension.rde.utils as def_utils
 
 
 class DEClusterNative:
@@ -37,20 +40,24 @@ class DEClusterNative:
                 client=client, logger_debug=logger.CLIENT_LOGGER,
                 logger_wire=logger_wire)
         self._native_cluster_api = NativeClusterApi(client)
+        self._client = client
+        self._server_rde_version = \
+            def_utils.get_runtime_rde_version_by_vcd_api_version(
+                float(client.get_api_version()))
 
-    def create_cluster(self, cluster_entity: def_models.ClusterEntity):
+    def create_cluster(self, cluster_entity: rde_1_0_0.NativeEntity):
         """Create a new Kubernetes cluster.
 
-        :param models.ClusterEntity cluster_entity: native cluster entity
+        :param models.NativeEntity cluster_entity: native cluster entity
         :return: (json) A parsed json object describing the requested cluster.
         """
         msg = "Operation not supported; Under implementation"
         raise vcd_exceptions.OperationNotSupportedException(msg)
 
-    def resize_cluster(self, cluster_entity: def_models.ClusterEntity):
+    def resize_cluster(self, cluster_entity: rde_1_0_0.NativeEntity):
         """Resize the existing Kubernetes cluster.
 
-        :param models.ClusterEntity cluster_entity: native cluster entity
+        :param models.NativeEntity cluster_entity: native cluster entity
         :return: (json) A parsed json object describing the requested cluster.
         """
         msg = "Operation not supported; Under implementation"
@@ -72,7 +79,9 @@ class DEClusterNative:
             return self.get_cluster_info_by_id(cluster_id)
         filters = client_utils.construct_filters(org=org, vdc=vdc)
         entity_svc = def_entity_svc.DefEntityService(self._cloudapi_client)
-        def_entity = entity_svc.get_native_entity_by_name(name=cluster_name, filters=filters)  # noqa: E501
+        def_entity = \
+            entity_svc.get_native_rde_by_name_and_rde_version(
+                cluster_name, self._server_rde_version, filters=filters)  # noqa: E501
         logger.CLIENT_LOGGER.debug(f"Defined entity info from server:{def_entity}")  # noqa: E501
         if not def_entity:
             logger.CLIENT_LOGGER.error(f"Cannot find native cluster with name {cluster_name}")  # noqa: E501
@@ -105,12 +114,7 @@ class DEClusterNative:
         :raises ClusterNotFoundError
         """
         if not cluster_id:
-            filters = client_utils.construct_filters(org=org, vdc=vdc)
-            entity_svc = def_entity_svc.DefEntityService(self._cloudapi_client)
-            def_entity = entity_svc.get_native_entity_by_name(name=cluster_name, filters=filters)  # noqa: E501
-            if not def_entity:
-                raise cse_exceptions.ClusterNotFoundError(f"Cluster '{cluster_name}' not found.")  # noqa: E501
-            cluster_id = def_entity.id
+            cluster_id = self.get_cluster_id_by_name(cluster_name, org, vdc)
         return self.delete_cluster_by_id(cluster_id)
 
     def delete_cluster_by_id(self, cluster_id, **kwargs):
@@ -137,7 +141,8 @@ class DEClusterNative:
         """
         filters = client_utils.construct_filters(org=org, vdc=vdc)
         entity_svc = def_entity_svc.DefEntityService(self._cloudapi_client)
-        def_entity = entity_svc.get_native_entity_by_name(name=cluster_name, filters=filters)  # noqa: E501
+        def_entity = entity_svc.get_native_rde_by_name_and_rde_version(
+            cluster_name, self._server_rde_version, filters=filters)
         if def_entity:
             return self.delete_nfs_by_cluster_id(def_entity.id, node_name)
         raise cse_exceptions.ClusterNotFoundError(f"Cluster '{cluster_name}' not found.")  # noqa: E501
@@ -168,12 +173,7 @@ class DEClusterNative:
         :raises ClusterNotFoundError, CseDuplicateClusterError
         """
         if not cluster_id:
-            filters = client_utils.construct_filters(org=org, vdc=vdc)
-            entity_svc = def_entity_svc.DefEntityService(self._cloudapi_client)
-            def_entity = entity_svc.get_native_entity_by_name(name=cluster_name, filters=filters)  # noqa: E501
-            if not def_entity:
-                raise cse_exceptions.ClusterNotFoundError(f"Cluster '{cluster_name}' not found.")  # noqa: E501
-            cluster_id = def_entity.id
+            cluster_id = self.get_cluster_id_by_name(cluster_name, org, vdc)
         return self.get_cluster_config_by_id(cluster_id)
 
     def get_cluster_config_by_id(self, cluster_id, **kwargs):
@@ -196,7 +196,8 @@ class DEClusterNative:
         """
         filters = client_utils.construct_filters(org=org, vdc=vdc)
         entity_svc = def_entity_svc.DefEntityService(self._cloudapi_client)
-        def_entity = entity_svc.get_native_entity_by_name(name=cluster_name, filters=filters)  # noqa: E501
+        def_entity = entity_svc.get_native_rde_by_name_and_rde_version(
+            cluster_name, self._server_rde_version, filters=filters)
         if def_entity:
             return self.get_upgrade_plan_by_cluster_id(def_entity.id)
         raise cse_exceptions.ClusterNotFoundError(f"Cluster '{cluster_name}' not found.")  # noqa: E501
@@ -226,7 +227,8 @@ class DEClusterNative:
         """
         filters = client_utils.construct_filters(org=org_name, vdc=ovdc_name)
         entity_svc = def_entity_svc.DefEntityService(self._cloudapi_client)
-        current_entity = entity_svc.get_native_entity_by_name(name=cluster_name, filters=filters)  # noqa: E501
+        current_entity = entity_svc.get_native_rde_by_name_and_rde_version(
+            cluster_name, self._server_rde_version, filters=filters)
         if current_entity:
             current_entity.entity.spec.k8_distribution.template_name = template_name  # noqa: E501
             current_entity.entity.spec.k8_distribution.template_revision = template_revision  # noqa: E501
@@ -242,7 +244,7 @@ class DEClusterNative:
         :rtype: str
         """
         # TODO: check if we really need to decode-encode-decode-encode
-        cluster_upgrade_definition = def_models.DefEntity(**cluster_def_entity)
+        cluster_upgrade_definition = common_models.DefEntity(**cluster_def_entity)  # noqa: E501
         cluster_def_entity = \
             self._native_cluster_api.upgrade_cluster_by_cluster_id(
                 cluster_id, cluster_upgrade_definition)
@@ -256,13 +258,14 @@ class DEClusterNative:
         :rtype: dict
         """
         entity_svc = def_entity_svc.DefEntityService(self._cloudapi_client)
-        cluster_spec = def_models.ClusterEntity(**cluster_config)
+        cluster_spec = rde_1_0_0.NativeEntity(**cluster_config)
         cluster_name = cluster_spec.metadata.cluster_name
         if cluster_id:
             # If cluster id doesn't exist, an exception will be raised
             def_entity = entity_svc.get_entity(cluster_id)
         else:
-            def_entity = entity_svc.get_native_entity_by_name(cluster_name)
+            def_entity = entity_svc.get_native_rde_by_name_and_rde_version(
+                cluster_name, self._server_rde_version)
         if not def_entity:
             cluster_entity = self._native_cluster_api.create_cluster(cluster_spec)  # noqa: E501
         else:
@@ -270,3 +273,88 @@ class DEClusterNative:
             cluster_entity = \
                 self._native_cluster_api.update_cluster_by_cluster_id(cluster_id, cluster_spec)  # noqa: E501
         return client_utils.construct_task_console_message(cluster_entity.entity.status.task_href)  # noqa: E501
+
+    def get_cluster_id_by_name(self, cluster_name, org=None, vdc=None):
+        filters = client_utils.construct_filters(org=org, vdc=vdc)
+        entity_svc = def_entity_svc.DefEntityService(self._cloudapi_client)
+        def_entity = entity_svc.get_native_rde_by_name_and_rde_version(
+            cluster_name, self._server_rde_version, filters=filters)
+        if not def_entity:
+            raise cse_exceptions.ClusterNotFoundError(f"Cluster '{cluster_name}' not found.")  # noqa: E501
+        return def_entity.id
+
+    def share_cluster(self, cluster_id, cluster_name, users: list,
+                      access_level_id, org, vdc):
+        """Share cluster with passed in users."""
+        if not cluster_id:
+            cluster_id = self.get_cluster_id_by_name(cluster_name, org, vdc)
+        org_href = self._client.get_org_by_name(org).get('href')
+        name_to_id: dict = client_utils.create_user_name_to_id_dict(
+            self._client, users, org_href)
+
+        # Parse user id info
+        update_acl_entries = []
+        for username, user_id in name_to_id.items():
+            acl_entry = common_models.ClusterAclEntry(
+                memberId=user_id,
+                username=username,
+                accessLevelId=access_level_id)
+            update_acl_entries.append(acl_entry)
+
+        # Only retain entries that are not updated
+        for acl_entry in self._native_cluster_api.\
+                list_native_cluster_acl_entries(cluster_id):
+            username = acl_entry.username
+            if name_to_id.get(username):
+                # Check that access level is not reduced
+                curr_access_level_id = acl_entry.accessLevelId
+                if client_utils.access_level_reduced(
+                        access_level_id, curr_access_level_id):
+                    raise Exception(f'{username} currently has higher access '
+                                    f'level: {curr_access_level_id}')
+            else:
+                update_acl_entries.append(acl_entry)
+
+        update_acl_values = \
+            [acl_entry.construct_filtered_dict(include=cli_constants.CLUSTER_ACL_UPDATE_REQUEST_FIELDS)  # noqa: E501
+             for acl_entry in update_acl_entries]
+        self._native_cluster_api.put_cluster_acl(cluster_id, update_acl_values)
+
+    def unshare_cluster(self, cluster_id, cluster_name, users: list, org=None,
+                        vdc=None):
+        if not cluster_id:
+            cluster_id = self.get_cluster_id_by_name(cluster_name, org, vdc)
+
+        delete_users_set = set(users)
+        updated_acl_entries = []
+        for acl_entry in self._native_cluster_api.\
+                list_native_cluster_acl_entries(cluster_id):
+            if acl_entry.username not in delete_users_set:
+                acl_dict = acl_entry.construct_filtered_dict(
+                    include=cli_constants.CLUSTER_ACL_UPDATE_REQUEST_FIELDS)
+                updated_acl_entries.append(acl_dict)
+            else:
+                delete_users_set.remove(acl_entry.username)
+
+        if len(delete_users_set) > 0:
+            raise Exception(f'Cluster {cluster_name or cluster_id} is not '
+                            f'currently shared with: {list(delete_users_set)}')
+
+        self._native_cluster_api.put_cluster_acl(cluster_id, updated_acl_entries)  # noqa: E501
+
+    def list_share_entries(self, cluster_id, cluster_name, org=None, vdc=None):
+        if not cluster_id:
+            cluster_id = self.get_cluster_id_by_name(cluster_name, org, vdc)
+        result_count = page_num = 0
+        while True:
+            page_num += 1
+            response_body = self._native_cluster_api.get_single_page_cluster_acl(  # noqa: E501
+                cluster_id=cluster_id,
+                page=page_num,
+                page_size=cli_constants.CLI_ENTRIES_PER_PAGE)
+            result_total = response_body[shared_constants.PaginationKey.RESULT_TOTAL]  # noqa: E501
+            acl_values = response_body[shared_constants.PaginationKey.VALUES]
+            if not acl_values:
+                break
+            result_count += len(acl_values)
+            yield acl_values, result_count < result_total

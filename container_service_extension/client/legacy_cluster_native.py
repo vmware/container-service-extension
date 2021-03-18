@@ -2,10 +2,9 @@
 # Copyright (c) 2020 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 
-import container_service_extension.client.cse_client.api_33.native_cluster_api \
-    as native_cluster_api_v33  # noqa: E501
-from container_service_extension.logger import CLIENT_LOGGER
-import container_service_extension.shared_constants as shared_constants
+import container_service_extension.client.cse_client.api_33.native_cluster_api as native_cluster_api_v33  # noqa: E501
+import container_service_extension.common.constants.shared_constants as shared_constants  # noqa: E501
+from container_service_extension.logging.logger import CLIENT_LOGGER
 
 
 class LegacyClusterNative:
@@ -17,23 +16,24 @@ class LegacyClusterNative:
         filters = {
             shared_constants.RequestKey.ORG_NAME: org,
             shared_constants.RequestKey.OVDC_NAME: vdc}
-        clusters_resp = self._native_cluster_api.list_clusters(filters=filters)
-        CLIENT_LOGGER.debug(clusters_resp)
-        clusters = []
-        for c in clusters_resp:
-            # TODO cluster api response keys need to be more well defined
-            cluster = {
-                'Name': c.get('name', 'N/A'),
-                'Owner': c.get('owner_name', 'N/A'),
-                'VDC': c.get('vdc', 'N/A'),
-                'Org': c.get('org_name', 'N/A'),
-                'K8s Runtime': c.get('k8s_type', 'N/A'),
-                'K8s Version': c.get('k8s_version', 'N/A'),
-                'Status': c.get('status', 'N/A'),
-                'Provider': c.get('k8s_provider', 'N/A'),
-            }
-            clusters.append(cluster)
-        return clusters
+        for clusters_rep, has_more_results in \
+                self._native_cluster_api.get_all_clusters(filters=filters):
+            clusters = []
+            CLIENT_LOGGER.debug(clusters_rep)
+            for c in clusters_rep:
+                # TODO cluster api response keys need to be more well defined
+                cluster = {
+                    'Name': c.get('name', 'N/A'),
+                    'Owner': c.get('owner_name', 'N/A'),
+                    'VDC': c.get('vdc', 'N/A'),
+                    'Org': c.get('org_name', 'N/A'),
+                    'K8s Runtime': c.get('k8s_type', 'N/A'),
+                    'K8s Version': c.get('k8s_version', 'N/A'),
+                    'Status': c.get('status', 'N/A'),
+                    'Provider': c.get('k8s_provider', 'N/A'),
+                }
+                clusters.append(cluster)
+            yield clusters, has_more_results
 
     def get_cluster_info(self, name, org=None, vdc=None, **kwargs):
         filters = {shared_constants.RequestKey.ORG_NAME: org,

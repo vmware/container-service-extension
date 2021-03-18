@@ -6,8 +6,8 @@ import pyvcloud.vcd.exceptions as vcd_exceptions
 
 import container_service_extension.client.cse_client.api_35.ovdc_api as ovdc_api_v35  # noqa: E501
 import container_service_extension.client.utils as client_utils
-import container_service_extension.def_.models as def_models
-from container_service_extension.pyvcloud_utils import get_vdc
+from container_service_extension.common.utils.pyvcloud_utils import get_vdc
+import container_service_extension.rde.models.common_models as common_models
 
 
 class PolicyBasedOvdc:
@@ -16,13 +16,13 @@ class PolicyBasedOvdc:
         self._ovdc_api = ovdc_api_v35.OvdcApi(self.client)
 
     def list_ovdc(self):
-        result = self._ovdc_api.list_ovdcs()
-        value_field_to_display_field = {
-            'ovdc_name': 'Name',
-            'ovdc_id': 'ID',
-            'k8s_runtime': 'K8s Runtime'
-        }
-        return client_utils.filter_columns(result, value_field_to_display_field)  # noqa: E501
+        for ovdc_list, has_more_results in self._ovdc_api.get_all_ovdcs():
+            value_field_to_display_field = {
+                'ovdc_name': 'Name',
+                'ovdc_id': 'ID',
+                'k8s_runtime': 'K8s Runtime'
+            }
+            yield client_utils.filter_columns(ovdc_list, value_field_to_display_field), has_more_results  # noqa: E501
 
     def update_ovdc(self, ovdc_name, k8s_runtime, enable=True, org_name=None,
                     remove_cp_from_vms_on_disable=False):
@@ -55,8 +55,9 @@ class PolicyBasedOvdc:
                 if k not in runtimes:
                     raise Exception(f"OVDC {ovdc_name} already disabled for {k8s_runtime}") # noqa: E501
                 runtimes.remove(k)
-        updated_ovdc = def_models.Ovdc(
+        updated_ovdc = common_models.Ovdc(
             k8s_runtime=runtimes,
+            org_name=org_name,
             remove_cp_from_vms_on_disable=remove_cp_from_vms_on_disable)
         return self._ovdc_api.update_ovdc(ovdc_id, updated_ovdc)
 

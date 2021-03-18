@@ -11,10 +11,10 @@ import pytest
 from pyvcloud.vcd.exceptions import EntityNotFoundException
 from pyvcloud.vcd.vdc import VDC
 
-from container_service_extension.config_validator import get_validated_config
-from container_service_extension.configure_cse import check_cse_installation
-import container_service_extension.local_template_manager as ltm
-from container_service_extension.server_cli import cli
+from container_service_extension.installer.config_validator import get_validated_config  # noqa: E501
+from container_service_extension.installer.configure_cse import check_cse_installation  # noqa: E501
+import container_service_extension.installer.templates.local_template_manager as ltm  # noqa: E501
+from container_service_extension.server.cli.server_cli import cli
 import container_service_extension.system_test_framework.environment as env
 import container_service_extension.system_test_framework.utils as testutils
 
@@ -71,7 +71,7 @@ def _remove_cse_artifacts():
             template['name'], template['revision'])
         env.delete_catalog_item(catalog_item_name)
         temp_vapp_name = testutils.get_temp_vapp_name(template['name'])
-        env.delete_vapp(temp_vapp_name)
+        env.delete_vapp(temp_vapp_name, vdc_href=env.VDC_HREF)
     env.delete_catalog()
     env.unregister_cse()
 
@@ -292,7 +292,7 @@ def test_0080_install_skip_template_creation(config,
 
         # check that temp vapp does not exists
         temp_vapp_name = testutils.get_temp_vapp_name(template_config['name'])
-        assert not env.vapp_exists(temp_vapp_name), \
+        assert not env.vapp_exists(temp_vapp_name, vdc_href=env.VDC_HREF), \
             'vApp exists when it should not.'
 
 

@@ -15,12 +15,11 @@ from pyvcloud.vcd.org import Org
 from pyvcloud.vcd.vdc import VDC
 from vcd_cli.vcd import vcd
 
-import container_service_extension.pyvcloud_utils as pyvcloud_utils
-from container_service_extension.remote_template_manager import \
-    RemoteTemplateManager
-from container_service_extension.server_constants import CSE_SERVICE_NAME
-from container_service_extension.server_constants import CSE_SERVICE_NAMESPACE
-from container_service_extension.server_constants import SYSTEM_ORG_NAME
+from container_service_extension.common.constants.server_constants import CSE_SERVICE_NAME  # noqa: E501
+from container_service_extension.common.constants.server_constants import CSE_SERVICE_NAMESPACE  # noqa: E501
+from container_service_extension.common.constants.server_constants import SYSTEM_ORG_NAME  # noqa: E501
+import container_service_extension.common.utils.pyvcloud_utils as pyvcloud_utils  # noqa: E501
+from container_service_extension.installer.templates.remote_template_manager import RemoteTemplateManager  # noqa: E501
 import container_service_extension.system_test_framework.utils as testutils
 
 
@@ -50,26 +49,32 @@ SSH_KEY_FILEPATH = str(Path.home() / '.ssh' / 'id_rsa.pub')
 CLI_RUNNER = CliRunner()
 SYS_ADMIN_TEST_CLUSTER_NAME = 'testclustersystem'
 ORG_ADMIN_TEST_CLUSTER_NAME = 'testclusteradmin'
-VAPP_AUTHOR_TEST_CLUSTER_NAME = 'testclustervapp'
+K8_AUTHOR_TEST_CLUSTER_NAME = 'testclusterk8'
 
 # required user info
 SYS_ADMIN_NAME = 'sys_admin'
 ORG_ADMIN_NAME = 'org_admin'
 ORG_ADMIN_PASSWORD = 'password'  # nosec: test environment
 ORG_ADMIN_ROLE_NAME = 'Organization Administrator'
-VAPP_AUTHOR_NAME = 'vapp_author'
-VAPP_AUTHOR_PASSWORD = 'password'  # nosec: test environment
 VAPP_AUTHOR_ROLE_NAME = 'vApp Author'
+K8_AUTHOR_NAME = 'k8_author'
+K8_AUTHOR_PASSWORD = 'password'  # nosec: test environment
+K8_AUTHOR_ROLE_NAME = 'k8 Author'
 
 # config file 'test' section flags
 TEARDOWN_INSTALLATION = None
 TEARDOWN_CLUSTERS = None
 TEST_ALL_TEMPLATES = None
+TEST_ORG = None
+TEST_VDC = None
+TEST_NETWORK = None
+TEST_ORG_HREF = None
+TEST_VDC_HREF = None
 
 # Persona login cmd
 SYS_ADMIN_LOGIN_CMD = None
 ORG_ADMIN_LOGIN_CMD = None
-VAPP_AUTHOR_LOGIN_CMD = None
+K8_AUTHOR_LOGIN_CMD = None
 USER_LOGOUT_CMD = "logout"
 USERNAME_TO_LOGIN_CMD = {}
 USERNAME_TO_CLUSTER_NAME = {}
@@ -82,6 +87,8 @@ VDC_HREF = None
 CATALOG_NAME = None
 
 WAIT_INTERVAL = 30
+DUPLICATE_NAME = "DUPLICATE_NAME"
+VIEW_PUBLISHED_CATALOG_RIGHT = 'Catalog: View Published Catalogs'
 
 
 def init_environment(config_filepath=BASE_CONFIG_FILEPATH):
@@ -92,8 +99,8 @@ def init_environment(config_filepath=BASE_CONFIG_FILEPATH):
     global AMQP_USERNAME, AMQP_PASSWORD, CLIENT, ORG_HREF, VDC_HREF, \
         CATALOG_NAME, TEARDOWN_INSTALLATION, TEARDOWN_CLUSTERS, \
         TEMPLATE_DEFINITIONS, TEST_ALL_TEMPLATES, SYS_ADMIN_LOGIN_CMD, \
-        ORG_ADMIN_LOGIN_CMD, VAPP_AUTHOR_LOGIN_CMD, USERNAME_TO_LOGIN_CMD, \
-        USERNAME_TO_CLUSTER_NAME
+        ORG_ADMIN_LOGIN_CMD, K8_AUTHOR_LOGIN_CMD, USERNAME_TO_LOGIN_CMD, \
+        USERNAME_TO_CLUSTER_NAME, TEST_ORG_HREF, TEST_VDC_HREF
 
     config = testutils.yaml_to_dict(config_filepath)
 
@@ -101,7 +108,10 @@ def init_environment(config_filepath=BASE_CONFIG_FILEPATH):
         RemoteTemplateManager(config['broker']['remote_template_cookbook_url'])
     template_cookbook = rtm.get_remote_template_cookbook()
     TEMPLATE_DEFINITIONS = template_cookbook['templates']
-    rtm.download_all_template_scripts(force_overwrite=True)
+    rtm.download_all_template_scripts(force_overwrite=True,
+                                      legacy_mode=config['service']['legacy_mode'])  # noqa: E501
+
+    init_test_vars(config.get('test'))
 
     CLIENT = Client(config['vcd']['host'],
                     api_version=config['vcd']['api_version'],
@@ -111,11 +121,6 @@ def init_environment(config_filepath=BASE_CONFIG_FILEPATH):
                                         config['vcd']['password'])
     CLIENT.set_credentials(credentials)
 
-    org = pyvcloud_utils.get_org(CLIENT, org_name=config['broker']['org'])
-    vdc = pyvcloud_utils.get_vdc(
-        CLIENT, vdc_name=config['broker']['vdc'], org=org)
-    ORG_HREF = org.href
-    VDC_HREF = vdc.href
     CATALOG_NAME = config['broker']['catalog']
     AMQP_USERNAME = config['amqp']['username']
     AMQP_PASSWORD = config['amqp']['password']
@@ -125,31 +130,55 @@ def init_environment(config_filepath=BASE_CONFIG_FILEPATH):
                           f"-iwp {config['vcd']['password']} " \
                           f"-V {config['vcd']['api_version']}"
     ORG_ADMIN_LOGIN_CMD = f"login {config['vcd']['host']} " \
-                          f"{config['broker']['org']}" \
+                          f"{TEST_ORG}" \
                           f" {ORG_ADMIN_NAME} -iwp {ORG_ADMIN_PASSWORD} " \
                           f"-V {config['vcd']['api_version']}"
-    VAPP_AUTHOR_LOGIN_CMD = f"login {config['vcd']['host']} " \
-                            f"{config['broker']['org']} " \
-                            f"{VAPP_AUTHOR_NAME} -iwp {VAPP_AUTHOR_PASSWORD}" \
-                            f" -V {config['vcd']['api_version']}"
+    K8_AUTHOR_LOGIN_CMD = f"login {config['vcd']['host']} " \
+        f"{TEST_ORG} " \
+        f"{K8_AUTHOR_NAME} -iwp {K8_AUTHOR_PASSWORD}" \
+        f" -V {config['vcd']['api_version']}"
 
     USERNAME_TO_LOGIN_CMD = {
         'sys_admin': SYS_ADMIN_LOGIN_CMD,
         'org_admin': ORG_ADMIN_LOGIN_CMD,
-        'vapp_author': VAPP_AUTHOR_LOGIN_CMD
+        'k8_author': K8_AUTHOR_LOGIN_CMD
     }
 
     USERNAME_TO_CLUSTER_NAME = {
         'sys_admin': SYS_ADMIN_TEST_CLUSTER_NAME,
         'org_admin': ORG_ADMIN_TEST_CLUSTER_NAME,
-        'vapp_author': VAPP_AUTHOR_TEST_CLUSTER_NAME
+        'k8_author': K8_AUTHOR_TEST_CLUSTER_NAME
     }
+    # hrefs for Org and VDC that hosts the catalog
+    org = pyvcloud_utils.get_org(CLIENT, org_name=config['broker']['org'])
+    vdc = pyvcloud_utils.get_vdc(CLIENT, vdc_name=config['broker']['vdc'],
+                                 org=org)
+    ORG_HREF = org.href
+    VDC_HREF = vdc.href
 
-    test_config = config.get('test')
+    # hrefs for Org and VDC that tests cluster operations
+    test_org = pyvcloud_utils.get_org(CLIENT, org_name=TEST_ORG)
+    test_vdc = pyvcloud_utils.get_vdc(CLIENT, vdc_name=TEST_VDC, org=test_org)
+    TEST_ORG_HREF = test_org.href
+    TEST_VDC_HREF = test_vdc.href
+    create_k8_author_role(config['vcd'])
+
+
+def init_test_vars(test_config):
+    """Initialize all the environment variables that are used for test.
+
+    :param dict test_config: test section of config.yaml
+    """
+    global TEMPLATE_DEFINITIONS, TEARDOWN_INSTALLATION, TEARDOWN_CLUSTERS, \
+        TEST_ALL_TEMPLATES, TEST_ORG, TEST_VDC, TEST_NETWORK
+
     if test_config is not None:
         TEARDOWN_INSTALLATION = test_config.get('teardown_installation', True)
         TEARDOWN_CLUSTERS = test_config.get('teardown_clusters', True)
         TEST_ALL_TEMPLATES = test_config.get('test_all_templates', False)
+        TEST_ORG = test_config.get('org', 'test-org')
+        TEST_VDC = test_config.get('vdc', 'test-vdc')
+        TEST_NETWORK = test_config.get('network', 'test-network')
         if not TEST_ALL_TEMPLATES:
             specified_templates_str = test_config.get('test_templates', "")
             specified_templates = specified_templates_str.split(",")
@@ -198,6 +227,31 @@ def teardown_active_config():
         os.remove(ACTIVE_CONFIG_FILEPATH)
 
 
+def create_k8_author_role(vcd_config: dict):
+    cmd = f"login {vcd_config['host']} {SYSTEM_ORG_NAME} " \
+        f"{vcd_config['username']} -iwp {vcd_config['password']} " \
+        f"-V {vcd_config['api_version']}"
+    result = CLI_RUNNER.invoke(vcd, cmd.split(), catch_exceptions=False)
+    assert result.exit_code == 0
+    cmd = f"org use {TEST_ORG}"
+    result = CLI_RUNNER.invoke(vcd, cmd.split(), catch_exceptions=False)
+    assert result.exit_code == 0
+    result = CLI_RUNNER.invoke(
+        vcd, ['role', 'clone', VAPP_AUTHOR_ROLE_NAME, K8_AUTHOR_ROLE_NAME],
+        catch_exceptions=False)
+    assert DUPLICATE_NAME in result.stdout or result.exit_code == 0, \
+        testutils.format_command_info('vcd', cmd, result.exit_code,
+                                      result.output)
+    # Add View right for other published catalogs
+    result = CLI_RUNNER.invoke(
+        vcd, ['role', 'add-right', K8_AUTHOR_ROLE_NAME,
+              VIEW_PUBLISHED_CATALOG_RIGHT],
+        catch_exceptions=False)
+    assert result.exit_code == 0, \
+        testutils.format_command_info('vcd', cmd, result.exit_code,
+                                      result.output)
+
+
 def create_user(username, password, role):
     config = testutils.yaml_to_dict(BASE_CONFIG_FILEPATH)
     cmd = f"login {config['vcd']['host']} {SYSTEM_ORG_NAME} " \
@@ -205,7 +259,7 @@ def create_user(username, password, role):
           f"-V {config['vcd']['api_version']}"
     result = CLI_RUNNER.invoke(vcd, cmd.split(), catch_exceptions=False)
     assert result.exit_code == 0
-    cmd = f"org use {config['broker']['org']}"
+    cmd = f"org use {TEST_ORG}"
     result = CLI_RUNNER.invoke(vcd, cmd.split(), catch_exceptions=False)
     assert result.exit_code == 0
 
@@ -236,8 +290,8 @@ def delete_catalog_item(item_name):
         pass
 
 
-def delete_vapp(vapp_name):
-    vdc = VDC(CLIENT, href=VDC_HREF)
+def delete_vapp(vapp_name, vdc_href):
+    vdc = VDC(CLIENT, href=vdc_href)
     try:
         task = vdc.delete_vapp(vapp_name, force=True)
         CLIENT.get_task_monitor().wait_for_success(task)
@@ -284,8 +338,8 @@ def catalog_item_exists(catalog_item, catalog_name=None):
         return False
 
 
-def vapp_exists(vapp_name):
-    vdc = VDC(CLIENT, href=VDC_HREF)
+def vapp_exists(vapp_name, vdc_href):
+    vdc = VDC(CLIENT, href=vdc_href)
     try:
         vdc.get_vapp(vapp_name)
         return True

@@ -11,8 +11,8 @@ from vcd_cli.utils import stdout
 from container_service_extension.client.pks_cluster import PksCluster
 from container_service_extension.client.pks_ovdc import PksOvdc
 import container_service_extension.client.utils as client_utils
-from container_service_extension.logger import CLIENT_LOGGER
-from container_service_extension.shared_constants import RESPONSE_MESSAGE_KEY
+from container_service_extension.common.constants.shared_constants import RESPONSE_MESSAGE_KEY  # noqa: E501
+from container_service_extension.logging.logger import CLIENT_LOGGER
 
 
 @click.group(name='pks', short_help='Manage Ent-PKS clusters')
@@ -397,17 +397,27 @@ Examples
     is_flag=True,
     help="Display available PKS plans if org VDC is backed by "
          "Enterprise PKS infrastructure")
+@click.option(
+    '-A',
+    '--all',
+    'should_print_all',
+    is_flag=True,
+    default=False,
+    required=False,
+    metavar='DISPLAY_ALL',
+    help='Display all the OVDCs non-interactively')
 @click.pass_context
-def list_ovdcs(ctx, list_pks_plans):
+def list_ovdcs(ctx, list_pks_plans, should_print_all=False):
     """Display org VDCs in vCD that are visible to the logged in user."""
     CLIENT_LOGGER.debug(f'Executing command: {ctx.command_path}')
     try:
         client_utils.cse_restore_session(ctx)
         client = ctx.obj['client']
         ovdc = PksOvdc(client)
-        result = ovdc.list_ovdc(list_pks_plans=list_pks_plans)
-        stdout(result, ctx, sort_headers=False)
-        CLIENT_LOGGER.debug(result)
+        client_utils.print_paginated_result(
+            ovdc.list_ovdc(list_pks_plans=list_pks_plans),
+            should_print_all=should_print_all,
+            logger=CLIENT_LOGGER)
     except Exception as e:
         stderr(e, ctx)
         CLIENT_LOGGER.error(str(e))

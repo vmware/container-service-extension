@@ -5,9 +5,9 @@
 from pyvcloud.vcd import utils
 
 from container_service_extension.client.cse_client.pks_ovdc_api import PksOvdcApi  # noqa: E501
-from container_service_extension.pyvcloud_utils import get_vdc
-import container_service_extension.server_constants as server_constants
-import container_service_extension.shared_constants as shared_constants
+import container_service_extension.common.constants.server_constants as server_constants  # noqa: E501
+import container_service_extension.common.constants.shared_constants as shared_constants  # noqa: E501
+from container_service_extension.common.utils.pyvcloud_utils import get_vdc
 
 
 class PksOvdc:
@@ -17,10 +17,9 @@ class PksOvdc:
         self._pks_ovdc_api = PksOvdcApi(client)
 
     def list_ovdc(self, list_pks_plans=False):
-        filters = {
-            shared_constants.RequestKey.LIST_PKS_PLANS: list_pks_plans
-        }
-        return self._pks_ovdc_api.list_ovdcs(filters=filters)
+        filters = {shared_constants.RequestKey.LIST_PKS_PLANS: list_pks_plans}
+        for ovdc_list, has_more_results in self._pks_ovdc_api.get_all_ovdcs(filters=filters):  # noqa: E501
+            yield ovdc_list, has_more_results
 
     def update_ovdc(self, enable, ovdc_name, org_name=None,
                     pks_plan=None, pks_cluster_domain=None):

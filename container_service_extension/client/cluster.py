@@ -8,13 +8,13 @@ from container_service_extension.client.de_cluster import DECluster
 from container_service_extension.client.de_cluster_native import DEClusterNative  # noqa: E501
 from container_service_extension.client.de_cluster_tkg import DEClusterTKG
 from container_service_extension.client.legacy_cluster_native import LegacyClusterNative  # noqa: E501
-from container_service_extension.shared_constants import ClusterEntityKind
+from container_service_extension.common.constants.shared_constants import ClusterEntityKind  # noqa: E501
 
 
 class Cluster:
     """Returns the cluster class as determined by API version."""
 
-    def __new__(cls, client: vcd_client, k8_runtime=None):
+    def __new__(cls, client: vcd_client.Client, k8_runtime=None):
         """Create the right cluster class for the negotiated API version.
 
         In case of ApiVersion.VERSION_35, return specific instance if the

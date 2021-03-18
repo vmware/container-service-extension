@@ -6,8 +6,8 @@ from pyvcloud.vcd import utils
 import pyvcloud.vcd.exceptions as vcd_exceptions
 
 import container_service_extension.client.cse_client.api_33.ovdc_api as ovdc_api_v33  # noqa: E501
-from container_service_extension.pyvcloud_utils import get_vdc
-import container_service_extension.shared_constants as shared_constants
+import container_service_extension.common.constants.shared_constants as shared_constants  # noqa: E501
+from container_service_extension.common.utils.pyvcloud_utils import get_vdc
 
 
 class MetadataBasedOvdc:
@@ -16,9 +16,9 @@ class MetadataBasedOvdc:
         self._uri = f"{self.client.get_api_uri()}/{shared_constants.CSE_URL_FRAGMENT}"  # noqa: E501
         self._ovdc_api = ovdc_api_v33.OvdcApi(self.client)
 
-    def list_ovdc(self, list_pks_plans=False):
-        filters = {shared_constants.RequestKey.LIST_PKS_PLANS: list_pks_plans}
-        return self._ovdc_api.list_ovdcs(filters=filters)
+    def list_ovdc(self):
+        for ovdc_list, has_more_results in self._ovdc_api.get_all_ovdcs():  # noqa: E501
+            yield ovdc_list, has_more_results
 
     # TODO(metadata based enablement for < v35): Revisit after decision
     # to support metadata way of enabling for native clusters
