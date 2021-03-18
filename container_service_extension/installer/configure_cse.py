@@ -761,14 +761,8 @@ def _register_def_schema(client: Client,
                                                                     logger_wire=logger_wire) # noqa: E501
     # TODO update CSE install to create client from max_vcd_api_version
     schema_file = None
-    vcd_supported_api_versions = \
-        set(client.get_supported_versions_list())
-    cse_supported_api_versions = \
-        set(server_constants.SUPPORTED_VCD_API_VERSIONS)
-    common_supported_api_versions = \
-        list(cse_supported_api_versions.intersection(vcd_supported_api_versions))  # noqa: E501
     max_vcd_api_version_supported = \
-        max([float(x) for x in common_supported_api_versions])
+        max([float(x) for x in config['service']['supported_api_versions']])
     try:
         def_utils.raise_error_if_def_not_supported(cloudapi_client)
         rde_version: str = \

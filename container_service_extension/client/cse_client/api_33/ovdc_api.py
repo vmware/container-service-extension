@@ -5,7 +5,6 @@
 import pyvcloud.vcd.client as vcd_client
 
 from container_service_extension.client.cse_client.cse_client import CseClient
-from container_service_extension.client.response_processor import process_response  # noqa: E501
 import container_service_extension.common.constants.shared_constants as shared_constants  # noqa: E501
 
 
@@ -17,42 +16,43 @@ class OvdcApi(CseClient):
         self._ovdc_uri = f"{self._uri}/ovdc"
 
     def get_all_ovdcs(self):
-        url = f"{self._org_vdcs_uri}?" \
-              f"{shared_constants.PaginationKey.PAGE_SIZE.value}={self._request_page_size}"  # noqa: E501
-        return self.iterate_results(url)
+        filters = {
+            shared_constants.PaginationKey.PAGE_SIZE.value: self._request_page_size  # noqa: E501
+        }
+        return self.iterate_results(self._org_vdcs_uri, filters=filters)
 
     def get_ovdc(self, ovdc_id):
         uri = f"{self._ovdc_uri}/{ovdc_id}"
-        response = self._client._do_request_prim(
-            shared_constants.RequestMethod.GET,
-            uri,
-            self._client._session,
+        response = self.do_request(
+            uri=uri,
+            method=shared_constants.RequestMethod.GET,
             accept_type='application/json')
-        return process_response(response)
+
+        return self.process_response(response)
 
     def update_ovdc_compute_policies(self, ovdc_id, compute_policy_name,
                                      compute_policy_action, force_remove=False):  # noqa: E501
         uri = f"{self._ovdc_uri}/{ovdc_id}/compute-policies"
         payload = {
-            shared_constants.RequestKey.OVDC_ID: ovdc_id, # also exists in url
+            shared_constants.RequestKey.OVDC_ID: ovdc_id,  # also exists in url
             shared_constants.RequestKey.COMPUTE_POLICY_NAME: compute_policy_name,  # noqa: E501
             shared_constants.RequestKey.COMPUTE_POLICY_ACTION: compute_policy_action,  # noqa: E501
             shared_constants.RequestKey.REMOVE_COMPUTE_POLICY_FROM_VMS: force_remove  # noqa: E501
         }
-        response = self._client._do_request_prim(
-            shared_constants.RequestMethod.PUT,
-            uri,
-            self._client._session,
-            contents=payload,
+        response = self.do_request(
+            uri=uri,
+            method=shared_constants.RequestMethod.PUT,
+            accept_type='application/json',
             media_type='application/json',
-            accept_type='application/json')
-        return process_response(response)
+            payload=payload)
+
+        return self.process_response(response)
 
     def list_ovdc_compute_policies(self, ovdc_id):
         uri = f'{self._ovdc_uri}/{ovdc_id}/compute-policies'
-        response = self._client._do_request_prim(
-            shared_constants.RequestMethod.GET,
-            uri,
-            self._client._session,
+        response = self.do_request(
+            uri=uri,
+            method=shared_constants.RequestMethod.GET,
             accept_type='application/json')
-        return process_response(response)
+
+        return self.process_response(response)

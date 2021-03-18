@@ -7,11 +7,11 @@ import json
 import sys
 from urllib.parse import parse_qsl
 
-import container_service_extension.common.constants.server_constants as server_constants  # noqa: E501
 from container_service_extension.common.constants.server_constants import CseOperation  # noqa: E501
-import container_service_extension.common.constants.shared_constants as shared_constants  # noqa: E501
 from container_service_extension.common.constants.shared_constants import RequestKey  # noqa: E501
 from container_service_extension.common.constants.shared_constants import RequestMethod  # noqa: E501
+from container_service_extension.common.constants.shared_constants import RESPONSE_MESSAGE_KEY  # noqa: E501
+from container_service_extension.common.constants.shared_constants import SUPPORTED_VCD_API_VERSIONS  # noqa: E501
 from container_service_extension.exception.exception_handler import handle_exception  # noqa: E501
 import container_service_extension.exception.exceptions as cse_exception
 from container_service_extension.logging.logger import SERVER_LOGGER as LOGGER
@@ -40,7 +40,7 @@ SYSTEM_HANDLERS = [
             }
         },
         RequestMethod.PUT: {
-            tuple(server_constants.SUPPORTED_VCD_API_VERSIONS): {
+            tuple(SUPPORTED_VCD_API_VERSIONS): {
                 'allowed_params': [],
                 'required_params': [],
                 'verify_payload': False,
@@ -57,7 +57,7 @@ TEMPLATE_HANDLERS = [
     {
         'url': "cse/templates",
         RequestMethod.GET: {
-            tuple(server_constants.SUPPORTED_VCD_API_VERSIONS): {
+            tuple(SUPPORTED_VCD_API_VERSIONS): {
                 'allowed_params': [],
                 'required_params': [],
                 'operation': CseOperation.TEMPLATE_LIST,
@@ -72,7 +72,7 @@ PKS_HANDLERS = [
     {
         'url': "pks/clusters",
         RequestMethod.GET: {
-            tuple(server_constants.SUPPORTED_VCD_API_VERSIONS): {
+            tuple(SUPPORTED_VCD_API_VERSIONS): {
                 'allowed_params': ['org_name', 'ovdc_name'],
                 'required_params': [],
                 'operation': CseOperation.PKS_CLUSTER_LIST,
@@ -80,7 +80,7 @@ PKS_HANDLERS = [
             }
         },
         RequestMethod.POST: {
-            tuple(server_constants.SUPPORTED_VCD_API_VERSIONS): {
+            tuple(SUPPORTED_VCD_API_VERSIONS): {
                 'allowed_params': [],
                 'required_params': [],
                 'verify_payload': False,
@@ -93,7 +93,7 @@ PKS_HANDLERS = [
     {
         'url': f"pks/cluster/${RequestKey.CLUSTER_NAME}",
         RequestMethod.GET: {
-            tuple(server_constants.SUPPORTED_VCD_API_VERSIONS): {
+            tuple(SUPPORTED_VCD_API_VERSIONS): {
                 'allowed_params': ['org_name', 'ovdc_name'],
                 'required_params': [],
                 'operation': CseOperation.PKS_CLUSTER_INFO,
@@ -101,7 +101,7 @@ PKS_HANDLERS = [
             }
         },
         RequestMethod.PUT: {
-            tuple(server_constants.SUPPORTED_VCD_API_VERSIONS): {
+            tuple(SUPPORTED_VCD_API_VERSIONS): {
                 'allowed_params': ['org_name', 'ovdc_name'],
                 'required_params': [],
                 'verify_payload': False,
@@ -111,7 +111,7 @@ PKS_HANDLERS = [
             }
         },
         RequestMethod.DELETE: {
-            tuple(server_constants.SUPPORTED_VCD_API_VERSIONS): {
+            tuple(SUPPORTED_VCD_API_VERSIONS): {
                 'allowed_params': ['org_name', 'ovdc_name'],
                 'required_params': [],
                 'operation': CseOperation.PKS_CLUSTER_DELETE,
@@ -122,7 +122,7 @@ PKS_HANDLERS = [
     {
         'url': f"pks/cluster/${RequestKey.CLUSTER_NAME}/config",
         RequestMethod.GET: {
-            tuple(server_constants.SUPPORTED_VCD_API_VERSIONS): {
+            tuple(SUPPORTED_VCD_API_VERSIONS): {
                 'allowed_params': ['org_name', 'ovdc_name'],
                 'required_params': [],
                 'operation': CseOperation.PKS_CLUSTER_CONFIG,
@@ -133,7 +133,7 @@ PKS_HANDLERS = [
     {
         'url': "pks/ovdcs",
         RequestMethod.GET: {
-            tuple(server_constants.SUPPORTED_VCD_API_VERSIONS): {
+            tuple(SUPPORTED_VCD_API_VERSIONS): {
                 'allowed_params': ['list_pks_plans'],
                 'required_params': [],
                 'operation': CseOperation.PKS_OVDC_LIST,
@@ -144,7 +144,7 @@ PKS_HANDLERS = [
     {
         'url': "pks/orgvdcs",
         RequestMethod.GET: {
-            tuple(server_constants.SUPPORTED_VCD_API_VERSIONS): {
+            tuple(SUPPORTED_VCD_API_VERSIONS): {
                 'allowed_params': ['list_pks_plans', 'page', 'pageSize'],
                 'required_params': [],
                 'operation': CseOperation.PKS_ORG_VDC_LIST,
@@ -155,7 +155,7 @@ PKS_HANDLERS = [
     {
         'url': f"pks/ovdc/${RequestKey.OVDC_ID}",
         RequestMethod.GET: {
-            tuple(server_constants.SUPPORTED_VCD_API_VERSIONS): {
+            tuple(SUPPORTED_VCD_API_VERSIONS): {
                 'allowed_params': [],
                 'required_params': [],
                 'operation': CseOperation.PKS_OVDC_INFO,
@@ -163,7 +163,7 @@ PKS_HANDLERS = [
             }
         },
         RequestMethod.PUT: {
-            tuple(server_constants.SUPPORTED_VCD_API_VERSIONS): {
+            tuple(SUPPORTED_VCD_API_VERSIONS): {
                 'allowed_params': [],
                 'required_params': [],
                 'verify_payload': False,
@@ -906,6 +906,8 @@ def process_request(message):
         for feature_flag in required_feature_flags:
             value = server_config['feature_flags'].get(feature_flag, False)
             if not value:
+                LOGGER.debug("Url matched but failed to satisfy feature "
+                             f"flag {feature_flag}")
                 feature_flags_satisfied = False
                 break
 
@@ -967,8 +969,7 @@ def process_request(message):
             operation_ctx.end()
 
     if not isinstance(body_content, (list, dict)):
-        body_content = \
-            {shared_constants.RESPONSE_MESSAGE_KEY: str(body_content)}
+        body_content = {RESPONSE_MESSAGE_KEY: str(body_content)}
     response = {
         'status_code': operation.ideal_response_code,
         'body': body_content,

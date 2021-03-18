@@ -17,12 +17,12 @@ import yaml
 
 from container_service_extension.common.constants.server_constants import \
     CONFIG_DECRYPTION_ERROR_MSG
-from container_service_extension.common.constants.server_constants import \
-    SUPPORTED_VCD_API_VERSIONS
 from container_service_extension.common.constants.server_constants import SYSTEM_ORG_NAME  # noqa: E501
 from container_service_extension.common.constants.server_constants import \
     VCENTER_LOGIN_ERROR_MSG
 from container_service_extension.common.constants.server_constants import VERSION_V1  # noqa: E501
+from container_service_extension.common.constants.shared_constants import \
+    SUPPORTED_VCD_API_VERSIONS
 from container_service_extension.common.utils.core_utils import check_file_permissions  # noqa: E501
 from container_service_extension.common.utils.core_utils import check_keys_and_value_types  # noqa: E501
 from container_service_extension.common.utils.core_utils import get_duplicate_items_in_list  # noqa: E501
@@ -74,7 +74,7 @@ def get_validated_config(config_file_name,
     :param str decryption_password: password to decrypt the config file.
     :param str log_wire_file: log_wire_file to use if needed to wire log
         pyvcloud requests and responses
-    :param logging.Logger logger: logger to log with.
+    :param logging.Logger logger_debug: logger to log with.
     :param utils.ConsoleMessagePrinter msg_update_callback: Callback object.
 
     :return: CSE config
@@ -87,8 +87,6 @@ def get_validated_config(config_file_name,
     :raises container_service_extension.exceptions.AmqpConnectionError:
         (when not using MQTT) if AMQP connection failed (host, password, port,
         username, vhost is invalid).
-    :raises pyvcloud.vcd.exceptions.NotAcceptableException: if 'vcd'
-        'api_version' is unsupported.
     :raises requests.exceptions.ConnectionError: if 'vcd' 'host' is invalid.
     :raises pyvcloud.vcd.exceptions.VcdException: if 'vcd' 'username' or
         'password' is invalid.
@@ -140,10 +138,10 @@ def get_validated_config(config_file_name,
                                      log_wire=log_wire)
     except vim.fault.InvalidLogin:
         raise Exception(VCENTER_LOGIN_ERROR_MSG)
-    except requests.exceptions.ConnectionError as err:
-        raise Exception(f"Cannot connect to {err.request.url}.")
     except requests.exceptions.SSLError as err:
         raise Exception(f"SSL verification failed: {str(err)}")
+    except requests.exceptions.ConnectionError as err:
+        raise Exception(f"Cannot connect to {err.request.url}.")
 
     _validate_broker_config(config['broker'], msg_update_callback,
                             logger_debug)
@@ -159,6 +157,7 @@ def get_validated_config(config_file_name,
                                msg_update_callback=msg_update_callback)
     msg_update_callback.general(
         f"Config file '{config_file_name}' is valid")
+
     if pks_config_file_name:
         check_file_permissions(pks_config_file_name,
                                msg_update_callback=msg_update_callback)
@@ -188,9 +187,6 @@ def get_validated_config(config_file_name,
     else:
         config['pks_config'] = None
 
-    # Store telemetry instance id, url and collector id in config
-    store_telemetry_settings(config)
-
     # Compute common supported api versions by the CSE server and vCD
     sysadmin_client = None
     try:
@@ -211,6 +207,7 @@ def get_validated_config(config_file_name,
         cse_supported_api_versions = set(SUPPORTED_VCD_API_VERSIONS)
         common_supported_api_versions = \
             list(cse_supported_api_versions.intersection(vcd_supported_api_versions))  # noqa: E501
+        common_supported_api_versions.sort()
         config['service']['supported_api_versions'] = \
             common_supported_api_versions
     finally:
@@ -225,6 +222,23 @@ def get_validated_config(config_file_name,
     config['feature_flags']['legacy_api'] = str_to_bool(is_legacy_mode)
     config['feature_flags']['non_legacy_api'] = \
         not str_to_bool(is_legacy_mode)
+
+    # Temporary work around before api version is completely removed from
+    # config
+    if is_legacy_mode:
+        supported_api_versions_float = \
+            [float(x) for x in config['service']['supported_api_versions']
+                if float(x) < 35.0]
+    else:
+        supported_api_versions_float = \
+            [float(x) for x in config['service']['supported_api_versions']
+                if float(x) >= 35.0]
+    config['vcd']['api_version'] = str(max(supported_api_versions_float))
+
+    # Store telemetry instance id, url and collector id in config
+    # This steps needs to be done after api_version has been computed
+    # and stored in the config
+    store_telemetry_settings(config)
 
     return config
 
@@ -304,13 +318,7 @@ def _validate_vcd_and_vcs_config(vcd_dict,
 
     client = None
     try:
-        api_version = vcd_dict['api_version']
-        if str(api_version) not in SUPPORTED_VCD_API_VERSIONS:
-            raise ValueError(f"vCD api version {api_version} is not supported "
-                             "by CSE. Supported api versions are "
-                             f"{SUPPORTED_VCD_API_VERSIONS}.")
         client = Client(vcd_dict['host'],
-                        api_version=api_version,
                         verify_ssl_certs=vcd_dict['verify'],
                         log_file=log_file,
                         log_requests=log_wire,
@@ -395,7 +403,7 @@ def _validate_broker_config(broker_dict,
                          f"'{broker_dict['ip_allocation_mode']}' when it "
                          f"should be either 'dhcp' or 'pool'")
 
-    rtm = RemoteTemplateManager(remote_template_cookbook_url=broker_dict['remote_template_cookbook_url'], # noqa: E501
+    rtm = RemoteTemplateManager(remote_template_cookbook_url=broker_dict['remote_template_cookbook_url'],  # noqa: E501
                                 logger=logger_debug)
     remote_template_cookbook = rtm.get_remote_template_cookbook()
 
@@ -509,9 +517,9 @@ def _validate_pks_config_data_integrity(pks_config,
                 continue
             for account in referenced_accounts:
                 if account not in all_pks_accounts:
-                    raise ValueError(f"Unknown PKS account : {account} refere"
-                                     f"nced by Org : {org.get('name')} in "
-                                     f"Section : {PKS_ORGS_SECTION_KEY}")
+                    raise ValueError(f"Unknown PKS account : {account} "
+                                     f"referenced by Org : {org.get('name')} "
+                                     f"in Section : {PKS_ORGS_SECTION_KEY}")
 
     # Check validity of all PKS api servers referenced in PVDC section
     for pvdc in pks_config[PKS_PVDCS_SECTION_KEY]:
@@ -538,11 +546,11 @@ def _validate_pks_config_data_integrity(pks_config,
         pks_configuration.uaac_uri = \
             f"https://{pks_server['host']}:{pks_server['uaac_port']}"
 
-        uaaClient = UaaClient(pks_configuration.uaac_uri,
-                              pks_configuration.username,
-                              pks_configuration.secret,
-                              proxy_uri=pks_configuration.proxy)
-        token = uaaClient.getToken()
+        uaa_client = UaaClient(pks_configuration.uaac_uri,
+                               pks_configuration.username,
+                               pks_configuration.secret,
+                               proxy_uri=pks_configuration.proxy)
+        token = uaa_client.getToken()
 
         if not token:
             raise ValueError(
@@ -588,6 +596,7 @@ def _validate_pks_config_data_integrity(pks_config,
         ipset_manager = IPSetManager(nsxt_client)
         if nsxt_server.get('nodes_ip_block_ids'):
             block_not_found = False
+            ip_block_id = ''
             try:
                 for ip_block_id in nsxt_server.get('nodes_ip_block_ids'):
                     if not ipset_manager.get_ip_block_by_id(ip_block_id):

@@ -59,7 +59,7 @@ class Singleton(type):
         return cls._instances[cls]
 
 
-def signal_handler(signal, frame):
+def signal_handler(signal_in, frame):
     print('\nCtrl+C detected, exiting')
     raise KeyboardInterrupt()
 
@@ -201,7 +201,7 @@ class Service(object, metaclass=Singleton):
         return bool(self.pks_cache)
 
     def active_requests_count(self):
-        # TODO(request_count) Add support for PksBroker - VCDA-938
+        # ToDo: (request_count) Add support for PksBroker - VCDA-938
         if self.consumer is None:
             return 0
         else:
@@ -215,7 +215,10 @@ class Service(object, metaclass=Singleton):
 
     def info(self, get_sysadmin_info=False):
         result = utils.get_cse_info()
-        result[shared_constants.CSE_SERVER_API_VERSION] = server_utils.get_server_api_version()  # noqa: E501
+        server_config = server_utils.get_server_runtime_config()
+        result[shared_constants.CSE_SERVER_API_VERSION] = server_config['vcd']['api_version']  # noqa: E501
+        result[shared_constants.CSE_SERVER_SUPPORTED_API_VERSIONS] = server_config['service']['supported_api_versions']  # noqa: E501
+        result[shared_constants.CSE_SERVER_LEGACY_MODE] = server_config['service']['legacy_mode']  # noqa: E501
         if get_sysadmin_info:
             result['all_consumer_threads'] = 0 if self.consumer is None else \
                 self.consumer.get_num_total_threads()
@@ -342,8 +345,8 @@ class Service(object, metaclass=Singleton):
         self._load_placement_policy_details(
             msg_update_callback=msg_update_callback)
 
-        if float(self.config['vcd']['api_version']) < float(vCDApiVersion.VERSION_35.value): # noqa: E501
-            # Read templates rules from config and update template deinfition
+        if float(self.config['vcd']['api_version']) < float(vCDApiVersion.VERSION_35.value):  # noqa: E501
+            # Read templates rules from config and update template definition
             # in server run-time config
             self._process_template_rules(
                 msg_update_callback=msg_update_callback)
@@ -374,9 +377,9 @@ class Service(object, metaclass=Singleton):
                 nsxt_servers=pks_config.get('nsxt_servers', []))
 
         num_processors = self.config['service']['processors']
+        name = server_constants.MESSAGE_CONSUMER_THREAD
         try:
             self.consumer = MessageConsumer(self.config, num_processors)
-            name = server_constants.MESSAGE_CONSUMER_THREAD
             consumer_thread = Thread(name=name, target=consumer_thread_run,
                                      args=(self.consumer, ))
             consumer_thread.daemon = True
@@ -425,7 +428,7 @@ class Service(object, metaclass=Singleton):
 
         # Record telemetry on user action and details of operation.
         cse_params = {
-            PayloadKey.WAS_DECRYPTION_SKIPPED: bool(self.skip_config_decryption), # noqa: E501
+            PayloadKey.WAS_DECRYPTION_SKIPPED: bool(self.skip_config_decryption),  # noqa: E501
             PayloadKey.WAS_PKS_CONFIG_FILE_PROVIDED: bool(self.pks_config_file),  # noqa: E501
             PayloadKey.WAS_INSTALLATION_CHECK_SKIPPED: bool(self.should_check_config)  # noqa: E501
         }
@@ -465,18 +468,18 @@ class Service(object, metaclass=Singleton):
         defined entity interface and defined entity type registered during
         server install
 
-        :param utils.ConsoleMessagePrinter msg_update_callback
+        :param utils.ConsoleMessagePrinter msg_update_callback:
         """
         sysadmin_client = None
         try:
             sysadmin_client = vcd_utils.get_sys_admin_client()
             logger_wire = logger.NULL_LOGGER
-            if utils.str_to_bool(utils.str_to_bool(self.config['service'].get('log_wire', False))): # noqa: E501
+            if utils.str_to_bool(utils.str_to_bool(self.config['service'].get('log_wire', False))):  # noqa: E501
                 logger_wire = logger.SERVER_CLOUDAPI_WIRE_LOGGER
 
             cloudapi_client = \
                 vcd_utils.get_cloudapi_client_from_vcd_client(sysadmin_client,
-                                                              logger.SERVER_LOGGER, # noqa: E501
+                                                              logger.SERVER_LOGGER,  # noqa: E501
                                                               logger_wire)
             raise_error_if_def_not_supported(cloudapi_client)
 
@@ -517,12 +520,12 @@ class Service(object, metaclass=Singleton):
             msg = f"Error while loading defined entity schema: {e.error_message}"  # noqa: E501
             msg_update_callback.error(msg)
             logger.SERVER_LOGGER.debug(msg)
-            raise e
+            raise
         except Exception as e:
-            msg = f"Failed to load defined entity schema to global context: {str(e)}" # noqa: E501
-            msg_update_callback.error(e)
-            logger.SERVER_LOGGER.error(e)
-            raise(e)
+            msg = f"Failed to load defined entity schema to global context: {str(e)}"  # noqa: E501
+            msg_update_callback.error(msg)
+            logger.SERVER_LOGGER.error(msg)
+            raise
         finally:
             if sysadmin_client:
                 sysadmin_client.logout()
@@ -543,7 +546,7 @@ class Service(object, metaclass=Singleton):
                 return
             placement_policy_name_to_href = {}
             cpm = compute_policy_manager.ComputePolicyManager(sysadmin_client,
-                                                              log_wire=self.config['service'].get('log_wire')) # noqa: E501
+                                                              log_wire=self.config['service'].get('log_wire'))  # noqa: E501
             for runtime_policy in shared_constants.CLUSTER_RUNTIME_PLACEMENT_POLICIES:  # noqa: E501
                 k8_runtime = shared_constants.RUNTIME_INTERNAL_NAME_TO_DISPLAY_NAME_MAP[runtime_policy]  # noqa: E501
                 try:
@@ -556,13 +559,13 @@ class Service(object, metaclass=Singleton):
                     pass
             self.config['placement_policy_hrefs'] = placement_policy_name_to_href  # noqa: E501
         except Exception as e:
-            msg = f"Failed to load placement policies to server runtime configuration: {str(e)}" # noqa: E501
+            msg = f"Failed to load placement policies to server runtime configuration: {str(e)}"  # noqa: E501
             msg_update_callback.error(msg)
             logger.SERVER_LOGGER.error(msg)
             raise
 
     def _load_template_definition_from_catalog(self,
-                                               msg_update_callback=utils.NullPrinter()): # noqa: E501
+                                               msg_update_callback=utils.NullPrinter()):  # noqa: E501
         # NOTE: If `enable_tkg_plus` in the config file is set to false,
         # CSE server will skip loading the TKG+ template this will prevent
         # users from performing TKG+ related operations.
@@ -626,7 +629,7 @@ class Service(object, metaclass=Singleton):
                     k8_templates.remove(template)
                     continue
                 if str(template[server_constants.LocalTemplateKey.REVISION]) == default_template_revision and \
-                        template[server_constants.LocalTemplateKey.NAME] == default_template_name: # noqa: E501
+                        template[server_constants.LocalTemplateKey.NAME] == default_template_name:  # noqa: E501
                     found_default_template = True
 
                 msg = f"Found K8 template '{template['name']}' at revision " \
@@ -680,7 +683,7 @@ class Service(object, metaclass=Singleton):
             msg_update_callback.general(msg)
 
     def _process_template_compute_policy_compliance(self,
-                                                    msg_update_callback=utils.NullPrinter()): # noqa: E501
+                                                    msg_update_callback=utils.NullPrinter()):  # noqa: E501
         msg = "Processing compute policy for k8s templates."
         logger.SERVER_LOGGER.info(msg)
         msg_update_callback.general_no_color(msg)
@@ -691,17 +694,17 @@ class Service(object, metaclass=Singleton):
         try:
             sysadmin_client = vcd_utils.get_sys_admin_client()
             cpm = compute_policy_manager.ComputePolicyManager(sysadmin_client,
-                                                              log_wire=self.config['service'].get('log_wire')) # noqa: E501
+                                                              log_wire=self.config['service'].get('log_wire'))  # noqa: E501
 
             for template in self.config['broker']['templates']:
                 policy_name = template[server_constants.LocalTemplateKey.COMPUTE_POLICY]  # noqa: E501
-                catalog_item_name = template[server_constants.LocalTemplateKey.CATALOG_ITEM_NAME] # noqa: E501
+                catalog_item_name = template[server_constants.LocalTemplateKey.CATALOG_ITEM_NAME]  # noqa: E501
                 # if policy name is not empty, stamp it on the template
                 if policy_name:
                     try:
                         policy = \
                             compute_policy_manager.get_cse_vdc_compute_policy(
-                                cpm, policy_name) # noqa: E501
+                                cpm, policy_name)  # noqa: E501
                     except EntityNotFoundException:
                         # create the policy if it does not exist
                         msg = f"Creating missing compute policy " \
