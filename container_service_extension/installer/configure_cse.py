@@ -1,8 +1,6 @@
 # container-service-extension
 # Copyright (c) 2017 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
-
-import time
 from typing import Dict, List
 
 import pika
@@ -18,7 +16,6 @@ from pyvcloud.vcd.org import Org
 from pyvcloud.vcd.role import Role
 import pyvcloud.vcd.utils as pyvcloud_vcd_utils
 from pyvcloud.vcd.vapp import VApp
-from pyvcloud.vcd.vm import VM
 import requests
 import semantic_version
 
@@ -59,7 +56,7 @@ from container_service_extension.rde.behaviors.behavior_service import BehaviorS
 import container_service_extension.rde.common.entity_service as def_entity_svc
 import container_service_extension.rde.constants as def_constants
 import container_service_extension.rde.models.common_models as common_models
-import container_service_extension.rde.models.rde_1_0_0 as rde_1_0_0
+from container_service_extension.rde.models.rde_factory import get_rde_model
 import container_service_extension.rde.schema_service as def_schema_svc
 import container_service_extension.rde.utils as def_utils
 from container_service_extension.security.context.user_context import UserContext  # noqa: E501
@@ -768,7 +765,6 @@ def _register_def_schema(client: Client,
         rde_version: str = \
             def_utils.get_runtime_rde_version_by_vcd_api_version(
                 max_vcd_api_version_supported)
-
         msg_update_callback.general(f"Using RDE version: {rde_version}")
         # Obtain RDE metadata needed to initialize CSE
         rde_metadata: dict = def_utils.get_rde_metadata(rde_version)
@@ -866,7 +862,7 @@ def _override_behaviors(cloudapi_client,
                 msg_update_callback.general(msg)
                 INSTALL_LOGGER.info(msg)
             except cse_exception.BehaviorServiceError as e:
-                msg = f"Failed to override behavior '{behavior.id}' on entity type '{entity_type_id}'"  # noqa: E501
+                msg = f"Failed to override behavior '{behavior.id}' on entity type '{entity_type_id}': {str(e)}"  # noqa: E501
                 msg_update_callback.error(msg)
                 INSTALL_LOGGER.error(msg)
                 raise e
@@ -1370,7 +1366,7 @@ def _install_single_template(
 def upgrade_cse(config_file_name, config, skip_template_creation,
                 ssh_key, retain_temp_vapp, admin_password,
                 msg_update_callback=utils.NullPrinter()):
-    """Handle logistics for upgrading CSE to v3.0.
+    """Handle logistics for upgrading CSE to 3.1.
 
     Handles decision making for configuring AMQP exchange/settings,
     defined entity schema registration for vCD api version >= 35,
@@ -1450,7 +1446,8 @@ def upgrade_cse(config_file_name, config, skip_template_creation,
             msg_update_callback.general(msg)
             INSTALL_LOGGER.info(msg)
 
-        target_vcd_api_version = config['vcd']['api_version']
+        target_vcd_api_version: str = \
+            str(max([float(x) for x in config['service']['supported_api_versions']]))  # noqa: E501
         target_cse_version = server_utils.get_installed_cse_version()
 
         telemetry_data = {
@@ -1476,61 +1473,45 @@ def upgrade_cse(config_file_name, config, skip_template_creation,
         # then CSE X.Y.Z+ should also be allowed to upgrade to CSE X'.Y'.Z'
         # irrespective of when these patches were released.
 
-        # Upgrading from Unknown version is allowed only in
-        # CSE 3.0.0 (2.6.0.devX for the time being)
+        target_cse_running_in_legacy_mode = config['service']['legacy_mode']
+        source_cse_running_in_legacy_mode = False
 
-        update_path_not_valid_msg = "CSE upgrade "
-        if ext_cse_version == server_constants.UNKNOWN_CSE_VERSION or \
-                ext_vcd_api_version == server_constants.UNKNOWN_VCD_API_VERSION: # noqa: E501
-            update_path_not_valid_msg += "to "
-        else:
-            update_path_not_valid_msg += \
-                f"path (CSE '{ext_cse_version}', vCD " \
-                f"api 'v{ext_vcd_api_version}') -> "
-        update_path_not_valid_msg += f"(CSE '{target_cse_version}', vCD api " \
-                                     f"'v{target_vcd_api_version}') is not " \
-                                     "supported."
+        # TODO() - Revisit here when legacy mode gets directly stamped to extension  # noqa: E501
+        if ext_vcd_api_version in (vCDApiVersion.VERSION_33.value, vCDApiVersion.VERSION_34.value):  # noqa: E501
+            source_cse_running_in_legacy_mode = True
+
+        upgrade_path_not_valid_msg = f"CSE upgrade path (CSE '{ext_cse_version}', vCD api 'v{ext_vcd_api_version}', legacy_mode:{source_cse_running_in_legacy_mode}) -> "  # noqa: E501
+        upgrade_path_not_valid_msg += \
+            f"(CSE '{target_cse_version}', vCD api 'v{target_vcd_api_version}', legacy_mode:{target_cse_running_in_legacy_mode}) is not supported."  # noqa: E501
 
         if target_cse_version < ext_cse_version or \
                 float(target_vcd_api_version) < float(ext_vcd_api_version):
-            raise Exception(update_path_not_valid_msg)
+            raise Exception(upgrade_path_not_valid_msg)
 
         # CSE version info in extension description is only applicable for
-        # CSE 2.6.02b.dev and CSE 3.0.0+ versions.
-        cse_2_6_any_patch = semantic_version.SimpleSpec('>=2.6.0,<2.7.0')
-        cse_3_0_any_previous_patch = semantic_version.SimpleSpec('>=3.0.0,<=3.0.1')  # noqa: E501
-        allow_upgrade = \
-            ext_cse_version == server_constants.UNKNOWN_CSE_VERSION or \
-            cse_2_6_any_patch.match(ext_cse_version) or \
-            cse_3_0_any_previous_patch.match(ext_cse_version)
+        # CSE 3.0.0+ versions.
+        cse_3_0_any_patch = semantic_version.SimpleSpec('>=3.0.0,<=3.1.0')  # noqa: E501
+        allow_upgrade = cse_3_0_any_patch.match(ext_cse_version)
 
         if not allow_upgrade:
-            raise Exception(update_path_not_valid_msg)
+            raise Exception(upgrade_path_not_valid_msg)
 
-        if target_vcd_api_version in (vCDApiVersion.VERSION_33.value,
-                                      vCDApiVersion.VERSION_34.value):
-            _legacy_upgrade_to_33_34(
-                client=client,
-                config=config,
-                ext_vcd_api_version=ext_vcd_api_version,
-                skip_template_creation=skip_template_creation,
-                ssh_key=ssh_key,
-                retain_temp_vapp=retain_temp_vapp,
-                admin_password=admin_password,
-                msg_update_callback=msg_update_callback)
-        elif target_vcd_api_version in (vCDApiVersion.VERSION_35.value):
-            _upgrade_to_35(
-                client=client,
-                config=config,
-                ext_vcd_api_version=ext_vcd_api_version,
-                skip_template_creation=skip_template_creation,
-                ssh_key=ssh_key,
-                retain_temp_vapp=retain_temp_vapp,
-                admin_password=admin_password,
-                msg_update_callback=msg_update_callback,
-                log_wire=log_wire)
-        else:
-            raise Exception(update_path_not_valid_msg)
+        if source_cse_running_in_legacy_mode != target_cse_running_in_legacy_mode and target_cse_running_in_legacy_mode:  # noqa: E501
+            raise Exception(upgrade_path_not_valid_msg)
+
+        if source_cse_running_in_legacy_mode and target_cse_running_in_legacy_mode:  # noqa: E501
+            raise Exception(upgrade_path_not_valid_msg)
+
+        _upgrade_to_cse_3_1(
+            client=client,
+            config=config,
+            ext_vcd_api_version=ext_vcd_api_version,
+            skip_template_creation=skip_template_creation,
+            ssh_key=ssh_key,
+            retain_temp_vapp=retain_temp_vapp,
+            admin_password=admin_password,
+            msg_update_callback=msg_update_callback,
+            log_wire=log_wire)
 
         record_user_action(CseOperation.SERVICE_UPGRADE,
                            status=OperationStatus.SUCCESS,
@@ -1609,59 +1590,11 @@ def _update_cse_amqp_extension(client, routing_key, exchange,
     INSTALL_LOGGER.info(msg)
 
 
-def _legacy_upgrade_to_33_34(client, config, ext_vcd_api_version,
-                             skip_template_creation, ssh_key,
-                             retain_temp_vapp, admin_password,
-                             msg_update_callback=utils.NullPrinter()):
-    # create amqp exchange if it doesn't exist
-    amqp = config['amqp']
-    _create_amqp_exchange(amqp['exchange'], amqp['host'], amqp['port'],
-                          amqp['vhost'], amqp['username'],
-                          amqp['password'],
-                          msg_update_callback=msg_update_callback)
-
-    if skip_template_creation:
-        msg = "Skipping creation of templates."
-        msg_update_callback.info(msg)
-        INSTALL_LOGGER.info(msg)
-    else:
-        # Recreate all supported templates
-        _install_all_templates(
-            client=client,
-            config=config,
-            force_create=True,
-            retain_temp_vapp=retain_temp_vapp,
-            ssh_key=retain_temp_vapp,
-            msg_update_callback=msg_update_callback)
-
-    # Fix cluster metadata and admin password
-    clusters = get_all_cse_clusters(client)
-
-    _fix_cluster_metadata(
-        client=client,
-        config=config,
-        cse_clusters=clusters,
-        msg_update_callback=msg_update_callback)
-    _fix_cluster_admin_password(
-        client=client,
-        cse_clusters=clusters,
-        new_admin_password=admin_password,
-        msg_update_callback=msg_update_callback)
-
-    # update cse api extension
-    _update_cse_amqp_extension(
-        client=client,
-        routing_key=amqp['routing_key'],
-        exchange=amqp['exchange'],
-        target_vcd_api_version=config['vcd']['api_version'],
-        msg_update_callback=msg_update_callback)
-
-
-def _upgrade_to_35(client, config, ext_vcd_api_version,
-                   skip_template_creation, ssh_key, retain_temp_vapp,
-                   admin_password, msg_update_callback=utils.NullPrinter(),
-                   log_wire=False):
-    """Handle upgrade to api version 35.
+def _upgrade_to_cse_3_1(client, config, ext_vcd_api_version,
+                        skip_template_creation, ssh_key, retain_temp_vapp,
+                        admin_password, msg_update_callback=utils.NullPrinter(),  # noqa: E501
+                        log_wire=False):
+    """Handle upgrade when VCD supports RDE.
 
     :raises: MultipleRecordsException: (when using mqtt) if more than one
         service with the given name and namespace are found when trying to
@@ -1709,26 +1642,6 @@ def _upgrade_to_35(client, config, ext_vcd_api_version,
     msg = "Loading all CSE clusters for processing..."
     INSTALL_LOGGER.info(msg)
     msg_update_callback.info(msg)
-    clusters = get_all_cse_clusters(client=client, fetch_details=False)
-
-    # Update clusters to have auto generated password and fix their metadata
-    _fix_cluster_metadata(
-        client=client,
-        config=config,
-        cse_clusters=clusters,
-        msg_update_callback=msg_update_callback)
-    _fix_cluster_admin_password(
-        client=client,
-        cse_clusters=clusters,
-        new_admin_password=admin_password,
-        msg_update_callback=msg_update_callback)
-
-    # Loading the clusters again after their metadata has been fixed.
-    # This time do fetch node details, org name etc. So that the def schema
-    # can be populated.
-    msg = "Loading all CSE clusters for processing..."
-    INSTALL_LOGGER.info(msg)
-    msg_update_callback.info(msg)
     clusters = get_all_cse_clusters(client=client, fetch_details=True)
 
     # Add new vdc (placement) compute policy to ovdc with existing CSE clusters
@@ -1753,8 +1666,9 @@ def _upgrade_to_35(client, config, ext_vcd_api_version,
     # been deployed.
 
     # Create DEF entity for all existing clusters (if missing)
-    _create_def_entity_for_existing_clusters(
+    _upgrade_or_create_def_entity_for_existing_clusters(
         client=client,
+        config=config,
         cse_clusters=clusters,
         msg_update_callback=msg_update_callback,
         is_tkg_plus_enabled=is_tkg_plus_enabled,
@@ -1796,385 +1710,6 @@ def _upgrade_to_35(client, config, ext_vcd_api_version,
             exchange=config['amqp']['exchange'],
             target_vcd_api_version=config['vcd']['api_version'],
             msg_update_callback=msg_update_callback)
-
-
-def _fix_cluster_metadata(client,
-                          config,
-                          cse_clusters,
-                          msg_update_callback=utils.NullPrinter()):
-    msg = "Fixing metadata on CSE k8s clusters."
-    INSTALL_LOGGER.info(msg)
-    msg_update_callback.info(msg)
-    if not cse_clusters:
-        msg = "No CSE k8s clusters were found."
-        INSTALL_LOGGER.info(msg)
-        msg_update_callback.info(msg)
-        return
-
-    for cluster in cse_clusters:
-        msg = f"Processing metadata of cluster '{cluster['name']}'."
-        INSTALL_LOGGER.info(msg)
-        msg_update_callback.info(msg)
-
-        vapp_href = cluster['vapp_href']
-        vapp = VApp(client, href=vapp_href)
-
-        # This step removes the old 'cse.template' metadata and adds
-        # cse.template.name and cse.template.revision metadata
-        # using hard-coded values taken from github history
-        metadata_dict = \
-            pyvcloud_vcd_utils.metadata_to_dict(vapp.get_metadata())
-        template_name = metadata_dict.get(
-            server_constants.ClusterMetadataKey.TEMPLATE_NAME)
-        if not template_name:
-            msg = "Reconstructing template name and revision for cluster."
-            INSTALL_LOGGER.info(msg)
-            msg_update_callback.info(msg)
-
-            new_template_name = \
-                _construct_template_name_from_history(metadata_dict)
-
-            if not new_template_name:
-                msg = "Unable to determine source template of cluster " \
-                      f"'{cluster['name']}'. Stopped processing cluster."
-                INSTALL_LOGGER.error(msg)
-                msg_update_callback.error(msg)
-                continue
-
-            msg = "Updating metadata of cluster with template name and revision." # noqa: E501
-            INSTALL_LOGGER.info(msg)
-            msg_update_callback.info(msg)
-
-            task = vapp.remove_metadata(
-                server_constants.ClusterMetadataKey.BACKWARD_COMPATIBILE_TEMPLATE_NAME) # noqa: E501
-            client.get_task_monitor().wait_for_success(task)
-
-            new_metadata_to_add = {
-                server_constants.ClusterMetadataKey.TEMPLATE_NAME: new_template_name, # noqa: E501
-                server_constants.ClusterMetadataKey.TEMPLATE_REVISION: 0
-            }
-            task = vapp.set_multiple_metadata(new_metadata_to_add)
-            client.get_task_monitor().wait_for_success(task)
-            vapp.reload()
-
-        # This step uses data from the newly updated cse.template.name and
-        # cse.template.revision metadata fields as well as github history
-        # to add [cse.os, cse.docker.version, cse.kubernetes,
-        # cse.kubernetes.version, cse.cni, cse.cni.version] to the clusters
-        # if they are missing.
-        metadata_dict = \
-            pyvcloud_vcd_utils.metadata_to_dict(vapp.get_metadata())
-        template_name = metadata_dict.get(
-            server_constants.ClusterMetadataKey.TEMPLATE_NAME)
-        template_revision = str(metadata_dict.get(
-            server_constants.ClusterMetadataKey.TEMPLATE_REVISION, 0))
-        cse_version = metadata_dict.get(
-            server_constants.ClusterMetadataKey.CSE_VERSION)
-        k8s_distribution = metadata_dict.get(
-            server_constants.ClusterMetadataKey.KUBERNETES)
-        k8s_version = metadata_dict.get(
-            server_constants.ClusterMetadataKey.KUBERNETES_VERSION)
-        os_name = metadata_dict.get(
-            server_constants.ClusterMetadataKey.OS)
-        cni = metadata_dict.get(
-            server_constants.ClusterMetadataKey.CNI)
-        cni_version = metadata_dict.get(
-            server_constants.ClusterMetadataKey.CNI_VERSION)
-        docker_version = metadata_dict.get(
-            server_constants.ClusterMetadataKey.DOCKER_VERSION)
-
-        if not k8s_distribution or not k8s_version or not os_name or not cni \
-                or not cni_version or not docker_version:
-            msg = "Determining k8s version on cluster."
-            INSTALL_LOGGER.info(msg)
-            msg_update_callback.info(msg)
-
-            if not template_name:
-                msg = "Unable to determine source template of cluster " \
-                      f"'{cluster['name']}'. Stopped processing cluster."
-                INSTALL_LOGGER.error(msg)
-                msg_update_callback.error(msg)
-                continue
-
-            tokens = template_name.split('_')
-            k8s_data = tokens[1].split('-')
-            cni_data = tokens[2].split('-')
-
-            if not os_name:
-                os_name = tokens[0]
-            if not k8s_distribution:
-                # old clusters that were converted can have non-existent
-                # template name that has 'k8s' string in it instead of 'k8'
-                if k8s_data[0] in ('k8', 'k8s'):
-                    k8s_distribution = 'upstream'
-                elif k8s_data[0] in ('tkg', 'tkgp', 'tkgplus'):
-                    k8s_distribution = 'TKG+'
-                else:
-                    k8s_distribution = "Unknown Kubernetes distribution"
-            if not cni:
-                cni = cni_data[0]
-            if not cni_version:
-                cni_version = cni_data[1]
-            if not k8s_version or not docker_version:
-                k8s_version, docker_version = \
-                    _get_k8s_and_docker_versions_from_history(
-                        template_name=template_name,
-                        template_revision=template_revision,
-                        cse_version=cse_version)
-
-            # Try to determine the above values using template definition
-            org_name = config['broker']['org']
-            catalog_name = config['broker']['catalog']
-            k8s_templates = ltm.get_all_k8s_local_template_definition(
-                client=client, catalog_name=catalog_name, org_name=org_name)
-            for k8s_template in k8s_templates:
-                # The source of truth for metadata on the clusters is always
-                # the template metadata.
-                if (str(k8s_template[server_constants.LocalTemplateKey.REVISION]), k8s_template[server_constants.LocalTemplateKey.NAME]) == (template_revision, template_name):  # noqa: E501
-                    if k8s_template.get(server_constants.LocalTemplateKey.OS):
-                        os_name = k8s_template.get(
-                            server_constants.LocalTemplateKey.OS) # noqa: E501
-                    if k8s_template.get(
-                            server_constants.LocalTemplateKey.KUBERNETES): # noqa: E501
-                        k8s_distribution = k8s_template.get(
-                            server_constants.LocalTemplateKey.KUBERNETES) # noqa: E501
-                    if k8s_template.get(
-                            server_constants.LocalTemplateKey.KUBERNETES_VERSION): # noqa: E501
-                        k8s_version = k8s_template[
-                            server_constants.LocalTemplateKey.KUBERNETES_VERSION] # noqa: E501
-                    if k8s_template.get(server_constants.LocalTemplateKey.CNI):
-                        cni = k8s_template.get(
-                            server_constants.LocalTemplateKey.CNI) # noqa: E501
-                    if k8s_template.get(
-                            server_constants.LocalTemplateKey.CNI_VERSION): # noqa: E501
-                        cni_version = k8s_template.get(
-                            server_constants.LocalTemplateKey.CNI_VERSION) # noqa: E501
-                    if k8s_template.get(
-                            server_constants.LocalTemplateKey.DOCKER_VERSION): # noqa: E501
-                        docker_version = k8s_template[
-                            server_constants.LocalTemplateKey.DOCKER_VERSION] # noqa: E501
-                    break
-
-            new_metadata = {
-                server_constants.ClusterMetadataKey.OS: os_name,
-                server_constants.ClusterMetadataKey.DOCKER_VERSION: docker_version, # noqa: E501
-                server_constants.ClusterMetadataKey.KUBERNETES: k8s_distribution, # noqa: E501
-                server_constants.ClusterMetadataKey.KUBERNETES_VERSION: k8s_version, # noqa: E501
-                server_constants.ClusterMetadataKey.CNI: cni,
-                server_constants.ClusterMetadataKey.CNI_VERSION: cni_version,
-            }
-            task = vapp.set_multiple_metadata(new_metadata)
-            client.get_task_monitor().wait_for_success(task)
-
-        msg = "Finished processing metadata of cluster."
-        INSTALL_LOGGER.info(msg)
-        msg_update_callback.general(msg)
-
-
-def _construct_template_name_from_history(metadata_dict):
-    old_template_name = metadata_dict.get(
-        server_constants.ClusterMetadataKey.BACKWARD_COMPATIBILE_TEMPLATE_NAME)
-    if not old_template_name:
-        return
-
-    new_template_name = None
-    cse_version = metadata_dict.get(
-        server_constants.ClusterMetadataKey.CSE_VERSION)
-    if 'photon' in old_template_name:
-        new_template_name = 'photon-v2'
-        if cse_version in ('1.0.0'):
-            new_template_name += '_k8-1.8_weave-2.0.5'
-        elif cse_version in ('1.1.0', '1.2.0', '1.2.1', '1.2.2', '1.2.3', '1.2.4'): # noqa: E501
-            new_template_name += '_k8-1.9_weave-2.3.0'
-        elif cse_version in ('1.2.5', '1.2.6', '1.2.7',): # noqa: E501
-            new_template_name += '_k8-1.10_weave-2.3.0'
-        elif cse_version in ('2.0.0'):
-            new_template_name += '_k8-1.12_weave-2.3.0'
-        else:
-            new_template_name += '_k8-0.0_weave-0.0.0'
-    elif 'ubuntu' in old_template_name:
-        new_template_name = 'ubuntu-16.04'
-        if cse_version in ('1.0.0'):
-            new_template_name += '_k8-1.9_weave-2.1.3'
-        elif cse_version in ('1.1.0', '1.2.0', '1.2.1', '1.2.2', '1.2.3', '1.2.4', '1.2.5', '1.2.6', '1.2.7'): # noqa: E501
-            new_template_name += '_k8-1.10_weave-2.3.0'
-        elif cse_version in ('2.0.0'):
-            new_template_name += '_k8-1.13_weave-2.3.0'
-        else:
-            new_template_name += '_k8-0.0_weave-0.0.0'
-
-    return new_template_name
-
-
-def _get_k8s_and_docker_versions_from_history(
-        template_name,
-        template_revision,
-        cse_version):
-    docker_version = '0.0.0'
-    k8s_version = template_name.split('_')[1].split('-')[1]
-    if 'photon' in template_name:
-        docker_version = '17.06.0'
-        if template_revision == '1':
-            docker_version = '18.06.2'
-        if '1.8' in template_name:
-            k8s_version = '1.8.1'
-        elif '1.9' in template_name:
-            k8s_version = '1.9.6'
-        elif '1.10' in template_name:
-            k8s_version = '1.10.11'
-        elif '1.12' in template_name:
-            k8s_version = '1.12.7'
-        elif '1.14' in template_name:
-            k8s_version = '1.14.6'
-    elif 'ubuntu' in template_name:
-        docker_version = '18.09.7'
-        if '1.9' in template_name:
-            docker_version = '17.12.0'
-            k8s_version = '1.9.3'
-        elif '1.10' in template_name:
-            docker_version = '18.03.0'
-            k8s_version = '1.10.1'
-            if cse_version in ('1.2.5', '1.2.6, 1.2.7'):
-                k8s_version = '1.10.11'
-            if cse_version in ('1.2.7'):
-                docker_version = '18.06.2'
-        elif '1.13' in template_name:
-            docker_version = '18.06.3'
-            k8s_version = '1.13.5'
-            if template_revision == '2':
-                k8s_version = '1.13.12'
-        elif '1.15' in template_name:
-            docker_version = '18.09.7'
-            k8s_version = '1.15.3'
-            if template_revision == '2':
-                k8s_version = '1.15.5'
-
-    return k8s_version, docker_version
-
-
-def _fix_cluster_admin_password(client,
-                                cse_clusters,
-                                new_admin_password=None,
-                                msg_update_callback=utils.NullPrinter()):
-    msg = "Fixing admin password of CSE k8s clusters."
-    INSTALL_LOGGER.info(msg)
-    msg_update_callback.info(msg)
-    if len(cse_clusters) == 0:
-        msg = "No CSE k8s clusters were found."
-        INSTALL_LOGGER.info(msg)
-        msg_update_callback.info(msg)
-        return
-
-    href_of_vms_to_verify = []
-    for cluster in cse_clusters:
-        msg = f"Processing admin password of cluster '{cluster['name']}'."
-        INSTALL_LOGGER.info(msg)
-        msg_update_callback.info(msg)
-
-        vm_hrefs_for_password_update = []
-        vapp_href = cluster['vapp_href']
-        vapp = VApp(client, href=vapp_href)
-        vm_resources = vapp.get_all_vms()
-        for vm_resource in vm_resources:
-            vm = VM(client, href=vm_resource.get('href'))
-            msg = f"Determining if vm '{vm.get_resource().get('name')}' " \
-                  "needs processing'."
-            INSTALL_LOGGER.info(msg)
-            msg_update_callback.info(msg)
-
-            gc_section = vm.get_guest_customization_section()
-            admin_password_enabled = False
-            if hasattr(gc_section, 'AdminPasswordEnabled'):
-                admin_password_enabled = utils.str_to_bool(gc_section.AdminPasswordEnabled) # noqa: E501
-            admin_password_on_vm = None
-            if hasattr(gc_section, 'AdminPassword'):
-                admin_password_on_vm = gc_section.AdminPassword.text
-
-            skip_vm = False
-            if admin_password_enabled:
-                if new_admin_password:
-                    if new_admin_password == admin_password_on_vm:
-                        skip_vm = True
-                else:
-                    if admin_password_on_vm:
-                        skip_vm = True
-            if not skip_vm:
-                href_of_vms_to_verify.append(vm.href)
-                vm_hrefs_for_password_update.append(vm.href)
-
-        # At least one vm in the vApp needs a password update
-        if len(vm_hrefs_for_password_update) > 0:
-            for href in vm_hrefs_for_password_update:
-                vm = VM(client=client, href=href)
-                try:
-                    msg = "Undeploying vm."
-                    INSTALL_LOGGER.info(msg)
-                    msg_update_callback.info(msg)
-                    task = vm.undeploy()
-                    client.get_task_monitor().wait_for_success(task)
-                    msg = "Successfully undeployed vm"
-                    INSTALL_LOGGER.info(msg)
-                    msg_update_callback.general(msg)
-                except Exception as err:
-                    INSTALL_LOGGER.debug(str(err))
-                    msg_update_callback.info(str(err))
-
-                msg = f"Processing vm '{vm.get_resource().get('name')}'." \
-                      "\nUpdating vm admin password"
-                INSTALL_LOGGER.info(msg)
-                msg_update_callback.info(msg)
-                vm.reload()
-                task = vm.update_guest_customization_section(
-                    enabled=True,
-                    admin_password_enabled=True,
-                    admin_password_auto=not new_admin_password,
-                    admin_password=new_admin_password,
-                )
-                client.get_task_monitor().wait_for_success(task)
-                msg = "Successfully updated vm"
-                INSTALL_LOGGER.info(msg)
-                msg_update_callback.general(msg)
-
-                msg = "Deploying vm."
-                INSTALL_LOGGER.info(msg)
-                msg_update_callback.info(msg)
-                vm.reload()
-                task = vm.power_on_and_force_recustomization()
-                client.get_task_monitor().wait_for_success(task)
-                msg = "Successfully deployed vm"
-                INSTALL_LOGGER.info(msg)
-                msg_update_callback.general(msg)
-
-        msg = f"Successfully processed cluster '{cluster['name']}'"
-        INSTALL_LOGGER.info(msg)
-        msg_update_callback.general(msg)
-
-    while len(href_of_vms_to_verify) != 0:
-        msg = f"Waiting on guest customization to finish on {len(href_of_vms_to_verify)} vms." # noqa: E501
-        INSTALL_LOGGER.info(msg)
-        msg_update_callback.info(msg)
-        to_remove = []
-        for href in href_of_vms_to_verify:
-            vm = VM(client=client, href=href)
-            gc_section = vm.get_guest_customization_section()
-            admin_password_enabled = False
-            if hasattr(gc_section, 'AdminPasswordEnabled'):
-                admin_password_enabled = utils.str_to_bool(gc_section.AdminPasswordEnabled) # noqa: E501
-            admin_password = None
-            if hasattr(gc_section, 'AdminPassword'):
-                admin_password = gc_section.AdminPassword.text
-            if admin_password_enabled and admin_password:
-                to_remove.append(vm.href)
-
-        for href in to_remove:
-            href_of_vms_to_verify.remove(href)
-
-        if len(href_of_vms_to_verify) > 0:
-            time.sleep(5)
-        else:
-            msg = "Finished Guest customization on all vms."
-            INSTALL_LOGGER.info(msg)
-            msg_update_callback.info(msg)
 
 
 def _get_placement_policy_name_from_template_name(template_name):
@@ -2382,14 +1917,14 @@ def _remove_old_cse_sizing_compute_policies(
             INSTALL_LOGGER.error(msg)
 
 
-def _create_def_entity_for_existing_clusters(
+def _upgrade_or_create_def_entity_for_existing_clusters(
         client,
+        config,
         cse_clusters,
         is_tkg_plus_enabled,
         msg_update_callback=utils.NullPrinter(),
         log_wire=False):
-    # TODO handle def enitty chnages when upgrading from CSE 3.0
-    msg = "Making old CSE k8s clusters compatible with CSE 3.0"
+    msg = "Making old CSE k8s clusters compatible with CSE 3.1"
     msg_update_callback.info(msg)
     INSTALL_LOGGER.info(msg)
 
@@ -2398,14 +1933,17 @@ def _create_def_entity_for_existing_clusters(
         client=client,
         logger_debug=INSTALL_LOGGER,
         logger_wire=logger_wire)
-    entity_svc = def_entity_svc.DefEntityService(cloudapi_client)
 
+    entity_svc = def_entity_svc.DefEntityService(cloudapi_client)
     schema_svc = def_schema_svc.DefSchemaService(cloudapi_client)
-    server_rde_version: str = \
-        def_utils.get_runtime_rde_version_by_vcd_api_version(float(client.get_api_version()))  # noqa: E501
-    rde_metadata: dict = def_utils.get_rde_metadata(server_rde_version)
+
+    max_vcd_api_version_supported = \
+        max([float(x) for x in config['service']['supported_api_versions']])
+    runtime_rde_version: str = \
+        def_utils.get_runtime_rde_version_by_vcd_api_version(max_vcd_api_version_supported)  # noqa: E501
+    rde_metadata: dict = def_utils.get_rde_metadata(runtime_rde_version)
     entity_type_metadata = rde_metadata[def_constants.RDEMetadataKey.ENTITY_TYPE]  # noqa: E501
-    native_entity_type = schema_svc.get_entity_type(entity_type_metadata.get_id())  # noqa: E501
+    target_entity_type = schema_svc.get_entity_type(entity_type_metadata.get_id())  # noqa: E501
 
     for cluster in cse_clusters:
         msg = f"Processing cluster '{cluster['name']}'"
@@ -2415,14 +1953,22 @@ def _create_def_entity_for_existing_clusters(
         cluster_id = cluster['cluster_id']
         try:
             def_entity = entity_svc.get_entity(cluster_id)
-            msg = f"Skipping cluster '{cluster['name']}' since it has " \
-                  "already been processed."
-            INSTALL_LOGGER.info(msg)
-            msg_update_callback.info(msg)
+            source_rde_version = def_entity.entityType.split(":")[-1]
+            if semantic_version.Version(source_rde_version) < semantic_version.Version(runtime_rde_version):  # noqa: E501
+                msg = f"Upgrading {def_entity.name} from {source_rde_version} to {runtime_rde_version}"  # noqa: E501
+                INSTALL_LOGGER.info(msg)
+                msg_update_callback.info(msg)
+                _upgrade_cluster_rde(client, cluster, def_entity, runtime_rde_version, target_entity_type, entity_svc, msg_update_callback)  # noqa: E501
+            else:
+                msg = f"Skipping cluster '{cluster['name']}' " \
+                    f"since it has already been processed."
+                INSTALL_LOGGER.info(msg)
+                msg_update_callback.info(msg)
             continue
         except Exception as err:
             INSTALL_LOGGER.debug(str(err))
 
+        # The code below creates defined-entity for api 33/34 native clusters
         try:
             policy_name = _get_placement_policy_name_from_template_name(
                 cluster['template_name'])
@@ -2447,122 +1993,107 @@ def _create_def_entity_for_existing_clusters(
         elif policy_name == shared_constants.TKG_PLUS_CLUSTER_RUNTIME_INTERNAL_NAME:  # noqa: E501
             kind = shared_constants.ClusterEntityKind.TKG_PLUS.value
 
-        worker_nodes = []
-        for item in cluster['nodes']:
-            worker_nodes.append(
-                rde_1_0_0.Node(name=item['name'], ip=item['ipAddress']))
-        nfs_nodes = []
-        for item in cluster['nfs_nodes']:
-            nfs_nodes.append(rde_1_0_0.NfsNode(
-                name=item['name'],
-                ip=item['ipAddress'],
-                exports=item['exports']))
-
-        cluster_entity = rde_1_0_0.NativeEntity(
-            kind=kind,
-            spec=rde_1_0_0.ClusterSpec(
-                workers=rde_1_0_0.Workers(
-                    count=len(cluster['nodes']),
-                    storage_profile=cluster['storage_profile_name']),
-                control_plane=rde_1_0_0.ControlPlane(
-                    count=len(cluster['master_nodes']),
-                    storage_profile=cluster['storage_profile_name']),
-                nfs=rde_1_0_0.Nfs(
-                    count=len(cluster['nfs_nodes']),
-                    storage_profile=cluster['storage_profile_name']),
-                settings=rde_1_0_0.Settings(
-                    network=cluster['network_name'],
-                    ssh_key=""),  # Impossible to get this value from clusters
-                k8_distribution=rde_1_0_0.Distribution(
-                    template_name=cluster['template_name'],
-                    template_revision=int(cluster['template_revision']))),
-            status=rde_1_0_0.Status(
-                phase=str(server_constants.DefEntityPhase(
-                    server_constants.DefEntityOperation.CREATE,
-                    server_constants.DefEntityOperationStatus.SUCCEEDED)),
-                kubernetes=f"{cluster['kubernetes']} {cluster['kubernetes_version']}", # noqa: E501
-                cni=f"{cluster['cni']} {cluster['cni_version']}",
-                os=cluster['os'],
-                docker_version=cluster['docker_version'],
-                nodes=rde_1_0_0.Nodes(
-                    control_plane=rde_1_0_0.Node(
-                        name=cluster['master_nodes'][0]['name'],
-                        ip=cluster['master_nodes'][0]['ipAddress']),
-                    workers=worker_nodes,
-                    nfs=nfs_nodes)),
-            metadata=rde_1_0_0.Metadata(
-                org_name=cluster['org_name'],
-                ovdc_name=cluster['vdc_name'],
-                cluster_name=cluster['name']),
-            api_version="")
-
-        org_resource = vcd_utils.get_org(client, org_name=cluster['org_name'])
-        org_id = org_resource.href.split('/')[-1]
-        def_entity = common_models.DefEntity(entity=cluster_entity,
-                                             entityType=native_entity_type.id)
-        entity_svc.create_entity(native_entity_type.id, entity=def_entity,
-                                 tenant_org_context=org_id)
-
-        def_entity = entity_svc.get_native_rde_by_name_and_rde_version(
-            cluster['name'], '1.0.0')
-        def_entity_id = def_entity.id
-        def_entity.externalId = cluster['vapp_href']
-
-        # update ownership of the entity
-        try:
-            user = client.get_user_in_org(
-                user_name=cluster['owner_name'],
-                org_href=cluster['org_href'])
-            user_urn = user.get('id')
-            orgmember_urn = user_urn.replace(":user:", ":orgMember:")
-
-            org_href = cluster['org_href']
-            org_id = org_href.split("/")[-1]
-            org_urn = f"urn:vcloud:org:{org_id}"
-
-            def_entity.owner = common_models.Owner(
-                name=cluster['owner_name'],
-                id=orgmember_urn)
-            def_entity.org = common_models.Org(
-                name=cluster['org_name'],
-                id=org_urn)
-        except Exception as err:
-            INSTALL_LOGGER.debug(str(err))
-            msg = "Unable to determine current owner of cluster " \
-                  f"'{cluster['name']}'. Unable to process ownership."
-            msg_update_callback.info(msg)
-            INSTALL_LOGGER.info(msg)
-
-        entity_svc.update_entity(def_entity_id, def_entity)
-        entity_svc.resolve_entity(def_entity_id)
-
-        msg = f"Generated new id for cluster '{cluster['name']}' "
-        INSTALL_LOGGER.info(msg)
-        msg_update_callback.general(msg)
-
-        # update vapp metadata to reflect new cluster_id
-        msg = f"Updating metadata of cluster '{cluster['name']}'"
-        INSTALL_LOGGER.info(msg)
-        msg_update_callback.info(msg)
-
-        tags = {
-            server_constants.ClusterMetadataKey.CLUSTER_ID: def_entity_id
-        }
-        vapp = VApp(client, href=cluster['vapp_href'])
-        task = vapp.set_multiple_metadata(tags)
-        client.get_task_monitor().wait_for_status(task)
-
-        msg = f"Updated metadata of cluster '{cluster['name']}'"
-        INSTALL_LOGGER.info(msg)
-        msg_update_callback.general(msg)
-
-        msg = f"Finished processing cluster '{cluster['name']}'"
-        INSTALL_LOGGER.info(msg)
-        msg_update_callback.general(msg)
+        _create_cluster_rde(client, cluster, kind, runtime_rde_version, target_entity_type, entity_svc, msg_update_callback)  # noqa: E501
 
     msg = "Finished processing all clusters."
     INSTALL_LOGGER.info(msg)
     msg_update_callback.general(msg)
+
+
+def _create_cluster_rde(client, cluster, kind, runtime_rde_version,
+                        target_entity_type, entity_svc,
+                        msg_update_callback=utils.NullPrinter()):
+    TargetNativeEntity = get_rde_model(runtime_rde_version)
+    cluster_entity = TargetNativeEntity.from_cluster_data(cluster=cluster, kind=kind)  # noqa: E501
+    org_resource = vcd_utils.get_org(client, org_name=cluster['org_name'])
+    org_id = org_resource.href.split('/')[-1]
+    def_entity = common_models.DefEntity(entity=cluster_entity, entityType=target_entity_type.id)  # noqa: E501
+    entity_svc.create_entity(target_entity_type.id, entity=def_entity, tenant_org_context=org_id)  # noqa: E501
+
+    def_entity = entity_svc.get_native_rde_by_name_and_rde_version(cluster['name'], runtime_rde_version)  # noqa: E501
+    def_entity_id = def_entity.id
+    def_entity.externalId = cluster['vapp_href']
+
+    # update ownership of the entity
+    try:
+        user = client.get_user_in_org(user_name=cluster['owner_name'], org_href=cluster['org_href'])  # noqa: E501
+        user_urn = user.get('id')
+        orgmember_urn = user_urn.replace(":user:", ":orgMember:")
+
+        org_href = cluster['org_href']
+        org_id = org_href.split("/")[-1]
+        org_urn = f"urn:vcloud:org:{org_id}"
+
+        def_entity.owner = common_models.Owner(
+            name=cluster['owner_name'],
+            id=orgmember_urn)
+        def_entity.org = common_models.Org(
+            name=cluster['org_name'],
+            id=org_urn)
+    except Exception as err:
+        INSTALL_LOGGER.debug(str(err))
+        msg = "Unable to determine current owner of cluster '{cluster['name']}'. Unable to process ownership."  # noqa: E501
+        msg_update_callback.info(msg)
+        INSTALL_LOGGER.info(msg)
+
+    entity_svc.update_entity(def_entity_id, def_entity)
+    entity_svc.resolve_entity(def_entity_id)
+
+    msg = f"Generated new id for cluster '{cluster['name']}' "
+    INSTALL_LOGGER.info(msg)
+    msg_update_callback.general(msg)
+
+    # update vapp metadata to reflect new cluster_id
+    msg = f"Updating metadata of cluster '{cluster['name']}'"
+    INSTALL_LOGGER.info(msg)
+    msg_update_callback.info(msg)
+
+    tags = {
+        server_constants.ClusterMetadataKey.CLUSTER_ID: def_entity_id
+    }
+    vapp = VApp(client, href=cluster['vapp_href'])
+    task = vapp.set_multiple_metadata(tags)
+    client.get_task_monitor().wait_for_status(task)
+
+    msg = f"Updated metadata of cluster '{cluster['name']}'"
+    INSTALL_LOGGER.info(msg)
+    msg_update_callback.general(msg)
+
+    msg = f"Finished processing cluster '{cluster['name']}'"
+    INSTALL_LOGGER.info(msg)
+    msg_update_callback.general(msg)
+
+
+def _upgrade_cluster_rde(client, cluster, def_entity_to_upgrade,
+                         runtime_rde_version, target_entity_type,
+                         entity_svc, msg_update_callback=utils.NullPrinter()):  # noqa: E501
+    TargetNativeEntity = get_rde_model(runtime_rde_version)
+    new_native_entity = TargetNativeEntity.from_native_entity(def_entity_to_upgrade.entity)  # noqa: E501
+    new_def_entity = common_models.DefEntity(
+        entity=new_native_entity, entityType=target_entity_type.id)  # noqa: E501
+    org_resource = vcd_utils.get_org(client, org_name=cluster['org_name'])  # noqa: E501
+    org_id = org_resource.href.split('/')[-1]
+    # TODO(): Changing entity type and update entity does not work
+    entity_svc.create_entity(entity_type_id=target_entity_type.id,
+                             entity=new_def_entity,
+                             tenant_org_context=org_id)
+    created_entity = entity_svc.get_native_rde_by_name_and_rde_version(cluster['name'], runtime_rde_version)  # noqa: E501
+    entity_svc.resolve_entity(entity_id=created_entity.id)
+
+    # Update cluster metadata with new cluster id
+    tags = {
+        server_constants.ClusterMetadataKey.CLUSTER_ID: created_entity.id,  # noqa: E501
+        server_constants.ClusterMetadataKey.CSE_VERSION: server_utils.get_installed_cse_version()  # noqa: E501
+    }
+    vapp = VApp(client, href=cluster['vapp_href'])
+    task = vapp.set_multiple_metadata(tags)
+    client.get_task_monitor().wait_for_status(task)
+    msg = f"Updated cluster id of cluster '{cluster['name']}'"
+    INSTALL_LOGGER.info(msg)
+    msg_update_callback.general(msg)
+
+    # Remove old defined entity
+    entity_svc.delete_entity(entity_id=def_entity_to_upgrade.id)
 
 
 def _print_users_in_need_of_def_rights(
