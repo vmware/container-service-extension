@@ -231,6 +231,7 @@ class LegacyLocalTemplatekey(str, Enum):
     All the keys for a template except min_cse_version and
     max_cse_version.
     """
+
     CATALOG_ITEM_NAME = 'catalog_item_name'
     CNI = 'cni'
     CNI_VERSION = 'cni_version'

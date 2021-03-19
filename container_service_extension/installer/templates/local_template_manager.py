@@ -5,17 +5,17 @@
 import ast
 import os
 import pathlib
-import semantic_version
 
 from pyvcloud.vcd.client import MetadataDomain
 from pyvcloud.vcd.client import MetadataVisibility
 from pyvcloud.vcd.org import Org
 from pyvcloud.vcd.utils import metadata_to_dict
+import semantic_version
 
-import container_service_extension.common.utils.server_utils as server_utils
 from container_service_extension.common.constants.server_constants import LegacyLocalTemplatekey  # noqa: E501
 from container_service_extension.common.constants.server_constants import LocalTemplateKey  # noqa: E501
 from container_service_extension.common.utils.pyvcloud_utils import get_org
+import container_service_extension.common.utils.server_utils as server_utils
 import container_service_extension.logging.logger as logger
 
 LOCAL_SCRIPTS_DIR = '.cse_scripts'

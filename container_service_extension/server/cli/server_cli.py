@@ -1012,7 +1012,6 @@ def list_template(ctx, config_file_path, skip_config_decryption,
                                    cse_params=cse_params,
                                    telemetry_settings=config_dict['service']['telemetry'])  # noqa: E501
 
-
         local_templates = []
         if display_option in (DISPLAY_ALL, DISPLAY_DIFF, DISPLAY_LOCAL):
             client = None
@@ -1084,7 +1083,8 @@ def list_template(ctx, config_file_path, skip_config_decryption,
                 remote_template_cookbook_url=config_dict['broker']['remote_template_cookbook_url'], # noqa: E501
                 legacy_mode=config_dict['service']['legacy_mode'],
                 logger=SERVER_CLI_LOGGER)
-            remote_template_cookbook = rtm.get_filtered_remote_template_cookbook()
+            remote_template_cookbook = \
+                rtm.get_filtered_remote_template_cookbook()
             remote_template_definitions = remote_template_cookbook['templates']
             for definition in remote_template_definitions:
                 template = {}
