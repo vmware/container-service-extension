@@ -1078,11 +1078,14 @@ def _construct_catalog_item_name_to_template_description_map(cookbook: dict) -> 
     :rtype: dict
     """
     catalog_item_name_to_template_description = {}
-    for template in cookbook['template']:
+    for template in cookbook['templates']:
         # For CSE 3.1, we can safely assume that all the catalog item names are
         # present in template metadata as CSE 3.1 can only be upgraded from
         # CSE 3.0
-        catalog_item_name_to_template_description[template[server_constants.LegacyLocalTemplatekey.CATALOG_ITEM_NAME]] = template  # noqa: E501
+        catalog_item_name = ltm.get_revisioned_template_name(
+            template[server_constants.RemoteTemplateKey.NAME],
+            template[server_constants.RemoteTemplateKey.REVISION])
+        catalog_item_name_to_template_description[catalog_item_name] = template
     return catalog_item_name_to_template_description
 
 
@@ -1132,15 +1135,20 @@ def _update_metadata_for_existing_templates(client: Client, config: dict,
         catalog_item_name = \
             template[server_constants.LegacyLocalTemplatekey.CATALOG_ITEM_NAME]
         if catalog_item_name in catalog_item_to_template_description_map:
-            # Supported template with the template name and revision found
-            # Update template metadata with min_cse_version and max_cse_version
-            template[server_constants.LocalTemplateKey.MIN_CSE_VERSION] = \
-                catalog_item_to_template_description_map[server_constants.RemoteTemplateKey.MIN_CSE_VERSION]  # noqa: E501
-            template[server_constants.LocalTemplateKey.MAX_CSE_VERSION] = \
-                catalog_item_to_template_description_map[server_constants.RemoteTemplateKey.MAX_CSE_VERSION]  # noqa: E501
+            # Supported template with the template name and revision found.
+            remote_template_descriptor = catalog_item_to_template_description_map[catalog_item_name]
+
+            # remote_template_descriptor will contain all the necessary
+            # metadata keys barring the catalog_item_name.
+            # Add catalog_item_name to the dict remote_template_descriptor
+            remote_template_descriptor[server_constants.LocalTemplateKey.CATALOG_ITEM_NAME] = catalog_item_name
+
+            # New keys to be added (min_cse_version and max_cse_version)
+            # will already be in remote_template_descriptor.
+            # Update template metadata.
             ltm.save_metadata(client, catalog_org_name,
                               catalog_name, catalog_item_name,
-                              template, metadata_key_list=new_metadata_key_list)  # noqa: E501
+                              remote_template_descriptor, metadata_key_list=new_metadata_key_list)  # noqa: E501
             msg = f"Successfully updated template metadata " \
                   f"for {catalog_item_name}"
             INSTALL_LOGGER.debug(msg)
@@ -1320,6 +1328,7 @@ def install_template(template_name, template_revision, config_file_name,
     msg_update_callback.info(msg)
     INSTALL_LOGGER.info(msg)
     global LEGACY_MODE
+    LEGACY_MODE = config['service']['legacy_mode']
 
     client = None
     try:
@@ -1433,7 +1442,6 @@ def install_template(template_name, template_revision, config_file_name,
             client.logout()
 
 
-# TODO legacy_mode required here?
 def _install_single_template(
         client, remote_template_manager, template, org_name,
         vdc_name, catalog_name, network_name, ip_allocation_mode,
