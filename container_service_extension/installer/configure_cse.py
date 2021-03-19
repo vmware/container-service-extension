@@ -1136,12 +1136,13 @@ def _update_metadata_for_existing_templates(client: Client, config: dict,
             template[server_constants.LegacyLocalTemplatekey.CATALOG_ITEM_NAME]
         if catalog_item_name in catalog_item_to_template_description_map:
             # Supported template with the template name and revision found.
-            remote_template_descriptor = catalog_item_to_template_description_map[catalog_item_name]
+            remote_template_descriptor = \
+                catalog_item_to_template_description_map[catalog_item_name]
 
             # remote_template_descriptor will contain all the necessary
             # metadata keys barring the catalog_item_name.
             # Add catalog_item_name to the dict remote_template_descriptor
-            remote_template_descriptor[server_constants.LocalTemplateKey.CATALOG_ITEM_NAME] = catalog_item_name
+            remote_template_descriptor[server_constants.LocalTemplateKey.CATALOG_ITEM_NAME] = catalog_item_name  # noqa: E501
 
             # New keys to be added (min_cse_version and max_cse_version)
             # will already be in remote_template_descriptor.
