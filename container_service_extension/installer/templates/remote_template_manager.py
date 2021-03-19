@@ -62,7 +62,8 @@ class RemoteTemplateManager():
         self.url = remote_template_cookbook_url
         self.logger = logger
         self.msg_update_callback = msg_update_callback
-        self.cookbook = None
+        self.filtered_cookbook = None
+        self.unfiltered_cookbook = None
 
     def _get_base_url_from_remote_template_cookbook_url(self):
         tokens = self.url.split('/')
@@ -110,13 +111,14 @@ class RemoteTemplateManager():
         if self.legacy_mode:
             msg = "Skipping filtering templates as CSE is being" \
                   " executed in legacy mode"
+            self.filtered_cookbook = self.unfiltered_cookbook
             self.logger.debug(msg)
             self.msg_update_callback.general(msg)
             return
         # Fetch current CSE version
         current_cse_version = server_utils.get_installed_cse_version()
         supported_templates = []
-        for template_description in self.cookbook['templates']:
+        for template_description in self.unfiltered_cookbook['templates']:
             # only include the template if the current CSE version
             # supports it
             # template is supported if current CSE version is between
@@ -133,7 +135,9 @@ class RemoteTemplateManager():
             msg += f" by CSE {current_cse_version}"
             self.logger.debug(msg)
             self.msg_update_callback.general(msg)
-        self.cookbook['templates'] = supported_templates
+        self.filtered_cookbook = {
+            'templates': supported_templates
+        }
         msg = "Successfully filtered unsupported templates."
         self.logger.debug(msg)
         self.msg_update_callback.general(msg)
@@ -154,11 +158,11 @@ class RemoteTemplateManager():
 
         # if there are no templates in the cookbook, the remote template
         # cookbook is invalid
-        if 'templates' not in self.cookbook:
+        if 'templates' not in self.unfiltered_cookbook:
             msg = "No 'templates' found."
             is_cookbook_invalid = True
 
-        for template_descriptor in self.cookbook.get('templates', []):
+        for template_descriptor in self.unfiltered_cookbook.get('templates', []):  # noqa: E501
             is_min_max_key_present = \
                 RemoteTemplateKey.MIN_CSE_VERSION in template_descriptor and \
                 RemoteTemplateKey.MAX_CSE_VERSION in template_descriptor
@@ -190,26 +194,49 @@ class RemoteTemplateManager():
         self.logger.debug(msg)
         self.msg_update_callback.general(msg)
 
-    def get_remote_template_cookbook(self):
+    def get_filtered_remote_template_cookbook(self):
         """Get the remote template cookbook as a dictionary.
+
+        Loads both filtered and unfiltered cookbooks into memory
 
         :returns: the contents of the cookbook.
 
         :rtype: dict
         """
-        if self.cookbook:
-            msg = "Re-using cached copy of template cookbook."
+        if self.filtered_cookbook:
+            msg = "Re-using cached copy of filtered template cookbook."
+            self.logger.debug(msg)
+            self.msg_update_callback(msg)
+        else:
+            self.get_unfiltered_remote_template_cookbook()
+            self._filter_unsupported_templates()
+        return self.filtered_cookbook
+
+    def get_unfiltered_remote_template_cookbook(self):
+        """Get the unvalidated remote template cookbook as a dictionary.
+
+        The unfiltered remote template cookbook will contain both supported
+        and unsupported CSE template descriptors
+
+        Handles validating if the template cookbook contains all required keys
+        in each template descriptor.
+
+        :returns: the contents of the cookbook
+
+        :rtype: dict
+        """
+        if self.unfiltered_cookbook:
+            msg = "Re-using cached copy of unfiltered template cookbook."
             self.logger.debug(msg)
             self.msg_update_callback(msg)
         else:
             template_cookbook_as_str = download_file_into_memory(self.url)
-            self.cookbook = yaml.safe_load(template_cookbook_as_str)
+            self.unfiltered_cookbook = yaml.safe_load(template_cookbook_as_str)
             msg = f"Downloaded remote template cookbook from {self.url}"
             self.logger.debug(msg)
             self.msg_update_callback.general(msg)
             self._validate_remote_template_cookbook()
-            self._filter_unsupported_templates()
-        return self.cookbook
+        return self.unfiltered_cookbook
 
     def download_template_scripts(self, template_name, revision,
                                   force_overwrite=False):
@@ -255,8 +282,8 @@ class RemoteTemplateManager():
         :param bool legacy_mode: If true, only template scripts will be
             downloaded.
         """
-        self.get_remote_template_cookbook()
-        for template in self.cookbook['templates']:
+        self.get_filtered_remote_template_cookbook()
+        for template in self.filtered_cookbook['templates']:
             template_name = template['name']
             revision = template['revision']
             self.download_template_scripts(template_name, revision,

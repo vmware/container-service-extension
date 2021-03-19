@@ -397,7 +397,6 @@ def _validate_broker_config(broker_dict,
     check_keys_and_value_types(broker_dict, SAMPLE_BROKER_CONFIG['broker'],
                                location="config file 'broker' section",
                                msg_update_callback=msg_update_callback)
-
     valid_ip_allocation_modes = [
         'dhcp',
         'pool'
@@ -410,7 +409,8 @@ def _validate_broker_config(broker_dict,
     rtm = RemoteTemplateManager(remote_template_cookbook_url=broker_dict['remote_template_cookbook_url'], # noqa: E501
                                 legacy_mode=legacy_mode,
                                 logger=logger_debug)
-    remote_template_cookbook = rtm.get_remote_template_cookbook()
+
+    remote_template_cookbook = rtm.get_filtered_remote_template_cookbook()
 
     if not remote_template_cookbook:
         raise Exception("Remote template cookbook is invalid.")

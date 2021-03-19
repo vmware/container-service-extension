@@ -107,7 +107,7 @@ def init_environment(config_filepath=BASE_CONFIG_FILEPATH):
     rtm = \
         RemoteTemplateManager(config['broker']['remote_template_cookbook_url'],
                               legacy_mode=config['service']['legacy_mode'])
-    template_cookbook = rtm.get_remote_template_cookbook()
+    template_cookbook = rtm.get_filtered_remote_template_cookbook()
     TEMPLATE_DEFINITIONS = template_cookbook['templates']
     rtm.download_all_template_scripts(force_overwrite=True)
 

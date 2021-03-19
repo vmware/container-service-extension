@@ -71,6 +71,8 @@ API_FILTER_PATTERNS = [
 ]
 
 
+LEGACY_MODE = False
+
 def check_cse_installation(config, msg_update_callback=utils.NullPrinter()):
     """Ensure that CSE is installed on vCD according to the config file.
 
@@ -326,6 +328,10 @@ def install_cse(config_file_name, config, skip_template_creation,
           f"'{config_file_name}'"
     msg_update_callback.info(msg)
     INSTALL_LOGGER.info(msg)
+
+    # Set global legacy_mode flag
+    global LEGACY_MODE
+    LEGACY_MODE = config['service']['legacy_mode']
 
     client = None
     try:
@@ -1091,13 +1097,15 @@ def _update_metadata_for_existing_templates(client: Client, config: dict,
     :param list all_legacy_templates: list of all legacy templates
     :param core_utils.ConsoleMessagePrinter msg_update_callback:
     """
-    legacy_mode = config['service']['legacy_mode']
+    # load global LEGACY_MODE value
+    global LEGACY_MODE
+
     cookbook_url = config['broker']['remote_template_cookbook_url']
     catalog_org_name = config['broker']['org']
     catalog_name = config['broker']['catalog']
 
     # Skip updating metadata if CSE is executed in legacy mode.
-    if legacy_mode:
+    if LEGACY_MODE:
         msg = "Skipping template metadata update as " \
               "CSE is executed in legacy mode."
         INSTALL_LOGGER.debug(msg)
@@ -1105,14 +1113,14 @@ def _update_metadata_for_existing_templates(client: Client, config: dict,
         return
     rtm = RemoteTemplateManager(
         remote_template_cookbook_url=cookbook_url,
-        legacy_mode=legacy_mode,
+        legacy_mode=LEGACY_MODE,
         logger=INSTALL_LOGGER,
         msg_update_callback=msg_update_callback)
     # NOTE: get_remote_template_cookbook() will load only
     # the template descriptors supported by the target CSE version.
-    rtm.get_remote_template_cookbook()
+    rtm.get_filtered_remote_template_cookbook()
     catalog_item_to_template_description_map = \
-        _construct_catalog_item_name_to_template_description_map(rtm.cookbook)
+        _construct_catalog_item_name_to_template_description_map(rtm.filtered_cookbook)
     # List of keys for the new template metadata. This includes
     # min_cse_version and max_cse_version
     new_metadata_key_list = [k for k in server_constants.LocalTemplateKey]
@@ -1196,7 +1204,7 @@ def _assign_placement_policies_to_existing_templates(client: Client,
 
 def _process_existing_templates(client: Client, config: dict,
                                 is_tkg_plus_enabled: bool,
-                                log_wire: bool =False,
+                                log_wire: bool = False,
                                 msg_update_callback=utils.NullPrinter()):  # noqa: E501
     """Read existing templates and assign respective placement policies.
 
@@ -1209,6 +1217,9 @@ def _process_existing_templates(client: Client, config: dict,
     :param bool log_wire:
     :param core_utils.ConsoleMessagePrinter msg_update_callback:
     """
+    #  Load global LEGACY_MODE variable
+    global LEGACY_MODE
+
     catalog_name = config['broker']['catalog']
     org_name = config['broker']['org']
 
@@ -1233,7 +1244,7 @@ def _process_existing_templates(client: Client, config: dict,
             client,
             catalog_name=catalog_name,  # noqa: E501
             org_name=org_name,
-            legacy_mode=config['service']['legacy_mode'],
+            legacy_mode=LEGACY_MODE,
             logger_debug=INSTALL_LOGGER)
 
     _assign_placement_policies_to_existing_templates(
@@ -1248,13 +1259,14 @@ def _process_existing_templates(client: Client, config: dict,
 def _install_all_templates(
         client, config, force_create, retain_temp_vapp,
         ssh_key, msg_update_callback=utils.NullPrinter()):
+    global LEGACY_MODE
     # read remote template cookbook, download all scripts
     rtm = RemoteTemplateManager(
         remote_template_cookbook_url=config['broker']['remote_template_cookbook_url'], # noqa: E501
-        legacy_mode=config['service']['legacy_mode'],
+        legacy_mode=LEGACY_MODE,
         logger=INSTALL_LOGGER,
         msg_update_callback=msg_update_callback)
-    remote_template_cookbook = rtm.get_remote_template_cookbook()
+    remote_template_cookbook = rtm.get_filtered_remote_template_cookbook()
 
     # create all templates defined in cookbook
     for template in remote_template_cookbook['templates']:
@@ -1272,7 +1284,6 @@ def _install_all_templates(
             retain_temp_vapp=retain_temp_vapp,
             ssh_key=ssh_key,
             is_tkg_plus_enabled=server_utils.is_tkg_plus_enabled(config),
-            legacy_mode=config['service']['legacy_mode'],
             msg_update_callback=msg_update_callback)
 
 
@@ -1305,6 +1316,7 @@ def install_template(template_name, template_revision, config_file_name,
           f"'{config_file_name}'"
     msg_update_callback.info(msg)
     INSTALL_LOGGER.info(msg)
+    global LEGACY_MODE
 
     client = None
     try:
@@ -1350,10 +1362,10 @@ def install_template(template_name, template_revision, config_file_name,
             legacy_mode=config['service']['legacy_mode'],
             logger=INSTALL_LOGGER, msg_update_callback=msg_update_callback)
 
-        remote_template_cookbook = rtm.get_remote_template_cookbook()
+        rtm.get_filtered_remote_template_cookbook()
 
         found_template = False
-        for template in remote_template_cookbook['templates']:
+        for template in rtm.filtered_cookbook['templates']:
             template_name_matched = template_name in (template[server_constants.RemoteTemplateKey.NAME], '*') # noqa: E501
             template_revision_matched = \
                 str(template_revision) in (str(template[server_constants.RemoteTemplateKey.REVISION]), '*') # noqa: E501
@@ -1373,14 +1385,28 @@ def install_template(template_name, template_revision, config_file_name,
                     retain_temp_vapp=retain_temp_vapp,
                     ssh_key=ssh_key,
                     is_tkg_plus_enabled=server_utils.is_tkg_plus_enabled(config),  # noqa: E501
-                    legacy_mode=config['service']['legacy_mode'],
                     msg_update_callback=msg_update_callback)
 
+        if not LEGACY_MODE and template_name != "*" and not found_template:
+            # Do not raise template unsupported exception if template name is "*"
+            # Raise TemplateUnsuppotedException if -
+            # if template_revision is *, check if a template with name
+            #   template_name is in unfiltered cookbook
+            # if (template_name, template_revision) is in unfiltered cookbook
+            for template in rtm.unfiltered_cookbook['templates']:
+                template_name_matched = template[server_constants.RemoteTemplateKey.NAME] == template_name
+                template_revision_matched = template_revision in (str(template[server_constants.RemoteTemplateKey.REVISION]), '*')
+                if template_name_matched and template_revision_matched:
+                    msg = f"Template '{template_name}' at revision " \
+                          f"'{template_revision}' is not supported by " \
+                          f"CSE {server_utils.get_installed_cse_version()}"
+                    INSTALL_LOGGER.debug(msg)
+                    msg_update_callback.general(msg)
+                    raise Exception(msg)
         if not found_template:
             msg = f"Template '{template_name}' at revision " \
-                  f"'{template_revision}' not supported by CSE " \
-                  f"{server_utils.get_installed_cse_version()} or " \
-                  f"not found in remote template cookbook."
+                  f"'{template_revision}' not found in " \
+                  f"remote template cookbook."
             msg_update_callback.error(msg)
             INSTALL_LOGGER.error(msg, exc_info=True)
             raise Exception(msg)
@@ -1408,8 +1434,9 @@ def _install_single_template(
         client, remote_template_manager, template, org_name,
         vdc_name, catalog_name, network_name, ip_allocation_mode,
         storage_profile, force_update, retain_temp_vapp,
-        ssh_key, is_tkg_plus_enabled=False, legacy_mode=False,
+        ssh_key, is_tkg_plus_enabled=False,
         msg_update_callback=utils.NullPrinter()):
+    global LEGACY_MODE
     # NOTE: For CSE 3.0, if the template is a TKG+ template
     # and `enable_tkg_plus` is set to false,
     # An error should be thrown and template installation should be skipped.
@@ -1426,7 +1453,7 @@ def _install_single_template(
         msg_update_callback.error(msg)
         raise Exception(msg)
     localTemplateKey = server_constants.LocalTemplateKey
-    if legacy_mode:
+    if LEGACY_MODE:
         # if legacy_mode, make use of LegacyLocalTemplateKey which
         # doesn't contain min_cse_version and max_cse_version.
         localTemplateKey = server_constants.LegacyLocalTemplatekey
@@ -1522,6 +1549,10 @@ def upgrade_cse(config_file_name, config, skip_template_creation,
           f"'{config_file_name}'"
     msg_update_callback.info(msg)
     INSTALL_LOGGER.info(msg)
+
+    # Set global LEGACY_MODE value
+    global LEGACY_MODE
+    LEGACY_MODE = config['service']['legacy_mode']
 
     client = None
     try:
