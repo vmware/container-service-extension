@@ -7,6 +7,7 @@ from typing import List
 
 import container_service_extension.common.constants.server_constants as server_constants  # noqa: E501
 import container_service_extension.common.constants.shared_constants as shared_constants  # noqa: E501
+from container_service_extension.rde.constants import PAYLOAD_VERSION_2_0
 from container_service_extension.rde.models.abstractNativeEntity import AbstractNativeEntity  # noqa: E501
 import container_service_extension.rde.models.rde_1_0_0 as rde_1_0_0
 
@@ -209,11 +210,11 @@ class NativeEntity(AbstractNativeEntity):
     spec: ClusterSpec
     status: Status = Status()
     kind: str = shared_constants.ClusterEntityKind.NATIVE.value
-    api_version: str = ''
+    api_version: str = PAYLOAD_VERSION_2_0
 
     def __init__(self, metadata: Metadata, spec: ClusterSpec, status=Status(),
                  kind: str = shared_constants.ClusterEntityKind.NATIVE.value,
-                 api_version: str = '', **kwargs):
+                 api_version: str = PAYLOAD_VERSION_2_0, **kwargs):
 
         self.metadata = Metadata(**metadata) \
             if isinstance(metadata, dict) else metadata

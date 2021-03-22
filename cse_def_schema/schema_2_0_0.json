@@ -28,7 +28,8 @@
         "required": [
             "kind",
             "spec",
-            "metadata"
+            "metadata",
+            "api_version"
         ],
         "properties": {
             "kind": {
@@ -252,9 +253,9 @@
             },
             "api_version": {
                 "type": "string",
-                "description":"Yet to be defined."
+                "default": "cse.vmware.com/v2.0",
+                "description":"The version of the payload format"
             }
         },
         "additionalProperties": false
-
 }
