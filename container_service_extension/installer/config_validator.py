@@ -234,6 +234,8 @@ def get_validated_config(config_file_name,
             [float(x) for x in config['service']['supported_api_versions']
                 if float(x) >= 35.0]
     config['vcd']['api_version'] = str(max(supported_api_versions_float))
+    # Update the supported versions
+    config['service']['supported_api_versions'] = supported_api_versions_float
 
     # Store telemetry instance id, url and collector id in config
     # This steps needs to be done after api_version has been computed

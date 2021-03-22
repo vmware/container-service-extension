@@ -95,9 +95,10 @@ def check_cse_installation(config, msg_update_callback=utils.NullPrinter()):
         log_wire = utils.str_to_bool(config['service'].get('log_wire'))
         if log_wire:
             log_filename = SERVER_CLI_WIRELOG_FILEPATH
+        target_vcd_api_version: str = str(max([float(x) for x in config['service']['supported_api_versions']]))  # noqa: E501
 
         client = Client(config['vcd']['host'],
-                        api_version=config['vcd']['api_version'],
+                        api_version=target_vcd_api_version,
                         verify_ssl_certs=config['vcd']['verify'],
                         log_file=log_filename,
                         log_requests=log_wire,
@@ -348,8 +349,9 @@ def install_cse(config_file_name, config, skip_template_creation,
         if log_wire:
             log_filename = INSTALL_WIRELOG_FILEPATH
 
+        target_vcd_api_version: str = str(max([float(x) for x in config['service']['supported_api_versions']]))  # noqa: E501
         client = Client(config['vcd']['host'],
-                        api_version=config['vcd']['api_version'],
+                        api_version=target_vcd_api_version,
                         verify_ssl_certs=config['vcd']['verify'],
                         log_file=log_filename,
                         log_requests=log_wire,
@@ -373,6 +375,7 @@ def install_cse(config_file_name, config, skip_template_creation,
 
         # register cse def schema on VCD
         _register_def_schema(client=client, config=config,
+                             target_vcd_api_version=target_vcd_api_version,
                              msg_update_callback=msg_update_callback,
                              log_wire=log_wire)
 
@@ -416,7 +419,7 @@ def install_cse(config_file_name, config, skip_template_creation,
         # Setup extension based on message bus protocol
         if server_utils.should_use_mqtt_protocol(config):
             _register_cse_as_mqtt_extension(client,
-                                            config['vcd']['api_version'],
+                                            target_vcd_api_version,
                                             msg_update_callback)
         else:
             # create amqp exchange if it doesn't exist
@@ -431,7 +434,7 @@ def install_cse(config_file_name, config, skip_template_creation,
                 client=client,
                 routing_key=amqp['routing_key'],
                 exchange=amqp['exchange'],
-                target_vcd_api_version=config['vcd']['api_version'],
+                target_vcd_api_version=target_vcd_api_version,
                 msg_update_callback=msg_update_callback)
 
             # register rights to vCD
@@ -735,6 +738,7 @@ def _update_user_role_with_right_bundle(right_bundle_name,
 
 def _register_def_schema(client: Client,
                          config=None,
+                         target_vcd_api_version=None,
                          msg_update_callback=utils.NullPrinter(),
                          log_wire=False):
     """Register RDE constructs.
@@ -756,15 +760,12 @@ def _register_def_schema(client: Client,
     cloudapi_client = vcd_utils.get_cloudapi_client_from_vcd_client(client=client, # noqa: E501
                                                                     logger_debug=INSTALL_LOGGER, # noqa: E501
                                                                     logger_wire=logger_wire) # noqa: E501
-    # TODO update CSE install to create client from max_vcd_api_version
     schema_file = None
-    max_vcd_api_version_supported = \
-        max([float(x) for x in config['service']['supported_api_versions']])
     try:
         def_utils.raise_error_if_def_not_supported(cloudapi_client)
         rde_version: str = \
             def_utils.get_runtime_rde_version_by_vcd_api_version(
-                max_vcd_api_version_supported)
+                float(target_vcd_api_version))
         msg_update_callback.general(f"Using RDE version: {rde_version}")
         # Obtain RDE metadata needed to initialize CSE
         rde_metadata: dict = def_utils.get_rde_metadata(rde_version)
@@ -1207,9 +1208,9 @@ def install_template(template_name, template_revision, config_file_name,
         log_wire = utils.str_to_bool(config['service'].get('log_wire'))
         if log_wire:
             log_filename = INSTALL_WIRELOG_FILEPATH
-
+        target_vcd_api_version: str = str(max([float(x) for x in config['service']['supported_api_versions']]))  # noqa: E501
         client = Client(config['vcd']['host'],
-                        api_version=config['vcd']['api_version'],
+                        api_version=target_vcd_api_version,
                         verify_ssl_certs=config['vcd']['verify'],
                         log_file=log_filename,
                         log_requests=log_wire,
@@ -1393,6 +1394,8 @@ def upgrade_cse(config_file_name, config, skip_template_creation,
     msg_update_callback.info(msg)
     INSTALL_LOGGER.info(msg)
 
+    target_vcd_api_version: str = \
+        str(max([float(x) for x in config['service']['supported_api_versions']]))  # noqa: E501
     client = None
     try:
         log_filename = None
@@ -1401,7 +1404,7 @@ def upgrade_cse(config_file_name, config, skip_template_creation,
             log_filename = INSTALL_WIRELOG_FILEPATH
 
         client = Client(config['vcd']['host'],
-                        api_version=config['vcd']['api_version'],
+                        api_version=target_vcd_api_version,
                         verify_ssl_certs=config['vcd']['verify'],
                         log_file=log_filename,
                         log_requests=log_wire,
@@ -1446,8 +1449,6 @@ def upgrade_cse(config_file_name, config, skip_template_creation,
             msg_update_callback.general(msg)
             INSTALL_LOGGER.info(msg)
 
-        target_vcd_api_version: str = \
-            str(max([float(x) for x in config['service']['supported_api_versions']]))  # noqa: E501
         target_cse_version = server_utils.get_installed_cse_version()
 
         telemetry_data = {
@@ -1505,7 +1506,7 @@ def upgrade_cse(config_file_name, config, skip_template_creation,
         _upgrade_to_cse_3_1(
             client=client,
             config=config,
-            ext_vcd_api_version=ext_vcd_api_version,
+            target_vcd_api_version=target_vcd_api_version,
             skip_template_creation=skip_template_creation,
             ssh_key=ssh_key,
             retain_temp_vapp=retain_temp_vapp,
@@ -1590,7 +1591,7 @@ def _update_cse_amqp_extension(client, routing_key, exchange,
     INSTALL_LOGGER.info(msg)
 
 
-def _upgrade_to_cse_3_1(client, config, ext_vcd_api_version,
+def _upgrade_to_cse_3_1(client, config, target_vcd_api_version,
                         skip_template_creation, ssh_key, retain_temp_vapp,
                         admin_password, msg_update_callback=utils.NullPrinter(),  # noqa: E501
                         log_wire=False):
@@ -1616,6 +1617,7 @@ def _upgrade_to_cse_3_1(client, config, ext_vcd_api_version,
     _register_def_schema(
         client=client,
         config=config,
+        target_vcd_api_version=target_vcd_api_version,
         msg_update_callback=msg_update_callback,
         log_wire=log_wire)
 
@@ -1668,7 +1670,7 @@ def _upgrade_to_cse_3_1(client, config, ext_vcd_api_version,
     # Create DEF entity for all existing clusters (if missing)
     _upgrade_or_create_def_entity_for_existing_clusters(
         client=client,
-        config=config,
+        target_vcd_api_version=target_vcd_api_version,
         cse_clusters=clusters,
         msg_update_callback=msg_update_callback,
         is_tkg_plus_enabled=is_tkg_plus_enabled,
@@ -1686,11 +1688,11 @@ def _upgrade_to_cse_3_1(client, config, ext_vcd_api_version,
         if existing_ext_type == server_constants.ExtensionType.AMQP:
             _deregister_cse_amqp_extension(client)
             _register_cse_as_mqtt_extension(client,
-                                            config['vcd']['api_version'],
+                                            target_vcd_api_version,
                                             msg_update_callback)
         elif existing_ext_type == server_constants.ExtensionType.MQTT:
             # Remove api filters and update description
-            _update_cse_mqtt_extension(client, config['vcd']['api_version'],
+            _update_cse_mqtt_extension(client, target_vcd_api_version,
                                        msg_update_callback)
     else:
         # Update amqp exchange
@@ -1708,7 +1710,7 @@ def _upgrade_to_cse_3_1(client, config, ext_vcd_api_version,
             client=client,
             routing_key=config['amqp']['routing_key'],
             exchange=config['amqp']['exchange'],
-            target_vcd_api_version=config['vcd']['api_version'],
+            target_vcd_api_version=target_vcd_api_version,
             msg_update_callback=msg_update_callback)
 
 
@@ -1919,7 +1921,7 @@ def _remove_old_cse_sizing_compute_policies(
 
 def _upgrade_or_create_def_entity_for_existing_clusters(
         client,
-        config,
+        target_vcd_api_version,
         cse_clusters,
         is_tkg_plus_enabled,
         msg_update_callback=utils.NullPrinter(),
@@ -1937,10 +1939,8 @@ def _upgrade_or_create_def_entity_for_existing_clusters(
     entity_svc = def_entity_svc.DefEntityService(cloudapi_client)
     schema_svc = def_schema_svc.DefSchemaService(cloudapi_client)
 
-    max_vcd_api_version_supported = \
-        max([float(x) for x in config['service']['supported_api_versions']])
     runtime_rde_version: str = \
-        def_utils.get_runtime_rde_version_by_vcd_api_version(max_vcd_api_version_supported)  # noqa: E501
+        def_utils.get_runtime_rde_version_by_vcd_api_version(float(target_vcd_api_version))  # noqa: E501
     rde_metadata: dict = def_utils.get_rde_metadata(runtime_rde_version)
     entity_type_metadata = rde_metadata[def_constants.RDEMetadataKey.ENTITY_TYPE]  # noqa: E501
     target_entity_type = schema_svc.get_entity_type(entity_type_metadata.get_id())  # noqa: E501
@@ -2032,7 +2032,7 @@ def _create_cluster_rde(client, cluster, kind, runtime_rde_version,
             id=org_urn)
     except Exception as err:
         INSTALL_LOGGER.debug(str(err))
-        msg = "Unable to determine current owner of cluster '{cluster['name']}'. Unable to process ownership."  # noqa: E501
+        msg = f"Unable to determine current owner of cluster '{cluster['name']}'. Unable to process ownership."  # noqa: E501
         msg_update_callback.info(msg)
         INSTALL_LOGGER.info(msg)
 
