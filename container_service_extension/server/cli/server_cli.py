@@ -32,12 +32,12 @@ from container_service_extension.common.constants.shared_constants import SUPPOR
 import container_service_extension.common.utils.core_utils as utils
 import container_service_extension.common.utils.pyvcloud_utils as vcd_utils
 import container_service_extension.common.utils.server_utils as server_utils
-from container_service_extension.installer.config_validator import get_validated_config # noqa: E501
+from container_service_extension.installer.config_validator import get_validated_config  # noqa: E501
 import container_service_extension.installer.configure_cse as configure_cse
-from container_service_extension.installer.cse_service_role_mgr import create_cse_service_role # noqa : E501
+from container_service_extension.installer.cse_service_role_mgr import create_cse_service_role  # noqa : E501
 from container_service_extension.installer.sample_generator import generate_sample_config  # noqa: E501
 import container_service_extension.installer.templates.local_template_manager as ltm  # noqa: E501
-from container_service_extension.installer.templates.remote_template_manager import RemoteTemplateManager # noqa: E501
+from container_service_extension.installer.templates.remote_template_manager import RemoteTemplateManager  # noqa: E501
 from container_service_extension.lib.cloudapi.constants import CloudApiResource
 from container_service_extension.lib.telemetry.constants import CseOperation
 from container_service_extension.lib.telemetry.constants import OperationStatus
@@ -58,7 +58,7 @@ from container_service_extension.logging.logger import SERVER_DEBUG_WIRELOG_FILE
 from container_service_extension.logging.logger import SERVER_LOGGER
 from container_service_extension.security.encryption_engine import decrypt_file
 from container_service_extension.security.encryption_engine import encrypt_file
-from container_service_extension.security.encryption_engine import get_decrypted_file_contents # noqa: E501
+from container_service_extension.security.encryption_engine import get_decrypted_file_contents  # noqa: E501
 import container_service_extension.server.service as cse_service
 
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
@@ -311,12 +311,11 @@ def version(ctx):
 @click.pass_context
 @click.argument('vcd_host', metavar='VCD_HOST')
 @click.option(
-    '-s/-i',
-    '--verify-ssl-certs/--no-verify-ssl-certs',
-    required=False,
-    default=True,
-    help='Verify SSL certificates of VCD Host')
-def create_service_role(ctx, vcd_host, verify_ssl_certs):
+    '-s',
+    '--skip-verify-ssl-certs',
+    is_flag=True,
+    help='Skip verifying SSL certificates of VCD Host')
+def create_service_role(ctx, vcd_host, skip_verify_ssl_certs):
     """Create CSE service Role."""
     SERVER_CLI_LOGGER.debug(f"Executing command: {ctx.command_path}")
     console_message_printer = utils.ConsoleMessagePrinter()
@@ -330,15 +329,16 @@ def create_service_role(ctx, vcd_host, verify_ssl_certs):
     # Prompt user for administrator username/password
     admin_username = utils.prompt_text(USERNAME_FOR_SYSTEM_ADMINISTRATOR,
                                        color='green', hide_input=False)
-    admin_password = utils.prompt_text(PASSWORD_FOR_SYSTEM_ADMINISTRATOR + str(admin_username), # noqa: E501
+    admin_password = utils.prompt_text(PASSWORD_FOR_SYSTEM_ADMINISTRATOR + str(admin_username),  # noqa: E501
                                        color='green', hide_input=True)
 
     msg = f"Connecting to vCD: {vcd_host}"
     console_message_printer.general_no_color(msg)
     SERVER_CLI_LOGGER.info(msg)
 
+    client = None
     try:
-        client = vcd_client.Client(vcd_host, verify_ssl_certs=verify_ssl_certs)
+        client = vcd_client.Client(vcd_host, verify_ssl_certs=not skip_verify_ssl_certs)  # noqa: E501
         credentials = vcd_client.BasicLoginCredentials(
             admin_username,
             SYSTEM_ORG_NAME,
@@ -502,7 +502,7 @@ def check(ctx, config_file_path, pks_config_file_path, skip_config_decryption,
             telemetry_settings=config_dict['service']['telemetry'])
         # Telemetry data construction
         cse_params = {
-            PayloadKey.WAS_PKS_CONFIG_FILE_PROVIDED: bool(pks_config_file_path), # noqa: E501
+            PayloadKey.WAS_PKS_CONFIG_FILE_PROVIDED: bool(pks_config_file_path),  # noqa: E501
             PayloadKey.WAS_DECRYPTION_SKIPPED: bool(skip_config_decryption),
             PayloadKey.WAS_INSTALLATION_CHECKED: bool(check_install)
         }
@@ -823,7 +823,7 @@ def run(ctx, config_file_path, pks_config_file_path, skip_check,
     except Exception as err:
         SERVER_CLI_LOGGER.error(str(err))
         console_message_printer.error(str(err))
-        console_message_printer.error("CSE Server failure. Please check the logs.") # noqa: E501
+        console_message_printer.error("CSE Server failure. Please check the logs.")  # noqa: E501
         sys.exit(1)
     finally:
         if not cse_run_complete:
@@ -866,7 +866,7 @@ def run(ctx, config_file_path, pks_config_file_path, skip_check,
     '--retain-temp-vapp',
     'retain_temp_vapp',
     is_flag=True,
-    help='Retain the temporary vApp after the CSE k8s template has been captured' # noqa: E501
+    help='Retain the temporary vApp after the CSE k8s template has been captured'  # noqa: E501
          ' --ssh-key option is required if this flag is used')
 @click.option(
     '-k',
@@ -901,7 +901,7 @@ def upgrade(ctx, config_file_path, skip_config_decryption,
     - Update existing CSE k8s cluster's to match CSE 3.0 k8s clusters.
     """
     # NOTE: For CSE 3.0, if `enable_tkg_plus` in the config is set to false,
-    # an exception is throwin if
+    # an exception is thrown if
     # 1. If there is an existing TKG+ template
     # 2. If remote template cookbook contains a TKG+ template.
     SERVER_CLI_LOGGER.debug(f"Executing command: {ctx.command_path}")
@@ -1021,7 +1021,7 @@ def list_template(ctx, config_file_path, skip_config_decryption,
                     log_wire_file = SERVER_DEBUG_WIRELOG_FILEPATH
 
                 client, _ = _get_clients_from_config(config_dict,
-                                                     log_wire_file=log_wire_file, # noqa: E501
+                                                     log_wire_file=log_wire_file,  # noqa: E501
                                                      log_wire=log_wire)
 
                 org_name = config_dict['broker']['org']
@@ -1050,26 +1050,25 @@ def list_template(ctx, config_file_path, skip_config_decryption,
                               "TKG+ is not enabled"
                         SERVER_CLI_LOGGER.debug(msg)
                         continue
-                    template = {}
-                    template['name'] = definition[LocalTemplateKey.NAME]
+                    local_template = {
+                        'name': definition[LocalTemplateKey.NAME],
+                        'revision': int(definition[LocalTemplateKey.REVISION]),
+                        'compute_policy': definition[LocalTemplateKey.COMPUTE_POLICY],  # noqa: E501
+                        'local': 'Yes',
+                        'remote': 'No',
+                        'cpu': definition[LocalTemplateKey.CPU],
+                        'memory': definition[LocalTemplateKey.MEMORY],
+                        'description': definition[LocalTemplateKey.DESCRIPTION]
+                    }
                     # Any metadata read from vCD is sting due to how pyvcloud
                     # is coded, so we need to cast it back to int.
-                    template['revision'] = \
-                        int(definition[LocalTemplateKey.REVISION])
-                    template['compute_policy'] = \
-                        definition[LocalTemplateKey.COMPUTE_POLICY]
-                    template['local'] = 'Yes'
-                    template['remote'] = 'No'
-                    if (definition[LocalTemplateKey.NAME], str(definition[LocalTemplateKey.REVISION])) == (default_template_name, default_template_revision): # noqa: E501
-                        template['default'] = 'Yes'
+                    if (definition[LocalTemplateKey.NAME], str(definition[LocalTemplateKey.REVISION])) == (default_template_name, default_template_revision):  # noqa: E501
+                        local_template['default'] = 'Yes'
                     else:
-                        template['default'] = 'No'
-                    template['deprecated'] = 'Yes' if utils.str_to_bool(definition[LocalTemplateKey.DEPRECATED]) else 'No' # noqa: E501
-                    template['cpu'] = definition[LocalTemplateKey.CPU]
-                    template['memory'] = definition[LocalTemplateKey.MEMORY]
-                    template['description'] = \
-                        definition[LocalTemplateKey.DESCRIPTION]
-                    local_templates.append(template)
+                        local_template['default'] = 'No'
+                    local_template['deprecated'] = 'Yes' if utils.str_to_bool(definition[LocalTemplateKey.DEPRECATED]) else 'No'  # noqa: E501
+
+                    local_templates.append(local_template)
             finally:
                 if client:
                     client.logout()
@@ -1077,27 +1076,27 @@ def list_template(ctx, config_file_path, skip_config_decryption,
         remote_templates = []
         if display_option in (DISPLAY_ALL, DISPLAY_DIFF, DISPLAY_REMOTE):
             rtm = RemoteTemplateManager(
-                remote_template_cookbook_url=config_dict['broker']['remote_template_cookbook_url'], # noqa: E501
+                remote_template_cookbook_url=config_dict['broker']['remote_template_cookbook_url'],  # noqa: E501
                 logger=SERVER_CLI_LOGGER,
                 msg_update_callback=console_message_printer)
             remote_template_cookbook = rtm.get_remote_template_cookbook()
             remote_template_definitions = remote_template_cookbook['templates']
             for definition in remote_template_definitions:
-                template = {}
-                template['name'] = definition[RemoteTemplateKey.NAME]
-                template['revision'] = definition[RemoteTemplateKey.REVISION]
-                template['compute_policy'] = \
-                    definition[RemoteTemplateKey.COMPUTE_POLICY]
-                template['local'] = 'No'
-                template['remote'] = 'Yes'
+                remote_template = {
+                    'name': definition[RemoteTemplateKey.NAME],
+                    'revision': definition[RemoteTemplateKey.REVISION],
+                    'compute_policy': definition[RemoteTemplateKey.COMPUTE_POLICY],  # noqa: E501
+                    'local': 'No',
+                    'remote': 'Yes',
+                    'cpu': definition[RemoteTemplateKey.CPU],
+                    'memory': definition[RemoteTemplateKey.MEMORY],
+                    'description': definition[RemoteTemplateKey.DESCRIPTION]
+                }
                 if display_option is DISPLAY_ALL:
-                    template['default'] = 'No'
-                template['deprecated'] = 'Yes' if utils.str_to_bool(definition[RemoteTemplateKey.DEPRECATED]) else 'No' # noqa: E501
-                template['cpu'] = definition[RemoteTemplateKey.CPU]
-                template['memory'] = definition[RemoteTemplateKey.MEMORY]
-                template['description'] = \
-                    definition[RemoteTemplateKey.DESCRIPTION]
-                remote_templates.append(template)
+                    remote_template['default'] = 'No'
+                remote_template['deprecated'] = 'Yes' if utils.str_to_bool(definition[RemoteTemplateKey.DEPRECATED]) else 'No'  # noqa: E501
+
+                remote_templates.append(remote_template)
 
         result = []
         if display_option is DISPLAY_ALL:
@@ -1108,7 +1107,7 @@ def list_template(ctx, config_file_path, skip_config_decryption,
             for local_template in local_templates:
                 found = False
                 for remote_template in remote_templates:
-                    if (local_template[LocalTemplateKey.NAME], local_template[LocalTemplateKey.REVISION]) == (remote_template[RemoteTemplateKey.NAME], remote_template[RemoteTemplateKey.REVISION]): # noqa: E501
+                    if (local_template[LocalTemplateKey.NAME], local_template[LocalTemplateKey.REVISION]) == (remote_template[RemoteTemplateKey.NAME], remote_template[RemoteTemplateKey.REVISION]):  # noqa: E501
                         remote_template['compute_policy'] = \
                             local_template['compute_policy']
                         remote_template['local'] = local_template['local']
@@ -1121,7 +1120,7 @@ def list_template(ctx, config_file_path, skip_config_decryption,
             for remote_template in remote_templates:
                 found = False
                 for local_template in local_templates:
-                    if (local_template[LocalTemplateKey.NAME], local_template[LocalTemplateKey.REVISION]) == (remote_template[RemoteTemplateKey.NAME], remote_template[RemoteTemplateKey.REVISION]): # noqa: E501
+                    if (local_template[LocalTemplateKey.NAME], local_template[LocalTemplateKey.REVISION]) == (remote_template[RemoteTemplateKey.NAME], remote_template[RemoteTemplateKey.REVISION]):  # noqa: E501
                         found = True
                         break
                 if not found:
@@ -1311,7 +1310,7 @@ def register_ui_plugin(ctx, plugin_file_path, config_file_path,
             raise Exception('Invalid plugin zip. Manifest file not found.')
 
         manifest = json.load(open(manifest_file, 'r'))
-        registerRequest = {
+        register_request_payload = {
             'pluginName': manifest['name'],
             'vendor': manifest['vendor'],
             'description': manifest['description'],
@@ -1338,8 +1337,8 @@ def register_ui_plugin(ctx, plugin_file_path, config_file_path,
             response_body = cloudapi_client.do_request(
                 method=RequestMethod.POST,
                 resource_url_relative_path=f"{CloudApiResource.EXTENSION_UI}",
-                payload=registerRequest)
-            pluginId = response_body.get('id')
+                payload=register_request_payload)
+            plugin_id = response_body.get('id')
         except requests.exceptions.HTTPError as err:
             if err.response.status_code == requests.codes.bad_request and \
                     'VCD_50012' in err.response.text:
@@ -1351,14 +1350,14 @@ def register_ui_plugin(ctx, plugin_file_path, config_file_path,
         msg = "Preparing to upload plugin to vCD."
         SERVER_CLI_LOGGER.debug(msg)
         console_message_printer.info(msg)
-        transferRequest = {
+        transfer_request_payload = {
             "fileName": os.path.split(plugin_file_path)[1],
             "size": os.stat(plugin_file_path).st_size
         }
-        response_body = cloudapi_client.do_request(
+        cloudapi_client.do_request(
             method=RequestMethod.POST,
-            resource_url_relative_path=f"{CloudApiResource.EXTENSION_UI}/{pluginId}/plugin", # noqa: E501
-            payload=transferRequest)
+            resource_url_relative_path=f"{CloudApiResource.EXTENSION_UI}/{plugin_id}/plugin",  # noqa: E501
+            payload=transfer_request_payload)
 
         msg = "Uploading plugin to vCD."
         SERVER_CLI_LOGGER.debug(msg)
@@ -1370,7 +1369,7 @@ def register_ui_plugin(ctx, plugin_file_path, config_file_path,
         tokens = response_headers.get("Link").split(";")
         for token in tokens:
             if token.startswith("<"):
-                transfer_url = token[1:-1] # get rid of the < and >
+                transfer_url = token[1:-1]  # get rid of the < and >
             if token.startswith("type"):
                 fragments = token.split("\"")
                 content_type = fragments[1]
@@ -1390,7 +1389,7 @@ def register_ui_plugin(ctx, plugin_file_path, config_file_path,
         while True:
             response_body = cloudapi_client.do_request(
                 method=RequestMethod.GET,
-                resource_url_relative_path=f"{CloudApiResource.EXTENSION_UI}/{pluginId}") # noqa: E501
+                resource_url_relative_path=f"{CloudApiResource.EXTENSION_UI}/{plugin_id}")  # noqa: E501
             plugin_status = response_body.get('plugin_status')
             msg = f"Plugin status : {plugin_status}"
             console_message_printer.info(msg)
@@ -1457,7 +1456,7 @@ def deregister_ui_plugin(ctx, plugin_id, config_file_path,
 
         cloudapi_client.do_request(
             method=RequestMethod.DELETE,
-            resource_url_relative_path=f"{CloudApiResource.EXTENSION_UI}/{plugin_id}") # noqa: E501
+            resource_url_relative_path=f"{CloudApiResource.EXTENSION_UI}/{plugin_id}")  # noqa: E501
 
         msg = f"Removed plugin with id : {plugin_id}."
         SERVER_CLI_LOGGER.debug(msg)
@@ -1519,14 +1518,15 @@ def list_ui_plugin(ctx, config_file_path, skip_config_decryption):
         result = []
         response_body = cloudapi_client.do_request(
             method=RequestMethod.GET,
-            resource_url_relative_path=f"{CloudApiResource.EXTENSION_UI}") # noqa: E501
+            resource_url_relative_path=f"{CloudApiResource.EXTENSION_UI}")  # noqa: E501
         if len(response_body) > 0:
             for plugin in response_body:
-                ui_plugin = {}
-                ui_plugin['name'] = plugin['pluginName']
-                ui_plugin['vendor'] = plugin['vendor']
-                ui_plugin['version'] = plugin['version']
-                ui_plugin['id'] = plugin['id']
+                ui_plugin = {
+                    'name': plugin['pluginName'],
+                    'vendor': plugin['vendor'],
+                    'version': plugin['version'],
+                    'id': plugin['id']
+                }
                 result.append(ui_plugin)
 
         stdout(result, ctx, sort_headers=False, show_id=True)
@@ -1602,7 +1602,7 @@ def _get_clients_from_config(config, log_wire_file, log_wire):
         SERVER_CLI_LOGGER,
         logger_wire)
 
-    return (client, cloudapi_client)
+    return client, cloudapi_client
 
 
 if __name__ == '__main__':
