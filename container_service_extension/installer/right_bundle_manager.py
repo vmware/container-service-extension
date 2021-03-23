@@ -55,34 +55,13 @@ class RightBundleManager():
         :returns: HTTP response of the request
         """
         relative_url = \
-            f"{CloudApiResource.RIGHT_BUNDLES}/{right_bundle_id}/tenants"
-
-        shared_to_orgs = set()
-        page_num = 0
-        while True:
-            page_num += 1
-            paginated_relative_url = \
-                f"{relative_url}?" \
-                f"{shared_constants.PaginationKey.PAGE_NUMBER}={page_num}&" \
-                f"{shared_constants.PaginationKey.PAGE_SIZE}={shared_constants.CSE_PAGINATION_DEFAULT_PAGE_SIZE}"  # noqa: E501
-
-            response_body = self.cloudapi_client.do_request(
-                method=shared_constants.RequestMethod.GET,
-                cloudapi_version=CloudApiVersion.VERSION_1_0_0,
-                resource_url_relative_path=paginated_relative_url)
-
-            values = response_body[shared_constants.PaginationKey.VALUES]
-            if len(values) == 0:
-                break
-            for entry in values:
-                shared_to_orgs.add(entry['id'])
-
-        for org_id in org_ids:
-            shared_to_orgs.add(self.cloudapi_client.get_org_urn_from_id(org_id))  # noqa: E501
-
-        payload = {"values": [{"id": org_id} for org_id in shared_to_orgs]}
+            f"{CloudApiResource.RIGHT_BUNDLES}/{right_bundle_id}" \
+            "/tenants/publish"
+        payload = {
+            "values": [self.cloudapi_client.get_org_urn_from_id(org_id)
+                       for org_id in org_ids]}
         return self.cloudapi_client.do_request(
-            method=shared_constants.RequestMethod.PUT,
+            method=shared_constants.RequestMethod.POST,
             cloudapi_version=CloudApiVersion.VERSION_1_0_0,
             resource_url_relative_path=relative_url,
             payload=payload)
