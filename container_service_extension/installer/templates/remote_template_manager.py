@@ -107,7 +107,7 @@ class RemoteTemplateManager():
 
     def _filter_unsupported_templates(self):
         """Remove template descriptors which is not supported."""
-        # No need to filter templates if CSE is executed in legacy mode.
+        # No need to filter templates if CSE is configured in legacy mode.
         if self.legacy_mode:
             msg = "Skipping filtering templates as CSE is being" \
                   " executed in legacy mode"
@@ -145,11 +145,11 @@ class RemoteTemplateManager():
     def _validate_remote_template_cookbook(self):
         """Check if the remote template cookbook supplied is valid.
 
-        If CSE is executed in legacy mode, template descriptors in the
+        If CSE is configured in legacy mode, template descriptors in the
         remote template cookbook are not expected to have min_cse_version and
         max_cse_version.
 
-        If CSE is executed in non-legacy mode, template descriptors in the
+        If CSE is configured in non-legacy mode, template descriptors in the
         remote template cookbook should have min_cse_version and
         max_cse_version.
         """

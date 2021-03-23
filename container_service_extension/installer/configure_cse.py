@@ -1094,7 +1094,7 @@ def _update_metadata_for_existing_templates(client: Client, config: dict,
                                             msg_update_callback=utils.NullPrinter()):  # noqa: E501
     """Update template metadata to include new metadata keys.
 
-    Metadata update will happen when CSE is executed in non-legacy mode only
+    Metadata update will happen when CSE is configured in non-legacy mode only
     for supported templates.
     :param vcdClient.Client client:
     :param dict config: server configuration
@@ -1108,10 +1108,10 @@ def _update_metadata_for_existing_templates(client: Client, config: dict,
     catalog_org_name = config['broker']['org']
     catalog_name = config['broker']['catalog']
 
-    # Skip updating metadata if CSE is executed in legacy mode.
+    # Skip updating metadata if CSE is configured in legacy mode.
     if LEGACY_MODE:
         msg = "Skipping template metadata update as " \
-              "CSE is executed in legacy mode."
+              "CSE is configured in legacy mode."
         INSTALL_LOGGER.debug(msg)
         msg_update_callback.general(msg)
         return
@@ -1372,7 +1372,7 @@ def install_template(template_name, template_revision, config_file_name,
         # read remote template cookbook
         rtm = RemoteTemplateManager(
             remote_template_cookbook_url=config['broker']['remote_template_cookbook_url'], # noqa: E501
-            legacy_mode=config['service']['legacy_mode'],
+            legacy_mode=LEGACY_MODE,
             logger=INSTALL_LOGGER, msg_update_callback=msg_update_callback)
 
         rtm.get_filtered_remote_template_cookbook()
