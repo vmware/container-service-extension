@@ -58,8 +58,12 @@ class RightBundleManager():
             f"{CloudApiResource.RIGHT_BUNDLES}/{right_bundle_id}" \
             "/tenants/publish"
         payload = {
-            "values": [self.cloudapi_client.get_org_urn_from_id(org_id)
-                       for org_id in org_ids]}
+            "values": [
+                {"id": self.cloudapi_client.get_org_urn_from_id(org_id)}
+                for org_id in org_ids
+            ]
+        }
+
         return self.cloudapi_client.do_request(
             method=shared_constants.RequestMethod.POST,
             cloudapi_version=CloudApiVersion.VERSION_1_0_0,
