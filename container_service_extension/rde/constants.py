@@ -22,6 +22,9 @@ DEF_SCHEMA_DIRECTORY = 'cse_def_schema'
 DEF_ERROR_MESSAGE_KEY = 'message'
 DEF_RESOLVED_STATE = 'RESOLVED'
 
+PAYLOAD_VERSION_PREFIX = 'cse.vmware.com/'
+PAYLOAD_VERSION_2_0 = PAYLOAD_VERSION_PREFIX + 'v2.0'
+
 
 @unique
 class Vendor(str, Enum):

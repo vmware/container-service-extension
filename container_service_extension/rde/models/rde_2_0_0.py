@@ -207,13 +207,14 @@ class NativeEntity(AbstractNativeEntity):
 
     metadata: Metadata
     spec: ClusterSpec
+    api_version: str
     status: Status = Status()
     kind: str = shared_constants.ClusterEntityKind.NATIVE.value
-    api_version: str = ''
 
-    def __init__(self, metadata: Metadata, spec: ClusterSpec, status=Status(),
+    def __init__(self, metadata: Metadata, spec: ClusterSpec, api_version: str,
+                 status=Status(),
                  kind: str = shared_constants.ClusterEntityKind.NATIVE.value,
-                 api_version: str = '', **kwargs):
+                 **kwargs):
 
         self.metadata = Metadata(**metadata) \
             if isinstance(metadata, dict) else metadata
