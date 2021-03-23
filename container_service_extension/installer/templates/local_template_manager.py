@@ -10,9 +10,12 @@ from pyvcloud.vcd.client import MetadataDomain
 from pyvcloud.vcd.client import MetadataVisibility
 from pyvcloud.vcd.org import Org
 from pyvcloud.vcd.utils import metadata_to_dict
+import semantic_version
 
+from container_service_extension.common.constants.server_constants import LegacyLocalTemplatekey  # noqa: E501
 from container_service_extension.common.constants.server_constants import LocalTemplateKey  # noqa: E501
 from container_service_extension.common.utils.pyvcloud_utils import get_org
+import container_service_extension.common.utils.server_utils as server_utils
 import container_service_extension.logging.logger as logger
 
 LOCAL_SCRIPTS_DIR = '.cse_scripts'
@@ -44,6 +47,7 @@ def get_script_filepath(template_name, revision, script_file_name):
 
 def get_all_k8s_local_template_definition(client, catalog_name, org=None,
                                           org_name=None,
+                                          legacy_mode=False,
                                           logger_debug=logger.NULL_LOGGER):
     """Fetch all CSE k8s templates in a catalog.
 
@@ -67,6 +71,14 @@ def get_all_k8s_local_template_definition(client, catalog_name, org=None,
     catalog_item_names = [
         entry['name'] for entry in org.list_catalog_items(catalog_name)]
     templates = []
+
+    # Select the right Key enum based on legacy_mode flag
+    localTemplateKey = LocalTemplateKey
+    if legacy_mode:
+        # if template is loaded in legacy mode, make sure to avoid the keys
+        # min_cse_version and max_cse_version
+        localTemplateKey = LegacyLocalTemplatekey
+
     for item_name in catalog_item_names:
         md = org.get_all_metadata_from_catalog_item(catalog_name=catalog_name,
                                                     item_name=item_name)
@@ -75,7 +87,7 @@ def get_all_k8s_local_template_definition(client, catalog_name, org=None,
         # if catalog item doesn't have all the required metadata keys,
         # CSE should not recognize it as a template
         expected_metadata_keys = \
-            set([entry.value for entry in LocalTemplateKey])
+            set([entry.value for entry in localTemplateKey])
         missing_metadata_keys = expected_metadata_keys - metadata_dict.keys()
         num_missing_metadata_keys = len(missing_metadata_keys)
         if num_missing_metadata_keys == len(expected_metadata_keys):
@@ -90,14 +102,29 @@ def get_all_k8s_local_template_definition(client, catalog_name, org=None,
             logger_debug.debug(msg)
             continue
 
+        if not legacy_mode:
+            # Do not load the template in legacy_mode if
+            # min_cse_version and max_cse_version are not present
+            # in the metadata_dict
+            curr_cse_version = server_utils.get_installed_cse_version()
+            valid_cse_versions = semantic_version.SimpleSpec(
+                f">={metadata_dict[localTemplateKey.MIN_CSE_VERSION]},"
+                f"<={metadata_dict[localTemplateKey.MAX_CSE_VERSION]}")
+            if not valid_cse_versions.match(curr_cse_version):
+                msg = f"Catalog item '{item_name}' is not valid for CSE " \
+                      f"{curr_cse_version}"
+                logger_debug.debug(msg)
+                continue
+
         # non-string metadata is written to the dictionary as a string
         # when 'upgrade_from' metadata is empty, vcd returns it as: "['']"
         # when 'upgrade_from' metadata is not empty, vcd returns it as an array
         # coerce "['']" to the more usable empty array []
-        if isinstance(metadata_dict[LocalTemplateKey.UPGRADE_FROM], str):
-            metadata_dict[LocalTemplateKey.UPGRADE_FROM] = ast.literal_eval(metadata_dict[LocalTemplateKey.UPGRADE_FROM]) # noqa: E501
-        if metadata_dict[LocalTemplateKey.UPGRADE_FROM] == ['']:
-            metadata_dict[LocalTemplateKey.UPGRADE_FROM] = []
+        if isinstance(metadata_dict[localTemplateKey.UPGRADE_FROM], str):
+            metadata_dict[localTemplateKey.UPGRADE_FROM] = \
+                ast.literal_eval(metadata_dict[localTemplateKey.UPGRADE_FROM])
+        if metadata_dict[localTemplateKey.UPGRADE_FROM] == ['']:
+            metadata_dict[localTemplateKey.UPGRADE_FROM] = []
 
         templates.append(metadata_dict)
 
@@ -105,12 +132,13 @@ def get_all_k8s_local_template_definition(client, catalog_name, org=None,
 
 
 def save_metadata(client, org_name, catalog_name, catalog_item_name,
-                  template_data):
+                  template_data, metadata_key_list=None):
+    metadata_key_list = metadata_key_list or []
     org_resource = client.get_org_by_name(org_name=org_name)
     org = Org(client, resource=org_resource)
     org.set_multiple_metadata_on_catalog_item(
         catalog_name=catalog_name,
         item_name=catalog_item_name,
-        key_value_dict={k: template_data[k] for k in LocalTemplateKey},
+        key_value_dict={k: template_data[k] for k in metadata_key_list},
         domain=MetadataDomain.SYSTEM,
         visibility=MetadataVisibility.PRIVATE)
