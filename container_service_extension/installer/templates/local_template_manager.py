@@ -14,6 +14,7 @@ import semantic_version
 
 from container_service_extension.common.constants.server_constants import LegacyLocalTemplatekey  # noqa: E501
 from container_service_extension.common.constants.server_constants import LocalTemplateKey  # noqa: E501
+import container_service_extension.common.utils.core_utils as utils
 from container_service_extension.common.utils.pyvcloud_utils import get_org
 import container_service_extension.common.utils.server_utils as server_utils
 import container_service_extension.logging.logger as logger
@@ -48,7 +49,8 @@ def get_script_filepath(template_name, revision, script_file_name):
 def get_all_k8s_local_template_definition(client, catalog_name, org=None,
                                           org_name=None,
                                           legacy_mode=False,
-                                          logger_debug=logger.NULL_LOGGER):
+                                          logger_debug=logger.NULL_LOGGER,
+                                          msg_update_callback=utils.NullPrinter()):  # noqa: E501
     """Fetch all CSE k8s templates in a catalog.
 
     A CSE k8s template is a catalog item that has all the necessary metadata
@@ -100,6 +102,7 @@ def get_all_k8s_local_template_definition(client, catalog_name, org=None,
                   f"{num_missing_metadata_keys} metadata: " \
                   f"{missing_metadata_keys}" # noqa: F841
             logger_debug.debug(msg)
+            msg_update_callback.info(msg)
             continue
 
         if not legacy_mode:
@@ -111,9 +114,15 @@ def get_all_k8s_local_template_definition(client, catalog_name, org=None,
                 f">={metadata_dict[localTemplateKey.MIN_CSE_VERSION]},"
                 f"<={metadata_dict[localTemplateKey.MAX_CSE_VERSION]}")
             if not valid_cse_versions.match(curr_cse_version):
-                msg = f"Catalog item '{item_name}' is not valid for CSE " \
-                      f"{curr_cse_version}"
+                template_name = \
+                    metadata_dict.get(localTemplateKey.NAME, "Unknown")
+                template_revision = \
+                    metadata_dict.get(localTemplateKey.REVISION, "Unknown")
+                msg = f"Template '{template_name}' at " \
+                      f"revision '{template_revision}' exists but is " \
+                      f"not valid for CSE {curr_cse_version}"
                 logger_debug.debug(msg)
+                msg_update_callback.info(msg)
                 continue
 
         # non-string metadata is written to the dictionary as a string
