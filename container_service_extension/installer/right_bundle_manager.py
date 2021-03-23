@@ -4,7 +4,7 @@
 
 import pyvcloud.vcd.client as vcd_client
 
-from container_service_extension.common.constants.shared_constants import RequestMethod  # noqa: E501
+import container_service_extension.common.constants.shared_constants as shared_constants  # noqa: E501
 import container_service_extension.common.utils.core_utils as utils
 import container_service_extension.common.utils.pyvcloud_utils as vcd_utils
 from container_service_extension.lib.cloudapi.constants import CloudApiResource
@@ -37,7 +37,7 @@ class RightBundleManager():
         if filter_string:
             query_string = f"filter={filter_string}"
         response_body = self.cloudapi_client.do_request(
-            method=RequestMethod.GET,
+            method=shared_constants.RequestMethod.GET,
             cloudapi_version=CloudApiVersion.VERSION_1_0_0,
             resource_url_relative_path=f"{CloudApiResource.RIGHT_BUNDLES}?{query_string}")  # noqa: E501
         right_bundles = response_body['values']
@@ -56,10 +56,33 @@ class RightBundleManager():
         """
         relative_url = \
             f"{CloudApiResource.RIGHT_BUNDLES}/{right_bundle_id}/tenants"
-        payload = \
-            {"values": [{"id": self.cloudapi_client.get_org_urn_from_id(org_id)} for org_id in org_ids]}  # noqa: E501
+
+        shared_to_orgs = set()
+        page_num = 0
+        while True:
+            page_num += 1
+            paginated_relative_url = \
+                f"{relative_url}?" \
+                f"{shared_constants.PaginationKey.PAGE_NUMBER}={page_num}&" \
+                f"{shared_constants.PaginationKey.PAGE_SIZE}={shared_constants.CSE_PAGINATION_DEFAULT_PAGE_SIZE}"  # noqa: E501
+
+            response_body = self.cloudapi_client.do_request(
+                method=shared_constants.RequestMethod.GET,
+                cloudapi_version=CloudApiVersion.VERSION_1_0_0,
+                resource_url_relative_path=paginated_relative_url)
+
+            values = response_body[shared_constants.PaginationKey.VALUES]
+            if len(values) == 0:
+                break
+            for entry in values:
+                shared_to_orgs.add(entry['id'])
+
+        for org_id in org_ids:
+            shared_to_orgs.add(self.cloudapi_client.get_org_urn_from_id(org_id))  # noqa: E501
+
+        payload = {"values": [{"id": org_id} for org_id in shared_to_orgs]}
         return self.cloudapi_client.do_request(
-            method=RequestMethod.PUT,
+            method=shared_constants.RequestMethod.PUT,
             cloudapi_version=CloudApiVersion.VERSION_1_0_0,
             resource_url_relative_path=relative_url,
             payload=payload)
@@ -74,9 +97,11 @@ class RightBundleManager():
         """
         right_bundle_info = self.get_right_bundle_by_name(right_bundle_name)
         right_bundle_id = right_bundle_info['id']
+        relative_url = f"{CloudApiResource.RIGHT_BUNDLES}/{right_bundle_id}/rights"  # noqa: E501
+
         rights = self.cloudapi_client.do_request(
-            method=RequestMethod.GET,
+            method=shared_constants.RequestMethod.GET,
             cloudapi_version=CloudApiVersion.VERSION_1_0_0,
-            resource_url_relative_path=f"{CloudApiResource.RIGHT_BUNDLES}/{right_bundle_id}/rights")  # noqa: E501
+            resource_url_relative_path=relative_url)
 
         return rights
