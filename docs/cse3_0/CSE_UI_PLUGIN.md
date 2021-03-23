@@ -7,7 +7,7 @@ title: Kubernetes Clusters UI Plugin for VCD
 
 Starting CSE 3.0 and VCD 10.2, Kubernetes Clusters UI Plugin 2.0 is available out of the box with VCD 10.2
 
-*Refer to [Compatibility Matrix](CSE30.html#cse30-compatibility-matrix) and 
+*Refer to [Compatibility Matrix](CSE30.html#cse30-compatibility-matrix) and
 [Kubernetes Clusters UI Plugin 2.0.0](https://docs.vmware.com/en/VMware-Cloud-Director/10.2/VMware-Cloud-Director-Service-Provider-Admin-Portal-Guide/GUID-A1910FF9-B2CF-49DD-B031-D1245E8740AE.html) documentation*
 
 ## Overview
@@ -114,6 +114,15 @@ This info page contains the following functionalities:
 ---
 
 ## Known Issues
+
+**Creating a cluster using Kubernetes Clusters UI Plugin as system administrator in a large-scale VCD (many orgs, org vdcs, networks, etc) will fail**
+
+When trying to create cluster as a system administrator user, datagrids in cluster create wizard will fail to load, preventing cluster creation. (Error will be an extension timeout error).
+This is because plugin 1.0.3 is not optimized to fetch VCD entities (orgs, ovdcs, networks, etc) at large scale (Tested in an environment with 80+ orgs/ovdcs/networks). The request will overload CSE Server and fail to complete.
+
+Workaround: If system administrator must create a cluster in a large-scale VCD environment, CSE CLI should be used instead.
+
+---
 
 **Re-registering Kubernetes Clusters UI Plugin with VCD fails**
 
