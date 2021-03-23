@@ -120,7 +120,7 @@ This info page contains the following functionalities:
 When trying to create cluster as a system administrator user, datagrids in cluster create wizard will fail to load, preventing cluster creation.
 This is because plugin 1.0.3 is not optimized to fetch VCD entities (orgs, ovdcs, networks, etc) at large scale. The request will overload CSE Server and fail to complete.
 
-Workaround: If system administrator must create a cluster in a large-scale VCD environment, CSE CLI can be used instead.
+Workaround: If system administrator must create a cluster in a large-scale VCD environment, CSE CLI should be used instead.
 
 ---
 
