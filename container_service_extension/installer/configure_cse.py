@@ -863,13 +863,19 @@ def _override_behaviors(cloudapi_client,
     behavior_svc = BehaviorService(cloudapi_client=cloudapi_client)
     for entity_type_id, behaviors in map_entitytypeid_to_behaviors.items():
         for behavior in behaviors:
-            msg = f"Overriding behavior '{behavior.id}' on entity type '{entity_type_id}'"  # noqa: E501
             try:
-                behavior_svc.override_behavior_on_entity_type(behavior, entity_type_id)  # noqa: E501
-                msg_update_callback.general(msg)
-                INSTALL_LOGGER.info(msg)
+                current_behavior: Behavior = behavior_svc.get_behavior_on_entity_type_by_id(behavior.ref, entity_type_id)  # noqa: E501
+                if current_behavior.execution.type == behavior.execution.type:
+                    msg = f"Skipping behavior overriding for '{behavior.id}' on entity type '{entity_type_id}'"  # noqa: E501
+                    msg_update_callback.general(msg)
+                    INSTALL_LOGGER.info(msg)
+                else:
+                    behavior_svc.override_behavior_on_entity_type(behavior, entity_type_id)  # noqa: E501
+                    msg = f"Overriding behavior '{behavior.id}' on entity type '{entity_type_id}'"  # noqa: E501
+                    msg_update_callback.general(msg)
+                    INSTALL_LOGGER.info(msg)
             except cse_exception.BehaviorServiceError as e:
-                msg = f"Failed to override behavior '{behavior.id}' on entity type '{entity_type_id}': {str(e)}"  # noqa: E501
+                msg = f"Overriding behavior '{behavior.id}' on entity type '{entity_type_id}' failed with error {str(e)}"  # noqa: E501
                 msg_update_callback.error(msg)
                 INSTALL_LOGGER.error(msg)
                 raise e
