@@ -870,8 +870,7 @@ def _override_behaviors(cloudapi_client,
                     msg_update_callback.general(msg)
                     INSTALL_LOGGER.info(msg)
                 else:
-                    behavior_svc.override_behavior_on_entity_type(behavior,
-                                                                  entity_type_id)
+                    behavior_svc.override_behavior_on_entity_type(behavior, entity_type_id)  # noqa: E501
                     msg = f"Overriding behavior '{behavior.id}' on entity type '{entity_type_id}'"  # noqa: E501
                     msg_update_callback.general(msg)
                     INSTALL_LOGGER.info(msg)
