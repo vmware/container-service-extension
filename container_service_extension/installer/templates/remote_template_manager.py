@@ -206,7 +206,7 @@ class RemoteTemplateManager():
         if self.filtered_cookbook:
             msg = "Re-using cached copy of filtered template cookbook."
             self.logger.debug(msg)
-            self.msg_update_callback(msg)
+            self.msg_update_callback.general(msg)
         else:
             self.get_unfiltered_remote_template_cookbook()
             self._filter_unsupported_templates()
