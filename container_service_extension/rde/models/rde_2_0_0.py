@@ -7,6 +7,7 @@ from typing import List
 
 import container_service_extension.common.constants.server_constants as server_constants  # noqa: E501
 import container_service_extension.common.constants.shared_constants as shared_constants  # noqa: E501
+import container_service_extension.rde.constants as rde_constants
 from container_service_extension.rde.models.abstractNativeEntity import AbstractNativeEntity  # noqa: E501
 import container_service_extension.rde.models.rde_1_0_0 as rde_1_0_0
 
@@ -231,6 +232,9 @@ class NativeEntity(AbstractNativeEntity):
         :return: native entity
         :rtype: rde_2.0.0.NativeEntity
         """
+        if isinstance(native_entity, NativeEntity):
+            return native_entity
+
         if isinstance(native_entity, rde_1_0_0.NativeEntity):
             rde_1_x_entity: rde_1_0_0.NativeEntity = native_entity
 
@@ -253,8 +257,7 @@ class NativeEntity(AbstractNativeEntity):
                                spec=rde_1_x_entity.spec,
                                status=status,
                                kind=rde_1_x_entity.kind,
-                               api_version=rde_1_x_entity.api_version)
-            # TODO - api_version needs revisit when it is going to be in real use in the upcoming tasks  # noqa: E501
+                               api_version=rde_constants.PAYLOAD_VERSION_2_0)
             return rde_2_entity
 
     @classmethod

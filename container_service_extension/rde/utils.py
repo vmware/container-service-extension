@@ -9,7 +9,11 @@ import json
 import math
 from typing import Union
 
+import semantic_version
+
+
 import container_service_extension.common.utils.core_utils as core_utils
+import container_service_extension.common.utils.server_utils as server_utils
 import container_service_extension.exception.exceptions as excptn
 from container_service_extension.lib.cloudapi.cloudapi_client import CloudApiClient  # noqa: E501
 import container_service_extension.rde.constants as def_constants
@@ -160,3 +164,10 @@ def find_diff_fields(input_spec: dict, reference_spec: dict, exclude_fields: lis
     key_set_for_validation = set(input_dict.keys()) - exclude_key_set
     return [key for key in key_set_for_validation
             if input_dict.get(key) is not None and input_dict.get(key) != reference_dict.get(key)]  # noqa: E501
+
+
+def raise_error_if_unsupported_payload_version(payload_version: str):
+    input_rde_version = def_constants.MAP_INPUT_PAYLOAD_VERSION_TO_RDE_VERSION.get(payload_version, def_constants.PayloadKey.UNKNOWN)  # noqa: E501
+    runtime_rde_version = server_utils.get_rde_version_in_use()
+    if input_rde_version == def_constants.PayloadKey.UNKNOWN or semantic_version.Version(input_rde_version) > semantic_version.Version(runtime_rde_version):  # noqa: E501
+        raise excptn.BadRequestError(f"Unsupported payload version: {payload_version}")  # noqa: E501
