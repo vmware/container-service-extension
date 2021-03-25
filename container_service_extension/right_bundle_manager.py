@@ -55,11 +55,16 @@ class RightBundleManager():
         :returns: HTTP response of the request
         """
         relative_url = \
-            f"{CloudApiResource.RIGHT_BUNDLES}/{right_bundle_id}/tenants"
-        payload = \
-            {"values": [{"id": self.cloudapi_client.get_org_urn_from_id(org_id)} for org_id in org_ids]}  # noqa: E501
+            f"{CloudApiResource.RIGHT_BUNDLES}/{right_bundle_id}" \
+            "/tenants/publish"
+        payload = {
+            "values": [
+                {"id": self.cloudapi_client.get_org_urn_from_id(org_id)}
+                for org_id in org_ids
+            ]
+        }
         return self.cloudapi_client.do_request(
-            method=RequestMethod.PUT,
+            method=RequestMethod.POST,
             cloudapi_version=CloudApiVersion.VERSION_1_0_0,
             resource_url_relative_path=relative_url,
             payload=payload)

@@ -442,6 +442,7 @@ CSE_SERVICE_ROLE_RIGHTS = [
     "Right: Manage",
     "Right: View",
     "Rights Bundle: View",
+    "Rights Bundle: Edit",
     "Role: Create, Edit, Delete, or Copy",
     "Service Configuration: Manage",
     "Service Configuration: View",
