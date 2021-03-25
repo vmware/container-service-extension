@@ -18,7 +18,6 @@ from pyvcloud.vcd.client import BasicLoginCredentials
 from pyvcloud.vcd.client import Client
 from pyvcloud.vcd.exceptions import EntityNotFoundException
 from pyvcloud.vcd.exceptions import OperationNotSupportedException
-import semantic_version
 
 import container_service_extension.common.constants.server_constants as server_constants  # noqa: E501
 import container_service_extension.common.constants.shared_constants as shared_constants  # noqa: E501
@@ -598,9 +597,12 @@ class Service(object, metaclass=Singleton):
             legacy_mode = self.config['service']['legacy_mode']
             org_name = self.config['broker']['org']
             catalog_name = self.config['broker']['catalog']
-            k8_templates = ltm.get_all_k8s_local_template_definition(
+            k8_templates = ltm.get_valid_k8s_local_template_definition(
                 client=client, catalog_name=catalog_name, org_name=org_name,
-                legacy_mode=legacy_mode, logger_debug=logger.SERVER_LOGGER)
+                legacy_mode=legacy_mode,
+                is_tkg_plus_enabled=is_tkg_plus_enabled,
+                logger_debug=logger.SERVER_LOGGER,
+                msg_update_callback=msg_update_callback)
 
             if not k8_templates:
                 msg = "No valid K8 templates were found in catalog " \
@@ -616,43 +618,10 @@ class Service(object, metaclass=Singleton):
             default_template_revision = \
                 str(self.config['broker']['default_template_revision'])
             found_default_template = False
-            curr_cse_version = server_utils.get_installed_cse_version()
             for template in k8_templates:
-                api_version = float(client.get_api_version())
-                if legacy_mode:
-                    template_supported_cse_versions = \
-                        semantic_version.SimpleSpec(
-                            f">={template[server_constants.LocalTemplateKey.MIN_CSE_VERSION]},"  # noqa: E501
-                            f"<={template[server_constants.LocalTemplateKey.MAX_CSE_VERSION]}")  # noqa: E501
-                    if not template_supported_cse_versions.match(curr_cse_version):  # noqa: E501
-                        # Template loaded is not supported by current CSE
-                        # version
-                        msg = f"Skipping loading template data for " \
-                              f"{template[server_constants.LocalTemplateKey.NAME]}" \
-                              f" as it is not supported by CSE {curr_cse_version}"  # noqa: E501
-                        logger.SERVER_LOGGER.debug(msg)
-                        k8_templates.remove(template)
-                        continue
-                if api_version >= float(vCDApiVersion.VERSION_35.value) and \
-                        template[server_constants.LocalTemplateKey.KIND] == \
-                        shared_constants.ClusterEntityKind.TKG_PLUS.value and \
-                        not is_tkg_plus_enabled:
-                    # TKG+ is not enabled on CSE config. Skip the template and
-                    # log the relevant information.
-                    msg = "Skipping loading template data for " \
-                          f"'{template[server_constants.LocalTemplateKey.NAME]}' as " \
-                          "TKG+ is not enabled"  # noqa: E501
-                    logger.SERVER_LOGGER.debug(msg)
-                    k8_templates.remove(template)
-                    continue
                 if str(template[server_constants.LocalTemplateKey.REVISION]) == default_template_revision and \
                         template[server_constants.LocalTemplateKey.NAME] == default_template_name:  # noqa: E501
                     found_default_template = True
-
-                msg = f"Found K8 template '{template['name']}' at revision " \
-                      f"{template['revision']} in catalog '{catalog_name}'"
-                msg_update_callback.general(msg)
-                logger.SERVER_LOGGER.info(msg)
 
             if not found_default_template:
                 msg = f"Default template {default_template_name} with " \

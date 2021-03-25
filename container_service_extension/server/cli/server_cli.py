@@ -26,7 +26,6 @@ from container_service_extension.common.constants.server_constants import CONFIG
 from container_service_extension.common.constants.server_constants import LocalTemplateKey  # noqa: E501
 from container_service_extension.common.constants.server_constants import RemoteTemplateKey  # noqa: E501
 from container_service_extension.common.constants.server_constants import SYSTEM_ORG_NAME  # noqa: E501
-from container_service_extension.common.constants.shared_constants import ClusterEntityKind  # noqa: E501
 from container_service_extension.common.constants.shared_constants import RequestMethod  # noqa: E501
 from container_service_extension.common.constants.shared_constants import SUPPORTED_VCD_API_VERSIONS  # noqa: E501
 import container_service_extension.common.utils.core_utils as utils
@@ -1031,28 +1030,18 @@ def list_template(ctx, config_file_path, skip_config_decryption,
                 legacy_mode = config_dict['service']['legacy_mode']
 
                 local_template_definitions = \
-                    ltm.get_all_k8s_local_template_definition(
+                    ltm.get_valid_k8s_local_template_definition(
                         client=client,
                         catalog_name=catalog_name,
                         legacy_mode=legacy_mode,
+                        is_tkg_plus_enabled=is_tkg_plus_enabled,
                         org_name=org_name,
                         logger_debug=SERVER_CLI_LOGGER)
                 default_template_name = \
                     config_dict['broker']['default_template_name']
                 default_template_revision = \
                     str(config_dict['broker']['default_template_revision'])
-                api_version = float(client.get_api_version())
                 for definition in local_template_definitions:
-                    if api_version >= float(vcd_client.ApiVersion.VERSION_35.value) and \
-                            definition[LocalTemplateKey.KIND] == ClusterEntityKind.TKG_PLUS.value and \
-                            not is_tkg_plus_enabled:  # noqa: E501
-                        # TKG+ is not enabled on CSE config. Skip the template
-                        # and log the relevant information.
-                        msg = "Skipping loading template data for " \
-                              f"'{definition[LocalTemplateKey.NAME]}' as " \
-                              "TKG+ is not enabled"
-                        SERVER_CLI_LOGGER.debug(msg)
-                        continue
                     local_template = {
                         'name': definition[LocalTemplateKey.NAME],
                         'revision': int(definition[LocalTemplateKey.REVISION]),
