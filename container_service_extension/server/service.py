@@ -618,7 +618,7 @@ class Service(object, metaclass=Singleton):
             found_default_template = False
             for template in k8_templates:
                 api_version = float(client.get_api_version())
-                if api_version >= float(vCDApiVersion.VERSION_35.value) and \
+                if not legacy_mode and \
                         template[server_constants.LocalTemplateKey.KIND] == \
                         shared_constants.ClusterEntityKind.TKG_PLUS.value and \
                         not is_tkg_plus_enabled:

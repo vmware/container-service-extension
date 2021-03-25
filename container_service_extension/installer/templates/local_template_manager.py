@@ -106,7 +106,7 @@ def get_all_k8s_local_template_definition(client, catalog_name, org=None,
             continue
 
         if not legacy_mode:
-            # Do not load the template in legacy_mode if
+            # Do not load the template in non-legacy_mode if
             # min_cse_version and max_cse_version are not present
             # in the metadata_dict
             curr_cse_version = server_utils.get_installed_cse_version()
