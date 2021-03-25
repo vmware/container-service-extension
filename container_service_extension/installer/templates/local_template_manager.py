@@ -14,6 +14,8 @@ import semantic_version
 
 from container_service_extension.common.constants.server_constants import LegacyLocalTemplatekey  # noqa: E501
 from container_service_extension.common.constants.server_constants import LocalTemplateKey  # noqa: E501
+import container_service_extension.common.constants.shared_constants as \
+    shared_constants
 import container_service_extension.common.utils.core_utils as utils
 from container_service_extension.common.utils.pyvcloud_utils import get_org
 import container_service_extension.common.utils.server_utils as server_utils
@@ -138,6 +140,57 @@ def get_all_k8s_local_template_definition(client, catalog_name, org=None,
         templates.append(metadata_dict)
 
     return templates
+
+
+def get_valid_k8s_local_template_definition(client, catalog_name, org=None,
+                                            org_name=None,
+                                            legacy_mode=False,
+                                            is_tkg_plus_enabled=False,
+                                            logger_debug=logger.NULL_LOGGER,
+                                            msg_update_callback=utils.NullPrinter()):  # noqa: E501
+    """Get valid templates as per the current server configuration.
+
+    :param pyvcloud.vcd.Client client: A sys admin client to be used to
+        retrieve metadata off the catalog items.
+    :param str catalog_name: Name of the catalog where the template resides.
+    :param pyvcloud.vcd.Org org: Org object which hosts the catalog.
+    :param str org_name: Name of the org that is hosting the catalog. Can be
+        provided in lieu of param org, however param org takes precedence.
+    :param bool legacy_mode: boolean indicating if the server is configured
+        in legacy_mode
+    :param bool is_tkg_plus_enabled: Boolean indicaing if server is configured
+        to work with TKG+
+    :param logger logger_debug: logger to log the results or exceptions.
+    :param utils.ConsoleMessagePrinter msg_update_callback:
+
+    :return: list of dictionaries containing template data
+    :rtype: list of dicts
+    """
+    all_templates = get_all_k8s_local_template_definition(
+        client=client,
+        catalog_name=catalog_name,
+        org=org,
+        org_name=org_name,
+        legacy_mode=legacy_mode,
+        logger_debug=logger_debug,
+        msg_update_callback=msg_update_callback)
+    for template in all_templates:
+        if not legacy_mode and \
+                template[LocalTemplateKey.KIND] == \
+                shared_constants.ClusterEntityKind.TKG_PLUS.value and \
+                not is_tkg_plus_enabled:
+            # TKG+ is not enabled on CSE config. Skip the template and
+            # log the relevant information.
+            msg = "Skipping loading template data for " \
+                  f"'{template[LocalTemplateKey.NAME]}' as TKG+ is not enabled"
+            logger_debug.debug(msg)
+            all_templates.remove(template)
+            continue
+        msg = f"Found K8 template '{template['name']}' at revision " \
+              f"{template['revision']} in catalog '{catalog_name}'"
+        msg_update_callback.general(msg)
+        logger_debug.info(msg)
+    return all_templates
 
 
 def save_metadata(client, org_name, catalog_name, catalog_item_name,
