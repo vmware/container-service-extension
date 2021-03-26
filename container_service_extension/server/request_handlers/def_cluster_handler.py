@@ -138,6 +138,7 @@ def cluster_update(data: dict, op_ctx: ctx.OperationContext):
     cluster_id = data[RequestKey.CLUSTER_ID]
     input_entity: dict = data[RequestKey.INPUT_SPEC]
     payload_version = input_entity.get(rde_constants.PayloadKey.PAYLOAD_VERSION)  # noqa: E501
+    rde_utils.raise_error_if_unsupported_payload_version(payload_version)
 
     # Validate the input
     rde_validator_factory.get_validator(

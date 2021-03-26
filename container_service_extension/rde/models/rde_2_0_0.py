@@ -226,7 +226,10 @@ class NativeEntity(AbstractNativeEntity):
 
     @classmethod
     def from_native_entity(cls, native_entity: AbstractNativeEntity):
-        """Construct rde_2.0.0 native entity.
+        """Construct rde_2.0.0 native entity from different rde_x.x.x.
+
+        Use case: converts rde of given payload version to rde of runtime rde
+        version.
 
         :param AbstractNativeEntity native_entity: input native entity
         :return: native entity
@@ -333,6 +336,6 @@ class NativeEntity(AbstractNativeEntity):
                 ovdc_name=cluster['vdc_name'],
                 cluster_name=cluster['name']
             ),
-            api_version=""
+            api_version=rde_constants.PAYLOAD_VERSION_2_0
         )
         return cluster_entity

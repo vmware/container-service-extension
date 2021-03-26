@@ -645,7 +645,7 @@ OVDC_HANDLERS = [
     {
         'url': f"cse/3.0/ovdc/${RequestKey.OVDC_ID}",
         RequestMethod.GET: {
-            ('35.0',): {
+            ('35.0', '36.0'): {
                 'allowed_params': [],
                 'required_params': [],
                 'operation': CseOperation.V35_OVDC_INFO,
@@ -654,7 +654,7 @@ OVDC_HANDLERS = [
             }
         },
         RequestMethod.PUT: {
-            ('35.0',): {
+            ('35.0', '36.0'): {
                 'allowed_params': [],
                 'required_params': [],
                 'verify_payload': False,
@@ -673,7 +673,7 @@ ORG_VDC_HANDLERS = [
     {
         'url': "cse/3.0/orgvdcs",
         RequestMethod.GET: {
-            ('35.0',): {
+            ('35.0', '36.0'): {
                 'allowed_params': [],
                 'required_params': [],
                 'operation': CseOperation.V35_ORG_VDC_LIST,
