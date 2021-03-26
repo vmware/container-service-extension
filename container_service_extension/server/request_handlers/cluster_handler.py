@@ -28,8 +28,8 @@ import container_service_extension.common.thread_local_data as thread_local_data
 import container_service_extension.common.utils.server_utils as server_utils
 import container_service_extension.lib.telemetry.constants as telemetry_constants  # noqa: E501
 import container_service_extension.lib.telemetry.telemetry_handler as telemetry_handler  # noqa: E501
+import container_service_extension.rde.backend.cluster_service_factory as cluster_service_factory  # noqa: E501
 from container_service_extension.rde.behaviors.behavior_model import BehaviorOperation  # noqa: E501
-import container_service_extension.rde.common.utils as rde_common_utils
 import container_service_extension.rde.constants as rde_constants
 import container_service_extension.rde.utils as rde_utils
 import container_service_extension.rde.validators.validator_factory as rde_validator_factory  # noqa: E501
@@ -63,7 +63,7 @@ def cluster_create(data: dict, op_ctx: ctx.OperationContext):
     # Convert the input entity to runtime rde format.
     # Based on the runtime rde, call the appropriate backend method.
     converted_rde = rde_utils.convert_input_rde_to_runtime_rde_format(input_entity)  # noqa: E501
-    svc = rde_common_utils.get_runtime_cluster_service(op_ctx)
+    svc = cluster_service_factory.ClusterServiceFactory(op_ctx).get_cluster_service()  # noqa: E501
     # TODO: Response RDE must be compatible with the request RDE.
     #  Conversions may be needed especially if there is a major version
     #  difference in the input RDE and runtime RDE.
@@ -77,7 +77,7 @@ def native_cluster_list(data: dict, op_ctx: ctx.OperationContext):
 
     :return: List
     """
-    svc = rde_common_utils.get_runtime_cluster_service(op_ctx)
+    svc = cluster_service_factory.ClusterServiceFactory(op_ctx).get_cluster_service()  # noqa: E501
     filters = data.get(RequestKey.QUERY_PARAMS, {})
     page_number = int(filters.get(PaginationKey.PAGE_NUMBER,
                                   CSE_PAGINATION_FIRST_PAGE_NUMBER))
@@ -112,7 +112,7 @@ def cluster_list(data: dict, op_ctx: ctx.OperationContext):
 
     :return: List
     """
-    svc = rde_common_utils.get_runtime_cluster_service(op_ctx)
+    svc = cluster_service_factory.ClusterServiceFactory(op_ctx).get_cluster_service()  # noqa: E501
     # response should not be paginated
     return [asdict(def_entity) for def_entity in
             svc.list_clusters(data.get(RequestKey.QUERY_PARAMS, {}))]
@@ -130,7 +130,7 @@ def cluster_info(data: dict, op_ctx: ctx.OperationContext):
 
     :return: Dict
     """
-    svc = rde_common_utils.get_runtime_cluster_service(op_ctx)
+    svc = cluster_service_factory.ClusterServiceFactory(op_ctx).get_cluster_service()  # noqa: E501
     cluster_id = data[RequestKey.CLUSTER_ID]
     return asdict(svc.get_cluster_info(cluster_id))
 
@@ -144,7 +144,7 @@ def cluster_config(data: dict, op_ctx: ctx.OperationContext):
 
     :return: Dict
     """
-    svc = rde_common_utils.get_runtime_cluster_service(op_ctx)
+    svc = cluster_service_factory.ClusterServiceFactory(op_ctx).get_cluster_service()  # noqa: E501
     cluster_id = data[RequestKey.CLUSTER_ID]
     return svc.get_cluster_config(cluster_id)
 
@@ -174,7 +174,7 @@ def cluster_update(data: dict, op_ctx: ctx.OperationContext):
     # Convert the input entity to runtime rde format.
     # Based on the runtime rde, call the appropriate backend method.
     converted_rde = rde_utils.convert_input_rde_to_runtime_rde_format(input_entity)  # noqa: E501
-    svc = rde_common_utils.get_runtime_cluster_service(op_ctx)
+    svc = cluster_service_factory.ClusterServiceFactory(op_ctx).get_cluster_service()  # noqa: E501
     # TODO: Response RDE must be compatible with the request RDE.
     #  Conversions may be needed especially if there is a major version
     #  difference in the input RDE and runtime RDE.
@@ -188,7 +188,7 @@ def cluster_upgrade_plan(data, op_ctx: ctx.OperationContext):
 
     :return: List[Tuple(str, str)]
     """
-    svc = rde_common_utils.get_runtime_cluster_service(op_ctx)
+    svc = cluster_service_factory.ClusterServiceFactory(op_ctx).get_cluster_service()  # noqa: E501
     return svc.get_cluster_upgrade_plan(data[RequestKey.CLUSTER_ID])
 
 
@@ -204,7 +204,7 @@ def cluster_delete(data: dict, op_ctx: ctx.OperationContext):
 
     :return: Dict
     """
-    svc = rde_common_utils.get_runtime_cluster_service(op_ctx)
+    svc = cluster_service_factory.ClusterServiceFactory(op_ctx).get_cluster_service()  # noqa: E501
     cluster_id = data[RequestKey.CLUSTER_ID]
     return asdict(svc.delete_cluster(cluster_id))
 
@@ -221,7 +221,7 @@ def nfs_node_delete(data, op_ctx: ctx.OperationContext):
 
     :return: Dict
     """
-    svc = rde_common_utils.get_runtime_cluster_service(op_ctx)
+    svc = cluster_service_factory.ClusterServiceFactory(op_ctx).get_cluster_service()  # noqa: E501
     cluster_id = data[RequestKey.CLUSTER_ID]
     node_name = data[RequestKey.NODE_NAME]
 
@@ -241,7 +241,7 @@ def nfs_node_delete(data, op_ctx: ctx.OperationContext):
 @request_utils.cluster_api_exception_handler
 def cluster_acl_info(data: dict, op_ctx: ctx.OperationContext):
     """Request handler for cluster acl list operation."""
-    svc = rde_common_utils.get_runtime_cluster_service(op_ctx)
+    svc = cluster_service_factory.ClusterServiceFactory(op_ctx).get_cluster_service()  # noqa: E501
     cluster_id = data[RequestKey.CLUSTER_ID]
     query = data.get(RequestKey.QUERY_PARAMS, {})
     page = int(query.get(PaginationKey.PAGE_NUMBER, CSE_PAGINATION_FIRST_PAGE_NUMBER))  # noqa: E501
@@ -261,7 +261,7 @@ def cluster_acl_info(data: dict, op_ctx: ctx.OperationContext):
 @request_utils.cluster_api_exception_handler
 def cluster_acl_update(data: dict, op_ctx: ctx.OperationContext):
     """Request handler for cluster acl update operation."""
-    svc = rde_common_utils.get_runtime_cluster_service(op_ctx)
+    svc = cluster_service_factory.ClusterServiceFactory(op_ctx).get_cluster_service()  # noqa: E501
     cluster_id = data[RequestKey.CLUSTER_ID]
     update_acl_entries = data.get(RequestKey.INPUT_SPEC, {}).get(ClusterAclKey.ACCESS_SETTING)  # noqa: E501
     svc.update_cluster_acl(cluster_id, update_acl_entries)
