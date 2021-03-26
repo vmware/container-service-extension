@@ -16,6 +16,7 @@ from container_service_extension.exception.exception_handler import handle_excep
 import container_service_extension.exception.exceptions as cse_exception
 from container_service_extension.logging.logger import SERVER_LOGGER as LOGGER
 import container_service_extension.security.context.operation_context as ctx
+import container_service_extension.server.request_handlers.cluster_handler as cluster_handler  # noqa: E501
 import \
     container_service_extension.server.request_handlers.legacy.native_cluster_handler as native_cluster_handler  # noqa: E501
 import container_service_extension.server.request_handlers.legacy.ovdc_handler as ovdc_handler  # noqa: E501
@@ -25,7 +26,6 @@ import container_service_extension.server.request_handlers.system_handler as sys
 import container_service_extension.server.request_handlers.template_handler as template_handler  # noqa: E501 E501
 import container_service_extension.server.request_handlers.v35.def_cluster_handler as v35_cluster_handler  # noqa: E501
 import container_service_extension.server.request_handlers.v35.ovdc_handler as v35_ovdc_handler  # noqa: E501
-import container_service_extension.server.request_handlers.v36.def_cluster_handler as v36_cluster_handler  # noqa: E501
 
 # /system end points
 SYSTEM_HANDLERS = [
@@ -424,7 +424,7 @@ CLUSTER_HANDLERS = [
                 'allowed_params': [],
                 'required_params': [],
                 'operation': CseOperation.V36_CLUSTER_LIST,
-                'handler': v36_cluster_handler.cluster_list,
+                'handler': cluster_handler.cluster_list,
                 'feature_flags': ['non_legacy_api']
             }
         },
@@ -444,7 +444,7 @@ CLUSTER_HANDLERS = [
                 'verify_payload': False,
                 'payload_type': '*',
                 'operation': CseOperation.V36_CLUSTER_CREATE,
-                'handler': v36_cluster_handler.cluster_create,
+                'handler': cluster_handler.cluster_create,
                 'feature_flags': ['non_legacy_api']
             }
         },
@@ -456,7 +456,7 @@ CLUSTER_HANDLERS = [
                 'allowed_params': ['org_name', 'ovdc_name', 'pageSize', 'page'],  # noqa: E501
                 'required_params': [],
                 'operation': CseOperation.V36_NATIVE_CLUSTER_LIST,
-                'handler': v36_cluster_handler.native_cluster_list,
+                'handler': cluster_handler.native_cluster_list,
                 'feature_flags': ['non_legacy_api']
             }
         },
@@ -475,7 +475,7 @@ CLUSTER_HANDLERS = [
                 'allowed_params': [],
                 'required_params': [],
                 'operation': CseOperation.V36_CLUSTER_INFO,
-                'handler': v36_cluster_handler.cluster_info,
+                'handler': cluster_handler.cluster_info,
                 'feature_flags': ['non_legacy_api']
             }
         },
@@ -495,7 +495,7 @@ CLUSTER_HANDLERS = [
                 'verify_payload': False,
                 'payload_type': '*',
                 'operation': CseOperation.V36_CLUSTER_UPDATE,
-                'handler': v36_cluster_handler.cluster_update,
+                'handler': cluster_handler.cluster_update,
                 'feature_flags': ['non_legacy_api']
             }
         },
@@ -511,7 +511,7 @@ CLUSTER_HANDLERS = [
                 'allowed_params': [],
                 'required_params': [],
                 'operation': CseOperation.V36_CLUSTER_DELETE,
-                'handler': v36_cluster_handler.cluster_delete,
+                'handler': cluster_handler.cluster_delete,
                 'feature_flags': ['non_legacy_api']
             }
         }
@@ -530,7 +530,7 @@ CLUSTER_HANDLERS = [
                 'allowed_params': [],
                 'required_params': [],
                 'operation': CseOperation.V36_CLUSTER_CONFIG,
-                'handler': v36_cluster_handler.cluster_config,
+                'handler': cluster_handler.cluster_config,
                 'feature_flags': ['non_legacy_api']
             }
         },
@@ -549,7 +549,7 @@ CLUSTER_HANDLERS = [
                 'allowed_params': [],
                 'required_params': [],
                 'operation': CseOperation.V36_CLUSTER_UPGRADE_PLAN,
-                'handler': v36_cluster_handler.cluster_upgrade_plan,
+                'handler': cluster_handler.cluster_upgrade_plan,
                 'feature_flags': ['non_legacy_api']
             }
         },
@@ -582,7 +582,7 @@ CLUSTER_HANDLERS = [
                 'allowed_params': [],
                 'required_params': [],
                 'operation': CseOperation.V36_NODE_DELETE,
-                'handler': v36_cluster_handler.nfs_node_delete,
+                'handler': cluster_handler.nfs_node_delete,
                 'feature_flags': ['non_legacy_api']
             }
         },
@@ -601,7 +601,7 @@ CLUSTER_HANDLERS = [
                 'allowed_params': [],
                 'required_params': [],
                 'operation': CseOperation.V36_CLUSTER_ACL_LIST,
-                'handler': v36_cluster_handler.cluster_acl_info,
+                'handler': cluster_handler.cluster_acl_info,
                 'feature_flags': ['non_legacy_api']
             }
         },
@@ -621,7 +621,7 @@ CLUSTER_HANDLERS = [
                 'verify_payload': False,
                 'payload_type': '*',
                 'operation': CseOperation.V36_CLUSTER_ACL_UPDATE,
-                'handler': v36_cluster_handler.cluster_acl_update,
+                'handler': cluster_handler.cluster_acl_update,
                 'feature_flags': ['non_legacy_api']
             }
         },
@@ -645,7 +645,7 @@ OVDC_HANDLERS = [
     {
         'url': f"cse/3.0/ovdc/${RequestKey.OVDC_ID}",
         RequestMethod.GET: {
-            ('35.0',): {
+            ('35.0', '36.0'): {
                 'allowed_params': [],
                 'required_params': [],
                 'operation': CseOperation.V35_OVDC_INFO,
@@ -654,7 +654,7 @@ OVDC_HANDLERS = [
             }
         },
         RequestMethod.PUT: {
-            ('35.0',): {
+            ('35.0', '36.0'): {
                 'allowed_params': [],
                 'required_params': [],
                 'verify_payload': False,
@@ -673,7 +673,7 @@ ORG_VDC_HANDLERS = [
     {
         'url': "cse/3.0/orgvdcs",
         RequestMethod.GET: {
-            ('35.0',): {
+            ('35.0', '36.0'): {
                 'allowed_params': [],
                 'required_params': [],
                 'operation': CseOperation.V35_ORG_VDC_LIST,
