@@ -7,6 +7,7 @@ import importlib
 from importlib import resources as pkg_resources
 import json
 import math
+from typing import Type
 from typing import Union
 
 import semantic_version
@@ -17,8 +18,10 @@ import container_service_extension.common.utils.server_utils as server_utils
 import container_service_extension.exception.exceptions as excptn
 from container_service_extension.lib.cloudapi.cloudapi_client import CloudApiClient  # noqa: E501
 import container_service_extension.rde.constants as def_constants
+from container_service_extension.rde.models.abstractNativeEntity import AbstractNativeEntity  # noqa: E501
 import container_service_extension.rde.models.rde_1_0_0 as rde_1_0_0
 import container_service_extension.rde.models.rde_2_0_0 as rde_2_0_0
+import container_service_extension.rde.models.rde_factory as rde_factory
 
 
 def raise_error_if_def_not_supported(cloudapi_client: CloudApiClient):
@@ -171,3 +174,19 @@ def raise_error_if_unsupported_payload_version(payload_version: str):
     runtime_rde_version = server_utils.get_rde_version_in_use()
     if input_rde_version == def_constants.PayloadKey.UNKNOWN or semantic_version.Version(input_rde_version) > semantic_version.Version(runtime_rde_version):  # noqa: E501
         raise excptn.BadRequestError(f"Unsupported payload version: {payload_version}")  # noqa: E501
+
+
+def convert_input_rde_to_runtime_rde_format(input_entity: dict):
+    """Convert input entity to runtime rde format.
+
+    :param AbstractNativeEntity input_entity: entity to be converted
+    :return: Entity in runtime rde format
+    :rtype: AbstractNativeEntity
+    """
+    payload_version = input_entity.get(def_constants.PayloadKey.PAYLOAD_VERSION)  # noqa: E501
+    runtime_rde_version = server_utils.get_rde_version_in_use()
+    RuntimeNativeEntityClass: Type[AbstractNativeEntity] = rde_factory.get_rde_model(runtime_rde_version)  # noqa: E501
+    InputNativeEntityClass: Type[AbstractNativeEntity] = rde_factory.get_rde_model(  # noqa: E501
+        def_constants.MAP_INPUT_PAYLOAD_VERSION_TO_RDE_VERSION[payload_version])  # noqa: E501
+    input_rde: AbstractNativeEntity = InputNativeEntityClass(**input_entity)  # noqa: E501
+    return RuntimeNativeEntityClass.from_native_entity(input_rde)

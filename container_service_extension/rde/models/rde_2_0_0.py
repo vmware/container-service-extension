@@ -228,8 +228,8 @@ class NativeEntity(AbstractNativeEntity):
     def from_native_entity(cls, native_entity: AbstractNativeEntity):
         """Construct rde_2.0.0 native entity from different rde_x.x.x.
 
-        Use case: converts rde of given payload version to rde of runtime rde
-        version.
+        Use case: converts the NativeEntity of the specified RDE version
+        to RDE 2.0.0.
 
         :param AbstractNativeEntity native_entity: input native entity
         :return: native entity

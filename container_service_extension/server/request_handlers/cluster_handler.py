@@ -1,8 +1,22 @@
 # container-service-extension
 # Copyright (c) 2020 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
+
+"""Support CSE 3.1 custer requests.
+
+Starting CSE 3.1, this module handles all the cluster requests coming in at
+any RDE version (>= 2.0) and at any request api_version (>=36).
+
+Responsibility of the functions in this file:
+1. Validate the Input payload based on the (Operation, payload_version).
+   Get the validator based on the payload_version.
+2. Convert the input entity to runtime rde format.
+3. Based on the runtime rde, call the appropriate backend method.
+4. Convert the response to be compatible with the request payload
+   version (If request = X.Y, the response must be X.Z where Z>=Y)
+5. Return the response.
+"""
 from dataclasses import asdict
-from typing import Type
 
 import container_service_extension.common.constants.server_constants as server_constants  # noqa: E501
 from container_service_extension.common.constants.shared_constants import ClusterAclKey  # noqa: E501
@@ -14,15 +28,17 @@ import container_service_extension.common.thread_local_data as thread_local_data
 import container_service_extension.common.utils.server_utils as server_utils
 import container_service_extension.lib.telemetry.constants as telemetry_constants  # noqa: E501
 import container_service_extension.lib.telemetry.telemetry_handler as telemetry_handler  # noqa: E501
-import container_service_extension.rde.backend.cluster_service_factory as cluster_service_factory  # noqa: E501
 from container_service_extension.rde.behaviors.behavior_model import BehaviorOperation  # noqa: E501
+import container_service_extension.rde.common.utils as rde_common_utils
 import container_service_extension.rde.constants as rde_constants
-from container_service_extension.rde.models.abstractNativeEntity import AbstractNativeEntity  # noqa: E501
-import container_service_extension.rde.models.rde_factory as rde_factory
 import container_service_extension.rde.utils as rde_utils
 import container_service_extension.rde.validators.validator_factory as rde_validator_factory  # noqa: E501
 import container_service_extension.security.context.operation_context as ctx
 import container_service_extension.server.request_handlers.request_utils as request_utils  # noqa: E501
+
+
+# TODO: Needs to evaluate if we want to handle RDE 1.0 requests coming
+#  in at 36.0 in this handler.
 
 
 @telemetry_handler.record_user_action_telemetry(cse_operation=telemetry_constants.CseOperation.V36_CLUSTER_APPLY)  # noqa: E501
@@ -37,14 +53,20 @@ def cluster_create(data: dict, op_ctx: ctx.OperationContext):
     payload_version = input_entity.get(rde_constants.PayloadKey.PAYLOAD_VERSION)  # noqa: E501
     rde_utils.raise_error_if_unsupported_payload_version(payload_version)
 
-    # Validate the input
+    # Validate the Input payload based on the (Operation, payload_version).
+    # Get the validator based on the payload_version
     rde_validator_factory.get_validator(
         rde_version=rde_constants.MAP_INPUT_PAYLOAD_VERSION_TO_RDE_VERSION[
             payload_version]).validate(cloudapi_client=op_ctx.cloudapi_client,
                                        entity=input_entity)
 
-    converted_rde = _get_runtime_entity_from_input_spec(input_entity)
-    svc = _get_runtime_cluster_service(op_ctx)
+    # Convert the input entity to runtime rde format.
+    # Based on the runtime rde, call the appropriate backend method.
+    converted_rde = rde_utils.convert_input_rde_to_runtime_rde_format(input_entity)  # noqa: E501
+    svc = rde_common_utils.get_runtime_cluster_service(op_ctx)
+    # TODO: Response RDE must be compatible with the request RDE.
+    #  Conversions may be needed especially if there is a major version
+    #  difference in the input RDE and runtime RDE.
     return asdict(svc.create_cluster(converted_rde))
 
 
@@ -55,7 +77,7 @@ def native_cluster_list(data: dict, op_ctx: ctx.OperationContext):
 
     :return: List
     """
-    svc = _get_runtime_cluster_service(op_ctx)
+    svc = rde_common_utils.get_runtime_cluster_service(op_ctx)
     filters = data.get(RequestKey.QUERY_PARAMS, {})
     page_number = int(filters.get(PaginationKey.PAGE_NUMBER,
                                   CSE_PAGINATION_FIRST_PAGE_NUMBER))
@@ -90,7 +112,7 @@ def cluster_list(data: dict, op_ctx: ctx.OperationContext):
 
     :return: List
     """
-    svc = _get_runtime_cluster_service(op_ctx)
+    svc = rde_common_utils.get_runtime_cluster_service(op_ctx)
     # response should not be paginated
     return [asdict(def_entity) for def_entity in
             svc.list_clusters(data.get(RequestKey.QUERY_PARAMS, {}))]
@@ -108,7 +130,7 @@ def cluster_info(data: dict, op_ctx: ctx.OperationContext):
 
     :return: Dict
     """
-    svc = _get_runtime_cluster_service(op_ctx)
+    svc = rde_common_utils.get_runtime_cluster_service(op_ctx)
     cluster_id = data[RequestKey.CLUSTER_ID]
     return asdict(svc.get_cluster_info(cluster_id))
 
@@ -122,7 +144,7 @@ def cluster_config(data: dict, op_ctx: ctx.OperationContext):
 
     :return: Dict
     """
-    svc = _get_runtime_cluster_service(op_ctx)
+    svc = rde_common_utils.get_runtime_cluster_service(op_ctx)
     cluster_id = data[RequestKey.CLUSTER_ID]
     return svc.get_cluster_config(cluster_id)
 
@@ -140,7 +162,8 @@ def cluster_update(data: dict, op_ctx: ctx.OperationContext):
     payload_version = input_entity.get(rde_constants.PayloadKey.PAYLOAD_VERSION)  # noqa: E501
     rde_utils.raise_error_if_unsupported_payload_version(payload_version)
 
-    # Validate the input
+    # Validate the Input payload based on the (Operation, payload_version).
+    # Get the validator based on the payload_version
     rde_validator_factory.get_validator(
         rde_version=rde_constants.MAP_INPUT_PAYLOAD_VERSION_TO_RDE_VERSION[
             payload_version]). \
@@ -148,8 +171,13 @@ def cluster_update(data: dict, op_ctx: ctx.OperationContext):
                  entity=input_entity,
                  operation=BehaviorOperation.UPDATE_CLUSTER)
 
-    converted_rde = _get_runtime_entity_from_input_spec(input_entity)
-    svc = _get_runtime_cluster_service(op_ctx)
+    # Convert the input entity to runtime rde format.
+    # Based on the runtime rde, call the appropriate backend method.
+    converted_rde = rde_utils.convert_input_rde_to_runtime_rde_format(input_entity)  # noqa: E501
+    svc = rde_common_utils.get_runtime_cluster_service(op_ctx)
+    # TODO: Response RDE must be compatible with the request RDE.
+    #  Conversions may be needed especially if there is a major version
+    #  difference in the input RDE and runtime RDE.
     return asdict(svc.update_cluster(cluster_id, converted_rde))
 
 
@@ -160,7 +188,7 @@ def cluster_upgrade_plan(data, op_ctx: ctx.OperationContext):
 
     :return: List[Tuple(str, str)]
     """
-    svc = _get_runtime_cluster_service(op_ctx)
+    svc = rde_common_utils.get_runtime_cluster_service(op_ctx)
     return svc.get_cluster_upgrade_plan(data[RequestKey.CLUSTER_ID])
 
 
@@ -176,7 +204,7 @@ def cluster_delete(data: dict, op_ctx: ctx.OperationContext):
 
     :return: Dict
     """
-    svc = _get_runtime_cluster_service(op_ctx)
+    svc = rde_common_utils.get_runtime_cluster_service(op_ctx)
     cluster_id = data[RequestKey.CLUSTER_ID]
     return asdict(svc.delete_cluster(cluster_id))
 
@@ -193,7 +221,7 @@ def nfs_node_delete(data, op_ctx: ctx.OperationContext):
 
     :return: Dict
     """
-    svc = _get_runtime_cluster_service(op_ctx)
+    svc = rde_common_utils.get_runtime_cluster_service(op_ctx)
     cluster_id = data[RequestKey.CLUSTER_ID]
     node_name = data[RequestKey.NODE_NAME]
 
@@ -213,7 +241,7 @@ def nfs_node_delete(data, op_ctx: ctx.OperationContext):
 @request_utils.cluster_api_exception_handler
 def cluster_acl_info(data: dict, op_ctx: ctx.OperationContext):
     """Request handler for cluster acl list operation."""
-    svc = _get_runtime_cluster_service(op_ctx)
+    svc = rde_common_utils.get_runtime_cluster_service(op_ctx)
     cluster_id = data[RequestKey.CLUSTER_ID]
     query = data.get(RequestKey.QUERY_PARAMS, {})
     page = int(query.get(PaginationKey.PAGE_NUMBER, CSE_PAGINATION_FIRST_PAGE_NUMBER))  # noqa: E501
@@ -233,24 +261,7 @@ def cluster_acl_info(data: dict, op_ctx: ctx.OperationContext):
 @request_utils.cluster_api_exception_handler
 def cluster_acl_update(data: dict, op_ctx: ctx.OperationContext):
     """Request handler for cluster acl update operation."""
-    rde_in_use = server_utils.get_rde_version_in_use()
-    svc = cluster_service_factory.ClusterServiceFactory(op_ctx). \
-        get_cluster_service(rde_in_use)
+    svc = rde_common_utils.get_runtime_cluster_service(op_ctx)
     cluster_id = data[RequestKey.CLUSTER_ID]
     update_acl_entries = data.get(RequestKey.INPUT_SPEC, {}).get(ClusterAclKey.ACCESS_SETTING)  # noqa: E501
     svc.update_cluster_acl(cluster_id, update_acl_entries)
-
-
-def _get_runtime_entity_from_input_spec(input_entity: dict):
-    payload_version = input_entity.get(rde_constants.PayloadKey.PAYLOAD_VERSION)  # noqa: E501
-    runtime_rde_version = server_utils.get_rde_version_in_use()
-    RuntimeNativeEntityClass: Type[AbstractNativeEntity] = rde_factory.get_rde_model(runtime_rde_version)  # noqa: E501
-    InputNativeEntityClass: Type[AbstractNativeEntity] = rde_factory.get_rde_model(  # noqa: E501
-        rde_constants.MAP_INPUT_PAYLOAD_VERSION_TO_RDE_VERSION[payload_version])  # noqa: E501
-    input_rde: AbstractNativeEntity = InputNativeEntityClass(**input_entity)  # noqa: E501
-    return RuntimeNativeEntityClass.from_native_entity(input_rde)
-
-
-def _get_runtime_cluster_service(op_ctx: ctx.OperationContext):
-    rde_in_use = server_utils.get_rde_version_in_use()
-    return cluster_service_factory.ClusterServiceFactory(op_ctx).get_cluster_service(rde_in_use)  # noqa: E501
