@@ -14,6 +14,7 @@ from container_service_extension.logging.logger import SERVER_LOGGER as LOGGER
 import container_service_extension.mqi.consumer.constants as constants
 from container_service_extension.mqi.consumer.consumer_thread_pool_executor \
     import ConsumerThreadPoolExecutor
+from container_service_extension.mqi.consumer.mqtt_publisher import MQTTPublisher  # noqa: E501
 import container_service_extension.mqi.consumer.utils as utils
 import container_service_extension.server.behavior_dispatcher as behavior_dispatcher  # noqa: E501
 
@@ -36,59 +37,23 @@ class MQTTConsumer:
         self.num_processors = num_processors
         self.fsencoding = sys.getfilesystemencoding()
         self._mqtt_client = None
+        self._mqtt_publisher: MQTTPublisher = None
         self._ctpe = ConsumerThreadPoolExecutor(self.num_processors)
         self._behavior_tpe = ConsumerThreadPoolExecutor(constants.BEHAVIOR_THREAD_POOL_SIZE)  # noqa: E501
         self._publish_lock = Lock()
         self._is_closing = False
 
-    def form_behavior_response_json(self, task_id, entity_id, payload, status):
-        response_json = {
-            "type": "BEHAVIOR_RESPONSE",
-            "headers": {
-                "taskId": task_id,
-                "entityId": entity_id,
-                "status": status
-            },
-            "payload": payload
-        }
-        return response_json
-
-    def form_response_json(self, request_id, status_code, reply_body_str,
-                           task_path=None):
-        response_json = {
-            "type": "API_RESPONSE",
-            "headers": {
-                "requestId": request_id,
-            },
-            "httpResponse": {
-                "statusCode": status_code,
-                "headers": {
-                    "Content-Type": "application/json",
-                    "Content-Length": len(reply_body_str)
-                },
-                "body": utils.format_response_body(reply_body_str,
-                                                   self.fsencoding)
-            }
-        }
-
-        # Add location header is appropriate status code
-        if status_code in (requests.codes.created,
-                           requests.codes.accepted,
-                           requests.codes.found,
-                           requests.codes.see_other) \
-                and task_path is not None:
-            response_json['httpResponse']['headers']['Location'] = task_path
-        return response_json
-
     def process_behavior_message(self, msg_json):
-        status, payload = behavior_dispatcher.process_behavior_request(msg_json)  # noqa: E501
+        status, payload = behavior_dispatcher.process_behavior_request(
+            msg_json, self._mqtt_publisher)
         task_id: str = msg_json['headers']['taskId']
         entity_id: str = msg_json['headers']['entityId']
-        response_json = self.form_behavior_response_json(task_id=task_id,
-                                                         entity_id=entity_id,
-                                                         payload=payload,
-                                                         status=status)
-        self.send_response(response_json)
+        response_json = self._mqtt_publisher.form_behavior_response_json(
+            task_id=task_id,
+            entity_id=entity_id,
+            payload=payload,
+            status=status)
+        self._mqtt_publisher.send_response(response_json)
         LOGGER.debug(f'MQTT response: {response_json}')
 
     def process_mqtt_message(self, msg):
@@ -102,37 +67,25 @@ class MQTTConsumer:
 
         task_path = utils.get_task_path_from_reply_body(reply_body)
         reply_body_str = json.dumps(reply_body)
-        response_json = self.form_response_json(
+        response_json = self._mqtt_publisher.form_response_json(
             request_id=req_id,
             status_code=status_code,
             reply_body_str=reply_body_str,
             task_path=task_path)
 
-        self.send_response(response_json)
+        self._mqtt_publisher.send_response(response_json)
         LOGGER.debug(f'MQTT response: {response_json}')
-
-    def send_response(self, response_json):
-        self._publish_lock.acquire()
-        try:
-            pub_ret = self._mqtt_client.publish(topic=self.respond_topic,
-                                                payload=json.dumps(
-                                                    response_json),
-                                                qos=constants.QOS_LEVEL,
-                                                retain=False)
-        finally:
-            self._publish_lock.release()
-        LOGGER.debug(f"publish return (rc, msg_id): {pub_ret}")
 
     def send_too_many_requests_response(self, msg):
         payload_json = utils.str_to_json(msg.payload, self.fsencoding)
         request_id = payload_json["headers"]["requestId"]
         LOGGER.debug(f"Replying with 'too many requests response' for "
                      f"request_id: {request_id} and msg id: {msg.mid}")
-        response_json = self.form_response_json(
+        response_json = self._mqtt_publisher.form_response_json(
             request_id=request_id,
             status_code=requests.codes.too_many_requests,
             reply_body_str=constants.TOO_MANY_REQUESTS_BODY)
-        self.send_response(response_json)
+        self._mqtt_publisher.send_response(response_json)
 
     def connect(self):
         def on_connect(mqtt_client, userdata, flags, rc):
@@ -176,6 +129,10 @@ class MQTTConsumer:
         self._mqtt_client.on_message = on_message
         self._mqtt_client.on_disconnect = on_disconnect
         self._mqtt_client.on_subscribe = on_subscribe
+
+        # Set the mqtt publisher
+        self._mqtt_publisher = MQTTPublisher(mqtt_client=self._mqtt_client,
+                                             respond_topic=self.respond_topic)
 
         try:
             self._mqtt_client.connect(self.url,

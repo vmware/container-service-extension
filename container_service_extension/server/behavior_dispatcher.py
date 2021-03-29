@@ -6,6 +6,8 @@ from dataclasses import asdict
 import json
 
 from container_service_extension.exception.exceptions import CseRequestError
+from container_service_extension.mqi.consumer.mqtt_publisher import \
+    MQTTPublisher
 from container_service_extension.rde.behaviors.behavior_model import \
     BehaviorErrorPayload, BehaviorOperation
 from container_service_extension.security.context.behavior_request_context \
@@ -22,7 +24,7 @@ MAP_BEHAVIOR_ID_TO_HANDLER_METHOD = {
 }
 
 
-def process_behavior_request(msg_json):
+def process_behavior_request(msg_json, mqtt_publisher: MQTTPublisher):
     # Extracting contents from headers
     task_id: str = msg_json['headers']['taskId']
     entity_id: str = msg_json['headers']['entityId']
@@ -48,7 +50,8 @@ def process_behavior_request(msg_json):
                                           user_context=usr_ctx,
                                           entity_type_id=entity_type_id,
                                           request_id=request_id,
-                                          op_ctx=op_ctx)
+                                          op_ctx=op_ctx,
+                                          mqtt_publisher=mqtt_publisher)
 
     # Invoke the handler method and return the response in the string format.
     try:

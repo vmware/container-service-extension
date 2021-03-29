@@ -4,6 +4,8 @@
 
 from dataclasses import dataclass
 
+from container_service_extension.mqi.consumer.mqtt_publisher import \
+    MQTTPublisher
 from container_service_extension.security.context.operation_context import OperationContext  # noqa: E501
 
 
@@ -26,3 +28,4 @@ class BehaviorRequestContext:
     request_id: str
     op_ctx: OperationContext
     user_context: BehaviorUserContext
+    mqtt_publisher: MQTTPublisher
