@@ -62,12 +62,12 @@ def cluster_create(data: dict, op_ctx: ctx.OperationContext):
 
     # Convert the input entity to runtime rde format.
     # Based on the runtime rde, call the appropriate backend method.
-    converted_rde = rde_utils.convert_input_rde_to_runtime_rde_format(input_entity)  # noqa: E501
+    converted_native_entity = rde_utils.convert_input_rde_to_runtime_rde_format(input_entity)  # noqa: E501
     svc = cluster_service_factory.ClusterServiceFactory(op_ctx).get_cluster_service()  # noqa: E501
     # TODO: Response RDE must be compatible with the request RDE.
     #  Conversions may be needed especially if there is a major version
     #  difference in the input RDE and runtime RDE.
-    return asdict(svc.create_cluster(converted_rde))
+    return asdict(svc.create_cluster(converted_native_entity))
 
 
 @telemetry_handler.record_user_action_telemetry(cse_operation=telemetry_constants.CseOperation.V36_CLUSTER_LIST)  # noqa: E501
@@ -173,12 +173,12 @@ def cluster_update(data: dict, op_ctx: ctx.OperationContext):
 
     # Convert the input entity to runtime rde format.
     # Based on the runtime rde, call the appropriate backend method.
-    converted_rde = rde_utils.convert_input_rde_to_runtime_rde_format(input_entity)  # noqa: E501
+    converted_native_entity = rde_utils.convert_input_rde_to_runtime_rde_format(input_entity)  # noqa: E501
     svc = cluster_service_factory.ClusterServiceFactory(op_ctx).get_cluster_service()  # noqa: E501
     # TODO: Response RDE must be compatible with the request RDE.
     #  Conversions may be needed especially if there is a major version
     #  difference in the input RDE and runtime RDE.
-    return asdict(svc.update_cluster(cluster_id, converted_rde))
+    return asdict(svc.update_cluster(cluster_id, converted_native_entity))
 
 
 @telemetry_handler.record_user_action_telemetry(cse_operation=telemetry_constants.CseOperation.V36_CLUSTER_UPGRADE_PLAN)  # noqa: E501
