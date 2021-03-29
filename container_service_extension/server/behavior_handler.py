@@ -5,16 +5,12 @@
 # from container_service_extension.rde.behaviors.behavior_model import BehaviorErrorPayload  # noqa: E501
 import functools
 
-from container_service_extension.common.utils import server_utils
 import container_service_extension.exception.exceptions as cse_exception
 from container_service_extension.lib.cloudapi.cloudapi_client import \
     CloudApiClient
 from container_service_extension.logging.logger import SERVER_LOGGER as LOGGER
 from container_service_extension.rde.backend import cluster_service_factory
 import container_service_extension.rde.constants as rde_constants
-from container_service_extension.rde.models import rde_factory
-from container_service_extension.rde.models.abstractNativeEntity import \
-    AbstractNativeEntity
 import container_service_extension.rde.utils as rde_utils
 import container_service_extension.rde.validators.validator_factory as rde_validator_factory  # noqa: E501
 from container_service_extension.security.context.behavior_request_context import BehaviorRequestContext  # noqa: E501
@@ -62,7 +58,7 @@ def create_cluster(behavior_ctx: BehaviorRequestContext):
     input_entity: dict = behavior_ctx.entity
     cloudapi_client: CloudApiClient = behavior_ctx.op_ctx.cloudapi_client
 
-    payload_version: str = input_entity.get(rde_constants.PayloadKey.PAYLOAD_VERSION)
+    payload_version: str = input_entity.get(rde_constants.PayloadKey.PAYLOAD_VERSION)  # noqa: E501
     rde_utils.raise_error_if_unsupported_payload_version(payload_version)
 
     # Validate the Input payload based on the (Operation, payload_version).
