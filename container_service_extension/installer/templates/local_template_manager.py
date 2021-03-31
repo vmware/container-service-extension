@@ -12,7 +12,7 @@ from pyvcloud.vcd.org import Org
 from pyvcloud.vcd.utils import metadata_to_dict
 import semantic_version
 
-from container_service_extension.common.constants.server_constants import LegacyLocalTemplatekey  # noqa: E501
+from container_service_extension.common.constants.server_constants import LegacyLocalTemplateKey  # noqa: E501
 from container_service_extension.common.constants.server_constants import LocalTemplateKey  # noqa: E501
 import container_service_extension.common.constants.shared_constants as \
     shared_constants
@@ -65,6 +65,9 @@ def get_all_k8s_local_template_definition(client, catalog_name, org=None,
     :param pyvcloud.vcd.Org org: Org object which hosts the catalog.
     :param str org_name: Name of the org that is hosting the catalog. Can be
         provided in lieu of param org, however param org takes precedence.
+    :param bool legacy_mode: True, if CSE is running in legacy mode
+    :param logging.Logger logger_debug:
+    :param utils.NullPrinter msg_update_callback:
 
     :return: list of dictionaries containing template data
 
@@ -81,7 +84,7 @@ def get_all_k8s_local_template_definition(client, catalog_name, org=None,
     if legacy_mode:
         # if template is loaded in legacy mode, make sure to avoid the keys
         # min_cse_version and max_cse_version
-        localTemplateKey = LegacyLocalTemplatekey
+        localTemplateKey = LegacyLocalTemplateKey
 
     for item_name in catalog_item_names:
         md = org.get_all_metadata_from_catalog_item(catalog_name=catalog_name,
@@ -102,7 +105,7 @@ def get_all_k8s_local_template_definition(client, catalog_name, org=None,
             # log relevant information.
             msg = f"Catalog item '{item_name}' missing " \
                   f"{num_missing_metadata_keys} metadata: " \
-                  f"{missing_metadata_keys}" # noqa: F841
+                  f"{missing_metadata_keys}"  # noqa: F841
             logger_debug.debug(msg)
             msg_update_callback.info(msg)
             continue
@@ -158,10 +161,11 @@ def get_valid_k8s_local_template_definition(client, catalog_name, org=None,
         provided in lieu of param org, however param org takes precedence.
     :param bool legacy_mode: boolean indicating if the server is configured
         in legacy_mode
-    :param bool is_tkg_plus_enabled: Boolean indicaing if server is configured
+    :param bool is_tkg_plus_enabled: Boolean indicating if server is configured
         to work with TKG+
-    :param logger logger_debug: logger to log the results or exceptions.
-    :param utils.ConsoleMessagePrinter msg_update_callback:
+    :param logging.Logger logger_debug: logger to log the results or
+        exceptions.
+    :param utils.NullPrinter msg_update_callback:
 
     :return: list of dictionaries containing template data
     :rtype: list of dicts

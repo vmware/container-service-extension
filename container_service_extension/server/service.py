@@ -100,44 +100,49 @@ def watchdog_thread_run(service_obj, num_processors):
         time.sleep(60)
 
 
-def verify_version_compatibility(sysadmin_client: Client,
-                                 target_vcd_api_version, is_mqtt_extension):
+def verify_version_compatibility(
+        sysadmin_client: Client,
+        should_cse_run_in_legacy_mode: bool,
+        is_mqtt_extension: bool):
     cse_version = server_utils.get_installed_cse_version()
-    ext_cse_version, ext_vcd_api_version = \
-        configure_cse.parse_cse_extension_description(
-            sysadmin_client, is_mqtt_extension)
-    if cse_version == server_constants.UNKNOWN_CSE_VERSION or \
-            ext_vcd_api_version == server_constants.UNKNOWN_VCD_API_VERSION:
-        # version data doesn't exist, so CSE <= 2.6.1 was installed
+
+    dikt = configure_cse.parse_cse_extension_description(
+        sysadmin_client, is_mqtt_extension)
+    ext_cse_version = dikt[server_constants.CSE_VERSION_KEY]
+    ext_in_legacy_mode = dikt[server_constants.LEGACY_MODE_KEY]
+    # ext_rde_in_use = dikt[server_constants.RDE_VERSION_IN_USE_KEY]
+
+    # version data doesn't exist, so installed CSE is <= 2.6.1
+    if cse_version == server_constants.UNKNOWN_CSE_VERSION:
         raise cse_exception.VersionCompatibilityError(
             "CSE and VCD API version data not found on VCD. "
             "Upgrade CSE to update version data.")
 
-    version_error_msg = ''
+    error_msg = ''
     if cse_version > ext_cse_version:
-        version_error_msg += \
+        error_msg += \
             f"CSE Server version ({cse_version}) is higher than what was " \
             f"previously registered with VCD ({ext_cse_version}). " \
             f"Upgrade CSE to update CSE version on VCD."
     if cse_version < ext_cse_version:
-        version_error_msg += \
+        error_msg += \
             f"CSE Server version ({cse_version}) cannot be lower than what " \
             f"was previously registered with VCD ({ext_cse_version})."
 
-    if target_vcd_api_version > ext_vcd_api_version:
-        version_error_msg += \
-            f"Target VCD API version ({target_vcd_api_version}) is higher " \
-            f"than what was previously registered by CSE " \
-            f"({ext_vcd_api_version}). Upgrade CSE to update " \
-            f"registered VCD API version."
-    if target_vcd_api_version < ext_vcd_api_version:
-        version_error_msg += \
-            f"Target VCD API version ({target_vcd_api_version}) cannot be " \
-            f"lower than what was previously registered by " \
-            f"CSE ({ext_vcd_api_version})."
+    if not should_cse_run_in_legacy_mode and ext_in_legacy_mode:
+        error_msg += \
+            "Installed CSE is configured in legacy mode. Unable to run it " \
+            "in non-legacy mode. Please use `cse upgrade` to first " \
+            "configure CSE to operate in non-legacy mode."
+    if should_cse_run_in_legacy_mode and not ext_in_legacy_mode:
+        error_msg += \
+            "Installed CSE is configured in non-legacy mode. Unable to run " \
+            "it in legacy mode."
 
-    if version_error_msg:
-        raise cse_exception.VersionCompatibilityError(version_error_msg)
+    # ToDo : RDE version check
+
+    if error_msg:
+        raise cse_exception.VersionCompatibilityError(error_msg)
 
 
 @unique
@@ -281,13 +286,13 @@ class Service(object, metaclass=Singleton):
         raise cse_exception.CseServerError(f"Invalid server state: '{self._state}'")  # noqa: E501
 
     def run(self, msg_update_callback=utils.NullPrinter()):
-
         sysadmin_client = None
         try:
             sysadmin_client = vcd_utils.get_sys_admin_client()
-            verify_version_compatibility(sysadmin_client,
-                                         self.config['vcd']['api_version'],
-                                         server_utils.should_use_mqtt_protocol(self.config))  # noqa: E501
+            verify_version_compatibility(
+                sysadmin_client,
+                should_cse_run_in_legacy_mode=self.config['service']['legacy_mode'],  # noqa: E501
+                is_mqtt_extension=server_utils.should_use_mqtt_protocol(self.config))  # noqa: E501
         except Exception as err:
             logger.SERVER_LOGGER.info(err)
             raise
@@ -468,7 +473,7 @@ class Service(object, metaclass=Singleton):
         defined entity interface and defined entity type registered during
         server install
 
-        :param utils.ConsoleMessagePrinter msg_update_callback:
+        :param utils.NullMessagePrinter msg_update_callback:
         """
         sysadmin_client = None
         try:

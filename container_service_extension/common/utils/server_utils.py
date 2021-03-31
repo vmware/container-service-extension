@@ -8,7 +8,6 @@ import math
 
 import semantic_version
 
-import container_service_extension.common.constants.server_constants as server_constants  # noqa: E501
 import container_service_extension.common.constants.shared_constants as shared_constants  # noqa: E501
 import container_service_extension.common.utils.core_utils as utils
 import container_service_extension.rde.models.common_models as common_models
@@ -84,6 +83,7 @@ def is_pks_enabled():
     return Service().is_pks_enabled()
 
 
+# noinspection PyBroadException
 def is_tkg_plus_enabled(config: dict = None):
     """
     Check if TKG plus is enabled by the provider in the config.
@@ -108,19 +108,16 @@ def is_tkg_plus_enabled(config: dict = None):
 def should_use_mqtt_protocol(config):
     """Return true if should use the mqtt protocol; false otherwise.
 
-    The MQTT protocol should be used if the config file contains an "mqtt" key
-        and the api version is greater than or equal to the minimum mqtt
-        api version.
+    The MQTT protocol should be used if the config file contains "mqtt" key
+        and the CSE server is not being run in legacy mode.
 
     :param dict config: config yaml file as a dictionary
 
     :return: whether to use the mqtt protocol
-    :rtype: str
+    :rtype: bool
     """
     return config.get('mqtt') is not None and \
-        config.get('vcd') is not None and \
-        config['vcd'].get('api_version') is not None and \
-        float(config['vcd']['api_version']) >= server_constants.MQTT_MIN_API_VERSION  # noqa: E501
+        not utils.str_to_bool(config['service'].get('legacy_mode'))
 
 
 def construct_paginated_response(values, result_total,
@@ -151,23 +148,26 @@ def construct_paginated_response(values, result_total,
     return resp
 
 
-def create_links_and_construct_paginated_result(base_uri, values, result_total,
-                                                page_number=shared_constants.CSE_PAGINATION_FIRST_PAGE_NUMBER,  # noqa: E501
-                                                page_size=shared_constants.CSE_PAGINATION_DEFAULT_PAGE_SIZE,  # noqa: E501
-                                                query_params=None):
+def create_links_and_construct_paginated_result(
+        base_uri,
+        values,
+        result_total,
+        page_number=shared_constants.CSE_PAGINATION_FIRST_PAGE_NUMBER,
+        page_size=shared_constants.CSE_PAGINATION_DEFAULT_PAGE_SIZE,
+        query_params=None):
     if query_params is None:
         query_params = {}
-    next_page_uri: str = None
+    next_page_uri: str = ''
     if 0 < page_number * page_size < result_total:
         # TODO find a way to get the initial url part
         # ideally the request details should be passed down to each of the
-        # handler funcions as request context
+        # handler functions as request context
         next_page_uri = f"{base_uri}?page={page_number+1}&pageSize={page_size}"
         for q in query_params.keys():
             next_page_uri += f"&{q}={query_params[q]}"
 
     page_count = math.ceil(result_total / page_size)
-    prev_page_uri: str = None
+    prev_page_uri: str = ''
     if page_count >= page_number > 1:
         prev_page_uri = f"{base_uri}?page={page_number-1}&pageSize={page_size}"
 
