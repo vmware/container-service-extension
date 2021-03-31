@@ -621,9 +621,11 @@ def upgrade_cse(config_file_name, config, skip_template_creation,
 
         if ext_cse_version == server_constants.UNKNOWN_CSE_VERSION:
             msg = "Found CSE api extension registered with vCD, but " \
-                  "couldn't determine version of CSE used previously."
-            msg_update_callback.info(msg)
-            INSTALL_LOGGER.info(msg)
+                  "couldn't determine version of CSE used previously. " \
+                  "Unable to upgrade to CSE 3.1. Please first upgrade " \
+                  "CSE to 3.0."
+            msg_update_callback.error(msg)
+            INSTALL_LOGGER.error(msg)
         else:
             msg = "Found CSE api extension registered by CSE " \
                   f"'{ext_cse_version}' in " \
