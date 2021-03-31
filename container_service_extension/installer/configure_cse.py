@@ -871,9 +871,9 @@ def _construct_cse_extension_description(rde_version_in_use):
     if not rde_version_in_use:
         rde_version_in_use = semantic_version.Version("0.0.0")
     dikt = {
-        server_constants.CSE_VERSION_KEY: cse_version,
+        server_constants.CSE_VERSION_KEY: str(cse_version),
         server_constants.LEGACY_MODE_KEY: LEGACY_MODE,
-        server_constants.RDE_VERSION_IN_USE_KEY: rde_version_in_use
+        server_constants.RDE_VERSION_IN_USE_KEY: str(rde_version_in_use)
     }
 
     description = json.dumps(dikt)
