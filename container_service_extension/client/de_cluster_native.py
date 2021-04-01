@@ -16,8 +16,10 @@ import container_service_extension.common.utils.pyvcloud_utils as vcd_utils
 import container_service_extension.exception.exceptions as cse_exceptions
 import container_service_extension.logging.logger as logger
 import container_service_extension.rde.common.entity_service as def_entity_svc
+import container_service_extension.rde.constants as def_constants
 import container_service_extension.rde.models.common_models as common_models
 import container_service_extension.rde.models.rde_1_0_0 as rde_1_0_0
+import container_service_extension.rde.models.rde_factory as rde_factory
 import container_service_extension.rde.utils as def_utils
 
 
@@ -126,7 +128,8 @@ class DEClusterNative:
         """
         cluster_entity = \
             self._native_cluster_api.delete_cluster_by_cluster_id(cluster_id)
-        return client_utils.construct_task_console_message(cluster_entity.entity.status.task_href)  # noqa: E501
+        task_href = cluster_entity.entity.get_latest_task_href()
+        return client_utils.construct_task_console_message(task_href)  # noqa: E501
 
     def delete_nfs_node(self, cluster_name, node_name, org=None, vdc=None):
         """Delete nfs node given the cluster name and node name.
@@ -158,7 +161,8 @@ class DEClusterNative:
         cluster_entity = \
             self._native_cluster_api.delete_nfs_node_by_node_name(cluster_id,
                                                                   node_name)
-        return client_utils.construct_task_console_message(cluster_entity.entity.status.task_href)  # noqa: E501
+        task_href = cluster_entity.entity.get_latest_task_href()
+        return client_utils.construct_task_console_message(task_href)
 
     def get_cluster_config(self, cluster_name, cluster_id=None,
                            org=None, vdc=None):
@@ -230,8 +234,12 @@ class DEClusterNative:
         current_entity = entity_svc.get_native_rde_by_name_and_rde_version(
             cluster_name, self._server_rde_version, filters=filters)
         if current_entity:
-            current_entity.entity.spec.k8_distribution.template_name = template_name  # noqa: E501
-            current_entity.entity.spec.k8_distribution.template_revision = template_revision  # noqa: E501
+            if self._server_rde_version == def_constants.RDEVersion.RDE_1_0_0:
+                current_entity.entity.spec.k8_distribution.template_name = template_name  # noqa: E501
+                current_entity.entity.spec.k8_distribution.template_revision = template_revision  # noqa: E501
+            else:
+                current_entity.entity.spec.k8Distribution.templateName = template_name  # noqa: E501
+                current_entity.entity.spec.k8Distribution.templateRevision = template_revision  # noqa: E501
             return self.upgrade_cluster_by_cluster_id(current_entity.id, cluster_def_entity=asdict(current_entity))  # noqa: E501
         raise cse_exceptions.ClusterNotFoundError(f"Cluster '{cluster_name}' not found.")  # noqa: E501
 
@@ -248,7 +256,8 @@ class DEClusterNative:
         cluster_def_entity = \
             self._native_cluster_api.upgrade_cluster_by_cluster_id(
                 cluster_id, cluster_upgrade_definition)
-        return client_utils.construct_task_console_message(cluster_def_entity.entity.status.task_href)  # noqa: E501
+        task_href = cluster_def_entity.entity.get_latest_task_href()
+        return client_utils.construct_task_console_message(task_href)
 
     def apply(self, cluster_config, cluster_id=None, **kwargs):
         """Apply the configuration either to create or update the cluster.
@@ -258,8 +267,12 @@ class DEClusterNative:
         :rtype: dict
         """
         entity_svc = def_entity_svc.DefEntityService(self._cloudapi_client)
-        cluster_spec = rde_1_0_0.NativeEntity(**cluster_config)
-        cluster_name = cluster_spec.metadata.cluster_name
+        NativeEntityClass = rde_factory.get_rde_model(self._server_rde_version)
+        cluster_spec = NativeEntityClass(**cluster_config)
+        if self._server_rde_version == def_constants.RDEVersion.RDE_1_0_0:
+            cluster_name = cluster_spec.metadata.cluster_name
+        else:
+            cluster_name = cluster_spec.metadata.name
         if cluster_id:
             # If cluster id doesn't exist, an exception will be raised
             def_entity = entity_svc.get_entity(cluster_id)
@@ -267,12 +280,15 @@ class DEClusterNative:
             def_entity = entity_svc.get_native_rde_by_name_and_rde_version(
                 cluster_name, self._server_rde_version)
         if not def_entity:
-            cluster_entity = self._native_cluster_api.create_cluster(cluster_spec)  # noqa: E501
+            print('creating a new cluster')
+            cluster_def_entity = self._native_cluster_api.create_cluster(cluster_spec)  # noqa: E501
         else:
+            print('resizing existing cluster')
             cluster_id = def_entity.id
-            cluster_entity = \
+            cluster_def_entity = \
                 self._native_cluster_api.update_cluster_by_cluster_id(cluster_id, cluster_spec)  # noqa: E501
-        return client_utils.construct_task_console_message(cluster_entity.entity.status.task_href)  # noqa: E501
+        task_href = cluster_def_entity.entity.get_latest_task_href()
+        return client_utils.construct_task_console_message(task_href)
 
     def get_cluster_id_by_name(self, cluster_name, org=None, vdc=None):
         filters = client_utils.construct_filters(org=org, vdc=vdc)

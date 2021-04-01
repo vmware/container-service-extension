@@ -104,42 +104,40 @@ def construct_2_0_0_cluster_spec_from_entity_status(entity_status: rde_2_0_0.Sta
     """
     # Currently only single control-plane is supported.
     control_plane = rde_2_0_0.ControlPlane(
-        sizing_class=entity_status.nodes.control_plane.sizing_class,
-        storage_profile=entity_status.nodes.control_plane.storage_profile,
+        sizingClass=entity_status.nodes.controlPlane.sizingClass,
+        storageProfile=entity_status.nodes.controlPlane.storageProfile,
         count=1)
 
     workers_count = len(entity_status.nodes.workers)
     if workers_count == 0:
-        workers = rde_2_0_0.Workers(sizing_class=None, storage_profile=None,
-                                    count=workers_count)
+        workers = rde_2_0_0.Workers()
     else:
         workers = rde_2_0_0.Workers(
-            sizing_class=entity_status.nodes.workers[0].sizing_class,
-            storage_profile=entity_status.nodes.workers[0].storage_profile,
+            sizingClass=entity_status.nodes.workers[0].sizingClass,
+            storageProfile=entity_status.nodes.workers[0].storageProfile,
             count=workers_count)
 
     nfs_count = len(entity_status.nodes.nfs)
     if nfs_count == 0:
-        nfs = rde_2_0_0.Nfs(sizing_class=None, storage_profile=None,
-                            count=nfs_count)
+        nfs = rde_2_0_0.Nfs()
     else:
         nfs = rde_2_0_0.Nfs(
-            sizing_class=entity_status.nodes.nfs[0].sizing_class,  # noqa: E501
-            storage_profile=entity_status.nodes.nfs[
-                0].storage_profile, count=nfs_count)
+            sizingClass=entity_status.nodes.nfs[0].sizingClass,  # noqa: E501
+            storageProfile=entity_status.nodes.nfs[
+                0].storageProfile, count=nfs_count)
 
     k8_distribution = rde_2_0_0.Distribution(
-        template_name=entity_status.cloud_properties.k8_distribution.template_name,  # noqa: E501
-        template_revision=entity_status.cloud_properties.k8_distribution.template_revision)  # noqa: E501
+        templateName=entity_status.cloudProperties.k8Distribution.templateName,  # noqa: E501
+        templateRevision=entity_status.cloudProperties.k8Distribution.templateRevision)  # noqa: E501
 
     settings = rde_2_0_0.Settings(
-        network=entity_status.cloud_properties.ovdc_network_name,
-        ssh_key=entity_status.cloud_properties.ssh_key,
-        rollback_on_failure=entity_status.cloud_properties.rollback_on_failure)  # noqa: E501
+        network=entity_status.cloudProperties.ovdcNetworkName,
+        sshKey=entity_status.cloudProperties.sshKey,
+        rollbackOnFailure=entity_status.cloudProperties.rollbackOnFailure)  # noqa: E501
 
     return rde_2_0_0.ClusterSpec(settings=settings,
-                                 k8_distribution=k8_distribution,
-                                 control_plane=control_plane,
+                                 k8Distribution=k8_distribution,
+                                 controlPlane=control_plane,
                                  workers=workers,
                                  nfs=nfs)
 

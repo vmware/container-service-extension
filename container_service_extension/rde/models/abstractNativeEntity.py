@@ -16,3 +16,6 @@ class AbstractNativeEntity(abc.ABC):
     @abc.abstractmethod
     def from_cluster_data(cls, cluster: dict, kind: str):
         pass
+
+    def get_latest_task_href(self):
+        pass

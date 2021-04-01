@@ -275,3 +275,6 @@ class NativeEntity(AbstractNativeEntity):
             api_version=""
         )
         return cluster_entity
+
+    def get_latest_task_href(self):
+        return self.status.task_href
