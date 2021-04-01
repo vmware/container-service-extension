@@ -8,7 +8,7 @@ title: Release Notes
 ## CSE 3.0.2 GA (3.0.2)
 Release Date: 2021-04-08
 
-**Supported (and Tested) VCD versions** : 10.2, 10.1.2, 10.0.0.3
+**Supported (and Tested) VCD versions** : 10.2.2, 10.1.3, 10.0.0.3
 
 Note : Future update/patch releases of these vCD versions will be supported by CSE but
 they won't be tested individually. If a bug is found in their interoperability
@@ -36,7 +36,7 @@ the same will be fixed in a future CSE release.
     * More details at [Kubernetes Cluster Management](CLUSTER_MANAGEMENT.html#expose_cluster)
 
 **Notes to System Administrator**
-If you are upgrading from an existing CSE 3.0.0 installation please be aware of
+If you are upgrading from an existing CSE 3.0.x installation please be aware of
 the issue related to runtime defined entities listed in [Known Issues](KNOWN_ISSUES.html).
 
 ## CSE 3.0.1 GA (3.0.1)
