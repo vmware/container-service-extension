@@ -341,8 +341,9 @@ show a new field viz. `exposed`, which would be set to `True`. The value for the
 would be `False` for clusters that are not exposed. An exposed cluster if ever de-exposed
 can't be re-exposed. Users deploying clusters must have the following rights, if they want to
 leverage the `expose` functionality.
-* Right 1 place holder
-* Right 2 place holder
+* Gateway View
+* NAT View Only
+* NAT Configure
 
 If even one of these rights are missing, CSE will ignore the request to expose the K8s cluster.
 When the K8s cluster is deleted, CSE will automatically delete the associated DNAT rule and
