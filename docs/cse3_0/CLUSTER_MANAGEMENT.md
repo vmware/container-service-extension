@@ -123,6 +123,7 @@ can choose to monitor the task progress manually.
             count: 1
             sizing_class: Large_sizing_policy_name
             storage_profile: Gold_storage_profile_name
+          expose: false
           k8_distribution:
             template_name: ubuntu-16.04_k8-1.17_weave-2.6.0
             template_revision: 2
@@ -140,6 +141,7 @@ can choose to monitor the task progress manually.
             storage_profile: Silver_storage_profile
         status:
           cni: null
+          exposed: False
           docker_version: null
           kubernetes: null
           nodes: null
@@ -302,3 +304,46 @@ commands are applicable to all versions of CSE. Please refer to [CLI commands pe
 # delete cluster when no longer needed
 > vcd cse cluster delete mycluster --yes
 ```
+
+<a name="expose_cluster"></a>
+## Creating clusters in Organizations with routed OrgVDC networks
+
+Traditionally, CSE requires a directly connected OrgVDC network for K8s cluster deployment. This is
+to make sure that the cluster vms can access internet, and are assigned routable IP(s) from the
+static IP pool of the network.
+However, with NSX-T directly connected OrgVDC networks can't be created anymore. As an alternative,
+routed OrgVDC networks can be used to deploy K8s cluster. In order to grant internet access to the
+cluster vms, SNAT rules should be created on the edge gateway that is powering the OrgVDC network.
+The vms however will be assigned IP(s) from the private pool of IPs of the edge gateway, and these
+IPs are typically not routable from beyond the scope of the edge gateway. This in effect will hide
+the K8s cluster from external networks and any application running on these K8s clusters won't be
+accessible from outside world. To solve this issue, a DNAT rule can be created on the edge gateway
+to `expose` the cluster However this approach has it demerits, viz.
+1. The DNAT rule has to be created manually for every cluster.
+2. The external IP of the DNAT rule can be used to reach the cluster, however the
+kube api server will reject all incoming requests, unless `--insecure-skip-tls-verify`is specified
+by kubectl. And this can be a serious secutiry concern for a lot of K8s cluster administrator.
+
+CSE 3.1 solves both these problems by automating the process of `expose`-ing the K8s cluster.
+A new field has been introduced in the cluster specification yaml viz. `expose`. which can be
+found under the `spec` section. If this field is set to `True`, then during cluster creation,
+CSE will automatically take an available external IP from the edge gateway and create a DNAT rule
+to map the external IP onto the control plane IP of the K8s cluster. Additionally, the external IP
+will be added to the certificate data of the K8s cluster's `kubeconfig` file, thereby ensuring
+that communication from kubectl doesn't need to specify the `--insecure-skip-tls-verify` flag.
+
+It should be noted that the cluster can be exposed only when it is being created. If the `expose`
+field is set to `True` at a later point in time and applied via `vcd cse cluster apply`, CSE server
+will simply ignore the request. If ever there is need to de-`expose` a cluster, it can be achieved
+by setting the value of `expose` field to `False` and applying it on the cluster via
+`vcd cse cluster apply`. Once a cluster has been exposed, the `status` section of the cluster would
+show a new field viz. `exposed`, which would be set to `True`. The value for the `exposed` field
+would be `False` for clusters that are not exposed. An exposed cluster if ever de-exposed
+can't be re-exposed. Users deploying clusters must have the following rights, if they want to
+leverage the `expose` functionality.
+* Right 1 place holder
+* Right 2 place holder
+
+If even one of these rights are missing, CSE will ignore the request to expose the K8s cluster.
+When the K8s cluster is deleted, CSE will automatically delete the associated DNAT rule and
+as a result the external IP would become availble on the edge gateway.
