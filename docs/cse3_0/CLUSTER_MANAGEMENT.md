@@ -316,7 +316,7 @@ to the cluster VMs on routed OrgVDC networks of NSX-T, and maintain accessibilit
 clusters, CSE 3.1 offers the following solution,
 
 User can choose to `expose` their K8s cluster during the first `vcd cse cluster apply`
-command by sepcifying the following `expose : True` under `spec` section in the cluster
+command by sepcifying `expose : True` under `spec` section in the cluster
 specification file. It should be noted that any attempt to expose the cluster after it has
 been created will be ignored by CSE. If ever there is need to de-`expose` a cluster,
 it can be achieved by setting the value of `expose` field to `False` and applying it on
