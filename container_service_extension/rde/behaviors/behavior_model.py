@@ -110,3 +110,10 @@ class BehaviorAcl(Enum):
                                           AclAccessLevelId.AccessLevelFullControl)  # noqa: E501
     KUBE_CONFIG_ACL = BehaviorAclEntry(KUBE_CONFIG_BEHAVIOR_INTERFACE_ID,
                                        AclAccessLevelId.AccessLevelReadOnly)
+
+
+@dataclass()
+class BehaviorError:
+    majorErrorCode: str = '400'
+    minorErrorCode: str = None
+    message: str = None

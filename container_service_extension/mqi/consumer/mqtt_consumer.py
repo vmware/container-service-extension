@@ -51,7 +51,7 @@ class MQTTConsumer:
         response_json = self._mqtt_publisher.form_behavior_response_json(
             task_id=task_id,
             entity_id=entity_id,
-            payload=payload)
+            task_payload=payload)
         self._mqtt_publisher.send_response(response_json)
         LOGGER.debug(f'MQTT response: {response_json}')
 

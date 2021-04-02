@@ -41,18 +41,21 @@ class MQTTPublisher:
             response_json['httpResponse']['headers']['Location'] = task_path
         return response_json
 
-    def form_behavior_error_details(self, major_error_code='400',
-                                    minor_error_code=None, error_message=None):
-        return {
-            'majorErrorCode': major_error_code,
-            'minorErrorCode': minor_error_code,
-            'message': error_message
-        }
+    def form_behavior_task_payload(self, operation='Cluster operation',
+                                   status='running',
+                                   progress=50, result=None,
+                                   error_details=None):
+        """Construct the (task) payload portion of the Behavior Response.
 
-    def form_behavior_response_payload(self, operation='Cluster operation',
-                                       status='running',
-                                       progress=50, result=None,
-                                       error_details=None):
+        :param str operation: Operation string
+        :param str status: Status of the task to be updated.
+        :param str progress:
+        :param str result: Result string in the case of status=success
+        :param dict error_details: Error_details in the case of status=error
+            {'majorErrorCode':'500','minorErrorCode':None,'message':None}
+        :return: The constructed task payload.
+        :rtype: dict
+        """
         payload = {
             "operation": operation,
             "status": status
@@ -65,7 +68,16 @@ class MQTTPublisher:
             payload['error'] = error_details
         return payload
 
-    def form_behavior_response_json(self, task_id, entity_id, payload):
+    def form_behavior_response_json(self, task_id, entity_id, task_payload):
+        """Construct the behavior response to be published onto MQTT.
+
+        :param str task_id:
+        :param str entity_id: Id of the entity
+        :param dict task_payload: Payload could be of type task update (or) success
+        (or) error payload.
+        :return: Behavior response
+        :rtype: dict
+        """
         response_json = {
             "type": "BEHAVIOR_RESPONSE",
             "headers": {
@@ -73,7 +85,7 @@ class MQTTPublisher:
                 "entityId": entity_id,
                 "contentType": "application/vnd.vmware.vcloud.task+json",
             },
-            "payload": json.dumps(payload)
+            "payload": json.dumps(task_payload)
         }
         return response_json
 
