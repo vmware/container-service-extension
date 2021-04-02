@@ -17,6 +17,7 @@ class Metadata:
     name: str
     orgName: str
     ovdcName: str
+    site: str
 
 
 @dataclass()
@@ -37,7 +38,7 @@ class ControlPlane:
 class Workers:
     sizingClass: str = None
     storageProfile: str = None
-    count: int = 1
+    count: int = 0
 
 
 @dataclass()
@@ -85,6 +86,7 @@ class Nodes:
 
 @dataclass()
 class CloudProperties:
+    site: str = None
     orgName: str = None
     ovdcName: str = None
     ovdcNetworkName: str = None
@@ -92,9 +94,11 @@ class CloudProperties:
     sshKey: str = None  # TODO contemplate the need to keep this attribute
     rollbackOnFailure: bool = True
 
-    def __init__(self, orgName: str = None, ovdcName: str = None, ovdcNetworkName: str = None,  # noqa: E501
+    def __init__(self, site: str = None, orgName: str = None,
+                 ovdcName: str = None, ovdcNetworkName: str = None,  # noqa: E501
                  k8Distribution: Distribution = None, sshKey: str = None,
                  rollbackOnFailure: bool = True, **kwargs):
+        self.site = site
         self.orgName = orgName
         self.ovdcName = ovdcName
         self.ovdcNetworkName = ovdcNetworkName
@@ -113,12 +117,13 @@ class Status:
     dockerVersion: str = None
     os: str = None
     nodes: Nodes = None
+    uid: str = None
     cloudProperties: CloudProperties = None
 
     def __init__(self, phase: str = None,
                  cni: str = None, taskHref: str = None,
                  kubernetes: str = None, dockerVersion: str = None,
-                 os: str = None, nodes: Nodes = None,
+                 os: str = None, nodes: Nodes = None, uid: str = None,
                  cloudProperties: CloudProperties = None, **kwargs):
         self.phase = phase
         self.cni = cni
@@ -127,6 +132,7 @@ class Status:
         self.dockerVersion = dockerVersion
         self.os = os
         self.nodes = Nodes(**nodes) if isinstance(nodes, dict) else nodes
+        self.uid = uid
         self.cloudProperties = CloudProperties(
             **cloudProperties) if isinstance(cloudProperties, dict) \
             else cloudProperties or CloudProperties()
@@ -244,13 +250,19 @@ class NativeEntity(AbstractNativeEntity):
             # TODO should change very much
             rde_1_x_entity: rde_1_0_0.NativeEntity = native_entity
 
-            cloud_properties = CloudProperties(orgName=rde_1_x_entity.metadata.org_name,  # noqa: E501
+            # NOTE: since details for the field `site` is not present in
+            # RDE 1.0, it is left empty
+            cloud_properties = CloudProperties(site=None,
+                                               orgName=rde_1_x_entity.metadata.org_name,  # noqa: E501
                                                ovdcName=rde_1_x_entity.metadata.ovdc_name,  # noqa: E501
                                                ovdcNetworkName=rde_1_x_entity.spec.settings.network,  # noqa: E501
                                                k8Distribution=rde_1_x_entity.spec.k8_distribution,  # noqa: E501
                                                sshKey=rde_1_x_entity.spec.settings.ssh_key,  # noqa: E501
                                                rollbackOnFailure=rde_1_x_entity.spec.settings.rollback_on_failure)  # noqa: E501
-
+            # NOTE: since details for the field `uid` is not present in
+            # RDE 1.0, it is left empty.
+            # Proper value for `uid` should be populated after RDE is converted
+            # as `uid` is a required property in Status for RDE 2.0
             status = Status(phase=rde_1_x_entity.status.phase,
                             cni=rde_1_x_entity.status.cni,
                             taskHref=rde_1_x_entity.status.task_href,
@@ -258,10 +270,17 @@ class NativeEntity(AbstractNativeEntity):
                             dockerVersion=rde_1_x_entity.status.docker_version,  # noqa: E501
                             os=rde_1_x_entity.status.os,
                             nodes=rde_1_x_entity.status.nodes,
+                            uid=None,
                             cloudProperties=cloud_properties)
+            # NOTE: since details for the field `site` is not present in
+            # RDE 1.0, it is left empty.
+            # Proper value for `site` should be populated after RDE is
+            # converted as `site` is a required property in Metadata
+            # for RDE 2.0
             metadata = Metadata(name=rde_1_x_entity.metadata.cluster_name,
                                 orgName=rde_1_x_entity.metadata.org_name,
-                                ovdcName=rde_1_x_entity.metadata.ovdc_name)
+                                ovdcName=rde_1_x_entity.metadata.ovdc_name,
+                                site='')
             spec = ClusterSpec(
                 settings=Settings(
                     network=rde_1_x_entity.spec.settings.network,
@@ -290,7 +309,7 @@ class NativeEntity(AbstractNativeEntity):
             return rde_2_entity
 
     @classmethod
-    def from_cluster_data(cls, cluster: dict, kind: str):
+    def from_cluster_data(cls, cluster: dict, kind: str, **kwargs):
         """Construct rde_2.0.0 native entity from non-rde cluster.
 
         :param dict cluster: cluster metadata
@@ -298,6 +317,7 @@ class NativeEntity(AbstractNativeEntity):
         :return: native entity
         :rtype: rde_2.0.0.NativeEntity
         """
+        site = kwargs.get('site', '')
         worker_nodes = []
         for item in cluster['nodes']:
             worker_nodes.append(
@@ -313,7 +333,8 @@ class NativeEntity(AbstractNativeEntity):
             templateName=cluster['template_name'],
             templateRevision=int(cluster['template_revision']))
 
-        cloud_properties = CloudProperties(orgName=cluster['org_name'],
+        cloud_properties = CloudProperties(site=site,
+                                           orgName=cluster['org_name'],
                                            ovdcName=cluster['vdc_name'],
                                            ovdcNetworkName=cluster['network_name'],  # noqa: E501
                                            k8Distribution=k8_distribution,
@@ -355,9 +376,11 @@ class NativeEntity(AbstractNativeEntity):
                     workers=worker_nodes,
                     nfs=nfs_nodes
                 ),
+                uid=cluster['cluster_id'],
                 cloudProperties=cloud_properties
             ),
             metadata=Metadata(
+                site=site,
                 orgName=cluster['org_name'],
                 ovdcName=cluster['vdc_name'],
                 name=cluster['name']

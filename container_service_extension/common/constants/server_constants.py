@@ -126,10 +126,13 @@ class FlattenedClusterSpecKey(Enum):
     NFS_COUNT = 'nfs.count'
     TEMPLATE_NAME = 'k8_distribution.template_name'
     TEMPLATE_REVISION = 'k8_distribution.template_revision'
+    TEMPLATE_NAME_CAMEL = 'k8Distribution.templateName'
+    TEMPLATE_REVISION_CAMEL = 'k8Distribution.templateRevision'
 
 
 VALID_UPDATE_FIELDS = [FlattenedClusterSpecKey.WORKERS_COUNT.value, FlattenedClusterSpecKey.NFS_COUNT.value,  # noqa: E501
-                       FlattenedClusterSpecKey.TEMPLATE_NAME.value, FlattenedClusterSpecKey.TEMPLATE_REVISION.value]  # noqa: E501
+                       FlattenedClusterSpecKey.TEMPLATE_NAME.value, FlattenedClusterSpecKey.TEMPLATE_REVISION.value,  # noqa: E501
+                       FlattenedClusterSpecKey.TEMPLATE_NAME_CAMEL, FlattenedClusterSpecKey.TEMPLATE_REVISION_CAMEL]  # noqa: E501
 
 
 CLUSTER_ENTITY = 'cluster_entity'

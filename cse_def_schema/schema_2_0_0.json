@@ -151,7 +151,8 @@
                 "type": "object",
                 "description":"The current status of the cluster.",
                 "required": [
-                    "nodes"
+                    "nodes",
+                    "uid"
                 ],
                 "properties": {
                     "phase": {
@@ -195,6 +196,10 @@
                       },
                       "additionalProperties": true
                     },
+                    "uid": {
+                      "type": "string",
+                      "description": "unique ID of the cluster"
+                    },
                     "cloudProperties": {
                       "type": "object",
                       "description": "The details specific to Cloud Director in which the cluster is hosted.",
@@ -221,6 +226,10 @@
                         "rollbackOnFailure": {
                           "type": "boolean",
                           "description":"On any cluster operation failure, if the value is set to true, affected node VMs will be automatically deleted."
+                        },
+                        "site": {
+                          "type": "string",
+                          "description": "Fully Qualified Domain Name of the VCD site in which the cluster is deployed"
                         }
                       },
                       "additionalProperties": true
@@ -233,7 +242,8 @@
                 "required": [
                     "orgName",
                     "ovdcName",
-                    "name"
+                    "name",
+                    "site"
                 ],
                 "properties": {
                     "orgName": {
@@ -247,6 +257,10 @@
                     "name": {
                         "type": "string",
                         "description":"The name of the cluster."
+                    },
+                    "site": {
+                        "type": "string",
+                        "description":"Fully Qualified Domain Name of the VCD site in which the cluster is deployed"
                     }
                 },
                 "additionalProperties": true

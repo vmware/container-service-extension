@@ -591,6 +591,7 @@ def apply(ctx, cluster_config_file_path, generate_sample_config, k8_runtime, out
             CLIENT_LOGGER.error(msg)
             raise Exception(msg)
 
+        client = ctx.obj['client']
         if generate_sample_config:
             if not k8_runtime:
                 console_message_printer.general_no_color(ctx.get_help())
@@ -601,11 +602,14 @@ def apply(ctx, cluster_config_file_path, generate_sample_config, k8_runtime, out
                     and not utils.is_environment_variable_enabled(cli_constants.ENV_CSE_TKG_PLUS_ENABLED):  # noqa: E501
                 raise Exception(f"{shared_constants.ClusterEntityKind.TKG_PLUS.value} not enabled")  # noqa: E501
             else:
-                sample_cluster_config = client_sample_generator.get_sample_cluster_configuration(output=output, k8_runtime=k8_runtime)  # noqa: E501
+                sample_cluster_config = \
+                    client_sample_generator.get_sample_cluster_configuration(
+                        output=output,
+                        k8_runtime=k8_runtime,
+                        server_api_version=client.get_api_version())  # noqa: E501
                 console_message_printer.general_no_color(sample_cluster_config)
                 return
 
-        client = ctx.obj['client']
         with open(cluster_config_file_path) as f:
             cluster_config = yaml.safe_load(f) or {}
 

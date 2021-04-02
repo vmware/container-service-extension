@@ -860,6 +860,10 @@ class ClusterService(abstract_broker.AbstractBroker):
             def_entity: common_models.DefEntity = self.entity_svc.get_entity(cluster_id)  # noqa: E501
             native_entity: rde_2_0_0.NativeEntity = def_entity.entity
             def_entity.externalId = vapp_resource.get('href')
+            native_entity.status.uid = cluster_id
+            # TODO set proper site details
+            native_entity.status.cloudProperties.site = server_config['vcd']['host']  # noqa: E501
+            native_entity.metadata.site = server_config['vcd']['host']
             native_entity.status.phase = str(
                 DefEntityPhase(DefEntityOperation.CREATE,
                                DefEntityOperationStatus.SUCCEEDED))

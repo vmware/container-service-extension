@@ -110,7 +110,9 @@ def construct_2_0_0_cluster_spec_from_entity_status(entity_status: rde_2_0_0.Sta
 
     workers_count = len(entity_status.nodes.workers)
     if workers_count == 0:
-        workers = rde_2_0_0.Workers()
+        workers = rde_2_0_0.Workers(sizingClass=None,
+                                    storageProfile=None,
+                                    count=0)
     else:
         workers = rde_2_0_0.Workers(
             sizingClass=entity_status.nodes.workers[0].sizingClass,
@@ -119,7 +121,8 @@ def construct_2_0_0_cluster_spec_from_entity_status(entity_status: rde_2_0_0.Sta
 
     nfs_count = len(entity_status.nodes.nfs)
     if nfs_count == 0:
-        nfs = rde_2_0_0.Nfs()
+        nfs = rde_2_0_0.Nfs(sizingClass=None, storageProfile=None,
+                            count=0)
     else:
         nfs = rde_2_0_0.Nfs(
             sizingClass=entity_status.nodes.nfs[0].sizingClass,  # noqa: E501
@@ -134,6 +137,11 @@ def construct_2_0_0_cluster_spec_from_entity_status(entity_status: rde_2_0_0.Sta
         network=entity_status.cloudProperties.ovdcNetworkName,
         sshKey=entity_status.cloudProperties.sshKey,
         rollbackOnFailure=entity_status.cloudProperties.rollbackOnFailure)  # noqa: E501
+
+    import container_service_extension.common.utils.core_utils as utils
+    cb = utils.ConsoleMessagePrinter()
+    cb.general(f"{workers}")
+    cb.general(f"{nfs}")
 
     return rde_2_0_0.ClusterSpec(settings=settings,
                                  k8Distribution=k8_distribution,
