@@ -311,23 +311,27 @@ commands are applicable to all versions of CSE. Please refer to [CLI commands pe
 Traditionally, CSE requires a directly connected OrgVDC network for K8s cluster deployment.
 This is to make sure that the cluster VMs are reachable from outside the scope of the
 OrgVDC network. With NSX-T, directly connected OrgVDC networks are not offered and
-routed OrgVDC networks are used to deploy K8s clusters. In order to grant internet access
-to the cluster VMs on routed OrgVDC networks of NSX-T, and maintain accessibility to the
-clusters, CSE 3.1 offers the following solution,
+routed OrgVDC networks are used to deploy K8s clusters. In order to grant Internet access
+to the cluster VMs connected to NSX-T backed routed OrgVDC networks, and maintain
+accessibility to the clusters, CSE 3.1 offers an option to `expose` the cluster.
 
-User can choose to `expose` their K8s cluster during the first `vcd cse cluster apply`
-command by sepcifying `expose : True` under `spec` section in the cluster
-specification file. It should be noted that any attempt to expose the cluster after it has
-been created will be ignored by CSE. If ever there is need to de-`expose` a cluster,
-it can be achieved by setting the value of `expose` field to `False` and applying it on
-the cluster via `vcd cse cluster apply`. Once a cluster has been exposed, the `status`
-section of the cluster would show a new field viz. `exposed`, which would be set to `True`.
-The value for the `exposed` field would be `False` for clusters that are not exposed.
-An exposed cluster if ever de-exposed can't be re-exposed. Users deploying clusters
-must have the following rights, if they want to leverage the `expose` functionality.
+Users deploying clusters must have the following rights, if they want to leverage
+the `expose` functionality.
 
 * Gateway View
 * NAT View Only
 * NAT Configure
 
 If even one of these rights are missing, CSE will ignore the request to expose the K8s cluster.
+
+User can `expose` their K8s cluster during the first `vcd cse cluster apply`
+command by specifying `expose : True` under `spec` section in the cluster
+specification file. It should be noted that any attempt to expose the cluster after it has
+been created will be ignored by CSE. Once a cluster has been exposed, the `status`
+section of the cluster would show a new field viz. `exposed`, which would be set to `True`.
+
+
+Users can de-`expose` a cluster, by setting the value of `expose` field to `False`
+and applying the updated specification on the cluster via `vcd cse cluster apply`.
+The value for the `exposed` field would be `False` for clusters that are not exposed.
+An exposed cluster if ever de-exposed can't be re-exposed. 

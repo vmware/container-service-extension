@@ -30,7 +30,8 @@ Install kubectl using directions from the [Kubernetes web site](https://kubernet
 <a name="getting_cse"></a>
 ## Install CSE Software
 
-Install python 3.7.3 or greater. See python installation instructions and
+Install python 3.7.3 or greater. Please note that python 3.8.0 and above is
+not supported. See python installation instructions and
 downloads at <https://www.python.org> or consult the [vcd-cli install
 procedure](https://vmware.github.io/vcd-cli/install.html). `Pip`, python's
 package manager is present by default in every python installation.
