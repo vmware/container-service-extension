@@ -8,6 +8,7 @@ from typing import List
 import container_service_extension.common.constants.server_constants as server_constants  # noqa: E501
 import container_service_extension.common.constants.shared_constants as shared_constants  # noqa: E501
 from container_service_extension.rde.models.abstractNativeEntity import AbstractNativeEntity  # noqa: E501
+import container_service_extension.rde.models.rde_2_0_0 as rde_2_0_0
 
 
 @dataclass()
@@ -203,7 +204,28 @@ class NativeEntity(AbstractNativeEntity):
         :return: native entity
         :rtype: rde_1.0.0.NativeEntity
         """
-        raise NotImplementedError
+        if isinstance(native_entity, NativeEntity):
+            return native_entity
+
+        if isinstance(native_entity, rde_2_0_0.NativeEntity):
+            rde_2_x_entity: rde_2_0_0.NativeEntity = native_entity
+            status = Status(
+                phase=rde_2_x_entity.status.phase,
+                cni=rde_2_x_entity.status.cni,
+                task_href=rde_2_x_entity.status.task_href,
+                kubernetes=rde_2_x_entity.status.kubernetes,
+                docker_version=rde_2_x_entity.status.kubernetes,
+                os=rde_2_x_entity.status.os,
+                nodes=rde_2_x_entity.status.nodes
+            )
+            rde_1_entity = cls(
+                metadata=rde_2_x_entity.metadata,
+                spec=rde_2_x_entity.spec,
+                status=status,
+                kind=rde_2_x_entity.kind,
+                api_version=''
+            )
+            return rde_1_entity
 
     @classmethod
     def from_cluster_data(cls, cluster: dict, kind: str, **kwargs):

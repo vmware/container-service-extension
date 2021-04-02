@@ -15,8 +15,10 @@ import container_service_extension.common.utils.server_utils as server_utils
 import container_service_extension.lib.telemetry.constants as telemetry_constants  # noqa: E501
 import container_service_extension.lib.telemetry.telemetry_handler as telemetry_handler  # noqa: E501
 import container_service_extension.rde.backend.cluster_service_factory as cluster_service_factory  # noqa: E501
+import container_service_extension.rde.constants as rde_constants
 from container_service_extension.rde.models.abstractNativeEntity import AbstractNativeEntity  # noqa: E501
-import container_service_extension.rde.models.rde_factory as rde_factory
+import container_service_extension.rde.models.common_models as common_models
+import container_service_extension.rde.utils as rde_utils
 import container_service_extension.security.context.operation_context as ctx
 import container_service_extension.server.request_handlers.request_utils as request_utils  # noqa: E501
 
@@ -31,16 +33,17 @@ def cluster_create(data: dict, op_ctx: ctx.OperationContext):
     :return: Defined entity of the native cluster
     :rtype: container_service_extension.def_.models.DefEntity
     """
-    rde_in_use = server_utils.get_rde_version_in_use()
-    svc = cluster_service_factory.ClusterServiceFactory(op_ctx). \
-        get_cluster_service(rde_in_use)
-
-    # TODO find out the RDE version from the request spec
-    # TODO Insert RDE converters and validators
-    NativeEntityClass = rde_factory.get_rde_model(rde_in_use)
-    cluster_entity_spec: AbstractNativeEntity = \
-        NativeEntityClass(**data[RequestKey.INPUT_SPEC])
-    return asdict(svc.create_cluster(cluster_entity_spec))
+    input_entity: dict = data[RequestKey.INPUT_SPEC]
+    # Convert the input entity to runtime rde format.
+    # Based on the runtime rde, call the appropriate backend method.
+    converted_native_entity: AbstractNativeEntity = rde_utils.convert_input_rde_to_runtime_rde_format(input_entity)  # noqa: E501
+    svc = cluster_service_factory.ClusterServiceFactory(op_ctx).get_cluster_service()  # noqa: E501
+    new_rde: common_models.DefEntity = svc.create_cluster(converted_native_entity)  # noqa: E501
+    # convert the created rde back to input rde version
+    new_native_entity: AbstractNativeEntity = rde_utils.convert_runtime_rde_to_input_rde_version_format(  # noqa: E501
+        new_rde.entity, rde_constants.RDEVersion.RDE_1_0_0)
+    new_rde.entity = new_native_entity
+    return asdict(new_rde)
 
 
 @telemetry_handler.record_user_action_telemetry(cse_operation=telemetry_constants.CseOperation.V35_CLUSTER_APPLY)  # noqa: E501
@@ -53,21 +56,23 @@ def cluster_resize(data: dict, op_ctx: ctx.OperationContext):
     :return: Defined entity of the native cluster
     :rtype: container_service_extension.def_.models.DefEntity
     """
-    rde_in_use = server_utils.get_rde_version_in_use()
-    svc = cluster_service_factory.ClusterServiceFactory(op_ctx). \
-        get_cluster_service(rde_in_use)
+    input_entity: dict = data[RequestKey.INPUT_SPEC]
+    # Convert the input entity to runtime rde format.
+    # Based on the runtime rde, call the appropriate backend method.
+    converted_native_entity: AbstractNativeEntity = rde_utils.convert_input_rde_to_runtime_rde_format(input_entity)  # noqa: E501
+    svc = cluster_service_factory.ClusterServiceFactory(op_ctx).get_cluster_service()  # noqa: E501
     cluster_id = data[RequestKey.CLUSTER_ID]
-    # TODO find out the RDE version from the request spec
-    # TODO Insert RDE converters and validators
-    NativeEntityClass = rde_factory.get_rde_model(rde_in_use)
-    cluster_entity_spec: AbstractNativeEntity = \
-        NativeEntityClass(**data[RequestKey.INPUT_SPEC])  # noqa: E501
     curr_entity = svc.entity_svc.get_entity(cluster_id)
     request_utils.validate_request_payload(
-        asdict(cluster_entity_spec.spec), asdict(curr_entity.entity.spec),
+        asdict(converted_native_entity.spec), asdict(curr_entity.entity.spec),
         exclude_fields=[FlattenedClusterSpecKey.WORKERS_COUNT.value,
                         FlattenedClusterSpecKey.NFS_COUNT.value])
-    return asdict(svc.resize_cluster(cluster_id, cluster_entity_spec))
+    new_rde: common_models.DefEntity = svc.resize_cluster(cluster_id, converted_native_entity)  # noqa: E501
+    # convert the resized rde back to input rde version
+    new_native_entity: AbstractNativeEntity = rde_utils.convert_runtime_rde_to_input_rde_version_format(  # noqa: E501
+        new_rde.entity, rde_constants.RDEVersion.RDE_1_0_0)
+    new_rde.entity = new_native_entity
+    return asdict(new_rde)
 
 
 @telemetry_handler.record_user_action_telemetry(cse_operation=telemetry_constants.CseOperation.V35_CLUSTER_DELETE)  # noqa: E501
@@ -146,21 +151,23 @@ def cluster_upgrade(data, op_ctx: ctx.OperationContext):
 
     :return: Dict
     """
-    rde_in_use = server_utils.get_rde_version_in_use()
-    svc = cluster_service_factory.ClusterServiceFactory(op_ctx). \
-        get_cluster_service(rde_in_use)
-    # TODO find out the RDE version from the request spec
-    # TODO Insert RDE converters and validators
-    NativeEntityClass = rde_factory.get_rde_model(rde_in_use)
-    cluster_entity_spec: AbstractNativeEntity = \
-        NativeEntityClass(**data[RequestKey.INPUT_SPEC])
+    input_entity: dict = data[RequestKey.INPUT_SPEC]
+    # Convert the input entity to runtime rde format.
+    # Based on the runtime rde, call the appropriate backend method.
+    converted_native_entity: AbstractNativeEntity = rde_utils.convert_input_rde_to_runtime_rde_format(input_entity)  # noqa: E501
+    svc = cluster_service_factory.ClusterServiceFactory(op_ctx).get_cluster_service()  # noqa: E501
     cluster_id = data[RequestKey.CLUSTER_ID]
     curr_entity = svc.entity_svc.get_entity(cluster_id)
     request_utils.validate_request_payload(
-        asdict(cluster_entity_spec.spec), asdict(curr_entity.entity.spec),
+        asdict(converted_native_entity.spec), asdict(curr_entity.entity.spec),
         exclude_fields=[FlattenedClusterSpecKey.TEMPLATE_NAME.value,
                         FlattenedClusterSpecKey.TEMPLATE_REVISION.value])
-    return asdict(svc.upgrade_cluster(cluster_id, cluster_entity_spec))
+    new_rde: common_models.DefEntity = svc.upgrade_cluster(cluster_id, converted_native_entity)  # noqa: E501
+    # convert the upgraded rde back to input rde version
+    new_native_entity: AbstractNativeEntity = rde_utils.convert_runtime_rde_to_input_rde_version_format(  # noqa: E501
+        new_rde.entity, rde_constants.RDEVersion.RDE_1_0_0)
+    new_rde.entity = new_native_entity
+    return asdict(new_rde)
 
 
 # TODO: Record telemetry in a different telemetry handler
