@@ -171,5 +171,5 @@ class ClusterEntityFilterKey(Enum):
 
 
 class PayloadKey(str, Enum):
-    PAYLOAD_VERSION = 'api_version'
+    PAYLOAD_VERSION = 'apiVersion'
     UNKNOWN = 'unknown'

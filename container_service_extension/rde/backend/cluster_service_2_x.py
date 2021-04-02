@@ -249,7 +249,7 @@ class ClusterService(abstract_broker.AbstractBroker):
         native_entity.status.cni = \
             _create_k8s_software_string(template[LocalTemplateKey.CNI],
                                         template[LocalTemplateKey.CNI_VERSION])
-        native_entity.status.docker_version = template[LocalTemplateKey.DOCKER_VERSION] # noqa: E501
+        native_entity.status.dockerVersion = template[LocalTemplateKey.DOCKER_VERSION] # noqa: E501
         native_entity.status.os = template[LocalTemplateKey.OS]
         native_entity.status.cloudProperties.k8Distribution.templateName = template_name  # noqa: E501
         native_entity.status.cloudProperties.k8Distribution.templateRevision = template_revision  # noqa: E501
