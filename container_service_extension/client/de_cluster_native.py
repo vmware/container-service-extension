@@ -280,10 +280,8 @@ class DEClusterNative:
             def_entity = entity_svc.get_native_rde_by_name_and_rde_version(
                 cluster_name, self._server_rde_version)
         if not def_entity:
-            print('creating a new cluster')
             cluster_def_entity = self._native_cluster_api.create_cluster(cluster_spec)  # noqa: E501
         else:
-            print('resizing existing cluster')
             cluster_id = def_entity.id
             cluster_def_entity = \
                 self._native_cluster_api.update_cluster_by_cluster_id(cluster_id, cluster_spec)  # noqa: E501

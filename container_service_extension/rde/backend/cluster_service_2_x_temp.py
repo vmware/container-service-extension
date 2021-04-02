@@ -673,8 +673,8 @@ class ClusterService(abstract_broker.AbstractBroker):
         cluster_name = None
         org_name = None
         ovdc_name = None
-        # TODO check if there is a default value for rollback
-        rollback = False
+        # Default value from rde_2_0_0 model class
+        rollback = True
         try:
             cluster_name = input_native_entity.metadata.name
             org_name = input_native_entity.metadata.orgName
@@ -1071,8 +1071,8 @@ class ClusterService(abstract_broker.AbstractBroker):
         """
         vapp: vcd_vapp.VApp = None
         cluster_name = None
-        # TODO check if there is a default value for rollback
-        rollback = False
+        # Default value from rde_2_0_0 model class
+        rollback = True
         vapp_href = None
         try:
             # get the current state of the defined entity

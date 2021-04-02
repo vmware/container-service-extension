@@ -138,11 +138,6 @@ def construct_2_0_0_cluster_spec_from_entity_status(entity_status: rde_2_0_0.Sta
         sshKey=entity_status.cloudProperties.sshKey,
         rollbackOnFailure=entity_status.cloudProperties.rollbackOnFailure)  # noqa: E501
 
-    import container_service_extension.common.utils.core_utils as utils
-    cb = utils.ConsoleMessagePrinter()
-    cb.general(f"{workers}")
-    cb.general(f"{nfs}")
-
     return rde_2_0_0.ClusterSpec(settings=settings,
                                  k8Distribution=k8_distribution,
                                  controlPlane=control_plane,
