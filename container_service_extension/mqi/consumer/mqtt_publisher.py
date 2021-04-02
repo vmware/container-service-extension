@@ -41,15 +41,39 @@ class MQTTPublisher:
             response_json['httpResponse']['headers']['Location'] = task_path
         return response_json
 
-    def form_behavior_response_json(self, task_id, entity_id, payload, status):
+    def form_behavior_error_details(self, major_error_code='400',
+                                    minor_error_code=None, error_message=None):
+        return {
+            'majorErrorCode': major_error_code,
+            'minorErrorCode': minor_error_code,
+            'message': error_message
+        }
+
+    def form_behavior_response_payload(self, operation='Cluster operation',
+                                       status='running',
+                                       progress=50, result=None,
+                                       error_details=None):
+        payload = {
+            "operation": operation,
+            "status": status
+        }
+        if progress:
+            payload['progress'] = progress
+        if result:
+            payload['result'] = result
+        if error_details:
+            payload['error'] = error_details
+        return payload
+
+    def form_behavior_response_json(self, task_id, entity_id, payload):
         response_json = {
             "type": "BEHAVIOR_RESPONSE",
             "headers": {
                 "taskId": task_id,
                 "entityId": entity_id,
-                "status": status
+                "contentType": "application/vnd.vmware.vcloud.task+json",
             },
-            "payload": payload
+            "payload": json.dumps(payload)
         }
         return response_json
 

@@ -8,8 +8,7 @@ import json
 from container_service_extension.exception.exceptions import CseRequestError
 from container_service_extension.mqi.consumer.mqtt_publisher import \
     MQTTPublisher
-from container_service_extension.rde.behaviors.behavior_model import \
-    BehaviorErrorPayload, BehaviorOperation
+from container_service_extension.rde.behaviors.behavior_model import BehaviorOperation  # noqa: E501
 from container_service_extension.security.context.behavior_request_context \
     import BehaviorRequestContext, BehaviorUserContext
 from container_service_extension.security.context.operation_context import OperationContext  # noqa: E501
@@ -55,13 +54,16 @@ def process_behavior_request(msg_json, mqtt_publisher: MQTTPublisher):
 
     # Invoke the handler method and return the response in the string format.
     try:
-        return 'success', MAP_BEHAVIOR_ID_TO_HANDLER_METHOD[behavior_id](behavior_ctx)  # noqa: E501
+        return MAP_BEHAVIOR_ID_TO_HANDLER_METHOD[behavior_id](behavior_ctx)  # noqa: E501
     except CseRequestError as e:
-        error_payload = BehaviorErrorPayload(majorErrorCode=e.status_code,
-                                             minorErrorCode=e.minor_error_code,
-                                             message=e.error_message)
-        return 'error', json.dumps(asdict(error_payload))
+        error_details = mqtt_publisher.\
+            form_behavior_error_details(major_error_code=e.status_code,
+                                        minor_error_code=e.minor_error_code,
+                                        error_message=e.error_message)
+        error_payload = mqtt_publisher.form_behavior_response_payload(operation=behavior_id)
+        return error_payload
     except Exception as e:
-        error_payload = BehaviorErrorPayload(majorErrorCode=500,
-                                             message=str(e))
-        return 'error', json.dumps(asdict(error_payload))
+        error_payload = mqtt_publisher. \
+            form_behavior_error_details(major_error_code='500',
+                                        error_message=str(e))
+        return error_payload

@@ -44,15 +44,14 @@ class MQTTConsumer:
         self._is_closing = False
 
     def process_behavior_message(self, msg_json):
-        status, payload = behavior_dispatcher.process_behavior_request(
+        payload = behavior_dispatcher.process_behavior_request(
             msg_json, self._mqtt_publisher)
         task_id: str = msg_json['headers']['taskId']
         entity_id: str = msg_json['headers']['entityId']
         response_json = self._mqtt_publisher.form_behavior_response_json(
             task_id=task_id,
             entity_id=entity_id,
-            payload=payload,
-            status=status)
+            payload=payload)
         self._mqtt_publisher.send_response(response_json)
         LOGGER.debug(f'MQTT response: {response_json}')
 
