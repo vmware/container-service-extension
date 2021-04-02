@@ -456,6 +456,25 @@ def install_template(template_name, template_revision, config_file_name,
         msg_update_callback.general(msg)
         INSTALL_LOGGER.info(msg)
 
+        # Handle missing extension
+        existing_ext_type = _get_existing_extension_type(client)
+        if existing_ext_type == server_constants.ExtensionType.NONE:
+            msg = "CSE installation not found. Please install CSE first " \
+                "using`cse install'."
+            raise Exception(msg)
+
+        is_mqtt_extension = existing_ext_type == server_constants.ExtensionType.MQTT  # noqa: E501
+        dikt = parse_cse_extension_description(
+            client, is_mqtt_extension=is_mqtt_extension)
+        ext_in_legacy_mode = dikt[server_constants.LEGACY_MODE_KEY]
+
+        if ext_in_legacy_mode != LEGACY_MODE:
+            msg = "CSE extension found installed in " \
+                f"{'legacy' if ext_in_legacy_mode else 'non-legacy'} mode." \
+                "Configuration file specifies otherwise. Unable to install " \
+                "templates."
+            raise Exception(msg)
+
         # read remote template cookbook
         rtm = RemoteTemplateManager(
             remote_template_cookbook_url=config['broker']['remote_template_cookbook_url'],  # noqa: E501
@@ -659,7 +678,7 @@ def upgrade_cse(config_file_name, config, skip_template_creation,
         # then CSE X.Y.Z+ should also be allowed to upgrade to CSE X'.Y'.Z'
         # irrespective of when these patches were released.
 
-        target_cse_running_in_legacy_mode = config['service']['legacy_mode']
+        target_cse_running_in_legacy_mode = LEGACY_MODE
         source_cse_running_in_legacy_mode = ext_in_legacy_mode
 
         # CSE version info in extension description is only applicable for
@@ -954,7 +973,6 @@ def _register_cse_as_amqp_extension(client, routing_key, exchange,
                                     msg_update_callback=utils.NullPrinter()):
     """Register CSE on vCD.
 
-    :param pyvcloud.vcd.client.Client client:
     :param pyvcloud.vcd.client.Client client:
     :param str routing_key:
     :param str exchange:
@@ -2228,11 +2246,8 @@ def _upgrade_or_create_def_entity_for_existing_clusters(
             INSTALL_LOGGER.error(msg)
             raise cse_exception.CseUpgradeError(msg)
 
-        kind = None  # Is this a correct default value?
-        if policy_name == shared_constants.NATIVE_CLUSTER_RUNTIME_INTERNAL_NAME:  # noqa: E501
-            # TODO combine to a single constant
-            kind = shared_constants.ClusterEntityKind.NATIVE.value
-        elif policy_name == shared_constants.TKG_PLUS_CLUSTER_RUNTIME_INTERNAL_NAME:  # noqa: E501
+        kind = shared_constants.ClusterEntityKind.NATIVE.value
+        if policy_name == shared_constants.TKG_PLUS_CLUSTER_RUNTIME_INTERNAL_NAME:  # noqa: E501
             kind = shared_constants.ClusterEntityKind.TKG_PLUS.value
 
         _create_cluster_rde(client, cluster, kind, runtime_rde_version, target_entity_type, entity_svc, msg_update_callback)  # noqa: E501
