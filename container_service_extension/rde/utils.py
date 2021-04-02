@@ -184,9 +184,18 @@ def convert_input_rde_to_runtime_rde_format(input_entity: dict):
     :rtype: AbstractNativeEntity
     """
     payload_version = input_entity.get(def_constants.PayloadKey.PAYLOAD_VERSION)  # noqa: E501
+    if payload_version:
+        input_rde_version = def_constants.MAP_INPUT_PAYLOAD_VERSION_TO_RDE_VERSION[payload_version]  # noqa: E501
+    else:
+        input_rde_version = def_constants.RDEVersion.RDE_1_0_0.value
     runtime_rde_version = server_utils.get_rde_version_in_use()
     RuntimeNativeEntityClass: Type[AbstractNativeEntity] = rde_factory.get_rde_model(runtime_rde_version)  # noqa: E501
-    InputNativeEntityClass: Type[AbstractNativeEntity] = rde_factory.get_rde_model(  # noqa: E501
-        def_constants.MAP_INPUT_PAYLOAD_VERSION_TO_RDE_VERSION[payload_version])  # noqa: E501
+    InputNativeEntityClass: Type[AbstractNativeEntity] = rde_factory.get_rde_model(input_rde_version)  # noqa: E501
     input_rde: AbstractNativeEntity = InputNativeEntityClass(**input_entity)  # noqa: E501
     return RuntimeNativeEntityClass.from_native_entity(input_rde)
+
+
+def convert_runtime_rde_to_input_rde_version_format(runtime_rde: AbstractNativeEntity, input_rde_version):  # noqa: E501
+    InputNativeEntityClass: Type[AbstractNativeEntity] = rde_factory.get_rde_model(input_rde_version)  # noqa: E501
+    output_entity = InputNativeEntityClass.from_native_entity(runtime_rde)
+    return output_entity
