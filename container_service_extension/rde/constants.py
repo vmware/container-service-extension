@@ -148,6 +148,7 @@ MAP_INPUT_PAYLOAD_VERSION_TO_RDE_VERSION = {
 }
 
 
+# TODO make changes to use camel case
 class ClusterEntityFilterKey(Enum):
     """Keys to filter cluster entities in CSE (or) vCD.
 

@@ -233,13 +233,11 @@ class DEClusterNative:
         entity_svc = def_entity_svc.DefEntityService(self._cloudapi_client)
         current_entity = entity_svc.get_native_rde_by_name_and_rde_version(
             cluster_name, self._server_rde_version, filters=filters)
+        # NOTE: This function is only valid when the CSE server is running
+        # with RDE 1.0.0
         if current_entity:
-            if self._server_rde_version == def_constants.RDEVersion.RDE_1_0_0:
-                current_entity.entity.spec.k8_distribution.template_name = template_name  # noqa: E501
-                current_entity.entity.spec.k8_distribution.template_revision = template_revision  # noqa: E501
-            else:
-                current_entity.entity.spec.k8Distribution.templateName = template_name  # noqa: E501
-                current_entity.entity.spec.k8Distribution.templateRevision = template_revision  # noqa: E501
+            current_entity.entity.spec.k8_distribution.template_name = template_name  # noqa: E501
+            current_entity.entity.spec.k8_distribution.template_revision = template_revision  # noqa: E501
             return self.upgrade_cluster_by_cluster_id(current_entity.id, cluster_def_entity=asdict(current_entity))  # noqa: E501
         raise cse_exceptions.ClusterNotFoundError(f"Cluster '{cluster_name}' not found.")  # noqa: E501
 
@@ -267,6 +265,7 @@ class DEClusterNative:
         :rtype: dict
         """
         entity_svc = def_entity_svc.DefEntityService(self._cloudapi_client)
+        # TODO: Sikp casting into RDE model before sending API request
         NativeEntityClass = rde_factory.get_rde_model(self._server_rde_version)
         cluster_spec = NativeEntityClass(**cluster_config)
         if self._server_rde_version == def_constants.RDEVersion.RDE_1_0_0:
