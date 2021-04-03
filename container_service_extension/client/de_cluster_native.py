@@ -16,7 +16,7 @@ import container_service_extension.common.utils.pyvcloud_utils as vcd_utils
 import container_service_extension.exception.exceptions as cse_exceptions
 import container_service_extension.logging.logger as logger
 import container_service_extension.rde.common.entity_service as def_entity_svc
-import container_service_extension.rde.constants as def_constants
+import container_service_extension.rde.constants as rde_constants
 import container_service_extension.rde.models.common_models as common_models
 import container_service_extension.rde.models.rde_1_0_0 as rde_1_0_0
 import container_service_extension.rde.models.rde_factory as rde_factory
@@ -268,7 +268,7 @@ class DEClusterNative:
         # TODO: Sikp casting into RDE model before sending API request
         NativeEntityClass = rde_factory.get_rde_model(self._server_rde_version)
         cluster_spec = NativeEntityClass(**cluster_config)
-        if self._server_rde_version == def_constants.RDEVersion.RDE_1_0_0:
+        if self._server_rde_version == rde_constants.RDEVersion.RDE_1_0_0:
             cluster_name = cluster_spec.metadata.cluster_name
         else:
             cluster_name = cluster_spec.metadata.name

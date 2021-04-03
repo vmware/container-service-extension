@@ -10,7 +10,6 @@ from container_service_extension.logging.logger import CLIENT_LOGGER
 import container_service_extension.rde.constants as def_constants
 import container_service_extension.rde.models.rde_1_0_0 as rde_1_0_0
 import container_service_extension.rde.models.rde_2_0_0 as rde_2_0_0
-import container_service_extension.rde.utils as def_utils
 
 SAMPLE_K8_CLUSTER_SPEC_HELP = """# Short description of various properties used in this sample cluster configuration
 # kind: The kind of the Kubernetes cluster.
@@ -73,7 +72,7 @@ SAMPLE_TKG_CLUSTER_SPEC_HELP = """# Short description of various properties used
 """  # noqa: E501
 
 
-def get_sample_cluster_configuration(output=None, k8_runtime=None, server_api_version=None):  # noqa: E501
+def get_sample_cluster_configuration(output=None, k8_runtime=None, server_rde_in_use=None):  # noqa: E501
     """Generate sample cluster configuration.
 
     :param str output: full path of output file
@@ -85,9 +84,9 @@ def get_sample_cluster_configuration(output=None, k8_runtime=None, server_api_ve
         sample_cluster_config = SAMPLE_TKG_CLUSTER_SPEC_HELP + _get_sample_tkg_cluster_configuration()  # noqa: E501
 
     else:
-        if not server_api_version:
+        if not server_rde_in_use:
             raise ValueError("CSE server API version required to generate sample config")  # noqa: E501
-        sample_cluster_config = SAMPLE_K8_CLUSTER_SPEC_HELP + _get_sample_cluster_configuration_by_k8_runtime(k8_runtime, server_api_version)  # noqa: E501
+        sample_cluster_config = SAMPLE_K8_CLUSTER_SPEC_HELP + _get_sample_cluster_configuration_by_k8_runtime(k8_runtime, server_rde_in_use)  # noqa: E501
 
     if output:
         with open(output, 'w') as f:
@@ -96,10 +95,7 @@ def get_sample_cluster_configuration(output=None, k8_runtime=None, server_api_ve
     return sample_cluster_config
 
 
-def _get_sample_cluster_configuration_by_k8_runtime(k8_runtime, server_api_version):  # noqa: E501
-    server_rde_in_use = \
-        def_utils.get_runtime_rde_version_by_vcd_api_version(
-            float(server_api_version))
+def _get_sample_cluster_configuration_by_k8_runtime(k8_runtime, server_rde_in_use):  # noqa: E501
     metadata = rde_1_0_0.Metadata('cluster_name', 'organization_name',
                                   'org_virtual_datacenter_name')
     status = rde_1_0_0.Status()

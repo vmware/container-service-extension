@@ -209,7 +209,7 @@ class ClusterService(abstract_broker.AbstractBroker):
             server_config = server_utils.get_server_runtime_config()
             cluster_spec.spec.k8Distribution = rde_2_0_0.Distribution(
                 templateName=server_config['broker']['default_template_name'],
-                templateRevision=int(server_config['broker']['default_template_name']))  # noqa: E501
+                templateRevision=int(server_config['broker']['default_template_revision']))  # noqa: E501
         template_name = cluster_spec.spec.k8Distribution.templateName
         template_revision = cluster_spec.spec.k8Distribution.templateRevision
 
