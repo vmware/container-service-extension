@@ -51,6 +51,8 @@ import container_service_extension.rde.constants as def_constants
 import container_service_extension.rde.models.common_models as common_models
 import container_service_extension.rde.models.rde_2_0_0 as rde_2_0_0
 import container_service_extension.rde.utils as def_utils
+from container_service_extension.rde.behaviors.behavior_model import \
+    BehaviorTaskStatus
 from container_service_extension.security.context.behavior_request_context import BehaviorRequestContext  # noqa: E501
 import container_service_extension.security.context.operation_context as ctx
 import container_service_extension.server.abstract_broker as abstract_broker
@@ -269,9 +271,9 @@ class ClusterService(abstract_broker.AbstractBroker):
             }
         )
         self._create_cluster_async(entity_id, input_native_entity)
-        return self.mqtt_publisher.form_behavior_task_payload(
+        return self.mqtt_publisher.form_behavior_payload(
             operation='create_cluster_in_progress',
-            status='running', progress=5)
+            status=BehaviorTaskStatus.RUNNING.value, progress=5)
 
     def resize_cluster(self, cluster_id: str,
                        cluster_spec: rde_2_0_0.NativeEntity):

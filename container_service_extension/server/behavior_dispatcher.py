@@ -8,7 +8,8 @@ import json
 from container_service_extension.exception.exceptions import CseRequestError
 from container_service_extension.mqi.consumer.mqtt_publisher import \
     MQTTPublisher
-from container_service_extension.rde.behaviors.behavior_model import BehaviorError, BehaviorOperation  # noqa: E501
+from container_service_extension.rde.behaviors.behavior_model import \
+    BehaviorError, BehaviorOperation, BehaviorTaskStatus  # noqa: E501
 from container_service_extension.security.context.behavior_request_context \
     import BehaviorRequestContext, BehaviorUserContext
 from container_service_extension.security.context.operation_context import OperationContext  # noqa: E501
@@ -59,17 +60,17 @@ def process_behavior_request(msg_json, mqtt_publisher: MQTTPublisher):
         error_details = asdict(BehaviorError(majorErrorCode=e.status_code,
                                              minorErrorCode=e.minor_error_code,
                                              message=e.error_message))
-        task_payload = mqtt_publisher.\
-            form_behavior_task_payload(operation=behavior_id,
-                                       status='error',
-                                       error_details=error_details)
-        return task_payload
+        payload = mqtt_publisher.\
+            form_behavior_payload(operation=behavior_id,
+                                  status=BehaviorTaskStatus.ERROR.value,
+                                  error_details=error_details)
+        return payload
     except Exception as e:
         error_details = asdict(BehaviorError(majorErrorCode='500',
                                              message=str(e)))
-        task_payload = mqtt_publisher. \
-            form_behavior_task_payload(operation=behavior_id,
-                                       status='error',
-                                       error_details=error_details)
+        payload = mqtt_publisher. \
+            form_behavior_payload(operation=behavior_id,
+                                  status=BehaviorTaskStatus.ERROR.value,
+                                  error_details=error_details)
 
-        return task_payload
+        return payload

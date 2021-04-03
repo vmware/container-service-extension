@@ -41,10 +41,10 @@ class MQTTPublisher:
             response_json['httpResponse']['headers']['Location'] = task_path
         return response_json
 
-    def form_behavior_task_payload(self, operation='Cluster operation',
-                                   status='running',
-                                   progress=None, result=None,
-                                   error_details=None):
+    def form_behavior_payload(self, operation='Cluster operation',
+                              status='running',
+                              progress=None, result=None,
+                              error_details=None):
         """Construct the (task) payload portion of the Behavior Response.
 
         :param str operation: Operation string
