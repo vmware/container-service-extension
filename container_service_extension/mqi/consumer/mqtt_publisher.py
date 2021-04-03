@@ -43,7 +43,7 @@ class MQTTPublisher:
 
     def form_behavior_task_payload(self, operation='Cluster operation',
                                    status='running',
-                                   progress=50, result=None,
+                                   progress=None, result=None,
                                    error_details=None):
         """Construct the (task) payload portion of the Behavior Response.
 
@@ -68,16 +68,17 @@ class MQTTPublisher:
             payload['error'] = error_details
         return payload
 
-    def form_behavior_response_json(self, task_id, entity_id, task_payload):
+    def form_behavior_response_json(self, task_id, entity_id, payload):
         """Construct the behavior response to be published onto MQTT.
 
         :param str task_id:
         :param str entity_id: Id of the entity
-        :param dict task_payload: Payload could be of type task update (or) success
+        :param dict payload: Payload could be of type task update (or) success
         (or) error payload.
         :return: Behavior response
         :rtype: dict
         """
+        status = payload['status']
         response_json = {
             "type": "BEHAVIOR_RESPONSE",
             "headers": {
@@ -85,8 +86,10 @@ class MQTTPublisher:
                 "entityId": entity_id,
                 "contentType": "application/vnd.vmware.vcloud.task+json",
             },
-            "payload": json.dumps(task_payload)
+            "payload": json.dumps(payload)
         }
+        if status == 'success':
+            del response_json['headers']['contentType']
         return response_json
 
     def send_response(self, response_json):

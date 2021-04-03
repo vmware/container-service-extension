@@ -39,41 +39,50 @@ class MQTTConsumer:
         self._mqtt_client = None
         self._mqtt_publisher: MQTTPublisher = None
         self._ctpe = ConsumerThreadPoolExecutor(self.num_processors)
-        self._behavior_tpe = ConsumerThreadPoolExecutor(constants.BEHAVIOR_THREAD_POOL_SIZE)  # noqa: E501
         self._publish_lock = Lock()
         self._is_closing = False
 
     def process_behavior_message(self, msg_json):
-        payload = behavior_dispatcher.process_behavior_request(
-            msg_json, self._mqtt_publisher)
         task_id: str = msg_json['headers']['taskId']
         entity_id: str = msg_json['headers']['entityId']
+        behavior_id: str = msg_json['headers']['behaviorId']
+        payload: dict = json.loads(msg_json['payload'])
+        request_id: str = payload['_metadata']['requestId']
+        LOGGER.debug(f"Received behavior invocation: {behavior_id} on "
+                     f"entityId:{entity_id} with requestId: {request_id}")
+        payload = behavior_dispatcher.process_behavior_request(
+            msg_json, self._mqtt_publisher)
+
         response_json = self._mqtt_publisher.form_behavior_response_json(
             task_id=task_id,
             entity_id=entity_id,
-            task_payload=payload)
+            payload=payload)
         self._mqtt_publisher.send_response(response_json)
         LOGGER.debug(f'MQTT response: {response_json}')
 
     def process_mqtt_message(self, msg):
-        msg_json, reply_body, status_code, req_id = utils.get_response_fields(
-            request_msg=msg,
-            fsencoding=self.fsencoding,
-            is_mqtt=True)
+        msg_json = json.loads(msg.payload.decode(self.fsencoding))
+        if msg_json['type'] == 'BEHAVIOR_INVOCATION':
+            self.process_behavior_message(msg_json=msg_json)
+        else:
+            msg_json, reply_body, status_code, req_id = utils.get_response_fields(  # noqa: E501
+                request_msg=msg,
+                fsencoding=self.fsencoding,
+                is_mqtt=True)
 
-        LOGGER.debug(f"Received message with request_id: {req_id}, mid: "
-                     f"{msg.mid}, and msg json: {msg_json}")
+            LOGGER.debug(f"Received message with request_id: {req_id}, mid: "
+                         f"{msg.mid}, and msg json: {msg_json}")
 
-        task_path = utils.get_task_path_from_reply_body(reply_body)
-        reply_body_str = json.dumps(reply_body)
-        response_json = self._mqtt_publisher.form_response_json(
-            request_id=req_id,
-            status_code=status_code,
-            reply_body_str=reply_body_str,
-            task_path=task_path)
+            task_path = utils.get_task_path_from_reply_body(reply_body)
+            reply_body_str = json.dumps(reply_body)
+            response_json = self._mqtt_publisher.form_response_json(
+                request_id=req_id,
+                status_code=status_code,
+                reply_body_str=reply_body_str,
+                task_path=task_path)
 
-        self._mqtt_publisher.send_response(response_json)
-        LOGGER.debug(f'MQTT response: {response_json}')
+            self._mqtt_publisher.send_response(response_json)
+            LOGGER.debug(f'MQTT response: {response_json}')
 
     def send_too_many_requests_response(self, msg):
         payload_json = utils.str_to_json(msg.payload, self.fsencoding)
@@ -96,15 +105,7 @@ class MQTTConsumer:
             # No longer processing messages if server is closing
             if self._is_closing:
                 return
-            msg_json = json.loads(msg.payload.decode(self.fsencoding))
-            if msg_json['type'] == 'BEHAVIOR_INVOCATION':
-                if self._behavior_tpe.max_threads_busy():
-                    # TODO Find out from Extensibility on what is recommended.
-                    self.send_too_many_requests_response(msg)
-                else:
-                    self._behavior_tpe.submit(
-                        lambda: self.process_behavior_message(msg_json=msg_json))  # noqa: E501
-            elif self._ctpe.max_threads_busy():
+            if self._ctpe.max_threads_busy():
                 self.send_too_many_requests_response(msg)
             else:
                 self._ctpe.submit(lambda: self.process_mqtt_message(msg))

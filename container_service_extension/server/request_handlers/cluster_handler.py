@@ -64,9 +64,6 @@ def cluster_create(data: dict, op_ctx: ctx.OperationContext):
     # Based on the runtime rde, call the appropriate backend method.
     converted_native_entity = rde_utils.convert_input_rde_to_runtime_rde_format(input_entity)  # noqa: E501
 
-
-    return entity_svc.create_entity(converted_native_entity)
-
     svc = cluster_service_factory.ClusterServiceFactory(op_ctx).get_cluster_service()  # noqa: E501
     # TODO: Response RDE must be compatible with the request RDE.
     #  Conversions may be needed especially if there is a major version
@@ -179,7 +176,6 @@ def cluster_update(data: dict, op_ctx: ctx.OperationContext):
     # Based on the runtime rde, call the appropriate backend method.
     converted_native_entity = rde_utils.convert_input_rde_to_runtime_rde_format(input_entity)  # noqa: E501
 
-    return entity_svc.update_entity(converted_native_entity)
     svc = cluster_service_factory.ClusterServiceFactory(op_ctx).get_cluster_service()  # noqa: E501
     # TODO: Response RDE must be compatible with the request RDE.
     #  Conversions may be needed especially if there is a major version
