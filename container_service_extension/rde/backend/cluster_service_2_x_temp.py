@@ -63,14 +63,12 @@ class ClusterService(abstract_broker.AbstractBroker):
     """Handles cluster operations for native DEF based clusters."""
 
     def __init__(self, op_ctx: BehaviorRequestContext):
-        # TODO(DEF) Once all the methods are modified to use defined entities,
-        #  the param OperationContext needs to be replaced by cloudapiclient.
         self.context: ctx.OperationContext = op_ctx.op_ctx
+        self.task_id = op_ctx.task_id
+        self.entity_id = op_ctx.entity_id
         self.mqtt_publisher: MQTTPublisher = op_ctx.mqtt_publisher
-        self.behavior_task_id = op_ctx.task_id
-        self.behavior_task_href = self.context.client.get_api_uri() + f"/task/{self.behavior_task_id}"  # noqa: E501
         self.task = None
-        self.task_resource = self.context.client.get_resource(self.behavior_task_href)  # noqa: E501
+        self.task_resource = None
         self.task_update_lock = threading.Lock()
         self.entity_svc = def_entity_svc.DefEntityService(
             self.context.cloudapi_client)
@@ -272,7 +270,7 @@ class ClusterService(abstract_broker.AbstractBroker):
         )
         self._create_cluster_async(entity_id, input_native_entity)
         return self.mqtt_publisher.form_behavior_payload(
-            operation='create_cluster_in_progress',
+            message='create_cluster_in_progress',
             status=BehaviorTaskStatus.RUNNING.value, progress=5)
 
     def resize_cluster(self, cluster_id: str,

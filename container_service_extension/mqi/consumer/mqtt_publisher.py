@@ -41,30 +41,30 @@ class MQTTPublisher:
             response_json['httpResponse']['headers']['Location'] = task_path
         return response_json
 
-    def form_behavior_payload(self, operation='Cluster operation',
-                              status='running',
-                              progress=None, result=None,
+    def form_behavior_payload(self, message='Cluster operation',
+                              status='running', progress=None,
                               error_details=None):
         """Construct the (task) payload portion of the Behavior Response.
 
-        :param str operation: Operation string
+        :param dict error_details: Dict form of type BehaviorError
+        {'majorErrorCode':'500','minorErrorCode':None,'message':None}
+        :param str message: Task update message
         :param str status: Status of the task to be updated.
         :param str progress:
-        :param str result: Result string in the case of status=success
-        :param dict error_details: Error_details in the case of status=error
-            {'majorErrorCode':'500','minorErrorCode':None,'message':None}
+
         :return: The constructed task payload.
         :rtype: dict
         """
         payload = {
-            "operation": operation,
             "status": status
         }
-        if progress:
-            payload['progress'] = progress
-        if result:
-            payload['result'] = result
-        if error_details:
+        if status == 'running':
+            payload['operation'] = message
+            if progress:
+                payload['progress'] = progress
+        elif status == 'success':
+            payload['result'] = message
+        elif status == 'error':
             payload['error'] = error_details
         return payload
 
