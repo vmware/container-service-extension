@@ -6,13 +6,13 @@ import re
 import string
 import threading
 import time
+from dataclasses import asdict
 from typing import Dict, List
 import urllib
-
+import pyvcloud.vcd.task as vcd_task
 import pkg_resources
 import pyvcloud.vcd.client as vcd_client
 import pyvcloud.vcd.org as vcd_org
-import pyvcloud.vcd.task as vcd_task
 import pyvcloud.vcd.vapp as vcd_vapp
 from pyvcloud.vcd.vdc import VDC
 import pyvcloud.vcd.vm as vcd_vm
@@ -52,7 +52,7 @@ import container_service_extension.rde.models.common_models as common_models
 import container_service_extension.rde.models.rde_2_0_0 as rde_2_0_0
 import container_service_extension.rde.utils as def_utils
 from container_service_extension.rde.behaviors.behavior_model import \
-    BehaviorTaskStatus
+    BehaviorTaskStatus, BehaviorError
 from container_service_extension.security.context.behavior_request_context import BehaviorRequestContext  # noqa: E501
 import container_service_extension.security.context.operation_context as ctx
 import container_service_extension.server.abstract_broker as abstract_broker
@@ -65,6 +65,7 @@ class ClusterService(abstract_broker.AbstractBroker):
     def __init__(self, op_ctx: BehaviorRequestContext):
         self.context: ctx.OperationContext = op_ctx.op_ctx
         self.task_id = op_ctx.task_id
+        self.task_href = self.context.client.get_api_uri() + f"/task/{self.task_id}"  # noqa: E501
         self.entity_id = op_ctx.entity_id
         self.mqtt_publisher: MQTTPublisher = op_ctx.mqtt_publisher
         self.task = None
@@ -253,8 +254,8 @@ class ClusterService(abstract_broker.AbstractBroker):
 
         msg = f"Creating cluster '{cluster_name}' " \
               f"from template '{template_name}' (revision {template_revision})"
-        # self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
-        curr_rde.entity.status.task_href = self.task_resource.get('href')
+        self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
+        curr_rde.entity.status.task_href = self.task_href
         try:
             self.entity_svc.update_entity(entity_id=entity_id, entity=curr_rde)
         except Exception as err:
@@ -338,7 +339,7 @@ class ClusterService(abstract_broker.AbstractBroker):
               f"desired worker count {desired_worker_count} and " \
               f"nfs count {desired_nfs_count}"
         self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
-        curr_entity.entity.status.task_href = self.task_resource.get('href')
+        curr_entity.entity.status.task_href = self.task_href
         curr_entity.entity.status.phase = str(
             DefEntityPhase(DefEntityOperation.UPDATE,
                            DefEntityOperationStatus.IN_PROGRESS))
@@ -387,7 +388,7 @@ class ClusterService(abstract_broker.AbstractBroker):
         msg = f"Deleting cluster '{cluster_name}' ({cluster_id})"
         self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
 
-        curr_entity.entity.status.task_href = self.task_resource.get('href')
+        curr_entity.entity.status.task_href = self.task_href
         curr_entity.entity.status.phase = str(
             DefEntityPhase(DefEntityOperation.DELETE,
                            DefEntityOperationStatus.IN_PROGRESS))
@@ -493,7 +494,7 @@ class ClusterService(abstract_broker.AbstractBroker):
 
         curr_entity.entity.status.phase = str(
             DefEntityPhase(DefEntityOperation.UPGRADE, DefEntityOperationStatus.IN_PROGRESS))  # noqa: E501
-        curr_entity.entity.status.task_href = self.task_resource.get('href')
+        curr_entity.entity.status.task_href = self.task_href
         try:
             curr_entity = self.entity_svc.update_entity(cluster_id, curr_entity)  # noqa: E501
         except Exception as err:
@@ -638,7 +639,7 @@ class ClusterService(abstract_broker.AbstractBroker):
         # TODO(DEF) design and implement telemetry VCDA-1564 defined entity
         #  based clusters
 
-        curr_entity.entity.status.task_href = self.task_resource.get('href')
+        curr_entity.entity.status.task_href = self.task_href
         curr_entity.entity.status.phase = str(
             DefEntityPhase(DefEntityOperation.UPDATE,
                            DefEntityOperationStatus.IN_PROGRESS))
@@ -1621,62 +1622,77 @@ class ClusterService(abstract_broker.AbstractBroker):
             str(DefEntityPhase(op, DefEntityOperationStatus.FAILED))
         self.entity_svc.update_entity(cluster_id, def_entity)
 
-    def _update_task(self, status, message='', error_message=None,
-                     stack_trace=''):
-        """Update task or create it if it does not exist.
+    def _update_task(self, status, message='', error_message='', progress=None):  # noqa: E501
+        if status == vcd_client.TaskStatus.ERROR:
+            error_details = asdict(BehaviorError(majorErrorCode='500',
+                                                 minorErrorCode=message,
+                                                 message=error_message))
+            payload = self.mqtt_publisher.form_behavior_payload(
+                status=status.value, error_details=error_details)
+        else:
+            payload = self.mqtt_publisher.form_behavior_payload(
+                status=status.value, message=message, progress=progress)
+        response_json = self.mqtt_publisher.form_behavior_response_json(
+            task_id=self.task_id, entity_id=self.entity_id, payload=payload)
+        self.mqtt_publisher.send_response(response_json)
+        # TODO update self.task_status variable
 
-        This function should only be used in the x_async functions, or in the
-        6 common broker functions to create the required task.
-        When this function is used, it logs in the sys admin client if it is
-        not already logged in, but it does not log out. This is because many
-        _update_task() calls are used in sequence until the task succeeds or
-        fails. Once the task is updated to a success or failure state, then
-        the sys admin client should be logged out.
-
-        Another reason for decoupling sys admin logout and this function is
-        because if any unknown errors occur during an operation, there should
-        be a finally clause that takes care of logging out.
-        """
-        if not self.context.client.is_sysadmin():
-            stack_trace = ''
-
-        if self.task is None:
-            self.task = vcd_task.Task(self.context.sysadmin_client)
-
-        org = vcd_utils.get_org(self.context.client)
-        user_href = org.get_user(self.context.user.name).get('href')
-
-        # Wait for the thread-1 to finish updating the task, before thread-2 in
-        # the line can read the current status of the task.
-        # It is safe for thread-2 to check the current task status before
-        # updating it. A task with a terminal state of SUCCESS or ERROR cannot
-        # be further updated; vCD will throw an error.
-        with self.task_update_lock:
-            task_href = None
-            if self.task_resource is not None:
-                task_href = self.task_resource.get('href')
-                curr_task_status = self.task_resource.get('status')
-                if curr_task_status == vcd_client.TaskStatus.SUCCESS.value or \
-                        curr_task_status == vcd_client.TaskStatus.ERROR.value:
-                    # TODO Log the message here.
-                    return
-            self.task_resource = self.task.update(
-                status=status.value,
-                namespace='vcloud.cse',
-                operation=message,
-                operation_name='cluster operation',
-                details='',
-                progress=None,
-                owner_href=self.context.user.org_href,
-                owner_name=self.context.user.org_name,
-                owner_type='application/vnd.vmware.vcloud.org+xml',
-                user_href=user_href,
-                user_name=self.context.user.name,
-                org_href=self.context.user.org_href,
-                task_href=task_href,
-                error_message=error_message,
-                stack_trace=stack_trace
-            )
+    # def _update_task(self, status, message='', error_message=None,
+    #                  stack_trace=''):
+    #     """Update task or create it if it does not exist.
+    #
+    #     This function should only be used in the x_async functions, or in the
+    #     6 common broker functions to create the required task.
+    #     When this function is used, it logs in the sys admin client if it is
+    #     not already logged in, but it does not log out. This is because many
+    #     _update_task() calls are used in sequence until the task succeeds or
+    #     fails. Once the task is updated to a success or failure state, then
+    #     the sys admin client should be logged out.
+    #
+    #     Another reason for decoupling sys admin logout and this function is
+    #     because if any unknown errors occur during an operation, there should
+    #     be a finally clause that takes care of logging out.
+    #     """
+    #     if not self.context.client.is_sysadmin():
+    #         stack_trace = ''
+    #
+    #     if self.task is None:
+    #         self.task = vcd_task.Task(self.context.sysadmin_client)
+    #
+    #     org = vcd_utils.get_org(self.context.client)
+    #     user_href = org.get_user(self.context.user.name).get('href')
+    #
+    #     # Wait for the thread-1 to finish updating the task, before thread-2 in
+    #     # the line can read the current status of the task.
+    #     # It is safe for thread-2 to check the current task status before
+    #     # updating it. A task with a terminal state of SUCCESS or ERROR cannot
+    #     # be further updated; vCD will throw an error.
+    #     with self.task_update_lock:
+    #         task_href = None
+    #         if self.task_resource is not None:
+    #             task_href = self.task_resource.get('href')
+    #             curr_task_status = self.task_resource.get('status')
+    #             if curr_task_status == vcd_client.TaskStatus.SUCCESS.value or \
+    #                     curr_task_status == vcd_client.TaskStatus.ERROR.value:
+    #                 # TODO Log the message here.
+    #                 return
+    #         self.task_resource = self.task.update(
+    #             status=status.value,
+    #             namespace='vcloud.cse',
+    #             operation=message,
+    #             operation_name='cluster operation',
+    #             details='',
+    #             progress=None,
+    #             owner_href=self.context.user.org_href,
+    #             owner_name=self.context.user.org_name,
+    #             owner_type='application/vnd.vmware.vcloud.org+xml',
+    #             user_href=user_href,
+    #             user_name=self.context.user.name,
+    #             org_href=self.context.user.org_href,
+    #             task_href=task_href,
+    #             error_message=error_message,
+    #             stack_trace=stack_trace
+    #         )
 
 
 def _get_nodes_details(sysadmin_client, vapp):
