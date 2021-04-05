@@ -68,6 +68,8 @@ class Validator_2_0_0(AbstractValidator):
         # TODO: validators for rest of the CSE operations in V36 will be
         #  implemented as and when v36/def_cluster_handler.py get other handler
         #  functions
+        input_entity_spec = None
+        current_entity_spec = None
         if operation == BehaviorOperation.UPDATE_CLUSTER:
             if not entity_id or not entity:
                 raise ValueError('Both entity_id and entity are required to validate the Update operation.')  # noqa: E501

@@ -56,6 +56,7 @@ from container_service_extension.rde.behaviors.behavior_service import BehaviorS
 import container_service_extension.rde.common.entity_service as def_entity_svc
 import container_service_extension.rde.constants as def_constants
 import container_service_extension.rde.models.common_models as common_models
+import container_service_extension.rde.models.rde_2_0_0 as rde_2_x
 from container_service_extension.rde.models.rde_factory import get_rde_model
 import container_service_extension.rde.schema_service as def_schema_svc
 import container_service_extension.rde.utils as def_utils
@@ -2119,6 +2120,8 @@ def _upgrade_or_create_def_entity_for_existing_clusters(
 
     max_vcd_api_version_supported = \
         max([float(x) for x in config['service']['supported_api_versions']])
+    # TODO: get proper site information
+    site = config['vcd']['host']
     runtime_rde_version: str = \
         def_utils.get_runtime_rde_version_by_vcd_api_version(max_vcd_api_version_supported)  # noqa: E501
     rde_metadata: dict = def_utils.get_rde_metadata(runtime_rde_version)
@@ -2138,7 +2141,11 @@ def _upgrade_or_create_def_entity_for_existing_clusters(
                 msg = f"Upgrading {def_entity.name} from {source_rde_version} to {runtime_rde_version}"  # noqa: E501
                 INSTALL_LOGGER.info(msg)
                 msg_update_callback.info(msg)
-                _upgrade_cluster_rde(client, cluster, def_entity, runtime_rde_version, target_entity_type, entity_svc, msg_update_callback)  # noqa: E501
+                _upgrade_cluster_rde(
+                    client, cluster,
+                    def_entity, runtime_rde_version,
+                    target_entity_type, entity_svc,
+                    site, msg_update_callback=msg_update_callback)
             else:
                 msg = f"Skipping cluster '{cluster['name']}' " \
                     f"since it has already been processed."
@@ -2173,7 +2180,11 @@ def _upgrade_or_create_def_entity_for_existing_clusters(
         elif policy_name == shared_constants.TKG_PLUS_CLUSTER_RUNTIME_INTERNAL_NAME:  # noqa: E501
             kind = shared_constants.ClusterEntityKind.TKG_PLUS.value
 
-        _create_cluster_rde(client, cluster, kind, runtime_rde_version, target_entity_type, entity_svc, msg_update_callback)  # noqa: E501
+        _create_cluster_rde(
+            client, cluster,
+            kind, runtime_rde_version,
+            target_entity_type, entity_svc,
+            site, msg_update_callback=msg_update_callback)  # noqa: E501
 
     msg = "Finished processing all clusters."
     INSTALL_LOGGER.info(msg)
@@ -2182,7 +2193,7 @@ def _upgrade_or_create_def_entity_for_existing_clusters(
 
 def _create_cluster_rde(client, cluster, kind, runtime_rde_version,
                         target_entity_type, entity_svc,
-                        msg_update_callback=utils.NullPrinter()):
+                        site, msg_update_callback=utils.NullPrinter()):
     TargetNativeEntity = get_rde_model(runtime_rde_version)
     cluster_entity = TargetNativeEntity.from_cluster_data(cluster=cluster, kind=kind)  # noqa: E501
     org_resource = vcd_utils.get_org(client, org_name=cluster['org_name'])
@@ -2192,6 +2203,17 @@ def _create_cluster_rde(client, cluster, kind, runtime_rde_version,
 
     def_entity = entity_svc.get_native_rde_by_name_and_rde_version(cluster['name'], runtime_rde_version)  # noqa: E501
     def_entity_id = def_entity.id
+
+    # TODO: Need to find a better approach to avoid conditional logic for
+    #   filling missing properties.
+    if semantic_version.Version(runtime_rde_version).major == \
+            semantic_version.Version(def_constants.RDEVersion.RDE_2_0_0).major:
+        # Update with the correct cluster id
+        native_entity_2_x: rde_2_x.NativeEntity = def_entity.entity
+        native_entity_2_x.status.uid = def_entity_id
+        native_entity_2_x.status.cloudProperties.site = site
+        native_entity_2_x.metadata.site = site
+
     def_entity.externalId = cluster['vapp_href']
 
     # update ownership of the entity
@@ -2246,9 +2268,21 @@ def _create_cluster_rde(client, cluster, kind, runtime_rde_version,
 
 def _upgrade_cluster_rde(client, cluster, def_entity_to_upgrade,
                          runtime_rde_version, target_entity_type,
-                         entity_svc, msg_update_callback=utils.NullPrinter()):  # noqa: E501
+                         entity_svc, site=None, msg_update_callback=utils.NullPrinter()):  # noqa: E501
     TargetNativeEntity = get_rde_model(runtime_rde_version)
     new_native_entity = TargetNativeEntity.from_native_entity(def_entity_to_upgrade.entity)  # noqa: E501
+
+    # Adding missing fields in RDE 2.0
+    # TODO: Need to find a better approach to avoid conditional logic for
+    #   filling missing properties.
+    if semantic_version.Version(runtime_rde_version).major == \
+            semantic_version.Version(def_constants.RDEVersion.RDE_2_0_0).major:
+        # RDE upgrade possible only from RDE 1.0 or RDE 2.x
+        native_entity_2_x: rde_2_x.NativeEntity = new_native_entity
+        native_entity_2_x.status.uid = def_entity_to_upgrade.id
+        native_entity_2_x.status.cloudProperties.site = site
+        native_entity_2_x.metadata.site = site
+
     new_def_entity = common_models.DefEntity(
         entity=new_native_entity, entityType=target_entity_type.id)  # noqa: E501
     org_resource = vcd_utils.get_org(client, org_name=cluster['org_name'])  # noqa: E501

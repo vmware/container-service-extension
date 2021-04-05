@@ -206,7 +206,7 @@ class NativeEntity(AbstractNativeEntity):
         raise NotImplementedError
 
     @classmethod
-    def from_cluster_data(cls, cluster: dict, kind: str):
+    def from_cluster_data(cls, cluster: dict, kind: str, **kwargs):
         """Construct rde_1.0.0 native entity from non-rde cluster.
 
         :param dict cluster: cluster metadata
@@ -275,3 +275,6 @@ class NativeEntity(AbstractNativeEntity):
             api_version=""
         )
         return cluster_entity
+
+    def get_latest_task_href(self):
+        return self.status.task_href
