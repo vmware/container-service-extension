@@ -17,7 +17,6 @@ class RedactingFilter(logging.Filter):
     the value for a sensitive key will be a plain string.
     """
 
-    # Keys are case sensitive in order to form pattern string
     _SENSITIVE_KEYS = ['authorization',
                        'x-vcloud-authorization',
                        'x-vmware-vcloud-access-token',
