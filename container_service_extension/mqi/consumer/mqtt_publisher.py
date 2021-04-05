@@ -6,6 +6,8 @@ import requests
 from container_service_extension.logging.logger import SERVER_LOGGER as LOGGER
 import container_service_extension.mqi.consumer.constants as constants
 import container_service_extension.mqi.consumer.utils as utils
+from container_service_extension.rde.behaviors.behavior_model import \
+    BehaviorTaskStatus
 
 
 class MQTTPublisher:
