@@ -44,8 +44,8 @@ class MQTTPublisher:
         return response_json
 
     def form_behavior_payload(self, message='Cluster operation',
-                              status='running', progress=None,
-                              error_details=None):
+                              status=BehaviorTaskStatus.RUNNING.value,
+                              progress=None, error_details=None):
         """Construct the (task) payload portion of the Behavior Response.
 
         :param dict error_details: Dict form of type BehaviorError
