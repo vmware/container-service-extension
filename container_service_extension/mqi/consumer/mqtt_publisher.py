@@ -6,6 +6,8 @@ import requests
 from container_service_extension.logging.logger import SERVER_LOGGER as LOGGER
 import container_service_extension.mqi.consumer.constants as constants
 import container_service_extension.mqi.consumer.utils as utils
+from container_service_extension.rde.behaviors.behavior_model import \
+    BehaviorTaskStatus
 
 
 class MQTTPublisher:
@@ -42,8 +44,8 @@ class MQTTPublisher:
         return response_json
 
     def form_behavior_payload(self, message='Cluster operation',
-                              status='running', progress=None,
-                              error_details=None):
+                              status=BehaviorTaskStatus.RUNNING.value,
+                              progress=None, error_details=None):
         """Construct the (task) payload portion of the Behavior Response.
 
         :param dict error_details: Dict form of type BehaviorError
