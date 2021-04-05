@@ -46,6 +46,8 @@ import container_service_extension.lib.telemetry.telemetry_handler as telemetry_
 from container_service_extension.logging.logger import SERVER_LOGGER as LOGGER
 from container_service_extension.mqi.consumer.mqtt_publisher import MQTTPublisher  # noqa: E501
 import container_service_extension.rde.acl_service as acl_service
+from container_service_extension.rde.behaviors.behavior_model import \
+    BehaviorTaskStatus
 import container_service_extension.rde.common.entity_service as def_entity_svc
 import container_service_extension.rde.constants as def_constants
 import container_service_extension.rde.models.common_models as common_models
