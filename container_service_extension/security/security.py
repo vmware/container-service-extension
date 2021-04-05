@@ -55,7 +55,7 @@ class RedactingFilter(logging.Filter):
         #   6. Look for 0 or 1 instance of '
         #   7. Put everything that is not ', space or } in a group,
         #      this group must be atleast of length 1.
-        self._pattern = r"((" + pattern_key + r")'?:\s+[{\[]*'?)([^',}]+)"
+        self._pattern = r"((\"|')(" + pattern_key + r")(\"|')?:\s+[{\[]*'?)([^',}]+)"  # noqa: E501
 
     def filter(self, record):
         """Overridden filter method to redact log records.
