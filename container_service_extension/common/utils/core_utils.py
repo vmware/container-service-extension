@@ -33,23 +33,7 @@ _type_to_string = {
 }
 
 
-class ConsoleMessagePrinter():
-    """Callback object to print color coded message on console."""
-
-    def general_no_color(self, msg):
-        click.secho(msg)
-
-    def general(self, msg):
-        click.secho(msg, fg='green')
-
-    def info(self, msg):
-        click.secho(msg, fg='yellow')
-
-    def error(self, msg):
-        click.secho(msg, fg='red')
-
-
-class NullPrinter():
+class NullPrinter:
     """Callback object which does nothing."""
 
     def general_no_color(self, msg):
@@ -65,10 +49,26 @@ class NullPrinter():
         pass
 
 
+class ConsoleMessagePrinter(NullPrinter):
+    """Callback object to print color coded message on console."""
+
+    def general_no_color(self, msg):
+        click.secho(msg)
+
+    def general(self, msg):
+        click.secho(msg, fg='green')
+
+    def info(self, msg):
+        click.secho(msg, fg='yellow')
+
+    def error(self, msg):
+        click.secho(msg, fg='red')
+
+
 def get_cse_info():
     return {
         'product': 'CSE',
-        'description': 'Container Service Extension for VMware vCloud Director', # noqa: E501
+        'description': 'Container Service Extension for VMware vCloud Director',  # noqa: E501
         'version': pkg_resources.require('container-service-extension')[0].version,  # noqa: E501
         'python': platform.python_version()
     }
@@ -93,7 +93,7 @@ def get_duplicate_items_in_list(items):
 
     :param list items: list of items with possible duplicates.
 
-    :return: the items that occur more than once in niput list. Each duplicated
+    :return: the items that occur more than once in input list. Each duplicated
         item will be mentioned only once in the returned list.
 
     :rtype: list
@@ -158,7 +158,7 @@ def check_keys_and_value_types(dikt, ref_dict, location='dictionary',
 def check_python_version(msg_update_callback=NullPrinter()):
     """Ensure that user's Python version >= 3.7.3.
 
-    If the check fails, will exit the python interpretor with error status.
+    If the check fails, will exit the python interpreter with error status.
 
     :param utils.ConsoleMessagePrinter msg_update_callback: Callback object.
     """
@@ -178,7 +178,7 @@ def str_to_bool(s):
 
     The conversion is case insensitive.
 
-    :param val: input string
+    :param s: input string
 
     :return: True if val is 'true' otherwise False
     """
@@ -303,7 +303,6 @@ def read_data_file(filepath, logger=NULL_LOGGER,
         found.
     """
     path = pathlib.Path(filepath)
-    contents = ''
     try:
         contents = path.read_text()
     except FileNotFoundError as err:
@@ -353,7 +352,7 @@ def escape_query_filter_expression_value(value):
 
 
 def construct_filter_string(filters: dict):
-    """Construct anded filter string from the dict.
+    """Construct &-ed filter string from the dict.
 
     :param dict filters: dictionary containing key and values for the filters
     """
