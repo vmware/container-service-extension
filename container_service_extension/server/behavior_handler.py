@@ -2,7 +2,6 @@
 # Copyright (c) 2021 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 
-# from container_service_extension.rde.behaviors.behavior_model import BehaviorErrorPayload  # noqa: E501
 import functools
 
 import container_service_extension.exception.exceptions as cse_exception

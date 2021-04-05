@@ -5,7 +5,6 @@
 import json
 import ssl
 import sys
-from threading import Lock
 
 import paho.mqtt.client as mqtt
 import requests
@@ -39,7 +38,6 @@ class MQTTConsumer:
         self._mqtt_client = None
         self._mqtt_publisher: MQTTPublisher = None
         self._ctpe = ConsumerThreadPoolExecutor(self.num_processors)
-        self._publish_lock = Lock()
         self._is_closing = False
 
     def process_behavior_message(self, msg_json):
