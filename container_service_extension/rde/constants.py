@@ -23,7 +23,6 @@ DEF_ERROR_MESSAGE_KEY = 'message'
 DEF_RESOLVED_STATE = 'RESOLVED'
 
 PAYLOAD_VERSION_PREFIX = 'cse.vmware.com/'
-PAYLOAD_VERSION_1_0 = PAYLOAD_VERSION_PREFIX + 'v1.0'
 PAYLOAD_VERSION_2_0 = PAYLOAD_VERSION_PREFIX + 'v2.0'
 
 
@@ -145,11 +144,11 @@ MAP_VCD_API_VERSION_TO_RDE_VERSION = {
 }
 
 MAP_INPUT_PAYLOAD_VERSION_TO_RDE_VERSION = {
-    PAYLOAD_VERSION_1_0: RDEVersion.RDE_1_0_0.value,
     PAYLOAD_VERSION_2_0: RDEVersion.RDE_2_0_0.value
 }
 
 
+# TODO make changes to use camel case
 class ClusterEntityFilterKey(Enum):
     """Keys to filter cluster entities in CSE (or) vCD.
 
@@ -173,5 +172,5 @@ class ClusterEntityFilterKey(Enum):
 
 
 class PayloadKey(str, Enum):
-    PAYLOAD_VERSION = 'api_version'
+    PAYLOAD_VERSION = 'apiVersion'
     UNKNOWN = 'unknown'

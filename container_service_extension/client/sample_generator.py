@@ -7,7 +7,9 @@ import yaml
 
 import container_service_extension.common.constants.shared_constants as shared_constants  # noqa: E501
 from container_service_extension.logging.logger import CLIENT_LOGGER
+import container_service_extension.rde.constants as def_constants
 import container_service_extension.rde.models.rde_1_0_0 as rde_1_0_0
+import container_service_extension.rde.models.rde_2_0_0 as rde_2_0_0
 
 SAMPLE_K8_CLUSTER_SPEC_HELP = """# Short description of various properties used in this sample cluster configuration
 # kind: The kind of the Kubernetes cluster.
@@ -70,7 +72,7 @@ SAMPLE_TKG_CLUSTER_SPEC_HELP = """# Short description of various properties used
 """  # noqa: E501
 
 
-def get_sample_cluster_configuration(output=None, k8_runtime=None):
+def get_sample_cluster_configuration(output=None, k8_runtime=None, server_rde_in_use=None):  # noqa: E501
     """Generate sample cluster configuration.
 
     :param str output: full path of output file
@@ -82,7 +84,9 @@ def get_sample_cluster_configuration(output=None, k8_runtime=None):
         sample_cluster_config = SAMPLE_TKG_CLUSTER_SPEC_HELP + _get_sample_tkg_cluster_configuration()  # noqa: E501
 
     else:
-        sample_cluster_config = SAMPLE_K8_CLUSTER_SPEC_HELP + _get_sample_cluster_configuration_by_k8_runtime(k8_runtime)  # noqa: E501
+        if not server_rde_in_use:
+            raise ValueError("CSE server API version required to generate sample config")  # noqa: E501
+        sample_cluster_config = SAMPLE_K8_CLUSTER_SPEC_HELP + _get_sample_cluster_configuration_by_k8_runtime(k8_runtime, server_rde_in_use)  # noqa: E501
 
     if output:
         with open(output, 'w') as f:
@@ -91,7 +95,7 @@ def get_sample_cluster_configuration(output=None, k8_runtime=None):
     return sample_cluster_config
 
 
-def _get_sample_cluster_configuration_by_k8_runtime(k8_runtime):
+def _get_sample_cluster_configuration_by_k8_runtime(k8_runtime, server_rde_in_use):  # noqa: E501
     metadata = rde_1_0_0.Metadata('cluster_name', 'organization_name',
                                   'org_virtual_datacenter_name')
     status = rde_1_0_0.Status()
@@ -130,6 +134,11 @@ def _get_sample_cluster_configuration_by_k8_runtime(k8_runtime):
         status=status,
         kind=k8_runtime.value
     )
+
+    # TODO Temporary solution for generating sample for RDE 2.0
+    if server_rde_in_use == def_constants.RDEVersion.RDE_2_0_0:
+        cluster_entity = rde_2_0_0.NativeEntity.from_native_entity(cluster_entity)  # noqa: E501
+        cluster_entity.metadata.site = "VCD site"
 
     sample_cluster_config = yaml.dump(dataclasses.asdict(cluster_entity))
     CLIENT_LOGGER.info(sample_cluster_config)

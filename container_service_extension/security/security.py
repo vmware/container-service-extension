@@ -47,7 +47,7 @@ class RedactingFilter(logging.Filter):
         # and value will be accessible as group 1
         # Regex explanation :
         #   1. Look for a match with one of the keys
-        #   2. Look for 0 or 1 instance of '
+        #   2. Look for 0 or 1 instance of ' or "
         #   3. Look for a colon
         #   4. Look for 1 or more instances of space
         #   5. Look for 0 or more instances of [ or { <-- looking for starting
@@ -55,7 +55,7 @@ class RedactingFilter(logging.Filter):
         #   6. Look for 0 or 1 instance of '
         #   7. Put everything that is not ', space or } in a group,
         #      this group must be atleast of length 1.
-        self._pattern = r"((" + pattern_key + r")'?:\s+[{\[]*'?)([^',}]+)"
+        self._pattern = r"((" + pattern_key + r")(\"|')?:\s+[{\[]*'?)([^',}]+)"
 
     def filter(self, record):
         """Overridden filter method to redact log records.

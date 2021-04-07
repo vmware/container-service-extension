@@ -406,7 +406,7 @@ def _validate_broker_config(broker_dict,
                          f"'{broker_dict['ip_allocation_mode']}' when it "
                          f"should be either 'dhcp' or 'pool'")
 
-    rtm = RemoteTemplateManager(remote_template_cookbook_url=broker_dict['remote_template_cookbook_url'], # noqa: E501
+    rtm = RemoteTemplateManager(remote_template_cookbook_url=broker_dict['remote_template_cookbook_url'],  # noqa: E501
                                 legacy_mode=legacy_mode,
                                 logger=logger_debug)
 
@@ -613,8 +613,9 @@ def _validate_pks_config_data_integrity(pks_config,
                     f"Unknown Node IP Block : {ip_block_id} referenced by "
                     f"NSX-T server : {nsxt_server.get('name')}.")
         if nsxt_server.get('pods_ip_block_ids'):
+            block_not_found = False
+            ip_block_id = ''
             try:
-                block_not_found = False
                 for ip_block_id in nsxt_server.get('pods_ip_block_ids'):
                     if not ipset_manager.get_ip_block_by_id(ip_block_id):
                         block_not_found = True

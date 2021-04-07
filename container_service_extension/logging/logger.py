@@ -59,7 +59,7 @@ CLIENT_DEBUG_LOG_FILEPATH = f"{LOGS_DIR_NAME}/cse-client-debug.log"
 CLIENT_LOGGER = logging.getLogger(CLIENT_LOGGER_NAME)
 
 CLIENT_WIRE_LOGGER_NAME = 'container_service_extension.client-wire'
-CLIENT_WIRE_LOGGER_FILEPATH = f"{LOGS_DIR_NAME}/cse-client-wire.log" # noqa: E501
+CLIENT_WIRE_LOGGER_FILEPATH = f"{LOGS_DIR_NAME}/cse-client-wire.log"  # noqa: E501
 CLIENT_WIRE_LOGGER = logging.getLogger(CLIENT_WIRE_LOGGER_NAME)
 
 # cse server cli logger and config
@@ -103,9 +103,9 @@ SERVER_PKS_WIRE_LOGGER_NAME = 'container_service_extension.server-pks-wire'
 SERVER_PKS_WIRE_LOG_FILEPATH = f"{LOGS_DIR_NAME}/pks-wire.log"
 SERVER_PKS_WIRE_LOGGER = logging.getLogger(SERVER_PKS_WIRE_LOGGER_NAME)
 
-SERVER_CLOUDAPI_WIRE_LOGGER_NAME = 'container_service_extension.server-cloudapi-wire' # noqa: E501
+SERVER_CLOUDAPI_WIRE_LOGGER_NAME = 'container_service_extension.server-cloudapi-wire'  # noqa: E501
 SERVER_CLOUDAPI_LOG_FILEPATH = f"{LOGS_DIR_NAME}/cloudapi-wire.log"
-SERVER_CLOUDAPI_WIRE_LOGGER = logging.getLogger(SERVER_CLOUDAPI_WIRE_LOGGER_NAME) # noqa: E501
+SERVER_CLOUDAPI_WIRE_LOGGER = logging.getLogger(SERVER_CLOUDAPI_WIRE_LOGGER_NAME)  # noqa: E501
 
 # NullLogger doesn't perform logging.
 NULL_LOGGER = logging.getLogger('container_service_extension.null-logger')
@@ -137,11 +137,11 @@ def configure_all_file_loggers():
                      INFO_LOG_FORMATTER, SERVER_LOGGER),
         LoggerConfig(SERVER_LOGGER_NAME, SERVER_DEBUG_LOG_FILEPATH,
                      DEBUG_LOG_FORMATTER, SERVER_LOGGER),
-        LoggerConfig(SERVER_NSXT_WIRE_LOGGER_NAME, SERVER_NSXT_WIRE_LOG_FILEPATH, # noqa: E501
+        LoggerConfig(SERVER_NSXT_WIRE_LOGGER_NAME, SERVER_NSXT_WIRE_LOG_FILEPATH,  # noqa: E501
                      DEBUG_LOG_FORMATTER, SERVER_NSXT_WIRE_LOGGER),
         LoggerConfig(SERVER_PKS_WIRE_LOGGER_NAME, SERVER_PKS_WIRE_LOG_FILEPATH,
                      DEBUG_LOG_FORMATTER, SERVER_PKS_WIRE_LOGGER),
-        LoggerConfig(SERVER_CLOUDAPI_WIRE_LOGGER_NAME, SERVER_CLOUDAPI_LOG_FILEPATH, # noqa: E501
+        LoggerConfig(SERVER_CLOUDAPI_WIRE_LOGGER_NAME, SERVER_CLOUDAPI_LOG_FILEPATH,  # noqa: E501
                      DEBUG_LOG_FORMATTER, SERVER_CLOUDAPI_WIRE_LOGGER)
     ]
 

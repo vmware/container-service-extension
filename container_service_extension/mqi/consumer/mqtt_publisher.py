@@ -11,13 +11,24 @@ from container_service_extension.rde.behaviors.behavior_model import \
 
 
 class MQTTPublisher:
+    """Publish messages to MQTT.
+
+    It provides methods to construct and send traditional MQTT messages and
+    Behavior type MQTT messages.
+
+    It holds a lock to avoid concurrent message publishing to MQTT. Hence,
+    there can only exist one instance of this class and it cannot be
+    initialized outside of the MQTTConsumer. Locking mechanism needs to be
+    changed if we ever decide to have more than one instance of MQTTConsumer.
+    """
+
     def __init__(self, mqtt_client, respond_topic):
         self.mqtt_client = mqtt_client
         self.respond_topic = respond_topic
         self._publish_lock = Lock()
 
-    def form_response_json(self, request_id, status_code, reply_body_str,
-                           task_path=None):
+    def construct_response_json(self, request_id, status_code, reply_body_str,
+                                task_path=None):
         response_json = {
             "type": "API_RESPONSE",
             "headers": {
@@ -43,9 +54,9 @@ class MQTTPublisher:
             response_json['httpResponse']['headers']['Location'] = task_path
         return response_json
 
-    def form_behavior_payload(self, message='Cluster operation',
-                              status=BehaviorTaskStatus.RUNNING.value,
-                              progress=None, error_details=None):
+    def construct_behavior_payload(self, message='Cluster operation',
+                                   status=BehaviorTaskStatus.RUNNING.value,
+                                   progress=None, error_details=None):
         """Construct the (task) payload portion of the Behavior Response.
 
         :param dict error_details: Dict form of type BehaviorError
@@ -70,7 +81,7 @@ class MQTTPublisher:
             payload['error'] = error_details
         return payload
 
-    def form_behavior_response_json(self, task_id, entity_id, payload):
+    def construct_behavior_response_json(self, task_id, entity_id, payload):
         """Construct the behavior response to be published onto MQTT.
 
         :param str task_id:

@@ -18,6 +18,7 @@ from container_service_extension.lib.telemetry.constants import PayloadTable
 from container_service_extension.lib.telemetry.constants import PayloadValue
 from container_service_extension.lib.telemetry.constants import SourceMap
 from container_service_extension.lib.telemetry.telemetry_utils import uuid_hash
+import container_service_extension.rde.models.rde_2_0_0 as rde_2_x
 
 
 def get_payload_for_user_action(cse_operation, status, message=None):
@@ -734,12 +735,13 @@ def get_payload_for_v36_cluster_config(params):
     :type: dict
     """
     def_entity = params.get(CLUSTER_ENTITY)
+    native_entity: rde_2_x.NativeEntity = def_entity.entity
     return {
         PayloadKey.TYPE: CseOperation.V36_CLUSTER_CONFIG.telemetry_table,
         PayloadKey.CLUSTER_ID: uuid_hash(pyvcd_utils.extract_id(def_entity.id)),  # noqa: E501
-        PayloadKey.CLUSTER_KIND: def_entity.entity.kind,
-        PayloadKey.TEMPLATE_NAME: def_entity.entity.spec.k8_distribution.template_name,  # noqa: E501
-        PayloadKey.TEMPLATE_REVISION: def_entity.entity.spec.k8_distribution.template_revision,  # noqa: E501
+        PayloadKey.CLUSTER_KIND: native_entity.kind,
+        PayloadKey.TEMPLATE_NAME: native_entity.spec.k8Distribution.templateName,  # noqa: E501
+        PayloadKey.TEMPLATE_REVISION: native_entity.spec.k8Distribution.templateRevision,  # noqa: E501
         PayloadKey.SOURCE_ID: SourceMap.get_source_id(params.get(PayloadKey.SOURCE_DESCRIPTION)),  # noqa: E501
         PayloadKey.SOURCE_DESCRIPTION: params.get(PayloadKey.SOURCE_DESCRIPTION)  # noqa: E501
     }
@@ -755,17 +757,18 @@ def get_payload_for_v36_cluster_apply(params):
     :type: dict
     """
     def_entity = params.get(CLUSTER_ENTITY)
+    native_entity: rde_2_x.NativeEntity = def_entity.entity
     return {
         PayloadKey.TYPE: CseOperation.V36_CLUSTER_APPLY.telemetry_table,
         PayloadKey.CLUSTER_ID: uuid_hash(pyvcd_utils.extract_id(def_entity.id)),  # noqa: E501
-        PayloadKey.CLUSTER_KIND: def_entity.entity.kind,
-        PayloadKey.TEMPLATE_NAME: def_entity.entity.spec.k8_distribution.template_name,  # noqa: E501
-        PayloadKey.TEMPLATE_REVISION: def_entity.entity.spec.k8_distribution.template_revision,  # noqa: E501
-        PayloadKey.NUMBER_OF_MASTER_NODES: def_entity.entity.spec.control_plane.count,  # noqa: E501
-        PayloadKey.NUMBER_OF_WORKER_NODES: def_entity.entity.spec.workers.count,  # noqa: E501
-        PayloadKey.NUMBER_OF_NFS_NODES: def_entity.entity.spec.nfs.count,  # noqa: E501
-        PayloadKey.WAS_SSH_KEY_SPECIFIED: bool(def_entity.entity.spec.settings.ssh_key),  # noqa: E501
-        PayloadKey.WAS_ROLLBACK_ENABLED: bool(def_entity.entity.spec.settings.rollback_on_failure),  # noqa: E501
+        PayloadKey.CLUSTER_KIND: native_entity.kind,
+        PayloadKey.TEMPLATE_NAME: native_entity.spec.k8Distribution.templateName,  # noqa: E501
+        PayloadKey.TEMPLATE_REVISION: native_entity.spec.k8Distribution.templateRevision,  # noqa: E501
+        PayloadKey.NUMBER_OF_MASTER_NODES: native_entity.spec.controlPlane.count,  # noqa: E501
+        PayloadKey.NUMBER_OF_WORKER_NODES: native_entity.spec.workers.count,
+        PayloadKey.NUMBER_OF_NFS_NODES: native_entity.spec.nfs.count,
+        PayloadKey.WAS_SSH_KEY_SPECIFIED: bool(native_entity.spec.settings.sshKey),  # noqa: E501
+        PayloadKey.WAS_ROLLBACK_ENABLED: bool(native_entity.spec.settings.rollbackOnFailure),  # noqa: E501
         PayloadKey.SOURCE_ID: SourceMap.get_source_id(params.get(PayloadKey.SOURCE_DESCRIPTION)),  # noqa: E501
         PayloadKey.SOURCE_DESCRIPTION: params.get(PayloadKey.SOURCE_DESCRIPTION)  # noqa: E501
     }
@@ -781,10 +784,11 @@ def get_payload_for_v36_cluster_delete(params):
     :type: dict
     """
     def_entity = params.get(CLUSTER_ENTITY)
+    native_entity: rde_2_x.NativeEntity = def_entity.entity
     return {
         PayloadKey.TYPE: CseOperation.V36_CLUSTER_DELETE.telemetry_table,
         PayloadKey.CLUSTER_ID: uuid_hash(pyvcd_utils.extract_id(def_entity.id)),  # noqa: E501
-        PayloadKey.CLUSTER_KIND: def_entity.entity.kind,
+        PayloadKey.CLUSTER_KIND: native_entity.kind,
         PayloadKey.SOURCE_ID: SourceMap.get_source_id(params.get(PayloadKey.SOURCE_DESCRIPTION)),  # noqa: E501
         PayloadKey.SOURCE_DESCRIPTION: params.get(PayloadKey.SOURCE_DESCRIPTION)  # noqa: E501
     }
@@ -800,10 +804,11 @@ def get_payload_for_v36_cluster_upgrade_plan(params):
     :type: dict
     """
     def_entity = params.get(CLUSTER_ENTITY)
+    native_entity: rde_2_x.NativeEntity = def_entity.entity
     return {
         PayloadKey.TYPE: CseOperation.V36_CLUSTER_UPGRADE_PLAN.telemetry_table,
         PayloadKey.CLUSTER_ID: uuid_hash(pyvcd_utils.extract_id(def_entity.id)),  # noqa: E501
-        PayloadKey.CLUSTER_KIND: def_entity.entity.kind,
+        PayloadKey.CLUSTER_KIND: native_entity.kind,
         PayloadKey.SOURCE_ID: SourceMap.get_source_id(params.get(PayloadKey.SOURCE_DESCRIPTION)),  # noqa: E501
         PayloadKey.SOURCE_DESCRIPTION: params.get(PayloadKey.SOURCE_DESCRIPTION)  # noqa: E501
     }
@@ -819,12 +824,13 @@ def get_payload_for_v36_cluster_upgrade(params):
     :type: dict
     """
     def_entity = params.get(CLUSTER_ENTITY)
+    native_entity: rde_2_x.NativeEntity = def_entity.entity
     return {
         PayloadKey.TYPE: CseOperation.V36_CLUSTER_UPGRADE.telemetry_table,
         PayloadKey.CLUSTER_ID: uuid_hash(pyvcd_utils.extract_id(def_entity.id)),  # noqa: E501
-        PayloadKey.CLUSTER_KIND: def_entity.entity.kind,
-        PayloadKey.TEMPLATE_NAME: def_entity.entity.spec.k8_distribution.template_name,  # noqa: E501
-        PayloadKey.TEMPLATE_REVISION: def_entity.entity.spec.k8_distribution.template_revision,  # noqa: E501
+        PayloadKey.CLUSTER_KIND: native_entity.kind,
+        PayloadKey.TEMPLATE_NAME: native_entity.spec.k8Distribution.templateName,  # noqa: E501
+        PayloadKey.TEMPLATE_REVISION: native_entity.spec.k8Distribution.templateRevision,  # noqa: E501
         PayloadKey.SOURCE_ID: SourceMap.get_source_id(params.get(PayloadKey.SOURCE_DESCRIPTION)),  # noqa: E501
         PayloadKey.SOURCE_DESCRIPTION: params.get(PayloadKey.SOURCE_DESCRIPTION)  # noqa: E501
     }

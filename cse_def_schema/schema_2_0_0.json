@@ -6,20 +6,20 @@
                 "properties": {
                     "name": {"type": "string"},
                     "ip": {"type": "string"},
-                    "sizing_class": {"type": "string"},
-                    "storage_profile": {"type": "string"}
+                    "sizingClass": {"type": "string"},
+                    "storageProfile": {"type": "string"}
                 },
                 "additionalProperties": true
             },
-            "k8_distribution": {
+            "k8Distribution": {
                 "type": "object",
                 "required": [
-                   "template_name",
-                   "template_revision"
+                   "templateName",
+                   "templateRevision"
                 ],
                 "properties": {
-                   "template_name":  { "type": "string"},
-                   "template_revision": { "type": "integer"}
+                   "templateName":  { "type": "string"},
+                   "templateRevision": { "type": "integer"}
                 },
                 "additionalProperties": true
             }
@@ -29,7 +29,7 @@
             "kind",
             "spec",
             "metadata",
-            "api_version"
+            "apiVersion"
         ],
         "properties": {
             "kind": {
@@ -50,7 +50,7 @@
                 "properties": {
                     "workers": {
                         "type": "object",
-                        "description":"The desired worker state of the cluster. The properties \"sizing_class\" and \"storage_profile\" can be specified only during the cluster creation phase. These properties will no longer be modifiable in further update operations like \"resize\" and \"upgrade\". Non uniform worker nodes in the clusters is not yet supported.",
+                        "description":"The desired worker state of the cluster. The properties \"sizingClass\" and \"storageProfile\" can be specified only during the cluster creation phase. These properties will no longer be modifiable in further update operations like \"resize\" and \"upgrade\". Non uniform worker nodes in the clusters is not yet supported.",
                         "required": [
                             "count"
                         ],
@@ -61,20 +61,20 @@
                                 "maximum": 100,
                                 "minimum": 0
                             },
-                            "sizing_class": {
+                            "sizingClass": {
                                 "type": "string",
                                 "description":"The compute sizing policy with which worker nodes need to be provisioned in a given \"ovdc\". The specified sizing policy is expected to be pre-published to the given ovdc."
                             },
-                            "storage_profile": {
+                            "storageProfile": {
                                 "type": "string",
                                 "description":"The storage-profile with which worker nodes need to be provisioned in a given \"ovdc\". The specified storage-profile is expected to be available on the given ovdc."
                             }
                         },
                         "additionalProperties": true
                     },
-                    "control_plane": {
+                    "controlPlane": {
                         "type": "object",
-                        "description":"The desired control-plane state of the cluster. The properties \"sizing_class\" and \"storage_profile\" can be specified only during the cluster creation phase. These properties will no longer be modifiable in further update operations like \"resize\" and \"upgrade\".\n ",
+                        "description":"The desired control-plane state of the cluster. The properties \"sizingClass\" and \"storageProfile\" can be specified only during the cluster creation phase. These properties will no longer be modifiable in further update operations like \"resize\" and \"upgrade\".\n ",
                         "required": [
                             "count"
                         ],
@@ -85,11 +85,11 @@
                                 "maximum": 1,
                                 "minimum": 1
                             },
-                            "sizing_class": {
+                            "sizingClass": {
                                 "type": "string",
                                 "description":"The compute sizing policy with which control-plane node needs to be provisioned in a given \"ovdc\". The specified sizing policy is expected to be pre-published to the given ovdc."
                             },
-                            "storage_profile": {
+                            "storageProfile": {
                                 "type": "string",
                                 "description":"The storage-profile with which control-plane needs to be provisioned in a given \"ovdc\". The specified storage-profile is expected to be available on the given ovdc."
                             }
@@ -98,7 +98,7 @@
                     },
                     "nfs": {
                         "type": "object",
-                        "description":"The desired nfs state of the cluster. The properties \"sizing_class\" and \"storage_profile\" can be specified only during the cluster creation phase. These properties will no longer be modifiable in further update operations like \"resize\" and \"upgrade\".",
+                        "description":"The desired nfs state of the cluster. The properties \"sizingClass\" and \"storageProfile\" can be specified only during the cluster creation phase. These properties will no longer be modifiable in further update operations like \"resize\" and \"upgrade\".",
                         "required": [
                             "count"
                         ],
@@ -109,11 +109,11 @@
                                 "maximum": 100,
                                 "minimum": 0
                             },
-                            "sizing_class": {
+                            "sizingClass": {
                                 "type": "string",
                                 "description":"The compute sizing policy with which nfs node needs to be provisioned in a given \"ovdc\". The specified sizing policy is expected to be pre-published to the given ovdc."
                             },
-                            "storage_profile": {
+                            "storageProfile": {
                                 "type": "string",
                                 "description":"The storage-profile with which nfs needs to be provisioned in a given \"ovdc\". The specified storage-profile is expected to be available on the given ovdc."
                             }
@@ -130,19 +130,19 @@
                                 "type": "string",
                                 "description":"Name of the Organization's virtual data center network"
                             },
-                            "ssh_key": {
+                            "sshKey": {
                                 "type": "string",
                                 "description":"The ssh key that users can use to log into the node VMs without explicitly providing passwords."
                             },
-                            "rollback_on_failure": {
+                            "rollbackOnFailure": {
                                 "type": "boolean",
                                 "description":"On any cluster operation failure, if the value is set to true, affected node VMs will be automatically deleted."
                             }
                         },
                         "additionalProperties": true
                     },
-                    "k8_distribution": {
-                      "$ref": "#/definitions/k8_distribution"
+                    "k8Distribution": {
+                      "$ref": "#/definitions/k8Distribution"
                     }
                 },
                 "additionalProperties": true
@@ -151,7 +151,8 @@
                 "type": "object",
                 "description":"The current status of the cluster.",
                 "required": [
-                    "nodes"
+                    "nodes",
+                    "uid"
                 ],
                 "properties": {
                     "phase": {
@@ -166,16 +167,16 @@
                     "os": {
                         "type": "string"
                     },
-                    "docker_version": {
+                    "dockerVersion": {
                         "type": "string"
                     },
                     "nodes": {
                       "type": "object",
                       "required": [
-                        "control_plane"
+                        "controlPlane"
                       ],
                       "properties": {
-                        "control_plane": {
+                        "controlPlane": {
                           "$ref": "#/definitions/node"
                         },
                         "workers": {
@@ -195,32 +196,40 @@
                       },
                       "additionalProperties": true
                     },
-                    "cloud_properties": {
+                    "uid": {
+                      "type": "string",
+                      "description": "unique ID of the cluster"
+                    },
+                    "cloudProperties": {
                       "type": "object",
                       "description": "The details specific to Cloud Director in which the cluster is hosted.",
                       "properties": {
-                        "org_name": {
+                        "orgName": {
                           "type": "string",
                           "description":"The name of the Organization in which cluster needs to be created or managed."
                         },
-                        "ovdc_name": {
+                        "ovdcName": {
                           "type": "string",
                           "description":"The name of the Organization Virtual data center in which the cluster need to be created or managed."
                         },
-                        "ovdc_network_name": {
+                        "ovdcNetworkName": {
                           "type":  "string",
                           "description": "The name of the Organization Virtual data center network to which cluster is connected."
                         },
-                        "k8_distribution": {
-                          "$ref": "#/definitions/k8_distribution"
+                        "k8Distribution": {
+                          "$ref": "#/definitions/k8Distribution"
                         },
-                        "ssh_key": {
+                        "sshKey": {
                           "type": "string",
                           "description":"The ssh key that users can use to log into the node VMs without explicitly providing passwords."
                         },
-                        "rollback_on_failure": {
+                        "rollbackOnFailure": {
                           "type": "boolean",
                           "description":"On any cluster operation failure, if the value is set to true, affected node VMs will be automatically deleted."
+                        },
+                        "site": {
+                          "type": "string",
+                          "description": "Fully Qualified Domain Name of the VCD site in which the cluster is deployed"
                         }
                       },
                       "additionalProperties": true
@@ -231,27 +240,32 @@
             "metadata": {
                 "type": "object",
                 "required": [
-                    "org_name",
-                    "ovdc_name",
-                    "cluster_name"
+                    "orgName",
+                    "ovdcName",
+                    "name",
+                    "site"
                 ],
                 "properties": {
-                    "org_name": {
+                    "orgName": {
                         "type": "string",
                         "description":"The name of the Organization in which cluster needs to be created or managed."
                     },
-                    "ovdc_name": {
+                    "ovdcName": {
                         "type": "string",
                         "description":"The name of the Organization Virtual data center in which the cluster need to be created or managed."
                     },
-                    "cluster_name": {
+                    "name": {
                         "type": "string",
                         "description":"The name of the cluster."
+                    },
+                    "site": {
+                        "type": "string",
+                        "description":"Fully Qualified Domain Name of the VCD site in which the cluster is deployed"
                     }
                 },
                 "additionalProperties": true
             },
-            "api_version": {
+            "apiVersion": {
                 "type": "string",
                 "default": "cse.vmware.com/v2.0",
                 "description":"The version of the payload format"

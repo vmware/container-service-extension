@@ -887,7 +887,7 @@ def run(ctx, config_file_path, pks_config_file_path, skip_check,
 def upgrade(ctx, config_file_path, skip_config_decryption,
             skip_template_creation, retain_temp_vapp,
             ssh_key_file, admin_password):
-    """Upgrade existing CSE installation/entities to match CSE 3.0.
+    """Upgrade existing CSE installation/entities to match CSE 3.1.
 
 \b
     - Add CSE / VCD API version info to VCD's extension data for CSE
@@ -928,7 +928,7 @@ def upgrade(ctx, config_file_path, skip_config_decryption,
     try:
         config = get_validated_config(
             config_file_name=config_file_path,
-            pks_config_file_name=None,
+            pks_config_file_name='',
             skip_config_decryption=skip_config_decryption,
             decryption_password=password,
             log_wire_file=INSTALL_WIRELOG_FILEPATH,
@@ -941,7 +941,6 @@ def upgrade(ctx, config_file_path, skip_config_decryption,
             skip_template_creation=skip_template_creation,
             ssh_key=ssh_key,
             retain_temp_vapp=retain_temp_vapp,
-            admin_password=admin_password,
             msg_update_callback=console_message_printer)
 
     except Exception as err:
@@ -1239,7 +1238,6 @@ def install_cse_template(ctx, template_name, template_revision,
             retain_temp_vapp=retain_temp_vapp,
             ssh_key=ssh_key,
             skip_config_decryption=skip_config_decryption,
-            decryption_password=password,
             msg_update_callback=console_message_printer)
     except Exception as err:
         SERVER_CLI_LOGGER.error(str(err))

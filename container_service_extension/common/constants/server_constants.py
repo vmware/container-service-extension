@@ -11,7 +11,12 @@ from enum import unique
 import requests
 import semantic_version
 
-# CSE SERVICE; default version strings for CSE api extension
+# CSE SERVICE;
+# keys for CSE info on the extension
+CSE_VERSION_KEY = 'cse_version'
+LEGACY_MODE_KEY = 'legacy_mode'
+RDE_VERSION_IN_USE_KEY = 'rde_version'
+# default version strings for CSE api extension
 UNKNOWN_CSE_VERSION = semantic_version.Version("0.0.0")
 UNKNOWN_VCD_API_VERSION = "0.0"
 
@@ -47,7 +52,7 @@ CSE_GLOBAL_PVDC_COMPUTE_POLICY_NAME = 'global'
 CSE_GLOBAL_PVDC_COMPUTE_POLICY_DESCRIPTION = \
     'global PVDC compute policy for cse'
 
-# CSE cluster Kubeconfig path
+# CSE cluster Kube Config path
 CSE_CLUSTER_KUBECONFIG_PATH = '/root/.kube/config'
 
 # MQTT constants
@@ -126,10 +131,13 @@ class FlattenedClusterSpecKey(Enum):
     NFS_COUNT = 'nfs.count'
     TEMPLATE_NAME = 'k8_distribution.template_name'
     TEMPLATE_REVISION = 'k8_distribution.template_revision'
+    TEMPLATE_NAME_CAMEL = 'k8Distribution.templateName'
+    TEMPLATE_REVISION_CAMEL = 'k8Distribution.templateRevision'
 
 
 VALID_UPDATE_FIELDS = [FlattenedClusterSpecKey.WORKERS_COUNT.value, FlattenedClusterSpecKey.NFS_COUNT.value,  # noqa: E501
-                       FlattenedClusterSpecKey.TEMPLATE_NAME.value, FlattenedClusterSpecKey.TEMPLATE_REVISION.value]  # noqa: E501
+                       FlattenedClusterSpecKey.TEMPLATE_NAME.value, FlattenedClusterSpecKey.TEMPLATE_REVISION.value,  # noqa: E501
+                       FlattenedClusterSpecKey.TEMPLATE_NAME_CAMEL.value, FlattenedClusterSpecKey.TEMPLATE_REVISION_CAMEL.value]  # noqa: E501
 
 
 CLUSTER_ENTITY = 'cluster_entity'
@@ -225,7 +233,7 @@ class ScriptFile(str, Enum):
 
 
 @unique
-class LegacyLocalTemplatekey(str, Enum):
+class LegacyLocalTemplateKey(str, Enum):
     """Enumerate the keys that define a legacy template.
 
     All the keys for a template except min_cse_version and
@@ -386,7 +394,7 @@ class CseOperation(Enum):
 
 @unique
 class ClusterMetadataKey(str, Enum):
-    BACKWARD_COMPATIBILE_TEMPLATE_NAME = 'cse.template'
+    BACKWARD_COMPATIBLE_TEMPLATE_NAME = 'cse.template'
     CLUSTER_ID = 'cse.cluster.id'
     CSE_VERSION = 'cse.version'
     CONTROL_PLANE_IP = 'cse.master.ip'

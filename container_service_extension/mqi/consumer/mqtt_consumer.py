@@ -51,7 +51,7 @@ class MQTTConsumer:
         payload = behavior_dispatcher.process_behavior_request(
             msg_json, self._mqtt_publisher)
 
-        response_json = self._mqtt_publisher.form_behavior_response_json(
+        response_json = self._mqtt_publisher.construct_behavior_response_json(
             task_id=task_id,
             entity_id=entity_id,
             payload=payload)
@@ -60,7 +60,7 @@ class MQTTConsumer:
 
     def process_mqtt_message(self, msg):
         msg_json = json.loads(msg.payload.decode(self.fsencoding))
-        if msg_json['type'] == 'BEHAVIOR_INVOCATION':
+        if msg_json.get('type', None) == 'BEHAVIOR_INVOCATION':   # noqa: E501
             self.process_behavior_message(msg_json=msg_json)
         else:
             msg_json, reply_body, status_code, req_id = utils.get_response_fields(  # noqa: E501
@@ -73,7 +73,7 @@ class MQTTConsumer:
 
             task_path = utils.get_task_path_from_reply_body(reply_body)
             reply_body_str = json.dumps(reply_body)
-            response_json = self._mqtt_publisher.form_response_json(
+            response_json = self._mqtt_publisher.construct_response_json(
                 request_id=req_id,
                 status_code=status_code,
                 reply_body_str=reply_body_str,
@@ -87,7 +87,7 @@ class MQTTConsumer:
         request_id = payload_json["headers"]["requestId"]
         LOGGER.debug(f"Replying with 'too many requests response' for "
                      f"request_id: {request_id} and msg id: {msg.mid}")
-        response_json = self._mqtt_publisher.form_response_json(
+        response_json = self._mqtt_publisher.construct_response_json(
             request_id=request_id,
             status_code=requests.codes.too_many_requests,
             reply_body_str=constants.TOO_MANY_REQUESTS_BODY)

@@ -12,7 +12,7 @@ from container_service_extension.rde import utils as def_utils
 from container_service_extension.rde.behaviors.behavior_model import BehaviorAcl, BehaviorOperation  # noqa: E501
 from container_service_extension.rde.constants import \
     DEF_ENTITY_TYPE_ID_PREFIX, DEF_INTERFACE_ID_PREFIX, Nss, RDEMetadataKey, \
-    RuntimeRDEVersion, SchemaFile, Vendor
+    RDEVersion, RuntimeRDEVersion, SchemaFile, Vendor
 from container_service_extension.rde.models.abstractNativeEntity import AbstractNativeEntity  # noqa: E501
 from container_service_extension.rde.models.rde_factory import get_rde_model
 from container_service_extension.rde.utils import load_rde_schema
@@ -116,8 +116,14 @@ class DefEntity:
         NativeEntityClass = get_rde_model(entity_type_version)
         self.entity: AbstractNativeEntity = \
             NativeEntityClass(**entity) if isinstance(entity, dict) else entity
+        self.name = name
 
-        self.name = name or self.entity.metadata.cluster_name
+        if not self.name:
+            if entity_type_version == RDEVersion.RDE_1_0_0:
+                self.name = self.entity.metadata.cluster_name
+            else:
+                self.name = self.entity.metadata.name
+
         self.externalId = externalId
         self.state = state
         self.owner = Owner(**owner) if isinstance(owner, dict) else owner

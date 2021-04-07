@@ -21,6 +21,7 @@ from container_service_extension.exception.exceptions import CseResponseError
 from container_service_extension.exception.exceptions import CseServerNotRunningError  # noqa: E501
 from container_service_extension.exception.minor_error_codes import MinorErrorCode  # noqa: E501
 from container_service_extension.logging.logger import CLIENT_LOGGER
+import container_service_extension.rde.utils as def_utils
 
 
 @click.group(name='cluster', cls=cmd_filter.GroupCommandFilter,
@@ -591,6 +592,7 @@ def apply(ctx, cluster_config_file_path, generate_sample_config, k8_runtime, out
             CLIENT_LOGGER.error(msg)
             raise Exception(msg)
 
+        client = ctx.obj['client']
         if generate_sample_config:
             if not k8_runtime:
                 console_message_printer.general_no_color(ctx.get_help())
@@ -601,11 +603,17 @@ def apply(ctx, cluster_config_file_path, generate_sample_config, k8_runtime, out
                     and not utils.is_environment_variable_enabled(cli_constants.ENV_CSE_TKG_PLUS_ENABLED):  # noqa: E501
                 raise Exception(f"{shared_constants.ClusterEntityKind.TKG_PLUS.value} not enabled")  # noqa: E501
             else:
-                sample_cluster_config = client_sample_generator.get_sample_cluster_configuration(output=output, k8_runtime=k8_runtime)  # noqa: E501
+                server_rde_version = \
+                    def_utils.get_runtime_rde_version_by_vcd_api_version(
+                        float(client.get_api_version()))
+                sample_cluster_config = \
+                    client_sample_generator.get_sample_cluster_configuration(
+                        output=output,
+                        k8_runtime=k8_runtime,
+                        server_rde_in_use=server_rde_version)
                 console_message_printer.general_no_color(sample_cluster_config)
                 return
 
-        client = ctx.obj['client']
         with open(cluster_config_file_path) as f:
             cluster_config = yaml.safe_load(f) or {}
 
