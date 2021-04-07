@@ -269,7 +269,7 @@ class ClusterService(abstract_broker.AbstractBroker):
             }
         )
         self._create_cluster_async(entity_id, input_native_entity)
-        return self.mqtt_publisher.form_behavior_payload(
+        return self.mqtt_publisher.construct_behavior_payload(
             message='create_cluster_in_progress',
             status=BehaviorTaskStatus.RUNNING.value, progress=5)
 

@@ -61,14 +61,14 @@ def process_behavior_request(msg_json, mqtt_publisher: MQTTPublisher):
                                              minorErrorCode=e.minor_error_code,
                                              message=e.error_message))
         payload = mqtt_publisher. \
-            form_behavior_payload(status=BehaviorTaskStatus.ERROR.value,
-                                  error_details=error_details)
+            construct_behavior_payload(status=BehaviorTaskStatus.ERROR.value,
+                                       error_details=error_details)
         return payload
     except Exception as e:
         error_details = asdict(BehaviorError(majorErrorCode='500',
                                              message=str(e)))
         payload = mqtt_publisher. \
-            form_behavior_payload(status=BehaviorTaskStatus.ERROR.value,
-                                  error_details=error_details)
+            construct_behavior_payload(status=BehaviorTaskStatus.ERROR.value,
+                                       error_details=error_details)
 
         return payload
