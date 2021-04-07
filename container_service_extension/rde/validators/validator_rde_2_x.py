@@ -2,9 +2,6 @@
 # Copyright (c) 2021 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 
-from dataclasses import asdict
-
-
 from container_service_extension.common.constants.server_constants import FlattenedClusterSpecKey  # noqa: E501
 from container_service_extension.common.constants.server_constants import VALID_UPDATE_FIELDS  # noqa: E501
 from container_service_extension.exception.exceptions import BadRequestError
@@ -59,7 +56,7 @@ class Validator_2_0_0(AbstractValidator):
         NativeEntityClass: AbstractNativeEntity = rde_factory. \
             get_rde_model(rde_version_introduced_at_api_version)
         if entity:
-            input_entity: AbstractNativeEntity = NativeEntityClass(**entity)
+            input_entity: AbstractNativeEntity = NativeEntityClass.from_dict(entity)  # noqa: E501
 
         # Return True if the operation is not specified.
         if not operation:
@@ -79,9 +76,12 @@ class Validator_2_0_0(AbstractValidator):
             current_entity_spec = \
                 rde_utils.construct_cluster_spec_from_entity_status(
                     current_entity_status, rde_constants.RDEVersion.RDE_2_0_0.value)  # noqa: E501
+        # TODO there is a benefit if we keep asdict here as asdict wont convert
+        #   fields to camel case. Check with team
         return validate_cluster_update_request_and_check_cluster_upgrade(
-            asdict(input_entity_spec),
-            asdict(current_entity_spec))
+            input_entity_spec.to_dict(),
+            current_entity_spec.to_dict())
+        # TODO check the reason why there was an unreachable raise statement
         raise NotImplementedError(f"Validator for {operation.name} not found")
 
 

@@ -16,7 +16,6 @@ Responsibility of the functions in this file:
    version (If request = X.Y, the response must be X.Z where Z>=Y)
 5. Return the response.
 """
-from dataclasses import asdict
 
 import container_service_extension.common.constants.server_constants as server_constants  # noqa: E501
 from container_service_extension.common.constants.shared_constants import ClusterAclKey  # noqa: E501
@@ -67,7 +66,7 @@ def cluster_create(data: dict, op_ctx: ctx.OperationContext):
     # TODO: Response RDE must be compatible with the request RDE.
     #  Conversions may be needed especially if there is a major version
     #  difference in the input RDE and runtime RDE.
-    return asdict(svc.create_cluster(converted_native_entity))
+    return svc.create_cluster(converted_native_entity).to_dict()
 
 
 @telemetry_handler.record_user_action_telemetry(cse_operation=telemetry_constants.CseOperation.V36_CLUSTER_LIST)  # noqa: E501
@@ -93,7 +92,7 @@ def native_cluster_list(data: dict, op_ctx: ctx.OperationContext):
 
     # response needs to paginated
     result = svc.get_clusters_by_page(filters=filters)
-    clusters = [asdict(def_entity) for def_entity in result[PaginationKey.VALUES]]  # noqa: E501
+    clusters = [def_entity.to_dict() for def_entity in result[PaginationKey.VALUES]]  # noqa: E501
 
     uri = data['url']
     return server_utils.create_links_and_construct_paginated_result(
@@ -114,7 +113,7 @@ def cluster_list(data: dict, op_ctx: ctx.OperationContext):
     """
     svc = cluster_service_factory.ClusterServiceFactory(op_ctx).get_cluster_service()  # noqa: E501
     # response should not be paginated
-    return [asdict(def_entity) for def_entity in
+    return [def_entity.to_dict() for def_entity in
             svc.list_clusters(data.get(RequestKey.QUERY_PARAMS, {}))]
 
 
@@ -132,7 +131,7 @@ def cluster_info(data: dict, op_ctx: ctx.OperationContext):
     """
     svc = cluster_service_factory.ClusterServiceFactory(op_ctx).get_cluster_service()  # noqa: E501
     cluster_id = data[RequestKey.CLUSTER_ID]
-    return asdict(svc.get_cluster_info(cluster_id))
+    return svc.get_cluster_info(cluster_id).to_dict()
 
 
 @telemetry_handler.record_user_action_telemetry(cse_operation=telemetry_constants.CseOperation.V36_CLUSTER_CONFIG)  # noqa: E501
@@ -178,7 +177,7 @@ def cluster_update(data: dict, op_ctx: ctx.OperationContext):
     # TODO: Response RDE must be compatible with the request RDE.
     #  Conversions may be needed especially if there is a major version
     #  difference in the input RDE and runtime RDE.
-    return asdict(svc.update_cluster(cluster_id, converted_native_entity))
+    return svc.update_cluster(cluster_id, converted_native_entity).to_dict()
 
 
 @telemetry_handler.record_user_action_telemetry(cse_operation=telemetry_constants.CseOperation.V36_CLUSTER_UPGRADE_PLAN)  # noqa: E501
@@ -206,7 +205,7 @@ def cluster_delete(data: dict, op_ctx: ctx.OperationContext):
     """
     svc = cluster_service_factory.ClusterServiceFactory(op_ctx).get_cluster_service()  # noqa: E501
     cluster_id = data[RequestKey.CLUSTER_ID]
-    return asdict(svc.delete_cluster(cluster_id))
+    return svc.delete_cluster(cluster_id).to_dict()
 
 
 @telemetry_handler.record_user_action_telemetry(cse_operation=telemetry_constants.CseOperation.V36_NODE_DELETE)  # noqa: E501
@@ -234,7 +233,7 @@ def nfs_node_delete(data, op_ctx: ctx.OperationContext):
         }
     )
 
-    return asdict(svc.delete_nodes(cluster_id, [node_name]))
+    return svc.delete_nodes(cluster_id, [node_name]).to_dict()
 
 
 @telemetry_handler.record_user_action_telemetry(cse_operation=telemetry_constants.CseOperation.V36_CLUSTER_ACL_LIST)  # noqa: E501

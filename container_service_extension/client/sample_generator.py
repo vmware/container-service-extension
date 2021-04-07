@@ -1,7 +1,6 @@
 # container-service-extension
 # Copyright (c) 2020 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
-import dataclasses
 
 import yaml
 
@@ -140,7 +139,7 @@ def _get_sample_cluster_configuration_by_k8_runtime(k8_runtime, server_rde_in_us
         cluster_entity = rde_2_0_0.NativeEntity.from_native_entity(cluster_entity)  # noqa: E501
         cluster_entity.metadata.site = "VCD site"
 
-    sample_cluster_config = yaml.dump(dataclasses.asdict(cluster_entity))
+    sample_cluster_config = yaml.dump(cluster_entity.to_dict())
     CLIENT_LOGGER.info(sample_cluster_config)
     return sample_cluster_config
 

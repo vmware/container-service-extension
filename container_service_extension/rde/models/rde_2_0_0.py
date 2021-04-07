@@ -3,7 +3,9 @@
 # SPDX-License-Identifier: BSD-2-Clause
 
 from dataclasses import dataclass
-from typing import List
+from typing import List, Optional
+
+from dataclasses_json import dataclass_json, LetterCase
 
 import container_service_extension.common.constants.server_constants as server_constants  # noqa: E501
 import container_service_extension.common.constants.shared_constants as shared_constants  # noqa: E501
@@ -12,133 +14,108 @@ from container_service_extension.rde.models.abstractNativeEntity import Abstract
 import container_service_extension.rde.models.rde_1_0_0 as rde_1_0_0
 
 
-@dataclass()
+@dataclass_json(letter_case=LetterCase.CAMEL)
+@dataclass
 class Metadata:
     name: str
-    orgName: str
-    ovdcName: str
+    org_name: str
+    ovdc_name: str
     site: str
 
 
-@dataclass()
+@dataclass_json(letter_case=LetterCase.CAMEL)
+@dataclass
 class Nfs:
-    sizingClass: str = None
-    storageProfile: str = None
+    sizing_class: Optional[str] = None
+    storage_profile: Optional[str] = None
     count: int = 0
 
 
-@dataclass()
+@dataclass_json(letter_case=LetterCase.CAMEL)
+@dataclass
 class ControlPlane:
-    sizingClass: str = None
-    storageProfile: str = None
+    sizing_class: Optional[str] = None
+    storage_profile: Optional[str] = None
     count: int = 1
 
 
-@dataclass()
+@dataclass_json(letter_case=LetterCase.CAMEL)
+@dataclass
 class Workers:
-    sizingClass: str = None
-    storageProfile: str = None
+    sizing_class: Optional[str] = None
+    storage_profile: Optional[str] = None
     count: int = 0
 
 
-@dataclass()
+@dataclass_json(letter_case=LetterCase.CAMEL)
+@dataclass
 class Distribution:
-    templateName: str = ""
-    templateRevision: int = 0
-
-    def __init__(self, templateName: str = '', templateRevision: int = 0, **kwargs):  # noqa: E501
-        self.templateName = templateName
-        self.templateRevision = templateRevision
+    template_name: str = ""
+    template_revision: int = 0
 
 
-@dataclass()
+@dataclass_json(letter_case=LetterCase.CAMEL)
+@dataclass
 class Settings:
     network: str
-    sshKey: str = None
-    rollbackOnFailure: bool = True
+    ssh_key: Optional[str] = None
+    rollback_on_failure: bool = True
 
 
-@dataclass()
+@dataclass_json(letter_case=LetterCase.CAMEL)
+@dataclass
 class Node:
     name: str
     ip: str
-    sizingClass: str = None
-    storageProfile: str = None
+    sizing_class: Optional[str] = None
+    storage_profile: Optional[str] = None
 
 
-@dataclass()
+@dataclass_json(letter_case=LetterCase.CAMEL)
+@dataclass
 class NfsNode(Node):
-    exports: list = None
+    exports: Optional[list] = None
 
 
-@dataclass()
+@dataclass_json(letter_case=LetterCase.CAMEL)
+@dataclass
 class Nodes:
-    controlPlane: Node = None
-    workers: List[Node] = None
-    nfs: List[NfsNode] = None
-
-    def __init__(self, controlPlane: Node = None, workers: List[Node] = None,
-                 nfs: List[Node] = None, **kwargs):
-        self.controlPlane = Node(**controlPlane) if isinstance(controlPlane, dict) else controlPlane  # noqa: E501
-        self.workers = [Node(**w) if isinstance(w, dict) else w for w in workers]  # noqa: E501
-        self.nfs = [NfsNode(**n) if isinstance(n, dict) else n for n in nfs]
+    control_plane: Optional[Node] = None
+    workers: Optional[List[Node]] = None
+    nfs: Optional[List[NfsNode]] = None
 
 
-@dataclass()
+@dataclass_json(letter_case=LetterCase.CAMEL)
+@dataclass
 class CloudProperties:
-    site: str = None
-    orgName: str = None
-    ovdcName: str = None
-    ovdcNetworkName: str = None
-    k8Distribution: Distribution = None
-    sshKey: str = None  # TODO contemplate the need to keep this attribute
-    rollbackOnFailure: bool = True
+    site: Optional[str] = None
+    org_name: Optional[str] = None
+    ovdc_name: Optional[str] = None
+    ovdc_network_name: Optional[str] = None
+    k8_distribution: Optional[Distribution] = None
 
-    def __init__(self, site: str = None, orgName: str = None,
-                 ovdcName: str = None, ovdcNetworkName: str = None,  # noqa: E501
-                 k8Distribution: Distribution = None, sshKey: str = None,
-                 rollbackOnFailure: bool = True, **kwargs):
-        self.site = site
-        self.orgName = orgName
-        self.ovdcName = ovdcName
-        self.ovdcNetworkName = ovdcNetworkName
-        self.k8Distribution = Distribution(**k8Distribution) \
-            if isinstance(k8Distribution, dict) else k8Distribution or Distribution()  # noqa: E501
-        self.sshKey = sshKey
-        self.rollbackOnFailure = rollbackOnFailure
+    # TODO contemplate the need to keep this attribute
+    ssh_key: Optional[str] = None
+
+    rollback_on_failure: bool = True
 
 
-@dataclass()
+@dataclass_json(letter_case=LetterCase.CAMEL)
+@dataclass
 class Status:
-    phase: str = None
-    cni: str = None
-    taskHref: str = None
-    kubernetes: str = None
-    dockerVersion: str = None
-    os: str = None
-    nodes: Nodes = None
-    uid: str = None
-    cloudProperties: CloudProperties = None
-
-    def __init__(self, phase: str = None,
-                 cni: str = None, taskHref: str = None,
-                 kubernetes: str = None, dockerVersion: str = None,
-                 os: str = None, nodes: Nodes = None, uid: str = None,
-                 cloudProperties: CloudProperties = None, **kwargs):
-        self.phase = phase
-        self.cni = cni
-        self.taskHref = taskHref
-        self.kubernetes = kubernetes
-        self.dockerVersion = dockerVersion
-        self.os = os
-        self.nodes = Nodes(**nodes) if isinstance(nodes, dict) else nodes
-        self.uid = uid
-        self.cloudProperties = CloudProperties(
-            **cloudProperties) if isinstance(cloudProperties, dict) \
-            else cloudProperties or CloudProperties()
+    phase: Optional[str] = None
+    cni: Optional[str] = None
+    task_href: Optional[str] = None
+    kubernetes: Optional[str] = None
+    docker_version: Optional[str] = None
+    os: Optional[str] = None
+    nodes: Optional[Nodes] = None
+    uid: Optional[str] = None
+    cloud_properties: Optional[CloudProperties] = None
 
 
-@dataclass()
+@dataclass_json(letter_case=LetterCase.CAMEL)
+@dataclass
 class ClusterSpec:
     """Represents the cluster spec.
 
@@ -146,27 +123,15 @@ class ClusterSpec:
     them into the expected class instances.
     """
 
-    controlPlane: ControlPlane
+    control_plane: ControlPlane
     workers: Workers
     nfs: Nfs
-    k8Distribution: Distribution
+    k8_distribution: Distribution
     settings: Settings
 
-    def __init__(self, settings: Settings, k8Distribution: Distribution = None,
-                 controlPlane: ControlPlane = None, workers: Workers = None,
-                 nfs: Nfs = None, **kwargs):
-        self.settings = Settings(**settings) \
-            if isinstance(settings, dict) else settings
-        self.controlPlane = ControlPlane(**controlPlane) \
-            if isinstance(controlPlane, dict) else controlPlane or ControlPlane()  # noqa: E501
-        self.workers = Workers(**workers) \
-            if isinstance(workers, dict) else workers or Workers()
-        self.nfs = Nfs(**nfs) if isinstance(nfs, dict) else nfs or Nfs()
-        self.k8Distribution = Distribution(**k8Distribution) \
-            if isinstance(k8Distribution, dict) else k8Distribution or Distribution()  # noqa: E501
 
-
-@dataclass()
+@dataclass_json(letter_case=LetterCase.CAMEL)
+@dataclass
 class NativeEntity(AbstractNativeEntity):
     # TODO change the comment to have camelCase
     """Represents the Native Cluster entity.
@@ -192,7 +157,7 @@ class NativeEntity(AbstractNativeEntity):
             "settings": {
                 "network": "net",
                 "sshKey": null,
-                "rollbackOnFailure": true
+                "rollback_on_failure": true
             },
             "k8Distribution": {
                 "templateName": "k81.17",
@@ -216,21 +181,9 @@ class NativeEntity(AbstractNativeEntity):
 
     metadata: Metadata
     spec: ClusterSpec
-    apiVersion: str
+    api_version: str
     status: Status = Status()
     kind: str = shared_constants.ClusterEntityKind.NATIVE.value
-
-    def __init__(self, metadata: Metadata, spec: ClusterSpec, apiVersion: str,
-                 status=Status(),
-                 kind: str = shared_constants.ClusterEntityKind.NATIVE.value,
-                 **kwargs):
-
-        self.metadata = Metadata(**metadata) \
-            if isinstance(metadata, dict) else metadata
-        self.spec = ClusterSpec(**spec) if isinstance(spec, dict) else spec
-        self.status = Status(**status) if isinstance(status, dict) else status
-        self.kind = kind
-        self.apiVersion = apiVersion
 
     @classmethod
     def from_native_entity(cls, native_entity: AbstractNativeEntity):
@@ -253,59 +206,59 @@ class NativeEntity(AbstractNativeEntity):
             # NOTE: since details for the field `site` is not present in
             # RDE 1.0, it is left empty
             cloud_properties = CloudProperties(site=None,
-                                               orgName=rde_1_x_entity.metadata.org_name,  # noqa: E501
-                                               ovdcName=rde_1_x_entity.metadata.ovdc_name,  # noqa: E501
-                                               ovdcNetworkName=rde_1_x_entity.spec.settings.network,  # noqa: E501
-                                               k8Distribution=rde_1_x_entity.spec.k8_distribution,  # noqa: E501
-                                               sshKey=rde_1_x_entity.spec.settings.ssh_key,  # noqa: E501
-                                               rollbackOnFailure=rde_1_x_entity.spec.settings.rollback_on_failure)  # noqa: E501
+                                               org_name=rde_1_x_entity.metadata.org_name,  # noqa: E501
+                                               ovdc_name=rde_1_x_entity.metadata.ovdc_name,  # noqa: E501
+                                               ovdc_network_name=rde_1_x_entity.spec.settings.network,  # noqa: E501
+                                               k8_distribution=rde_1_x_entity.spec.k8_distribution,  # noqa: E501
+                                               ssh_key=rde_1_x_entity.spec.settings.ssh_key,  # noqa: E501
+                                               rollback_on_failure=rde_1_x_entity.spec.settings.rollback_on_failure)  # noqa: E501
             # NOTE: since details for the field `uid` is not present in
             # RDE 1.0, it is left empty.
             # Proper value for `uid` should be populated after RDE is converted
             # as `uid` is a required property in Status for RDE 2.0
             status = Status(phase=rde_1_x_entity.status.phase,
                             cni=rde_1_x_entity.status.cni,
-                            taskHref=rde_1_x_entity.status.task_href,
+                            task_href=rde_1_x_entity.status.task_href,
                             kubernetes=rde_1_x_entity.status.kubernetes,
-                            dockerVersion=rde_1_x_entity.status.docker_version,  # noqa: E501
+                            docker_version=rde_1_x_entity.status.docker_version,  # noqa: E501
                             os=rde_1_x_entity.status.os,
                             nodes=rde_1_x_entity.status.nodes,
                             uid=None,
-                            cloudProperties=cloud_properties)
+                            cloud_properties=cloud_properties)
             # NOTE: since details for the field `site` is not present in
             # RDE 1.0, it is left empty.
             # Proper value for `site` should be populated after RDE is
             # converted as `site` is a required property in Metadata
             # for RDE 2.0
             metadata = Metadata(name=rde_1_x_entity.metadata.cluster_name,
-                                orgName=rde_1_x_entity.metadata.org_name,
-                                ovdcName=rde_1_x_entity.metadata.ovdc_name,
+                                org_name=rde_1_x_entity.metadata.org_name,
+                                ovdc_name=rde_1_x_entity.metadata.ovdc_name,
                                 site='')
             spec = ClusterSpec(
                 settings=Settings(
                     network=rde_1_x_entity.spec.settings.network,
-                    sshKey=rde_1_x_entity.spec.settings.ssh_key,
-                    rollbackOnFailure=rde_1_x_entity.spec.settings.rollback_on_failure),  # noqa: E501,
-                controlPlane=ControlPlane(
-                    sizingClass=rde_1_x_entity.spec.control_plane.sizing_class,
-                    storageProfile=rde_1_x_entity.spec.control_plane.storage_profile,  # noqa: E501
+                    ssh_key=rde_1_x_entity.spec.settings.ssh_key,
+                    rollback_on_failure=rde_1_x_entity.spec.settings.rollback_on_failure),  # noqa: E501,
+                control_plane=ControlPlane(
+                    sizing_class=rde_1_x_entity.spec.control_plane.sizing_class,  # noqa: E501
+                    storage_profile=rde_1_x_entity.spec.control_plane.storage_profile,  # noqa: E501
                     count=rde_1_x_entity.spec.control_plane.count),
                 workers=Workers(
-                    sizingClass=rde_1_x_entity.spec.workers.sizing_class,
-                    storageProfile=rde_1_x_entity.spec.workers.storage_profile,
+                    sizing_class=rde_1_x_entity.spec.workers.sizing_class,
+                    storage_profile=rde_1_x_entity.spec.workers.storage_profile,  # noqa: E501
                     count=rde_1_x_entity.spec.workers.count),
                 nfs=Nfs(
-                    sizingClass=rde_1_x_entity.spec.nfs.sizing_class,
-                    storageProfile=rde_1_x_entity.spec.nfs.storage_profile,
+                    sizing_class=rde_1_x_entity.spec.nfs.sizing_class,
+                    storage_profile=rde_1_x_entity.spec.nfs.storage_profile,
                     count=rde_1_x_entity.spec.nfs.count),
-                k8Distribution=Distribution(
-                    templateName=rde_1_x_entity.spec.k8_distribution.template_name,  # noqa: E501
-                    templateRevision=rde_1_x_entity.spec.k8_distribution.template_revision))  # noqa: E501
+                k8_distribution=Distribution(
+                    template_name=rde_1_x_entity.spec.k8_distribution.template_name,  # noqa: E501
+                    template_revision=rde_1_x_entity.spec.k8_distribution.template_revision))  # noqa: E501
             rde_2_entity = cls(metadata=metadata,
                                spec=spec,
                                status=status,
                                kind=rde_1_x_entity.kind,
-                               apiVersion=rde_constants.PAYLOAD_VERSION_2_0)
+                               api_version=rde_constants.PAYLOAD_VERSION_2_0)
             return rde_2_entity
 
     @classmethod
@@ -330,35 +283,35 @@ class NativeEntity(AbstractNativeEntity):
                 exports=item['exports']))
 
         k8_distribution = Distribution(
-            templateName=cluster['template_name'],
-            templateRevision=int(cluster['template_revision']))
+            template_name=cluster['template_name'],
+            template_revision=int(cluster['template_revision']))
 
         cloud_properties = CloudProperties(site=site,
-                                           orgName=cluster['org_name'],
-                                           ovdcName=cluster['vdc_name'],
-                                           ovdcNetworkName=cluster['network_name'],  # noqa: E501
-                                           k8Distribution=k8_distribution,
-                                           sshKey='')
+                                           org_name=cluster['org_name'],
+                                           ovdc_name=cluster['vdc_name'],
+                                           ovdc_network_name=cluster['network_name'],  # noqa: E501
+                                           k8_distribution=k8_distribution,
+                                           ssh_key='')
         cluster_entity = cls(
             kind=kind,
             spec=ClusterSpec(
                 workers=Workers(
                     count=len(cluster['nodes']),
-                    storageProfile=cluster['storage_profile_name']
+                    storage_profile=cluster['storage_profile_name']
                 ),
-                controlPlane=ControlPlane(
+                control_plane=ControlPlane(
                     count=len(cluster['master_nodes']),
-                    storageProfile=cluster['storage_profile_name']
+                    storage_profile=cluster['storage_profile_name']
                 ),
                 nfs=Nfs(
                     count=len(cluster['nfs_nodes']),
-                    storageProfile=cluster['storage_profile_name']
+                    storage_profile=cluster['storage_profile_name']
                 ),
                 settings=Settings(
                     network=cluster['network_name'],
-                    sshKey=""
+                    ssh_key=""
                 ),
-                k8Distribution=k8_distribution
+                k8_distribution=k8_distribution
             ),
             status=Status(
                 phase=str(server_constants.DefEntityPhase(
@@ -368,26 +321,23 @@ class NativeEntity(AbstractNativeEntity):
                 kubernetes=f"{cluster['kubernetes']} {cluster['kubernetes_version']}", # noqa: E501
                 cni=f"{cluster['cni']} {cluster['cni_version']}",
                 os=cluster['os'],
-                dockerVersion=cluster['docker_version'],
+                docker_version=cluster['docker_version'],
                 nodes=Nodes(
-                    controlPlane=Node(
+                    control_plane=Node(
                         name=cluster['master_nodes'][0]['name'],
                         ip=cluster['master_nodes'][0]['ipAddress']),
                     workers=worker_nodes,
                     nfs=nfs_nodes
                 ),
                 uid=cluster['cluster_id'],
-                cloudProperties=cloud_properties
+                cloud_properties=cloud_properties
             ),
             metadata=Metadata(
                 site=site,
-                orgName=cluster['org_name'],
-                ovdcName=cluster['vdc_name'],
+                org_name=cluster['org_name'],
+                ovdc_name=cluster['vdc_name'],
                 name=cluster['name']
             ),
-            apiVersion=rde_constants.PAYLOAD_VERSION_2_0
+            api_version=rde_constants.PAYLOAD_VERSION_2_0
         )
         return cluster_entity
-
-    def get_latest_task_href(self):
-        return self.status.taskHref

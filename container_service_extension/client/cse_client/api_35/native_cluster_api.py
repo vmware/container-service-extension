@@ -2,7 +2,6 @@
 # Copyright (c) 2020 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 
-from dataclasses import asdict
 from typing import Dict, List
 
 import pyvcloud.vcd.client as vcd_client
@@ -22,7 +21,7 @@ class NativeClusterApi(CseClient):
         self._request_page_size = 10
 
     def create_cluster(self, cluster_entity_definition: rde_1_0_0.NativeEntity):  # noqa: E501
-        cluster_entity_dict = asdict(cluster_entity_definition)
+        cluster_entity_dict = cluster_entity_definition.to_dict()
         uri = self._clusters_uri
         response = self.do_request(
             uri=uri,
@@ -34,7 +33,7 @@ class NativeClusterApi(CseClient):
         return common_models.DefEntity(**self.process_response(response))
 
     def update_cluster_by_cluster_id(self, cluster_id, cluster_entity_definition: rde_1_0_0.NativeEntity):  # noqa: E501
-        cluster_entity_dict = asdict(cluster_entity_definition)
+        cluster_entity_dict = cluster_entity_definition.to_dict()
         uri = f"{self._cluster_uri}/{cluster_id}"
         response = self.do_request(
             uri=uri,
@@ -84,7 +83,7 @@ class NativeClusterApi(CseClient):
     def upgrade_cluster_by_cluster_id(self, cluster_id: str,
                                       cluster_upgrade_definition: common_models.DefEntity):  # noqa: E501
         uri = f'{self._uri}/cluster/{cluster_id}/action/upgrade'
-        entity_dict = asdict(cluster_upgrade_definition.entity)
+        entity_dict = cluster_upgrade_definition.entity.to_dict()
         response = self.do_request(
             uri=uri,
             method=shared_constants.RequestMethod.POST,

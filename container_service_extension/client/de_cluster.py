@@ -2,7 +2,6 @@
 # Copyright (c) 2020 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 
-from dataclasses import asdict
 import json
 import os
 from typing import List
@@ -230,7 +229,7 @@ class DECluster:
             self._get_tkg_native_clusters_by_name(cluster_name,
                                                   org=org, vdc=vdc)
         if is_native_cluster:
-            cluster_info = asdict(cluster.entity)
+            cluster_info = cluster.entity.to_dict()
         else:
             # TKG cluster represents the defined_entity.entity
             cluster_info = client_utils.swagger_object_to_dict(cluster)
@@ -350,7 +349,7 @@ class DECluster:
         if is_native_cluster:
             cluster.entity.spec.k8_distribution.template_name = template_name
             cluster.entity.spec.k8_distribution.template_revision = template_revision  # noqa: E501
-            cluster_dict = asdict(cluster)
+            cluster_dict = cluster.to_dict()
             return self._nativeCluster.upgrade_cluster_by_cluster_id(cluster.id, cluster_def_entity=cluster_dict)  # noqa: E501
         self._tkgCluster.upgrade_cluster(cluster_name, template_name, template_revision)  # noqa: E501
 
