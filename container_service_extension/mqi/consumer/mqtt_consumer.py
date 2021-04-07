@@ -60,7 +60,7 @@ class MQTTConsumer:
 
     def process_mqtt_message(self, msg):
         msg_json = json.loads(msg.payload.decode(self.fsencoding))
-        if msg_json['type'] == 'BEHAVIOR_INVOCATION':
+        if msg_json.get('type', None) == 'BEHAVIOR_INVOCATION':   # noqa: E501
             self.process_behavior_message(msg_json=msg_json)
         else:
             msg_json, reply_body, status_code, req_id = utils.get_response_fields(  # noqa: E501
