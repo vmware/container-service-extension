@@ -4,8 +4,9 @@
 from dataclasses import asdict, dataclass
 from enum import Enum
 from enum import unique
-from typing import List
+from typing import List, Optional
 
+from dataclasses_json import dataclass_json
 
 from container_service_extension.common.constants import shared_constants as shared_constants  # noqa: E501
 from container_service_extension.rde import utils as def_utils
@@ -93,7 +94,8 @@ class Org:
     id: str = None
 
 
-@dataclass()
+@dataclass_json
+@dataclass
 class DefEntity:
     """Represents defined entity instance.
 
@@ -103,12 +105,12 @@ class DefEntity:
 
     name: str
     entity: AbstractNativeEntity
-    id: str = None
-    entityType: str = None
-    externalId: str = None
-    state: str = None
-    owner: Owner = None
-    org: Org = None
+    id: Optional[str] = None
+    entityType: Optional[str] = None
+    externalId: Optional[str] = None
+    state: Optional[str] = None
+    owner: Optional[Owner] = None
+    org: Optional[Org] = None
 
     def __init__(self, entity: AbstractNativeEntity, entityType: str,
                  name: str = None, id: str = None,
@@ -119,10 +121,13 @@ class DefEntity:
 
         # Get the entity type version from entity type urn
         entity_type_version = self.entityType.split(":")[-1]
-        # Parse the enitty to the right entity class
-        NativeEntityClass = get_rde_model(entity_type_version)
-        self.entity: AbstractNativeEntity = \
-            NativeEntityClass(**entity) if isinstance(entity, dict) else entity
+        self.entity = entity
+        if isinstance(entity, dict):
+
+            # Parse the enitty to the right entity class
+            NativeEntityClass = get_rde_model(entity_type_version)
+            self.entity = NativeEntityClass.from_dict(entity)
+
         self.name = name
 
         if not self.name:
@@ -199,7 +204,7 @@ class GenericClusterEntity:
         self.name = name
         self.org = Org(**org) if isinstance(org, dict) else org
         self.entityType = entityType
-        entity_dict = asdict(entity) if not isinstance(entity, dict) else entity  # noqa: E501
+        entity_dict = entity.to_dict() if not isinstance(entity, dict) else entity  # noqa: E501
         if entity_dict['kind'] in \
                 [shared_constants.ClusterEntityKind.NATIVE.value,
                  shared_constants.ClusterEntityKind.TKG_PLUS.value]:
@@ -208,7 +213,7 @@ class GenericClusterEntity:
             # Parse the enitty to the right entity class
             NativeEntityClass = get_rde_model(entity_type_version)
             self.entity: AbstractNativeEntity = \
-                NativeEntityClass(**entity_dict) if isinstance(entity, dict) else entity  # noqa: E501
+                NativeEntityClass.from_dict(entity_dict) if isinstance(entity, dict) else entity  # noqa: E501
         elif entity_dict['kind'] == \
                 shared_constants.ClusterEntityKind.TKG.value:
             self.entity = TKGEntity(**entity) if isinstance(entity, dict) else entity  # noqa: E501

@@ -1,7 +1,6 @@
 # container-service-extension
 # Copyright (c) 2020 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
-import dataclasses
 
 import yaml
 
@@ -96,7 +95,7 @@ def get_sample_cluster_configuration(output=None, k8_runtime=None, server_rde_in
 def _get_sample_cluster_configuration_by_k8_runtime(k8_runtime, server_rde_in_use):  # noqa: E501
     NativeEntityClass = rde_factory.get_rde_model(server_rde_in_use)
     sample_native_entity = NativeEntityClass.sample_native_entity(k8_runtime.value)  # noqa: E501
-    native_entity_dict = dataclasses.asdict(sample_native_entity)
+    native_entity_dict = sample_native_entity.to_dict()
 
     # remove status part of the entity dict
     del native_entity_dict['status']

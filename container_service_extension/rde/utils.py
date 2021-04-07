@@ -103,43 +103,43 @@ def construct_2_0_0_cluster_spec_from_entity_status(entity_status: rde_2_0_0.Sta
     """
     # Currently only single control-plane is supported.
     control_plane = rde_2_0_0.ControlPlane(
-        sizingClass=entity_status.nodes.controlPlane.sizingClass,
-        storageProfile=entity_status.nodes.controlPlane.storageProfile,
+        sizing_class=entity_status.nodes.control_plane.sizing_class,
+        storage_profile=entity_status.nodes.control_plane.storage_profile,
         count=1)
 
     workers_count = len(entity_status.nodes.workers)
     if workers_count == 0:
-        workers = rde_2_0_0.Workers(sizingClass=None,
-                                    storageProfile=None,
+        workers = rde_2_0_0.Workers(sizing_class=None,
+                                    storage_profile=None,
                                     count=0)
     else:
         workers = rde_2_0_0.Workers(
-            sizingClass=entity_status.nodes.workers[0].sizingClass,
-            storageProfile=entity_status.nodes.workers[0].storageProfile,
+            sizing_class=entity_status.nodes.workers[0].sizing_class,
+            storage_profile=entity_status.nodes.workers[0].storage_profile,
             count=workers_count)
 
     nfs_count = len(entity_status.nodes.nfs)
     if nfs_count == 0:
-        nfs = rde_2_0_0.Nfs(sizingClass=None, storageProfile=None,
+        nfs = rde_2_0_0.Nfs(sizing_class=None, storage_profile=None,
                             count=0)
     else:
         nfs = rde_2_0_0.Nfs(
-            sizingClass=entity_status.nodes.nfs[0].sizingClass,  # noqa: E501
-            storageProfile=entity_status.nodes.nfs[
+            sizing_class=entity_status.nodes.nfs[0].sizing_class,  # noqa: E501
+            storage_profile=entity_status.nodes.nfs[
                 0].storageProfile, count=nfs_count)
 
     k8_distribution = rde_2_0_0.Distribution(
-        templateName=entity_status.cloudProperties.k8Distribution.templateName,  # noqa: E501
-        templateRevision=entity_status.cloudProperties.k8Distribution.templateRevision)  # noqa: E501
+        template_name=entity_status.cloud_properties.k8_distribution.template_name,  # noqa: E501
+        template_revision=entity_status.cloud_properties.k8_distribution.template_revision)  # noqa: E501
 
     settings = rde_2_0_0.Settings(
-        network=entity_status.cloudProperties.ovdcNetworkName,
-        sshKey=entity_status.cloudProperties.sshKey,
-        rollbackOnFailure=entity_status.cloudProperties.rollbackOnFailure)  # noqa: E501
+        network=entity_status.cloud_properties.ovdc_network_name,
+        ssh_key=entity_status.cloud_properties.ssh_key,
+        rollback_on_failure=entity_status.cloud_properties.rollback_on_failure)  # noqa: E501
 
     return rde_2_0_0.ClusterSpec(settings=settings,
-                                 k8Distribution=k8_distribution,
-                                 controlPlane=control_plane,
+                                 k8_distribution=k8_distribution,
+                                 control_plane=control_plane,
                                  workers=workers,
                                  nfs=nfs)
 
@@ -191,7 +191,7 @@ def convert_input_rde_to_runtime_rde_format(input_entity: dict):
     runtime_rde_version = server_utils.get_rde_version_in_use()
     RuntimeNativeEntityClass: Type[AbstractNativeEntity] = rde_factory.get_rde_model(runtime_rde_version)  # noqa: E501
     InputNativeEntityClass: Type[AbstractNativeEntity] = rde_factory.get_rde_model(input_rde_version)  # noqa: E501
-    input_rde: AbstractNativeEntity = InputNativeEntityClass(**input_entity)  # noqa: E501
+    input_rde: AbstractNativeEntity = InputNativeEntityClass.from_dict(input_entity)  # noqa: E501
     return RuntimeNativeEntityClass.from_native_entity(input_rde)
 
 

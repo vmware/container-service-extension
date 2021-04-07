@@ -2427,7 +2427,7 @@ def _upgrade_cluster_rde(client, cluster, def_entity_to_upgrade,
         # RDE upgrade possible only from RDE 1.0 or RDE 2.x
         native_entity_2_x: rde_2_x.NativeEntity = new_native_entity
         native_entity_2_x.status.uid = def_entity_to_upgrade.id
-        native_entity_2_x.status.cloudProperties.site = site
+        native_entity_2_x.status.cloud_properties.site = site
         native_entity_2_x.metadata.site = site
 
     new_def_entity = common_models.DefEntity(
