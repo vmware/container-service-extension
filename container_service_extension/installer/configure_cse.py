@@ -181,6 +181,8 @@ def parse_cse_extension_description(sys_admin_client, is_mqtt_extension):
     # the key legacy_mode is also mandatory
     try:
         result = json.loads(description)
+        result[server_constants.CSE_VERSION_KEY] = \
+            semantic_version.Version(result[server_constants.CSE_VERSION_KEY])
     except json.decoder.JSONDecodeError:
         cse_version = server_constants.UNKNOWN_CSE_VERSION
         legacy_mode = True
@@ -329,7 +331,7 @@ def install_cse(config_file_name, config, skip_template_creation,
 
         # Setup extension based on message bus protocol
         if server_utils.should_use_mqtt_protocol(config):
-            _register_cse_as_mqtt_extension(client, msg_update_callback)
+            _register_cse_as_mqtt_extension(client, msg_update_callback=msg_update_callback)  # noqa: E501
         else:
             # create amqp exchange if it doesn't exist
             amqp = config['amqp']
@@ -1948,10 +1950,10 @@ def _upgrade_to_cse_3_1(client, config,
         existing_ext_type = _get_existing_extension_type(client)
         if existing_ext_type == server_constants.ExtensionType.AMQP:
             _deregister_cse_amqp_extension(client)
-            _register_cse_as_mqtt_extension(client, msg_update_callback)
+            _register_cse_as_mqtt_extension(client, msg_update_callback=msg_update_callback)  # noqa: E501
         elif existing_ext_type == server_constants.ExtensionType.MQTT:
             # Remove api filters and update description
-            _update_cse_mqtt_extension(client, msg_update_callback)
+            _update_cse_mqtt_extension(client, msg_update_callback=msg_update_callback)  # noqa: E501
     else:
         # Update amqp exchange
         _create_amqp_exchange(
