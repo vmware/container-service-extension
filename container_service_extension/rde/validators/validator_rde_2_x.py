@@ -2,11 +2,16 @@
 # Copyright (c) 2021 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 
+<<<<<<< HEAD
 from dataclasses import asdict
 
 
 from container_service_extension.common.constants.server_constants import FlattenedClusterSpecKey2X  # noqa: E501
 from container_service_extension.common.constants.server_constants import VALID_UPDATE_FIELDS_2X  # noqa: E501
+=======
+from container_service_extension.common.constants.server_constants import FlattenedClusterSpecKey  # noqa: E501
+from container_service_extension.common.constants.server_constants import VALID_UPDATE_FIELDS  # noqa: E501
+>>>>>>> cfb10ad (change model classes to use snake case instead of camel case)
 from container_service_extension.exception.exceptions import BadRequestError
 from container_service_extension.lib.cloudapi.cloudapi_client import CloudApiClient  # noqa: E501
 from container_service_extension.rde.behaviors.behavior_model import BehaviorOperation  # noqa: E501
@@ -60,7 +65,7 @@ class Validator_2_0_0(AbstractValidator):
         NativeEntityClass: AbstractNativeEntity = rde_factory. \
             get_rde_model(rde_version_introduced_at_api_version)
         if entity:
-            input_entity: AbstractNativeEntity = NativeEntityClass(**entity)
+            input_entity: AbstractNativeEntity = NativeEntityClass.from_dict(entity)  # noqa: E501
 
         # Return True if the operation is not specified.
         if not operation:
@@ -80,9 +85,13 @@ class Validator_2_0_0(AbstractValidator):
             current_entity_spec = \
                 rde_utils.construct_cluster_spec_from_entity_status(
                     current_entity_status, rde_constants.RDEVersion.RDE_2_0_0.value)  # noqa: E501
+        # TODO there is a benefit if we keep asdict here as asdict wont convert
+        #   fields to camel case. Check with team
         return validate_cluster_update_request_and_check_cluster_upgrade(
             input_entity_spec,
             current_entity_spec)
+
+        # TODO check the reason why there was an unreachable raise statement
         raise NotImplementedError(f"Validator for {operation.name} not found")
 
 
@@ -109,8 +118,8 @@ def validate_cluster_update_request_and_check_cluster_upgrade(input_spec: rde_2_
         exclude_fields.append(FlattenedClusterSpecKey2X.NFS_SIZING_CLASS.value)
         exclude_fields.append(FlattenedClusterSpecKey2X.NFS_STORAGE_PROFILE.value)  # noqa: E501
 
-    input_spec_dict = asdict(input_spec)
-    reference_spec_dict = asdict(reference_spec)
+    input_spec_dict = input_spec.to_dict()
+    reference_spec_dict = reference_spec.to_dict()
     diff_fields = \
         rde_utils.find_diff_fields(input_spec_dict, reference_spec_dict, exclude_fields=exclude_fields)  # noqa: E501
 
