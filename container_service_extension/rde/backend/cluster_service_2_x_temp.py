@@ -44,7 +44,10 @@ import container_service_extension.installer.templates.local_template_manager as
 import container_service_extension.lib.telemetry.constants as telemetry_constants  # noqa: E501
 import container_service_extension.lib.telemetry.telemetry_handler as telemetry_handler  # noqa: E501
 from container_service_extension.logging.logger import SERVER_LOGGER as LOGGER
+from container_service_extension.mqi.consumer.mqtt_publisher import MQTTPublisher  # noqa: E501
 import container_service_extension.rde.acl_service as acl_service
+from container_service_extension.rde.behaviors.behavior_model import \
+    BehaviorTaskStatus
 import container_service_extension.rde.common.entity_service as def_entity_svc
 import container_service_extension.rde.constants as def_constants
 import container_service_extension.rde.models.common_models as common_models
@@ -60,13 +63,12 @@ class ClusterService(abstract_broker.AbstractBroker):
     """Handles cluster operations for native DEF based clusters."""
 
     def __init__(self, op_ctx: BehaviorRequestContext):
-        # TODO(DEF) Once all the methods are modified to use defined entities,
-        #  the param OperationContext needs to be replaced by cloudapiclient.
         self.context: ctx.OperationContext = op_ctx.op_ctx
-        self.behavior_task_id = op_ctx.task_id
-        self.behavior_task_href = self.context.client.get_api_uri() + f"/task/{self.behavior_task_id}"  # noqa: E501
+        self.task_id = op_ctx.task_id
+        self.entity_id = op_ctx.entity_id
+        self.mqtt_publisher: MQTTPublisher = op_ctx.mqtt_publisher
         self.task = None
-        self.task_resource = self.context.client.get_resource(self.behavior_task_href)  # noqa: E501
+        self.task_resource = None
         self.task_update_lock = threading.Lock()
         self.entity_svc = def_entity_svc.DefEntityService(
             self.context.cloudapi_client)
@@ -273,6 +275,9 @@ class ClusterService(abstract_broker.AbstractBroker):
             }
         )
         self._create_cluster_async(entity_id, input_native_entity)
+        return self.mqtt_publisher.construct_behavior_payload(
+            message='create_cluster_in_progress',
+            status=BehaviorTaskStatus.RUNNING.value, progress=5)
 
     def resize_cluster(self, cluster_id: str,
                        cluster_spec: rde_2_0_0.NativeEntity):
@@ -668,6 +673,7 @@ class ClusterService(abstract_broker.AbstractBroker):
                                    nodes_to_del=nodes_to_del)
         return curr_entity
 
+    @thread_utils.run_async
     def _create_cluster_async(self, cluster_id: str,
                               input_native_entity: rde_2_0_0.NativeEntity):
         cluster_name = None

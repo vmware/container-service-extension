@@ -6,8 +6,10 @@ from dataclasses import asdict
 import json
 
 from container_service_extension.exception.exceptions import CseRequestError
+from container_service_extension.mqi.consumer.mqtt_publisher import \
+    MQTTPublisher
 from container_service_extension.rde.behaviors.behavior_model import \
-    BehaviorErrorPayload, BehaviorOperation
+    BehaviorError, BehaviorOperation, BehaviorTaskStatus  # noqa: E501
 from container_service_extension.security.context.behavior_request_context \
     import BehaviorRequestContext, BehaviorUserContext
 from container_service_extension.security.context.operation_context import OperationContext  # noqa: E501
@@ -22,7 +24,7 @@ MAP_BEHAVIOR_ID_TO_HANDLER_METHOD = {
 }
 
 
-def process_behavior_request(msg_json):
+def process_behavior_request(msg_json, mqtt_publisher: MQTTPublisher):
     # Extracting contents from headers
     task_id: str = msg_json['headers']['taskId']
     entity_id: str = msg_json['headers']['entityId']
@@ -48,17 +50,25 @@ def process_behavior_request(msg_json):
                                           user_context=usr_ctx,
                                           entity_type_id=entity_type_id,
                                           request_id=request_id,
-                                          op_ctx=op_ctx)
+                                          op_ctx=op_ctx,
+                                          mqtt_publisher=mqtt_publisher)
 
     # Invoke the handler method and return the response in the string format.
     try:
-        return 'success', MAP_BEHAVIOR_ID_TO_HANDLER_METHOD[behavior_id](behavior_ctx)  # noqa: E501
+        return MAP_BEHAVIOR_ID_TO_HANDLER_METHOD[behavior_id](behavior_ctx)  # noqa: E501
     except CseRequestError as e:
-        error_payload = BehaviorErrorPayload(majorErrorCode=e.status_code,
+        error_details = asdict(BehaviorError(majorErrorCode=e.status_code,
                                              minorErrorCode=e.minor_error_code,
-                                             message=e.error_message)
-        return 'error', json.dumps(asdict(error_payload))
+                                             message=e.error_message))
+        payload = mqtt_publisher. \
+            construct_behavior_payload(status=BehaviorTaskStatus.ERROR.value,
+                                       error_details=error_details)
+        return payload
     except Exception as e:
-        error_payload = BehaviorErrorPayload(majorErrorCode=500,
-                                             message=str(e))
-        return 'error', json.dumps(asdict(error_payload))
+        error_details = asdict(BehaviorError(majorErrorCode='500',
+                                             message=str(e)))
+        payload = mqtt_publisher. \
+            construct_behavior_payload(status=BehaviorTaskStatus.ERROR.value,
+                                       error_details=error_details)
+
+        return payload

@@ -112,8 +112,16 @@ class BehaviorAcl(Enum):
                                        AclAccessLevelId.AccessLevelReadOnly)
 
 
-@dataclass
-class BehaviorErrorPayload():
+@dataclass()
+class BehaviorError:
     majorErrorCode: str = '400'
     minorErrorCode: str = None
     message: str = None
+
+
+@unique
+class BehaviorTaskStatus(Enum):
+    RUNNING = 'running'
+    SUCCESS = 'success'
+    ERROR = 'error'
+    ABORTED = 'aborted'
