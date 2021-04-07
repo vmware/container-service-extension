@@ -8,6 +8,7 @@ from typing import List
 import container_service_extension.common.constants.server_constants as server_constants  # noqa: E501
 import container_service_extension.common.constants.shared_constants as shared_constants  # noqa: E501
 from container_service_extension.rde.models.abstractNativeEntity import AbstractNativeEntity  # noqa: E501
+import container_service_extension.rde.models.rde_2_0_0 as rde_2_0_0
 
 
 @dataclass()
@@ -203,7 +204,75 @@ class NativeEntity(AbstractNativeEntity):
         :return: native entity
         :rtype: rde_1.0.0.NativeEntity
         """
-        raise NotImplementedError
+        if isinstance(native_entity, NativeEntity):
+            return native_entity
+
+        if isinstance(native_entity, rde_2_0_0.NativeEntity):
+            rde_2_x_entity: rde_2_0_0.NativeEntity = native_entity
+
+            metadata = Metadata(
+                cluster_name=rde_2_x_entity.metadata.name,
+                org_name=rde_2_x_entity.metadata.orgName,
+                ovdc_name=rde_2_x_entity.metadata.ovdcName
+            )
+
+            settings = Settings(
+                network=rde_2_x_entity.spec.settings.network,
+                ssh_key=rde_2_x_entity.spec.settings.sshKey,
+                rollback_on_failure=rde_2_x_entity.spec.settings.rollbackOnFailure  # noqa: E501
+            )
+
+            k8_distribution = Distribution(
+                template_name=rde_2_x_entity.spec.k8Distribution.templateName,
+                template_revision=rde_2_x_entity.spec.k8Distribution.templateRevision  # noqa: E501
+            )
+
+            control_plane = ControlPlane(
+                sizing_class=rde_2_x_entity.spec.controlPlane.sizingClass,
+                storage_profile=rde_2_x_entity.spec.controlPlane.storageProfile,  # noqa: E501
+                count=rde_2_x_entity.spec.controlPlane.count
+            )
+
+            workers = Workers(
+                sizing_class=rde_2_x_entity.spec.workers.sizingClass,
+                storage_profile=rde_2_x_entity.spec.workers.storageProfile,
+                count=rde_2_x_entity.spec.workers.count
+            )
+
+            nfs = Nfs(
+                sizing_class=rde_2_x_entity.spec.nfs.sizingClass,
+                storage_profile=rde_2_x_entity.spec.nfs.storageProfile,
+                count=rde_2_x_entity.spec.nfs.count
+            )
+
+            spec = ClusterSpec(
+                settings=settings,
+                k8_distribution=k8_distribution,
+                control_plane=control_plane,
+                workers=workers,
+                nfs=nfs
+            )
+
+            status = Status(
+                phase=rde_2_x_entity.status.phase,
+                cni=rde_2_x_entity.status.cni,
+                task_href=rde_2_x_entity.status.task_href,
+                kubernetes=rde_2_x_entity.status.kubernetes,
+                docker_version=rde_2_x_entity.status.dockerVersion,
+                os=rde_2_x_entity.status.os,
+                nodes=rde_2_x_entity.status.nodes
+            )
+
+            rde_1_entity = cls(
+                metadata=metadata,
+                spec=spec,
+                status=status,
+                kind=rde_2_x_entity.kind,
+                api_version=''
+            )
+            return rde_1_entity
+
+        return native_entity
 
     @classmethod
     def from_cluster_data(cls, cluster: dict, kind: str, **kwargs):
