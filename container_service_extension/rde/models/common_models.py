@@ -124,7 +124,6 @@ class DefEntity:
         entity_type_version = self.entityType.split(":")[-1]
         self.entity = entity
         if isinstance(entity, dict):
-
             # Parse the enitty to the right entity class
             NativeEntityClass = get_rde_model(entity_type_version)
             self.entity = NativeEntityClass.from_dict(entity)
