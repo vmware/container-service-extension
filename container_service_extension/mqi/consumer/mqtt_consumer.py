@@ -130,7 +130,8 @@ class MQTTConsumer:
 
         # Set the mqtt publisher
         self._mqtt_publisher = MQTTPublisher(mqtt_client=self._mqtt_client,
-                                             respond_topic=self.respond_topic)
+                                             respond_topic=self.respond_topic,
+                                             fsencoding=self.fsencoding)
 
         try:
             self._mqtt_client.connect(self.url,

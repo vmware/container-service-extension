@@ -22,10 +22,11 @@ class MQTTPublisher:
     changed if we ever decide to have more than one instance of MQTTConsumer.
     """
 
-    def __init__(self, mqtt_client, respond_topic):
+    def __init__(self, mqtt_client, respond_topic, fsencoding):
         self.mqtt_client = mqtt_client
         self.respond_topic = respond_topic
         self._publish_lock = Lock()
+        self._fsencoding = fsencoding
 
     def construct_response_json(self, request_id, status_code, reply_body_str,
                                 task_path=None):
@@ -41,7 +42,7 @@ class MQTTPublisher:
                     "Content-Length": len(reply_body_str)
                 },
                 "body": utils.format_response_body(reply_body_str,
-                                                   self.fsencoding)
+                                                   self._fsencoding)
             }
         }
 
