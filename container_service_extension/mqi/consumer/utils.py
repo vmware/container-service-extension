@@ -15,6 +15,7 @@ from container_service_extension.common.constants.shared_constants import RESPON
 import container_service_extension.common.thread_local_data as thread_local_data  # noqa: E501
 from container_service_extension.exception.exceptions import CseRequestError
 from container_service_extension.logging.logger import SERVER_LOGGER as LOGGER
+from container_service_extension.rde.models.common_models import DefEntity
 import container_service_extension.server.request_dispatcher as request_dispatcher  # noqa: E501
 
 
@@ -83,7 +84,8 @@ def get_task_href(body):
 
     if body.get('entity') is not None and \
             body['entity'].get('status') is not None:
-        return body['entity']['status'].get('task_href')
+        rde = DefEntity(**body)
+        return rde.entity.get_latest_task_href()
     return None
 
 

@@ -12,7 +12,6 @@ from typing import Union
 
 import semantic_version
 
-
 import container_service_extension.common.utils.core_utils as core_utils
 import container_service_extension.common.utils.server_utils as server_utils
 import container_service_extension.exception.exceptions as excptn
