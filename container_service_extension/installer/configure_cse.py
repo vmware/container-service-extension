@@ -181,6 +181,8 @@ def parse_cse_extension_description(sys_admin_client, is_mqtt_extension):
     # the key legacy_mode is also mandatory
     try:
         result = json.loads(description)
+        result[server_constants.CSE_VERSION_KEY] = \
+            semantic_version.Version(result[server_constants.CSE_VERSION_KEY])
     except json.decoder.JSONDecodeError:
         cse_version = server_constants.UNKNOWN_CSE_VERSION
         legacy_mode = True
@@ -329,7 +331,7 @@ def install_cse(config_file_name, config, skip_template_creation,
 
         # Setup extension based on message bus protocol
         if server_utils.should_use_mqtt_protocol(config):
-            _register_cse_as_mqtt_extension(client, msg_update_callback)
+            _register_cse_as_mqtt_extension(client, msg_update_callback=msg_update_callback)  # noqa: E501
         else:
             # create amqp exchange if it doesn't exist
             amqp = config['amqp']
@@ -554,7 +556,7 @@ def install_template(template_name, template_revision, config_file_name,
 # CSE 3.0.x, api v33.0
 # CSE 3.0.x, api v34.0
 # CSE 3.0.x, api v35.0
-# api v33.0 and v34.0 will map to legacy_mode = False
+# api v33.0 and v34.0 will map to legacy_mode = True
 #
 # The target configurations can be
 # CSE 3.1, vCD 10.1, legacy_mode = True
@@ -708,21 +710,23 @@ def upgrade_cse(config_file_name, config, skip_template_creation,
         if source_cse_running_in_legacy_mode != target_cse_running_in_legacy_mode and target_cse_running_in_legacy_mode:  # noqa: E501
             raise Exception(upgrade_path_not_valid_msg)
 
-        # ToDo : This is a valid path, we need to write the
-        #  upgrade path for this
         if source_cse_running_in_legacy_mode and target_cse_running_in_legacy_mode:  # noqa: E501
-            raise Exception(upgrade_path_not_valid_msg)
-
-        # ToDo : Depending on the determined RDE version we should have
-        #  two separate upgrade paths
-
-        _upgrade_to_cse_3_1(
-            client=client,
-            config=config,
-            skip_template_creation=skip_template_creation,
-            retain_temp_vapp=retain_temp_vapp,
-            msg_update_callback=msg_update_callback,
-            log_wire=log_wire)
+            _upgrade_to_cse_3_1_legacy(
+                client=client,
+                config=config,
+                skip_template_creation=skip_template_creation,
+                retain_temp_vapp=retain_temp_vapp,
+                msg_update_callback=msg_update_callback)
+        else:
+            # ToDo : Depending on the determined RDE version we should have
+            #  two separate upgrade paths
+            _upgrade_to_cse_3_1_non_legacy(
+                client=client,
+                config=config,
+                skip_template_creation=skip_template_creation,
+                retain_temp_vapp=retain_temp_vapp,
+                msg_update_callback=msg_update_callback,
+                log_wire=log_wire)
 
         record_user_action(CseOperation.SERVICE_UPGRADE,
                            status=OperationStatus.SUCCESS,
@@ -1853,10 +1857,41 @@ def _update_cse_amqp_extension(client, routing_key, exchange,
     INSTALL_LOGGER.info(msg)
 
 
-def _upgrade_to_cse_3_1(client, config,
-                        skip_template_creation, retain_temp_vapp,
-                        msg_update_callback=utils.NullPrinter(),
-                        log_wire=False):
+def _update_cse_extension(client, config,
+                          msg_update_callback=utils.NullPrinter()):
+    # update extension
+    if server_utils.should_use_mqtt_protocol(config):
+        # Caller guarantees that there is an extension present
+        existing_ext_type = _get_existing_extension_type(client)
+        if existing_ext_type == server_constants.ExtensionType.AMQP:
+            _deregister_cse_amqp_extension(client)
+            _register_cse_as_mqtt_extension(client, msg_update_callback=msg_update_callback)  # noqa: E501
+        elif existing_ext_type == server_constants.ExtensionType.MQTT:
+            # Remove api filters and update description
+            _update_cse_mqtt_extension(client, msg_update_callback=msg_update_callback)  # noqa: E501
+    else:
+        # Update amqp exchange
+        _create_amqp_exchange(
+            exchange_name=config['amqp']['exchange'],
+            host=config['amqp']['host'],
+            port=config['amqp']['port'],
+            vhost=config['amqp']['vhost'],
+            username=config['amqp']['username'],
+            password=config['amqp']['password'],
+            msg_update_callback=msg_update_callback)
+
+        # Update cse api extension (along with api end points)
+        _update_cse_amqp_extension(
+            client=client,
+            routing_key=config['amqp']['routing_key'],
+            exchange=config['amqp']['exchange'],
+            msg_update_callback=msg_update_callback)
+
+
+def _upgrade_to_cse_3_1_non_legacy(client, config,
+                                   skip_template_creation, retain_temp_vapp,
+                                   msg_update_callback=utils.NullPrinter(),
+                                   log_wire=False):
     """Handle upgrade when VCD supports RDE.
 
     :raises: MultipleRecordsException: (when using mqtt) if more than one
@@ -1942,33 +1977,39 @@ def _upgrade_to_cse_3_1(client, config,
     _print_users_in_need_of_def_rights(
         cse_clusters=clusters, msg_update_callback=msg_update_callback)
 
-    # update extension
-    if server_utils.should_use_mqtt_protocol(config):
-        # Caller guarantees that there is an extension present
-        existing_ext_type = _get_existing_extension_type(client)
-        if existing_ext_type == server_constants.ExtensionType.AMQP:
-            _deregister_cse_amqp_extension(client)
-            _register_cse_as_mqtt_extension(client, msg_update_callback)
-        elif existing_ext_type == server_constants.ExtensionType.MQTT:
-            # Remove api filters and update description
-            _update_cse_mqtt_extension(client, msg_update_callback)
+    _update_cse_extension(client=client,
+                          config=config,
+                          msg_update_callback=msg_update_callback)
+
+
+def _upgrade_to_cse_3_1_legacy(
+        client, config, skip_template_creation, retain_temp_vapp,
+        msg_update_callback=utils.NullPrinter()):
+    """Handle upgrade when no support from VCD for RDE.
+
+    :raises: MultipleRecordsException: (when using mqtt) if more than one
+        service with the given name and namespace are found when trying to
+        delete the amqp-based extension.
+    :raises requests.exceptions.HTTPError: (when using MQTT) if the MQTT
+        components were not installed correctly
+    """
+    if skip_template_creation:
+        msg = "Skipping creation of new templates and special processing of existing templates"  # noqa: E501
+        msg_update_callback.info(msg)
+        INSTALL_LOGGER.info(msg)
     else:
-        # Update amqp exchange
-        _create_amqp_exchange(
-            exchange_name=config['amqp']['exchange'],
-            host=config['amqp']['host'],
-            port=config['amqp']['port'],
-            vhost=config['amqp']['vhost'],
-            username=config['amqp']['username'],
-            password=config['amqp']['password'],
+        # Recreate all supported templates
+        _install_all_templates(
+            client=client,
+            config=config,
+            force_create=True,
+            retain_temp_vapp=retain_temp_vapp,
+            ssh_key=retain_temp_vapp,
             msg_update_callback=msg_update_callback)
 
-        # Update cse api extension (along with api end points)
-        _update_cse_amqp_extension(
-            client=client,
-            routing_key=config['amqp']['routing_key'],
-            exchange=config['amqp']['exchange'],
-            msg_update_callback=msg_update_callback)
+    _update_cse_extension(client=client,
+                          config=config,
+                          msg_update_callback=msg_update_callback)
 
 
 def _get_placement_policy_name_from_template_name(template_name):
