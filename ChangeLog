@@ -1,6 +1,44 @@
 CHANGES
 =======
 
+* [VCDA-2238] edited regex pattern to redact headers with double quote (updates) (#987)
+* update requirements (#980)
+* Update pyvcloud to 23.0.1dev11, vcd-cli to 24.0.1dev3
+* Port '[VCDA-2274] Fix upgrade issue related to missing rights in \`cse service account\` (#965)' to cse\_3\_0\_updates (#971)
+* [VCDA-2007] Cluster resize with exposed cluster (#953)
+* [VCDA-2189] Update cluster delete to handle exposed cluster (#951)
+* [VCDA-2207] Update exposing cluster logic to use ipam solution (#949)
+* [VCDA-2132] Expose cluster in cluster create workflow (#929)
+* [VCDA-2187] Nsxt gateway delete dnat rule (#936)
+* Port fail\_operation changes (#939)
+* [VCDA-2188] ipam solution for getting available ip (#937)
+* Allow upgrade from CSE 3.0.2 (#927)
+* Fix merge errors (#910)
+* [VCDA-2129] Report exception for Script execution error (#911)
+* Fix repetitive expensive calls to vdcComputePolicies (#905)
+* [VCDA-2040 and VCDA-2043] Nsxt edge gateway (updates branch) (#900)
+* Prevent returning response dict on server busy response (#901)
+* [VCDA-1927 & VCDA-2042] Paginate TKG and legacy native cluster responses (#868)
+* exclude nfs node from cluster upgrade (#896)
+* Port "[VCDA-1908] Reorder CSE installation steps, to make \`creation of extension\` the last step. (#840)" to cse\_3\_0\_updates (#883)
+* Port "[VCDA-1937] Fix minor issue in \`cse create-service-role\` (#841)" to cse\_3\_0\_updates(#884)
+* Port [VCDA-1955] Update and resolve entity with correct status before syncing def entity (#845) to cse\_3\_0\_updates (#885)
+* Port \`updated cryptography library (#855)\` to cse\_3\_0\_updates (#886)
+* mqtt maintains only one token (#879)
+* [VCDA-1943] Move \`adding TKG rights\` from 'cse create-service-role' to 'cse install' (#875)
+* Api path format fix for ovdc list operation (#876)
+* [VCDA-2035] Fix ovdc list operation to support backward compatibility (#871)
+* [VCDA-1909] Add logic in AMQP consumer to reject redelivered messages (#851)
+* [VCDA-1927] paginate ovdc list (apiV 33 & 35) and cluster list (api 35). (#839) (#863)
+* [VCDA-1894] Refactor cse.py and separate out different command groups (#827) (#862)
+* [VCDA-1669] Optimize list vdc query using typed query (#809) (#861)
+* [VCDA-1884] Refactoring client modules (#808) (#860)
+* [VCDE-986]: Migrate to pika 1.1.0 (#847)
+
+3.0.1
+-----
+
+* Update AUTHORS, Changelog for 3.0.1. Fix flake8 errors
 * [VCDA-1917] CSE Service Role creation cosmetic issues (#821)
 * [VCDA-1919] Add ACL to the System Org while registering the defined entity schema (#823)
 * [VCDA-1890] Implement CSE server CLI command to create service account role (#819)
