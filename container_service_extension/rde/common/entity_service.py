@@ -327,7 +327,7 @@ class DefEntityService:
         state will be either changed to "RESOLVED" (or) "RESOLUTION ERROR".
 
         :param str entity_id: Id of the entity
-        :param str entity_type_id:
+        :param str entity_type_id: Entity type ID of the entity being resolved
         :return: Defined entity with its state updated.
         :rtype: DefEntity
         """
