@@ -313,7 +313,7 @@ This is to make sure that the cluster VMs are reachable from outside the scope o
 OrgVDC network. With NSX-T, directly connected OrgVDC networks are not offered and
 routed OrgVDC networks are used to deploy K8s clusters. In order to grant Internet access
 to the cluster VMs connected to NSX-T backed routed OrgVDC networks, and maintain
-accessibility to the clusters, CSE 3.1 offers an option to `expose` the cluster.
+accessibility to the clusters, CSE 3.0.2 offers an option to `expose` the cluster.
 
 Users deploying clusters must have the following rights, if they want to leverage
 the `expose` functionality.
@@ -334,4 +334,4 @@ section of the cluster would show a new field viz. `exposed`, which would be set
 Users can de-`expose` a cluster, by setting the value of `expose` field to `False`
 and applying the updated specification on the cluster via `vcd cse cluster apply`.
 The value for the `exposed` field would be `False` for clusters that are not exposed.
-An exposed cluster if ever de-exposed can't be re-exposed. 
+An exposed cluster if ever de-exposed can't be re-exposed.
