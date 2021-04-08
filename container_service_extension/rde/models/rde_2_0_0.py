@@ -92,7 +92,7 @@ class CloudProperties:
     org_name: Optional[str] = None
     ovdc_name: Optional[str] = None
     ovdc_network_name: Optional[str] = None
-    k8_distribution: Optional[Distribution] = None
+    k8_distribution: Distribution = Distribution()
 
     # TODO contemplate the need to keep this attribute
     ssh_key: Optional[str] = None
@@ -111,7 +111,7 @@ class Status:
     os: Optional[str] = None
     nodes: Optional[Nodes] = None
     uid: Optional[str] = None
-    cloud_properties: Optional[CloudProperties] = None
+    cloud_properties: CloudProperties = CloudProperties()
 
 
 @dataclass_json(letter_case=LetterCase.CAMEL)
@@ -123,11 +123,11 @@ class ClusterSpec:
     them into the expected class instances.
     """
 
-    control_plane: ControlPlane
-    workers: Workers
-    nfs: Nfs
-    k8_distribution: Distribution
     settings: Settings
+    control_plane: ControlPlane = ControlPlane()
+    workers: Workers = Workers()
+    nfs: Nfs = Nfs()
+    k8_distribution: Distribution = Distribution()
 
 
 @dataclass_json(letter_case=LetterCase.CAMEL)

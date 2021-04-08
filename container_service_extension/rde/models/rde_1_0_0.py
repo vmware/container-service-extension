@@ -104,11 +104,11 @@ class ClusterSpec:
     them into the expected class instances.
     """
 
-    control_plane: ControlPlane
-    workers: Workers
-    nfs: Nfs
-    k8_distribution: Distribution
     settings: Settings
+    control_plane: ControlPlane = ControlPlane()
+    workers: Workers = Workers()
+    nfs: Nfs = Nfs()
+    k8_distribution: Distribution = Distribution()
 
 
 @dataclass_json

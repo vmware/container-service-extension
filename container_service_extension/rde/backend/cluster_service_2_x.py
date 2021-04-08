@@ -1710,7 +1710,6 @@ class ClusterService(abstract_broker.AbstractBroker):
 
         if self.task is None:
             self.task = vcd_task.Task(self.context.sysadmin_client)
-
         org = vcd_utils.get_org(self.context.client)
         user_href = org.get_user(self.context.user.name).get('href')
 
