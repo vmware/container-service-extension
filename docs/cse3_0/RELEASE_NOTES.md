@@ -5,6 +5,40 @@ title: Release Notes
 
 # Release Notes
 
+## CSE 3.0.2 GA (3.0.2)
+Release Date: 2021-04-08
+
+**Supported (and Tested) VCD versions** : 10.2.2, 10.1.3, 10.0.0.3
+
+Note : Future update/patch releases of these vCD versions will be supported by CSE but
+they won't be tested individually. If a bug is found in their interoperability
+with CSE, please file a github [issue](https://github.com/vmware/container-service-extension/issues),
+the same will be fixed in a future CSE release.
+
+| CSE Server | CSE CLI | CSE UI  | Cloud Director | Cloud Director NSX-T | Ent-PKS with NSX-T | Features offered                                                                                    |
+|------------|---------|---------|----------------|----------------------|--------------------|-----------------------------------------------------------------------------------------------------|
+| 3.0.2      | 3.0.2   | 2.2.0** | 10.2.2         | 3.0.2, 3.1.2         | 1.7 with 2.5.1     | Native, Tkg, and Ent-PKS Cluster management; Defined entity representation for both native and tkg. |
+| 3.0.2      | 3.0.2   | 1.0.3   | 10.1, 10.0     | NA                   | 1.7 with 2.5.1     | Native and Ent-PKS cluster management                                                               |
+| NA         | 3.0.2   | 2.2.0** | 10.2.2         | NA                   | NA                 | Tkg cluster management only                                                                         |
+
+** Kubernetes clusters UI plug-in 2.2.0 ships with VCD 10.2.2
+
+**What's New**
+* Improved performance for ovdc and cluster listing
+    * Impacted CLI commands
+        * `vcd cse cluster list`
+        * `vcd cse ovdc list`
+    * New apis with support for paginated response
+        * `/api/cse/3.0/nativeclusters`
+        * `/api/cse/nativeclusters`
+        * `/api/cse/orgvdcs`
+* Support for cluster deployment on Organization VDCs with routed OrgVDC network.
+    * More details at [Kubernetes Cluster Management](CLUSTER_MANAGEMENT.html#expose_cluster)
+
+**Notes to System Administrator**
+If you are upgrading from an existing CSE 3.0.x installation please be aware of
+the issue related to runtime defined entities listed in [Known Issues](KNOWN_ISSUES.html).
+
 ## CSE 3.0.1 GA (3.0.1)
 Release Date: 2020-11-06
 
