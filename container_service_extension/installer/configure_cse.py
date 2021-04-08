@@ -718,6 +718,7 @@ def upgrade_cse(config_file_name, config, skip_template_creation,
                 config=config,
                 skip_template_creation=skip_template_creation,
                 retain_temp_vapp=retain_temp_vapp,
+                ssh_key=ssh_key,
                 msg_update_callback=msg_update_callback)
         else:
             # ToDo : Depending on the determined RDE version we should have
@@ -727,6 +728,7 @@ def upgrade_cse(config_file_name, config, skip_template_creation,
                 config=config,
                 skip_template_creation=skip_template_creation,
                 retain_temp_vapp=retain_temp_vapp,
+                ssh_key=ssh_key,
                 msg_update_callback=msg_update_callback,
                 log_wire=log_wire)
 
@@ -1892,6 +1894,7 @@ def _update_cse_extension(client, config,
 
 def _upgrade_to_cse_3_1_non_legacy(client, config,
                                    skip_template_creation, retain_temp_vapp,
+                                   ssh_key,
                                    msg_update_callback=utils.NullPrinter(),
                                    log_wire=False):
     """Handle upgrade when VCD supports RDE.
@@ -1936,7 +1939,7 @@ def _upgrade_to_cse_3_1_non_legacy(client, config,
             config=config,
             force_create=True,
             retain_temp_vapp=retain_temp_vapp,
-            ssh_key=retain_temp_vapp,
+            ssh_key=ssh_key,
             msg_update_callback=msg_update_callback)
 
     msg = "Loading all CSE clusters for processing..."
@@ -1984,7 +1987,7 @@ def _upgrade_to_cse_3_1_non_legacy(client, config,
 
 
 def _upgrade_to_cse_3_1_legacy(
-        client, config, skip_template_creation, retain_temp_vapp,
+        client, config, skip_template_creation, retain_temp_vapp, ssh_key,
         msg_update_callback=utils.NullPrinter()):
     """Handle upgrade when no support from VCD for RDE.
 
@@ -2005,12 +2008,25 @@ def _upgrade_to_cse_3_1_legacy(
             config=config,
             force_create=True,
             retain_temp_vapp=retain_temp_vapp,
-            ssh_key=retain_temp_vapp,
+            ssh_key=ssh_key,
             msg_update_callback=msg_update_callback)
 
-    _update_cse_extension(client=client,
-                          config=config,
-                          msg_update_callback=msg_update_callback)
+    # Update amqp exchange
+    _create_amqp_exchange(
+        exchange_name=config['amqp']['exchange'],
+        host=config['amqp']['host'],
+        port=config['amqp']['port'],
+        vhost=config['amqp']['vhost'],
+        username=config['amqp']['username'],
+        password=config['amqp']['password'],
+        msg_update_callback=msg_update_callback)
+
+    # Update cse api extension (along with api end points)
+    _update_cse_amqp_extension(
+        client=client,
+        routing_key=config['amqp']['routing_key'],
+        exchange=config['amqp']['exchange'],
+        msg_update_callback=msg_update_callback)
 
 
 def _get_placement_policy_name_from_template_name(template_name):
