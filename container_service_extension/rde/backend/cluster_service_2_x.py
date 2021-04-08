@@ -835,10 +835,7 @@ class ClusterService(abstract_broker.AbstractBroker):
             LOGGER.debug(msg)
             self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
             vapp.reload()
-            _join_cluster(self.context.sysadmin_client,
-                          vapp,
-                          template[LocalTemplateKey.NAME],
-                          template[LocalTemplateKey.REVISION])
+            _join_cluster(self.context.sysadmin_client, vapp)
 
             if nfs_count > 0:
                 msg = f"Creating {nfs_count} NFS nodes for cluster " \
@@ -1179,8 +1176,6 @@ class ClusterService(abstract_broker.AbstractBroker):
                 vapp.reload()
                 _join_cluster(self.context.sysadmin_client,
                               vapp,
-                              template[LocalTemplateKey.NAME],
-                              template[LocalTemplateKey.REVISION],
                               target_nodes=target_nodes)
                 msg = f"Added {num_workers_to_add} node(s) to cluster " \
                       f"{cluster_name}({cluster_id})"
@@ -2184,8 +2179,7 @@ def _init_cluster(sysadmin_client: vcd_client.Client, vapp, k8s_version,
             f"Couldn't initialize cluster: {str(err)}")
 
 
-def _join_cluster(sysadmin_client: vcd_client.Client, vapp, template_name,
-                  template_revision, target_nodes=None):
+def _join_cluster(sysadmin_client: vcd_client.Client, vapp, target_nodes=None):
     vcd_utils.raise_error_if_user_not_from_system_org(sysadmin_client)
     try:
 
