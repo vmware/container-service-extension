@@ -159,7 +159,7 @@ def cluster_upgrade(data, op_ctx: ctx.OperationContext):
     cluster_id = data[RequestKey.CLUSTER_ID]
     curr_entity = svc.entity_svc.get_entity(cluster_id)
     request_utils.validate_request_payload(
-        converted_native_entity.spec.to_dict(), curr_entity.entity.spec.to_dict(),
+        converted_native_entity.spec.to_dict(), curr_entity.entity.spec.to_dict(),  # noqa: E501
         exclude_fields=[FlattenedClusterSpecKey1X.TEMPLATE_NAME.value,
                         FlattenedClusterSpecKey1X.TEMPLATE_REVISION.value])
     new_rde: common_models.DefEntity = svc.upgrade_cluster(cluster_id, converted_native_entity)  # noqa: E501
