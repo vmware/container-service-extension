@@ -32,7 +32,7 @@ the same will be fixed in a future CSE release.
         * `/api/cse/3.0/nativeclusters`
         * `/api/cse/nativeclusters`
         * `/api/cse/orgvdcs`
-* Support for cluster deployment on Organization VDCs with routed OrgVDC network.
+* Support for cluster deployment on Organization VDCs with NSX-T based routed OrgVDC network.
     * More details at [Kubernetes Cluster Management](CLUSTER_MANAGEMENT.html#expose_cluster)
 
 **Notes to System Administrator**
