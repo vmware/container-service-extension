@@ -273,6 +273,9 @@ class ClusterService(abstract_broker.AbstractBroker):
             }
         )
         self._create_cluster_async(entity_id, input_native_entity)
+        self._update_task(status=BehaviorTaskStatus.RUNNING,
+                          message='Hurray cluster task-update is working',
+                          progress=3)
         return self.mqtt_publisher.construct_behavior_payload(
             message='create_cluster_in_progress',
             status=BehaviorTaskStatus.RUNNING.value, progress=5)
@@ -1670,7 +1673,7 @@ class ClusterService(abstract_broker.AbstractBroker):
         else:
             payload = self.mqtt_publisher.construct_behavior_payload(
                 status=status.value, message=message, progress=progress)
-        response_json = self.mqtt_publisher.construct_behavior_payload(
+        response_json = self.mqtt_publisher.construct_behavior_response_json(
             task_id=self.task_id, entity_id=self.entity_id, payload=payload)
         self.mqtt_publisher.send_response(response_json)
         self.task_status = status.value
