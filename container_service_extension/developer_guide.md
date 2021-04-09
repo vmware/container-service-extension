@@ -1,6 +1,6 @@
 # Check-list
 
-This is the check-list of steps to be performed at the beginning of the each 
+This is the check-list of steps to be performed at the beginning of each 
 release cycle of CSE.
 
 # Server
@@ -39,7 +39,7 @@ Versioning guidelines:
   is an indication to bump up the major version.
   
 Steps:
-1. Create new schema file under /cse_def_schema/schema_2_1_0.json.
+1. Create new schema file under /cse_def_schema/schema_x_y_z.json.
 2. Update below classes and tables for the finalized RDE version. There could 
    be more trivial constructs to be updated. Updating the below should lead you 
    to the other constructs. Below can be found in ../rde/constants.py and ../rde/common_models.py
