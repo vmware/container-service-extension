@@ -7,9 +7,7 @@ import yaml
 
 import container_service_extension.common.constants.shared_constants as shared_constants  # noqa: E501
 from container_service_extension.logging.logger import CLIENT_LOGGER
-import container_service_extension.rde.constants as def_constants
-import container_service_extension.rde.models.rde_1_0_0 as rde_1_0_0
-import container_service_extension.rde.models.rde_2_0_0 as rde_2_0_0
+import container_service_extension.rde.models.rde_factory as rde_factory
 
 SAMPLE_K8_CLUSTER_SPEC_HELP = """# Short description of various properties used in this sample cluster configuration
 # kind: The kind of the Kubernetes cluster.
@@ -96,53 +94,16 @@ def get_sample_cluster_configuration(output=None, k8_runtime=None, server_rde_in
 
 
 def _get_sample_cluster_configuration_by_k8_runtime(k8_runtime, server_rde_in_use):  # noqa: E501
-    metadata = rde_1_0_0.Metadata('cluster_name', 'organization_name',
-                                  'org_virtual_datacenter_name')
-    status = rde_1_0_0.Status()
-    settings = rde_1_0_0.Settings(network='ovdc_network_name', ssh_key=None)
-    k8_distribution = rde_1_0_0.Distribution(
-        template_name='ubuntu-16.04_k8-1.17_weave-2.6.0',
-        template_revision=2
-    )
-    control_plane = rde_1_0_0.ControlPlane(
-        count=1,
-        sizing_class='Large_sizing_policy_name',
-        storage_profile='Gold_storage_profile_name'
-    )
-    workers = rde_1_0_0.Workers(
-        count=2,
-        sizing_class='Medium_sizing_policy_name',
-        storage_profile='Silver_storage_profile'
-    )
+    NativeEntityClass = rde_factory.get_rde_model(server_rde_in_use)
+    sample_native_entity = NativeEntityClass.sample_native_entity(k8_runtime.value)  # noqa: E501
+    native_entity_dict = dataclasses.asdict(sample_native_entity)
 
-    nfs = rde_1_0_0.Nfs(
-        count=0,
-        sizing_class='Large_sizing_policy_name',
-        storage_profile='Platinum_storage_profile_name'
-    )
+    # remove status part of the entity dict
+    del native_entity_dict['status']
 
-    cluster_spec = rde_1_0_0.ClusterSpec(
-        control_plane=control_plane,
-        k8_distribution=k8_distribution,
-        settings=settings,
-        workers=workers,
-        nfs=nfs
-    )
-    cluster_entity = rde_1_0_0.NativeEntity(
-        metadata=metadata,
-        spec=cluster_spec,
-        status=status,
-        kind=k8_runtime.value
-    )
-
-    # TODO Temporary solution for generating sample for RDE 2.0
-    if server_rde_in_use == def_constants.RDEVersion.RDE_2_0_0:
-        cluster_entity = rde_2_0_0.NativeEntity.from_native_entity(cluster_entity)  # noqa: E501
-        cluster_entity.metadata.site = "VCD site"
-
-    sample_cluster_config = yaml.dump(dataclasses.asdict(cluster_entity))
-    CLIENT_LOGGER.info(sample_cluster_config)
-    return sample_cluster_config
+    sample_apply_spec = yaml.dump(native_entity_dict)
+    CLIENT_LOGGER.info(sample_apply_spec)
+    return sample_apply_spec
 
 
 def _get_sample_tkg_cluster_configuration():
@@ -171,6 +132,6 @@ def _get_sample_tkg_cluster_configuration():
             "virtualDataCenterName": "org_virtual_datacenter_name"
         }
     }
-    sample_cluster_config = yaml.dump(sample_tkg_plus_config)
-    CLIENT_LOGGER.info(sample_cluster_config)
-    return sample_cluster_config
+    sample_apply_spec = yaml.dump(sample_tkg_plus_config)
+    CLIENT_LOGGER.info(sample_apply_spec)
+    return sample_apply_spec

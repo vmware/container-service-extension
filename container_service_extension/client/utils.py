@@ -9,6 +9,7 @@ from pyvcloud.vcd.client import Client
 import pyvcloud.vcd.org as vcd_org
 import pyvcloud.vcd.utils as vcd_utils
 import requests
+import semantic_version
 import six
 from vcd_cli.profiles import Profiles
 from vcd_cli.utils import stdout
@@ -184,12 +185,17 @@ def _override_client(ctx) -> None:
     ctx.obj['profiles'] = profiles
 
 
-def construct_filters(**kwargs):
+def construct_filters(server_rde_version, **kwargs):
+    # NOTE: org and vdc filters need to be camel cased if RDE version > 1.0.0
+    filter_key = def_constants.ClusterEntityFilterKey
+    if semantic_version.Version(server_rde_version) <= \
+            semantic_version.Version(def_constants.RDEVersion.RDE_1_0_0):
+        filter_key = def_constants.ClusterEntityFilterKeyV1
     filters = {}
     if kwargs.get('org'):
-        filters[def_constants.ClusterEntityFilterKey.ORG_NAME.value] = kwargs['org']  # noqa: E501
+        filters[filter_key.ORG_NAME.value] = kwargs['org']  # noqa: E501
     if kwargs.get('vdc'):
-        filters[def_constants.ClusterEntityFilterKey.OVDC_NAME.value] = kwargs['vdc']  # noqa: E501
+        filters[filter_key.OVDC_NAME.value] = kwargs['vdc']  # noqa: E501
     return filters
 
 

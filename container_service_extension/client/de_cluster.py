@@ -21,8 +21,8 @@ import container_service_extension.common.utils.pyvcloud_utils as vcd_utils
 import container_service_extension.exception.exceptions as cse_exceptions
 import container_service_extension.logging.logger as logger
 import container_service_extension.rde.common.entity_service as def_entity_svc
+from container_service_extension.rde.models.abstractNativeEntity import AbstractNativeEntity  # noqa: E501
 import container_service_extension.rde.models.common_models as common_models
-import container_service_extension.rde.models.rde_1_0_0 as rde_1_0_0
 import container_service_extension.rde.utils as def_utils
 
 
@@ -83,7 +83,8 @@ class DECluster:
                 raise e
         else:
             # display all clusters
-            filters = client_utils.construct_filters(org=org, vdc=vdc)
+            filters = client_utils.construct_filters(
+                self._server_rde_version, org=org, vdc=vdc)
             entity_svc = def_entity_svc.DefEntityService(self._cloudapi_client)
             has_more_results = True
             page_number = CSE_PAGINATION_FIRST_PAGE_NUMBER
@@ -108,13 +109,13 @@ class DECluster:
                             cli_constants.CLIOutputKey.ORG.value: de.org.name, # noqa: E501
                             cli_constants.CLIOutputKey.OWNER.value: de.owner.name  # noqa: E501
                         }
-                        if type(entity) == rde_1_0_0.NativeEntity:
+                        if isinstance(entity, AbstractNativeEntity):
                             cluster[cli_constants.CLIOutputKey.VDC.value] = \
                                 entity.metadata.ovdc_name
                             cluster[cli_constants.CLIOutputKey.K8S_RUNTIME.value] = entity.kind  # noqa: E501
                             cluster[cli_constants.CLIOutputKey.K8S_VERSION.value] = entity.status.kubernetes  # noqa: E501
                             cluster[cli_constants.CLIOutputKey.STATUS.value] = entity.status.phase  # noqa: E501
-                        elif type(entity) == common_models.TKGEntity:
+                        elif isinstance(entity, common_models.TKGEntity):
                             cluster[cli_constants.CLIOutputKey.VDC.value] = \
                                 entity.metadata.virtualDataCenterName
                             cluster[cli_constants.CLIOutputKey.K8S_RUNTIME.value] = entity.kind  # noqa: E501
@@ -146,7 +147,8 @@ class DECluster:
             boolean indicating cluster type
         :rtype: (cluster, dict,  bool)
         """
-        filters = client_utils.construct_filters(org=org, vdc=vdc)
+        filters = client_utils.construct_filters(
+            self._server_rde_version, org=org, vdc=vdc)
         entity_svc = def_entity_svc.DefEntityService(self._cloudapi_client)
         has_native_rights = True
         has_tkg_rights = True
