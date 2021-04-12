@@ -333,7 +333,10 @@ def install_cse(config_file_name, config, skip_template_creation,
 
         # Setup extension based on message bus protocol
         if server_utils.should_use_mqtt_protocol(config):
-            _register_cse_as_mqtt_extension(client, msg_update_callback=msg_update_callback)  # noqa: E501
+            _register_cse_as_mqtt_extension(
+                client,
+                rde_version_in_use=config['service']['rde_version_in_use'],
+                msg_update_callback=msg_update_callback)  # noqa: E501
         else:
             # create amqp exchange if it doesn't exist
             amqp = config['amqp']
@@ -347,6 +350,7 @@ def install_cse(config_file_name, config, skip_template_creation,
                 client=client,
                 routing_key=amqp['routing_key'],
                 exchange=amqp['exchange'],
+                rde_version_in_use=config['service']['rde_version_in_use'],
                 msg_update_callback=msg_update_callback)
 
             # register rights to vCD
@@ -1872,7 +1876,10 @@ def _update_cse_extension(client, config,
             _register_cse_as_mqtt_extension(client, msg_update_callback=msg_update_callback)  # noqa: E501
         elif existing_ext_type == server_constants.ExtensionType.MQTT:
             # Remove api filters and update description
-            _update_cse_mqtt_extension(client, msg_update_callback=msg_update_callback)  # noqa: E501
+            _update_cse_mqtt_extension(
+                client,
+                rde_version_in_use=config['service']['rde_version_in_use'],
+                msg_update_callback=msg_update_callback)
     else:
         # Update amqp exchange
         _create_amqp_exchange(
@@ -1889,6 +1896,7 @@ def _update_cse_extension(client, config,
             client=client,
             routing_key=config['amqp']['routing_key'],
             exchange=config['amqp']['exchange'],
+            rde_version_in_use=config['service']['rde_version_in_use'],
             msg_update_callback=msg_update_callback)
 
 
@@ -1991,9 +1999,6 @@ def _upgrade_to_cse_3_1_legacy(
         msg_update_callback=utils.NullPrinter()):
     """Handle upgrade when no support from VCD for RDE.
 
-    :raises: MultipleRecordsException: (when using mqtt) if more than one
-        service with the given name and namespace are found when trying to
-        delete the amqp-based extension.
     :raises cse_exception.AmqpError: (when using AMQP) if AMQP exchange
         could not be created.
     """
