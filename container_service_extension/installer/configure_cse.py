@@ -1994,8 +1994,8 @@ def _upgrade_to_cse_3_1_legacy(
     :raises: MultipleRecordsException: (when using mqtt) if more than one
         service with the given name and namespace are found when trying to
         delete the amqp-based extension.
-    :raises requests.exceptions.HTTPError: (when using MQTT) if the MQTT
-        components were not installed correctly
+    :raises cse_exception.AmqpError: (when using AMQP) if AMQP exchange
+        could not be created.
     """
     if skip_template_creation:
         msg = "Skipping creation of new templates and special processing of existing templates"  # noqa: E501
