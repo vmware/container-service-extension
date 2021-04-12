@@ -183,6 +183,8 @@ def parse_cse_extension_description(sys_admin_client, is_mqtt_extension):
         result = json.loads(description)
         result[server_constants.CSE_VERSION_KEY] = \
             semantic_version.Version(result[server_constants.CSE_VERSION_KEY])
+        result[server_constants.RDE_VERSION_IN_USE_KEY] = \
+            semantic_version.Version(result[server_constants.RDE_VERSION_IN_USE_KEY])  # noqa: E501
     except json.decoder.JSONDecodeError:
         cse_version = server_constants.UNKNOWN_CSE_VERSION
         legacy_mode = True
