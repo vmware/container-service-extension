@@ -604,6 +604,10 @@ def apply(ctx, cluster_config_file_path, generate_sample_config, k8_runtime, out
                     and not utils.is_environment_variable_enabled(cli_constants.ENV_CSE_TKG_PLUS_ENABLED):  # noqa: E501
                 raise Exception(f"{shared_constants.ClusterEntityKind.TKG_PLUS.value} not enabled")  # noqa: E501
             else:
+                # since apply command is not exposed when CSE server is not
+                # running, it is safe to get the server_rde_version from
+                # VCD API version as VCD API version will be the supported by
+                # CSE server.
                 server_rde_version = \
                     def_utils.get_runtime_rde_version_by_vcd_api_version(
                         float(client.get_api_version()))

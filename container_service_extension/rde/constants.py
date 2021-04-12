@@ -148,7 +148,7 @@ MAP_INPUT_PAYLOAD_VERSION_TO_RDE_VERSION = {
 }
 
 
-class ClusterEntityFilterKeyV1(Enum):
+class ClusterEntityFilterKey1X(Enum):
     """Keys to filter cluster entities in CSE (or) vCD.
 
     NOTE: Use ClusterEntityFilterKeyV1 if RDE version is <= 1.0.0
@@ -173,7 +173,7 @@ class ClusterEntityFilterKeyV1(Enum):
     PHASE = 'entity.status.phase'
 
 
-class ClusterEntityFilterKey(Enum):
+class ClusterEntityFilterKey2X(Enum):
     """Keys to filter cluster entities in CSE (or) vCD.
 
     Below Keys are commonly used filters. An entity can be filtered by any of
@@ -193,6 +193,13 @@ class ClusterEntityFilterKey(Enum):
     K8_DISTRIBUTION = 'entity.spec.k8Distribution.templateName'
     STATE = 'state'
     PHASE = 'entity.status.phase'
+
+
+class RDEFilterKey(Enum):
+    """Keys to filter RDE."""
+
+    NAME = 'name'
+    STATE = 'state'
 
 
 class PayloadKey(str, Enum):

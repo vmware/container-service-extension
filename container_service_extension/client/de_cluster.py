@@ -23,7 +23,7 @@ import container_service_extension.logging.logger as logger
 import container_service_extension.rde.common.entity_service as def_entity_svc
 from container_service_extension.rde.models.abstractNativeEntity import AbstractNativeEntity  # noqa: E501
 import container_service_extension.rde.models.common_models as common_models
-import container_service_extension.rde.utils as def_utils
+import container_service_extension.rde.schema_service as def_schema_svc
 
 
 DUPLICATE_CLUSTER_ERROR_MSG = "Duplicate clusters found. Please use --k8-runtime for the unique identification"  # noqa: E501
@@ -52,9 +52,9 @@ class DECluster:
                 logger_wire=logger_wire)
         self._nativeCluster = DEClusterNative(client)
         self._tkgCluster = DEClusterTKG(client)
+        schema_svc = def_schema_svc.DefSchemaService(self._cloudapi_client)
         self._server_rde_version = \
-            def_utils.get_runtime_rde_version_by_vcd_api_version(
-                float(self._cloudapi_client.get_api_version()))
+            schema_svc.get_latest_registered_schema_version()
 
     def list_clusters(self, vdc=None, org=None, **kwargs):
         """Get collection of clusters using DEF API.

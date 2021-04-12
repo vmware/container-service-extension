@@ -297,7 +297,7 @@ class DefEntityService():
         """
         if not filters:
             filters = {}
-        filters[def_constants.ClusterEntityFilterKey.CLUSTER_NAME.value] = name
+        filters[def_constants.RDEFilterKey.NAME.value] = name
         native_entity_type: DefEntityType = \
             def_utils.get_rde_metadata(version)[def_constants.RDEMetadataKey.ENTITY_TYPE]  # noqa: E501
         for entity in \

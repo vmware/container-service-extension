@@ -20,7 +20,7 @@ import container_service_extension.rde.common.entity_service as def_entity_svc
 import container_service_extension.rde.constants as rde_constants
 import container_service_extension.rde.models.common_models as common_models
 import container_service_extension.rde.models.rde_1_0_0 as rde_1_0_0
-import container_service_extension.rde.utils as def_utils
+import container_service_extension.rde.schema_service as def_schema_svc
 
 
 class DEClusterNative:
@@ -43,9 +43,9 @@ class DEClusterNative:
                 logger_wire=logger_wire)
         self._native_cluster_api = NativeClusterApi(client)
         self._client = client
+        schema_service = def_schema_svc.DefSchemaService(self._cloudapi_client)
         self._server_rde_version = \
-            def_utils.get_runtime_rde_version_by_vcd_api_version(
-                float(client.get_api_version()))
+            schema_service.get_latest_registered_schema_version()
 
     def create_cluster(self, cluster_entity: rde_1_0_0.NativeEntity):
         """Create a new Kubernetes cluster.

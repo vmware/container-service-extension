@@ -187,10 +187,10 @@ def _override_client(ctx) -> None:
 
 def construct_filters(server_rde_version, **kwargs):
     # NOTE: org and vdc filters need to be camel cased if RDE version > 1.0.0
-    filter_key = def_constants.ClusterEntityFilterKey
+    filter_key = def_constants.ClusterEntityFilterKey2X
     if semantic_version.Version(server_rde_version) <= \
             semantic_version.Version(def_constants.RDEVersion.RDE_1_0_0):
-        filter_key = def_constants.ClusterEntityFilterKeyV1
+        filter_key = def_constants.ClusterEntityFilterKey1X
     filters = {}
     if kwargs.get('org'):
         filters[filter_key.ORG_NAME.value] = kwargs['org']  # noqa: E501
