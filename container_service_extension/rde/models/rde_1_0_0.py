@@ -256,7 +256,7 @@ class NativeEntity(AbstractNativeEntity):
             status = Status(
                 phase=rde_2_x_entity.status.phase,
                 cni=rde_2_x_entity.status.cni,
-                task_href=rde_2_x_entity.status.task_href,
+                task_href=rde_2_x_entity.status.taskHref,
                 kubernetes=rde_2_x_entity.status.kubernetes,
                 docker_version=rde_2_x_entity.status.dockerVersion,
                 os=rde_2_x_entity.status.os,
