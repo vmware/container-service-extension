@@ -50,6 +50,7 @@ from container_service_extension.lib.telemetry.telemetry_utils import \
 from container_service_extension.lib.uaaclient.uaaclient import UaaClient
 from container_service_extension.logging.logger import NULL_LOGGER
 from container_service_extension.logging.logger import SERVER_NSXT_WIRE_LOGGER
+import container_service_extension.rde.utils as rde_utils
 from container_service_extension.security.encryption_engine import \
     get_decrypted_file_contents
 from container_service_extension.server.pks.pks_cache import Credentials
@@ -225,6 +226,11 @@ def get_validated_config(config_file_name,
     config['feature_flags']['legacy_api'] = str_to_bool(is_legacy_mode)
     config['feature_flags']['non_legacy_api'] = \
         not str_to_bool(is_legacy_mode)
+
+    max_vcd_api_version_supported = \
+        max([float(x) for x in config['service']['supported_api_versions']])  # noqa: E501
+    config['service']['rde_version_in_use'] = \
+        rde_utils.get_runtime_rde_version_by_vcd_api_version(max_vcd_api_version_supported)  # noqa: E501
 
     # Temporary work around before api version is completely removed from
     # config
