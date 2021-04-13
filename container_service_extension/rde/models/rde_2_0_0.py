@@ -43,10 +43,10 @@ class Workers:
 
 @dataclass()
 class Distribution:
-    templateName: str = ""
-    templateRevision: int = 0
+    templateName: str = None
+    templateRevision: int = None
 
-    def __init__(self, templateName: str = '', templateRevision: int = 0, **kwargs):  # noqa: E501
+    def __init__(self, templateName: str = None, templateRevision: int = None, **kwargs):  # noqa: E501
         self.templateName = templateName
         self.templateRevision = templateRevision
 
