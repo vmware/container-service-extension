@@ -141,8 +141,8 @@ def verify_version_compatibility(
             "it in legacy mode."
 
     if not ext_in_legacy_mode and ext_rde_in_use < runtime_rde_version:
-        error_msg += f"Supported Server RDE version ({runtime_rde_version}) " \
-            f"is higher than the previously installed RDE version " \
+        error_msg += f"Installed CSE RDE version ({runtime_rde_version}) " \
+            f"is lower than the supported Server RDE version " \
             f"({ext_rde_in_use}). Upgrade CSE to update RDE."
 
     if error_msg:
