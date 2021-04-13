@@ -118,8 +118,8 @@ def validate_cluster_update_request_and_check_cluster_upgrade(input_spec: dict, 
     #   camel case based on RDE version in use.
     if FlattenedClusterSpecKey.TEMPLATE_NAME.value in diff_fields or \
             FlattenedClusterSpecKey.TEMPLATE_REVISION.value in diff_fields or \
-            FlattenedClusterSpecKey.TEMPLATE_NAME_CAMEL in diff_fields or \
-            FlattenedClusterSpecKey.TEMPLATE_REVISION_CAMEL in diff_fields:
+            FlattenedClusterSpecKey.TEMPLATE_NAME_CAMEL.value in diff_fields or \
+            FlattenedClusterSpecKey.TEMPLATE_REVISION_CAMEL.value in diff_fields:  # noqa: E501
         is_upgrade_operation = True
 
     # Raise exception if resize and upgrade are performed at the same time
