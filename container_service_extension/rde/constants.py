@@ -148,9 +148,11 @@ MAP_INPUT_PAYLOAD_VERSION_TO_RDE_VERSION = {
 }
 
 
-# TODO make changes to use camel case
-class ClusterEntityFilterKey(Enum):
+class ClusterEntityFilterKey1X(Enum):
     """Keys to filter cluster entities in CSE (or) vCD.
+
+    NOTE: Use ClusterEntityFilterKeyV1 if RDE version is <= 1.0.0
+    else, use ClusterEntityFilterKey
 
     Below Keys are commonly used filters. An entity can be filtered by any of
     its properties.
@@ -169,6 +171,35 @@ class ClusterEntityFilterKey(Enum):
     K8_DISTRIBUTION = 'entity.spec.k8_distribution.template_name'
     STATE = 'state'
     PHASE = 'entity.status.phase'
+
+
+class ClusterEntityFilterKey2X(Enum):
+    """Keys to filter cluster entities in CSE (or) vCD.
+
+    Below Keys are commonly used filters. An entity can be filtered by any of
+    its properties.
+
+    Usage examples:
+    ..api/cse/internal/clusters?entity.kind=native
+    ..api/cse/internal/clusters?entity.metadata.orgName=org1
+    ..cloudapi/1.0.0/entities?filter=entity.metadata.orgName==org1
+    """
+
+    # TODO(DEF) CLI can leverage this enum for the filter implementation.
+    CLUSTER_NAME = 'name'
+    ORG_NAME = 'entity.metadata.orgName'
+    OVDC_NAME = 'entity.metadata.ovdcName'
+    KIND = 'entity.kind'
+    K8_DISTRIBUTION = 'entity.spec.k8Distribution.templateName'
+    STATE = 'state'
+    PHASE = 'entity.status.phase'
+
+
+class RDEFilterKey(Enum):
+    """Keys to filter RDE."""
+
+    NAME = 'name'
+    STATE = 'state'
 
 
 class PayloadKey(str, Enum):

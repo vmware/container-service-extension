@@ -347,3 +347,43 @@ class NativeEntity(AbstractNativeEntity):
 
     def get_latest_task_href(self):
         return self.status.task_href
+
+    @classmethod
+    def sample_native_entity(cls, k8_runtime: str = shared_constants.ClusterEntityKind.NATIVE.value):  # noqa: E501
+        metadata = Metadata('cluster_name', 'organization_name',
+                            'org_virtual_datacenter_name')
+        status = Status()
+        settings = Settings(network='ovdc_network_name', ssh_key=None)
+        k8_distribution = Distribution(
+            template_name='ubuntu-16.04_k8-1.17_weave-2.6.0',
+            template_revision=2
+        )
+        control_plane = ControlPlane(
+            count=1,
+            sizing_class='Large_sizing_policy_name',
+            storage_profile='Gold_storage_profile_name'
+        )
+        workers = Workers(
+            count=2,
+            sizing_class='Medium_sizing_policy_name',
+            storage_profile='Silver_storage_profile'
+        )
+
+        nfs = Nfs(
+            count=0,
+            sizing_class='Large_sizing_policy_name',
+            storage_profile='Platinum_storage_profile_name'
+        )
+
+        cluster_spec = ClusterSpec(
+            control_plane=control_plane,
+            k8_distribution=k8_distribution,
+            settings=settings,
+            workers=workers,
+            nfs=nfs
+        )
+
+        return NativeEntity(metadata=metadata,
+                            spec=cluster_spec,
+                            status=status,
+                            kind=k8_runtime)

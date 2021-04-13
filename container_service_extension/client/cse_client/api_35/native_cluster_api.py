@@ -10,7 +10,6 @@ import pyvcloud.vcd.client as vcd_client
 from container_service_extension.client.cse_client.cse_client import CseClient
 import container_service_extension.common.constants.shared_constants as shared_constants  # noqa: E501
 import container_service_extension.rde.models.common_models as common_models
-import container_service_extension.rde.models.rde_1_0_0 as rde_1_0_0
 
 
 class NativeClusterApi(CseClient):
@@ -21,27 +20,38 @@ class NativeClusterApi(CseClient):
         self._cluster_uri = f"{self._uri}/cluster"
         self._request_page_size = 10
 
-    def create_cluster(self, cluster_entity_definition: rde_1_0_0.NativeEntity):  # noqa: E501
-        cluster_entity_dict = asdict(cluster_entity_definition)
+    def create_cluster(self, cluster_create_spec: dict):
+        """Call create native cluster CSE server endpoint.
+
+        :param dict cluster_create_spec: Cluster create specification
+        :return: defined entity object representing the response
+        :rtype: common_models.DefEntity
+        """
         uri = self._clusters_uri
         response = self.do_request(
             uri=uri,
             method=shared_constants.RequestMethod.POST,
             accept_type='application/json',
             media_type='application/json',
-            payload=cluster_entity_dict)
+            payload=cluster_create_spec)
 
         return common_models.DefEntity(**self.process_response(response))
 
-    def update_cluster_by_cluster_id(self, cluster_id, cluster_entity_definition: rde_1_0_0.NativeEntity):  # noqa: E501
-        cluster_entity_dict = asdict(cluster_entity_definition)
+    def update_cluster_by_cluster_id(self, cluster_id: str, cluster_update_spec: dict):  # noqa: E501
+        """Call update native cluster CSE server endpoint.
+
+        :param str cluster_id: ID of the cluster
+        :param dict cluster_update_spec: Update cluster specification
+        :return: defined entity object representing the response
+        :rtype: common_models.DefEntity
+        """
         uri = f"{self._cluster_uri}/{cluster_id}"
         response = self.do_request(
             uri=uri,
             method=shared_constants.RequestMethod.PUT,
             accept_type='application/json',
             media_type='application/json',
-            payload=cluster_entity_dict)
+            payload=cluster_update_spec)
 
         return common_models.DefEntity(**self.process_response(response))
 

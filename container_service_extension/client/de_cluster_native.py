@@ -6,6 +6,7 @@ from dataclasses import asdict
 import os
 
 import pyvcloud.vcd.exceptions as vcd_exceptions
+import semantic_version
 import yaml
 
 import container_service_extension.client.constants as cli_constants
@@ -19,8 +20,7 @@ import container_service_extension.rde.common.entity_service as def_entity_svc
 import container_service_extension.rde.constants as rde_constants
 import container_service_extension.rde.models.common_models as common_models
 import container_service_extension.rde.models.rde_1_0_0 as rde_1_0_0
-import container_service_extension.rde.models.rde_factory as rde_factory
-import container_service_extension.rde.utils as def_utils
+import container_service_extension.rde.schema_service as def_schema_svc
 
 
 class DEClusterNative:
@@ -43,9 +43,9 @@ class DEClusterNative:
                 logger_wire=logger_wire)
         self._native_cluster_api = NativeClusterApi(client)
         self._client = client
+        schema_service = def_schema_svc.DefSchemaService(self._cloudapi_client)
         self._server_rde_version = \
-            def_utils.get_runtime_rde_version_by_vcd_api_version(
-                float(client.get_api_version()))
+            schema_service.get_latest_registered_schema_version()
 
     def create_cluster(self, cluster_entity: rde_1_0_0.NativeEntity):
         """Create a new Kubernetes cluster.
@@ -79,7 +79,8 @@ class DEClusterNative:
         """
         if cluster_id:
             return self.get_cluster_info_by_id(cluster_id)
-        filters = client_utils.construct_filters(org=org, vdc=vdc)
+        filters = client_utils.construct_filters(
+            self._server_rde_version, org=org, vdc=vdc)
         entity_svc = def_entity_svc.DefEntityService(self._cloudapi_client)
         def_entity = \
             entity_svc.get_native_rde_by_name_and_rde_version(
@@ -142,7 +143,8 @@ class DEClusterNative:
         :rtype: str
         :raises ClusterNotFoundError
         """
-        filters = client_utils.construct_filters(org=org, vdc=vdc)
+        filters = client_utils.construct_filters(
+            self._server_rde_version, org=org, vdc=vdc)
         entity_svc = def_entity_svc.DefEntityService(self._cloudapi_client)
         def_entity = entity_svc.get_native_rde_by_name_and_rde_version(
             cluster_name, self._server_rde_version, filters=filters)
@@ -169,6 +171,7 @@ class DEClusterNative:
         """Get cluster config for the given cluster name.
 
         :param str cluster_name: name of the cluster
+        :param str cluster_id: id of the cluster
         :param str vdc: name of vdc
         :param str org: name of org
 
@@ -198,7 +201,8 @@ class DEClusterNative:
         :return: upgrade plan info
         :rtype: dict
         """
-        filters = client_utils.construct_filters(org=org, vdc=vdc)
+        filters = client_utils.construct_filters(
+            self._server_rde_version, org=org, vdc=vdc)
         entity_svc = def_entity_svc.DefEntityService(self._cloudapi_client)
         def_entity = entity_svc.get_native_rde_by_name_and_rde_version(
             cluster_name, self._server_rde_version, filters=filters)
@@ -229,7 +233,8 @@ class DEClusterNative:
         :return: string containing upgrade cluster task href
         :rtype: str
         """
-        filters = client_utils.construct_filters(org=org_name, vdc=ovdc_name)
+        filters = client_utils.construct_filters(
+            self._server_rde_version, org=org_name, vdc=ovdc_name)
         entity_svc = def_entity_svc.DefEntityService(self._cloudapi_client)
         current_entity = entity_svc.get_native_rde_by_name_and_rde_version(
             cluster_name, self._server_rde_version, filters=filters)
@@ -257,21 +262,30 @@ class DEClusterNative:
         task_href = cluster_def_entity.entity.get_latest_task_href()
         return client_utils.construct_task_console_message(task_href)
 
-    def apply(self, cluster_config, cluster_id=None, **kwargs):
+    def _get_cluster_name_from_cluster_apply_specification(self, input_spec: dict):  # noqa: E501
+        """Derive cluster name from cluster apply specificaiton.
+
+        :param dict input_spec: Input specification
+        :return: cluster name
+        :rtype: str
+        """
+        # RDE version > 1.0.0 will have the cluster name under metadata.name
+        metadata: dict = input_spec.get('metadata')
+        if semantic_version.Version(self._server_rde_version) <= \
+                semantic_version.Version(rde_constants.RDEVersion.RDE_1_0_0):
+            return metadata.get('cluster_name')
+        return metadata.get('cluster_name')
+
+    def apply(self, cluster_apply_spec: dict, cluster_id: str = None, **kwargs):  # noqa: E501
         """Apply the configuration either to create or update the cluster.
 
         :param dict cluster_config: cluster configuration information
         :return: dictionary containing the apply operation task
         :rtype: dict
         """
+        cluster_name = \
+            self._get_cluster_name_from_cluster_apply_specification(cluster_apply_spec)  # noqa: E501
         entity_svc = def_entity_svc.DefEntityService(self._cloudapi_client)
-        # TODO: Sikp casting into RDE model before sending API request
-        NativeEntityClass = rde_factory.get_rde_model(self._server_rde_version)
-        cluster_spec = NativeEntityClass(**cluster_config)
-        if self._server_rde_version == rde_constants.RDEVersion.RDE_1_0_0:
-            cluster_name = cluster_spec.metadata.cluster_name
-        else:
-            cluster_name = cluster_spec.metadata.name
         if cluster_id:
             # If cluster id doesn't exist, an exception will be raised
             def_entity = entity_svc.get_entity(cluster_id)
@@ -279,16 +293,19 @@ class DEClusterNative:
             def_entity = entity_svc.get_native_rde_by_name_and_rde_version(
                 cluster_name, self._server_rde_version)
         if not def_entity:
-            cluster_def_entity = self._native_cluster_api.create_cluster(cluster_spec)  # noqa: E501
+            cluster_def_entity = self._native_cluster_api.create_cluster(
+                cluster_apply_spec)
         else:
             cluster_id = def_entity.id
             cluster_def_entity = \
-                self._native_cluster_api.update_cluster_by_cluster_id(cluster_id, cluster_spec)  # noqa: E501
+                self._native_cluster_api.update_cluster_by_cluster_id(
+                    cluster_id, cluster_apply_spec)
         task_href = cluster_def_entity.entity.get_latest_task_href()
         return client_utils.construct_task_console_message(task_href)
 
     def get_cluster_id_by_name(self, cluster_name, org=None, vdc=None):
-        filters = client_utils.construct_filters(org=org, vdc=vdc)
+        filters = client_utils.construct_filters(
+            self._server_rde_version, org=org, vdc=vdc)
         entity_svc = def_entity_svc.DefEntityService(self._cloudapi_client)
         def_entity = entity_svc.get_native_rde_by_name_and_rde_version(
             cluster_name, self._server_rde_version, filters=filters)

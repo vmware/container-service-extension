@@ -7,6 +7,7 @@ import functools
 import json
 
 from requests.exceptions import HTTPError
+import semantic_version
 
 import container_service_extension.common.constants.shared_constants as cse_shared_constants  # noqa: E501
 import container_service_extension.exception.exceptions as cse_exceptions
@@ -194,6 +195,20 @@ class DefSchemaService():
                     yield common_models.DefEntityType(**entityType)
             else:
                 break
+
+    @handle_schema_service_exception
+    def get_latest_registered_schema_version(self) -> str:
+        """Get the latest registered schema version.
+
+        :return: string representing the latest schema version registered.
+        :rtype: str
+        """
+        max_entity_type_version = semantic_version.Version('0.0.0')
+        for entity_type in self.list_entity_types():
+            entity_type_version = semantic_version.Version(entity_type.version)
+            if max_entity_type_version < entity_type_version:  # noqa: E501
+                max_entity_type_version = entity_type_version
+        return str(max_entity_type_version)
 
     @handle_schema_service_exception
     def update_entity_type(self, entity_type: common_models.DefEntityType) -> common_models.DefEntityType:  # noqa: E501

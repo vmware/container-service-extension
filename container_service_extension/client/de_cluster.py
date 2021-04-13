@@ -21,9 +21,9 @@ import container_service_extension.common.utils.pyvcloud_utils as vcd_utils
 import container_service_extension.exception.exceptions as cse_exceptions
 import container_service_extension.logging.logger as logger
 import container_service_extension.rde.common.entity_service as def_entity_svc
+from container_service_extension.rde.models.abstractNativeEntity import AbstractNativeEntity  # noqa: E501
 import container_service_extension.rde.models.common_models as common_models
-import container_service_extension.rde.models.rde_1_0_0 as rde_1_0_0
-import container_service_extension.rde.utils as def_utils
+import container_service_extension.rde.schema_service as def_schema_svc
 
 
 DUPLICATE_CLUSTER_ERROR_MSG = "Duplicate clusters found. Please use --k8-runtime for the unique identification"  # noqa: E501
@@ -52,9 +52,9 @@ class DECluster:
                 logger_wire=logger_wire)
         self._nativeCluster = DEClusterNative(client)
         self._tkgCluster = DEClusterTKG(client)
+        schema_svc = def_schema_svc.DefSchemaService(self._cloudapi_client)
         self._server_rde_version = \
-            def_utils.get_runtime_rde_version_by_vcd_api_version(
-                float(self._cloudapi_client.get_api_version()))
+            schema_svc.get_latest_registered_schema_version()
 
     def list_clusters(self, vdc=None, org=None, **kwargs):
         """Get collection of clusters using DEF API.
@@ -83,7 +83,8 @@ class DECluster:
                 raise e
         else:
             # display all clusters
-            filters = client_utils.construct_filters(org=org, vdc=vdc)
+            filters = client_utils.construct_filters(
+                self._server_rde_version, org=org, vdc=vdc)
             entity_svc = def_entity_svc.DefEntityService(self._cloudapi_client)
             has_more_results = True
             page_number = CSE_PAGINATION_FIRST_PAGE_NUMBER
@@ -108,13 +109,19 @@ class DECluster:
                             cli_constants.CLIOutputKey.ORG.value: de.org.name, # noqa: E501
                             cli_constants.CLIOutputKey.OWNER.value: de.owner.name  # noqa: E501
                         }
-                        if type(entity) == rde_1_0_0.NativeEntity:
-                            cluster[cli_constants.CLIOutputKey.VDC.value] = \
-                                entity.metadata.ovdc_name
+                        if isinstance(entity, AbstractNativeEntity):
+                            # TODO remove if-else logic once model classes
+                            #   start using snake_case
+                            if hasattr(entity.metadata, 'ovdc_name'):
+                                cluster[cli_constants.CLIOutputKey.VDC.value] = \
+                                    entity.metadata.ovdc_name  # noqa: E501
+                            elif hasattr(entity.metadata, 'ovdcName'):
+                                cluster[cli_constants.CLIOutputKey.VDC.value] = \
+                                    entity.metadata.ovdcName  # noqa: E501
                             cluster[cli_constants.CLIOutputKey.K8S_RUNTIME.value] = entity.kind  # noqa: E501
                             cluster[cli_constants.CLIOutputKey.K8S_VERSION.value] = entity.status.kubernetes  # noqa: E501
                             cluster[cli_constants.CLIOutputKey.STATUS.value] = entity.status.phase  # noqa: E501
-                        elif type(entity) == common_models.TKGEntity:
+                        elif isinstance(entity, common_models.TKGEntity):
                             cluster[cli_constants.CLIOutputKey.VDC.value] = \
                                 entity.metadata.virtualDataCenterName
                             cluster[cli_constants.CLIOutputKey.K8S_RUNTIME.value] = entity.kind  # noqa: E501
@@ -146,7 +153,8 @@ class DECluster:
             boolean indicating cluster type
         :rtype: (cluster, dict,  bool)
         """
-        filters = client_utils.construct_filters(org=org, vdc=vdc)
+        filters = client_utils.construct_filters(
+            self._server_rde_version, org=org, vdc=vdc)
         entity_svc = def_entity_svc.DefEntityService(self._cloudapi_client)
         has_native_rights = True
         has_tkg_rights = True

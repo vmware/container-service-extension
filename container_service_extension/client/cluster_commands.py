@@ -168,6 +168,7 @@ Example
         result = cluster.delete_cluster(name, cluster_id=cluster_id,
                                         org=org, vdc=vdc)
         if len(result) == 0:
+            # TODO(CLI): Update message to use vcd task wait instead
             click.secho(f"Delete cluster operation has been initiated on "
                         f"{name}, please check the status using"
                         f" 'vcd cse cluster info {name}'.", fg='yellow')
@@ -603,6 +604,10 @@ def apply(ctx, cluster_config_file_path, generate_sample_config, k8_runtime, out
                     and not utils.is_environment_variable_enabled(cli_constants.ENV_CSE_TKG_PLUS_ENABLED):  # noqa: E501
                 raise Exception(f"{shared_constants.ClusterEntityKind.TKG_PLUS.value} not enabled")  # noqa: E501
             else:
+                # since apply command is not exposed when CSE server is not
+                # running, it is safe to get the server_rde_version from
+                # VCD API version as VCD API version will be the supported by
+                # CSE server.
                 server_rde_version = \
                     def_utils.get_runtime_rde_version_by_vcd_api_version(
                         float(client.get_api_version()))
@@ -632,7 +637,7 @@ def apply(ctx, cluster_config_file_path, generate_sample_config, k8_runtime, out
             if not org:
                 org_name = ctx.obj['profiles'].get('org_in_use')
 
-        cluster = Cluster(client, k8_runtime=cluster_config.get('kind'))  # noqa: E501
+        cluster = Cluster(client, k8_runtime=cluster_config.get('kind'))
         result = cluster.apply(cluster_config, cluster_id=cluster_id,
                                org=org_name)
         stdout(result, ctx)
@@ -667,6 +672,7 @@ def apply(ctx, cluster_config_file_path, generate_sample_config, k8_runtime, out
 def delete_nfs(ctx, cluster_name, node_name, vdc, org):
     """Remove nfs node in a cluster that uses native Kubernetes provider."""
     CLIENT_LOGGER.debug(f'Executing command: {ctx.command_path}')
+    # NOTE: command is exposed only if cli is enabled for native clusters
     try:
         client_utils.cse_restore_session(ctx)
         client = ctx.obj['client']
@@ -723,6 +729,7 @@ Examples
     (Supported only for vcd api version >= 35)
     """
     CLIENT_LOGGER.debug(f'Executing command: {ctx.command_path}')
+    # NOTE: Command is exposed only if CLI is enabled for native clusters
     try:
         client_utils.cse_restore_session(ctx)
         if client_utils.is_cli_for_tkg_only():
@@ -805,6 +812,7 @@ Example
         Affected software: Docker-CE, Kubernetes, CNI
     """
     CLIENT_LOGGER.debug(f'Executing command: {ctx.command_path}')
+    # NOTE: Command is exposed only if CLI is enabled for native
     try:
         client_utils.cse_restore_session(ctx)
         if client_utils.is_cli_for_tkg_only():
@@ -980,6 +988,8 @@ Example
             k8_runtime = shared_constants.ClusterEntityKind.TKG.value
         client = ctx.obj['client']
         cluster = Cluster(client, k8_runtime=k8_runtime)
+        # Users should be explicit in their intent about the org on which the
+        # command needs to be executed.
         if not client.is_sysadmin() and org is None:
             org = ctx.obj['profiles'].get('org_in_use')
         result = cluster.get_cluster_info(name, cluster_id=cluster_id,
@@ -1079,6 +1089,7 @@ Examples:
             k8_runtime = shared_constants.ClusterEntityKind.TKG.value
 
         client = ctx.obj['client']
+        # TODO(CLI): Check regarding is sysadmin client check
         if not org:
             ctx_profiles = ctx.obj['profiles']
             org = ctx_profiles.get('org')
@@ -1171,6 +1182,7 @@ Examples:
 
         # Determine cluster type and retrieve cluster id if needed
         client = ctx.obj['client']
+        # TODO(CLI): Check regarding is sysadmin client check
         if not org:
             ctx_profiles = ctx.obj['profiles']
             org = ctx_profiles.get('org')
@@ -1252,6 +1264,7 @@ Examples:
             k8_runtime = shared_constants.ClusterEntityKind.TKG.value
 
         client = ctx.obj['client']
+        # TODO(CLI): Check regarding why sysadmin check is excluded here
         if not org:
             ctx_profiles = ctx.obj['profiles']
             org = ctx_profiles.get('org')

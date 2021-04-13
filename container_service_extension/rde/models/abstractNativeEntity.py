@@ -17,5 +17,10 @@ class AbstractNativeEntity(abc.ABC):
     def from_cluster_data(cls, cluster: dict, kind: str, **kwargs):
         pass
 
+    @classmethod
+    @abc.abstractmethod
+    def sample_native_entity(cls, k8_runtime=''):
+        pass
+
     def get_latest_task_href(self):
         pass
