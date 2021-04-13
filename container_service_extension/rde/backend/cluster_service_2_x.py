@@ -1674,6 +1674,8 @@ class ClusterService(abstract_broker.AbstractBroker):
             self.context.sysadmin_client, vapp)
         if curr_nodes_status:
             curr_entity.entity.status.nodes = curr_nodes_status
+        curr_entity.entity.spec = def_utils.construct_cluster_spec_from_entity_status(  # noqa: E501
+            curr_entity.entity.status, server_utils.get_rde_version_in_use())
         return self.entity_svc.update_entity(cluster_id, curr_entity)
 
     def _fail_operation(self, cluster_id: str, op: DefEntityOperation):
