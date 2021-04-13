@@ -114,10 +114,10 @@ class DECluster:
                             #   start using snake_case
                             if hasattr(entity.metadata, 'ovdc_name'):
                                 cluster[cli_constants.CLIOutputKey.VDC.value] = \
-                                    entity.metadata.ovdc_name
+                                    entity.metadata.ovdc_name  # noqa: E501
                             elif hasattr(entity.metadata, 'ovdcName'):
                                 cluster[cli_constants.CLIOutputKey.VDC.value] = \
-                                    entity.metadata.ovdcName
+                                    entity.metadata.ovdcName  # noqa: E501
                             cluster[cli_constants.CLIOutputKey.K8S_RUNTIME.value] = entity.kind  # noqa: E501
                             cluster[cli_constants.CLIOutputKey.K8S_VERSION.value] = entity.status.kubernetes  # noqa: E501
                             cluster[cli_constants.CLIOutputKey.STATUS.value] = entity.status.phase  # noqa: E501

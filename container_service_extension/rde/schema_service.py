@@ -203,13 +203,12 @@ class DefSchemaService():
         :return: string representing the latest schema version registered.
         :rtype: str
         """
-        max_entity_type_version = None
+        max_entity_type_version = semantic_version.Version('0.0.0')
         for entity_type in self.list_entity_types():
             entity_type_version = semantic_version.Version(entity_type.version)
-            if not max_entity_type_version or \
-                    semantic_version.Version(max_entity_type_version) < entity_type_version:  # noqa: E501
-                max_entity_type_version = str(entity_type_version)
-        return max_entity_type_version
+            if max_entity_type_version < entity_type_version:  # noqa: E501
+                max_entity_type_version = entity_type_version
+        return str(max_entity_type_version)
 
     @handle_schema_service_exception
     def update_entity_type(self, entity_type: common_models.DefEntityType) -> common_models.DefEntityType:  # noqa: E501
