@@ -725,8 +725,6 @@ def upgrade_cse(config_file_name, config, skip_template_creation,
                 ssh_key=ssh_key,
                 msg_update_callback=msg_update_callback)
         else:
-            # ToDo : Depending on the determined RDE version we should have
-            #  two separate upgrade paths
             _upgrade_to_cse_3_1_non_legacy(
                 client=client,
                 config=config,
@@ -1914,6 +1912,8 @@ def _upgrade_to_cse_3_1_non_legacy(client, config,
         components were not installed correctly
     """
     is_tkg_plus_enabled = server_utils.is_tkg_plus_enabled(config=config)
+    # This check should be done before registering def schema
+    def_entity_type_found = _def_entity_type_found(client=client)
 
     # Add global placement policies
     _setup_placement_policies(
@@ -1976,14 +1976,21 @@ def _upgrade_to_cse_3_1_non_legacy(client, config,
     # designed to gate cluster deployment and has no play once the cluster has
     # been deployed.
 
-    # Create DEF entity for all existing clusters (if missing)
-    _upgrade_or_create_def_entity_for_existing_clusters(
-        client=client,
-        config=config,
-        cse_clusters=clusters,
-        msg_update_callback=msg_update_callback,
-        is_tkg_plus_enabled=is_tkg_plus_enabled,
-        log_wire=log_wire)
+    if def_entity_type_found:
+        _upgrade_non_legacy_clusters(
+            client=client,
+            config=config,
+            cse_clusters=clusters,
+            msg_update_callback=msg_update_callback,
+            log_wire=log_wire)
+    else:
+        _upgrade_legacy_clusters(
+            client=client,
+            config=config,
+            cse_clusters=clusters,
+            is_tkg_plus_enabled=is_tkg_plus_enabled,
+            msg_update_callback=msg_update_callback,
+            log_wire=log_wire)
 
     # Print list of users categorized by org, who currently owns CSE clusters
     # and will need DEF entity rights.
@@ -2239,14 +2246,14 @@ def _remove_old_cse_sizing_compute_policies(
             INSTALL_LOGGER.error(msg)
 
 
-def _upgrade_or_create_def_entity_for_existing_clusters(
+def _upgrade_non_legacy_clusters(
         client,
         config,
         cse_clusters,
-        is_tkg_plus_enabled,
         msg_update_callback=utils.NullPrinter(),
         log_wire=False):
-    msg = "Making old CSE k8s clusters compatible with CSE 3.1"
+
+    msg = "Upgrading non legacy CSE k8s clusters compatible with CSE 3.1"
     msg_update_callback.info(msg)
     INSTALL_LOGGER.info(msg)
 
@@ -2296,7 +2303,57 @@ def _upgrade_or_create_def_entity_for_existing_clusters(
         except Exception as err:
             INSTALL_LOGGER.debug(str(err))
 
-        # The code below creates defined-entity for api 33/34 native clusters
+    msg = "Finished processing all clusters."
+    INSTALL_LOGGER.info(msg)
+    msg_update_callback.general(msg)
+
+    # Remove old entity types
+    msg = "Removing old native entity types"
+    INSTALL_LOGGER.info(msg)
+    msg_update_callback.general(msg)
+    try:
+        native_entity_types = _get_native_def_entity_types(client)
+        for entity_type in native_entity_types:
+            if entity_type.id != target_entity_type.id:
+                msg = f"Deleting entity type: {entity_type.id}"
+                INSTALL_LOGGER.info(msg)
+                msg_update_callback.general(msg)
+                schema_svc.delete_entity_type(entity_type.id)
+    except Exception as err:
+        INSTALL_LOGGER.debug(str(err))
+
+
+def _upgrade_legacy_clusters(
+        client,
+        config,
+        cse_clusters,
+        is_tkg_plus_enabled,
+        msg_update_callback=utils.NullPrinter(),
+        log_wire=False):
+    msg = "Upgrading legacy CSE k8s clusters compatible with CSE 3.1"
+    msg_update_callback.info(msg)
+    INSTALL_LOGGER.info(msg)
+
+    logger_wire = SERVER_CLOUDAPI_WIRE_LOGGER if log_wire else NULL_LOGGER
+    cloudapi_client = vcd_utils.get_cloudapi_client_from_vcd_client(
+        client=client,
+        logger_debug=INSTALL_LOGGER,
+        logger_wire=logger_wire)
+
+    entity_svc = def_entity_svc.DefEntityService(cloudapi_client)
+    schema_svc = def_schema_svc.DefSchemaService(cloudapi_client)
+
+    max_vcd_api_version_supported = \
+        max([float(x) for x in config['service']['supported_api_versions']])
+    # TODO: get proper site information
+    site = config['vcd']['host']
+    runtime_rde_version: str = \
+        def_utils.get_runtime_rde_version_by_vcd_api_version(max_vcd_api_version_supported)  # noqa: E501
+    rde_metadata: dict = def_utils.get_rde_metadata(runtime_rde_version)
+    entity_type_metadata = rde_metadata[def_constants.RDEMetadataKey.ENTITY_TYPE]  # noqa: E501
+    target_entity_type = schema_svc.get_entity_type(entity_type_metadata.get_id())  # noqa: E501
+
+    for cluster in cse_clusters:
         try:
             policy_name = _get_placement_policy_name_from_template_name(
                 cluster['template_name'])
@@ -2374,7 +2431,7 @@ def _create_cluster_rde(client, cluster, kind, runtime_rde_version,
             id=org_urn)
     except Exception as err:
         INSTALL_LOGGER.debug(str(err))
-        msg = "Unable to determine current owner of cluster '{cluster['name']}'. Unable to process ownership."  # noqa: E501
+        msg = f"Unable to determine current owner of cluster '{cluster['name']}'. Unable to process ownership."  # noqa: E501
         msg_update_callback.info(msg)
         INSTALL_LOGGER.info(msg)
 
@@ -2469,3 +2526,32 @@ def _print_users_in_need_of_def_rights(
         msg = msg + org_users_msg
         msg_update_callback.info(msg)
         INSTALL_LOGGER.info(msg)
+
+
+def _def_entity_type_found(client):
+    """Check the presence of native entity type.
+
+    :param client:
+    :return: True if present else False
+    :rtype: bool
+    """
+    try:
+        return True if len(_get_native_def_entity_types(client)) > 0 else False  # noqa: E501
+    except cse_exception.DefNotSupportedException:
+        return False
+
+
+def _get_native_def_entity_types(client):
+    """Get list of native entity types.
+
+    :param client:
+    :return: list of native entity types
+    :rtype: list
+    """
+    cloudapi_client = vcd_utils.get_cloudapi_client_from_vcd_client(
+        client=client,
+        logger_debug=INSTALL_LOGGER
+    )
+    schema_svc = def_schema_svc.DefSchemaService(cloudapi_client)
+    return [entity_type for entity_type in schema_svc.list_entity_types()
+            if entity_type.nss == def_constants.Nss.NATIVE_ClUSTER.value]

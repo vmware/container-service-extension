@@ -110,8 +110,7 @@ def verify_version_compatibility(
 
     dikt = configure_cse.parse_cse_extension_description(
         sysadmin_client, is_mqtt_extension)
-    ext_cse_version = \
-        semantic_version.Version(dikt[server_constants.CSE_VERSION_KEY])
+    ext_cse_version = dikt[server_constants.CSE_VERSION_KEY]
     ext_in_legacy_mode = dikt[server_constants.LEGACY_MODE_KEY]
     ext_rde_in_use = dikt[server_constants.RDE_VERSION_IN_USE_KEY]
 
@@ -143,8 +142,8 @@ def verify_version_compatibility(
             "it in legacy mode."
 
     if not ext_in_legacy_mode and ext_rde_in_use < runtime_rde_version:
-        error_msg += f"Supported Server RDE version ({runtime_rde_version}) " \
-            f"is higher than the previously installed RDE version " \
+        error_msg += f"Installed CSE RDE version ({runtime_rde_version}) " \
+            f"is lower than the supported Server RDE version " \
             f"({ext_rde_in_use}). Upgrade CSE to update RDE."
 
     if error_msg:
