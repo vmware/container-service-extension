@@ -368,6 +368,11 @@ class ClusterService(abstract_broker.AbstractBroker):
         curr_native_entity.status.phase = str(
             DefEntityPhase(DefEntityOperation.UPDATE,
                            DefEntityOperationStatus.IN_PROGRESS))
+
+        # TODO: Remove after behavior implementation
+        # Update spec section for the RDE
+        curr_native_entity.spec = cluster_spec.spec
+
         try:
             curr_entity = self.entity_svc.update_entity(cluster_id, curr_entity)  # noqa: E501
         except Exception as err:
@@ -523,6 +528,10 @@ class ClusterService(abstract_broker.AbstractBroker):
         curr_native_entity.status.phase = str(
             DefEntityPhase(DefEntityOperation.UPGRADE, DefEntityOperationStatus.IN_PROGRESS))  # noqa: E501
         curr_native_entity.status.taskHref = self.task_resource.get('href')
+
+        # TODO remove after behaviors are implemented
+        # Update spec portion of the defined entity
+        curr_native_entity.spec = upgrade_spec.spec
         try:
             curr_entity = self.entity_svc.update_entity(cluster_id, curr_entity)  # noqa: E501
         except Exception as err:
@@ -1674,8 +1683,6 @@ class ClusterService(abstract_broker.AbstractBroker):
             self.context.sysadmin_client, vapp)
         if curr_nodes_status:
             curr_entity.entity.status.nodes = curr_nodes_status
-        curr_entity.entity.spec = def_utils.construct_cluster_spec_from_entity_status(  # noqa: E501
-            curr_entity.entity.status, server_utils.get_rde_version_in_use())
         return self.entity_svc.update_entity(cluster_id, curr_entity)
 
     def _fail_operation(self, cluster_id: str, op: DefEntityOperation):
