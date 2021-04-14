@@ -7,7 +7,7 @@ import semantic_version
 import container_service_extension.common.utils.server_utils as server_utils
 from container_service_extension.rde.backend.cluster_service_1_x import ClusterService as ClusterService1X  # noqa: E501
 from container_service_extension.rde.backend.cluster_service_2_x import ClusterService as ClusterService2X  # noqa: E501
-from container_service_extension.rde.backend.cluster_service_2_x_temp import ClusterService as ClusterService2XBehaviors  # noqa: E501
+from container_service_extension.rde.backend.cluster_service_2_x_behaviors import ClusterService as ClusterService2XBehaviors  # noqa: E501
 from container_service_extension.security.context.behavior_request_context import BehaviorRequestContext  # noqa: E501
 
 

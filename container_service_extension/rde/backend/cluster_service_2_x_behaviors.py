@@ -1,6 +1,7 @@
 # container-service-extension
 # Copyright (c) 2021 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
+from dataclasses import asdict
 import random
 import re
 import string
@@ -12,7 +13,6 @@ import urllib
 import pkg_resources
 import pyvcloud.vcd.client as vcd_client
 import pyvcloud.vcd.org as vcd_org
-import pyvcloud.vcd.task as vcd_task
 import pyvcloud.vcd.vapp as vcd_vapp
 from pyvcloud.vcd.vdc import VDC
 import pyvcloud.vcd.vm as vcd_vm
@@ -46,8 +46,7 @@ import container_service_extension.lib.telemetry.telemetry_handler as telemetry_
 from container_service_extension.logging.logger import SERVER_LOGGER as LOGGER
 from container_service_extension.mqi.consumer.mqtt_publisher import MQTTPublisher  # noqa: E501
 import container_service_extension.rde.acl_service as acl_service
-from container_service_extension.rde.behaviors.behavior_model import \
-    BehaviorTaskStatus
+from container_service_extension.rde.behaviors.behavior_model import BehaviorError, BehaviorTaskStatus  # noqa: E501
 import container_service_extension.rde.common.entity_service as def_entity_svc
 import container_service_extension.rde.constants as def_constants
 import container_service_extension.rde.models.common_models as common_models
@@ -65,11 +64,10 @@ class ClusterService(abstract_broker.AbstractBroker):
     def __init__(self, op_ctx: BehaviorRequestContext):
         self.context: ctx.OperationContext = op_ctx.op_ctx
         self.task_id = op_ctx.task_id
+        self.task_href = self.context.client.get_api_uri() + f"/task/{self.task_id}"  # noqa: E501
+        self.task_status = None
         self.entity_id = op_ctx.entity_id
         self.mqtt_publisher: MQTTPublisher = op_ctx.mqtt_publisher
-        self.task = None
-        self.task_resource = None
-        self.task_update_lock = threading.Lock()
         self.entity_svc = def_entity_svc.DefEntityService(
             self.context.cloudapi_client)
         self.sysadmin_entity_svc = def_entity_svc.DefEntityService(
@@ -259,8 +257,8 @@ class ClusterService(abstract_broker.AbstractBroker):
 
         msg = f"Creating cluster '{cluster_name}' " \
               f"from template '{template_name}' (revision {template_revision})"
-        # self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
-        curr_native_entity.status.taskHref = self.task_resource.get('href')
+        self._update_task(BehaviorTaskStatus.RUNNING, message=msg)
+        curr_native_entity.status.taskHref = self.task_href
         try:
             self.entity_svc.update_entity(entity_id=entity_id, entity=curr_rde)
         except Exception as err:
@@ -275,6 +273,9 @@ class ClusterService(abstract_broker.AbstractBroker):
             }
         )
         self._create_cluster_async(entity_id, input_native_entity)
+        self._update_task(status=BehaviorTaskStatus.RUNNING,
+                          message='Hurray cluster task-update is working',
+                          progress=3)
         return self.mqtt_publisher.construct_behavior_payload(
             message='create_cluster_in_progress',
             status=BehaviorTaskStatus.RUNNING.value, progress=5)
@@ -346,15 +347,15 @@ class ClusterService(abstract_broker.AbstractBroker):
         msg = f"Resizing the cluster '{cluster_name}' ({cluster_id}) to the " \
               f"desired worker count {desired_worker_count} and " \
               f"nfs count {desired_nfs_count}"
-        self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
-        curr_native_entity.taskHref = self.task_resource.get('href')
+        self._update_task(BehaviorTaskStatus.RUNNING, message=msg)
+        curr_native_entity.taskHref = self.task_href
         curr_native_entity.phase = str(
             DefEntityPhase(DefEntityOperation.UPDATE,
                            DefEntityOperationStatus.IN_PROGRESS))
         try:
             curr_entity = self.entity_svc.update_entity(cluster_id, curr_entity)  # noqa: E501
         except Exception as err:
-            self._update_task(vcd_client.TaskStatus.ERROR,
+            self._update_task(BehaviorTaskStatus.ERROR,
                               message=msg,
                               error_message=str(err))
             LOGGER.error(str(err))
@@ -395,9 +396,9 @@ class ClusterService(abstract_broker.AbstractBroker):
         # do not logout of sys admin, or else in pyvcloud's session.request()
         # call, session becomes None
         msg = f"Deleting cluster '{cluster_name}' ({cluster_id})"
-        self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
+        self._update_task(BehaviorTaskStatus.RUNNING, message=msg)
 
-        curr_native_entity.status.taskHref = self.task_resource.get('href')
+        curr_native_entity.status.taskHref = self.task_href
         curr_native_entity.status.phase = str(
             DefEntityPhase(DefEntityOperation.DELETE,
                            DefEntityOperationStatus.IN_PROGRESS))
@@ -406,7 +407,7 @@ class ClusterService(abstract_broker.AbstractBroker):
             # lets vCD authorize the user for delete operation.
             self.entity_svc.delete_entity(cluster_id)
         except Exception as err:
-            self._update_task(vcd_client.TaskStatus.ERROR,
+            self._update_task(BehaviorTaskStatus.ERROR,
                               message=msg,
                               error_message=str(err))
             LOGGER.error(str(err))
@@ -501,16 +502,16 @@ class ClusterService(abstract_broker.AbstractBroker):
               f"{template[LocalTemplateKey.DOCKER_VERSION]}, CNI: " \
               f"{cur_native_entity.status.cni} -> " \
               f"{template[LocalTemplateKey.CNI_VERSION]}"
-        self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
+        self._update_task(BehaviorTaskStatus.RUNNING, message=msg)
         LOGGER.info(f"{msg} ({curr_entity.externalId})")
 
         cur_native_entity.status.phase = str(
             DefEntityPhase(DefEntityOperation.UPGRADE, DefEntityOperationStatus.IN_PROGRESS))  # noqa: E501
-        cur_native_entity.status.taskHref = self.task_resource.get('href')
+        cur_native_entity.status.taskHref = self.task_href
         try:
             curr_entity = self.entity_svc.update_entity(cluster_id, curr_entity)  # noqa: E501
         except Exception as err:
-            self._update_task(vcd_client.TaskStatus.ERROR,
+            self._update_task(BehaviorTaskStatus.ERROR,
                               message=msg,
                               error_message=str(err))
             LOGGER.error(str(err))
@@ -650,19 +651,19 @@ class ClusterService(abstract_broker.AbstractBroker):
 
         msg = f"Deleting {', '.join(nodes_to_del)} node(s) from cluster " \
               f"'{curr_native_entity.metadata.name}' ({cluster_id})"
-        self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
+        self._update_task(BehaviorTaskStatus.RUNNING, message=msg)
 
         # TODO(DEF) design and implement telemetry VCDA-1564 defined entity
         #  based clusters
 
-        curr_native_entity.status.taskHref = self.task_resource.get('href')
+        curr_native_entity.status.taskHref = self.task_href
         curr_native_entity.status.phase = str(
             DefEntityPhase(DefEntityOperation.UPDATE,
                            DefEntityOperationStatus.IN_PROGRESS))
         try:
             curr_entity = self.entity_svc.update_entity(cluster_id, curr_entity)  # noqa: E501
         except Exception as err:
-            self._update_task(vcd_client.TaskStatus.ERROR,
+            self._update_task(BehaviorTaskStatus.ERROR,
                               message=msg,
                               error_message=str(err))
             LOGGER.error(str(err))
@@ -708,7 +709,7 @@ class ClusterService(abstract_broker.AbstractBroker):
                          f"{ovdc_name} with {num_workers} worker nodes, "
                          f"storage profile={worker_storage_profile}")
             msg = f"Creating cluster vApp {cluster_name} ({cluster_id})"
-            # self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
+            self._update_task(BehaviorTaskStatus.RUNNING, message=msg)
             try:
                 vapp_resource = vdc.create_vapp(
                     cluster_name,
@@ -744,7 +745,7 @@ class ClusterService(abstract_broker.AbstractBroker):
             msg = f"Creating control plane node for cluster '{cluster_name}'" \
                   f" ({cluster_id})"
             LOGGER.debug(msg)
-            # self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
+            self._update_task(BehaviorTaskStatus.RUNNING, message=msg)
             vapp.reload()
             server_config = server_utils.get_server_runtime_config()
             catalog_name = server_config['broker']['catalog']
@@ -768,7 +769,7 @@ class ClusterService(abstract_broker.AbstractBroker):
 
             msg = f"Initializing cluster '{cluster_name}' ({cluster_id})"
             LOGGER.debug(msg)
-            # self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
+            self._update_task(BehaviorTaskStatus.RUNNING, message=msg)
             vapp.reload()
             _init_cluster(self.context.sysadmin_client,
                           vapp,
@@ -782,7 +783,7 @@ class ClusterService(abstract_broker.AbstractBroker):
             msg = f"Creating {num_workers} node(s) for cluster " \
                   f"'{cluster_name}' ({cluster_id})"
             LOGGER.debug(msg)
-            # self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
+            self._update_task(BehaviorTaskStatus.RUNNING, message=msg)
             try:
                 _add_nodes(self.context.sysadmin_client,
                            num_nodes=num_workers,
@@ -804,7 +805,7 @@ class ClusterService(abstract_broker.AbstractBroker):
             msg = f"Adding {num_workers} node(s) to cluster " \
                   f"'{cluster_name}' ({cluster_id})"
             LOGGER.debug(msg)
-            # self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
+            self._update_task(BehaviorTaskStatus.RUNNING, message=msg)
             vapp.reload()
             _join_cluster(self.context.sysadmin_client,
                           vapp,
@@ -816,7 +817,7 @@ class ClusterService(abstract_broker.AbstractBroker):
                       f"'{cluster_name}' ({cluster_id})"
                 LOGGER.debug(msg)
                 # TODO should this task be commented out?
-                self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
+                self._update_task(BehaviorTaskStatus.RUNNING, message=msg)
                 try:
                     _add_nodes(self.context.sysadmin_client,
                                num_nodes=nfs_count,
@@ -839,7 +840,7 @@ class ClusterService(abstract_broker.AbstractBroker):
             # control plane_ip and nodes.
             msg = f"Updating cluster `{cluster_name}` ({cluster_id}) defined entity"  # noqa: E501
             LOGGER.debug(msg)
-            # self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
+            self._update_task(BehaviorTaskStatus.RUNNING, message=msg)
             curr_rde: common_models.DefEntity = self.entity_svc.get_entity(cluster_id)  # noqa: E501
             curr_native_entity: rde_2_0_0.NativeEntity = curr_rde.entity
             curr_rde.externalId = vapp_resource.get('href')
@@ -855,7 +856,7 @@ class ClusterService(abstract_broker.AbstractBroker):
             # cluster creation succeeded. Mark the task as success
             msg = f"Created cluster '{cluster_name}' ({cluster_id})"
             LOGGER.debug(msg)
-            # self._update_task(vcd_client.TaskStatus.SUCCESS, message=msg)
+            self._update_task(BehaviorTaskStatus.SUCCESS, message=msg)
             return msg
         except (E.ControlPlaneNodeCreationError, E.WorkerNodeCreationError,
                 E.NFSNodeCreationError, E.ClusterJoiningError,
@@ -866,7 +867,7 @@ class ClusterService(abstract_broker.AbstractBroker):
             if rollback:
                 msg = f"Error creating cluster '{cluster_name}'. " \
                       f"Deleting cluster (rollback=True)"
-                self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
+                self._update_task(BehaviorTaskStatus.RUNNING, message=msg)
                 LOGGER.info(msg)
                 try:
                     _delete_vapp(self.context.client,
@@ -908,7 +909,7 @@ class ClusterService(abstract_broker.AbstractBroker):
                     msg = f"Failed to resolve defined entity for cluster {cluster_id}"  # noqa: E501
                     LOGGER.error(f"{msg}", exc_info=True)
 
-            self._update_task(vcd_client.TaskStatus.ERROR,
+            self._update_task(BehaviorTaskStatus.ERROR,
                               message=msg,
                               error_message=str(err))
         except Exception as err:
@@ -938,9 +939,9 @@ class ClusterService(abstract_broker.AbstractBroker):
                 msg = f"Failed to resolve defined entity for cluster {cluster_id}"  # noqa: E501
                 LOGGER.error(f"{msg}", exc_info=True)
 
-            # self._update_task(vcd_client.TaskStatus.ERROR,
-            #                   message=msg,
-            #                   error_message=str(err))
+            self._update_task(BehaviorTaskStatus.ERROR,
+                              message=msg,
+                              error_message=str(err))
         finally:
             # TODO re-organize updating defined entity and task update as per
             # https://stackoverflow.com/questions/49099637/how-to-determine-if-an-exception-was-raised-once-youre-in-the-finally-block
@@ -1006,8 +1007,8 @@ class ClusterService(abstract_broker.AbstractBroker):
 
             # update the defined entity and the task status. Check if one of
             # the child threads had set the status to ERROR.
-            curr_task_status = self.task_resource.get('status')
-            if curr_task_status == vcd_client.TaskStatus.ERROR.value:
+            curr_task_status = self.task_status
+            if curr_task_status == BehaviorTaskStatus.ERROR.value:
                 # NOTE: Possible repetition of operation.
                 # _create_node_async() and _delete_node_async() also
                 # sets status to failed
@@ -1018,7 +1019,7 @@ class ClusterService(abstract_broker.AbstractBroker):
                 msg = f"Resized the cluster '{cluster_name}' ({cluster_id}) " \
                       f"to the desired worker count {desired_worker_count} " \
                       f"and nfs count {desired_nfs_count}"
-                self._update_task(vcd_client.TaskStatus.SUCCESS, message=msg)
+                self._update_task(BehaviorTaskStatus.SUCCESS, message=msg)
                 curr_native_entity.status.phase = str(
                     DefEntityPhase(DefEntityOperation.UPDATE,
                                    DefEntityOperationStatus.SUCCEEDED))
@@ -1048,7 +1049,7 @@ class ClusterService(abstract_broker.AbstractBroker):
                 msg = f"Failed to sync defined entity of the cluster {cluster_id}"  # noqa: E501
                 LOGGER.error(f"{msg}", exc_info=True)
 
-            self._update_task(vcd_client.TaskStatus.ERROR,
+            self._update_task(BehaviorTaskStatus.ERROR,
                               message=msg,
                               error_message=str(err))
         finally:
@@ -1065,9 +1066,9 @@ class ClusterService(abstract_broker.AbstractBroker):
         This method is executed by a thread in an asynchronous manner.
         Do's:
         - Update the defined entity in except blocks.
-        - Can set the self.task status either to Running or Error
+        - Can update the task status either to Running or Error
         Dont's:
-        - Do not set the self.task status to SUCCESS. This will prevent other
+        - Do not update the task status to SUCCESS. This will prevent other
         parallel threads if any to update the status. vCD interprets SUCCESS
         as a terminal state.
         - Do not end the context.client.
@@ -1125,7 +1126,7 @@ class ClusterService(abstract_broker.AbstractBroker):
                       f"' {template_name}' (revision {template_revision}); " \
                       f"adding to cluster '{cluster_name}' ({cluster_id})"
                 LOGGER.debug(msg)
-                self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
+                self._update_task(BehaviorTaskStatus.RUNNING, message=msg)
                 worker_nodes = _add_nodes(
                     self.context.sysadmin_client,
                     num_nodes=num_workers_to_add,
@@ -1141,7 +1142,7 @@ class ClusterService(abstract_broker.AbstractBroker):
                     sizing_class_name=worker_sizing_class)
                 msg = f"Adding {num_workers_to_add} node(s) to cluster " \
                       f"{cluster_name}({cluster_id})"
-                self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
+                self._update_task(BehaviorTaskStatus.RUNNING, message=msg)
                 target_nodes = []
                 for spec in worker_nodes['specs']:
                     target_nodes.append(spec['target_vm_name'])
@@ -1153,13 +1154,13 @@ class ClusterService(abstract_broker.AbstractBroker):
                               target_nodes)
                 msg = f"Added {num_workers_to_add} node(s) to cluster " \
                       f"{cluster_name}({cluster_id})"
-                self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
+                self._update_task(BehaviorTaskStatus.RUNNING, message=msg)
             if num_nfs_to_add > 0:
                 msg = f"Creating {num_nfs_to_add} nfs node(s) from template " \
                       f"'{template_name}' (revision {template_revision}) " \
                       f"for cluster '{cluster_name}' ({cluster_id})"
                 LOGGER.debug(msg)
-                self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
+                self._update_task(BehaviorTaskStatus.RUNNING, message=msg)
                 _add_nodes(self.context.sysadmin_client,
                            num_nodes=num_nfs_to_add,
                            node_type=NodeType.NFS,
@@ -1174,10 +1175,10 @@ class ClusterService(abstract_broker.AbstractBroker):
                            sizing_class_name=nfs_sizing_class)
                 msg = f"Created {num_nfs_to_add} nfs_node(s) for cluster " \
                       f"'{cluster_name}' ({cluster_id})"
-                self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
+                self._update_task(BehaviorTaskStatus.RUNNING, message=msg)
             msg = f"Created {num_workers_to_add} workers & {num_nfs_to_add}" \
                   f" nfs nodes for '{cluster_name}' ({cluster_id}) "
-            self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
+            self._update_task(BehaviorTaskStatus.RUNNING, message=msg)
         except (E.NodeCreationError, E.ClusterJoiningError) as err:
             msg = f"Error adding nodes to cluster '{cluster_name}'"
             LOGGER.error(msg, exc_info=True)
@@ -1185,7 +1186,7 @@ class ClusterService(abstract_broker.AbstractBroker):
                 msg = f"Error adding nodes to cluster '{cluster_name}' " \
                       f"({cluster_id}). Deleting nodes: {err.node_names} " \
                       f"(rollback=True)"
-                self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
+                self._update_task(BehaviorTaskStatus.RUNNING, message=msg)
                 LOGGER.info(msg)
                 try:
                     _delete_nodes(self.context.sysadmin_client,
@@ -1213,7 +1214,7 @@ class ClusterService(abstract_broker.AbstractBroker):
                 msg = f"Failed to sync defined entity of the cluster {cluster_id}"  # noqa: E501
                 LOGGER.error(f"{msg}", exc_info=True)
 
-            self._update_task(vcd_client.TaskStatus.ERROR,
+            self._update_task(BehaviorTaskStatus.ERROR,
                               message=msg,
                               error_message=str(err))
         except Exception as err:
@@ -1234,7 +1235,7 @@ class ClusterService(abstract_broker.AbstractBroker):
             except Exception:
                 msg = f"Failed to sync defined entity of the cluster {cluster_id}"  # noqa: E501
                 LOGGER.error(f"{msg}", exc_info=True)
-            self._update_task(vcd_client.TaskStatus.ERROR,
+            self._update_task(BehaviorTaskStatus.ERROR,
                               message=msg,
                               error_message=str(err))
 
@@ -1251,16 +1252,16 @@ class ClusterService(abstract_broker.AbstractBroker):
         """
         try:
             msg = f"Deleting cluster '{cluster_name}'"
-            self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
+            self._update_task(BehaviorTaskStatus.RUNNING, message=msg)
             _delete_vapp(
                 self.context.client, org_name, ovdc_name, cluster_name)
             msg = f"Deleted cluster '{cluster_name}'"
-            self._update_task(vcd_client.TaskStatus.SUCCESS, message=msg)
+            self._update_task(BehaviorTaskStatus.SUCCESS, message=msg)
         except Exception as err:
             msg = f"Unexpected error while deleting cluster {cluster_name}"
             LOGGER.error(f"{msg}",
                          exc_info=True)
-            self._update_task(vcd_client.TaskStatus.ERROR,
+            self._update_task(BehaviorTaskStatus.ERROR,
                               message=msg,
                               error_message=str(err))
         finally:
@@ -1328,13 +1329,13 @@ class ClusterService(abstract_broker.AbstractBroker):
 
             if upgrade_k8s:
                 msg = f"Draining control plane node {control_plane_node_names}"
-                self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
+                self._update_task(BehaviorTaskStatus.RUNNING, message=msg)
                 _drain_nodes(self.context.sysadmin_client, vapp_href,
                              control_plane_node_names, cluster_name=cluster_name)  # noqa: E501
 
                 msg = f"Upgrading Kubernetes ({c_k8s} -> {t_k8s}) " \
                       f"in control plane node {control_plane_node_names}"
-                self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
+                self._update_task(BehaviorTaskStatus.RUNNING, message=msg)
                 filepath = ltm.get_script_filepath(template_name,
                                                    template_revision,
                                                    TemplateScriptFile.CONTROL_PLANE_K8S_UPGRADE) # noqa: E501
@@ -1343,7 +1344,7 @@ class ClusterService(abstract_broker.AbstractBroker):
                                      control_plane_node_names, script)
 
                 msg = f"Uncordoning control plane node {control_plane_node_names}"  # noqa: E501
-                self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
+                self._update_task(BehaviorTaskStatus.RUNNING, message=msg)
                 _uncordon_nodes(self.context.sysadmin_client,
                                 vapp_href,
                                 control_plane_node_names,
@@ -1355,7 +1356,7 @@ class ClusterService(abstract_broker.AbstractBroker):
                 script = utils.read_data_file(filepath, logger=LOGGER)
                 for node in worker_node_names:
                     msg = f"Draining node {node}"
-                    self._update_task(vcd_client.TaskStatus.RUNNING,
+                    self._update_task(BehaviorTaskStatus.RUNNING,
                                       message=msg)
                     _drain_nodes(self.context.sysadmin_client,
                                  vapp_href,
@@ -1364,13 +1365,13 @@ class ClusterService(abstract_broker.AbstractBroker):
 
                     msg = f"Upgrading Kubernetes ({c_k8s} " \
                           f"-> {t_k8s}) in node {node}"
-                    self._update_task(vcd_client.TaskStatus.RUNNING,
+                    self._update_task(BehaviorTaskStatus.RUNNING,
                                       message=msg)
                     _run_script_in_nodes(self.context.sysadmin_client,
                                          vapp_href, [node], script)
 
                     msg = f"Uncordoning node {node}"
-                    self._update_task(vcd_client.TaskStatus.RUNNING,
+                    self._update_task(BehaviorTaskStatus.RUNNING,
                                       message=msg)
                     _uncordon_nodes(self.context.sysadmin_client,
                                     vapp_href, [node],
@@ -1378,7 +1379,7 @@ class ClusterService(abstract_broker.AbstractBroker):
 
             if upgrade_docker or upgrade_cni:
                 msg = f"Draining all nodes {all_node_names}"
-                self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
+                self._update_task(BehaviorTaskStatus.RUNNING, message=msg)
                 _drain_nodes(self.context.sysadmin_client,
                              vapp_href, all_node_names,
                              cluster_name=cluster_name)
@@ -1386,7 +1387,7 @@ class ClusterService(abstract_broker.AbstractBroker):
             if upgrade_docker:
                 msg = f"Upgrading Docker-CE ({c_docker} -> {t_docker}) " \
                       f"in nodes {all_node_names}"
-                self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
+                self._update_task(BehaviorTaskStatus.RUNNING, message=msg)
                 filepath = ltm.get_script_filepath(
                     template_name,
                     template_revision,
@@ -1399,7 +1400,7 @@ class ClusterService(abstract_broker.AbstractBroker):
                 msg = "Applying CNI " \
                       f"({curr_native_entity.status.cni} " \
                       f"-> {t_cni}) in control plane node {control_plane_node_names}"  # noqa: E501
-                self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
+                self._update_task(BehaviorTaskStatus.RUNNING, message=msg)
                 filepath = ltm.get_script_filepath(template_name,
                                                    template_revision,
                                                    TemplateScriptFile.CONTROL_PLANE_CNI_APPLY)  # noqa: E501
@@ -1409,13 +1410,13 @@ class ClusterService(abstract_broker.AbstractBroker):
 
             # uncordon all nodes (sometimes redundant)
             msg = f"Uncordoning all nodes {all_node_names}"
-            self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
+            self._update_task(BehaviorTaskStatus.RUNNING, message=msg)
             _uncordon_nodes(self.context.sysadmin_client, vapp_href,
                             all_node_names, cluster_name=cluster_name)
 
             # update cluster metadata
             msg = f"Updating metadata for cluster '{cluster_name}'"
-            self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
+            self._update_task(BehaviorTaskStatus.RUNNING, message=msg)
             metadata = {
                 ClusterMetadataKey.TEMPLATE_NAME: template[LocalTemplateKey.NAME], # noqa: E501
                 ClusterMetadataKey.TEMPLATE_REVISION: template[LocalTemplateKey.REVISION], # noqa: E501
@@ -1450,7 +1451,7 @@ class ClusterService(abstract_broker.AbstractBroker):
                   f"{template_revision}): Kubernetes: {c_k8s} -> {t_k8s}, " \
                   f"Docker-CE: {c_docker} -> {t_docker}, " \
                   f"CNI: {c_cni} -> {t_cni}"
-            self._update_task(vcd_client.TaskStatus.SUCCESS, message=msg)
+            self._update_task(BehaviorTaskStatus.SUCCESS, message=msg)
             LOGGER.info(f"{msg} ({vapp_href})")
         except Exception as err:
             msg = f"Unexpected error while upgrading cluster " \
@@ -1472,7 +1473,7 @@ class ClusterService(abstract_broker.AbstractBroker):
             except Exception:
                 msg = f"Failed to sync defined entity of the cluster {cluster_id}"  # noqa: E501
                 LOGGER.error(f"{msg}", exc_info=True)
-            self._update_task(vcd_client.TaskStatus.ERROR,
+            self._update_task(BehaviorTaskStatus.ERROR,
                               message=msg, error_message=str(err))
 
         finally:
@@ -1506,15 +1507,15 @@ class ClusterService(abstract_broker.AbstractBroker):
                     t.join()
 
             # update the defined entity and task status.
-            curr_task_status = self.task_resource.get('status')
-            if curr_task_status == vcd_client.TaskStatus.ERROR.value:
+            curr_task_status = self.task_status
+            if curr_task_status == BehaviorTaskStatus.ERROR.value:
                 curr_native_entity.status.phase = str(
                     DefEntityPhase(DefEntityOperation.UPDATE,
                                    DefEntityOperationStatus.FAILED))
             else:
                 msg = f"Deleted the {nodes_to_del} nodes  from cluster " \
                       f"'{cluster_name}' ({cluster_id}) "
-                self._update_task(vcd_client.TaskStatus.SUCCESS, message=msg)
+                self._update_task(BehaviorTaskStatus.SUCCESS, message=msg)
                 curr_native_entity.status.phase = str(
                     DefEntityPhase(DefEntityOperation.UPDATE,
                                    DefEntityOperationStatus.SUCCEEDED))
@@ -1540,7 +1541,7 @@ class ClusterService(abstract_broker.AbstractBroker):
             except Exception:
                 msg = f"Failed to sync defined entity of the cluster {cluster_id}"  # noqa: E501
                 LOGGER.error(f"{msg}", exc_info=True)
-            self._update_task(vcd_client.TaskStatus.ERROR,
+            self._update_task(BehaviorTaskStatus.ERROR,
                               message=msg,
                               error_message=str(err))
         finally:
@@ -1558,9 +1559,9 @@ class ClusterService(abstract_broker.AbstractBroker):
         This method is executed by a thread in an asynchronous manner.
         Do's:
         - Update the defined entity in except blocks.
-        - Set the self.task status either to Running or Error
+        - Update the task status either to Running or Error
         Dont's:
-        - Do not set the self.task status to SUCCESS. This will prevent other
+        - Do not update the task status to SUCCESS. This will prevent other
         parallel threads if any to update the status. vCD interprets SUCCESS
         as a terminal state.
         - Do not end the context.client.
@@ -1595,7 +1596,7 @@ class ClusterService(abstract_broker.AbstractBroker):
                           f"from cluster '{cluster_name}': " \
                           f"{worker_nodes_to_delete}"
                     self._update_task(
-                        vcd_client.TaskStatus.RUNNING, message=msg)
+                        BehaviorTaskStatus.RUNNING, message=msg)
                     _drain_nodes(self.context.sysadmin_client,
                                  vapp_href,
                                  worker_nodes_to_delete,
@@ -1607,7 +1608,7 @@ class ClusterService(abstract_broker.AbstractBroker):
 
             msg = f"Deleting {len(nodes_to_del)} node(s) from " \
                   f"cluster '{cluster_name}': {nodes_to_del}"
-            self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
+            self._update_task(BehaviorTaskStatus.RUNNING, message=msg)
 
             _delete_nodes(self.context.sysadmin_client,
                           vapp_href,
@@ -1616,7 +1617,7 @@ class ClusterService(abstract_broker.AbstractBroker):
 
             msg = f"Deleted {len(nodes_to_del)} node(s)" \
                   f" to cluster '{cluster_name}'"
-            self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
+            self._update_task(BehaviorTaskStatus.RUNNING, message=msg)
         except Exception as err:
             msg = f"Unexpected error while deleting nodes {nodes_to_del}"
             LOGGER.error(f"{msg}",
@@ -1637,7 +1638,7 @@ class ClusterService(abstract_broker.AbstractBroker):
             except Exception:
                 msg = f"Failed to sync defined entity of the cluster {cluster_id}"  # noqa: E501
                 LOGGER.error(f"{msg}", exc_info=True)
-            self._update_task(vcd_client.TaskStatus.ERROR,
+            self._update_task(BehaviorTaskStatus.ERROR,
                               message=msg,
                               error_message=str(err))
 
@@ -1662,62 +1663,20 @@ class ClusterService(abstract_broker.AbstractBroker):
             str(DefEntityPhase(op, DefEntityOperationStatus.FAILED))
         self.entity_svc.update_entity(cluster_id, def_entity)
 
-    def _update_task(self, status, message='', error_message=None,
-                     stack_trace=''):
-        """Update task or create it if it does not exist.
-
-        This function should only be used in the x_async functions, or in the
-        6 common broker functions to create the required task.
-        When this function is used, it logs in the sys admin client if it is
-        not already logged in, but it does not log out. This is because many
-        _update_task() calls are used in sequence until the task succeeds or
-        fails. Once the task is updated to a success or failure state, then
-        the sys admin client should be logged out.
-
-        Another reason for decoupling sys admin logout and this function is
-        because if any unknown errors occur during an operation, there should
-        be a finally clause that takes care of logging out.
-        """
-        if not self.context.client.is_sysadmin():
-            stack_trace = ''
-
-        if self.task is None:
-            self.task = vcd_task.Task(self.context.sysadmin_client)
-
-        org = vcd_utils.get_org(self.context.client)
-        user_href = org.get_user(self.context.user.name).get('href')
-
-        # Wait for the thread-1 to finish updating the task, before thread-2 in
-        # the line can read the current status of the task.
-        # It is safe for thread-2 to check the current task status before
-        # updating it. A task with a terminal state of SUCCESS or ERROR cannot
-        # be further updated; vCD will throw an error.
-        with self.task_update_lock:
-            task_href = None
-            if self.task_resource is not None:
-                task_href = self.task_resource.get('href')
-                curr_task_status = self.task_resource.get('status')
-                if curr_task_status == vcd_client.TaskStatus.SUCCESS.value or \
-                        curr_task_status == vcd_client.TaskStatus.ERROR.value:
-                    # TODO Log the message here.
-                    return
-            self.task_resource = self.task.update(
-                status=status.value,
-                namespace='vcloud.cse',
-                operation=message,
-                operation_name='cluster operation',
-                details='',
-                progress=None,
-                owner_href=self.context.user.org_href,
-                owner_name=self.context.user.org_name,
-                owner_type='application/vnd.vmware.vcloud.org+xml',
-                user_href=user_href,
-                user_name=self.context.user.name,
-                org_href=self.context.user.org_href,
-                task_href=task_href,
-                error_message=error_message,
-                stack_trace=stack_trace
-            )
+    def _update_task(self, status, message='', error_message='', progress=None):  # noqa: E501
+        if status == BehaviorTaskStatus.ERROR:
+            error_details = asdict(BehaviorError(majorErrorCode='500',
+                                                 minorErrorCode=message,
+                                                 message=error_message))
+            payload = self.mqtt_publisher.construct_behavior_payload(
+                status=status.value, error_details=error_details)
+        else:
+            payload = self.mqtt_publisher.construct_behavior_payload(
+                status=status.value, message=message, progress=progress)
+        response_json = self.mqtt_publisher.construct_behavior_response_json(
+            task_id=self.task_id, entity_id=self.entity_id, payload=payload)
+        self.mqtt_publisher.send_response(response_json)
+        self.task_status = status.value
 
 
 def _get_nodes_details(sysadmin_client, vapp):
