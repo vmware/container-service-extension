@@ -126,7 +126,7 @@ class DefEntityOperationStatus(str, Enum):
 
 
 @unique
-class FlattenedClusterSPecKey1X(Enum):
+class FlattenedClusterSpecKey1X(Enum):
     WORKERS_COUNT = 'workers.count'
     NFS_COUNT = 'nfs.count'
     TEMPLATE_NAME = 'k8_distribution.template_name'

@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: BSD-2-Clause
 from dataclasses import asdict
 
-from container_service_extension.common.constants.server_constants import FlattenedClusterSPecKey1X  # noqa: E501
+from container_service_extension.common.constants.server_constants import FlattenedClusterSpecKey1X  # noqa: E501
 from container_service_extension.common.constants.server_constants import ThreadLocalData  # noqa: E501
 from container_service_extension.common.constants.shared_constants import ClusterAclKey  # noqa: E501
 from container_service_extension.common.constants.shared_constants import CSE_PAGINATION_DEFAULT_PAGE_SIZE  # noqa: E501
@@ -160,8 +160,8 @@ def cluster_upgrade(data, op_ctx: ctx.OperationContext):
     curr_entity = svc.entity_svc.get_entity(cluster_id)
     request_utils.validate_request_payload(
         asdict(converted_native_entity.spec), asdict(curr_entity.entity.spec),
-        exclude_fields=[FlattenedClusterSPecKey1X.TEMPLATE_NAME.value,
-                        FlattenedClusterSPecKey1X.TEMPLATE_REVISION.value])
+        exclude_fields=[FlattenedClusterSpecKey1X.TEMPLATE_NAME.value,
+                        FlattenedClusterSpecKey1X.TEMPLATE_REVISION.value])
     new_rde: common_models.DefEntity = svc.upgrade_cluster(cluster_id, converted_native_entity)  # noqa: E501
     # convert the upgraded rde back to input rde version
     new_native_entity: AbstractNativeEntity = rde_utils.convert_runtime_rde_to_input_rde_version_format(  # noqa: E501
