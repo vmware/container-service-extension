@@ -1912,8 +1912,9 @@ def _upgrade_to_cse_3_1_non_legacy(client, config,
         components were not installed correctly
     """
     is_tkg_plus_enabled = server_utils.is_tkg_plus_enabled(config=config)
+
     # This check should be done before registering def schema
-    def_entity_type_found = _def_entity_type_found(client=client)
+    def_entity_type_registered = _is_def_entity_type_registered(client=client)
 
     # Add global placement policies
     _setup_placement_policies(
@@ -1976,7 +1977,7 @@ def _upgrade_to_cse_3_1_non_legacy(client, config,
     # designed to gate cluster deployment and has no play once the cluster has
     # been deployed.
 
-    if def_entity_type_found:
+    if def_entity_type_registered:
         _upgrade_non_legacy_clusters(
             client=client,
             config=config,
@@ -2528,8 +2529,8 @@ def _print_users_in_need_of_def_rights(
         INSTALL_LOGGER.info(msg)
 
 
-def _def_entity_type_found(client):
-    """Check the presence of native entity type.
+def _is_def_entity_type_registered(client):
+    """Check the presence of native entity type of any version.
 
     :param client:
     :return: True if present else False
