@@ -875,18 +875,9 @@ def run(ctx, config_file_path, pks_config_file_path, skip_check,
     default=None,
     type=click.File('r'),
     help='Filepath of SSH public key to add to CSE k8s template vms')
-@click.option(
-    '-p',
-    '--admin-password',
-    'admin_password',
-    default=None,
-    metavar='ADMIN_PASSWORD',
-    help="New root password to set on existing CSE k8s cluster vms. If left "
-         "empty, old passwords,if present, will be retained else it will be "
-         "auto-generated")
 def upgrade(ctx, config_file_path, skip_config_decryption,
             skip_template_creation, retain_temp_vapp,
-            ssh_key_file, admin_password):
+            ssh_key_file):
     """Upgrade existing CSE installation/entities to match CSE 3.1.
 
 \b

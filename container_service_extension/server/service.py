@@ -18,6 +18,7 @@ from pyvcloud.vcd.client import BasicLoginCredentials
 from pyvcloud.vcd.client import Client
 from pyvcloud.vcd.exceptions import EntityNotFoundException
 from pyvcloud.vcd.exceptions import OperationNotSupportedException
+import semantic_version
 
 import container_service_extension.common.constants.server_constants as server_constants  # noqa: E501
 import container_service_extension.common.constants.shared_constants as shared_constants  # noqa: E501
@@ -108,7 +109,8 @@ def verify_version_compatibility(
 
     dikt = configure_cse.parse_cse_extension_description(
         sysadmin_client, is_mqtt_extension)
-    ext_cse_version = dikt[server_constants.CSE_VERSION_KEY]
+    ext_cse_version = \
+        semantic_version.Version(dikt[server_constants.CSE_VERSION_KEY])
     ext_in_legacy_mode = dikt[server_constants.LEGACY_MODE_KEY]
     # ext_rde_in_use = dikt[server_constants.RDE_VERSION_IN_USE_KEY]
 
