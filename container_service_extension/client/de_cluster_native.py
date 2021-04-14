@@ -273,8 +273,8 @@ class DEClusterNative:
         metadata: dict = input_spec.get('metadata')
         if semantic_version.Version(self._server_rde_version) <= \
                 semantic_version.Version(rde_constants.RDEVersion.RDE_1_0_0):
-            return metadata.get('cluster_name')
-        return metadata.get('cluster_name')
+            return metadata['cluster_name']
+        return metadata['name']
 
     def apply(self, cluster_apply_spec: dict, cluster_id: str = None, **kwargs):  # noqa: E501
         """Apply the configuration either to create or update the cluster.
