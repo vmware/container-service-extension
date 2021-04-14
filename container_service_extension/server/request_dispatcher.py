@@ -27,6 +27,21 @@ import container_service_extension.server.request_handlers.template_handler as t
 import container_service_extension.server.request_handlers.v35.def_cluster_handler as v35_cluster_handler  # noqa: E501
 import container_service_extension.server.request_handlers.v35.ovdc_handler as v35_ovdc_handler  # noqa: E501
 
+DUAL_FORM_TOKENS = {
+    'template': ('template', 'templates'),
+    'templates': ('template', 'templates'),
+    'cluster': ('cluster', 'clusters'),
+    'clusters': ('cluster', 'clusters'),
+    'ovdc': ('ovdc', 'ovdcs'),
+    'ovdcs': ('ovdc', 'ovdcs'),
+    'orgvdc': ('orgvdc', 'orgvdcs'),
+    'orgvdcs': ('orgvdc', 'orgvdcs'),
+    'nativecluster': ('nativecluster', 'nativeclusters'),
+    'nativeclusters': ('nativecluster', 'nativeclusters'),
+    'node': ('node', 'nodes'),
+    'nodes': ('node', 'nodes')
+}
+
 # /system end points
 SYSTEM_HANDLERS = [
     {
@@ -876,10 +891,23 @@ def process_request(message):
             token = entry['url_tokens'][i]
             if token.startswith("$"):
                 url_data[token[1:]] = url_tokens[i]
-            elif token.lower() != url_tokens[i].lower():
-                url_matched = False
-                url_data.clear()
-                break
+            else:
+                # Certain url tokens can be singular as well plural
+                # e.g. cluster / clusters. This ensures that we support both
+                # /api/cse/cluster and
+                # /api/cse/clusters
+                # as well as
+                # /api/cse/cluster/{id} and
+                # /api/cse/clusters/{id}
+                target_tag = url_tokens[i].lower()
+                if target_tag in DUAL_FORM_TOKENS:
+                    target_tag = DUAL_FORM_TOKENS[target_tag]
+                else:
+                    target_tag = (target_tag,)
+                if token.lower() not in target_tag:
+                    url_matched = False
+                    url_data.clear()
+                    break
 
         if not url_matched:
             continue
