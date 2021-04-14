@@ -274,7 +274,7 @@ class DEClusterNative:
         if semantic_version.Version(self._server_rde_version) <= \
                 semantic_version.Version(rde_constants.RDEVersion.RDE_1_0_0):
             return metadata.get('cluster_name')
-        return metadata.get('cluster_name')
+        return metadata.get('name')
 
     def apply(self, cluster_apply_spec: dict, cluster_id: str = None, **kwargs):  # noqa: E501
         """Apply the configuration either to create or update the cluster.
@@ -285,6 +285,9 @@ class DEClusterNative:
         """
         cluster_name = \
             self._get_cluster_name_from_cluster_apply_specification(cluster_apply_spec)  # noqa: E501
+        # cluster name should not be missing from the apply specification
+        if not cluster_name:
+            raise Exception('Cluster name missing in the cluster apply specification')  # noqa: E501
         entity_svc = def_entity_svc.DefEntityService(self._cloudapi_client)
         if cluster_id:
             # If cluster id doesn't exist, an exception will be raised
