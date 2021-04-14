@@ -113,7 +113,7 @@ def verify_version_compatibility(
     # ext_rde_in_use = dikt[server_constants.RDE_VERSION_IN_USE_KEY]
 
     # version data doesn't exist, so installed CSE is <= 2.6.1
-    if cse_version == server_constants.UNKNOWN_CSE_VERSION:
+    if ext_cse_version == server_constants.UNKNOWN_CSE_VERSION:
         raise cse_exception.VersionCompatibilityError(
             "CSE and VCD API version data not found on VCD. "
             "Upgrade CSE to update version data.")
