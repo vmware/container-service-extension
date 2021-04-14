@@ -1462,7 +1462,7 @@ class ClusterService(abstract_broker.AbstractBroker):
             # update defined entity of the cluster
             curr_native_entity.status.cloudProperties.k8Distribution = \
                 rde_2_x.Distribution(templateName=template[LocalTemplateKey.NAME],  # noqa: E501
-                                       templateRevision=int(template[LocalTemplateKey.REVISION]))  # noqa: E501
+                                     templateRevision=int(template[LocalTemplateKey.REVISION]))  # noqa: E501
             curr_native_entity.status.cni = \
                 _create_k8s_software_string(template[LocalTemplateKey.CNI],
                                             template[LocalTemplateKey.CNI_VERSION]) # noqa: E501
@@ -1793,13 +1793,13 @@ def _get_nodes_details(sysadmin_client, vapp):
                 storage_profile: str = vm.StorageProfile.get('name')
             if vm_name.startswith(NodeType.CONTROL_PLANE):
                 control_plane = rde_2_x.Node(name=vm_name, ip=ip,
-                                               sizingClass=sizing_class,
-                                               storageProfile=storage_profile)
+                                             sizingClass=sizing_class,
+                                             storageProfile=storage_profile)
             elif vm_name.startswith(NodeType.WORKER):
                 workers.append(
                     rde_2_x.Node(name=vm_name, ip=ip,
-                                   sizingClass=sizing_class,
-                                   storageProfile=storage_profile))
+                                 sizingClass=sizing_class,
+                                 storageProfile=storage_profile))
             elif vm_name.startswith(NodeType.NFS):
                 exports = None
                 try:
@@ -1812,11 +1812,11 @@ def _get_nodes_details(sysadmin_client, vapp):
                                  f"node {vm_name} of cluster {vapp.name} ",
                                  exc_info=True)
                 nfs_nodes.append(rde_2_x.NfsNode(name=vm_name, ip=ip,
-                                                   sizingClass=sizing_class,
-                                                   storageProfile=storage_profile,  # noqa: E501
-                                                   exports=exports))
+                                                 sizingClass=sizing_class,
+                                                 storageProfile=storage_profile,  # noqa: E501
+                                                 exports=exports))
         return rde_2_x.Nodes(controlPlane=control_plane, workers=workers,
-                               nfs=nfs_nodes)
+                             nfs=nfs_nodes)
     except Exception as err:
         LOGGER.error("Failed to retrieve the status of the nodes of the "
                      f"cluster {vapp.name}: {err}", exc_info=True)
