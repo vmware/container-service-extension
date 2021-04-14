@@ -18,6 +18,7 @@ from pyvcloud.vcd.client import BasicLoginCredentials
 from pyvcloud.vcd.client import Client
 from pyvcloud.vcd.exceptions import EntityNotFoundException
 from pyvcloud.vcd.exceptions import OperationNotSupportedException
+import semantic_version
 
 import container_service_extension.common.constants.server_constants as server_constants  # noqa: E501
 import container_service_extension.common.constants.shared_constants as shared_constants  # noqa: E501
