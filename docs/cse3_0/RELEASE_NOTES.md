@@ -12,9 +12,9 @@ Supported VCD versions: 10.3.0-Beta, 10.2.2, 10.1.3, 10.0.0.3
 
 | CSE Server | CSE CLI | CSE UI  | Cloud Director       | Cloud Director NSX-T | Ent-PKS with NSX-T | Features offered                                                                                    |
 |------------|---------|---------|----------------------|----------------------|--------------------|-----------------------------------------------------------------------------------------------------|
-| 3.1.0      | 3.1.0   | 3.0.2** | 10.3.1-beta, 10.2.2  | 3.0.2, 3.1.2         | 1.7 with 2.5.1     | Native, Tkg, and Ent-PKS Cluster management; Defined entity representation for both native and tkg. |
+| 3.1.0      | 3.1.0   | 3.0.2** | 10.3.0-beta, 10.2.2  | 3.0.2, 3.1.2         | 1.7 with 2.5.1     | Native, Tkg, and Ent-PKS Cluster management; Defined entity representation for both native and tkg. |
 | 3.1.0      | 3.1.0   | 1.0.3   | 10.1, 10.0           | NA                   | 1.7 with 2.5.1     | Native and Ent-PKS cluster management                                                               |
-| NA         | 3.1.0   | 3.0.2** | 10.3.1-beta, 10.2.2  | NA                   | NA                 | Tkg cluster management only                                                                         |
+| NA         | 3.1.0   | 3.0.2** | 10.3.0-beta, 10.2.2  | NA                   | NA                 | Tkg cluster management only                                                                         |
 
 
 **Installation of binaries**
@@ -41,10 +41,10 @@ CSE 3.1.0 beta.
           apiVersion: cse.vmware.com/v2.0
           kind: native
           metadata:
-            name: clus40
+            name: mycluster
             orgName: myorg
             ovdcName: myorgvdc
-            site: bos1-vcloud-static-179-6.eng.vmware.com
+            site: vcd.eng.vmware.com
           spec:
             controlPlane:
               count: 1
@@ -67,8 +67,6 @@ CSE 3.1.0 beta.
               storageProfile: null
           ```
 * Improved performance for ovdc and cluster listing commands
-* Support for cluster deployment on Organization VDCs with NSX-T based routed OrgVDC network.
-    * More details at [Kubernetes Cluster Management](CLUSTER_MANAGEMENT.html#expose_cluster)
 
 **Notes to System Administrator**
 If you are upgrading from an existing CSE 3.0.x installation please be aware of
