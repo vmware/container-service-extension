@@ -1,6 +1,6 @@
 # Check-list
 
-This is the check-list of steps to be performed at the beginning of each 
+This is the checklist of steps to be performed at the beginning of each 
 release cycle of CSE.
 
 # Server
