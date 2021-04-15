@@ -333,7 +333,10 @@ def install_cse(config_file_name, config, skip_template_creation,
 
         # Setup extension based on message bus protocol
         if server_utils.should_use_mqtt_protocol(config):
-            _register_cse_as_mqtt_extension(client, msg_update_callback=msg_update_callback)  # noqa: E501
+            _register_cse_as_mqtt_extension(
+                client,
+                rde_version_in_use=semantic_version.Version("0.0.0"),
+                msg_update_callback=msg_update_callback)
         else:
             # create amqp exchange if it doesn't exist
             amqp = config['amqp']
@@ -347,6 +350,7 @@ def install_cse(config_file_name, config, skip_template_creation,
                 client=client,
                 routing_key=amqp['routing_key'],
                 exchange=amqp['exchange'],
+                rde_version_in_use=semantic_version.Version("0.0.0"),
                 msg_update_callback=msg_update_callback)
 
             # register rights to vCD
@@ -985,7 +989,7 @@ def _register_cse_as_amqp_extension(client, routing_key, exchange,
     :param pyvcloud.vcd.client.Client client:
     :param str routing_key:
     :param str exchange:
-    :param str rde_version_in_use:
+    :param semantic_version.Version rde_version_in_use:
     :param core_utils.ConsoleMessagePrinter msg_update_callback: Callback object.  # noqa: E501
     """
     description = _construct_cse_extension_description(rde_version_in_use)
@@ -1869,10 +1873,16 @@ def _update_cse_extension(client, config,
         existing_ext_type = _get_existing_extension_type(client)
         if existing_ext_type == server_constants.ExtensionType.AMQP:
             _deregister_cse_amqp_extension(client)
-            _register_cse_as_mqtt_extension(client, msg_update_callback=msg_update_callback)  # noqa: E501
+            _register_cse_as_mqtt_extension(
+                client,
+                rde_version_in_use=semantic_version.Version("0.0.0"),
+                msg_update_callback=msg_update_callback)
         elif existing_ext_type == server_constants.ExtensionType.MQTT:
             # Remove api filters and update description
-            _update_cse_mqtt_extension(client, msg_update_callback=msg_update_callback)  # noqa: E501
+            _update_cse_mqtt_extension(
+                client,
+                rde_version_in_use=semantic_version.Version("0.0.0"),
+                msg_update_callback=msg_update_callback)
     else:
         # Update amqp exchange
         _create_amqp_exchange(
@@ -1889,6 +1899,7 @@ def _update_cse_extension(client, config,
             client=client,
             routing_key=config['amqp']['routing_key'],
             exchange=config['amqp']['exchange'],
+            rde_version_in_use=semantic_version.Version("0.0.0"),
             msg_update_callback=msg_update_callback)
 
 
@@ -2026,6 +2037,7 @@ def _upgrade_to_cse_3_1_legacy(
         client=client,
         routing_key=config['amqp']['routing_key'],
         exchange=config['amqp']['exchange'],
+        rde_version_in_use=semantic_version.Version("0.0.0"),
         msg_update_callback=msg_update_callback)
 
 
