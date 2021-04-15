@@ -5,6 +5,82 @@ title: Release Notes
 
 # Release Notes
 
+## CSE 3.1.0 Beta (3.1.0.0b1)
+Release Date: 2021-04-14
+
+Supported VCD versions: 10.3.0-Beta, 10.2.2, 10.1.3, 10.0.0.3
+
+| CSE Server | CSE CLI | CSE UI  | Cloud Director       | Cloud Director NSX-T | Ent-PKS with NSX-T | Features offered                                                                                    |
+|------------|---------|---------|----------------------|----------------------|--------------------|-----------------------------------------------------------------------------------------------------|
+| 3.1.0      | 3.1.0   | 3.0.2** | 10.3.1-beta, 10.2.2  | 3.0.2, 3.1.2         | 1.7 with 2.5.1     | Native, Tkg, and Ent-PKS Cluster management; Defined entity representation for both native and tkg. |
+| 3.1.0      | 3.1.0   | 1.0.3   | 10.1, 10.0           | NA                   | 1.7 with 2.5.1     | Native and Ent-PKS cluster management                                                               |
+| NA         | 3.1.0   | 3.0.2** | 10.3.1-beta, 10.2.2  | NA                   | NA                 | Tkg cluster management only                                                                         |
+
+
+**Installation of binaries**
+
+```sh
+pip install container-service-extension==3.1.0.0b1
+```
+
+Note: `pip install container-service-extension` installs previous official
+version of CSE viz. 3.0.2. Specify the above mentioned exact version to install
+CSE 3.1.0 beta.
+
+**What's New**
+* Tenant UI plugin supports cluster upgrades for both Native and Tanzu clusters
+* PUT on `/api/cse/3.0/cluster/<id>` endpoint now supports cluster upgrades in addition to the resize operation.
+    * `/api/cse/3.0/cluster/<id>/action/upgrade` is not supported at api_version = 36.0
+* Cluster YAML specification changes
+    * Keys of all the properties are expected to be in CamelCase. 
+    * New required field `apiVersion` in the cluster YAML specification. The 
+      value for it must be `cse.vmware.com/v2.0`, which indicates the RDE version 
+      of the native clusters, that CSE server uses.
+    * Sample input YAML 
+        * ```
+          apiVersion: cse.vmware.com/v2.0
+          kind: native
+          metadata:
+            name: clus40
+            orgName: myorg
+            ovdcName: myorgvdc
+            site: bos1-vcloud-static-179-6.eng.vmware.com
+          spec:
+            controlPlane:
+              count: 1
+              sizingClass: null
+              storageProfile: null
+            k8Distribution:
+              templateName: ubuntu-16.04_k8-1.18_weave-2.6.5
+              templateRevision: 2
+            nfs:
+              count: 0
+              sizingClass: null
+              storageProfile: null
+            settings:
+              network: mynet
+              rollbackOnFailure: true
+              sshKey: ''
+            workers:
+              count: 0
+              sizingClass: null
+              storageProfile: null
+          ```
+* Improved performance for ovdc and cluster listing commands
+* Support for cluster deployment on Organization VDCs with NSX-T based routed OrgVDC network.
+    * More details at [Kubernetes Cluster Management](CLUSTER_MANAGEMENT.html#expose_cluster)
+
+**Notes to System Administrator**
+If you are upgrading from an existing CSE 3.0.x installation please be aware of
+the issue related to runtime defined entities listed in [Known Issues](KNOWN_ISSUES.html).
+
+**Known issues specific to 3.1.0-beta**:
+Resizing an empty cluster will fail for non-null values of sizingClass and storageProfile in the input yaml spec.
+Workaround: specify `storageProfile: null` and `sizingClass: null` in 
+the `vcd cse cluster apply` specification for worker/nfs nodes.
+
+---
+
 ## CSE 3.0.2 GA (3.0.2)
 Release Date: 2021-04-08
 
