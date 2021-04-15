@@ -1564,7 +1564,7 @@ def _get_unvalidated_config(config_file_path,
 def _get_clients_from_config(config, log_wire_file, log_wire):
     client = vcd_client.Client(
         config['vcd']['host'],
-        api_version=config['vcd']['api_version'],
+        api_version=config['vcd'].get('api_version'),
         verify_ssl_certs=config['vcd']['verify'],
         log_file=log_wire_file,
         log_requests=log_wire,
