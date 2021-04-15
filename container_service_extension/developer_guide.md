@@ -17,7 +17,7 @@ Guidelines on
 - rules to follow to maintain backward compatibility
 
 ## RDE
-RDE is a persistent object in VCD representing CSE's K8 cluster. It contains two 
+RDEs offer persistence in VCD for otherwise CSE's K8 clusters. It contains two 
 parts a)the latest desired state expressed by the user b)the current state of the cluster. 
 
 Versioning terminology:
@@ -33,7 +33,7 @@ Versioning guidelines:
   determine whether major or minor version needs to be bumped up. 
   Use https://semver.org/ for versioning guidelines. In short, bump up the 
   major version only when there is an addition of new required properties, deletion of 
-  existing required properties, strict dependency on features of a particular VCD version.
+  existing required properties or strict dependency on features of a particular VCD version.
 - The goal must be always to provide the latest features (newer RDE versions) 
   on older versions of VCD. When this cannot be achieved for any reason, that 
   is an indication to bump up the major version.
