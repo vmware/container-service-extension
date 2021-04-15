@@ -126,18 +126,30 @@ class DefEntityOperationStatus(str, Enum):
 
 
 @unique
-class FlattenedClusterSpecKey(Enum):
+class FlattenedClusterSpecKey1X(Enum):
     WORKERS_COUNT = 'workers.count'
     NFS_COUNT = 'nfs.count'
     TEMPLATE_NAME = 'k8_distribution.template_name'
     TEMPLATE_REVISION = 'k8_distribution.template_revision'
-    TEMPLATE_NAME_CAMEL = 'k8Distribution.templateName'
-    TEMPLATE_REVISION_CAMEL = 'k8Distribution.templateRevision'
 
 
-VALID_UPDATE_FIELDS = [FlattenedClusterSpecKey.WORKERS_COUNT.value, FlattenedClusterSpecKey.NFS_COUNT.value,  # noqa: E501
-                       FlattenedClusterSpecKey.TEMPLATE_NAME.value, FlattenedClusterSpecKey.TEMPLATE_REVISION.value,  # noqa: E501
-                       FlattenedClusterSpecKey.TEMPLATE_NAME_CAMEL.value, FlattenedClusterSpecKey.TEMPLATE_REVISION_CAMEL.value]  # noqa: E501
+@unique
+class FlattenedClusterSpecKey2X(Enum):
+    WORKERS_COUNT = 'workers.count'
+    WORKERS_SIZING_CLASS = 'workers.sizingClass'
+    WORKERS_STORAGE_PROFILE = 'workers.storageProfile'
+    NFS_COUNT = 'nfs.count'
+    NFS_SIZING_CLASS = 'nfs.sizingClass'
+    NFS_STORAGE_PROFILE = 'nfs.storageProfile'
+    TEMPLATE_NAME = 'k8Distribution.templateName'
+    TEMPLATE_REVISION = 'k8Distribution.templateRevision'
+
+
+VALID_UPDATE_FIELDS_2X = \
+    [FlattenedClusterSpecKey2X.WORKERS_COUNT.value,
+     FlattenedClusterSpecKey2X.NFS_COUNT.value,
+     FlattenedClusterSpecKey2X.TEMPLATE_NAME.value,
+     FlattenedClusterSpecKey2X.TEMPLATE_REVISION.value]
 
 
 CLUSTER_ENTITY = 'cluster_entity'
