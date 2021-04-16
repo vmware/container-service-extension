@@ -263,7 +263,8 @@ class ClusterService(abstract_broker.AbstractBroker):
         self._update_task(BehaviorTaskStatus.RUNNING, message=msg)
         curr_native_entity.status.taskHref = self.task_href
         try:
-            self.sysadmin_entity_svc.update_entity(entity_id=entity_id, entity=curr_rde)
+            self.sysadmin_entity_svc.update_entity(entity_id=entity_id,
+                                                   entity=curr_rde)
         except Exception as err:
             msg = f"Error updating the cluster '{cluster_name}' with the status"  # noqa: E501
             LOGGER.error(f"{msg}: {err}")
