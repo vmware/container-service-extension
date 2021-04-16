@@ -54,10 +54,10 @@ class DefEntityType:
     name: str
     description: str
     schema: dict
-    interfaces: list
+    interfaces: list[str]
     version: str
     id: str = None
-    externalId: str = None
+    externalId: Optional[str] = None
     readonly: bool = False
     vendor: str = Vendor.CSE.value
     nss: str = Nss.NATIVE_ClUSTER.value
