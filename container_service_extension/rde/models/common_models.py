@@ -6,7 +6,7 @@ from enum import Enum
 from enum import unique
 from typing import List, Optional
 
-from dataclasses_json import dataclass_json
+from dataclasses_json import dataclass_json, Undefined
 
 from container_service_extension.common.constants import shared_constants as shared_constants  # noqa: E501
 from container_service_extension.rde import utils as def_utils
@@ -19,6 +19,7 @@ from container_service_extension.rde.models.rde_factory import get_rde_model
 from container_service_extension.rde.utils import load_rde_schema
 
 
+@dataclass_json(undefined=Undefined.EXCLUDE)
 @dataclass(frozen=True)
 class DefInterface:
     """Provides interface for the defined entity type."""
@@ -45,6 +46,7 @@ class DefInterface:
             return self.id
 
 
+@dataclass_json(undefined=Undefined.EXCLUDE)
 @dataclass(frozen=True)
 class DefEntityType:
     """Represents the schema for Defined Entities."""
@@ -75,20 +77,15 @@ class DefEntityType:
             return self.id
 
 
-@dataclass(frozen=True)
-class DefEntityType2_0(DefEntityType):
-    """Represents the schema for Defined Entities."""
-
-    hooks: dict = None
-
-
-@dataclass()
+@dataclass_json
+@dataclass
 class Owner:
     name: str = None
     id: str = None
 
 
-@dataclass()
+@dataclass_json
+@dataclass
 class Org:
     name: str = None
     id: str = None

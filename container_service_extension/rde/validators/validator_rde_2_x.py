@@ -2,16 +2,8 @@
 # Copyright (c) 2021 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 
-<<<<<<< HEAD
-from dataclasses import asdict
-
-
 from container_service_extension.common.constants.server_constants import FlattenedClusterSpecKey2X  # noqa: E501
 from container_service_extension.common.constants.server_constants import VALID_UPDATE_FIELDS_2X  # noqa: E501
-=======
-from container_service_extension.common.constants.server_constants import FlattenedClusterSpecKey  # noqa: E501
-from container_service_extension.common.constants.server_constants import VALID_UPDATE_FIELDS  # noqa: E501
->>>>>>> cfb10ad (change model classes to use snake case instead of camel case)
 from container_service_extension.exception.exceptions import BadRequestError
 from container_service_extension.lib.cloudapi.cloudapi_client import CloudApiClient  # noqa: E501
 from container_service_extension.rde.behaviors.behavior_model import BehaviorOperation  # noqa: E501
