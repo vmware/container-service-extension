@@ -159,7 +159,7 @@ class DefSchemaService():
             cloudapi_version=CloudApiVersion.VERSION_1_0_0,
             resource_url_relative_path=f"{CloudApiResource.ENTITY_TYPES}",
             payload=asdict(entity_type))
-        return common_models.DefEntityType(**response_body)
+        return common_models.DefEntityType2_0(**response_body)
 
     @handle_schema_service_exception
     def get_entity_type(self, id: str) -> common_models.DefEntityType:
@@ -173,7 +173,7 @@ class DefSchemaService():
             method=cse_shared_constants.RequestMethod.GET,
             cloudapi_version=CloudApiVersion.VERSION_1_0_0,
             resource_url_relative_path=f"{CloudApiResource.ENTITY_TYPES}/{id}")
-        return common_models.DefEntityType(**response_body)
+        return common_models.DefEntityType2_0(**response_body)
 
     @handle_schema_service_exception
     def list_entity_types(self):
@@ -192,7 +192,7 @@ class DefSchemaService():
                 f"page={page_num}")
             if len(response_body['values']) > 0:
                 for entityType in response_body['values']:
-                    yield common_models.DefEntityType(**entityType)
+                    yield common_models.DefEntityType2_0(**entityType)
             else:
                 break
 

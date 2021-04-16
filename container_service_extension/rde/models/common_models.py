@@ -74,6 +74,13 @@ class DefEntityType:
             return self.id
 
 
+@dataclass(frozen=True)
+class DefEntityType2_0(DefEntityType):
+    """Represents the schema for Defined Entities."""
+
+    hooks: dict = None
+
+
 @dataclass()
 class Owner:
     name: str = None
