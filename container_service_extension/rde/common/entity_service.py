@@ -121,7 +121,7 @@ class DefEntityService():
                                            f"{CloudApiResource.ENTITY_TYPES_TOKEN}/"  # noqa: E501
                                            f"{vendor}/{nss}/{version}?{query_string}")  # noqa: E501
             if len(response_body['values']) == 0:
-                break
+                continue
             for entity in response_body['values']:
                 yield DefEntity(**entity)
 
@@ -182,7 +182,7 @@ class DefEntityService():
                                            f"{CloudApiResource.INTERFACES}/{vendor}/{nss}/{version}?"  # noqa: E501
                                            f"page={page_num}")
             if len(response_body['values']) == 0:
-                break
+                continue
             for entity in response_body['values']:
                 yield DefEntity(**entity)
 
