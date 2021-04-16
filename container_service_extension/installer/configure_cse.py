@@ -283,11 +283,11 @@ def install_cse(config_file_name, config, skip_template_creation,
         INSTALL_LOGGER.info(msg)
 
         ext_type = _get_existing_extension_type(client)
-        if ext_type != server_constants.ExtensionType.NONE:
-            ext_found_msg = f"{ext_type} extension found. Use `cse upgrade` " \
-                            f"instead of 'cse install'."
-            INSTALL_LOGGER.error(ext_found_msg)
-            raise Exception(ext_found_msg)
+        # if ext_type != server_constants.ExtensionType.NONE:
+        #     ext_found_msg = f"{ext_type} extension found. Use `cse upgrade` " \
+        #                     f"instead of 'cse install'."
+        #     INSTALL_LOGGER.error(ext_found_msg)
+        #     raise Exception(ext_found_msg)
 
         # register cse def schema on VCD
         _register_def_schema(client=client, config=config,
@@ -1203,15 +1203,16 @@ def _register_def_schema(client: Client,
             rde_metadata[def_constants.RDEMetadataKey.INTERFACES]
         _register_interfaces(cloudapi_client, interfaces, msg_update_callback)
 
-        # Register Native EntityType
-        entity_type: common_models.DefEntityType = \
-            rde_metadata[def_constants.RDEMetadataKey.ENTITY_TYPE]
-        _register_native_entity_type(cloudapi_client, entity_type, msg_update_callback)  # noqa: E501
-
         # Register Behavior(s)
         behavior_metadata: Dict[str, List[Behavior]] = rde_metadata.get(
             def_constants.RDEMetadataKey.INTERFACE_TO_BEHAVIORS_MAP, {})
         _register_behaviors(cloudapi_client, behavior_metadata, msg_update_callback)  # noqa: E501
+
+        # Register Native EntityType
+        entity_type: common_models.DefEntityType = \
+            rde_metadata[def_constants.RDEMetadataKey.ENTITY_TYPE]
+        _register_native_entity_type(cloudapi_client, entity_type,
+                                     msg_update_callback)  # noqa: E501
 
         # Override Behavior(s)
         override_behavior_metadata: Dict[str, List[Behavior]] = \
