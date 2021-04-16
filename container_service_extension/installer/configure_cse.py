@@ -335,7 +335,7 @@ def install_cse(config_file_name, config, skip_template_creation,
         if server_utils.should_use_mqtt_protocol(config):
             _register_cse_as_mqtt_extension(
                 client,
-                rde_version_in_use=semantic_version.Version(config['service']['rde_version_in_use']),  # noqa: E501
+                rde_version_in_use=config['service']['rde_version_in_use'],
                 msg_update_callback=msg_update_callback)  # noqa: E501
         else:
             # create amqp exchange if it doesn't exist
@@ -350,7 +350,7 @@ def install_cse(config_file_name, config, skip_template_creation,
                 client=client,
                 routing_key=amqp['routing_key'],
                 exchange=amqp['exchange'],
-                rde_version_in_use=semantic_version.Version(config['service']['rde_version_in_use']),  # noqa: E501
+                rde_version_in_use=config['service']['rde_version_in_use'],
                 msg_update_callback=msg_update_callback)
 
             # register rights to vCD
@@ -1185,8 +1185,7 @@ def _register_def_schema(client: Client,
                                                                     logger_debug=INSTALL_LOGGER,  # noqa: E501
                                                                     logger_wire=logger_wire)  # noqa: E501
     # TODO update CSE install to create client from max_vcd_api_version
-    max_vcd_api_version_supported = \
-        max([float(x) for x in config['service']['supported_api_versions']])
+    max_vcd_api_version_supported = utils.get_max_api_version(config['service']['supported_api_versions'])   # noqa: E501
     try:
         def_utils.raise_error_if_def_not_supported(cloudapi_client)
         rde_version: str = \
@@ -1873,13 +1872,13 @@ def _update_cse_extension(client, config,
             _deregister_cse_amqp_extension(client)
             _register_cse_as_mqtt_extension(
                 client,
-                rde_version_in_use=semantic_version.Version(config['service']['rde_version_in_use']),  # noqa: E501
-                msg_update_callback=msg_update_callback)  # noqa: E501
+                rde_version_in_use=config['service']['rde_version_in_use'],
+                msg_update_callback=msg_update_callback)
         elif existing_ext_type == server_constants.ExtensionType.MQTT:
             # Remove api filters and update description
             _update_cse_mqtt_extension(
                 client,
-                rde_version_in_use=semantic_version.Version(config['service']['rde_version_in_use']),  # noqa: E501
+                rde_version_in_use=config['service']['rde_version_in_use'],
                 msg_update_callback=msg_update_callback)
     else:
         # Update amqp exchange
@@ -1897,7 +1896,7 @@ def _update_cse_extension(client, config,
             client=client,
             routing_key=config['amqp']['routing_key'],
             exchange=config['amqp']['exchange'],
-            rde_version_in_use=semantic_version.Version(config['service']['rde_version_in_use']),  # noqa: E501
+            rde_version_in_use=config['service']['rde_version_in_use'],
             msg_update_callback=msg_update_callback)
 
 
@@ -2271,8 +2270,7 @@ def _upgrade_non_legacy_clusters(
     entity_svc = def_entity_svc.DefEntityService(cloudapi_client)
     schema_svc = def_schema_svc.DefSchemaService(cloudapi_client)
 
-    max_vcd_api_version_supported = \
-        max([float(x) for x in config['service']['supported_api_versions']])
+    max_vcd_api_version_supported = utils.get_max_api_version(config['service']['supported_api_versions'])  # noqa: E501
     # TODO: get proper site information
     site = config['vcd']['host']
     runtime_rde_version: str = \
@@ -2348,8 +2346,7 @@ def _upgrade_legacy_clusters(
     entity_svc = def_entity_svc.DefEntityService(cloudapi_client)
     schema_svc = def_schema_svc.DefSchemaService(cloudapi_client)
 
-    max_vcd_api_version_supported = \
-        max([float(x) for x in config['service']['supported_api_versions']])
+    max_vcd_api_version_supported = utils.get_max_api_version(config['service']['supported_api_versions'])   # noqa: E501
     # TODO: get proper site information
     site = config['vcd']['host']
     runtime_rde_version: str = \
