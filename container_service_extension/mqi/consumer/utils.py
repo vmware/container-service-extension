@@ -85,7 +85,7 @@ def get_task_href(body):
     if body.get('entity') is not None and \
             body['entity'].get('status') is not None:
         rde = DefEntity(**body)
-        return rde.entity.get_latest_task_href()
+        return rde.entity.status.task_href
     return None
 
 

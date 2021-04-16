@@ -19,6 +19,7 @@ from container_service_extension.rde.models.rde_factory import get_rde_model
 from container_service_extension.rde.utils import load_rde_schema
 
 
+@dataclass_json(undefined=Undefined.EXCLUDE)
 @dataclass(frozen=True)
 class DefInterface:
     """Provides interface for the defined entity type."""
@@ -76,20 +77,21 @@ class DefEntityType:
             return self.id
 
 
-@dataclass(frozen=True)
 class DefEntityType2_0(DefEntityType):
     """Defined Entity type schema for the apiVersion = 36.0."""
 
     hooks: dict = None
 
 
-@dataclass()
+@dataclass_json
+@dataclass
 class Owner:
     name: str = None
     id: str = None
 
 
-@dataclass()
+@dataclass_json
+@dataclass
 class Org:
     name: str = None
     id: str = None
