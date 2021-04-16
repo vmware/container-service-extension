@@ -47,10 +47,11 @@ def get_rde_version_in_use() -> str:
     :return: rde version
     :rtype: str
     """
-    # TODO(VCDA-2151): Uncomment after new RDE version
-    # is installed
+    # TODO: Currently in many places, this method is used with expected
+    #  return type is string. This should be changed to return semantic version
+    #  with all dependencies changed as well.
     config = get_server_runtime_config()
-    return config['service']['rde_version_in_use']
+    return str(config['service']['rde_version_in_use'])
 
 
 def get_registered_def_entity_type() -> common_models.DefEntityType:
