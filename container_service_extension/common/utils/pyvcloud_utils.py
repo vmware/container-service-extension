@@ -39,8 +39,11 @@ ORG_ADMIN_RIGHTS = ['General: Administrator Control',
 
 
 def raise_error_if_user_not_from_system_org(client: vcd_client.Client):
+    # ToDo: current implementation of client.is_sysadmin checks if
+    # org of the user is System or not. If implementation changes,
+    # we should adapt accordingly.
     if not client.is_sysadmin():
-        raise ValueError("Client should be sysadmin.")
+        raise ValueError("Client does not belong to System Org.")
 
 
 def connect_vcd_user_via_token(tenant_auth_token, is_jwt_token):
@@ -116,7 +119,7 @@ def get_vdc(client, vdc_id=None, vdc_name=None, org=None, org_name=None,
             is_admin_operation=False):
     """Get the specified VDC object.
 
-    Atleast one of vdc_id or vdc_name must be specified. If org or org_name
+    At least one of vdc_id or vdc_name must be specified. If org or org_name
     both are not specified, the currently logged in user's org will be used to
     look for the vdc.
 
@@ -201,7 +204,7 @@ def get_org_href_from_ovdc_id(sysadmin_client: vcd_client.Client, vdc_id):
     return get_org_name_href_from_ovdc_id(sysadmin_client, vdc_id).get('href')
 
 
-def get_pvdc_id(sysadmin_client: vcd_client.Client, ovdc: VDC):
+def get_pvdc_id(ovdc: VDC):
     """Get id of pvdc backing an ovdc.
 
     :param pyvcloud.vcd.VDC ovdc: This ovdc object has to be created with a
@@ -211,18 +214,10 @@ def get_pvdc_id(sysadmin_client: vcd_client.Client, ovdc: VDC):
 
     :rtype: str
     """
-    raise_error_if_user_not_from_system_org(sysadmin_client)
-
+    raise_error_if_user_not_from_system_org(ovdc.client)
     pvdc_element = ovdc.get_resource().ProviderVdcReference
-    # To support <= VCD 9.1 where no 'id' is present in pvdc
-    # element, it has to be extracted from href. Once VCD 9.1 support
-    # is discontinued, this code is not required.
-    if float(sysadmin_client.get_api_version()) < float(vcd_client.ApiVersion.VERSION_31.value): # noqa: E501
-        pvdc_href = pvdc_element.get('href')
-        return pvdc_href.split("/")[-1]
-    else:
-        pvdc_id = pvdc_element.get('id')
-        return extract_id(pvdc_id)
+    pvdc_id = pvdc_element.get('id')
+    return extract_id(pvdc_id)
 
 
 def get_pvdc_id_from_pvdc_name(name, vc_name_in_vcd):
@@ -469,12 +464,12 @@ def get_parent_network_name_of_vapp(vapp):
     if hasattr(vapp_resource, 'NetworkConfigSection'):
         network_config_section = vapp_resource.NetworkConfigSection
     network_config = None
-    if network_config_section is not None and hasattr(network_config_section, 'NetworkConfig'): # noqa: E501
+    if network_config_section is not None and hasattr(network_config_section, 'NetworkConfig'):  # noqa: E501
         network_config = network_config_section.NetworkConfig
     configuration_section = None
-    if network_config is not None and hasattr(network_config, 'Configuration'): # noqa: E501
+    if network_config is not None and hasattr(network_config, 'Configuration'):  # noqa: E501
         configuration_section = network_config.Configuration
-    if configuration_section is not None and hasattr(configuration_section, 'ParentNetwork'): # noqa: E501
+    if configuration_section is not None and hasattr(configuration_section, 'ParentNetwork'):  # noqa: E501
         parent_network = configuration_section.ParentNetwork
         network_name = parent_network.get('name')
 
@@ -496,12 +491,12 @@ def get_storage_profile_name_of_first_vm_in_vapp(vapp):
     if hasattr(first_vm, 'VmSpecSection'):
         vm_spec_section = first_vm.VmSpecSection
     disk_section = None
-    if vm_spec_section is not None and hasattr(vm_spec_section, 'DiskSection'): # noqa : E501
+    if vm_spec_section is not None and hasattr(vm_spec_section, 'DiskSection'):  # noqa : E501
         disk_section = vm_spec_section.DiskSection
     disk_settings = None
-    if disk_section is not None and hasattr(disk_section, 'DiskSettings'): # noqa: E501
+    if disk_section is not None and hasattr(disk_section, 'DiskSettings'):  # noqa: E501
         disk_settings = disk_section.DiskSettings
-    if disk_settings is not None and hasattr(disk_settings, 'StorageProfile'): # noqa: E501
+    if disk_settings is not None and hasattr(disk_settings, 'StorageProfile'):  # noqa: E501
         storage_profile = disk_settings.StorageProfile
         storage_profile_name = storage_profile.get('name')
 
@@ -545,9 +540,9 @@ def create_cse_page_uri(client: vcd_client.Client, cse_path: str, vcd_uri=None, 
     """Create a CSE URI equivalent to the VCD uri.
 
     :param vcd_client.Client client:
-    :param str path:
+    :param str cse_path:
     :param str vcd_uri:
-    :param dict query_params
+    :param dict query_params:
 
     Example: To convert a vCD generated Next page URI to CSE server next page
         url:
