@@ -4,7 +4,7 @@
 from dataclasses import asdict, dataclass
 from enum import Enum
 from enum import unique
-from typing import List
+from typing import List, Optional
 
 from dataclasses_json import dataclass_json, Undefined
 
@@ -53,13 +53,14 @@ class DefEntityType:
     name: str
     description: str
     schema: dict
-    interfaces: list
+    interfaces: list[str]
     version: str
     id: str = None
     externalId: str = None
     readonly: bool = False
     vendor: str = Vendor.CSE.value
     nss: str = Nss.NATIVE_ClUSTER.value
+    hooks: Optional[dict] = None
 
     def get_id(self):
         """Get or generate entity type id.
@@ -74,13 +75,6 @@ class DefEntityType:
                 generate_entity_type_id(self.vendor, self.nss, self.version)
         else:
             return self.id
-
-
-@dataclass(frozen=True)
-class DefEntityType2_0(DefEntityType):
-    """Represents the schema for Defined Entities."""
-
-    hooks: dict = None
 
 
 @dataclass()
@@ -289,7 +283,7 @@ class EntityType(Enum):
                                              vendor=Vendor.CSE.value,
                                              nss=Nss.NATIVE_ClUSTER.value,
                                              description='')
-    NATIVE_ENTITY_TYPE_2_0_0 = DefEntityType2_0(name='nativeClusterEntityType',
+    NATIVE_ENTITY_TYPE_2_0_0 = DefEntityType(name='nativeClusterEntityType',
                                                 id=f"{DEF_ENTITY_TYPE_ID_PREFIX}:{Vendor.CSE.value}:{Nss.NATIVE_ClUSTER}:2.0.0",  # noqa: E501
                                                 schema=load_rde_schema(SchemaFile.SCHEMA_2_0_0),  # noqa: E501
                                                 interfaces=[
@@ -298,7 +292,7 @@ class EntityType(Enum):
                                                 version='2.0.0',
                                                 vendor=Vendor.CSE.value,
                                                 nss=Nss.NATIVE_ClUSTER.value,
-                                                description='',
+                                                description=''
                                                 # TODO Uncomment this portion when the behavior integration is complete.  # noqa: E501
                                                 #  Uncommenting below, today(Apr 16,2021), will break the existing native api endpoints.  # noqa: E501
                                                 # hooks={
