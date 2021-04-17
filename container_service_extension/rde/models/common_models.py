@@ -300,7 +300,7 @@ class EntityType(Enum):
                                                 nss=Nss.NATIVE_ClUSTER.value,
                                                 description='',
                                                 # TODO Uncomment this portion when the behavior integration is complete.  # noqa: E501
-                                                #  Uncommenting below, today (Apr 16,2021), will break the existing native api endpoints.  # noqa: E501
+                                                #  Uncommenting below, today(Apr 16,2021), will break the existing native api endpoints.  # noqa: E501
                                                 # hooks={
                                                 #     'PostCreate': BehaviorOperation.CREATE_CLUSTER.value.id,  # noqa: E501
                                                 #     'PostUpdate': BehaviorOperation.UPDATE_CLUSTER.value.id,  # noqa: E501
