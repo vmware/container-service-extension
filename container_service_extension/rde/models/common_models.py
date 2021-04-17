@@ -48,7 +48,7 @@ class DefInterface:
 @dataclass_json(undefined=Undefined.EXCLUDE)
 @dataclass(frozen=True)
 class DefEntityType:
-    """Defined Entity type schema for the apiVersion = 35.0"""
+    """Defined Entity type schema for the apiVersion = 35.0."""
 
     name: str
     description: str
