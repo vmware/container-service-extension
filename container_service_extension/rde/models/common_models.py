@@ -6,6 +6,7 @@ from enum import Enum
 from enum import unique
 from typing import List
 
+from dataclasses_json import dataclass_json, Undefined
 
 from container_service_extension.common.constants import shared_constants as shared_constants  # noqa: E501
 from container_service_extension.rde import utils as def_utils
@@ -44,9 +45,10 @@ class DefInterface:
             return self.id
 
 
+@dataclass_json(undefined=Undefined.EXCLUDE)
 @dataclass(frozen=True)
 class DefEntityType:
-    """Represents the schema for Defined Entities."""
+    """Defined Entity type schema for the apiVersion = 35.0."""
 
     name: str
     description: str
@@ -76,7 +78,7 @@ class DefEntityType:
 
 @dataclass(frozen=True)
 class DefEntityType2_0(DefEntityType):
-    """Represents the schema for Defined Entities."""
+    """Defined Entity type schema for the apiVersion = 36.0."""
 
     hooks: dict = None
 
@@ -287,17 +289,23 @@ class EntityType(Enum):
                                              vendor=Vendor.CSE.value,
                                              nss=Nss.NATIVE_ClUSTER.value,
                                              description='')
-    NATIVE_ENTITY_TYPE_2_0_0 = DefEntityType(name='nativeClusterEntityType',
-                                             id=f"{DEF_ENTITY_TYPE_ID_PREFIX}:{Vendor.CSE.value}:{Nss.NATIVE_ClUSTER}:2.0.0",  # noqa: E501
-                                             schema=load_rde_schema(
-                                                 SchemaFile.SCHEMA_2_0_0),
-                                             interfaces=[
-                                                 K8Interface.VCD_INTERFACE.value.id,  # noqa: E501
-                                                 K8Interface.CSE_INTERFACE.value.id],  # noqa: E501
-                                             version='2.0.0',
-                                             vendor=Vendor.CSE.value,
-                                             nss=Nss.NATIVE_ClUSTER.value,
-                                             description='')
+    NATIVE_ENTITY_TYPE_2_0_0 = DefEntityType2_0(name='nativeClusterEntityType',
+                                                id=f"{DEF_ENTITY_TYPE_ID_PREFIX}:{Vendor.CSE.value}:{Nss.NATIVE_ClUSTER}:2.0.0",  # noqa: E501
+                                                schema=load_rde_schema(SchemaFile.SCHEMA_2_0_0),  # noqa: E501
+                                                interfaces=[
+                                                    K8Interface.VCD_INTERFACE.value.id,  # noqa: E501
+                                                    K8Interface.CSE_INTERFACE.value.id],  # noqa: E501
+                                                version='2.0.0',
+                                                vendor=Vendor.CSE.value,
+                                                nss=Nss.NATIVE_ClUSTER.value,
+                                                description=''
+                                                # TODO Uncomment this portion when the behavior integration is complete.  # noqa: E501
+                                                #  Uncommenting below, today (Apr 16,2021), will break the existing native api endpoints.  # noqa: E501
+                                                # hooks={
+                                                #     'PostCreate': BehaviorOperation.CREATE_CLUSTER.value.id,  # noqa: E501
+                                                #     'PostUpdate': BehaviorOperation.UPDATE_CLUSTER.value.id,  # noqa: E501
+                                                #     'PreDelete': BehaviorOperation.DELETE_CLUSTER.value.id}  # noqa: E501
+                                                )
     TKG_ENTITY_TYPE_1_0_0 = DefEntityType(name='TKG Cluster',
                                           id=f"{DEF_ENTITY_TYPE_ID_PREFIX}:{Vendor.VMWARE.value}:{Nss.TKG}:1.0.0",  # noqa: E501
                                           schema='',

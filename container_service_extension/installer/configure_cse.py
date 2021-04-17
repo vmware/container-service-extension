@@ -1203,15 +1203,16 @@ def _register_def_schema(client: Client,
             rde_metadata[def_constants.RDEMetadataKey.INTERFACES]
         _register_interfaces(cloudapi_client, interfaces, msg_update_callback)
 
-        # Register Native EntityType
-        entity_type: common_models.DefEntityType = \
-            rde_metadata[def_constants.RDEMetadataKey.ENTITY_TYPE]
-        _register_native_entity_type(cloudapi_client, entity_type, msg_update_callback)  # noqa: E501
-
         # Register Behavior(s)
         behavior_metadata: Dict[str, List[Behavior]] = rde_metadata.get(
             def_constants.RDEMetadataKey.INTERFACE_TO_BEHAVIORS_MAP, {})
         _register_behaviors(cloudapi_client, behavior_metadata, msg_update_callback)  # noqa: E501
+
+        # Register Native EntityType
+        entity_type: common_models.DefEntityType = \
+            rde_metadata[def_constants.RDEMetadataKey.ENTITY_TYPE]
+        _register_native_entity_type(cloudapi_client, entity_type,
+                                     msg_update_callback)  # noqa: E501
 
         # Override Behavior(s)
         override_behavior_metadata: Dict[str, List[Behavior]] = \
