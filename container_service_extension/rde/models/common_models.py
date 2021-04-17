@@ -78,7 +78,7 @@ class DefEntityType:
 
 @dataclass(frozen=True)
 class DefEntityType2_0(DefEntityType):
-    """Represents the schema for Defined Entities."""
+    """Defined Entity type schema for the apiVersion>=36.0."""
 
     hooks: dict = None
 
