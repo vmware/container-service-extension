@@ -48,7 +48,7 @@ class DefInterface:
 @dataclass_json(undefined=Undefined.EXCLUDE)
 @dataclass(frozen=True)
 class DefEntityType:
-    """Represents the schema for Defined Entities."""
+    """Defined Entity type schema for the apiVersion = 35.0"""
 
     name: str
     description: str
@@ -78,7 +78,7 @@ class DefEntityType:
 
 @dataclass(frozen=True)
 class DefEntityType2_0(DefEntityType):
-    """Defined Entity type schema for the apiVersion>=36.0."""
+    """Defined Entity type schema for the apiVersion = 36.0."""
 
     hooks: dict = None
 
@@ -298,7 +298,7 @@ class EntityType(Enum):
                                                 version='2.0.0',
                                                 vendor=Vendor.CSE.value,
                                                 nss=Nss.NATIVE_ClUSTER.value,
-                                                description='',
+                                                description=''
                                                 # TODO Uncomment this portion when the behavior integration is complete.  # noqa: E501
                                                 #  Uncommenting below, today (Apr 16,2021), will break the existing native api endpoints.  # noqa: E501
                                                 # hooks={
