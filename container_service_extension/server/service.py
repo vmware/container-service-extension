@@ -355,7 +355,7 @@ class Service(object, metaclass=Singleton):
         self._load_placement_policy_details(
             msg_update_callback=msg_update_callback)
 
-        if float(self.config['vcd']['api_version']) < float(vCDApiVersion.VERSION_35.value):  # noqa: E501
+        if self.config['service']['legacy_mode']:
             # Read templates rules from config and update template definition
             # in server run-time config
             self._process_template_rules(
