@@ -26,7 +26,7 @@ from container_service_extension.common.utils.core_utils import extract_id_from_
 from container_service_extension.common.utils.core_utils import NullPrinter
 from container_service_extension.common.utils.core_utils import str_to_bool
 from container_service_extension.common.utils.server_utils import get_server_runtime_config  # noqa: E501
-import container_service_extension.lib.cloudapi.cloudapi_client as cloudApiClient  # noqa: E501
+import container_service_extension.lib.cloudapi.cloudapi_client as cloud_api_client  # noqa: E501
 from container_service_extension.logging.logger import NULL_LOGGER
 from container_service_extension.logging.logger import SERVER_DEBUG_WIRELOG_FILEPATH  # noqa: E501
 from container_service_extension.logging.logger import SERVER_LOGGER
@@ -169,6 +169,7 @@ def get_org_name_href_from_ovdc_id(sysadmin_client: vcd_client.Client, vdc_id):
 
     Update OVDC_TO_ORG_MAP for new vdc_id
 
+    :param pyvcloud.vcd.client.Client sysadmin_client:
     :param vdc_id: unique ovdc id
 
     :return: org's name and href
@@ -511,18 +512,18 @@ def get_cloudapi_client_from_vcd_client(client: vcd_client.Client,
     if not token:
         token = client.get_xvcloud_authorization_token()
         is_jwt = False
-    return cloudApiClient.CloudApiClient(base_url=client.get_cloudapi_uri(),
-                                         token=token,
-                                         is_jwt_token=is_jwt,
-                                         api_version=client.get_api_version(),
-                                         logger_debug=logger_debug,
-                                         logger_wire=logger_wire,
-                                         verify_ssl=client._verify_ssl_certs,
-                                         is_sys_admin=client.is_sysadmin())
+    return cloud_api_client.CloudApiClient(
+        base_url=client.get_cloudapi_uri(),
+        token=token,
+        is_jwt_token=is_jwt,
+        api_version=client.get_api_version(),
+        logger_debug=logger_debug,
+        logger_wire=logger_wire,
+        verify_ssl=client._verify_ssl_certs,
+        is_sys_admin=client.is_sysadmin())
 
 
 def get_all_ovdcs(client: vcd_client.Client):
-    query = None
     if client.is_sysadmin():
         # use adminOrgVdc in typed query
         query = client.get_typed_query(
@@ -568,7 +569,6 @@ def get_ovdcs_by_page(client: vcd_client.Client,
                       page=CSE_PAGINATION_FIRST_PAGE_NUMBER,
                       page_size=CSE_PAGINATION_DEFAULT_PAGE_SIZE):
     """Get the list of ovdcs in the page."""
-    query = None
     if client.is_sysadmin():
         # use adminOrgVdc in typed query
         query = client.get_typed_query(
