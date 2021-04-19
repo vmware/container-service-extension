@@ -74,7 +74,7 @@ class Node:
 @dataclass_json(letter_case=LetterCase.CAMEL)
 @dataclass
 class NfsNode(Node):
-    exports: Optional[list[str]] = None
+    exports: Optional[List[str]] = None
 
 
 @dataclass_json(letter_case=LetterCase.CAMEL)
