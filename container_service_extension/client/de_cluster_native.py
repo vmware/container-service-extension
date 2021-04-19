@@ -2,7 +2,6 @@
 # Copyright (c) 2020 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 
-from dataclasses import asdict
 import os
 
 import pyvcloud.vcd.exceptions as vcd_exceptions
@@ -91,7 +90,7 @@ class DEClusterNative:
             raise cse_exceptions.ClusterNotFoundError(f"Cluster '{cluster_name}' not found.")  # noqa: E501
         # TODO() relevant output
         if def_entity:
-            return yaml.dump(asdict(def_entity.entity))
+            return yaml.dump(def_entity.entity.to_dict())
 
     def get_cluster_info_by_id(self, cluster_id, **kwargs):
         """Get cluster information by cluster ID.
@@ -103,7 +102,7 @@ class DEClusterNative:
         entity_svc = def_entity_svc.DefEntityService(self._cloudapi_client)
         def_entity = entity_svc.get_entity(cluster_id)
         logger.CLIENT_LOGGER.debug(f"Defined entity info from server: {def_entity}")  # noqa: E501
-        return yaml.dump(asdict(def_entity.entity))
+        return yaml.dump(def_entity.entity.to_dict())
 
     def delete_cluster(self, cluster_name, cluster_id=None,
                        org=None, vdc=None):
@@ -129,7 +128,7 @@ class DEClusterNative:
         """
         cluster_entity = \
             self._native_cluster_api.delete_cluster_by_cluster_id(cluster_id)
-        task_href = cluster_entity.entity.get_latest_task_href()
+        task_href = cluster_entity.entity.status.task_href
         return client_utils.construct_task_console_message(task_href)  # noqa: E501
 
     def delete_nfs_node(self, cluster_name, node_name, org=None, vdc=None):
@@ -163,7 +162,7 @@ class DEClusterNative:
         cluster_entity = \
             self._native_cluster_api.delete_nfs_node_by_node_name(cluster_id,
                                                                   node_name)
-        task_href = cluster_entity.entity.get_latest_task_href()
+        task_href = cluster_entity.entity.status.task_href
         return client_utils.construct_task_console_message(task_href)
 
     def get_cluster_config(self, cluster_name, cluster_id=None,
@@ -243,7 +242,7 @@ class DEClusterNative:
         if current_entity:
             current_entity.entity.spec.k8_distribution.template_name = template_name  # noqa: E501
             current_entity.entity.spec.k8_distribution.template_revision = template_revision  # noqa: E501
-            return self.upgrade_cluster_by_cluster_id(current_entity.id, cluster_def_entity=asdict(current_entity))  # noqa: E501
+            return self.upgrade_cluster_by_cluster_id(current_entity.id, cluster_def_entity=current_entity.to_dict())  # noqa: E501
         raise cse_exceptions.ClusterNotFoundError(f"Cluster '{cluster_name}' not found.")  # noqa: E501
 
     def upgrade_cluster_by_cluster_id(self, cluster_id, cluster_def_entity, **kwargs):  # noqa: E501
@@ -259,7 +258,7 @@ class DEClusterNative:
         cluster_def_entity = \
             self._native_cluster_api.upgrade_cluster_by_cluster_id(
                 cluster_id, cluster_upgrade_definition)
-        task_href = cluster_def_entity.entity.get_latest_task_href()
+        task_href = cluster_def_entity.entity.status.task_href
         return client_utils.construct_task_console_message(task_href)
 
     def _get_cluster_name_from_cluster_apply_specification(self, input_spec: dict):  # noqa: E501
@@ -303,7 +302,7 @@ class DEClusterNative:
             cluster_def_entity = \
                 self._native_cluster_api.update_cluster_by_cluster_id(
                     cluster_id, cluster_apply_spec)
-        task_href = cluster_def_entity.entity.get_latest_task_href()
+        task_href = cluster_def_entity.entity.status.task_href
         return client_utils.construct_task_console_message(task_href)
 
     def get_cluster_id_by_name(self, cluster_name, org=None, vdc=None):

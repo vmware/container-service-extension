@@ -21,6 +21,3 @@ class AbstractNativeEntity(abc.ABC):
     @abc.abstractmethod
     def sample_native_entity(cls, k8_runtime=''):
         pass
-
-    def get_latest_task_href(self):
-        pass

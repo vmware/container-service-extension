@@ -1,7 +1,6 @@
 # container-service-extension
 # Copyright (c) 2020 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
-from dataclasses import asdict
 from typing import Type
 
 import container_service_extension.common.constants.server_constants as server_constants  # noqa: E501
@@ -46,8 +45,8 @@ def cluster_create(data: dict, op_ctx: ctx.OperationContext):
     # TODO Insert RDE converter if needed.
     NativeEntityClass: Type[AbstractNativeEntity] = rde_factory.get_rde_model(rde_in_use)  # noqa: E501
     cluster_entity_spec: AbstractNativeEntity = \
-        NativeEntityClass(**input_entity)
-    return asdict(svc.create_cluster(cluster_entity_spec))
+        NativeEntityClass.from_dict(input_entity)
+    return svc.create_cluster(cluster_entity_spec).to_dict()
 
 
 @telemetry_handler.record_user_action_telemetry(cse_operation=telemetry_constants.CseOperation.V36_CLUSTER_LIST)  # noqa: E501
@@ -75,7 +74,7 @@ def native_cluster_list(data: dict, op_ctx: ctx.OperationContext):
 
     # response needs to paginated
     result = svc.get_clusters_by_page(filters=filters)
-    clusters = [asdict(def_entity) for def_entity in result[PaginationKey.VALUES]]  # noqa: E501
+    clusters = [def_entity.to_dict() for def_entity in result[PaginationKey.VALUES]]  # noqa: E501
 
     uri = data['url']
     return server_utils.create_links_and_construct_paginated_result(
@@ -98,7 +97,7 @@ def cluster_list(data: dict, op_ctx: ctx.OperationContext):
     svc = cluster_service_factory.ClusterServiceFactory(op_ctx). \
         get_cluster_service(rde_in_use)
     # response should not be paginated
-    return [asdict(def_entity) for def_entity in
+    return [def_entity.to_dict() for def_entity in
             svc.list_clusters(data.get(RequestKey.QUERY_PARAMS, {}))]
 
 
@@ -118,7 +117,7 @@ def cluster_info(data: dict, op_ctx: ctx.OperationContext):
     svc = cluster_service_factory.ClusterServiceFactory(op_ctx). \
         get_cluster_service(rde_in_use)
     cluster_id = data[RequestKey.CLUSTER_ID]
-    return asdict(svc.get_cluster_info(cluster_id))
+    return svc.get_cluster_info(cluster_id).to_dict()
 
 
 @telemetry_handler.record_user_action_telemetry(cse_operation=telemetry_constants.CseOperation.V36_CLUSTER_CONFIG)  # noqa: E501
@@ -163,8 +162,9 @@ def cluster_update(data: dict, op_ctx: ctx.OperationContext):
         get_cluster_service(rde_in_use)
     NativeEntityClass: Type[AbstractNativeEntity] = rde_factory.get_rde_model(
         rde_in_use)  # noqa: E501
-    cluster_entity: AbstractNativeEntity = NativeEntityClass(**input_entity)
-    return asdict(svc.update_cluster(cluster_id, cluster_entity))
+    cluster_entity: AbstractNativeEntity = \
+        NativeEntityClass.from_dict(input_entity)
+    return svc.update_cluster(cluster_id, cluster_entity).to_dict()
 
 
 @telemetry_handler.record_user_action_telemetry(cse_operation=telemetry_constants.CseOperation.V36_CLUSTER_UPGRADE_PLAN)  # noqa: E501
@@ -196,7 +196,7 @@ def cluster_delete(data: dict, op_ctx: ctx.OperationContext):
     svc = cluster_service_factory.ClusterServiceFactory(op_ctx). \
         get_cluster_service(rde_in_use)
     cluster_id = data[RequestKey.CLUSTER_ID]
-    return asdict(svc.delete_cluster(cluster_id))
+    return svc.delete_cluster(cluster_id).to_dict()
 
 
 @telemetry_handler.record_user_action_telemetry(cse_operation=telemetry_constants.CseOperation.V36_NODE_DELETE)  # noqa: E501
@@ -226,7 +226,7 @@ def nfs_node_delete(data, op_ctx: ctx.OperationContext):
         }
     )
 
-    return asdict(svc.delete_nodes(cluster_id, [node_name]))
+    return svc.delete_nodes(cluster_id, [node_name]).to_dict()
 
 
 @telemetry_handler.record_user_action_telemetry(cse_operation=telemetry_constants.CseOperation.V36_CLUSTER_ACL_LIST)  # noqa: E501

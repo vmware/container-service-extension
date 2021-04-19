@@ -2,7 +2,6 @@
 # Copyright (c) 2020 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 
-from dataclasses import asdict
 import functools
 import json
 
@@ -75,7 +74,7 @@ class DefSchemaService():
                 f"page={page_num}")
             if len(response_body['values']) > 0:
                 for interface in response_body['values']:
-                    yield common_models.DefInterface(**interface)
+                    yield common_models.DefInterface.from_dict(interface)
             else:
                 break
 
@@ -91,7 +90,7 @@ class DefSchemaService():
             method=cse_shared_constants.RequestMethod.GET,
             cloudapi_version=CloudApiVersion.VERSION_1_0_0,
             resource_url_relative_path=f"{CloudApiResource.INTERFACES}/{id}")
-        return common_models.DefInterface(**response_body)
+        return common_models.DefInterface.from_dict(response_body)
 
     @handle_schema_service_exception
     def create_interface(self, interface: common_models.DefInterface) -> common_models.DefInterface:  # noqa: E501
@@ -107,8 +106,8 @@ class DefSchemaService():
             method=cse_shared_constants.RequestMethod.POST,
             cloudapi_version=CloudApiVersion.VERSION_1_0_0,
             resource_url_relative_path=f"{CloudApiResource.INTERFACES}",
-            payload=asdict(interface))
-        return common_models.DefInterface(**response_body)
+            payload=interface.to_dict())
+        return common_models.DefInterface.from_dict(response_body)
 
     @handle_schema_service_exception
     def update_interface(self, interface: common_models.DefInterface) -> common_models.DefInterface:  # noqa: E501
@@ -127,8 +126,8 @@ class DefSchemaService():
             cloudapi_version=CloudApiVersion.VERSION_1_0_0,
             resource_url_relative_path=f"{CloudApiResource.INTERFACES}/"
             f"{interface.id}",
-            payload=asdict(interface))
-        return common_models.DefInterface(**response_body)
+            payload=interface.to_dict())
+        return common_models.DefInterface.from_dict(response_body)
 
     @handle_schema_service_exception
     def delete_interface(self, id: str) -> None:
@@ -158,8 +157,8 @@ class DefSchemaService():
             method=cse_shared_constants.RequestMethod.POST,
             cloudapi_version=CloudApiVersion.VERSION_1_0_0,
             resource_url_relative_path=f"{CloudApiResource.ENTITY_TYPES}",
-            payload=asdict(entity_type))
-        return common_models.DefEntityType(**response_body)
+            payload=entity_type.to_dict())
+        return common_models.DefEntityType.from_dict(response_body)
 
     @handle_schema_service_exception
     def get_entity_type(self, id: str) -> common_models.DefEntityType:
@@ -173,7 +172,7 @@ class DefSchemaService():
             method=cse_shared_constants.RequestMethod.GET,
             cloudapi_version=CloudApiVersion.VERSION_1_0_0,
             resource_url_relative_path=f"{CloudApiResource.ENTITY_TYPES}/{id}")
-        return common_models.DefEntityType(**response_body)
+        return common_models.DefEntityType.from_dict(response_body)
 
     @handle_schema_service_exception
     def list_entity_types(self):
@@ -192,7 +191,7 @@ class DefSchemaService():
                 f"page={page_num}")
             if len(response_body['values']) > 0:
                 for entityType in response_body['values']:
-                    yield common_models.DefEntityType(**entityType)
+                    yield common_models.DefEntityType.from_dict(entityType)
             else:
                 break
 
@@ -228,8 +227,8 @@ class DefSchemaService():
             cloudapi_version=CloudApiVersion.VERSION_1_0_0,
             resource_url_relative_path=f"{CloudApiResource.ENTITY_TYPES}/"
             f"{entity_type.id}",
-            payload=asdict(entity_type))
-        return common_models.DefEntityType(**response_body)
+            payload=entity_type.to_dict())
+        return common_models.DefEntityType.from_dict(response_body)
 
     @handle_schema_service_exception
     def delete_entity_type(self, id: str) -> None:
