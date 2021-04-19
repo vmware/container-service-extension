@@ -209,7 +209,7 @@ class ClusterService(abstract_broker.AbstractBroker):
         if not cluster_spec.spec.k8_distribution.template_name and \
                 not cluster_spec.spec.k8_distribution.template_revision:
             server_config = server_utils.get_server_runtime_config()
-            cluster_spec.spec.k8Distribution = rde_2_x.Distribution(
+            cluster_spec.spec.k8_distribution = rde_2_x.Distribution(
                 template_name=server_config['broker']['default_template_name'],
                 template_revision=int(server_config['broker']['default_template_revision']))  # noqa: E501
         template_name = cluster_spec.spec.k8_distribution.template_name
@@ -1455,7 +1455,7 @@ class ClusterService(abstract_broker.AbstractBroker):
             self.context.client.get_task_monitor().wait_for_status(task)
 
             # update defined entity of the cluster
-            curr_native_entity.status.cloudProperties.k8Distribution = \
+            curr_native_entity.status.cloud_properties.k8_distribution = \
                 rde_2_x.Distribution(template_name=template[LocalTemplateKey.NAME],  # noqa: E501
                                      template_revision=int(template[LocalTemplateKey.REVISION]))  # noqa: E501
             curr_native_entity.status.cni = \

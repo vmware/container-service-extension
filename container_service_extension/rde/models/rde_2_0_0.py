@@ -50,8 +50,8 @@ class Workers:
 @dataclass_json(letter_case=LetterCase.CAMEL)
 @dataclass
 class Distribution:
-    template_name: Optional[str] = None
-    template_revision: Optional[int] = None
+    template_name: Optional[str] = ''
+    template_revision: Optional[int] = 0
 
 
 @dataclass_json(letter_case=LetterCase.CAMEL)

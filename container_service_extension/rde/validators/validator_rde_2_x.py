@@ -66,8 +66,6 @@ class Validator_2_0_0(AbstractValidator):
         # TODO: validators for rest of the CSE operations in V36 will be
         #  implemented as and when v36/def_cluster_handler.py get other handler
         #  functions
-        input_entity_spec = None
-        current_entity_spec = None
         if operation == BehaviorOperation.UPDATE_CLUSTER:
             if not entity_id or not entity:
                 raise ValueError('Both entity_id and entity are required to validate the Update operation.')  # noqa: E501
@@ -77,11 +75,9 @@ class Validator_2_0_0(AbstractValidator):
             current_entity_spec = \
                 rde_utils.construct_cluster_spec_from_entity_status(
                     current_entity_status, rde_constants.RDEVersion.RDE_2_0_0.value)  # noqa: E501
-        # TODO there is a benefit if we keep asdict here as asdict wont convert
-        #   fields to camel case. Check with team
-        return validate_cluster_update_request_and_check_cluster_upgrade(
-            input_entity_spec,
-            current_entity_spec)
+            return validate_cluster_update_request_and_check_cluster_upgrade(
+                input_entity_spec,
+                current_entity_spec)
 
         # TODO check the reason why there was an unreachable raise statement
         raise NotImplementedError(f"Validator for {operation.name} not found")
