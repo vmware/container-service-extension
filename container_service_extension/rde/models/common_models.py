@@ -54,7 +54,7 @@ class DefEntityType:
     name: str
     description: str
     schema: dict
-    interfaces: list[str]
+    interfaces: List[str]
     version: str
     id: str = None
     externalId: Optional[str] = None
