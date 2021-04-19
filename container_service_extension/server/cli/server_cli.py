@@ -405,7 +405,7 @@ def create_service_role(ctx, vcd_host, skip_verify_ssl_certs):
     '--api-version',
     'api_version',
     required=False,
-    default=vcd_client.ApiVersion.VERSION_35.value,
+    default=vcd_client.ApiVersion.VERSION_36.value,
     show_default=True,
     metavar='API_VERSION',
     help=f'vCD API version: {SUPPORTED_VCD_API_VERSIONS}. '
