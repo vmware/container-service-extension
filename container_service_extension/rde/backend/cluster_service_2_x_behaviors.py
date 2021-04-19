@@ -263,7 +263,8 @@ class ClusterService(abstract_broker.AbstractBroker):
         self._update_task(BehaviorTaskStatus.RUNNING, message=msg)
         curr_native_entity.status.taskHref = self.task_href
         try:
-            self.entity_svc.update_entity(entity_id=entity_id, entity=curr_rde)
+            self.sysadmin_entity_svc.update_entity(entity_id=entity_id,
+                                                   entity=curr_rde)
         except Exception as err:
             msg = f"Error updating the cluster '{cluster_name}' with the status"  # noqa: E501
             LOGGER.error(f"{msg}: {err}")
@@ -356,7 +357,7 @@ class ClusterService(abstract_broker.AbstractBroker):
             DefEntityPhase(DefEntityOperation.UPDATE,
                            DefEntityOperationStatus.IN_PROGRESS))
         try:
-            curr_entity = self.entity_svc.update_entity(cluster_id, curr_entity)  # noqa: E501
+            curr_entity = self.sysadmin_entity_svc.update_entity(cluster_id, curr_entity)  # noqa: E501
         except Exception as err:
             self._update_task(BehaviorTaskStatus.ERROR,
                               message=msg,
@@ -512,7 +513,7 @@ class ClusterService(abstract_broker.AbstractBroker):
             DefEntityPhase(DefEntityOperation.UPGRADE, DefEntityOperationStatus.IN_PROGRESS))  # noqa: E501
         cur_native_entity.status.taskHref = self.task_href
         try:
-            curr_entity = self.entity_svc.update_entity(cluster_id, curr_entity)  # noqa: E501
+            curr_entity = self.sysadmin_entity_svc.update_entity(cluster_id, curr_entity)  # noqa: E501
         except Exception as err:
             self._update_task(BehaviorTaskStatus.ERROR,
                               message=msg,
@@ -664,7 +665,7 @@ class ClusterService(abstract_broker.AbstractBroker):
             DefEntityPhase(DefEntityOperation.UPDATE,
                            DefEntityOperationStatus.IN_PROGRESS))
         try:
-            curr_entity = self.entity_svc.update_entity(cluster_id, curr_entity)  # noqa: E501
+            curr_entity = self.sysadmin_entity_svc.update_entity(cluster_id, curr_entity)  # noqa: E501
         except Exception as err:
             self._update_task(BehaviorTaskStatus.ERROR,
                               message=msg,
@@ -853,7 +854,7 @@ class ClusterService(abstract_broker.AbstractBroker):
             curr_native_entity.status.nodes = _get_nodes_details(
                 self.context.sysadmin_client, vapp)
 
-            self.entity_svc.update_entity(cluster_id, curr_rde)
+            self.sysadmin_entity_svc.update_entity(cluster_id, curr_rde)
             # self.entity_svc.resolve_entity(cluster_id)
 
             # cluster creation succeeded. Mark the task as success
@@ -1447,7 +1448,7 @@ class ClusterService(abstract_broker.AbstractBroker):
             curr_native_entity.status.phase = str(
                 DefEntityPhase(DefEntityOperation.UPGRADE,
                                DefEntityOperationStatus.SUCCEEDED))
-            self.entity_svc.update_entity(curr_entity.id, curr_entity)
+            self.sysadmin_entity_svc.update_entity(curr_entity.id, curr_entity)
 
             msg = f"Successfully upgraded cluster '{cluster_name}' software " \
                   f"to match template {template_name} (revision " \
@@ -1658,13 +1659,13 @@ class ClusterService(abstract_broker.AbstractBroker):
             self.context.sysadmin_client, vapp)
         if curr_nodes_status:
             curr_entity.entity.status.nodes = curr_nodes_status
-        return self.entity_svc.update_entity(cluster_id, curr_entity)
+        return self.sysadmin_entity_svc.update_entity(cluster_id, curr_entity)
 
     def _fail_operation(self, cluster_id: str, op: DefEntityOperation):
         def_entity: common_models.DefEntity = self.entity_svc.get_entity(cluster_id)  # noqa: E501
         def_entity.entity.status.phase = \
             str(DefEntityPhase(op, DefEntityOperationStatus.FAILED))
-        self.entity_svc.update_entity(cluster_id, def_entity)
+        self.sysadmin_entity_svc.update_entity(cluster_id, def_entity)
 
     def _update_task(self, status, message='', error_message='', progress=None):  # noqa: E501
         if status == BehaviorTaskStatus.ERROR:
