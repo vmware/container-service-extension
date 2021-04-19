@@ -122,15 +122,15 @@ SAMPLE_SERVICE_CONFIG = {
 
 SAMPLE_BROKER_CONFIG = {
     'broker': {
-        'org': 'myorg',
-        'vdc': 'myorgvdc',
+        'org': 'my_org',
+        'vdc': 'my_org_vdc',
         'catalog': 'cse',
-        'network': 'mynetwork',
+        'network': 'my_network',
         'ip_allocation_mode': 'pool',
         'storage_profile': '*',
         'default_template_name': 'my_template',
         'default_template_revision': 0,
-        'remote_template_cookbook_url': 'http://raw.githubusercontent.com/vmware/container-service-extension-templates/upgrades/template_v2.yaml', # noqa: E501
+        'remote_template_cookbook_url': 'http://raw.githubusercontent.com/vmware/container-service-extension-templates/upgrades/template_v2.yaml',  # noqa: E501
     }
 }
 
@@ -327,24 +327,29 @@ def generate_sample_config(output=None, generate_pks_config=False,
             sample_config = yaml.safe_dump(SAMPLE_AMQP_CONFIG,
                                            default_flow_style=False) + '\n'
 
-        api_version_vcd_config = dict(SAMPLE_VCD_CONFIG)
-        api_version_vcd_config['vcd']['api_version'] = api_version_str
-        sample_config += yaml.safe_dump(api_version_vcd_config,
+        sample_config += yaml.safe_dump(SAMPLE_VCD_CONFIG,
                                         default_flow_style=False) + '\n'
         sample_config += yaml.safe_dump(SAMPLE_VCS_CONFIG,
                                         default_flow_style=False) + '\n'
-        sample_config += yaml.safe_dump(SAMPLE_SERVICE_CONFIG,
+
+        updated_service_config = dict(SAMPLE_SERVICE_CONFIG)
+        if api_version < float(ApiVersion.VERSION_35.value):
+            updated_service_config['service']['legacy_mode'] = True
+        sample_config += yaml.safe_dump(updated_service_config,
                                         default_flow_style=False) + '\n'
+
         sample_config += yaml.safe_dump(SAMPLE_BROKER_CONFIG,
                                         default_flow_style=False) + '\n'
-        if api_version < float(ApiVersion.VERSION_35.value):
+
+        if updated_service_config['service']['legacy_mode']:
             sample_config += TEMPLATE_RULE_NOTE + '\n'
     else:
         sample_config = yaml.safe_dump(
             SAMPLE_PKS_SERVERS_SECTION, default_flow_style=False) + '\n'
         sample_config += yaml.safe_dump(
             SAMPLE_PKS_ACCOUNTS_SECTION, default_flow_style=False) + '\n'
-        # Org - PKS account mapping section will be supressed for CSE 2.0 alpha
+        # Org - PKS account mapping section will be suppressed for
+        #   CSE 2.0 alpha
         # sample_pks_config += yaml.safe_dump(
         # SAMPLE_PKS_ORGS_SECTION, default_flow_style=False) + '\n'
         sample_config += yaml.safe_dump(
