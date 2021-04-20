@@ -140,11 +140,10 @@ def verify_version_compatibility(
         error_msg += \
             "Installed CSE is configured in non-legacy mode. Unable to run " \
             "it in legacy mode."
-
     if not ext_in_legacy_mode and ext_rde_in_use < runtime_rde_version:
-        error_msg += f"Installed CSE RDE version ({runtime_rde_version}) " \
+        error_msg += f"Installed CSE RDE version ({ext_rde_in_use}) " \
             f"is lower than the supported Server RDE version " \
-            f"({ext_rde_in_use}). Upgrade CSE to update RDE."
+            f"({runtime_rde_version}). Upgrade CSE to update RDE."
 
     if error_msg:
         raise cse_exception.VersionCompatibilityError(error_msg)
