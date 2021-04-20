@@ -10,6 +10,7 @@ import pathlib
 import platform
 import stat
 import sys
+from typing import List
 import urllib
 
 import click
@@ -381,3 +382,7 @@ def extract_id_from_href(href):
     if '/' in href:
         return href.split('/')[-1]
     return href
+
+
+def get_max_api_version(api_versions: List[str]) -> float:
+    return max(float(x) for x in api_versions)

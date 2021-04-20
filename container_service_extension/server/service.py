@@ -18,6 +18,7 @@ from pyvcloud.vcd.client import BasicLoginCredentials
 from pyvcloud.vcd.client import Client
 from pyvcloud.vcd.exceptions import EntityNotFoundException
 from pyvcloud.vcd.exceptions import OperationNotSupportedException
+import semantic_version
 
 import container_service_extension.common.constants.server_constants as server_constants  # noqa: E501
 import container_service_extension.common.constants.shared_constants as shared_constants  # noqa: E501
@@ -105,12 +106,13 @@ def verify_version_compatibility(
         should_cse_run_in_legacy_mode: bool,
         is_mqtt_extension: bool):
     cse_version = server_utils.get_installed_cse_version()
+    runtime_rde_version = semantic_version.Version(server_utils.get_rde_version_in_use())  # noqa: E501
 
     dikt = configure_cse.parse_cse_extension_description(
         sysadmin_client, is_mqtt_extension)
     ext_cse_version = dikt[server_constants.CSE_VERSION_KEY]
     ext_in_legacy_mode = dikt[server_constants.LEGACY_MODE_KEY]
-    # ext_rde_in_use = dikt[server_constants.RDE_VERSION_IN_USE_KEY]
+    ext_rde_in_use = dikt[server_constants.RDE_VERSION_IN_USE_KEY]
 
     # version data doesn't exist, so installed CSE is <= 2.6.1
     if ext_cse_version == server_constants.UNKNOWN_CSE_VERSION:
@@ -139,7 +141,10 @@ def verify_version_compatibility(
             "Installed CSE is configured in non-legacy mode. Unable to run " \
             "it in legacy mode."
 
-    # ToDo : RDE version check
+    if not ext_in_legacy_mode and ext_rde_in_use < runtime_rde_version:
+        error_msg += f"Installed CSE RDE version ({runtime_rde_version}) " \
+            f"is lower than the supported Server RDE version " \
+            f"({ext_rde_in_use}). Upgrade CSE to update RDE."
 
     if error_msg:
         raise cse_exception.VersionCompatibilityError(error_msg)
@@ -488,11 +493,6 @@ class Service(object, metaclass=Singleton):
                                                               logger_wire)
             raise_error_if_def_not_supported(cloudapi_client)
 
-            # set the RDE version used
-            max_vcd_api_version_supported = \
-                max([float(x) for x in self.config['service']['supported_api_versions']])  # noqa: E501
-            self.config['service']['rde_version_in_use'] = \
-                def_utils.get_runtime_rde_version_by_vcd_api_version(max_vcd_api_version_supported)  # noqa: E501
             server_rde_version = server_utils.get_rde_version_in_use()
             msg_update_callback.general(f"Using RDE version: {server_rde_version}")  # noqa: E501
 

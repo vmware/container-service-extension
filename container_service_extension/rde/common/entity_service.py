@@ -2,7 +2,6 @@
 # Copyright (c) 2020 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 
-from dataclasses import asdict
 import functools
 import json
 from typing import List
@@ -58,7 +57,7 @@ def handle_entity_service_exception(func):
     return exception_handler_wrapper
 
 
-class DefEntityService():
+class DefEntityService:
     """Manages lifecycle of entities.
 
     TODO Add API version check at the appropriate place. This class needs to
@@ -86,7 +85,7 @@ class DefEntityService():
             cloudapi_version=CloudApiVersion.VERSION_1_0_0,
             resource_url_relative_path=f"{CloudApiResource.ENTITY_TYPES}/"
                                        f"{entity_type_id}",
-            payload=asdict(entity),
+            payload=entity.to_dict(),
             additional_headers=additional_headers)
 
     @handle_entity_service_exception
@@ -236,7 +235,7 @@ class DefEntityService():
             cloudapi_version=CloudApiVersion.VERSION_1_0_0,
             resource_url_relative_path=f"{CloudApiResource.ENTITIES}/"
                                        f"{entity_id}",
-            payload=asdict(entity))
+            payload=entity.to_dict())
         return DefEntity(**response_body)
 
     @handle_entity_service_exception
@@ -284,7 +283,7 @@ class DefEntityService():
         return
 
     @handle_entity_service_exception
-    def get_native_rde_by_name_and_rde_version(self, name: str, version: str,  # noqa: E501
+    def get_native_rde_by_name_and_rde_version(self, name: str, version: str,
                                                filters: dict = None) -> DefEntity:  # noqa: E501
         """Get native RDE given its name and RDE version.
 
@@ -292,6 +291,7 @@ class DefEntityService():
 
         :param str name: Name of the native cluster.
         :param str version: RDE version
+        :param dict filters: dictionary representing filters
         :rtype: DefEntity
         :return: Native cluster RDE
         """
@@ -301,8 +301,8 @@ class DefEntityService():
         native_entity_type: DefEntityType = \
             def_utils.get_rde_metadata(version)[def_constants.RDEMetadataKey.ENTITY_TYPE]  # noqa: E501
         for entity in \
-            self.list_entities_by_entity_type(vendor=native_entity_type.vendor,  # noqa: E501
-                                              nss=native_entity_type.nss,  # noqa: E501
+            self.list_entities_by_entity_type(vendor=native_entity_type.vendor,
+                                              nss=native_entity_type.nss,
                                               version=native_entity_type.version,  # noqa: E501
                                               filters=filters):
             return entity
@@ -327,6 +327,7 @@ class DefEntityService():
         state will be either changed to "RESOLVED" (or) "RESOLUTION ERROR".
 
         :param str entity_id: Id of the entity
+        :param str entity_type_id: Entity type ID of the entity being resolved
         :return: Defined entity with its state updated.
         :rtype: DefEntity
         """

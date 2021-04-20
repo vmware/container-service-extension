@@ -12,6 +12,7 @@ from pyvcloud.vcd.platform import Platform
 from pyVmomi import vim
 import requests
 from requests.exceptions import HTTPError
+import semantic_version
 from vsphere_guest_run.vsphere import VSphere
 import yaml
 
@@ -26,6 +27,7 @@ from container_service_extension.common.constants.shared_constants import \
 from container_service_extension.common.utils.core_utils import check_file_permissions  # noqa: E501
 from container_service_extension.common.utils.core_utils import check_keys_and_value_types  # noqa: E501
 from container_service_extension.common.utils.core_utils import get_duplicate_items_in_list  # noqa: E501
+from container_service_extension.common.utils.core_utils import get_max_api_version  # noqa: E501
 from container_service_extension.common.utils.core_utils import NullPrinter
 from container_service_extension.common.utils.core_utils import str_to_bool
 from container_service_extension.common.utils.server_utils import should_use_mqtt_protocol  # noqa: E501
@@ -50,6 +52,7 @@ from container_service_extension.lib.telemetry.telemetry_utils import \
 from container_service_extension.lib.uaaclient.uaaclient import UaaClient
 from container_service_extension.logging.logger import NULL_LOGGER
 from container_service_extension.logging.logger import SERVER_NSXT_WIRE_LOGGER
+import container_service_extension.rde.utils as rde_utils
 from container_service_extension.security.encryption_engine import \
     get_decrypted_file_contents
 from container_service_extension.server.pks.pks_cache import Credentials
@@ -225,6 +228,11 @@ def get_validated_config(config_file_name,
     config['feature_flags']['legacy_api'] = str_to_bool(is_legacy_mode)
     config['feature_flags']['non_legacy_api'] = \
         not str_to_bool(is_legacy_mode)
+
+    max_vcd_api_version_supported = get_max_api_version(config['service']['supported_api_versions'])  # noqa: E501
+    config['service']['rde_version_in_use'] = semantic_version.Version(
+        rde_utils.get_runtime_rde_version_by_vcd_api_version(
+            max_vcd_api_version_supported))
 
     # Temporary work around before api version is completely removed from
     # config

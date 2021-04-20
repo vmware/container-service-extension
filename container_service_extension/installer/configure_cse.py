@@ -335,8 +335,8 @@ def install_cse(config_file_name, config, skip_template_creation,
         if server_utils.should_use_mqtt_protocol(config):
             _register_cse_as_mqtt_extension(
                 client,
-                rde_version_in_use=semantic_version.Version("0.0.0"),
-                msg_update_callback=msg_update_callback)
+                rde_version_in_use=config['service']['rde_version_in_use'],
+                msg_update_callback=msg_update_callback)  # noqa: E501
         else:
             # create amqp exchange if it doesn't exist
             amqp = config['amqp']
@@ -350,7 +350,7 @@ def install_cse(config_file_name, config, skip_template_creation,
                 client=client,
                 routing_key=amqp['routing_key'],
                 exchange=amqp['exchange'],
-                rde_version_in_use=semantic_version.Version("0.0.0"),
+                rde_version_in_use=config['service']['rde_version_in_use'],
                 msg_update_callback=msg_update_callback)
 
             # register rights to vCD
@@ -725,8 +725,6 @@ def upgrade_cse(config_file_name, config, skip_template_creation,
                 ssh_key=ssh_key,
                 msg_update_callback=msg_update_callback)
         else:
-            # ToDo : Depending on the determined RDE version we should have
-            #  two separate upgrade paths
             _upgrade_to_cse_3_1_non_legacy(
                 client=client,
                 config=config,
@@ -1187,8 +1185,7 @@ def _register_def_schema(client: Client,
                                                                     logger_debug=INSTALL_LOGGER,  # noqa: E501
                                                                     logger_wire=logger_wire)  # noqa: E501
     # TODO update CSE install to create client from max_vcd_api_version
-    max_vcd_api_version_supported = \
-        max([float(x) for x in config['service']['supported_api_versions']])
+    max_vcd_api_version_supported = utils.get_max_api_version(config['service']['supported_api_versions'])   # noqa: E501
     try:
         def_utils.raise_error_if_def_not_supported(cloudapi_client)
         rde_version: str = \
@@ -1203,15 +1200,16 @@ def _register_def_schema(client: Client,
             rde_metadata[def_constants.RDEMetadataKey.INTERFACES]
         _register_interfaces(cloudapi_client, interfaces, msg_update_callback)
 
-        # Register Native EntityType
-        entity_type: common_models.DefEntityType = \
-            rde_metadata[def_constants.RDEMetadataKey.ENTITY_TYPE]
-        _register_native_entity_type(cloudapi_client, entity_type, msg_update_callback)  # noqa: E501
-
         # Register Behavior(s)
         behavior_metadata: Dict[str, List[Behavior]] = rde_metadata.get(
             def_constants.RDEMetadataKey.INTERFACE_TO_BEHAVIORS_MAP, {})
         _register_behaviors(cloudapi_client, behavior_metadata, msg_update_callback)  # noqa: E501
+
+        # Register Native EntityType
+        entity_type: common_models.DefEntityType = \
+            rde_metadata[def_constants.RDEMetadataKey.ENTITY_TYPE]
+        _register_native_entity_type(cloudapi_client, entity_type,
+                                     msg_update_callback)  # noqa: E501
 
         # Override Behavior(s)
         override_behavior_metadata: Dict[str, List[Behavior]] = \
@@ -1875,13 +1873,13 @@ def _update_cse_extension(client, config,
             _deregister_cse_amqp_extension(client)
             _register_cse_as_mqtt_extension(
                 client,
-                rde_version_in_use=semantic_version.Version("0.0.0"),
+                rde_version_in_use=config['service']['rde_version_in_use'],
                 msg_update_callback=msg_update_callback)
         elif existing_ext_type == server_constants.ExtensionType.MQTT:
             # Remove api filters and update description
             _update_cse_mqtt_extension(
                 client,
-                rde_version_in_use=semantic_version.Version("0.0.0"),
+                rde_version_in_use=config['service']['rde_version_in_use'],
                 msg_update_callback=msg_update_callback)
     else:
         # Update amqp exchange
@@ -1899,7 +1897,7 @@ def _update_cse_extension(client, config,
             client=client,
             routing_key=config['amqp']['routing_key'],
             exchange=config['amqp']['exchange'],
-            rde_version_in_use=semantic_version.Version("0.0.0"),
+            rde_version_in_use=config['service']['rde_version_in_use'],
             msg_update_callback=msg_update_callback)
 
 
@@ -1917,6 +1915,9 @@ def _upgrade_to_cse_3_1_non_legacy(client, config,
         components were not installed correctly
     """
     is_tkg_plus_enabled = server_utils.is_tkg_plus_enabled(config=config)
+
+    # This check should be done before registering def schema
+    def_entity_type_registered = _is_def_entity_type_registered(client=client)
 
     # Add global placement policies
     _setup_placement_policies(
@@ -1979,14 +1980,21 @@ def _upgrade_to_cse_3_1_non_legacy(client, config,
     # designed to gate cluster deployment and has no play once the cluster has
     # been deployed.
 
-    # Create DEF entity for all existing clusters (if missing)
-    _upgrade_or_create_def_entity_for_existing_clusters(
-        client=client,
-        config=config,
-        cse_clusters=clusters,
-        msg_update_callback=msg_update_callback,
-        is_tkg_plus_enabled=is_tkg_plus_enabled,
-        log_wire=log_wire)
+    if def_entity_type_registered:
+        _upgrade_non_legacy_clusters(
+            client=client,
+            config=config,
+            cse_clusters=clusters,
+            msg_update_callback=msg_update_callback,
+            log_wire=log_wire)
+    else:
+        _upgrade_legacy_clusters(
+            client=client,
+            config=config,
+            cse_clusters=clusters,
+            is_tkg_plus_enabled=is_tkg_plus_enabled,
+            msg_update_callback=msg_update_callback,
+            log_wire=log_wire)
 
     # Print list of users categorized by org, who currently owns CSE clusters
     # and will need DEF entity rights.
@@ -2002,9 +2010,6 @@ def _upgrade_to_cse_3_1_legacy(
         msg_update_callback=utils.NullPrinter()):
     """Handle upgrade when no support from VCD for RDE.
 
-    :raises: MultipleRecordsException: (when using mqtt) if more than one
-        service with the given name and namespace are found when trying to
-        delete the amqp-based extension.
     :raises cse_exception.AmqpError: (when using AMQP) if AMQP exchange
         could not be created.
     """
@@ -2246,14 +2251,14 @@ def _remove_old_cse_sizing_compute_policies(
             INSTALL_LOGGER.error(msg)
 
 
-def _upgrade_or_create_def_entity_for_existing_clusters(
+def _upgrade_non_legacy_clusters(
         client,
         config,
         cse_clusters,
-        is_tkg_plus_enabled,
         msg_update_callback=utils.NullPrinter(),
         log_wire=False):
-    msg = "Making old CSE k8s clusters compatible with CSE 3.1"
+
+    msg = "Upgrading non legacy CSE k8s clusters compatible with CSE 3.1"
     msg_update_callback.info(msg)
     INSTALL_LOGGER.info(msg)
 
@@ -2266,8 +2271,7 @@ def _upgrade_or_create_def_entity_for_existing_clusters(
     entity_svc = def_entity_svc.DefEntityService(cloudapi_client)
     schema_svc = def_schema_svc.DefSchemaService(cloudapi_client)
 
-    max_vcd_api_version_supported = \
-        max([float(x) for x in config['service']['supported_api_versions']])
+    max_vcd_api_version_supported = utils.get_max_api_version(config['service']['supported_api_versions'])  # noqa: E501
     # TODO: get proper site information
     site = config['vcd']['host']
     runtime_rde_version: str = \
@@ -2303,7 +2307,56 @@ def _upgrade_or_create_def_entity_for_existing_clusters(
         except Exception as err:
             INSTALL_LOGGER.debug(str(err))
 
-        # The code below creates defined-entity for api 33/34 native clusters
+    msg = "Finished processing all clusters."
+    INSTALL_LOGGER.info(msg)
+    msg_update_callback.general(msg)
+
+    # Remove old entity types
+    msg = "Removing old native entity types"
+    INSTALL_LOGGER.info(msg)
+    msg_update_callback.general(msg)
+    try:
+        native_entity_types = _get_native_def_entity_types(client)
+        for entity_type in native_entity_types:
+            if entity_type.id != target_entity_type.id:
+                msg = f"Deleting entity type: {entity_type.id}"
+                INSTALL_LOGGER.info(msg)
+                msg_update_callback.general(msg)
+                schema_svc.delete_entity_type(entity_type.id)
+    except Exception as err:
+        INSTALL_LOGGER.debug(str(err))
+
+
+def _upgrade_legacy_clusters(
+        client,
+        config,
+        cse_clusters,
+        is_tkg_plus_enabled,
+        msg_update_callback=utils.NullPrinter(),
+        log_wire=False):
+    msg = "Upgrading legacy CSE k8s clusters compatible with CSE 3.1"
+    msg_update_callback.info(msg)
+    INSTALL_LOGGER.info(msg)
+
+    logger_wire = SERVER_CLOUDAPI_WIRE_LOGGER if log_wire else NULL_LOGGER
+    cloudapi_client = vcd_utils.get_cloudapi_client_from_vcd_client(
+        client=client,
+        logger_debug=INSTALL_LOGGER,
+        logger_wire=logger_wire)
+
+    entity_svc = def_entity_svc.DefEntityService(cloudapi_client)
+    schema_svc = def_schema_svc.DefSchemaService(cloudapi_client)
+
+    max_vcd_api_version_supported = utils.get_max_api_version(config['service']['supported_api_versions'])   # noqa: E501
+    # TODO: get proper site information
+    site = config['vcd']['host']
+    runtime_rde_version: str = \
+        def_utils.get_runtime_rde_version_by_vcd_api_version(max_vcd_api_version_supported)  # noqa: E501
+    rde_metadata: dict = def_utils.get_rde_metadata(runtime_rde_version)
+    entity_type_metadata = rde_metadata[def_constants.RDEMetadataKey.ENTITY_TYPE]  # noqa: E501
+    target_entity_type = schema_svc.get_entity_type(entity_type_metadata.get_id())  # noqa: E501
+
+    for cluster in cse_clusters:
         try:
             policy_name = _get_placement_policy_name_from_template_name(
                 cluster['template_name'])
@@ -2381,7 +2434,7 @@ def _create_cluster_rde(client, cluster, kind, runtime_rde_version,
             id=org_urn)
     except Exception as err:
         INSTALL_LOGGER.debug(str(err))
-        msg = "Unable to determine current owner of cluster '{cluster['name']}'. Unable to process ownership."  # noqa: E501
+        msg = f"Unable to determine current owner of cluster '{cluster['name']}'. Unable to process ownership."  # noqa: E501
         msg_update_callback.info(msg)
         INSTALL_LOGGER.info(msg)
 
@@ -2427,7 +2480,7 @@ def _upgrade_cluster_rde(client, cluster, def_entity_to_upgrade,
         # RDE upgrade possible only from RDE 1.0 or RDE 2.x
         native_entity_2_x: rde_2_x.NativeEntity = new_native_entity
         native_entity_2_x.status.uid = def_entity_to_upgrade.id
-        native_entity_2_x.status.cloudProperties.site = site
+        native_entity_2_x.status.cloud_properties.site = site
         native_entity_2_x.metadata.site = site
 
     new_def_entity = common_models.DefEntity(
@@ -2476,3 +2529,32 @@ def _print_users_in_need_of_def_rights(
         msg = msg + org_users_msg
         msg_update_callback.info(msg)
         INSTALL_LOGGER.info(msg)
+
+
+def _is_def_entity_type_registered(client):
+    """Check the presence of native entity type of any version.
+
+    :param client:
+    :return: True if present else False
+    :rtype: bool
+    """
+    try:
+        return True if len(_get_native_def_entity_types(client)) > 0 else False  # noqa: E501
+    except cse_exception.DefNotSupportedException:
+        return False
+
+
+def _get_native_def_entity_types(client):
+    """Get list of native entity types.
+
+    :param client:
+    :return: list of native entity types
+    :rtype: list
+    """
+    cloudapi_client = vcd_utils.get_cloudapi_client_from_vcd_client(
+        client=client,
+        logger_debug=INSTALL_LOGGER
+    )
+    schema_svc = def_schema_svc.DefSchemaService(cloudapi_client)
+    return [entity_type for entity_type in schema_svc.list_entity_types()
+            if entity_type.nss == def_constants.Nss.NATIVE_ClUSTER.value]

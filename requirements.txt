@@ -33,3 +33,6 @@ vcd-cli >= 24.0.1, < 25.0.0
 
 # vsphere-guest-run 0.0.7
 vsphere-guest-run >= 0.0.7, < 1.0.0
+
+# dataclasses-json
+dataclasses-json >= 0.5.2, < 1.0.0
