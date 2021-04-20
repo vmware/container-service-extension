@@ -4,13 +4,9 @@
 # Copyright (c) 2019 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 
-import json
 import os
-import shutil
 import sys
-import tempfile
 import time
-from zipfile import ZipFile
 
 import click
 import cryptography
@@ -26,7 +22,6 @@ from container_service_extension.common.constants.server_constants import CONFIG
 from container_service_extension.common.constants.server_constants import LocalTemplateKey  # noqa: E501
 from container_service_extension.common.constants.server_constants import RemoteTemplateKey  # noqa: E501
 from container_service_extension.common.constants.server_constants import SYSTEM_ORG_NAME  # noqa: E501
-from container_service_extension.common.constants.shared_constants import RequestMethod  # noqa: E501
 from container_service_extension.common.constants.shared_constants import SUPPORTED_VCD_API_VERSIONS  # noqa: E501
 import container_service_extension.common.utils.core_utils as utils
 import container_service_extension.common.utils.pyvcloud_utils as vcd_utils
@@ -37,7 +32,6 @@ from container_service_extension.installer.cse_service_role_mgr import create_cs
 from container_service_extension.installer.sample_generator import generate_sample_config  # noqa: E501
 import container_service_extension.installer.templates.local_template_manager as ltm  # noqa: E501
 from container_service_extension.installer.templates.remote_template_manager import RemoteTemplateManager  # noqa: E501
-from container_service_extension.lib.cloudapi.constants import CloudApiResource
 from container_service_extension.lib.telemetry.constants import CseOperation
 from container_service_extension.lib.telemetry.constants import OperationStatus
 from container_service_extension.lib.telemetry.constants import PayloadKey
