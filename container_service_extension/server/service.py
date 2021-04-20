@@ -586,6 +586,10 @@ class Service(object, metaclass=Singleton):
             if log_wire:
                 log_filename = logger.SERVER_DEBUG_WIRELOG_FILEPATH
 
+            # Since the config param has been read from file by
+            # get_validated_config method, we can safely use the
+            # api_version key, it will be set to the highest api
+            # version supported by VCD and CSE.
             client = Client(self.config['vcd']['host'],
                             api_version=self.config['vcd']['api_version'],
                             verify_ssl_certs=self.config['vcd']['verify'],
