@@ -66,7 +66,10 @@ def generate_entity_type_id(vendor, nss, version):
 
 def get_runtime_rde_version_by_vcd_api_version(vcd_api_version: float) -> str:
     major_vcd_api_version = math.floor(vcd_api_version)
-    return def_constants.MAP_VCD_API_VERSION_TO_RUNTIME_RDE_VERSION[major_vcd_api_version]  # noqa: E501
+    val = def_constants.MAP_VCD_API_VERSION_TO_RUNTIME_RDE_VERSION.get(major_vcd_api_version)  # noqa: E501
+    if not val:
+        val = "0.0.0"
+    return val
 
 
 def get_rde_version_introduced_at_api_version(vcd_api_version: float) -> str:

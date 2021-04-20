@@ -193,6 +193,8 @@ def get_validated_config(config_file_name,
     else:
         config['pks_config'] = None
 
+    is_legacy_mode = config['service']['legacy_mode']
+
     # Compute common supported api versions by the CSE server and vCD
     sysadmin_client = None
     try:
@@ -214,6 +216,15 @@ def get_validated_config(config_file_name,
         common_supported_api_versions = \
             list(cse_supported_api_versions.intersection(vcd_supported_api_versions))  # noqa: E501
         common_supported_api_versions.sort()
+
+        if is_legacy_mode:
+            common_supported_api_versions = \
+                [x for x in common_supported_api_versions
+                 if float(x) < 35.0]
+        else:
+            common_supported_api_versions = \
+                [x for x in common_supported_api_versions
+                 if float(x) >= 35.0]
         config['service']['supported_api_versions'] = \
             common_supported_api_versions
     finally:
@@ -222,7 +233,6 @@ def get_validated_config(config_file_name,
 
     # Convert legacy_mode flag in service_section to corresponding
     # feature flags
-    is_legacy_mode = config['service']['legacy_mode']
     if 'feature_flags' not in config:
         config['feature_flags'] = {}
     config['feature_flags']['legacy_api'] = str_to_bool(is_legacy_mode)
@@ -230,21 +240,12 @@ def get_validated_config(config_file_name,
         not str_to_bool(is_legacy_mode)
 
     max_vcd_api_version_supported = get_max_api_version(config['service']['supported_api_versions'])  # noqa: E501
+    # Temporary work around before api version is completely removed from
+    # config
+    config['vcd']['api_version'] = str(max_vcd_api_version_supported)
     config['service']['rde_version_in_use'] = semantic_version.Version(
         rde_utils.get_runtime_rde_version_by_vcd_api_version(
             max_vcd_api_version_supported))
-
-    # Temporary work around before api version is completely removed from
-    # config
-    if is_legacy_mode:
-        supported_api_versions_float = \
-            [float(x) for x in config['service']['supported_api_versions']
-                if float(x) < 35.0]
-    else:
-        supported_api_versions_float = \
-            [float(x) for x in config['service']['supported_api_versions']
-                if float(x) >= 35.0]
-    config['vcd']['api_version'] = str(max(supported_api_versions_float))
 
     # Store telemetry instance id, url and collector id in config
     # This steps needs to be done after api_version has been computed
