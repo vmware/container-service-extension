@@ -100,6 +100,10 @@ def check_cse_installation(config, msg_update_callback=utils.NullPrinter()):
         if log_wire:
             log_filename = SERVER_CLI_WIRELOG_FILEPATH
 
+        # Since the config param has been read from file by
+        # get_validated_config method, we can safely use the
+        # api_version key, it will be set to the highest api
+        # version supported by VCD and CSE.
         client = Client(config['vcd']['host'],
                         api_version=config['vcd']['api_version'],
                         verify_ssl_certs=config['vcd']['verify'],
@@ -266,6 +270,10 @@ def install_cse(config_file_name, config, skip_template_creation,
         if log_wire:
             log_filename = INSTALL_WIRELOG_FILEPATH
 
+        # Since the config param has been read from file by
+        # get_validated_config method, we can safely use the
+        # api_version key, it will be set to the highest api
+        # version supported by VCD and CSE.
         client = Client(config['vcd']['host'],
                         api_version=config['vcd']['api_version'],
                         verify_ssl_certs=config['vcd']['verify'],
@@ -449,6 +457,10 @@ def install_template(template_name, template_revision, config_file_name,
         if log_wire:
             log_filename = INSTALL_WIRELOG_FILEPATH
 
+        # Since the config param has been read from file by
+        # get_validated_config method, we can safely use the
+        # api_version key, it will be set to the highest api
+        # version supported by VCD and CSE.
         client = Client(config['vcd']['host'],
                         api_version=config['vcd']['api_version'],
                         verify_ssl_certs=config['vcd']['verify'],
@@ -612,6 +624,10 @@ def upgrade_cse(config_file_name, config, skip_template_creation,
         if log_wire:
             log_filename = INSTALL_WIRELOG_FILEPATH
 
+        # Since the config param has been read from file by
+        # get_validated_config method, we can safely use the
+        # api_version key, it will be set to the highest api
+        # version supported by VCD and CSE.
         client = Client(config['vcd']['host'],
                         api_version=config['vcd']['api_version'],
                         verify_ssl_certs=config['vcd']['verify'],
