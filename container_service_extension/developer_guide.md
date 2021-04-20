@@ -73,7 +73,7 @@ Steps:
 
 ## CSE start-up
 1. Make sure feature flags, VCD api version in extension are not changed after CSE install/upgrade
-2. Ensure that un-supported templates are not loaded into runtime config.
+2. Ensure that unsupported templates are not loaded into runtime config.
 3. Ensure native placement policies are set up and are loaded to runtime config.
 4. Determine the CSE server API version at runtime.
 5. Ensure right runtime RDE version is loaded into the config variable.
@@ -85,10 +85,11 @@ Steps:
 # CLI
 1. Update any new NativeEntity models with sample_native_entity()
 2. Ensure proper mapping between VCD api version and Runtime RDE version for all supported VCD API versions are available.
-3. Update mappings in command_filter.py and make sure right commands are exposed at the right API versions
+3. Update mappings in command_filter.py and make sure right commands and sub-commands are exposed at the right API versions.
 4. Auto-negotiate the VCD api version to be used to communicate with CSE server.
    - Update the CSE CLI supported API version set.
-5. Dynamically compute the RDE version to use based on the CSE server side configuration.
+5. Ensure the right cloudapi endpoint is used for cluster list and cluster info operations.
+6. Dynamically compute the RDE version to use based on the CSE server side configuration.
 
 # Template management
 1. Ensure all scripts for each of the template descriptor in template.yaml and template_v2.yaml are present in scripts and scripts_v2 directories respectively.
