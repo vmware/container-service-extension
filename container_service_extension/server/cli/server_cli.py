@@ -982,6 +982,8 @@ def list_template(ctx, config_file_path, skip_config_decryption,
                 if log_wire:
                     log_wire_file = SERVER_DEBUG_WIRELOG_FILEPATH
 
+                # Note: This will get us a client with highest supported
+                # VCD api version.
                 client, _ = _get_clients_from_config(config_dict,
                                                      log_wire_file=log_wire_file,  # noqa: E501
                                                      log_wire=log_wire)
@@ -1158,7 +1160,6 @@ def install_cse_template(ctx, template_name, template_revision,
     Use '*' for TEMPLATE_NAME and TEMPLATE_REVISION to install
     all listed templates.
     """
-    # TODO(VCDA-2236) Validate legacy_mode in extension
     # NOTE: For CSE 3.0, if `enable_tkg_plus` flag in config is set to false,
     # Throw an error if TKG+ template creation is issued.
     SERVER_CLI_LOGGER.debug(f"Executing command: {ctx.command_path}")
@@ -1253,7 +1254,6 @@ def _get_unvalidated_config(config_file_path,
 def _get_clients_from_config(config, log_wire_file, log_wire):
     client = vcd_client.Client(
         config['vcd']['host'],
-        api_version=config['vcd'].get('api_version'),
         verify_ssl_certs=config['vcd']['verify'],
         log_file=log_wire_file,
         log_requests=log_wire,
