@@ -33,6 +33,7 @@ class CloudApiResource(str, Enum):
     EDGE_GATEWAYS = 'edgeGateways'
     EXTERNAL_NETWORKS = 'externalNetworks'
     USED_IP_ADDRESSES = 'usedIpAddresses'
+    ORG_VDC_NETWORKS = 'orgVdcNetworks'
 
 
 class ResponseKeys(str, Enum):

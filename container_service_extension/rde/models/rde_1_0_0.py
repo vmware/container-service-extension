@@ -91,11 +91,12 @@ class Status:
     docker_version: str = None
     os: str = None
     nodes: Nodes = None
+    exposed: bool = False
 
     def __init__(self, phase: str = None,
                  cni: str = None, task_href: str = None,
                  kubernetes: str = None, docker_version: str = None,
-                 os: str = None, nodes: Nodes = None):
+                 os: str = None, nodes: Nodes = None, exposed: bool = False):
         self.phase = phase
         self.cni = cni
         self.task_href = task_href
@@ -103,6 +104,7 @@ class Status:
         self.docker_version = docker_version
         self.os = os
         self.nodes = Nodes(**nodes) if isinstance(nodes, dict) else nodes
+        self.exposed = exposed
 
 
 @dataclass()
@@ -118,10 +120,11 @@ class ClusterSpec:
     nfs: Nfs
     k8_distribution: Distribution
     settings: Settings
+    expose: bool
 
     def __init__(self, settings: Settings, k8_distribution: Distribution = None,  # noqa: E501
                  control_plane: ControlPlane = None, workers: Workers = None,
-                 nfs: Nfs = None):
+                 nfs: Nfs = None, expose: bool = False):
         self.settings = Settings(**settings) \
             if isinstance(settings, dict) else settings
         self.control_plane = ControlPlane(**control_plane) \
@@ -131,6 +134,7 @@ class ClusterSpec:
         self.nfs = Nfs(**nfs) if isinstance(nfs, dict) else nfs or Nfs()
         self.k8_distribution = Distribution(**k8_distribution) \
             if isinstance(k8_distribution, dict) else k8_distribution or Distribution()  # noqa: E501
+        self.expose = expose
 
 
 @dataclass()

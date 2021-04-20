@@ -131,6 +131,7 @@ class FlattenedClusterSpecKey1X(Enum):
     NFS_COUNT = 'nfs.count'
     TEMPLATE_NAME = 'k8_distribution.template_name'
     TEMPLATE_REVISION = 'k8_distribution.template_revision'
+    EXPOSE = 'expose'
 
 
 @unique
@@ -647,6 +648,24 @@ class PKSOvdcInfoKey(str, Enum):
     PKS_API_SERVER = 'pks api server'
     AVAILABLE_PKS_PLANS = 'available pks plans'
 
+
+# Network urn prefix
+NETWORK_URN_PREFIX = 'urn:vcloud:network'
+
+# Expose cluster name to be appended to cluster name for dnat rule
+EXPOSE_CLUSTER_NAME_FRAGMENT = 'expose_dnat'
+
+
+@unique
+class VdcNetworkInfoKey(str, Enum):
+    VALUES = 'values'
+    CONNECTION = 'connection'
+    ROUTER_REF = 'routerRef'
+    NAME = 'name'
+
+
+# Regex for ip: port
+IP_PORT_REGEX = '[0-9]+(?:\\.[0-9]+){3}(:[0-9]+)?'
 
 # Default first page
 DEFAULT_FIRST_PAGE = 1
