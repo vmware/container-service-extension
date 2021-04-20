@@ -60,7 +60,6 @@ import container_service_extension.rde.models.rde_2_0_0 as rde_2_x
 from container_service_extension.rde.models.rde_factory import get_rde_model
 import container_service_extension.rde.schema_service as def_schema_svc
 import container_service_extension.rde.utils as def_utils
-from container_service_extension.security.context.user_context import UserContext  # noqa: E501
 import container_service_extension.server.compute_policy_manager as compute_policy_manager  # noqa: E501
 from container_service_extension.server.vcdbroker import get_all_clusters as get_all_cse_clusters  # noqa: E501
 
@@ -102,10 +101,10 @@ def check_cse_installation(config, msg_update_callback=utils.NullPrinter()):
 
         # Since the config param has been read from file by
         # get_validated_config method, we can safely use the
-        # api_version key, it will be set to the highest api
+        # default_api_version key, it will be set to the highest api
         # version supported by VCD and CSE.
         client = Client(config['vcd']['host'],
-                        api_version=config['vcd']['api_version'],
+                        api_version=config['vcd']['default_api_version'],
                         verify_ssl_certs=config['vcd']['verify'],
                         log_file=log_filename,
                         log_requests=log_wire,
@@ -272,10 +271,10 @@ def install_cse(config_file_name, config, skip_template_creation,
 
         # Since the config param has been read from file by
         # get_validated_config method, we can safely use the
-        # api_version key, it will be set to the highest api
+        # default_api_version key, it will be set to the highest api
         # version supported by VCD and CSE.
         client = Client(config['vcd']['host'],
-                        api_version=config['vcd']['api_version'],
+                        api_version=config['vcd']['default_api_version'],
                         verify_ssl_certs=config['vcd']['verify'],
                         log_file=log_filename,
                         log_requests=log_wire,
@@ -459,10 +458,10 @@ def install_template(template_name, template_revision, config_file_name,
 
         # Since the config param has been read from file by
         # get_validated_config method, we can safely use the
-        # api_version key, it will be set to the highest api
+        # default_api_version key, it will be set to the highest api
         # version supported by VCD and CSE.
         client = Client(config['vcd']['host'],
-                        api_version=config['vcd']['api_version'],
+                        api_version=config['vcd']['default_api_version'],
                         verify_ssl_certs=config['vcd']['verify'],
                         log_file=log_filename,
                         log_requests=log_wire,
@@ -626,10 +625,10 @@ def upgrade_cse(config_file_name, config, skip_template_creation,
 
         # Since the config param has been read from file by
         # get_validated_config method, we can safely use the
-        # api_version key, it will be set to the highest api
+        # default_api_version key, it will be set to the highest api
         # version supported by VCD and CSE.
         client = Client(config['vcd']['host'],
-                        api_version=config['vcd']['api_version'],
+                        api_version=config['vcd']['default_api_version'],
                         verify_ssl_certs=config['vcd']['verify'],
                         log_file=log_filename,
                         log_requests=log_wire,
@@ -1132,8 +1131,7 @@ def _update_user_role_with_right_bundle(right_bundle_name,
         logger_wire=logger_wire)
 
     # Determine role name for the user
-    user_context = UserContext(client, cloudapi_client)
-    role_name = user_context.role
+    role_name = vcd_utils.get_user_role_name(client)
 
     # Given that this user is sysadmin, Org must be System
     # If its not, we should receive an exception during one of the below

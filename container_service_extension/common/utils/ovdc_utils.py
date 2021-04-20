@@ -77,7 +77,7 @@ def get_ovdc_k8s_provider_metadata(sysadmin_client: vcd_client.Client,
 def get_all_ovdc_with_metadata():
     client = None
     try:
-        client = vcd_utils.get_sys_admin_client()
+        client = vcd_utils.get_sys_admin_client(api_version=None)
         q = client.get_typed_query(
             vcd_client.ResourceType.ADMIN_ORG_VDC.value,
             query_result_format=vcd_client.QueryResultFormat.RECORDS,
