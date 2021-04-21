@@ -2,6 +2,7 @@
 # Copyright (c) 2019 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 
+import pyvcloud.vcd.client as vcd_client
 from pyvcloud.vcd.org import Org
 
 from container_service_extension.common.constants.server_constants import K8S_PROVIDER_KEY  # noqa: E501
@@ -10,6 +11,8 @@ import container_service_extension.common.utils.ovdc_utils as ovdc_utils
 import container_service_extension.common.utils.server_utils as server_utils
 import container_service_extension.security.context.operation_context as ctx
 from container_service_extension.server.pks.pksbroker import PksBroker
+
+DEFAULT_API_VERSION = vcd_client.ApiVersion.VERSION_33.value
 
 
 def list_clusters(request_data, op_ctx: ctx.OperationContext):

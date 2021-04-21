@@ -7,7 +7,7 @@ import re
 import string
 import threading
 import time
-from typing import Dict, List
+from typing import Dict, List, Optional
 import urllib
 
 import pkg_resources
@@ -21,7 +21,7 @@ import semantic_version as semver
 from container_service_extension.common.constants.server_constants import CLUSTER_ENTITY  # noqa: E501
 from container_service_extension.common.constants.server_constants import ClusterMetadataKey  # noqa: E501
 from container_service_extension.common.constants.server_constants import ClusterScriptFile, TemplateScriptFile  # noqa: E501
-from container_service_extension.common.constants.server_constants import CSE_CLUSTER_KUBECONFIG_PATH # noqa: E501
+from container_service_extension.common.constants.server_constants import CSE_CLUSTER_KUBECONFIG_PATH  # noqa: E501
 from container_service_extension.common.constants.server_constants import DefEntityOperation  # noqa: E501
 from container_service_extension.common.constants.server_constants import DefEntityOperationStatus  # noqa: E501
 from container_service_extension.common.constants.server_constants import DefEntityPhase  # noqa: E501
@@ -29,13 +29,13 @@ from container_service_extension.common.constants.server_constants import LocalT
 from container_service_extension.common.constants.server_constants import NodeType  # noqa: E501
 from container_service_extension.common.constants.server_constants import SYSTEM_ORG_NAME  # noqa: E501
 from container_service_extension.common.constants.server_constants import ThreadLocalData  # noqa: E501
-import container_service_extension.common.constants.shared_constants as shared_constants # noqa: E501
+import container_service_extension.common.constants.shared_constants as shared_constants  # noqa: E501
 from container_service_extension.common.constants.shared_constants import CSE_PAGINATION_DEFAULT_PAGE_SIZE  # noqa: E501
 from container_service_extension.common.constants.shared_constants import CSE_PAGINATION_FIRST_PAGE_NUMBER  # noqa: E501
 import container_service_extension.common.thread_local_data as thread_local_data  # noqa: E501
 import container_service_extension.common.utils.core_utils as utils
 import container_service_extension.common.utils.pyvcloud_utils as vcd_utils
-from container_service_extension.common.utils.script_utils import get_cluster_script_file_contents # noqa: E501
+from container_service_extension.common.utils.script_utils import get_cluster_script_file_contents  # noqa: E501
 import container_service_extension.common.utils.server_utils as server_utils
 import container_service_extension.common.utils.thread_utils as thread_utils
 import container_service_extension.common.utils.vsphere_utils as vs_utils
@@ -57,12 +57,16 @@ import container_service_extension.security.context.operation_context as ctx
 import container_service_extension.server.abstract_broker as abstract_broker
 import container_service_extension.server.compute_policy_manager as compute_policy_manager  # noqa: E501
 
+DEFAULT_API_VERSION = vcd_client.ApiVersion.VERSION_36.value
+
 
 class ClusterService(abstract_broker.AbstractBroker):
     """Handles cluster operations for native DEF based clusters."""
 
     def __init__(self, op_ctx: BehaviorRequestContext):
-        self.context: ctx.OperationContext = op_ctx.op_ctx
+        self.context: Optional[ctx.OperationContext] = None
+        # populates above attributes
+        super().__init__(op_ctx.op_ctx)
 
         # TODO find an elegant way to dynamically pick the module rde_2_x
 
@@ -98,7 +102,7 @@ class ClusterService(abstract_broker.AbstractBroker):
         """List clusters by page number and page size.
 
         :param dict filters: filters to use to filter the cluster response
-        :param int page_number: page number of the clusters to be fetchec
+        :param int page_number: page number of the clusters to be fetched
         :param int page_size: page size of the result
         :return: paginated response containing native clusters
         :rtype: dict
@@ -244,11 +248,11 @@ class ClusterService(abstract_broker.AbstractBroker):
                            DefEntityOperationStatus.IN_PROGRESS))
         curr_native_entity.status.kubernetes = \
             _create_k8s_software_string(template[LocalTemplateKey.KUBERNETES],
-                                        template[LocalTemplateKey.KUBERNETES_VERSION]) # noqa: E501
+                                        template[LocalTemplateKey.KUBERNETES_VERSION])  # noqa: E501
         curr_native_entity.status.cni = \
             _create_k8s_software_string(template[LocalTemplateKey.CNI],
                                         template[LocalTemplateKey.CNI_VERSION])
-        curr_native_entity.status.docker_version = template[LocalTemplateKey.DOCKER_VERSION] # noqa: E501
+        curr_native_entity.status.docker_version = template[LocalTemplateKey.DOCKER_VERSION]  # noqa: E501
         curr_native_entity.status.os = template[LocalTemplateKey.OS]
         curr_native_entity.status.cloud_properties.k8_distribution.template_name = template_name  # noqa: E501
         curr_native_entity.status.cloud_properties.k8_distribution.template_revision = template_revision  # noqa: E501
@@ -282,7 +286,7 @@ class ClusterService(abstract_broker.AbstractBroker):
                           progress=3)
         return self.mqtt_publisher.construct_behavior_payload(
             message='create_cluster_in_progress',
-            status=BehaviorTaskStatus.RUNNING.value, progress=5)
+            status=BehaviorTaskStatus.RUNNING.value, progress='5')
 
     def resize_cluster(self, cluster_id: str,
                        cluster_spec: rde_2_x.NativeEntity):
@@ -418,8 +422,7 @@ class ClusterService(abstract_broker.AbstractBroker):
             raise
         self.context.is_async = True
         self._delete_cluster_async(cluster_name=cluster_name,
-                                   org_name=org_name, ovdc_name=ovdc_name,
-                                   def_entity=curr_entity)
+                                   org_name=org_name, ovdc_name=ovdc_name)
         return curr_entity
 
     def get_cluster_upgrade_plan(self, cluster_id: str):
@@ -439,8 +442,9 @@ class ClusterService(abstract_broker.AbstractBroker):
                 telemetry_constants.PayloadKey.SOURCE_DESCRIPTION: thread_local_data.get_thread_local_data(ThreadLocalData.USER_AGENT)  # noqa: E501
             }
         )
-        return self._get_cluster_upgrade_plan(curr_native_entity.status.cloud_properties.k8_distribution.template_name,  # noqa: E501
-                                              curr_native_entity.status.cloud_properties.k8_distribution.template_revision)  # noqa: E501
+        return _get_cluster_upgrade_plan(
+            curr_native_entity.status.cloud_properties.k8_distribution.template_name,  # noqa: E501
+            str(curr_native_entity.status.cloud_properties.k8_distribution.template_revision))  # noqa: E501
 
     def upgrade_cluster(self, cluster_id: str,
                         upgrade_spec: rde_2_x.NativeEntity):
@@ -460,7 +464,7 @@ class ClusterService(abstract_broker.AbstractBroker):
         cur_native_entity: rde_2_x.NativeEntity = curr_entity.entity
         cluster_name = cur_native_entity.metadata.name
         new_template_name = upgrade_spec.spec.k8_distribution.template_name
-        new_template_revision = upgrade_spec.spec.k8_distribution.template_revision # noqa: E501
+        new_template_revision = upgrade_spec.spec.k8_distribution.template_revision  # noqa: E501
 
         # check if cluster is in a valid state
         phase: DefEntityPhase = DefEntityPhase.from_phase(
@@ -473,12 +477,12 @@ class ClusterService(abstract_broker.AbstractBroker):
 
         # check that the specified template is a valid upgrade target
         template = {}
-        valid_templates = self._get_cluster_upgrade_plan(
-            cur_native_entity.status.cloud_properties.k8_distribution.template_name, # noqa: E501
-            cur_native_entity.status.cloud_properties.k8_distribution.template_revision) # noqa: E501
+        valid_templates = _get_cluster_upgrade_plan(
+            cur_native_entity.status.cloud_properties.k8_distribution.template_name,  # noqa: E501
+            str(cur_native_entity.status.cloud_properties.k8_distribution.template_revision))  # noqa: E501
 
         for t in valid_templates:
-            if (t[LocalTemplateKey.NAME], str(t[LocalTemplateKey.REVISION])) == (new_template_name, str(new_template_revision)): # noqa: E501
+            if (t[LocalTemplateKey.NAME], str(t[LocalTemplateKey.REVISION])) == (new_template_name, str(new_template_revision)):  # noqa: E501
                 template = t
                 break
         if not template:
@@ -629,7 +633,7 @@ class ClusterService(abstract_broker.AbstractBroker):
             acl_svc.native_update_vapp_access_settings(
                 prev_user_id_to_acl_entry_dict, update_acl_entries)
         except Exception as err:
-            # Rolback defined entity
+            # Rollback defined entity
             prev_acl_entries = [acl_entry for _, acl_entry in prev_user_id_to_acl_entry_dict.items()]  # noqa: E501
             curr_user_acl_info = acl_svc.create_user_id_to_acl_entry_dict()
             acl_svc.update_native_def_entity_acl(
@@ -686,6 +690,7 @@ class ClusterService(abstract_broker.AbstractBroker):
         ovdc_name = None
         # Default value from rde_2_x model class
         rollback = True
+        vapp = None
         try:
             cluster_name = input_native_entity.metadata.name
             org_name = input_native_entity.metadata.org_name
@@ -724,22 +729,22 @@ class ClusterService(abstract_broker.AbstractBroker):
                 LOGGER.error(err, exc_info=True)
                 raise E.ClusterOperationError(
                     f"Error while creating vApp: {err}")
-            self.context.client.get_task_monitor().wait_for_status(vapp_resource.Tasks.Task[0]) # noqa: E501
+            self.context.client.get_task_monitor().wait_for_status(vapp_resource.Tasks.Task[0])  # noqa: E501
 
             template = _get_template(template_name, template_revision)
 
             LOGGER.debug(f"Setting metadata on cluster vApp '{cluster_name}'")
             tags = {
                 ClusterMetadataKey.CLUSTER_ID: cluster_id,
-                ClusterMetadataKey.CSE_VERSION: pkg_resources.require('container-service-extension')[0].version, # noqa: E501
-                ClusterMetadataKey.TEMPLATE_NAME: template[LocalTemplateKey.NAME], # noqa: E501
-                ClusterMetadataKey.TEMPLATE_REVISION: template[LocalTemplateKey.REVISION], # noqa: E501
+                ClusterMetadataKey.CSE_VERSION: pkg_resources.require('container-service-extension')[0].version,  # noqa: E501
+                ClusterMetadataKey.TEMPLATE_NAME: template[LocalTemplateKey.NAME],  # noqa: E501
+                ClusterMetadataKey.TEMPLATE_REVISION: template[LocalTemplateKey.REVISION],  # noqa: E501
                 ClusterMetadataKey.OS: template[LocalTemplateKey.OS],
-                ClusterMetadataKey.DOCKER_VERSION: template[LocalTemplateKey.DOCKER_VERSION], # noqa: E501
-                ClusterMetadataKey.KUBERNETES: template[LocalTemplateKey.KUBERNETES], # noqa: E501
-                ClusterMetadataKey.KUBERNETES_VERSION: template[LocalTemplateKey.KUBERNETES_VERSION], # noqa: E501
+                ClusterMetadataKey.DOCKER_VERSION: template[LocalTemplateKey.DOCKER_VERSION],  # noqa: E501
+                ClusterMetadataKey.KUBERNETES: template[LocalTemplateKey.KUBERNETES],  # noqa: E501
+                ClusterMetadataKey.KUBERNETES_VERSION: template[LocalTemplateKey.KUBERNETES_VERSION],  # noqa: E501
                 ClusterMetadataKey.CNI: template[LocalTemplateKey.CNI],
-                ClusterMetadataKey.CNI_VERSION: template[LocalTemplateKey.CNI_VERSION] # noqa: E501
+                ClusterMetadataKey.CNI_VERSION: template[LocalTemplateKey.CNI_VERSION]  # noqa: E501
             }
             vapp = vcd_vapp.VApp(self.context.client,
                                  href=vapp_resource.get('href'))
@@ -897,7 +902,7 @@ class ClusterService(abstract_broker.AbstractBroker):
                     LOGGER.error(f"{msg}", exc_info=True)
 
                 # NOTE: sync of the defined entity should happen before call to
-                # resolving the defined entity to prevent possible misisng
+                # resolving the defined entity to prevent possible missing
                 # values in the defined entity
                 try:
                     self._sync_def_entity(cluster_id, vapp=vapp)
@@ -927,7 +932,7 @@ class ClusterService(abstract_broker.AbstractBroker):
                 LOGGER.error(f"{msg}", exc_info=True)
 
             # NOTE: sync of the defined entity should happen before call to
-            # resolving the defined entity to prevent possible misisng
+            # resolving the defined entity to prevent possible missing
             # values in the defined entity
             try:
                 self._sync_def_entity(cluster_id, vapp=vapp)
@@ -1078,7 +1083,7 @@ class ClusterService(abstract_broker.AbstractBroker):
         Let the caller monitor thread or method to set SUCCESS task status,
          end the client context
         """
-        vapp: vcd_vapp.VApp = None
+        vapp: Optional[vcd_vapp.VApp] = None
         cluster_name = None
         # Default value from rde_2_x model class
         rollback = True
@@ -1240,8 +1245,7 @@ class ClusterService(abstract_broker.AbstractBroker):
                               error_message=str(err))
 
     @thread_utils.run_async
-    def _delete_cluster_async(self, cluster_name, org_name, ovdc_name,
-                              def_entity: common_models.DefEntity = None):
+    def _delete_cluster_async(self, cluster_name, org_name, ovdc_name):
         """Delete the cluster asynchronously.
 
         :param cluster_name: Name of the cluster to be deleted.
@@ -1270,26 +1274,6 @@ class ClusterService(abstract_broker.AbstractBroker):
             # noqa: E501
             self.context.end()
 
-    def _get_cluster_upgrade_plan(self, source_template_name,
-                                  source_template_revision) -> List[dict]:
-        """Get list of templates that a given cluster can upgrade to.
-
-        :param str source_template_name:
-        :param str source_template_revision:
-        :return: List of dictionary containing templates
-        :rtype: List[dict]
-        """
-        upgrades = []
-        config = server_utils.get_server_runtime_config()
-        for t in config['broker']['templates']:
-            if source_template_name in t[LocalTemplateKey.UPGRADE_FROM]:
-                if t[LocalTemplateKey.NAME] == source_template_name and \
-                        int(t[LocalTemplateKey.REVISION]) <= int(source_template_revision): # noqa: E501
-                    continue
-                upgrades.append(t)
-
-        return upgrades
-
     @thread_utils.run_async
     def _upgrade_cluster_async(self, *args,
                                cluster_id: str,
@@ -1297,7 +1281,7 @@ class ClusterService(abstract_broker.AbstractBroker):
         cluster_name = None
         vapp = None
         try:
-            curr_entity: common_models.DefEntity = self.entity_svc.get_entity(cluster_id) # noqa: E501
+            curr_entity: common_models.DefEntity = self.entity_svc.get_entity(cluster_id)  # noqa: E501
             curr_native_entity: rde_2_x.NativeEntity = curr_entity.entity
             cluster_name = curr_native_entity.metadata.name
             vapp_href = curr_entity.externalId
@@ -1325,7 +1309,7 @@ class ClusterService(abstract_broker.AbstractBroker):
 
             upgrade_docker = t_docker > c_docker
             upgrade_k8s = t_k8s >= c_k8s
-            upgrade_cni = t_cni > c_cni or t_k8s.major > c_k8s.major or t_k8s.minor > c_k8s.minor # noqa: E501
+            upgrade_cni = t_cni > c_cni or t_k8s.major > c_k8s.major or t_k8s.minor > c_k8s.minor  # noqa: E501
 
             if upgrade_k8s:
                 msg = f"Draining control plane node {control_plane_node_names}"
@@ -1338,7 +1322,7 @@ class ClusterService(abstract_broker.AbstractBroker):
                 self._update_task(BehaviorTaskStatus.RUNNING, message=msg)
                 filepath = ltm.get_script_filepath(template_name,
                                                    template_revision,
-                                                   TemplateScriptFile.CONTROL_PLANE_K8S_UPGRADE) # noqa: E501
+                                                   TemplateScriptFile.CONTROL_PLANE_K8S_UPGRADE)  # noqa: E501
                 script = utils.read_data_file(filepath, logger=LOGGER)
                 _run_script_in_nodes(self.context.sysadmin_client, vapp_href,
                                      control_plane_node_names, script)
@@ -1352,7 +1336,7 @@ class ClusterService(abstract_broker.AbstractBroker):
 
                 filepath = ltm.get_script_filepath(template_name,
                                                    template_revision,
-                                                   TemplateScriptFile.WORKER_K8S_UPGRADE) # noqa: E501
+                                                   TemplateScriptFile.WORKER_K8S_UPGRADE)  # noqa: E501
                 script = utils.read_data_file(filepath, logger=LOGGER)
                 for node in worker_node_names:
                     msg = f"Draining node {node}"
@@ -1418,12 +1402,12 @@ class ClusterService(abstract_broker.AbstractBroker):
             msg = f"Updating metadata for cluster '{cluster_name}'"
             self._update_task(BehaviorTaskStatus.RUNNING, message=msg)
             metadata = {
-                ClusterMetadataKey.TEMPLATE_NAME: template[LocalTemplateKey.NAME], # noqa: E501
-                ClusterMetadataKey.TEMPLATE_REVISION: template[LocalTemplateKey.REVISION], # noqa: E501
-                ClusterMetadataKey.DOCKER_VERSION: template[LocalTemplateKey.DOCKER_VERSION], # noqa: E501
-                ClusterMetadataKey.KUBERNETES_VERSION: template[LocalTemplateKey.KUBERNETES_VERSION], # noqa: E501
+                ClusterMetadataKey.TEMPLATE_NAME: template[LocalTemplateKey.NAME],  # noqa: E501
+                ClusterMetadataKey.TEMPLATE_REVISION: template[LocalTemplateKey.REVISION],  # noqa: E501
+                ClusterMetadataKey.DOCKER_VERSION: template[LocalTemplateKey.DOCKER_VERSION],  # noqa: E501
+                ClusterMetadataKey.KUBERNETES_VERSION: template[LocalTemplateKey.KUBERNETES_VERSION],  # noqa: E501
                 ClusterMetadataKey.CNI: template[LocalTemplateKey.CNI],
-                ClusterMetadataKey.CNI_VERSION: template[LocalTemplateKey.CNI_VERSION] # noqa: E501
+                ClusterMetadataKey.CNI_VERSION: template[LocalTemplateKey.CNI_VERSION]  # noqa: E501
             }
 
             task = vapp.set_multiple_metadata(metadata)
@@ -1435,11 +1419,11 @@ class ClusterService(abstract_broker.AbstractBroker):
                                      template_revision=int(template[LocalTemplateKey.REVISION]))  # noqa: E501
             curr_native_entity.status.cni = \
                 _create_k8s_software_string(template[LocalTemplateKey.CNI],
-                                            template[LocalTemplateKey.CNI_VERSION]) # noqa: E501
+                                            template[LocalTemplateKey.CNI_VERSION])  # noqa: E501
             curr_native_entity.status.kubernetes = \
-                _create_k8s_software_string(template[LocalTemplateKey.KUBERNETES], # noqa: E501
-                                            template[LocalTemplateKey.KUBERNETES_VERSION]) # noqa: E501
-            curr_native_entity.status.docker_version = template[LocalTemplateKey.DOCKER_VERSION] # noqa: E501
+                _create_k8s_software_string(template[LocalTemplateKey.KUBERNETES],  # noqa: E501
+                                            template[LocalTemplateKey.KUBERNETES_VERSION])  # noqa: E501
+            curr_native_entity.status.docker_version = template[LocalTemplateKey.DOCKER_VERSION]  # noqa: E501
             curr_native_entity.status.os = template[LocalTemplateKey.OS]
             curr_native_entity.status.phase = str(
                 DefEntityPhase(DefEntityOperation.UPGRADE,
@@ -1679,6 +1663,27 @@ class ClusterService(abstract_broker.AbstractBroker):
         self.task_status = status.value
 
 
+def _get_cluster_upgrade_plan(source_template_name,
+                              source_template_revision) -> List[dict]:
+    """Get list of templates that a given cluster can upgrade to.
+
+    :param str source_template_name:
+    :param str source_template_revision:
+    :return: List of dictionary containing templates
+    :rtype: List[dict]
+    """
+    upgrades = []
+    config = server_utils.get_server_runtime_config()
+    for t in config['broker']['templates']:
+        if source_template_name in t[LocalTemplateKey.UPGRADE_FROM]:
+            if t[LocalTemplateKey.NAME] == source_template_name and \
+                    int(t[LocalTemplateKey.REVISION]) <= int(source_template_revision):  # noqa: E501
+                continue
+            upgrades.append(t)
+
+    return upgrades
+
+
 def _get_nodes_details(sysadmin_client, vapp):
     """Get the details of the nodes given a vapp.
 
@@ -1716,9 +1721,9 @@ def _get_nodes_details(sysadmin_client, vapp):
                 policy_name = vm.ComputePolicy.VmSizingPolicy.get('name')
                 sizing_class = compute_policy_manager.\
                     get_cse_policy_display_name(policy_name)
-            storage_profile = None
+            storage_profile: Optional[str] = None
             if hasattr(vm, 'StorageProfile'):
-                storage_profile: str = vm.StorageProfile.get('name')
+                storage_profile = vm.StorageProfile.get('name')
             if vm_name.startswith(NodeType.CONTROL_PLANE):
                 control_plane = rde_2_x.Node(name=vm_name, ip=ip,
                                              sizing_class=sizing_class,
@@ -1839,7 +1844,7 @@ def _delete_vapp(client, org_name, ovdc_name, vapp_name):
         client.get_task_monitor().wait_for_status(task)
     except Exception as err:
         LOGGER.error(f"Failed to delete vapp {vapp_name} "
-                     f"(vdc: {vdc_href}) with error: {err}")
+                     f"(vdc: {ovdc_name}) with error: {err}")
         raise
 
     LOGGER.debug(f"Deleted vapp {vapp_name} (vdc: {vdc_href})")
@@ -1900,7 +1905,7 @@ def _cluster_exists(client, cluster_name, org_name=None, ovdc_name=None):
     resource_type = vcd_client.ResourceType.VAPP.value
     if client.is_sysadmin():
         resource_type = vcd_client.ResourceType.ADMIN_VAPP.value
-        if org_name is not None and org_name.lower() != SYSTEM_ORG_NAME.lower(): # noqa: E501
+        if org_name is not None and org_name.lower() != SYSTEM_ORG_NAME.lower():  # noqa: E501
             org_resource = client.get_org_by_name(org_name)
             org = vcd_org.Org(client, resource=org_resource)
             query_filter += f";org=={urllib.parse.quote(org.resource.get('id'))}"  # noqa: E501
@@ -1915,14 +1920,14 @@ def _cluster_exists(client, cluster_name, org_name=None, ovdc_name=None):
 
 
 def _get_template(name=None, revision=None):
-    if (name is None and revision is not None) or (name is not None and revision is None): # noqa: E501
+    if (name is None and revision is not None) or (name is not None and revision is None):  # noqa: E501
         raise ValueError("If template revision is specified, then template "
                          "name must also be specified (and vice versa).")
     server_config = server_utils.get_server_runtime_config()
     name = name or server_config['broker']['default_template_name']
     revision = revision or server_config['broker']['default_template_revision']
     for template in server_config['broker']['templates']:
-        if (template[LocalTemplateKey.NAME], str(template[LocalTemplateKey.REVISION])) == (name, str(revision)): # noqa: E501
+        if (template[LocalTemplateKey.NAME], str(template[LocalTemplateKey.REVISION])) == (name, str(revision)):  # noqa: E501
             return template
     raise Exception(f"Template '{name}' at revision {revision} not found.")
 
@@ -1991,9 +1996,8 @@ def _add_nodes(sysadmin_client, num_nodes, node_type, org, vdc, vapp,
 
             vapp.reload()
             for n in range(num_nodes):
-                name = None
                 while True:
-                    name = f"{node_type}-{''.join(random.choices(string.ascii_lowercase + string.digits, k=4))}" # noqa: E501
+                    name = f"{node_type}-{''.join(random.choices(string.ascii_lowercase + string.digits, k=4))}"  # noqa: E501
                     try:
                         vapp.get_vm(name)
                     except Exception:
@@ -2061,7 +2065,7 @@ def _add_nodes(sysadmin_client, num_nodes, node_type, org, vdc, vapp,
 
 
 def _get_node_names(vapp, node_type):
-    return [vm.get('name') for vm in vapp.get_all_vms() if vm.get('name').startswith(node_type)] # noqa: E501
+    return [vm.get('name') for vm in vapp.get_all_vms() if vm.get('name').startswith(node_type)]  # noqa: E501
 
 
 def _get_control_plane_ip(sysadmin_client: vcd_client.Client, vapp):
@@ -2106,7 +2110,7 @@ def _init_cluster(sysadmin_client: vcd_client.Client, vapp, k8s_version,
                 f"Initialize cluster script execution failed on node "
                 f"{node_names}:{errors}")
         if result[0][0] != 0:
-            raise E.ClusterInitializationError(f"Couldn't initialize cluster:\n{result[0][2].content.decode()}") # noqa: E501
+            raise E.ClusterInitializationError(f"Couldn't initialize cluster:\n{result[0][2].content.decode()}")  # noqa: E501
     except Exception as err:
         LOGGER.error(err, exc_info=True)
         raise E.ClusterInitializationError(
@@ -2287,7 +2291,7 @@ def _get_script_execution_errors(results):
     return [result[2].content.decode() for result in results if result[0] != 0]
 
 
-def _create_k8s_software_string(software_name: str, software_version: str) -> str: # noqa: E501
+def _create_k8s_software_string(software_name: str, software_version: str) -> str:  # noqa: E501
     """Generate string containing the software name and version.
 
     Example: if software_name is "upstream" and version is "1.17.3",

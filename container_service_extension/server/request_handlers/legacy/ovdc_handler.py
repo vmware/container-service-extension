@@ -35,6 +35,7 @@ import container_service_extension.security.context.operation_context as ctx
 import container_service_extension.server.compute_policy_manager as compute_policy_manager  # noqa: E501
 import container_service_extension.server.request_handlers.request_utils as req_utils  # noqa: E501
 
+DEFAULT_API_VERSION = vcd_client.ApiVersion.VERSION_33.value
 SYSTEM_DEFAULT_COMPUTE_POLICY_NAME = "System Default"
 
 
