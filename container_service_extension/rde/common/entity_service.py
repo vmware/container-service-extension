@@ -6,8 +6,8 @@ import functools
 import json
 from typing import List
 
+from pyvcloud.vcd.client import ApiVersion
 from requests.exceptions import HTTPError
-
 
 from container_service_extension.common.constants.shared_constants import CSE_PAGINATION_DEFAULT_PAGE_SIZE, PaginationKey  # noqa: E501
 from container_service_extension.common.constants.shared_constants import CSE_PAGINATION_FIRST_PAGE_NUMBER  # noqa: E501
@@ -222,19 +222,26 @@ class DefEntityService:
         return result
 
     @handle_entity_service_exception
-    def update_entity(self, entity_id: str, entity: DefEntity) -> DefEntity:
+    def update_entity(self, entity_id: str, entity: DefEntity,
+                      invoke_hooks=False) -> DefEntity:
         """Update entity instance.
 
         :param str entity_id: Id of the entity to be updated.
         :param DefEntity entity: Modified entity to be updated.
+        :param bool invoke_hooks: Value indicating whether hook-based-behaviors
+        need to be triggered or not.
         :return: Updated entity
         :rtype: DefEntity
         """
+        resource_url_relative_path = f"{CloudApiResource.ENTITIES}/{entity_id}"
+        vcd_api_version = self._cloudapi_client.get_api_version()
+        # TODO Float conversions must be changed to Semantic versioning.
+        if float(vcd_api_version) >= float(ApiVersion.VERSION_36.value):
+            resource_url_relative_path += f"?invokeHooks={invoke_hooks}"
         response_body = self._cloudapi_client.do_request(
             method=RequestMethod.PUT,
             cloudapi_version=CloudApiVersion.VERSION_1_0_0,
-            resource_url_relative_path=f"{CloudApiResource.ENTITIES}/"
-                                       f"{entity_id}",
+            resource_url_relative_path=resource_url_relative_path,
             payload=entity.to_dict())
         return DefEntity(**response_body)
 
