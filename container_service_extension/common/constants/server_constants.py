@@ -144,6 +144,7 @@ class FlattenedClusterSpecKey2X(Enum):
     NFS_STORAGE_PROFILE = 'nfs.storageProfile'
     TEMPLATE_NAME = 'k8Distribution.templateName'
     TEMPLATE_REVISION = 'k8Distribution.templateRevision'
+    EXPOSE = 'expose'
 
 
 VALID_UPDATE_FIELDS_2X = \

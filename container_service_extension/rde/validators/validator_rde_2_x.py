@@ -94,7 +94,7 @@ def validate_cluster_update_request_and_check_cluster_upgrade(input_spec: rde_2_
     :rtype: bool
     :raises: BadRequestError for invalid payload.
     """
-    exclude_fields = []
+    exclude_fields = [FlattenedClusterSpecKey2X.EXPOSE.value]
     if reference_spec.workers.count == 0:
         # Exclude worker nodes' sizing class and storage profile from
         # validation if worker count is 0

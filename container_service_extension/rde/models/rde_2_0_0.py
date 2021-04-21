@@ -112,6 +112,7 @@ class Status:
     nodes: Optional[Nodes] = None
     uid: Optional[str] = None
     cloud_properties: CloudProperties = CloudProperties()
+    exposed: bool = False
 
 
 @dataclass_json(letter_case=LetterCase.CAMEL)
@@ -128,6 +129,7 @@ class ClusterSpec:
     workers: Workers = Workers()
     nfs: Nfs = Nfs()
     k8_distribution: Distribution = Distribution()
+    expose: bool = False
 
 
 @dataclass_json(letter_case=LetterCase.CAMEL)
