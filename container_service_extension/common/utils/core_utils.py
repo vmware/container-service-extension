@@ -384,5 +384,8 @@ def extract_id_from_href(href):
     return href
 
 
-def get_max_api_version(api_versions: List[str]) -> float:
-    return max(float(x) for x in api_versions)
+# ToDo: Device a better way to find the max api version
+# without converting the strings to float.
+# e.g. 5.20 will be smaller than 5.8 if compared as float, which is wrong
+def get_max_api_version(api_versions: List[str]) -> str:
+    return str(max(float(x) for x in api_versions))

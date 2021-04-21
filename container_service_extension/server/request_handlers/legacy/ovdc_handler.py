@@ -73,7 +73,7 @@ def ovdc_update(request_data, op_ctx: ctx.OperationContext):
 
     try:
         sysadmin_client_v33 = \
-            op_ctx.get_sysadmin_client(api_Version=DEFAULT_API_VERSION)
+            op_ctx.get_sysadmin_client(api_version=DEFAULT_API_VERSION)
         task = ovdc_utils.update_ovdc_k8s_provider_metadata(
             sysadmin_client_v33,
             validated_data[RequestKey.OVDC_ID],
@@ -110,7 +110,7 @@ def ovdc_info(request_data, op_ctx: ctx.OperationContext):
                                cse_params=cse_params)
 
     sysadmin_client_v33 = \
-        op_ctx.get_sysadmin_client(api_Version=DEFAULT_API_VERSION)
+        op_ctx.get_sysadmin_client(api_version=DEFAULT_API_VERSION)
     return ovdc_utils.get_ovdc_k8s_provider_metadata(
         sysadmin_client_v33,
         ovdc_id=request_data[RequestKey.OVDC_ID])
@@ -201,7 +201,7 @@ def org_vdc_list(request_data, op_ctx: ctx.OperationContext):
     prev_page_uri = result.get(PaginationKey.PREV_PAGE_URI)
 
     sysadmin_client_v33 = \
-        op_ctx.get_sysadmin_client(api_Version=DEFAULT_API_VERSION)
+        op_ctx.get_sysadmin_client(api_version=DEFAULT_API_VERSION)
     ovdcs = _get_cse_ovdc_list(sysadmin_client_v33, org_vdcs)
 
     api_path = CseServerOperationInfo.ORG_VDC_LIST.api_path_format
@@ -234,7 +234,7 @@ def ovdc_compute_policy_list(
 
     config = server_utils.get_server_runtime_config()
     sysadmin_client_v33 = \
-        op_ctx.get_sysadmin_client(api_Version=DEFAULT_API_VERSION)
+        op_ctx.get_sysadmin_client(api_version=DEFAULT_API_VERSION)
     cpm = compute_policy_manager.ComputePolicyManager(
         sysadmin_client_v33,
         log_wire=utils.str_to_bool(config['service'].get('log_wire')))
@@ -281,7 +281,7 @@ def ovdc_compute_policy_update(
     try:
         config = server_utils.get_server_runtime_config()
         sysadmin_client_v33 = \
-            op_ctx.get_sysadmin_client(api_Version=DEFAULT_API_VERSION)
+            op_ctx.get_sysadmin_client(api_version=DEFAULT_API_VERSION)
         cpm = compute_policy_manager.ComputePolicyManager(
             sysadmin_client_v33,
             log_wire=utils.str_to_bool(config['service'].get('log_wire')))  # noqa: E501
@@ -342,7 +342,7 @@ def ovdc_compute_policy_update(
 @thread_utils.run_async
 def _follow_task(op_ctx: ctx.OperationContext, task_href: str, ovdc_id: str):
     sysadmin_client_v33 = \
-        op_ctx.get_sysadmin_client(api_Version=DEFAULT_API_VERSION)
+        op_ctx.get_sysadmin_client(api_version=DEFAULT_API_VERSION)
     try:
         task = vcd_task.Task(client=sysadmin_client_v33)
         session = sysadmin_client_v33.get_vcloud_session()
