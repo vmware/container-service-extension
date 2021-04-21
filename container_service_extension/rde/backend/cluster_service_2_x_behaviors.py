@@ -276,6 +276,8 @@ class ClusterService(abstract_broker.AbstractBroker):
                 telemetry_constants.PayloadKey.SOURCE_DESCRIPTION: thread_local_data.get_thread_local_data(ThreadLocalData.USER_AGENT)  # noqa: E501
             }
         )
+        # trigger async operation
+        self.context.is_async = True
         self._create_cluster_async(entity_id, input_native_entity)
         self._update_task(status=BehaviorTaskStatus.RUNNING,
                           message='Hurray cluster task-update is working',

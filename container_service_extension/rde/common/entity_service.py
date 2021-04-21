@@ -226,7 +226,6 @@ class DefEntityService:
                       invoke_hooks=False) -> DefEntity:
         """Update entity instance.
 
-        :param invoke_hooks:
         :param str entity_id: Id of the entity to be updated.
         :param DefEntity entity: Modified entity to be updated.
         :param bool invoke_hooks: Value indicating whether hook-based-behaviors
@@ -236,6 +235,7 @@ class DefEntityService:
         """
         resource_url_relative_path = f"{CloudApiResource.ENTITIES}/{entity_id}"
         vcd_api_version = self._cloudapi_client.get_api_version()
+        # TODO Float conversions must be changed to Semantic versioning.
         if float(vcd_api_version) >= float(ApiVersion.VERSION_36.value):
             resource_url_relative_path += f"?invokeHooks={invoke_hooks}"
         response_body = self._cloudapi_client.do_request(
