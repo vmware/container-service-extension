@@ -307,7 +307,8 @@ class Service(object, metaclass=Singleton):
         if server_utils.should_use_mqtt_protocol(self.config):
             # Store/setup MQTT extension, api filter, and token info
             try:
-                sysadmin_client = vcd_utils.get_sys_admin_client(api_version=None)
+                sysadmin_client = \
+                    vcd_utils.get_sys_admin_client(api_version=None)
                 mqtt_ext_manager = MQTTExtensionManager(sysadmin_client)
                 ext_info = mqtt_ext_manager.get_extension_info(
                     ext_name=server_constants.CSE_SERVICE_NAME,

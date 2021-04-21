@@ -7,9 +7,9 @@ import random
 import re
 import string
 import time
+from typing import Dict, List, Optional, Union
 import urllib
 import uuid
-from typing import Optional, List, Dict, Union
 
 import pkg_resources
 import pyvcloud.vcd.client as vcd_client
@@ -54,6 +54,8 @@ import container_service_extension.security.authorization as auth
 import container_service_extension.security.context.operation_context as ctx
 import container_service_extension.server.abstract_broker as abstract_broker
 import container_service_extension.server.request_handlers.request_utils as req_utils  # noqa: E501
+
+DEFAULT_API_VERSION = vcd_client.ApiVersion.VERSION_33.value
 
 
 class VcdBroker(abstract_broker.AbstractBroker):
@@ -442,7 +444,7 @@ class VcdBroker(abstract_broker.AbstractBroker):
             RequestKey.ENABLE_NFS: False,
             RequestKey.ROLLBACK: True,
         }
-        validated_data: Dict[str, Union[Optional, str, int]] = {**defaults, **data}
+        validated_data: Dict[str, Union[Optional, str, int]] = {**defaults, **data}  # noqa: E501
         req_utils.validate_payload(validated_data, required)
 
         cluster_name = validated_data[RequestKey.CLUSTER_NAME]
@@ -478,7 +480,7 @@ class VcdBroker(abstract_broker.AbstractBroker):
             return self.create_nodes(data=validated_data, telemetry=False)
         else:
             num_workers_to_be_deleted = num_workers - num_workers_wanted
-            node_list: List[Dict[str, str]] = cluster_info[ClusterDetailsKey.WORKER_NODE_LIST]
+            node_list: List[Dict[str, str]] = cluster_info[ClusterDetailsKey.WORKER_NODE_LIST]  # noqa: E501
             validated_data[RequestKey.NODE_NAMES_LIST] = [node['name'] for node in node_list[0:num_workers_to_be_deleted]]  # noqa: E501
             return self.delete_nodes(data=validated_data, telemetry=False)
 

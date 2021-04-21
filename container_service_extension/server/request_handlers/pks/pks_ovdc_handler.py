@@ -36,6 +36,7 @@ import container_service_extension.server.pks.pksbroker as pksbroker
 import container_service_extension.server.pks.pksbroker_manager as pksbroker_manager  # noqa: E501
 import container_service_extension.server.request_handlers.request_utils as req_utils  # noqa: E501
 
+DEFAULT_API_VERSION = vcd_client.ApiVersion.VERSION_33.value
 SYSTEM_DEFAULT_COMPUTE_POLICY_NAME = "System Default"
 
 
@@ -165,7 +166,7 @@ def org_vdc_list(request_data, op_ctx: ctx.OperationContext):
 
     page_number = int(validated_data[PaginationKey.PAGE_NUMBER])
     page_size = int(validated_data[PaginationKey.PAGE_SIZE])
-    list_pks_plans = utils.str_to_bool(validated_data[RequestKey.LIST_PKS_PLANS]) # noqa: E501
+    list_pks_plans = utils.str_to_bool(validated_data[RequestKey.LIST_PKS_PLANS])  # noqa: E501
 
     # Record telemetry data
     # TODO: enhance telemetry to record the page number and page size data.
@@ -213,7 +214,7 @@ def org_vdc_list(request_data, op_ctx: ctx.OperationContext):
                           f"orgName=={urllib.parse.quote(org_name)}"
                 q = op_ctx.client.get_typed_query(
                     vcd_client.ResourceType.ADMIN_ORG_VDC.value,
-                    query_result_format=vcd_client.QueryResultFormat.RECORDS, # noqa: E501
+                    query_result_format=vcd_client.QueryResultFormat.RECORDS,  # noqa: E501
                     qfilter=qfilter)
                 # should only ever be one element in the generator
                 ovdc_records = list(q.execute())
@@ -223,7 +224,7 @@ def org_vdc_list(request_data, op_ctx: ctx.OperationContext):
                 ovdc_record = None
                 for record in ovdc_records:
                     ovdc_record = pyvcd_utils.to_dict(
-                        record, resource_type=vcd_client.ResourceType.ADMIN_ORG_VDC.value) # noqa: E501
+                        record, resource_type=vcd_client.ResourceType.ADMIN_ORG_VDC.value)  # noqa: E501
                     break
 
                 vc_to_pks_plans_map = {}
@@ -280,7 +281,7 @@ def ovdc_list(request_data, op_ctx: ctx.OperationContext):
     }
     validated_data = {**defaults, **data}
 
-    list_pks_plans = utils.str_to_bool(validated_data[RequestKey.LIST_PKS_PLANS]) # noqa: E501
+    list_pks_plans = utils.str_to_bool(validated_data[RequestKey.LIST_PKS_PLANS])  # noqa: E501
 
     # Record telemetry data
     cse_params = copy.deepcopy(validated_data)
@@ -321,7 +322,7 @@ def ovdc_list(request_data, op_ctx: ctx.OperationContext):
                           f"orgName=={urllib.parse.quote(org_name)}"
                 q = op_ctx.client.get_typed_query(
                     vcd_client.ResourceType.ADMIN_ORG_VDC.value,
-                    query_result_format=vcd_client.QueryResultFormat.RECORDS, # noqa: E501
+                    query_result_format=vcd_client.QueryResultFormat.RECORDS,  # noqa: E501
                     qfilter=qfilter)
                 # should only ever be one element in the generator
                 ovdc_records = list(q.execute())
@@ -331,7 +332,7 @@ def ovdc_list(request_data, op_ctx: ctx.OperationContext):
                 ovdc_record = None
                 for record in ovdc_records:
                     ovdc_record = pyvcd_utils.to_dict(
-                        record, resource_type=vcd_client.ResourceType.ADMIN_ORG_VDC.value) # noqa: E501
+                        record, resource_type=vcd_client.ResourceType.ADMIN_ORG_VDC.value)  # noqa: E501
                     break
 
                 vc_to_pks_plans_map = {}

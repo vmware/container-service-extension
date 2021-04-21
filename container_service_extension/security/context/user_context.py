@@ -2,6 +2,8 @@
 # Copyright (c) 2020 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 
+from typing import List, Optional
+
 import lxml.objectify as lxml
 import pyvcloud.vcd.client as vcd_client
 import pyvcloud.vcd.org as vcd_org
@@ -22,13 +24,13 @@ class UserContext:
         self.client: vcd_client.Client = client
         self.cloud_api_client: cloudapi_client.CloudApiClient = \
             cloud_api_client
-        self._session: lxml.ObjectifiedElement or None = None
-        self._name: str or None = None
-        self._id: str or None = None
-        self._org_name: str or None = None
-        self._org_href: str or None = None
-        self._role: str or None = None
-        self._rights: [str] or None = None
+        self._session: Optional[lxml.ObjectifiedElement] = None
+        self._name: Optional[str] = None
+        self._id: Optional[str] = None
+        self._org_name: Optional[str] = None
+        self._org_href: Optional[str] = None
+        self._role: Optional[str] = None
+        self._rights: Optional[List[str]] = None
         self._is_sys_admin: bool = False
 
     @property

@@ -5,6 +5,7 @@
 """Utility module to perform operations which involve pyvcloud calls."""
 
 import pathlib
+from typing import Optional
 import urllib
 
 import pyvcloud.vcd.client as vcd_client
@@ -45,7 +46,7 @@ def raise_error_if_user_not_from_system_org(client: vcd_client.Client):
 def connect_vcd_user_via_token(
         tenant_auth_token: str,
         is_jwt_token: bool,
-        api_version: str or None):
+        api_version: Optional[str]):
     server_config = get_server_runtime_config()
     if not api_version:
         api_version = server_config['vcd']['default_api_version']
@@ -69,7 +70,7 @@ def connect_vcd_user_via_token(
     return client_tenant
 
 
-def get_sys_admin_client(api_version: str or None):
+def get_sys_admin_client(api_version: Optional[str]):
     server_config = get_server_runtime_config()
     if not api_version:
         api_version = server_config['vcd']['default_api_version']
