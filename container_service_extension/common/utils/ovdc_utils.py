@@ -133,7 +133,7 @@ def construct_pks_context(pks_account_info, pvdc_info=None, nsxt_info=None,
                           credentials_required=False):
     """Construct PKS context dictionary.
 
-    :param container_service_extension.server.pks.pks_cache.PksAccountInfo pks_account_info: pks connection details
+    :param container_service_extension.server.pks.pks_cache.PksAccountInfo pks_account_info: pks connection details  # noqa: E501
     :param container_service_extension.server.pks.pks_cache.PvdcInfo pvdc_info:
         pvdc details including datacenter and cluster.
     :param dict nsxt_info:

@@ -32,7 +32,7 @@ from container_service_extension.lib.telemetry.telemetry_handler import record_u
 from container_service_extension.lib.telemetry.telemetry_handler import record_user_action_telemetry  # noqa: E501
 import container_service_extension.logging.logger as logger
 import container_service_extension.security.context.operation_context as ctx
-import container_service_extension.server.compute_policy_manager as compute_policy_manager # noqa: E501
+import container_service_extension.server.compute_policy_manager as compute_policy_manager  # noqa: E501
 import container_service_extension.server.request_handlers.request_utils as req_utils  # noqa: E501
 
 SYSTEM_DEFAULT_COMPUTE_POLICY_NAME = "System Default"
@@ -267,12 +267,12 @@ def ovdc_compute_policy_update(request_data,
     action = validated_data[RequestKey.COMPUTE_POLICY_ACTION]
     cp_name = validated_data[RequestKey.COMPUTE_POLICY_NAME]
     ovdc_id = validated_data[RequestKey.OVDC_ID]
-    remove_compute_policy_from_vms = validated_data[RequestKey.REMOVE_COMPUTE_POLICY_FROM_VMS] # noqa: E501
+    remove_compute_policy_from_vms = validated_data[RequestKey.REMOVE_COMPUTE_POLICY_FROM_VMS]  # noqa: E501
     try:
         config = server_utils.get_server_runtime_config()
         cpm = compute_policy_manager.ComputePolicyManager(
             op_ctx.sysadmin_client,
-            log_wire=utils.str_to_bool(config['service'].get('log_wire'))) # noqa: E501
+            log_wire=utils.str_to_bool(config['service'].get('log_wire')))  # noqa: E501
         cp_href = None
         cp_id = None
         if cp_name == SYSTEM_DEFAULT_COMPUTE_POLICY_NAME:
@@ -337,7 +337,7 @@ def _follow_task(op_ctx: ctx.OperationContext, task_href: str, ovdc_id: str):
         user_name = session.get('user')
         user_href = org.get_user(user_name).get('href')
         msg = "Remove ovdc compute policy"
-        # TODO(pyvcloud): Add method to retireve task from task href
+        # TODO(pyvcloud): Add method to retrieve task from task href
         t = task.update(
             status=vcd_task.TaskStatus.RUNNING.value,
             namespace='vcloud.cse',

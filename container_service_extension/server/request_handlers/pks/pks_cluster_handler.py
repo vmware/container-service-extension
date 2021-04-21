@@ -3,6 +3,8 @@
 # SPDX-License-Identifier: BSD-2-Clause
 import copy
 
+import pyvcloud.vcd.client as vcd_client
+
 from container_service_extension.common.constants.server_constants import K8S_PROVIDER_KEY  # noqa: E501
 from container_service_extension.common.constants.server_constants import K8sProvider  # noqa: E501
 from container_service_extension.common.constants.server_constants import PKS_CLUSTER_DOMAIN_KEY  # noqa: E501
@@ -27,6 +29,8 @@ from container_service_extension.server.pks.pksbroker import PksBroker
 import container_service_extension.server.pks.pksbroker_manager as pks_broker_manager  # noqa: E501
 from container_service_extension.server.pks.pksbroker_manager import create_pks_context_for_all_accounts_in_org  # noqa: E501
 import container_service_extension.server.request_handlers.request_utils as req_utils  # noqa: E501
+
+DEFAULT_API_VERSION = vcd_client.ApiVersion.VERSION_33.value
 
 
 @telemetry_handler.record_user_action_telemetry(cse_operation=CseOperation.PKS_CLUSTER_LIST)  # noqa: E501
@@ -65,9 +69,9 @@ def cluster_list(request_data, op_ctx: ctx.OperationContext):
     ]
 
     result = []
-    for cluster_info in pks_clusters_info:
+    for info in pks_clusters_info:
         filtered_cluster_info = \
-            {k: cluster_info.get(k) for k in common_cluster_properties}
+            {k: info.get(k) for k in common_cluster_properties}
         result.append(filtered_cluster_info)
 
     return result
@@ -145,9 +149,11 @@ def cluster_create(request_data, op_ctx: ctx.OperationContext):
     except ClusterNotFoundError:
         pass
 
+    sysadmin_client_v33 = op_ctx.get_sysadmin_client(
+        api_version=DEFAULT_API_VERSION)
     k8s_metadata = \
         ovdc_utils.get_ovdc_k8s_provider_metadata(
-            op_ctx.sysadmin_client,
+            sysadmin_client_v33,
             org_name=data[RequestKey.ORG_NAME],
             ovdc_name=data[RequestKey.OVDC_NAME],
             include_credentials=True,
@@ -232,12 +238,15 @@ def _get_cluster_info(request_data, op_ctx, **kwargs):
     ovdc_name = request_data.get(RequestKey.OVDC_NAME)
 
     if ovdc_name is not None and org_name is not None:
+        sysadmin_client_v33 = op_ctx.get_sysadmin_client(
+            api_version=DEFAULT_API_VERSION)
         k8s_metadata = \
-            ovdc_utils.get_ovdc_k8s_provider_metadata(op_ctx.sysadmin_client,  # noqa: E501
-                                                      org_name=org_name,
-                                                      ovdc_name=ovdc_name,
-                                                      include_credentials=True,
-                                                      include_nsxt_info=True)
+            ovdc_utils.get_ovdc_k8s_provider_metadata(
+                sysadmin_client_v33,
+                org_name=org_name,
+                ovdc_name=ovdc_name,
+                include_credentials=True,
+                include_nsxt_info=True)
         broker = _get_broker_from_k8s_metadata(
             k8s_metadata, op_ctx)
         return broker.get_cluster_info(data=request_data, **kwargs), broker

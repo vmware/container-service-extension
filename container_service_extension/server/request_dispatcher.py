@@ -986,9 +986,8 @@ def process_request(message):
             is_jwt_token = True
 
     # create operation context
-    operation_ctx = ctx.OperationContext(tenant_auth_token,
-                                         is_jwt=is_jwt_token,
-                                         request_id=message['id'])
+    operation_ctx = ctx.OperationContext(
+        tenant_auth_token, is_jwt=is_jwt_token, request_id=message['id'])
 
     try:
         body_content = handler_method(request_data, operation_ctx)

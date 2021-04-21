@@ -23,7 +23,7 @@ def list_clusters(request_data, op_ctx: ctx.OperationContext):
     return pks_clusters
 
 
-def create_pks_context_for_all_accounts_in_org(op_ctx: ctx.OperationContext): # noqa: E501
+def create_pks_context_for_all_accounts_in_org(op_ctx: ctx.OperationContext):  # noqa: E501
     """Create PKS context for accounts in a given Org.
 
     If user is Sysadmin
@@ -32,7 +32,7 @@ def create_pks_context_for_all_accounts_in_org(op_ctx: ctx.OperationContext): # 
     else
         Creates PKS contexts for all PKS accounts assigned to the org.
         However if separate service accounts for each org hasn't been
-        configued by admin via pks.yaml, then PKS accounts of the PKS
+        configured by admin via pks.yaml, then PKS accounts of the PKS
         server corresponding to the vCenters powering the individual
         orgVDC of the org will be picked up for creating the PKS contexts.
 
@@ -46,12 +46,12 @@ def create_pks_context_for_all_accounts_in_org(op_ctx: ctx.OperationContext): # 
 
     if op_ctx.client.is_sysadmin():
         all_pks_account_info = pks_cache.get_all_pks_account_info_in_system()
-        pks_ctx_list = [ovdc_utils.construct_pks_context(pks_account_info, credentials_required=True) for pks_account_info in all_pks_account_info] # noqa: E501
+        pks_ctx_list = [ovdc_utils.construct_pks_context(pks_account_info, credentials_required=True) for pks_account_info in all_pks_account_info]  # noqa: E501
         return pks_ctx_list
 
     if pks_cache.do_orgs_have_exclusive_pks_account():
-        pks_account_infos = pks_cache.get_exclusive_pks_accounts_info_for_org(op_ctx.user.org_name) # noqa: E501
-        pks_ctx_list = [ovdc_utils.construct_pks_context(pks_account_info, credentials_required=True) for pks_account_info in pks_account_infos] # noqa: E501
+        pks_account_infos = pks_cache.get_exclusive_pks_accounts_info_for_org(op_ctx.user.org_name)  # noqa: E501
+        pks_ctx_list = [ovdc_utils.construct_pks_context(pks_account_info, credentials_required=True) for pks_account_info in pks_account_infos]  # noqa: E501
         return pks_ctx_list
 
     org_resource = op_ctx.client.get_org()
