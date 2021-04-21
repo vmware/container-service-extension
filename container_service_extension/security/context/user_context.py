@@ -31,7 +31,6 @@ class UserContext:
         self._org_href: Optional[str] = None
         self._role: Optional[str] = None
         self._rights: Optional[List[str]] = None
-        self._is_sys_admin: bool = False
 
     @property
     def session(self):
@@ -52,12 +51,6 @@ class UserContext:
         if self._id is None:
             self._id = self.session.get('userId')
         return self._id
-
-    @property
-    def is_sys_admin(self):
-        if self._is_sys_admin is None:
-            self._is_sys_admin = self.client.is_sysadmin()
-        return self._is_sys_admin
 
     @property
     def org_name(self):

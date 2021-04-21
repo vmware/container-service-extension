@@ -47,7 +47,8 @@ def create_pks_context_for_all_accounts_in_org(op_ctx: ctx.OperationContext):  #
     if pks_cache is None:
         return []
 
-    if op_ctx.client.is_sysadmin():
+    client_v33 = op_ctx.get_client(api_version=DEFAULT_API_VERSION)
+    if client_v33.is_sysadmin():
         all_pks_account_info = pks_cache.get_all_pks_account_info_in_system()
         pks_ctx_list = [ovdc_utils.construct_pks_context(pks_account_info, credentials_required=True) for pks_account_info in all_pks_account_info]  # noqa: E501
         return pks_ctx_list
@@ -57,17 +58,19 @@ def create_pks_context_for_all_accounts_in_org(op_ctx: ctx.OperationContext):  #
         pks_ctx_list = [ovdc_utils.construct_pks_context(pks_account_info, credentials_required=True) for pks_account_info in pks_account_infos]  # noqa: E501
         return pks_ctx_list
 
-    org_resource = op_ctx.client.get_org()
-    org = Org(op_ctx.client, resource=org_resource)
+    org_resource = client_v33.get_org()
+    org = Org(client_v33, resource=org_resource)
     vdc_names = [vdc['name'] for vdc in org.list_vdcs()]
     # Constructing dict instead of list to avoid duplicates
     # TODO() figure out a way to add pks contexts to a set directly
     pks_ctx_dict = {}
+    sysadmin_client_v33 = \
+        op_ctx.get_sysadmin_client(api_version=DEFAULT_API_VERSION)
     for vdc_name in vdc_names:
         # this is a full blown pks_account_info + pvdc_info +
         # compute_profile_name dictionary
         k8s_metadata = ovdc_utils.get_ovdc_k8s_provider_metadata(
-            op_ctx.sysadmin_client,
+            sysadmin_client_v33,
             ovdc_name=vdc_name,
             org_name=op_ctx.user.org_name,
             include_credentials=True)
