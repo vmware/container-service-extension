@@ -10,10 +10,9 @@ import threading
 from threading import Thread
 import time
 import traceback
-from typing import List
+from typing import List, Optional
 
 import click
-from pyvcloud.vcd.client import ApiVersion as vCDApiVersion
 from pyvcloud.vcd.client import BasicLoginCredentials
 from pyvcloud.vcd.client import Client
 from pyvcloud.vcd.exceptions import EntityNotFoundException
@@ -195,8 +194,8 @@ class Service(object, metaclass=Singleton):
         self.skip_config_decryption = skip_config_decryption
         self.pks_cache = None
         self._state = ServerState.STOPPED
-        self._kubernetesInterface: common_models.DefInterface = None
-        self._nativeEntityType: common_models.DefEntityType = None
+        self._kubernetesInterface: Optional[common_models.DefInterface] = None
+        self._nativeEntityType: Optional[common_models.DefEntityType] = None
         self.consumer = None
         self.consumer_thread = None
         self._consumer_watchdog = None
@@ -293,7 +292,7 @@ class Service(object, metaclass=Singleton):
     def run(self, msg_update_callback=utils.NullPrinter()):
         sysadmin_client = None
         try:
-            sysadmin_client = vcd_utils.get_sys_admin_client()
+            sysadmin_client = vcd_utils.get_sys_admin_client(api_version=None)
             verify_version_compatibility(
                 sysadmin_client,
                 should_cse_run_in_legacy_mode=self.config['service']['legacy_mode'],  # noqa: E501
@@ -308,7 +307,7 @@ class Service(object, metaclass=Singleton):
         if server_utils.should_use_mqtt_protocol(self.config):
             # Store/setup MQTT extension, api filter, and token info
             try:
-                sysadmin_client = vcd_utils.get_sys_admin_client()
+                sysadmin_client = vcd_utils.get_sys_admin_client(api_version=None)
                 mqtt_ext_manager = MQTTExtensionManager(sysadmin_client)
                 ext_info = mqtt_ext_manager.get_extension_info(
                     ext_name=server_constants.CSE_SERVICE_NAME,
@@ -482,7 +481,7 @@ class Service(object, metaclass=Singleton):
         """
         sysadmin_client = None
         try:
-            sysadmin_client = vcd_utils.get_sys_admin_client()
+            sysadmin_client = vcd_utils.get_sys_admin_client(api_version=None)
             logger_wire = logger.NULL_LOGGER
             if utils.str_to_bool(utils.str_to_bool(self.config['service'].get('log_wire', False))):  # noqa: E501
                 logger_wire = logger.SERVER_CLOUDAPI_WIRE_LOGGER
@@ -541,7 +540,7 @@ class Service(object, metaclass=Singleton):
         logger.SERVER_LOGGER.info(msg)
         msg_update_callback.general(msg)
         try:
-            sysadmin_client = vcd_utils.get_sys_admin_client()
+            sysadmin_client = vcd_utils.get_sys_admin_client(api_version=None)
             if float(sysadmin_client.get_api_version()) < compute_policy_manager.GLOBAL_PVDC_COMPUTE_POLICY_MIN_VERSION:  # noqa: E501
                 msg = "Placement policies for kubernetes runtimes not " \
                       " supported in api version " \
@@ -688,7 +687,7 @@ class Service(object, metaclass=Singleton):
         catalog_name = self.config['broker']['catalog']
         sysadmin_client = None
         try:
-            sysadmin_client = vcd_utils.get_sys_admin_client()
+            sysadmin_client = vcd_utils.get_sys_admin_client(api_version=None)
             cpm = compute_policy_manager.ComputePolicyManager(sysadmin_client,
                                                               log_wire=self.config['service'].get('log_wire'))  # noqa: E501
 

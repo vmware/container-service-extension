@@ -1124,12 +1124,6 @@ def _update_user_role_with_right_bundle(right_bundle_name,
     # Only a user from System Org can execute this function
     vcd_utils.raise_error_if_user_not_from_system_org(client)
 
-    logger_wire = SERVER_CLOUDAPI_WIRE_LOGGER if log_wire else NULL_LOGGER
-    cloudapi_client = vcd_utils.get_cloudapi_client_from_vcd_client(
-        client=client,
-        logger_debug=logger_debug,
-        logger_wire=logger_wire)
-
     # Determine role name for the user
     role_name = vcd_utils.get_user_role_name(client)
 

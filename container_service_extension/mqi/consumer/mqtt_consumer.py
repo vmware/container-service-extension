@@ -5,6 +5,7 @@
 import json
 import ssl
 import sys
+from typing import Optional
 
 import paho.mqtt.client as mqtt
 import requests
@@ -36,7 +37,7 @@ class MQTTConsumer:
         self.num_processors = num_processors
         self.fsencoding = sys.getfilesystemencoding()
         self._mqtt_client = None
-        self._mqtt_publisher: MQTTPublisher = None
+        self._mqtt_publisher: Optional[MQTTPublisher] = None
         self._ctpe = ConsumerThreadPoolExecutor(self.num_processors)
         self._is_closing = False
 

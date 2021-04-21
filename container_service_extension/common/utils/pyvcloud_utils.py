@@ -18,7 +18,7 @@ from pyvcloud.vcd.vdc import VDC
 import requests
 
 import container_service_extension.common.constants.server_constants as server_constants  # noqa: E501
-import container_service_extension.common.constants.shared_constants as shared_constants
+import container_service_extension.common.constants.shared_constants as shared_constants  # noqa: E501
 from container_service_extension.common.utils.core_utils import extract_id_from_href  # noqa: E501
 from container_service_extension.common.utils.core_utils import NullPrinter
 from container_service_extension.common.utils.core_utils import str_to_bool
