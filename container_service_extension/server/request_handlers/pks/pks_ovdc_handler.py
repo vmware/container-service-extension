@@ -73,6 +73,8 @@ def ovdc_update(request_data, op_ctx: ctx.OperationContext):
     cse_operation = CseOperation.OVDC_DISABLE if k8s_provider == K8sProvider.NONE else CseOperation.OVDC_ENABLE  # noqa: E501
     record_user_action_details(cse_operation=cse_operation, cse_params=cse_params)  # noqa: E501
 
+    sysadmin_client_v33 = \
+        op_ctx.get_sysadmin_client(api_version=DEFAULT_API_VERSION)
     try:
         if k8s_provider == K8sProvider.PKS:
             if not server_utils.is_pks_enabled():
@@ -86,7 +88,7 @@ def ovdc_update(request_data, op_ctx: ctx.OperationContext):
 
             # Check if target ovdc is not already enabled for other non PKS k8 providers # noqa: E501
             ovdc_metadata = ovdc_utils.get_ovdc_k8s_provider_metadata(
-                op_ctx.sysadmin_client,
+                sysadmin_client_v33,
                 ovdc_id=validated_data[RequestKey.OVDC_ID])
             ovdc_k8_provider = ovdc_metadata.get(K8S_PROVIDER_KEY)
             if ovdc_k8_provider != K8sProvider.NONE and \
@@ -94,7 +96,7 @@ def ovdc_update(request_data, op_ctx: ctx.OperationContext):
                 raise e.CseServerError("Ovdc already enabled for different K8 provider")  # noqa: E501
 
             k8s_provider_info = ovdc_utils.construct_k8s_metadata_from_pks_cache(  # noqa: E501
-                op_ctx.sysadmin_client,
+                sysadmin_client_v33,
                 ovdc_id=validated_data[RequestKey.OVDC_ID],
                 org_name=validated_data[RequestKey.ORG_NAME],
                 pks_plans=validated_data[RequestKey.PKS_PLAN_NAME],
@@ -105,7 +107,7 @@ def ovdc_update(request_data, op_ctx: ctx.OperationContext):
                                                   k8s_provider_info)
 
         task = ovdc_utils.update_ovdc_k8s_provider_metadata(
-            op_ctx.sysadmin_client,
+            sysadmin_client_v33,
             validated_data[RequestKey.OVDC_ID],
             k8s_provider_data=k8s_provider_info,
             k8s_provider=k8s_provider)
@@ -137,11 +139,13 @@ def ovdc_info(request_data, op_ctx: ctx.OperationContext):
     # Record telemetry data
     cse_params = copy.deepcopy(request_data)
     cse_params[PayloadKey.SOURCE_DESCRIPTION] = thread_local_data.get_thread_local_data(ThreadLocalData.USER_AGENT)  # noqa: E501
-    record_user_action_details(cse_operation=CseOperation.OVDC_INFO,
-                               cse_params=cse_params)
+    record_user_action_details(
+        cse_operation=CseOperation.OVDC_INFO, cse_params=cse_params)
 
+    sysadmin_client_v33 = \
+        op_ctx.get_sysadmin_client(api_version=DEFAULT_API_VERSION)
     return ovdc_utils.get_ovdc_k8s_provider_metadata(
-        op_ctx.sysadmin_client,
+        sysadmin_client_v33,
         ovdc_id=request_data[RequestKey.OVDC_ID])
 
 
@@ -176,26 +180,30 @@ def org_vdc_list(request_data, op_ctx: ctx.OperationContext):
     record_user_action_details(cse_operation=CseOperation.OVDC_LIST,
                                cse_params=cse_params)
 
-    if list_pks_plans and not op_ctx.client.is_sysadmin():
+    client_v33 = op_ctx.get_client(api_version=DEFAULT_API_VERSION)
+    if list_pks_plans and not client_v33.is_sysadmin():
         raise e.UnauthorizedRequestError(
             'Operation denied. Enterprise PKS plans visible only '
             'to System Administrators.')
 
     ovdcs = []
     result = \
-        vcd_utils.get_ovdcs_by_page(op_ctx.client,
+        vcd_utils.get_ovdcs_by_page(client_v33,
                                     page=page_number,
                                     page_size=page_size)
     org_vdcs = result[PaginationKey.VALUES]
     result_total = result[PaginationKey.RESULT_TOTAL]
     next_page_uri = result.get(PaginationKey.NEXT_PAGE_URI)
     prev_page_uri = result.get(PaginationKey.PREV_PAGE_URI)
+
+    sysadmin_client_v33 = \
+        op_ctx.get_sysadmin_client(api_version=DEFAULT_API_VERSION)
     for ovdc in org_vdcs:
         ovdc_name = ovdc.get('name')
         org_name = ovdc.get('orgName')
         ovdc_id = vcd_utils.extract_id(ovdc.get('id'))
         k8s_metadata = ovdc_utils.get_ovdc_k8s_provider_metadata(
-            op_ctx.sysadmin_client,
+            sysadmin_client_v33,
             ovdc_id=ovdc_id,
             ovdc_name=ovdc_name,
             org_name=org_name)
@@ -212,7 +220,7 @@ def org_vdc_list(request_data, op_ctx: ctx.OperationContext):
                 # vc name for vdc can only be found using typed query
                 qfilter = f"name=={urllib.parse.quote(ovdc_name)};" \
                           f"orgName=={urllib.parse.quote(org_name)}"
-                q = op_ctx.client.get_typed_query(
+                q = client_v33.get_typed_query(
                     vcd_client.ResourceType.ADMIN_ORG_VDC.value,
                     query_result_format=vcd_client.QueryResultFormat.RECORDS,  # noqa: E501
                     qfilter=qfilter)
@@ -233,8 +241,7 @@ def org_vdc_list(request_data, op_ctx: ctx.OperationContext):
                 for pks_context in pks_contexts:
                     if pks_context['vc'] in vc_to_pks_plans_map:
                         continue
-                    pks_broker = pksbroker.PksBroker(pks_context,
-                                                     op_ctx)
+                    pks_broker = pksbroker.PksBroker(pks_context, op_ctx)
                     plans = pks_broker.list_plans()
                     plan_names = [plan.get('name') for plan in plans]
                     vc_to_pks_plans_map[pks_context['vc']] = \
@@ -250,10 +257,10 @@ def org_vdc_list(request_data, op_ctx: ctx.OperationContext):
             ovdc_dict[PKSOvdcInfoKey.AVAILABLE_PKS_PLANS] = pks_plans
         ovdcs.append(ovdc_dict)
     api_path = CseServerOperationInfo.PKS_ORG_VDC_LIST.api_path_format
-    next_page_uri = vcd_utils.create_cse_page_uri(op_ctx.client,
+    next_page_uri = vcd_utils.create_cse_page_uri(client_v33,
                                                   api_path,
                                                   vcd_uri=next_page_uri)
-    prev_page_uri = vcd_utils.create_cse_page_uri(op_ctx.client,
+    prev_page_uri = vcd_utils.create_cse_page_uri(client_v33,
                                                   api_path,
                                                   vcd_uri=prev_page_uri)
     return server_utils.construct_paginated_response(values=ovdcs,
@@ -290,20 +297,22 @@ def ovdc_list(request_data, op_ctx: ctx.OperationContext):
     record_user_action_details(cse_operation=CseOperation.OVDC_LIST,
                                cse_params=cse_params)
 
-    if list_pks_plans and not op_ctx.client.is_sysadmin():
+    client_v33 = op_ctx.get_client(api_version=DEFAULT_API_VERSION)
+    if list_pks_plans and not client_v33.is_sysadmin():
         raise e.UnauthorizedRequestError(
             'Operation denied. Enterprise PKS plans visible only '
             'to System Administrators.')
 
     ovdcs = []
-    org_vdcs = \
-        vcd_utils.get_all_ovdcs(op_ctx.client)
+    org_vdcs = vcd_utils.get_all_ovdcs(client_v33)
+    sysadmin_client_v33 = \
+        op_ctx.get_sysadmin_client(api_version=DEFAULT_API_VERSION)
     for ovdc in org_vdcs:
         ovdc_name = ovdc.get('name')
         org_name = ovdc.get('orgName')
         ovdc_id = vcd_utils.extract_id(ovdc.get('id'))
         k8s_metadata = ovdc_utils.get_ovdc_k8s_provider_metadata(
-            op_ctx.sysadmin_client,
+            sysadmin_client_v33,
             ovdc_id=ovdc_id,
             ovdc_name=ovdc_name,
             org_name=org_name)
@@ -320,7 +329,7 @@ def ovdc_list(request_data, op_ctx: ctx.OperationContext):
                 # vc name for vdc can only be found using typed query
                 qfilter = f"name=={urllib.parse.quote(ovdc_name)};" \
                           f"orgName=={urllib.parse.quote(org_name)}"
-                q = op_ctx.client.get_typed_query(
+                q = client_v33.get_typed_query(
                     vcd_client.ResourceType.ADMIN_ORG_VDC.value,
                     query_result_format=vcd_client.QueryResultFormat.RECORDS,  # noqa: E501
                     qfilter=qfilter)
@@ -341,8 +350,7 @@ def ovdc_list(request_data, op_ctx: ctx.OperationContext):
                 for pks_context in pks_contexts:
                     if pks_context['vc'] in vc_to_pks_plans_map:
                         continue
-                    pks_broker = pksbroker.PksBroker(pks_context,
-                                                     op_ctx)
+                    pks_broker = pksbroker.PksBroker(pks_context, op_ctx)
                     plans = pks_broker.list_plans()
                     plan_names = [plan.get('name') for plan in plans]
                     vc_to_pks_plans_map[pks_context['vc']] = \
