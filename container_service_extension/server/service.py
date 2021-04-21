@@ -104,9 +104,6 @@ def verify_version_compatibility(
         sysadmin_client: Client,
         should_cse_run_in_legacy_mode: bool,
         is_mqtt_extension: bool):
-    cse_version = server_utils.get_installed_cse_version()
-    runtime_rde_version = semantic_version.Version(server_utils.get_rde_version_in_use())  # noqa: E501
-
     dikt = configure_cse.parse_cse_extension_description(
         sysadmin_client, is_mqtt_extension)
     ext_cse_version = dikt[server_constants.CSE_VERSION_KEY]
@@ -120,6 +117,7 @@ def verify_version_compatibility(
             "Upgrade CSE to update version data.")
 
     error_msg = ''
+    cse_version = server_utils.get_installed_cse_version()
     if cse_version > ext_cse_version:
         error_msg += \
             f"CSE Server version ({cse_version}) is higher than what was " \
@@ -140,7 +138,8 @@ def verify_version_compatibility(
             "Installed CSE is configured in non-legacy mode. Unable to run " \
             "it in legacy mode."
 
-    if not ext_in_legacy_mode and ext_rde_in_use < runtime_rde_version:
+    runtime_rde_version = semantic_version.Version(server_utils.get_rde_version_in_use())  # noqa: E501
+    if not ext_in_legacy_mode and runtime_rde_version < ext_rde_in_use:
         error_msg += f"Installed CSE RDE version ({runtime_rde_version}) " \
             f"is lower than the supported Server RDE version " \
             f"({ext_rde_in_use}). Upgrade CSE to update RDE."

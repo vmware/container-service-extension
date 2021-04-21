@@ -239,8 +239,8 @@ def get_validated_config(config_file_name,
     config['feature_flags']['non_legacy_api'] = \
         not str_to_bool(is_legacy_mode)
 
-    max_vcd_api_version_supported = get_max_api_version(config['service']['supported_api_versions'])  # noqa: E501
-    config['vcd']['default_api_version'] = str(max_vcd_api_version_supported)
+    max_vcd_api_version_supported: str = get_max_api_version(config['service']['supported_api_versions'])  # noqa: E501
+    config['vcd']['default_api_version'] = max_vcd_api_version_supported
     config['service']['rde_version_in_use'] = semantic_version.Version(
         rde_utils.get_runtime_rde_version_by_vcd_api_version(
             max_vcd_api_version_supported))

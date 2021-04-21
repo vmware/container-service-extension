@@ -70,10 +70,10 @@ class ClusterService(abstract_broker.AbstractBroker):
         self.task_resource = None
         self.task_update_lock = threading.Lock()
         cloudapi_client_v35 = \
-            op_ctx.get_cloudapi_client(api_version=DEFAULT_API_VERSION)
+            self.context.get_cloudapi_client(api_version=DEFAULT_API_VERSION)
         self.entity_svc = def_entity_svc.DefEntityService(cloudapi_client_v35)
         sysadmin_cloudapi_client_v35 = \
-            op_ctx.get_sysadmin_cloudapi_client(
+            self.context.get_sysadmin_cloudapi_client(
                 api_version=DEFAULT_API_VERSION)
         self.sysadmin_entity_svc = \
             def_entity_svc.DefEntityService(sysadmin_cloudapi_client_v35)

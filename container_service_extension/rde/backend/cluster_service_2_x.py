@@ -73,9 +73,9 @@ class ClusterService(abstract_broker.AbstractBroker):
         self.task_resource = None
         self.task_update_lock = threading.Lock()
         self.entity_svc = def_entity_svc.DefEntityService(
-            op_ctx.cloudapi_client)
+            self.context.cloudapi_client)
         self.sysadmin_entity_svc = def_entity_svc.DefEntityService(
-            op_ctx.sysadmin_cloudapi_client)
+            self.context.sysadmin_cloudapi_client)
 
     def get_cluster_info(self, cluster_id: str) -> common_models.DefEntity:
         """Get the corresponding defined entity of the native cluster.
