@@ -252,34 +252,33 @@ class ClusterService(abstract_broker.AbstractBroker):
 
         # TODO(DEF) design and implement telemetry VCDA-1564 defined entity
         #  based clusters
-        curr_rde: common_models.DefEntity = self.entity_svc.get_entity(entity_id)  # noqa: E501
-        curr_native_entity: rde_2_x.NativeEntity = curr_rde.entity
-        curr_native_entity.status.phase = str(
+        new_entity_status: rde_2_x.Status = rde_2_x.Status()
+        new_entity_status.phase = str(
             DefEntityPhase(DefEntityOperation.CREATE,
                            DefEntityOperationStatus.IN_PROGRESS))
-        curr_native_entity.status.kubernetes = \
+        new_entity_status.kubernetes = \
             _create_k8s_software_string(template[LocalTemplateKey.KUBERNETES],
-                                        template[LocalTemplateKey.KUBERNETES_VERSION])  # noqa: E501
-        curr_native_entity.status.cni = \
+                                        template[LocalTemplateKey.KUBERNETES_VERSION]) # noqa: E501
+        new_entity_status.cni = \
             _create_k8s_software_string(template[LocalTemplateKey.CNI],
                                         template[LocalTemplateKey.CNI_VERSION])
-        curr_native_entity.status.docker_version = template[LocalTemplateKey.DOCKER_VERSION]  # noqa: E501
-        curr_native_entity.status.os = template[LocalTemplateKey.OS]
-        curr_native_entity.status.cloud_properties.k8_distribution.template_name = template_name  # noqa: E501
-        curr_native_entity.status.cloud_properties.k8_distribution.template_revision = template_revision  # noqa: E501
-        curr_native_entity.status.cloud_properties.org_name = org_name
-        curr_native_entity.status.cloud_properties.ovdc_name = ovdc_name
-        curr_native_entity.status.cloud_properties.ovdc_network_name = input_native_entity.spec.settings.network  # noqa: E501
-        curr_native_entity.status.cloud_properties.rollback_on_failure = input_native_entity.spec.settings.rollback_on_failure  # noqa: E501
-        curr_native_entity.status.cloud_properties.ssh_key = input_native_entity.spec.settings.ssh_key  # noqa: E501
+        new_entity_status.docker_version = template[LocalTemplateKey.DOCKER_VERSION] # noqa: E501
+        new_entity_status.os = template[LocalTemplateKey.OS]
+        new_entity_status.cloud_properties.k8_distribution.template_name = template_name  # noqa: E501
+        new_entity_status.cloud_properties.k8_distribution.template_revision = template_revision  # noqa: E501
+        new_entity_status.cloud_properties.org_name = org_name
+        new_entity_status.cloud_properties.ovdc_name = ovdc_name
+        new_entity_status.cloud_properties.ovdc_network_name = input_native_entity.spec.settings.network  # noqa: E501
+        new_entity_status.cloud_properties.rollback_on_failure = input_native_entity.spec.settings.rollback_on_failure  # noqa: E501
+        new_entity_status.cloud_properties.ssh_key = input_native_entity.spec.settings.ssh_key  # noqa: E501
 
         msg = f"Creating cluster '{cluster_name}' " \
               f"from template '{template_name}' (revision {template_revision})"
         self._update_task(BehaviorTaskStatus.RUNNING, message=msg)
-        curr_native_entity.status.task_href = self.task_href
+        new_entity_status.task_href = self.task_href
         try:
-            self.sysadmin_entity_svc.update_entity(entity_id=entity_id,
-                                                   entity=curr_rde)
+            self._update_cluster_entity(entity_id,
+                                        new_entity_status)
         except Exception as err:
             msg = f"Error updating the cluster '{cluster_name}' with the status"  # noqa: E501
             LOGGER.error(f"{msg}: {err}")
@@ -371,12 +370,15 @@ class ClusterService(abstract_broker.AbstractBroker):
               f"desired worker count {desired_worker_count} and " \
               f"nfs count {desired_nfs_count}"
         self._update_task(BehaviorTaskStatus.RUNNING, message=msg)
-        curr_native_entity.task_href = self.task_href
-        curr_native_entity.phase = str(
+        new_entity_status: rde_2_x.Status = curr_native_entity.status
+        new_entity_status.task_href = self.task_href
+        new_entity_status.phase = str(
             DefEntityPhase(DefEntityOperation.UPDATE,
                            DefEntityOperationStatus.IN_PROGRESS))
         try:
-            curr_entity = self.sysadmin_entity_svc.update_entity(cluster_id, curr_entity)  # noqa: E501
+            curr_entity = self._update_cluster_entity(cluster_id,
+                                                      new_entity_status,
+                                                      cluster_rde=curr_entity)
         except Exception as err:
             self._update_task(BehaviorTaskStatus.ERROR,
                               message=msg,
@@ -476,14 +478,14 @@ class ClusterService(abstract_broker.AbstractBroker):
         :rtype: def_models.DefEntity representing the cluster
         """
         curr_entity = self.entity_svc.get_entity(cluster_id)
-        cur_native_entity: rde_2_x.NativeEntity = curr_entity.entity
-        cluster_name = cur_native_entity.metadata.name
+        curr_native_entity: rde_2_x.NativeEntity = curr_entity.entity
+        cluster_name = curr_native_entity.metadata.name
         new_template_name = upgrade_spec.spec.k8_distribution.template_name
         new_template_revision = upgrade_spec.spec.k8_distribution.template_revision  # noqa: E501
 
         # check if cluster is in a valid state
         phase: DefEntityPhase = DefEntityPhase.from_phase(
-            cur_native_entity.status.phase)
+            curr_native_entity.status.phase)
         state: str = curr_entity.state
         if state != def_constants.DEF_RESOLVED_STATE or phase.is_entity_busy():
             raise exceptions.CseServerError(
@@ -493,8 +495,8 @@ class ClusterService(abstract_broker.AbstractBroker):
         # check that the specified template is a valid upgrade target
         template = {}
         valid_templates = _get_cluster_upgrade_target_templates(
-            cur_native_entity.status.cloud_properties.k8_distribution.template_name,  # noqa: E501
-            str(cur_native_entity.status.cloud_properties.k8_distribution.template_revision))  # noqa: E501
+            curr_native_entity.status.cloud_properties.k8_distribution.template_name, # noqa: E501
+            str(curr_native_entity.status.cloud_properties.k8_distribution.template_revision)) # noqa: E501
 
         for t in valid_templates:
             if (t[LocalTemplateKey.NAME], str(t[LocalTemplateKey.REVISION])) == (new_template_name, str(new_template_revision)):  # noqa: E501
@@ -519,20 +521,23 @@ class ClusterService(abstract_broker.AbstractBroker):
         msg = f"Upgrading cluster '{cluster_name}' " \
               f"software to match template {new_template_name} (revision " \
               f"{new_template_revision}): Kubernetes: " \
-              f"{cur_native_entity.status.kubernetes} -> " \
+              f"{curr_native_entity.status.kubernetes} -> " \
               f"{template[LocalTemplateKey.KUBERNETES_VERSION]}, Docker-CE: " \
-              f"{cur_native_entity.status.docker_version} -> " \
+              f"{curr_native_entity.status.docker_version} -> " \
               f"{template[LocalTemplateKey.DOCKER_VERSION]}, CNI: " \
-              f"{cur_native_entity.status.cni} -> " \
+              f"{curr_native_entity.status.cni} -> " \
               f"{template[LocalTemplateKey.CNI_VERSION]}"
         self._update_task(BehaviorTaskStatus.RUNNING, message=msg)
         LOGGER.info(f"{msg} ({curr_entity.externalId})")
 
-        cur_native_entity.status.phase = str(
+        new_entity_status: rde_2_x.Status = curr_native_entity.status
+        new_entity_status.phase = str(
             DefEntityPhase(DefEntityOperation.UPGRADE, DefEntityOperationStatus.IN_PROGRESS))  # noqa: E501
-        cur_native_entity.status.task_href = self.task_href
+        new_entity_status.task_href = self.task_href
         try:
-            curr_entity = self.sysadmin_entity_svc.update_entity(cluster_id, curr_entity)  # noqa: E501
+            curr_entity = self._update_cluster_entity(cluster_id,
+                                                      new_entity_status,
+                                                      cluster_rde=curr_entity)
         except Exception as err:
             self._update_task(BehaviorTaskStatus.ERROR,
                               message=msg,
@@ -679,12 +684,15 @@ class ClusterService(abstract_broker.AbstractBroker):
         # TODO(DEF) design and implement telemetry VCDA-1564 defined entity
         #  based clusters
 
-        curr_native_entity.status.task_href = self.task_href
-        curr_native_entity.status.phase = str(
+        new_entity_status: rde_2_x.Status = curr_native_entity.status
+        new_entity_status.task_href = self.task_href
+        new_entity_status.phase = str(
             DefEntityPhase(DefEntityOperation.UPDATE,
                            DefEntityOperationStatus.IN_PROGRESS))
         try:
-            curr_entity = self.sysadmin_entity_svc.update_entity(cluster_id, curr_entity)  # noqa: E501
+            curr_entity = self._update_cluster_entity(cluster_id,
+                                                      new_entity_status,
+                                                      cluster_rde=curr_entity)
         except Exception as err:
             self._update_task(BehaviorTaskStatus.ERROR,
                               message=msg,
@@ -867,14 +875,18 @@ class ClusterService(abstract_broker.AbstractBroker):
             self._update_task(BehaviorTaskStatus.RUNNING, message=msg)
             curr_rde: common_models.DefEntity = self.entity_svc.get_entity(cluster_id)  # noqa: E501
             curr_native_entity: rde_2_x.NativeEntity = curr_rde.entity
-            curr_rde.externalId = vapp_resource.get('href')
-            curr_native_entity.status.phase = str(
+            new_entity_status: rde_2_x.Status = curr_native_entity. status
+            new_entity_status.uid = cluster_id
+            new_entity_status.phase = str(
                 DefEntityPhase(DefEntityOperation.CREATE,
                                DefEntityOperationStatus.SUCCEEDED))
-            curr_native_entity.status.nodes = _get_nodes_details(
+            new_entity_status.nodes = _get_nodes_details(
                 sysadmin_client_v36, vapp)
 
-            self.sysadmin_entity_svc.update_entity(cluster_id, curr_rde)
+            self._update_cluster_entity(cluster_id,
+                                        new_entity_status,
+                                        cluster_rde=curr_rde,
+                                        external_id=vapp_resource.get('href'))
             # self.entity_svc.resolve_entity(cluster_id)
 
             # cluster creation succeeded. Mark the task as success
@@ -1441,22 +1453,23 @@ class ClusterService(abstract_broker.AbstractBroker):
                 api_version=DEFAULT_API_VERSION)
             client_v36.get_task_monitor().wait_for_status(task)
 
+            curr_entity_status: rde_2_x.Status = curr_native_entity.status
             # update defined entity of the cluster
-            curr_native_entity.status.cloud_properties.k8_distribution = \
+            curr_entity_status.cloud_properties.k8_distribution = \
                 rde_2_x.Distribution(template_name=template[LocalTemplateKey.NAME],  # noqa: E501
                                      template_revision=int(template[LocalTemplateKey.REVISION]))  # noqa: E501
-            curr_native_entity.status.cni = \
+            curr_entity_status.cni = \
                 _create_k8s_software_string(template[LocalTemplateKey.CNI],
                                             template[LocalTemplateKey.CNI_VERSION])  # noqa: E501
-            curr_native_entity.status.kubernetes = \
+            curr_entity_status.kubernetes = \
                 _create_k8s_software_string(template[LocalTemplateKey.KUBERNETES],  # noqa: E501
                                             template[LocalTemplateKey.KUBERNETES_VERSION])  # noqa: E501
-            curr_native_entity.status.docker_version = template[LocalTemplateKey.DOCKER_VERSION]  # noqa: E501
-            curr_native_entity.status.os = template[LocalTemplateKey.OS]
-            curr_native_entity.status.phase = str(
+            curr_entity_status.docker_version = template[LocalTemplateKey.DOCKER_VERSION]  # noqa: E501
+            curr_entity_status.os = template[LocalTemplateKey.OS]
+            curr_entity_status.phase = str(
                 DefEntityPhase(DefEntityOperation.UPGRADE,
                                DefEntityOperationStatus.SUCCEEDED))
-            self.sysadmin_entity_svc.update_entity(curr_entity.id, curr_entity)
+            self._update_cluster_entity(cluster_id, curr_entity_status)
 
             msg = f"Successfully upgraded cluster '{cluster_name}' software " \
                   f"to match template {template_name} (revision " \
@@ -1674,15 +1687,49 @@ class ClusterService(abstract_broker.AbstractBroker):
         sysadmin_client_v36 = self.context.get_sysadmin_client(
             api_version=DEFAULT_API_VERSION)
         curr_nodes_status = _get_nodes_details(sysadmin_client_v36, vapp)
+        curr_entity_status: rde_2_x.Status = curr_entity.entity.status
         if curr_nodes_status:
-            curr_entity.entity.status.nodes = curr_nodes_status
-        return self.sysadmin_entity_svc.update_entity(cluster_id, curr_entity)
+            curr_entity_status.nodes = curr_nodes_status
+        return self._update_cluster_entity(
+            cluster_id, curr_entity_status, cluster_rde=curr_entity)
+
+    def _update_cluster_entity(self, cluster_id: str,
+                               native_entity_status: rde_2_x.Status,
+                               cluster_rde: common_models.DefEntity = None,
+                               external_id: Optional[str] = None):
+        """Update status part of the cluster rde.
+
+        This method serves as a placeholder where we make changes for
+        optimistic locking.
+
+        :param str cluster_id: ID of the defined entity
+        :param rde_2_x.Status native_entity_status: Defined entity status to be
+            updated
+        """
+        # TODO update funciton to use optimistic locking feature by VCD
+        # Make a GET call on the entity to receive the latest version of the
+        # RDE if cluster_rde is not specified
+        if not cluster_rde:
+            cluster_rde: common_models.DefEntity = \
+                self.entity_svc.get_entity(cluster_id)
+
+        # update the cluster_rde with external_id if provided by the caller
+        if external_id:
+            cluster_rde.entity.externalId = external_id
+        # Update entity status with new values
+        cluster_rde.entity.status = native_entity_status
+
+        # Update cluster rde
+        return self.sysadmin_entity_svc.update_entity(cluster_id,
+                                                      cluster_rde,
+                                                      invoke_hooks=False)
 
     def _fail_operation(self, cluster_id: str, op: DefEntityOperation):
         def_entity: common_models.DefEntity = self.entity_svc.get_entity(cluster_id)  # noqa: E501
-        def_entity.entity.status.phase = \
+        cluster_status: rde_2_x.Status = def_entity.entity.status
+        cluster_status.status.phase = \
             str(DefEntityPhase(op, DefEntityOperationStatus.FAILED))
-        self.sysadmin_entity_svc.update_entity(cluster_id, def_entity)
+        self._update_cluster_entity(def_entity.id, cluster_status, cluster_rde=def_entity)  # noqa: E501
 
     def _update_task(self, status, message='', error_message='', progress=None):  # noqa: E501
         if status == BehaviorTaskStatus.ERROR:
