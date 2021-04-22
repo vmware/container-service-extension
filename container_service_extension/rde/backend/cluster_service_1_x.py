@@ -333,7 +333,8 @@ class ClusterService(abstract_broker.AbstractBroker):
         if not unexpose and num_workers_to_add == 0 and num_nfs_to_add == 0:
             raise E.CseServerError(f"Cluster '{cluster_name}' already has "
                                    f"{desired_worker_count} workers and "
-                                   f"{desired_nfs_count} nfs nodes.")
+                                   f"{desired_nfs_count} nfs nodes and "
+                                   f"is already not exposed.")
         elif not unexpose and desired_worker_count < 0:
             raise E.CseServerError(
                 f"Worker count must be >= 0 (received {desired_worker_count})")
