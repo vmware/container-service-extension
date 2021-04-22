@@ -151,7 +151,8 @@ VALID_UPDATE_FIELDS_2X = \
     [FlattenedClusterSpecKey2X.WORKERS_COUNT.value,
      FlattenedClusterSpecKey2X.NFS_COUNT.value,
      FlattenedClusterSpecKey2X.TEMPLATE_NAME.value,
-     FlattenedClusterSpecKey2X.TEMPLATE_REVISION.value]
+     FlattenedClusterSpecKey2X.TEMPLATE_REVISION.value,
+     FlattenedClusterSpecKey2X.EXPOSE.value]
 
 
 CLUSTER_ENTITY = 'cluster_entity'

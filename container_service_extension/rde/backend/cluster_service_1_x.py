@@ -848,7 +848,8 @@ class ClusterService(abstract_broker.AbstractBroker):
             # Update defined entity with exposed ip
             if expose_ip:
                 def_entity.entity.status.exposed = True
-                if def_entity.entity.status.nodes:
+                if def_entity.entity.status.nodes and \
+                        def_entity.entity.status.nodes.control_plane:
                     def_entity.entity.status.nodes.control_plane.ip = expose_ip
 
             self.entity_svc.update_entity(cluster_id, def_entity)

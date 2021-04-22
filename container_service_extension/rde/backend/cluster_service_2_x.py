@@ -595,9 +595,12 @@ class ClusterService(abstract_broker.AbstractBroker):
         current_nfs_count = current_spec.nfs.count
         desired_workers_count = update_spec.spec.workers.count
         desired_nfs_count = update_spec.spec.nfs.count
+        desired_expose_state: bool = update_spec.spec.expose
+        is_exposed: bool = curr_entity.entity.status.exposed
+        unexpose: bool = is_exposed and not desired_expose_state
 
         if current_workers_count != desired_workers_count or \
-                current_nfs_count != desired_nfs_count:
+                current_nfs_count != desired_nfs_count or unexpose:
             return self.resize_cluster(cluster_id, update_spec)
 
         current_template_name = current_spec.k8_distribution.template_name
@@ -606,7 +609,7 @@ class ClusterService(abstract_broker.AbstractBroker):
         desired_template_revision = update_spec.spec.k8_distribution.template_revision  # noqa: E501
         if current_template_name != desired_template_name or current_template_revision != desired_template_revision:  # noqa: E501
             return self.upgrade_cluster(cluster_id, update_spec)
-        E.CseServerError("update not supported for the specified input specification")  # noqa: E501
+        raise E.CseServerError("update not supported for the specified input specification")  # noqa: E501
 
     def get_cluster_acl_info(self, cluster_id, page: int, page_size: int):
         """Get cluster ACL info based on the defined entity ACL."""
@@ -928,7 +931,8 @@ class ClusterService(abstract_broker.AbstractBroker):
             # Update defined entity with exposed ip
             if expose_ip:
                 def_entity.entity.status.exposed = True
-                if def_entity.entity.status.nodes:
+                if def_entity.entity.status.nodes and \
+                        def_entity.entity.status.nodes.control_plane.ip:
                     def_entity.entity.status.nodes.control_plane.ip = expose_ip
 
             self.entity_svc.update_entity(cluster_id, def_entity)
