@@ -1577,7 +1577,7 @@ class ClusterService(abstract_broker.AbstractBroker):
         if not curr_entity:
             curr_entity: common_models.DefEntity = self.entity_svc.get_entity(
                 cluster_id)
-        if not curr_entity.externalId:
+        if not curr_entity.externalId and not vapp:
             return curr_entity
         if not vapp:
             vapp = vcd_vapp.VApp(self.context.client, href=curr_entity.externalId)  # noqa: E501
