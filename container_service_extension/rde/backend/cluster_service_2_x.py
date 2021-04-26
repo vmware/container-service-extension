@@ -1825,10 +1825,12 @@ class ClusterService(abstract_broker.AbstractBroker):
         curr_nodes_status = _get_nodes_details(
             self.context.sysadmin_client, vapp)
         if curr_nodes_status:
+            # Retrieve external ip for exposed NSX-T cluster
             if curr_entity.entity.status.exposed and \
                     curr_entity.entity.status.nodes and \
                     curr_entity.entity.status.nodes.control_plane:
                 curr_nodes_status.control_plane.ip = curr_entity.entity.status.nodes.control_plane.ip  # noqa: E501
+
             curr_entity.entity.status.nodes = curr_nodes_status
         return self.entity_svc.update_entity(cluster_id, curr_entity)
 
