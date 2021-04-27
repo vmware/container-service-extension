@@ -224,7 +224,7 @@ class Service(object, metaclass=Singleton):
     def info(self, get_sysadmin_info=False):
         result = utils.get_cse_info()
         server_config = server_utils.get_server_runtime_config()
-        result[shared_constants.CSE_SERVER_API_VERSION] = server_config['vcd']['default_api_version']  # noqa: E501
+        result[shared_constants.CSE_SERVER_API_VERSION] = server_config['service']['default_api_version']  # noqa: E501
         result[shared_constants.CSE_SERVER_SUPPORTED_API_VERSIONS] = server_config['service']['supported_api_versions']  # noqa: E501
         result[shared_constants.CSE_SERVER_LEGACY_MODE] = server_config['service']['legacy_mode']  # noqa: E501
         if get_sysadmin_info:
@@ -591,7 +591,7 @@ class Service(object, metaclass=Singleton):
             # version supported by VCD and CSE.
             client = Client(
                 self.config['vcd']['host'],
-                api_version=self.config['vcd']['default_api_version'],
+                api_version=self.config['service']['default_api_version'],
                 verify_ssl_certs=self.config['vcd']['verify'],
                 log_file=log_filename,
                 log_requests=log_wire,

@@ -76,12 +76,12 @@ class UserContext:
         # can't be sys admin or org admin. And anyone other than those
         # two shouldn't be able to see their own set of rights.
         if self._rights is None:
-            self._rights = []
             try:
                 org = vcd_org.Org(self.client, href=self.org_href)
                 role = vcd_role.Role(self.client,
                                      resource=org.get_role_resource(self.role))
 
+                self._rights = []
                 for right_dict in role.list_rights():
                     right_name = right_dict.get('name')
                     if right_name is not None:

@@ -362,7 +362,7 @@ def create_service_role(ctx, vcd_host, skip_verify_ssl_certs):
 @click.option(
     '-o',
     '--output',
-    'output',
+    'output_file_name',
     required=False,
     default=None,
     metavar='OUTPUT_FILE_NAME',
@@ -382,7 +382,7 @@ def create_service_role(ctx, vcd_host, skip_verify_ssl_certs):
     metavar='API_VERSION',
     help=f'vCD API version: {SUPPORTED_VCD_API_VERSIONS}. '
          f'Not needed if only generating PKS config.')
-def sample(ctx, output, pks_config, api_version):
+def sample(ctx, output_file_name, pks_config, api_version):
     """Display sample CSE config file contents."""
     SERVER_CLI_LOGGER.debug(f"Executing command: {ctx.command_path}")
     console_message_printer = utils.ConsoleMessagePrinter()
@@ -393,9 +393,10 @@ def sample(ctx, output, pks_config, api_version):
 
     try:
         api_version = float(api_version)
-        sample_config = generate_sample_config(output=output,
-                                               generate_pks_config=pks_config,
-                                               api_version=api_version)
+        sample_config = generate_sample_config(
+            output_file_name=output_file_name,
+            generate_pks_config=pks_config,
+            api_version=api_version)
     except Exception as err:
         console_message_printer.error(str(err))
         SERVER_CLI_LOGGER.error(str(err))

@@ -457,7 +457,7 @@ class ClusterService(abstract_broker.AbstractBroker):
                 telemetry_constants.PayloadKey.SOURCE_DESCRIPTION: thread_local_data.get_thread_local_data(ThreadLocalData.USER_AGENT)  # noqa: E501
             }
         )
-        return _get_cluster_upgrade_plan(
+        return _get_cluster_upgrade_target_templates(
             curr_native_entity.status.cloud_properties.k8_distribution.template_name,  # noqa: E501
             str(curr_native_entity.status.cloud_properties.k8_distribution.template_revision))  # noqa: E501
 
@@ -492,7 +492,7 @@ class ClusterService(abstract_broker.AbstractBroker):
 
         # check that the specified template is a valid upgrade target
         template = {}
-        valid_templates = _get_cluster_upgrade_plan(
+        valid_templates = _get_cluster_upgrade_target_templates(
             cur_native_entity.status.cloud_properties.k8_distribution.template_name,  # noqa: E501
             str(cur_native_entity.status.cloud_properties.k8_distribution.template_revision))  # noqa: E501
 
@@ -1698,8 +1698,8 @@ class ClusterService(abstract_broker.AbstractBroker):
         self.task_status = status.value
 
 
-def _get_cluster_upgrade_plan(source_template_name,
-                              source_template_revision) -> List[dict]:
+def _get_cluster_upgrade_target_templates(
+        source_template_name, source_template_revision) -> List[dict]:
     """Get list of templates that a given cluster can upgrade to.
 
     :param str source_template_name:

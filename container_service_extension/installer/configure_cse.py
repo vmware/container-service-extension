@@ -104,7 +104,7 @@ def check_cse_installation(config, msg_update_callback=utils.NullPrinter()):
         # default_api_version key, it will be set to the highest api
         # version supported by VCD and CSE.
         client = Client(config['vcd']['host'],
-                        api_version=config['vcd']['default_api_version'],
+                        api_version=config['service']['default_api_version'],
                         verify_ssl_certs=config['vcd']['verify'],
                         log_file=log_filename,
                         log_requests=log_wire,
@@ -274,7 +274,7 @@ def install_cse(config_file_name, config, skip_template_creation,
         # default_api_version key, it will be set to the highest api
         # version supported by VCD and CSE.
         client = Client(config['vcd']['host'],
-                        api_version=config['vcd']['default_api_version'],
+                        api_version=config['service']['default_api_version'],
                         verify_ssl_certs=config['vcd']['verify'],
                         log_file=log_filename,
                         log_requests=log_wire,
@@ -461,7 +461,7 @@ def install_template(template_name, template_revision, config_file_name,
         # default_api_version key, it will be set to the highest api
         # version supported by VCD and CSE.
         client = Client(config['vcd']['host'],
-                        api_version=config['vcd']['default_api_version'],
+                        api_version=config['service']['default_api_version'],
                         verify_ssl_certs=config['vcd']['verify'],
                         log_file=log_filename,
                         log_requests=log_wire,
@@ -628,7 +628,7 @@ def upgrade_cse(config_file_name, config, skip_template_creation,
         # default_api_version key, it will be set to the highest api
         # version supported by VCD and CSE.
         client = Client(config['vcd']['host'],
-                        api_version=config['vcd']['default_api_version'],
+                        api_version=config['service']['default_api_version'],
                         verify_ssl_certs=config['vcd']['verify'],
                         log_file=log_filename,
                         log_requests=log_wire,

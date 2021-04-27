@@ -442,7 +442,7 @@ class ClusterService(abstract_broker.AbstractBroker):
             }
         )
 
-        return _get_cluster_upgrade_plan(
+        return _get_cluster_upgrade_target_templates(
             curr_entity.entity.spec.k8_distribution.template_name,
             curr_entity.entity.spec.k8_distribution.template_revision)
 
@@ -476,7 +476,7 @@ class ClusterService(abstract_broker.AbstractBroker):
 
         # check that the specified template is a valid upgrade target
         template = {}
-        valid_templates = _get_cluster_upgrade_plan(
+        valid_templates = _get_cluster_upgrade_target_templates(
             curr_entity.entity.spec.k8_distribution.template_name,
             curr_entity.entity.spec.k8_distribution.template_revision)
 
@@ -1672,8 +1672,8 @@ class ClusterService(abstract_broker.AbstractBroker):
             )
 
 
-def _get_cluster_upgrade_plan(source_template_name,
-                              source_template_revision) -> List[dict]:
+def _get_cluster_upgrade_target_templates(
+        source_template_name, source_template_revision) -> List[dict]:
     """Get list of templates that a given cluster can upgrade to.
 
     :param str source_template_name:

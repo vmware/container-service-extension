@@ -1,7 +1,7 @@
 # container-service-extension
 # Copyright (c) 2017 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
-
+from typing import Dict
 from urllib.parse import urlparse
 
 import cryptography
@@ -70,7 +70,9 @@ def get_validated_config(config_file_name,
     Ensures that all properties exist and all values are the expected type.
     Checks that AMQP connection is available, and vCD/VCs are valid.
     Does not guarantee that CSE has been installed according to this
-    config file.
+    config file. Additionally populates certain key-value pairs in the
+    config dict to avoid repeated computation of those e.g.
+    supported api versions, feature flags, RDE version in use etc.
 
     :param str config_file_name: path to config file.
     :param str pks_config_file_name: path to PKS config file.
@@ -193,6 +195,24 @@ def get_validated_config(config_file_name,
     else:
         config['pks_config'] = None
 
+    config = _add_additional_details_to_config(
+        config=config, log_wire=log_wire, log_wire_file=log_wire_file)
+    return config
+
+
+def _add_additional_details_to_config(
+        config: Dict,
+        log_wire: bool,
+        log_wire_file: str):
+    """Update config dict with computed key-value pairs.
+
+    :param dict config:
+    :param bool log_wire:
+    :param str log_wire_file:
+
+    :return: the updated config file
+    :rtype: dict
+    """
     is_legacy_mode = config['service']['legacy_mode']
 
     # Compute common supported api versions by the CSE server and vCD
@@ -239,12 +259,15 @@ def get_validated_config(config_file_name,
     config['feature_flags']['non_legacy_api'] = \
         not str_to_bool(is_legacy_mode)
 
+    # Compute the default api version as the max supported version
+    # Also compute the RDE version in use
     max_vcd_api_version_supported: str = get_max_api_version(config['service']['supported_api_versions'])  # noqa: E501
-    config['vcd']['default_api_version'] = max_vcd_api_version_supported
+    config['service']['default_api_version'] = max_vcd_api_version_supported
     config['service']['rde_version_in_use'] = semantic_version.Version(
         rde_utils.get_runtime_rde_version_by_vcd_api_version(
             max_vcd_api_version_supported))
 
+    # Update the config dict with telemetry specific key value pairs
     store_telemetry_settings(config)
 
     return config

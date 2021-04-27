@@ -49,7 +49,7 @@ def connect_vcd_user_via_token(
         api_version: Optional[str]):
     server_config = get_server_runtime_config()
     if not api_version:
-        api_version = server_config['vcd']['default_api_version']
+        api_version = server_config['service']['default_api_version']
     verify_ssl_certs = server_config['vcd']['verify']
     if not verify_ssl_certs:
         requests.packages.urllib3.disable_warnings()
@@ -73,7 +73,7 @@ def connect_vcd_user_via_token(
 def get_sys_admin_client(api_version: Optional[str]):
     server_config = get_server_runtime_config()
     if not api_version:
-        api_version = server_config['vcd']['default_api_version']
+        api_version = server_config['service']['default_api_version']
     verify_ssl_certs = server_config['vcd']['verify']
     if not verify_ssl_certs:
         requests.packages.urllib3.disable_warnings()

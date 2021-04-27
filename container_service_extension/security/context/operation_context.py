@@ -19,9 +19,13 @@ class OperationContext:
         self.request_id: Optional[str] = request_id
 
         # map for storing user's context at different api versions
+        # `None` key, maps to the client at the highest api version supported
+        # by the vCD and pyvcloud
         self._user_context_map: Dict[Optional[str], user_context.UserContext] = {}  # noqa: E501
 
         # map for storing sys admin user's context at different api versions
+        # `None` key maps to the client at the highest api version supported
+        # by the vCD and pyvcloud
         self._sysadmin_user_context_map: Dict[Optional[str], user_context.UserContext] = {}  # noqa: E501
 
         # async operations should call end() when they are finished

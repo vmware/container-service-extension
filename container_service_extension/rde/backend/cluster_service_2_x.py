@@ -54,6 +54,14 @@ import container_service_extension.security.context.operation_context as ctx
 import container_service_extension.server.abstract_broker as abstract_broker
 import container_service_extension.server.compute_policy_manager as compute_policy_manager  # noqa: E501
 
+# Currently this service layer has been developed against
+# vCD 10.3 (api v 36.0). Hence only one api version is being
+# used in this file. But as we release minor versions of RDE 2
+# in newer VCD releases (e.g. 2.1 in api v 37.0 etc.), we
+# will make sure that the new code is accessed only at the
+# desired api version (be it 37.0 or 36.0 or something else).
+# To chose the correct VCD api version to perform a task
+# will be the responsibility of the newer implementation.
 DEFAULT_API_VERSION = vcd_client.ApiVersion.VERSION_36.value
 
 
@@ -472,7 +480,7 @@ class ClusterService(abstract_broker.AbstractBroker):
                 telemetry_constants.PayloadKey.SOURCE_DESCRIPTION: thread_local_data.get_thread_local_data(ThreadLocalData.USER_AGENT)  # noqa: E501
             }
         )
-        return _get_cluster_upgrade_plan(
+        return _get_cluster_upgrade_target_templates(
             curr_native_entity.status.cloud_properties.k8_distribution.template_name,  # noqa: E501
             str(curr_native_entity.status.cloud_properties.k8_distribution.template_revision))  # noqa: E501
 
@@ -507,7 +515,7 @@ class ClusterService(abstract_broker.AbstractBroker):
 
         # check that the specified template is a valid upgrade target
         template = {}
-        valid_templates = _get_cluster_upgrade_plan(
+        valid_templates = _get_cluster_upgrade_target_templates(
             curr_native_entity.status.cloud_properties.k8_distribution.template_name,  # noqa: E501
             str(curr_native_entity.status.cloud_properties.k8_distribution.template_revision))  # noqa: E501
 
@@ -1763,8 +1771,8 @@ class ClusterService(abstract_broker.AbstractBroker):
             )
 
 
-def _get_cluster_upgrade_plan(source_template_name,
-                              source_template_revision) -> List[dict]:
+def _get_cluster_upgrade_target_templates(
+        source_template_name, source_template_revision) -> List[dict]:
     """Get list of templates that a given cluster can upgrade to.
 
     :param str source_template_name:

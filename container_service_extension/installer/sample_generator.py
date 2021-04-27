@@ -296,16 +296,16 @@ SAMPLE_PKS_NSXT_SERVERS_SECTION = {
 }
 
 
-def generate_sample_config(output=None, generate_pks_config=False,
-                           api_version=MQTT_MIN_API_VERSION):
+def generate_sample_config(
+        output_file_name: str, generate_pks_config: bool, api_version: str):
     """Generate sample configs for cse.
 
-    If config file names are
-    provided, configs are dumped into respective files.
+    If output config file name is provided, config is dumped into the file.
 
-    :param str output: name of the config file to dump the CSE configs.
+    :param str output_file_name: name of the config file to dump the
+        CSE configs.
     :param bool generate_pks_config: Flag to generate sample of PKS specific
-    configuration file instead of sample regular CSE configuration file.
+        configuration file instead of sample regular CSE configuration file.
     :param float api_version: the desired api version for the config file.
 
     :return: sample config
@@ -358,8 +358,8 @@ def generate_sample_config(output=None, generate_pks_config=False,
             SAMPLE_PKS_NSXT_SERVERS_SECTION, default_flow_style=False)
         sample_config = f"{INSTRUCTIONS_FOR_PKS_CONFIG_FILE}\n{sample_config}"
 
-    if output:
-        with open(output, 'w') as f:
+    if output_file_name:
+        with open(output_file_name, 'w') as f:
             f.write(sample_config)
 
     return sample_config.strip()
