@@ -217,8 +217,8 @@ class ClusterService(abstract_broker.AbstractBroker):
 
         **telemetry: Optional
 
-        :return: Defined entity of the cluster
-        :rtype: common_models.DefEntity
+        :return: dictionary representing mqtt response published
+        :rtype: dict
         """
         cluster_name = input_native_entity.metadata.name
         org_name = input_native_entity.metadata.org_name
@@ -321,7 +321,7 @@ class ClusterService(abstract_broker.AbstractBroker):
         :return: DefEntity of the cluster with the updated operation status
         and task_href.
 
-        :rtype: DefEntity
+        :rtype: dict
         """
         # TODO: Make use of current entity in the behavior payload
         # NOTE: It is always better to do a get on the entity to make use of
@@ -503,8 +503,8 @@ class ClusterService(abstract_broker.AbstractBroker):
         :param rde_2_x.NativeEntity input_native_entity: cluster spec with new
             kubernetes distribution and revision
 
-        :return: Defined entity with upgrade in progress set
-        :rtype: def_models.DefEntity representing the cluster
+        :return: dictionary representing mqtt response published
+        :rtype: dict
         """
         # TODO: Make use of current entity in the behavior payload
         curr_entity = self.entity_svc.get_entity(cluster_id)
@@ -516,7 +516,7 @@ class ClusterService(abstract_broker.AbstractBroker):
 
         # check if cluster is in a valid state
         phase: DefEntityPhase = DefEntityPhase.from_phase(
-            input_native_entity.status.phase)
+            curr_native_entity.status.phase)
 
         if state != def_constants.DEF_RESOLVED_STATE or phase.is_entity_busy():
             raise exceptions.CseServerError(
@@ -594,8 +594,8 @@ class ClusterService(abstract_broker.AbstractBroker):
         :param rde_2_x.NativeEntity input_native_entity: cluster spec with new
         worker/nfs node count or new kubernetes distribution and revision
 
-        :return: Defined entity with update in progress set
-        :rtype: def_models.DefEntity representing the cluster
+        :return: dictionary representing mqtt response published
+        :rtype: dict
         """
         current_spec: rde_2_x.ClusterSpec = \
             def_utils.construct_cluster_spec_from_entity_status(
