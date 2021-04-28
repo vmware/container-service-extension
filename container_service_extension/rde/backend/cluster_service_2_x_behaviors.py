@@ -58,10 +58,10 @@ import container_service_extension.server.abstract_broker as abstract_broker
 import container_service_extension.server.compute_policy_manager as compute_policy_manager  # noqa: E501
 
 
-CLUSTER_CREATE_IN_PROGRESS_MESSAGE = 'create_cluster_in_progress'
-CLUSTER_RESIZE_IN_PROGRESS_MESSAGE = 'resize_cluster_in_progress'
-CLUSTER_DELETE_IN_PROGRESS_MESSAGE = 'delete_cluster_in_progress'
-CLUSTER_UPGRADE_IN_PROGRESS_MESSAGE = 'upgrade_cluster_in_progress'
+CLUSTER_CREATE_IN_PROGRESS_MESSAGE = 'Create cluster in progress'
+CLUSTER_RESIZE_IN_PROGRESS_MESSAGE = 'Resize cluster in progress'
+CLUSTER_DELETE_IN_PROGRESS_MESSAGE = 'Delete cluster in progress'
+CLUSTER_UPGRADE_IN_PROGRESS_MESSAGE = 'Upgrade cluster in progress'
 
 
 class ClusterService(abstract_broker.AbstractBroker):
@@ -308,6 +308,7 @@ class ClusterService(abstract_broker.AbstractBroker):
 
         :rtype: DefEntity
         """
+        # TODO: Make use of current entity in the behavior payload
         # NOTE: It is always better to do a get on the entity to make use of
         # existing entity status. This guarantees that operations performed
         # are relevant.
@@ -387,12 +388,15 @@ class ClusterService(abstract_broker.AbstractBroker):
         self.context.is_async = True
         self._monitor_resize(cluster_id=cluster_id,
                              cluster_spec=input_native_entity)
+        # TODO(test-resize): verify if multiple messages are not published
+        #   in update_cluster()
         return self.mqtt_publisher.construct_behavior_payload(
             message=CLUSTER_RESIZE_IN_PROGRESS_MESSAGE,
             status=BehaviorTaskStatus.RUNNING.value, progress=5)
 
     def delete_cluster(self, cluster_id):
         """Start the delete cluster operation."""
+        # TODO: Make use of current entity in the behavior payload
         # Get entity required here to get the org and vdc in which the cluster
         # is present
         curr_entity: common_models.DefEntity = self.entity_svc.get_entity(
@@ -456,6 +460,7 @@ class ClusterService(abstract_broker.AbstractBroker):
 
         :rtype: List[Dict]
         """
+        # TODO: Make use of current entity in the behavior payload
         # Get entity required here to retrieve the cluster upgrade plan
         curr_entity = self.entity_svc.get_entity(cluster_id)
         curr_native_entity: rde_2_x.NativeEntity = curr_entity.entity
@@ -483,6 +488,7 @@ class ClusterService(abstract_broker.AbstractBroker):
         :return: Defined entity with upgrade in progress set
         :rtype: def_models.DefEntity representing the cluster
         """
+        # TODO: Make use of current entity in the behavior payload
         curr_entity = self.entity_svc.get_entity(cluster_id)
         curr_native_entity: rde_2_x.NativeEntity = curr_entity.entity
         cluster_name = curr_native_entity.metadata.name
@@ -554,6 +560,8 @@ class ClusterService(abstract_broker.AbstractBroker):
         self.context.is_async = True
         self._upgrade_cluster_async(cluster_id=cluster_id,
                                     template=template)
+        # TODO(test-upgrade): Verify if multiple messages are not published
+        #   in update_cluster()
         return self.mqtt_publisher.construct_behavior_payload(
             message=CLUSTER_UPGRADE_IN_PROGRESS_MESSAGE,
             status=BehaviorTaskStatus.RUNNING.value, progress=5)
@@ -589,7 +597,7 @@ class ClusterService(abstract_broker.AbstractBroker):
         desired_template_revision = input_native_entity.spec.k8_distribution.template_revision  # noqa: E501
         if current_template_name != desired_template_name or current_template_revision != desired_template_revision:  # noqa: E501
             return self.upgrade_cluster(cluster_id, input_native_entity)
-        E.CseServerError("update not supported for the specified input specification")  # noqa: E501
+        raise E.CseServerError("update not supported for the specified input specification")  # noqa: E501
 
     def get_cluster_acl_info(self, cluster_id, page: int, page_size: int):
         """Get cluster ACL info based on the defined entity ACL."""
@@ -671,6 +679,7 @@ class ClusterService(abstract_broker.AbstractBroker):
         """Start the delete nodes operation."""
         if nodes_to_del is None:
             nodes_to_del = []
+        # TODO: Make use of current entity in the behavior payload
         # get_entity() call needed here to get the cluster details
         curr_entity: common_models.DefEntity = self.entity_svc.get_entity(
             cluster_id)
