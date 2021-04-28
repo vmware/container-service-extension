@@ -1194,8 +1194,8 @@ def _register_def_schema(client: Client,
     # TODO update CSE install to create client from max_vcd_api_version
     try:
         def_utils.raise_error_if_def_not_supported(cloudapi_client)
-        rde_version: str = config['service']['rde_version_in_use']
-        msg_update_callback.general(f"Using RDE version: {rde_version}")
+        rde_version: str = str(config['service']['rde_version_in_use'])
+        msg_update_callback.general(f"Using RDE version: {str(rde_version)}")
         # Obtain RDE metadata needed to initialize CSE
         rde_metadata: dict = def_utils.get_rde_metadata(rde_version)
 
@@ -2277,7 +2277,7 @@ def _upgrade_non_legacy_clusters(
 
     # TODO: get proper site information
     site = config['vcd']['host']
-    runtime_rde_version: str = config['service']['rde_version_in_use']
+    runtime_rde_version: str = str(config['service']['rde_version_in_use'])
     rde_metadata: dict = def_utils.get_rde_metadata(runtime_rde_version)
     entity_type_metadata = rde_metadata[def_constants.RDEMetadataKey.ENTITY_TYPE]  # noqa: E501
     target_entity_type = schema_svc.get_entity_type(entity_type_metadata.get_id())  # noqa: E501

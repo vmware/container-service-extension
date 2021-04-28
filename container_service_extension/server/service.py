@@ -114,35 +114,54 @@ def verify_version_compatibility(
     if ext_cse_version == server_constants.UNKNOWN_CSE_VERSION:
         raise cse_exception.VersionCompatibilityError(
             "CSE and VCD API version data not found on VCD. "
-            "Upgrade CSE to update version data.")
+            "Please upgrade CSE and retry.")
 
     error_msg = ''
     cse_version = server_utils.get_installed_cse_version()
+    # Trying to use newer version of CSE without running `cse upgrade`
     if cse_version > ext_cse_version:
         error_msg += \
             f"CSE Server version ({cse_version}) is higher than what was " \
             f"previously registered with VCD ({ext_cse_version}). " \
-            f"Upgrade CSE to update CSE version on VCD."
+            "Please upgrade CSE and retry."
+    # Trying to use an older version of CSE
     if cse_version < ext_cse_version:
         error_msg += \
             f"CSE Server version ({cse_version}) cannot be lower than what " \
-            f"was previously registered with VCD ({ext_cse_version})."
+            f"was previously registered with VCD ({ext_cse_version}). " \
+            "Please use a newer version of CSE."
 
+    # Trying to run a legacy CSE in non-legacy mode
     if not should_cse_run_in_legacy_mode and ext_in_legacy_mode:
         error_msg += \
             "Installed CSE is configured in legacy mode. Unable to run it " \
-            "in non-legacy mode. Please use `cse upgrade` to first " \
-            "configure CSE to operate in non-legacy mode."
+            "in non-legacy mode. Please use `cse upgrade` to configure " \
+            "CSE to operate in non-legacy mode."
+
+    # Trying to run a non legacy CSE in legacy mode
     if should_cse_run_in_legacy_mode and not ext_in_legacy_mode:
         error_msg += \
             "Installed CSE is configured in non-legacy mode. Unable to run " \
             "it in legacy mode."
 
-    runtime_rde_version = semantic_version.Version(server_utils.get_rde_version_in_use())  # noqa: E501
-    if not ext_in_legacy_mode and runtime_rde_version < ext_rde_in_use:
-        error_msg += f"Installed CSE RDE version ({runtime_rde_version}) " \
-            f"is lower than the supported Server RDE version " \
-            f"({ext_rde_in_use}). Upgrade CSE to update RDE."
+    expected_runtime_rde_version = semantic_version.Version(server_utils.get_rde_version_in_use())  # noqa: E501
+    if not ext_in_legacy_mode:
+        # VCD downgrade?
+        if ext_rde_in_use > expected_runtime_rde_version:
+            error_msg += \
+                "Installed CSE Runtime Defined Entity (RDE) version " \
+                f"({ext_rde_in_use}) is higher than the expected RDE " \
+                f"version ({expected_runtime_rde_version}). Please " \
+                "upgrade VCD to proceed."
+
+        # VCD got upgraded without `cse upgrade` being run.
+        if ext_rde_in_use < expected_runtime_rde_version:
+            error_msg += \
+                "Installed CSE Runtime Defined Entity (RDE) version " \
+                f"({ext_rde_in_use}) is lower than the expected RDE " \
+                f"version ({expected_runtime_rde_version}). Please " \
+                "use `cse upgrade` to upgrade CSE RDE version and " \
+                "retry."
 
     if error_msg:
         raise cse_exception.VersionCompatibilityError(error_msg)
@@ -534,8 +553,8 @@ class Service(object, metaclass=Singleton):
             if sysadmin_client:
                 sysadmin_client.logout()
 
-    def _load_placement_policy_details(self,
-                                       msg_update_callback=utils.NullPrinter()):  # noqa: E501
+    def _load_placement_policy_details(
+            self, msg_update_callback=utils.NullPrinter()):
         msg = "Loading kubernetes runtime placement policies."
         logger.SERVER_LOGGER.info(msg)
         msg_update_callback.general(msg)
@@ -568,8 +587,8 @@ class Service(object, metaclass=Singleton):
             logger.SERVER_LOGGER.error(msg)
             raise
 
-    def _load_template_definition_from_catalog(self,
-                                               msg_update_callback=utils.NullPrinter()):  # noqa: E501
+    def _load_template_definition_from_catalog(
+            self, msg_update_callback=utils.NullPrinter()):
         # NOTE: If `enable_tkg_plus` in the config file is set to false,
         # CSE server will skip loading the TKG+ template this will prevent
         # users from performing TKG+ related operations.
