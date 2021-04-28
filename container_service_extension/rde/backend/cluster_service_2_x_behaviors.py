@@ -60,6 +60,12 @@ import container_service_extension.server.compute_policy_manager as compute_poli
 DEFAULT_API_VERSION = vcd_client.ApiVersion.VERSION_36.value
 
 
+CLUSTER_CREATE_IN_PROGRESS_MESSAGE = 'create_cluster_in_progress'
+CLUSTER_RESIZE_IN_PROGRESS_MESSAGE = 'resize_cluster_in_progress'
+CLUSTER_DELETE_IN_PROGRESS_MESSAGE = 'delete_cluster_in_progress'
+CLUSTER_UPGRADE_IN_PROGRESS_MESSAGE = 'upgrade_cluster_in_progress'
+
+
 class ClusterService(abstract_broker.AbstractBroker):
     """Handles cluster operations for native DEF based clusters."""
 
@@ -252,33 +258,39 @@ class ClusterService(abstract_broker.AbstractBroker):
 
         # TODO(DEF) design and implement telemetry VCDA-1564 defined entity
         #  based clusters
-        new_entity_status: rde_2_x.Status = rde_2_x.Status()
-        new_entity_status.phase = str(
-            DefEntityPhase(DefEntityOperation.CREATE,
-                           DefEntityOperationStatus.IN_PROGRESS))
-        new_entity_status.kubernetes = \
-            _create_k8s_software_string(template[LocalTemplateKey.KUBERNETES],
-                                        template[LocalTemplateKey.KUBERNETES_VERSION]) # noqa: E501
-        new_entity_status.cni = \
-            _create_k8s_software_string(template[LocalTemplateKey.CNI],
-                                        template[LocalTemplateKey.CNI_VERSION])
-        new_entity_status.docker_version = template[LocalTemplateKey.DOCKER_VERSION] # noqa: E501
-        new_entity_status.os = template[LocalTemplateKey.OS]
-        new_entity_status.cloud_properties.k8_distribution.template_name = template_name  # noqa: E501
-        new_entity_status.cloud_properties.k8_distribution.template_revision = template_revision  # noqa: E501
-        new_entity_status.cloud_properties.org_name = org_name
-        new_entity_status.cloud_properties.ovdc_name = ovdc_name
-        new_entity_status.cloud_properties.ovdc_network_name = input_native_entity.spec.settings.network  # noqa: E501
-        new_entity_status.cloud_properties.rollback_on_failure = input_native_entity.spec.settings.rollback_on_failure  # noqa: E501
-        new_entity_status.cloud_properties.ssh_key = input_native_entity.spec.settings.ssh_key  # noqa: E501
+        k8_distribution = rde_2_x.Distribution(
+            template_name=template_name,
+            template_revision=template_revision
+        )
+        cloud_properties = rde_2_x.CloudProperties(
+            k8_distribution=k8_distribution,
+            org_name=org_name,
+            ovdc_name=ovdc_name,
+            ovdc_network_name=input_native_entity.spec.settings.network,
+            rollback_on_failure=input_native_entity.spec.settings.rollback_on_failure,  # noqa: E501
+            ssh_key=input_native_entity.spec.settings.ssh_key
+        )
+        new_status: rde_2_x.Status = rde_2_x.Status(
+            phase=str(DefEntityPhase(DefEntityOperation.CREATE,
+                                     DefEntityOperationStatus.IN_PROGRESS)),
+            kubernetes=_create_k8s_software_string(
+                template[LocalTemplateKey.KUBERNETES],
+                template[LocalTemplateKey.KUBERNETES_VERSION]),
+            cni=_create_k8s_software_string(
+                template[LocalTemplateKey.CNI],
+                template[LocalTemplateKey.CNI_VERSION]),
+            docker_version=template[LocalTemplateKey.DOCKER_VERSION],
+            os=template[LocalTemplateKey.OS],
+            cloud_properties=cloud_properties
+        )
 
         msg = f"Creating cluster '{cluster_name}' " \
               f"from template '{template_name}' (revision {template_revision})"
         self._update_task(BehaviorTaskStatus.RUNNING, message=msg)
-        new_entity_status.task_href = self.task_href
+        new_status.task_href = self.task_href
         try:
             self._update_cluster_entity(entity_id,
-                                        new_entity_status)
+                                        new_status)
         except Exception as err:
             msg = f"Error updating the cluster '{cluster_name}' with the status"  # noqa: E501
             LOGGER.error(f"{msg}: {err}")
@@ -297,23 +309,27 @@ class ClusterService(abstract_broker.AbstractBroker):
                           message='Hurray cluster task-update is working',
                           progress=3)
         return self.mqtt_publisher.construct_behavior_payload(
-            message='create_cluster_in_progress',
+            message=CLUSTER_CREATE_IN_PROGRESS_MESSAGE,
             status=BehaviorTaskStatus.RUNNING.value, progress='5')
 
     def resize_cluster(self, cluster_id: str,
-                       cluster_spec: rde_2_x.NativeEntity):
+                       input_native_entity: rde_2_x.NativeEntity):
         """Start the resize cluster operation.
 
         :param str cluster_id: Defined entity Id of the cluster
-        :param DefEntity cluster_spec: Input cluster spec
+        :param DefEntity input_native_entity: Input cluster spec
         :return: DefEntity of the cluster with the updated operation status
         and task_href.
 
         :rtype: DefEntity
         """
-        # Get the existing defined entity for the given cluster id
+        # NOTE: It is always better to do a get on the entity to make use of
+        # existing entity status. This guarantees that operations performed
+        # are relevant.
         curr_entity: common_models.DefEntity = self.entity_svc.get_entity(cluster_id)  # noqa: E501
         curr_native_entity: rde_2_x.NativeEntity = curr_entity.entity
+        state: str = curr_entity.state
+
         cluster_name: str = curr_entity.name
         current_spec: rde_2_x.ClusterSpec = \
             def_utils.construct_cluster_spec_from_entity_status(
@@ -321,15 +337,14 @@ class ClusterService(abstract_broker.AbstractBroker):
                 server_utils.get_rde_version_in_use())
         curr_worker_count: int = current_spec.workers.count
         curr_nfs_count: int = current_spec.nfs.count
-        state: str = curr_entity.state
         phase: DefEntityPhase = DefEntityPhase.from_phase(
             curr_native_entity.status.phase)
 
         # compute the values of workers and nfs to be added or removed by
         # comparing the desired and the current state. "num_workers_to_add"
         # can hold either +ve or -ve value.
-        desired_worker_count: int = cluster_spec.spec.workers.count
-        desired_nfs_count: int = cluster_spec.spec.nfs.count
+        desired_worker_count: int = input_native_entity.spec.workers.count
+        desired_nfs_count: int = input_native_entity.spec.nfs.count
         num_workers_to_add: int = desired_worker_count - curr_worker_count
         num_nfs_to_add: int = desired_nfs_count - curr_nfs_count
 
@@ -356,7 +371,7 @@ class ClusterService(abstract_broker.AbstractBroker):
         telemetry_data: common_models.DefEntity = common_models.DefEntity(
             entityType=server_utils.get_registered_def_entity_type().id,
             id=cluster_id,
-            entity=cluster_spec)
+            entity=input_native_entity)
         telemetry_handler.record_user_action_details(
             cse_operation=telemetry_constants.CseOperation.V36_CLUSTER_APPLY,
             cse_params={
@@ -370,15 +385,15 @@ class ClusterService(abstract_broker.AbstractBroker):
               f"desired worker count {desired_worker_count} and " \
               f"nfs count {desired_nfs_count}"
         self._update_task(BehaviorTaskStatus.RUNNING, message=msg)
-        new_entity_status: rde_2_x.Status = curr_native_entity.status
-        new_entity_status.task_href = self.task_href
-        new_entity_status.phase = str(
+
+        # set entity status to busy
+        new_status: rde_2_x.Status = curr_native_entity.status
+        new_status.task_href = self.task_href
+        new_status.phase = str(
             DefEntityPhase(DefEntityOperation.UPDATE,
                            DefEntityOperationStatus.IN_PROGRESS))
         try:
-            curr_entity = self._update_cluster_entity(cluster_id,
-                                                      new_entity_status,
-                                                      cluster_rde=curr_entity)
+            self._update_cluster_entity(cluster_id, new_status)
         except Exception as err:
             self._update_task(BehaviorTaskStatus.ERROR,
                               message=msg,
@@ -388,12 +403,15 @@ class ClusterService(abstract_broker.AbstractBroker):
         # trigger async operation
         self.context.is_async = True
         self._monitor_resize(cluster_id=cluster_id,
-                             cluster_spec=cluster_spec)
-        return curr_entity
+                             cluster_spec=input_native_entity)
+        return self.mqtt_publisher.construct_behavior_payload(
+            message=CLUSTER_RESIZE_IN_PROGRESS_MESSAGE,
+            status=BehaviorTaskStatus.RUNNING.value, progress=5)
 
     def delete_cluster(self, cluster_id):
         """Start the delete cluster operation."""
-        # Get the current state of the defined entity
+        # Get entity required here to get the org and vdc in which the cluster
+        # is present
         curr_entity: common_models.DefEntity = self.entity_svc.get_entity(
             cluster_id)
         curr_native_entity: rde_2_x.NativeEntity = curr_entity.entity
@@ -403,6 +421,8 @@ class ClusterService(abstract_broker.AbstractBroker):
         phase: DefEntityPhase = DefEntityPhase.from_phase(
             curr_native_entity.status.phase)
 
+        # TODO: Cannot delete the defined entity if not in RESOLVED state.
+        #   Add check for resolved state before deleting the Vapp
         # Check if cluster is busy
         if phase.is_entity_busy():
             raise exceptions.CseServerError(
@@ -423,24 +443,27 @@ class ClusterService(abstract_broker.AbstractBroker):
         msg = f"Deleting cluster '{cluster_name}' ({cluster_id})"
         self._update_task(BehaviorTaskStatus.RUNNING, message=msg)
 
-        curr_native_entity.status.task_href = self.task_href
-        curr_native_entity.status.phase = str(
+        new_status: rde_2_x.Status = curr_native_entity.status
+        new_status.task_href = self.task_href
+        curr_native_entity.phase = str(
             DefEntityPhase(DefEntityOperation.DELETE,
                            DefEntityOperationStatus.IN_PROGRESS))
+        # Update defined entity of the cluster to delete in-progress state
         try:
-            # attempt deleting the defined entity;
-            # lets vCD authorize the user for delete operation.
-            self.entity_svc.delete_entity(cluster_id)
+            self._update_cluster_entity(cluster_id, new_status)
         except Exception as err:
-            self._update_task(BehaviorTaskStatus.ERROR,
-                              message=msg,
-                              error_message=str(err))
-            LOGGER.error(str(err))
+            msg = f"Error updating the cluster '{cluster_name}' with the status"  # noqa: E501
+            LOGGER.error(f"{msg}: {err}")
             raise
         self.context.is_async = True
+        # NOTE: The async method will mark the task as succeeded which will
+        # allow the RDE framework to delete the cluster defined entity
         self._delete_cluster_async(cluster_name=cluster_name,
-                                   org_name=org_name, ovdc_name=ovdc_name)
-        return curr_entity
+                                   org_name=org_name, ovdc_name=ovdc_name,
+                                   def_entity=curr_entity)
+        return self.mqtt_publisher.construct_behavior_payload(
+            message=CLUSTER_DELETE_IN_PROGRESS_MESSAGE,
+            status=BehaviorTaskStatus.RUNNING.value, progress='5')
 
     def get_cluster_upgrade_plan(self, cluster_id: str):
         """Get the template names/revisions that the cluster can upgrade to.
@@ -450,6 +473,7 @@ class ClusterService(abstract_broker.AbstractBroker):
 
         :rtype: List[Dict]
         """
+        # Get entity required here to retrieve the cluster upgrade plan
         curr_entity = self.entity_svc.get_entity(cluster_id)
         curr_native_entity: rde_2_x.NativeEntity = curr_entity.entity
         telemetry_handler.record_user_action_details(
@@ -464,14 +488,14 @@ class ClusterService(abstract_broker.AbstractBroker):
             str(curr_native_entity.status.cloud_properties.k8_distribution.template_revision))  # noqa: E501
 
     def upgrade_cluster(self, cluster_id: str,
-                        upgrade_spec: rde_2_x.NativeEntity):
+                        input_native_entity: rde_2_x.NativeEntity):
         """Start the upgrade cluster operation.
 
         Upgrading cluster is an asynchronous task, so the returned
         `result['task_href']` can be polled to get updates on task progress.
 
         :param str cluster_id: id of the cluster to be upgraded
-        :param rde_2_x.NativeEntity upgrade_spec: cluster spec with new
+        :param rde_2_x.NativeEntity input_native_entity: cluster spec with new
             kubernetes distribution and revision
 
         :return: Defined entity with upgrade in progress set
@@ -480,13 +504,14 @@ class ClusterService(abstract_broker.AbstractBroker):
         curr_entity = self.entity_svc.get_entity(cluster_id)
         curr_native_entity: rde_2_x.NativeEntity = curr_entity.entity
         cluster_name = curr_native_entity.metadata.name
-        new_template_name = upgrade_spec.spec.k8_distribution.template_name
-        new_template_revision = upgrade_spec.spec.k8_distribution.template_revision  # noqa: E501
+        state = curr_entity.state
+        new_template_name = input_native_entity.spec.k8_distribution.template_name  # noqa: E501
+        new_template_revision = input_native_entity.spec.k8_distribution.template_revision # noqa: E501
 
         # check if cluster is in a valid state
         phase: DefEntityPhase = DefEntityPhase.from_phase(
-            curr_native_entity.status.phase)
-        state: str = curr_entity.state
+            input_native_entity.status.phase)
+
         if state != def_constants.DEF_RESOLVED_STATE or phase.is_entity_busy():
             raise exceptions.CseServerError(
                 f"Cluster {cluster_name} with id {cluster_id} is not in a "
@@ -521,23 +546,22 @@ class ClusterService(abstract_broker.AbstractBroker):
         msg = f"Upgrading cluster '{cluster_name}' " \
               f"software to match template {new_template_name} (revision " \
               f"{new_template_revision}): Kubernetes: " \
-              f"{curr_native_entity.status.kubernetes} -> " \
+              f"{input_native_entity.status.kubernetes} -> " \
               f"{template[LocalTemplateKey.KUBERNETES_VERSION]}, Docker-CE: " \
-              f"{curr_native_entity.status.docker_version} -> " \
+              f"{input_native_entity.status.docker_version} -> " \
               f"{template[LocalTemplateKey.DOCKER_VERSION]}, CNI: " \
-              f"{curr_native_entity.status.cni} -> " \
+              f"{input_native_entity.status.cni} -> " \
               f"{template[LocalTemplateKey.CNI_VERSION]}"
         self._update_task(BehaviorTaskStatus.RUNNING, message=msg)
         LOGGER.info(f"{msg} ({curr_entity.externalId})")
 
-        new_entity_status: rde_2_x.Status = curr_native_entity.status
-        new_entity_status.phase = str(
+        new_status: rde_2_x.Status = input_native_entity.status
+        new_status.phase = str(
             DefEntityPhase(DefEntityOperation.UPGRADE, DefEntityOperationStatus.IN_PROGRESS))  # noqa: E501
-        new_entity_status.task_href = self.task_href
+        new_status.task_href = self.task_href
         try:
-            curr_entity = self._update_cluster_entity(cluster_id,
-                                                      new_entity_status,
-                                                      cluster_rde=curr_entity)
+            self._update_cluster_entity(cluster_id,
+                                        new_status)
         except Exception as err:
             self._update_task(BehaviorTaskStatus.ERROR,
                               message=msg,
@@ -548,41 +572,41 @@ class ClusterService(abstract_broker.AbstractBroker):
         self.context.is_async = True
         self._upgrade_cluster_async(cluster_id=cluster_id,
                                     template=template)
-        return curr_entity
+        return self.mqtt_publisher.construct_behavior_payload(
+            message=CLUSTER_UPGRADE_IN_PROGRESS_MESSAGE,
+            status=BehaviorTaskStatus.RUNNING.value, progress=5)
 
-    def update_cluster(self, cluster_id: str, update_spec: rde_2_x.NativeEntity):  # noqa: E501
+    def update_cluster(self, cluster_id: str, input_native_entity: rde_2_x.NativeEntity):  # noqa: E501
         """Start the update cluster operation (resize or upgrade).
 
         Updating cluster is an asynchronous task, so the returned
         `result['task_href']` can be polled to get updates on task progress.
 
         :param str cluster_id: id of the cluster to be updated
-        :param rde_2_x.NativeEntity update_spec: cluster spec with new
+        :param rde_2_x.NativeEntity input_native_entity: cluster spec with new
         worker/nfs node count or new kubernetes distribution and revision
 
         :return: Defined entity with update in progress set
         :rtype: def_models.DefEntity representing the cluster
         """
-        curr_entity = self.entity_svc.get_entity(cluster_id)
-        curr_native_entity: rde_2_x.NativeEntity = curr_entity.entity
         current_spec: rde_2_x.ClusterSpec = \
             def_utils.construct_cluster_spec_from_entity_status(
-                curr_native_entity.status,
+                input_native_entity.status,
                 server_utils.get_rde_version_in_use())
         current_workers_count = current_spec.workers.count
         current_nfs_count = current_spec.nfs.count
-        desired_workers_count = update_spec.spec.workers.count
-        desired_nfs_count = update_spec.spec.nfs.count
+        desired_workers_count = input_native_entity.spec.workers.count
+        desired_nfs_count = input_native_entity.spec.nfs.count
 
         if current_workers_count != desired_workers_count or current_nfs_count != desired_nfs_count:  # noqa: E501
-            return self.resize_cluster(cluster_id, update_spec)
+            return self.resize_cluster(cluster_id, input_native_entity)
 
         current_template_name = current_spec.k8_distribution.template_name
         current_template_revision = current_spec.k8_distribution.template_revision  # noqa: E501
-        desired_template_name = update_spec.spec.k8_distribution.template_name
-        desired_template_revision = update_spec.spec.k8_distribution.template_revision  # noqa: E501
+        desired_template_name = input_native_entity.spec.k8_distribution.template_name  # noqa: E501
+        desired_template_revision = input_native_entity.spec.k8_distribution.template_revision  # noqa: E501
         if current_template_name != desired_template_name or current_template_revision != desired_template_revision:  # noqa: E501
-            return self.upgrade_cluster(cluster_id, update_spec)
+            return self.upgrade_cluster(cluster_id, input_native_entity)
         exceptions.CseServerError("update not supported for the specified input specification")  # noqa: E501
 
     def get_cluster_acl_info(self, cluster_id, page: int, page_size: int):
@@ -665,6 +689,7 @@ class ClusterService(abstract_broker.AbstractBroker):
         """Start the delete nodes operation."""
         if nodes_to_del is None:
             nodes_to_del = []
+        # get_entity() call needed here to get the cluster details
         curr_entity: common_models.DefEntity = self.entity_svc.get_entity(
             cluster_id)
         curr_native_entity: rde_2_x.NativeEntity = curr_entity.entity
@@ -684,15 +709,14 @@ class ClusterService(abstract_broker.AbstractBroker):
         # TODO(DEF) design and implement telemetry VCDA-1564 defined entity
         #  based clusters
 
-        new_entity_status: rde_2_x.Status = curr_native_entity.status
-        new_entity_status.task_href = self.task_href
-        new_entity_status.phase = str(
+        new_status: rde_2_x.Status = curr_native_entity.status
+        new_status.task_href = self.task_href
+        new_status.phase = str(
             DefEntityPhase(DefEntityOperation.UPDATE,
                            DefEntityOperationStatus.IN_PROGRESS))
         try:
             curr_entity = self._update_cluster_entity(cluster_id,
-                                                      new_entity_status,
-                                                      cluster_rde=curr_entity)
+                                                      new_status)
         except Exception as err:
             self._update_task(BehaviorTaskStatus.ERROR,
                               message=msg,
@@ -875,17 +899,16 @@ class ClusterService(abstract_broker.AbstractBroker):
             self._update_task(BehaviorTaskStatus.RUNNING, message=msg)
             curr_rde: common_models.DefEntity = self.entity_svc.get_entity(cluster_id)  # noqa: E501
             curr_native_entity: rde_2_x.NativeEntity = curr_rde.entity
-            new_entity_status: rde_2_x.Status = curr_native_entity. status
-            new_entity_status.uid = cluster_id
-            new_entity_status.phase = str(
+            new_status: rde_2_x.Status = curr_native_entity. status
+            new_status.uid = cluster_id
+            new_status.phase = str(
                 DefEntityPhase(DefEntityOperation.CREATE,
                                DefEntityOperationStatus.SUCCEEDED))
-            new_entity_status.nodes = _get_nodes_details(
+            new_status.nodes = _get_nodes_details(
                 sysadmin_client_v36, vapp)
 
             self._update_cluster_entity(cluster_id,
-                                        new_entity_status,
-                                        cluster_rde=curr_rde,
+                                        new_status,
                                         external_id=vapp_resource.get('href'))
             # self.entity_svc.resolve_entity(cluster_id)
 
@@ -987,7 +1010,7 @@ class ClusterService(abstract_broker.AbstractBroker):
             self.context.end()
 
     @thread_utils.run_async
-    def _monitor_resize(self, cluster_id, cluster_spec):
+    def _monitor_resize(self, cluster_id: str, input_native_entity: rde_2_x.NativeEntity):  # noqa: E501
         """Triggers and monitors one or more async threads of resize.
 
         This method (or) thread triggers two async threads (for node
@@ -1014,15 +1037,14 @@ class ClusterService(abstract_broker.AbstractBroker):
             template_name = current_spec.k8_distribution.template_name
             template_revision = current_spec.k8_distribution.template_revision
 
-            desired_worker_count: int = cluster_spec.spec.workers.count
-            desired_nfs_count: int = cluster_spec.spec.nfs.count
+            desired_worker_count: int = input_native_entity.spec.workers.count
+            desired_nfs_count: int = input_native_entity.spec.nfs.count
             num_workers_to_add: int = desired_worker_count - curr_worker_count
             num_nfs_to_add: int = desired_nfs_count - curr_nfs_count
 
             if num_workers_to_add > 0 or num_nfs_to_add > 0:
                 _get_template(name=template_name, revision=template_revision)
-                self._create_nodes_async(cluster_id=cluster_id,
-                                         cluster_spec=cluster_spec)
+                self._create_nodes_async(input_native_entity)
 
                 # TODO Below is the temporary fix to avoid parallel Recompose
                 #  error between node creation and deletion threads. Below
@@ -1034,8 +1056,9 @@ class ClusterService(abstract_broker.AbstractBroker):
                     if t.getName() == create_nodes_async_thread_name:
                         t.join()
             if num_workers_to_add < 0:
-                self._delete_nodes_async(cluster_id=cluster_id,
-                                         cluster_spec=cluster_spec)
+                self._delete_nodes_async(
+                    cluster_id,
+                    input_native_entity=input_native_entity)
 
             # Wait for the children threads of the current thread to join
             curr_thread_id = str(threading.current_thread().ident)
@@ -1097,8 +1120,7 @@ class ClusterService(abstract_broker.AbstractBroker):
             self.context.end()
 
     @thread_utils.run_async
-    def _create_nodes_async(self, cluster_id: str,
-                            cluster_spec: rde_2_x.NativeEntity):
+    def _create_nodes_async(self, input_native_entity: rde_2_x.NativeEntity):
         """Create worker and/or nfs nodes in vCD.
 
         This method is executed by a thread in an asynchronous manner.
@@ -1121,8 +1143,8 @@ class ClusterService(abstract_broker.AbstractBroker):
         vapp_href = None
         sysadmin_client_v36 = self.context.get_sysadmin_client(
             api_version=DEFAULT_API_VERSION)
+        cluster_id = input_native_entity.status.uid
         try:
-            # get the current state of the defined entity
             curr_entity: common_models.DefEntity = self.entity_svc.get_entity(cluster_id)  # noqa: E501
             curr_native_entity: rde_2_x.NativeEntity = curr_entity.entity
             vapp_href = curr_entity.externalId
@@ -1150,9 +1172,9 @@ class ClusterService(abstract_broker.AbstractBroker):
             template = _get_template(template_name, template_revision)
 
             # compute the values of workers and nfs to be added or removed
-            desired_worker_count: int = cluster_spec.spec.workers.count
+            desired_worker_count: int = input_native_entity.spec.workers.count
             num_workers_to_add = desired_worker_count - curr_worker_count
-            desired_nfs_count = cluster_spec.spec.nfs.count
+            desired_nfs_count = input_native_entity.spec.nfs.count
             num_nfs_to_add = desired_nfs_count - curr_nfs_count
 
             server_config = server_utils.get_server_runtime_config()
@@ -1521,7 +1543,6 @@ class ClusterService(abstract_broker.AbstractBroker):
             curr_entity: common_models.DefEntity = self.entity_svc.get_entity(
                 cluster_id)
             curr_native_entity: rde_2_x.NativeEntity = curr_entity.entity
-            cluster_name = curr_entity.name
             self._delete_nodes_async(cluster_id=cluster_id,
                                      nodes_to_del=nodes_to_del)
 
@@ -1577,7 +1598,7 @@ class ClusterService(abstract_broker.AbstractBroker):
 
     @thread_utils.run_async
     def _delete_nodes_async(self, cluster_id: str,
-                            cluster_spec: rde_2_x.NativeEntity = None,
+                            input_native_entity: rde_2_x.NativeEntity = None,
                             nodes_to_del=None):
         """Delete worker and/or nfs nodes in vCD.
 
@@ -1594,6 +1615,7 @@ class ClusterService(abstract_broker.AbstractBroker):
         Let the caller monitor thread or method to set SUCCESS task status,
           end the client context
         """
+        # cluster_id = input_native_entity.status.uid
         if nodes_to_del is None:
             nodes_to_del = []
         curr_entity: common_models.DefEntity = self.entity_svc.get_entity(cluster_id)  # noqa: E501
@@ -1602,11 +1624,11 @@ class ClusterService(abstract_broker.AbstractBroker):
         cluster_name = curr_native_entity.metadata.name
 
         if not nodes_to_del:
-            if not cluster_spec:
+            if not input_native_entity:
                 raise exceptions.CseServerError(
                     f"No nodes specified to delete from "
                     f"cluster {cluster_name}({cluster_id})")
-            desired_worker_count = cluster_spec.spec.workers.count
+            desired_worker_count = input_native_entity.spec.workers.count
             nodes_to_del = [node.name for node in
                             curr_native_entity.status.nodes.workers[desired_worker_count:]]  # noqa: E501
 
@@ -1671,7 +1693,9 @@ class ClusterService(abstract_broker.AbstractBroker):
                               message=msg,
                               error_message=str(err))
 
-    def _sync_def_entity(self, cluster_id: str, curr_entity=None, vapp=None):
+    def _sync_def_entity(self, cluster_id: str,
+                         curr_entity: common_models.DefEntity = None,
+                         vapp=None):
         """Sync the defined entity with the latest vApp status."""
         # NOTE: This function should not be relied to update the defined entity
         # unless it is sure that the Vapp with the cluster-id exists
@@ -1680,6 +1704,7 @@ class ClusterService(abstract_broker.AbstractBroker):
                 cluster_id)
         if not curr_entity.externalId and not vapp:
             return curr_entity
+        vapp_id = curr_entity.externalId
         if not vapp:
             client_v36 = self.context.get_client(
                 api_version=DEFAULT_API_VERSION)
@@ -1687,31 +1712,31 @@ class ClusterService(abstract_broker.AbstractBroker):
         sysadmin_client_v36 = self.context.get_sysadmin_client(
             api_version=DEFAULT_API_VERSION)
         curr_nodes_status = _get_nodes_details(sysadmin_client_v36, vapp)
-        curr_entity_status: rde_2_x.Status = curr_entity.entity.status
+        new_status: rde_2_x.Status = curr_entity.entity.status
         if curr_nodes_status:
-            curr_entity_status.nodes = curr_nodes_status
-        return self._update_cluster_entity(
-            cluster_id, curr_entity_status, cluster_rde=curr_entity)
+            new_status.nodes = curr_nodes_status
+        return self._update_cluster_entity(cluster_id, new_status)
 
     def _update_cluster_entity(self, cluster_id: str,
                                native_entity_status: rde_2_x.Status,
-                               cluster_rde: common_models.DefEntity = None,
                                external_id: Optional[str] = None):
         """Update status part of the cluster rde.
 
         This method serves as a placeholder where we make changes for
         optimistic locking.
 
-        :param str cluster_id: ID of the defined entity
+        :param str cluster_id: ID of the defined entity.
         :param rde_2_x.Status native_entity_status: Defined entity status to be
-            updated
+            updated.
+        :param str external_id: Vapp ID to update the defined entity of the
+            cluster with.
+        :returns: Updated defined entity
+        :rtype: common_models.DefEntity
         """
         # TODO update funciton to use optimistic locking feature by VCD
-        # Make a GET call on the entity to receive the latest version of the
-        # RDE if cluster_rde is not specified
-        if not cluster_rde:
-            cluster_rde: common_models.DefEntity = \
-                self.entity_svc.get_entity(cluster_id)
+
+        cluster_rde: common_models.DefEntity = \
+            self.entity_svc.get_entity(cluster_id)
 
         # update the cluster_rde with external_id if provided by the caller
         if external_id:
@@ -1725,11 +1750,11 @@ class ClusterService(abstract_broker.AbstractBroker):
                                                       invoke_hooks=False)
 
     def _fail_operation(self, cluster_id: str, op: DefEntityOperation):
-        def_entity: common_models.DefEntity = self.entity_svc.get_entity(cluster_id)  # noqa: E501
-        cluster_status: rde_2_x.Status = def_entity.entity.status
-        cluster_status.status.phase = \
+        curr_entity: common_models.DefEntity = self.entity_svc.get_entity(cluster_id)  # noqa: E501
+        new_status: rde_2_x.Status = curr_entity.entity.status
+        new_status.phase = \
             str(DefEntityPhase(op, DefEntityOperationStatus.FAILED))
-        self._update_cluster_entity(def_entity.id, cluster_status, cluster_rde=def_entity)  # noqa: E501
+        self._update_cluster_entity(curr_entity.id, new_status)
 
     def _update_task(self, status, message='', error_message='', progress=None):  # noqa: E501
         if status == BehaviorTaskStatus.ERROR:
