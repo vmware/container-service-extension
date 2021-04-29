@@ -5,6 +5,15 @@ release cycle of CSE.
 
 # Server
 
+## Terminology
+* remote template cookbook - refers to the template descriptor yaml file (template.yaml or template_v2.yaml).
+  Templates released by CSE are found in https://github.com/vmware/container-service-extension-templates.
+* Supported templates - new templates introduced since CSE 3.1 will have template descriptors containing min_cse_version
+  and max_cse_version keys. Supported templates for a given CSE version are those templates such that the CSE version falls
+  between min_cse_version and max_cse_version of the template.
+* Unsupported templates - Templates whose template descriptor values for min_cse_version and max_cse_version falls
+  out of range of the given CSE version.
+
 ## API versioning
 (To be updated by Aritra)
 Update the CSE server supported API version set - (file references)
@@ -63,22 +72,32 @@ Steps:
 3. Upgrade existing RDE instances to newer runtime RDE chosen by the server (references and guidelines - to be updated)
 
 ## CSE start-up
-(To be updated by Aniruddha)
-1. Determine the CSE server API version at runtime.
-2. Ensure right runtime RDE version is loaded into the config variable.
-3. Ensure the templates' metadata is correctly loaded into config variable.
+1. Make sure feature flags, VCD api version in extension are not changed after CSE install/upgrade
+2. Ensure that unsupported templates are not loaded into runtime config.
+3. Ensure native placement policies are set up and are loaded to runtime config.
+4. Determine the CSE server API version at runtime.
+5. Ensure right runtime RDE version is loaded into the config variable.
+6. Ensure the templates' metadata is correctly loaded into config variable.
     
 ## Telemetry
 (To be filled by Sakthi)
 
 # CLI
-(To be updated by Aritra sen and Aniruddha)
-1. Auto-negotiate the VCD api version to be used to communicate with CSE server.
+1. Update any new NativeEntity models with sample_native_entity()
+2. Ensure proper mapping between VCD api version and Runtime RDE version for all supported VCD API versions are available.
+3. Update mappings in command_filter.py and make sure right commands and sub-commands are exposed at the right API versions.
+4. Auto-negotiate the VCD api version to be used to communicate with CSE server.
    - Update the CSE CLI supported API version set.
-2. Dynamically compute the RDE version to use based on the CSE server side configuration.
+5. Ensure the right cloudapi endpoint is used for cluster list and cluster info operations.
+6. Dynamically compute the RDE version to use based on the CSE server side configuration.
 
 # Template management
-(To be updated by Aniruddha)
-1. Update min and max versions of CSE version in each of the template definition
+1. Ensure all scripts for each of the template descriptor in template.yaml and template_v2.yaml are present in scripts and scripts_v2 directories respectively.
+2. Make sure that only one revision of a template (not necessarily the same) is present in each of tempalte.yaml and template_v2.yaml.
+2. Block non-legacy template install, CSE upgrade or CSE install if remote template cookbook doesn't contain required keys (min_cse_version and max_cse_version).
+3. Ensure only supported templates are installed during CSE install/CSE upgrade.
+4. Make sure non-legacy CSE upgrade with skip-template-install option ignores update to unsupported templates which are already present.
+5. Ensure cse template list yields only the list of templates supported by the CSE version.
+6. Update min and max versions of CSE version in each of the template definition
    at https://github.com/vmware/container-service-extension-templates/blob/upgrades/template_v2.yaml
-2. Ensure metadata on existing templates is updated correctly during the upgrade process.
+7. Ensure metadata on existing templates is updated correctly during the upgrade process.
