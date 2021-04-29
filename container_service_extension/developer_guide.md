@@ -5,7 +5,7 @@ release cycle of CSE.
 
 # Server
 
-## Terminologies
+## Terminology
 * remote template cookbook - refers to the template descriptor yaml file (template.yaml or template_v2.yaml).
   Templates released by CSE are found in https://github.com/vmware/container-service-extension-templates.
 * Supported templates - new templates introduced since CSE 3.1 will have template descriptors containing min_cse_version
