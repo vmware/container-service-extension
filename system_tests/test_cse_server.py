@@ -12,7 +12,6 @@ from pyvcloud.vcd.exceptions import EntityNotFoundException
 from pyvcloud.vcd.vdc import VDC
 
 from container_service_extension.installer.config_validator import get_validated_config  # noqa: E501
-from container_service_extension.installer.configure_cse import check_cse_installation  # noqa: E501
 import container_service_extension.installer.templates.local_template_manager as ltm  # noqa: E501
 from container_service_extension.server.cli.server_cli import cli
 import container_service_extension.system_test_framework.environment as env
@@ -76,7 +75,7 @@ def _remove_cse_artifacts():
     env.unregister_cse()
 
 
-@pytest.fixture(scope='module', autouse='true')
+@pytest.fixture(scope='module', autouse=True)
 def delete_installation_entities():
     """Fixture to ensure that CSE entities do not exist in vCD.
 
@@ -243,7 +242,8 @@ def test_0060_config_valid(config):
 def test_0070_check_invalid_installation(config):
     """Test cse check against config that hasn't been used for installation."""
     try:
-        check_cse_installation(config)
+        cmd = f"check {env.ACTIVE_CONFIG_FILEPATH} --skip-config-decryption --check-install"  # noqa: E501
+        env.CLI_RUNNER.invoke(cli, cmd.split(), catch_exceptions=False)
         assert False, "cse check passed when it should have failed."
     except Exception:
         pass
@@ -263,7 +263,7 @@ def test_0080_install_skip_template_creation(config,
         --ssh-key ~/.ssh/id_rsa.pub --skip-config-decryption
         --skip-create-templates
     required files: ~/.ssh/id_rsa.pub, cse_test_config.yaml,
-    expected: cse registered, catalog exists, source ovas do not exist,
+    expected: cse registered, catalog exists, source OVAs do not exist,
         temp vapps do not exist, k8s templates do not exist.
     """
     cmd = f"install --config {env.ACTIVE_CONFIG_FILEPATH} --ssh-key " \
@@ -314,7 +314,7 @@ def test_0090_install_all_templates(config, unregister_cse_before_test):
     command: cse install --config cse_test_config.yaml --retain-temp-vapp
         --skip-config-decryption --ssh-key ~/.ssh/id_rsa.pub
     required files: ~/.ssh/id_rsa.pub, cse_test_config.yaml
-    expected: cse registered, catalog exists, source ovas exist,
+    expected: cse registered, catalog exists, source OVAs exist,
         temp vapps exist, k8s templates exist.
     """
     cmd = f"install --config {env.ACTIVE_CONFIG_FILEPATH} --ssh-key " \
@@ -364,7 +364,7 @@ def test_0100_install_select_templates(config, unregister_cse_before_test):
         --skip-config-decryption --retain-temp-vapp
     required files: cse_test_config.yaml, ~/.ssh/id_rsa.pub,
         ubuntu/photon init/cust scripts
-    expected: cse registered, source ovas exist, k8s templates exist and
+    expected: cse registered, source OVAs exist, k8s templates exist and
         temp vapps exist.
     """
     cmd = f"install --config {env.ACTIVE_CONFIG_FILEPATH} --ssh-key " \
@@ -416,11 +416,12 @@ def test_0100_install_select_templates(config, unregister_cse_before_test):
 def test_0110_cse_check_valid_installation(config):
     """Tests that `cse check` passes for a valid installation.
 
-    command: cse check cse_test_config.yaml -i
+    command: cse check cse_test_config.yaml -i -s
     expected: check passes
     """
     try:
-        check_cse_installation(config)
+        cmd = f"check {env.ACTIVE_CONFIG_FILEPATH} --skip-config-decryption --check-install"  # noqa: E501
+        env.CLI_RUNNER.invoke(cli, cmd.split(), catch_exceptions=False)
     except EntityNotFoundException:
         assert False, "cse check failed when it should have passed."
 
@@ -448,8 +449,8 @@ def test_0120_cse_run(config):
                 p = subprocess.Popen(cmd, shell=True)
             else:
                 p = subprocess.Popen(cmd.split())
-            p.wait(timeout=env.WAIT_INTERVAL * 2) # 1 minute
-            assert False, f"`{cmd}` failed with returncode {p.returncode}"
+            p.wait(timeout=env.WAIT_INTERVAL * 2)  # 1 minute
+            assert False, f"`{cmd}` failed with return code {p.returncode}"
         except subprocess.TimeoutExpired:
             pass
         finally:
