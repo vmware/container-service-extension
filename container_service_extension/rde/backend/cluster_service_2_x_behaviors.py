@@ -1713,7 +1713,6 @@ class ClusterService(abstract_broker.AbstractBroker):
                 cluster_id)
         if not curr_entity.externalId and not vapp:
             return curr_entity
-        vapp_id = curr_entity.externalId
         if not vapp:
             client_v36 = self.context.get_client(
                 api_version=DEFAULT_API_VERSION)
