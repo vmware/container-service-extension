@@ -2,7 +2,7 @@
 # Copyright (c) 2017 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 import json
-from typing import Dict, List
+from typing import Dict, List, Union
 
 import pika
 import pyvcloud.vcd.api_extension as api_extension
@@ -60,7 +60,6 @@ import container_service_extension.rde.models.rde_2_0_0 as rde_2_x
 from container_service_extension.rde.models.rde_factory import get_rde_model
 import container_service_extension.rde.schema_service as def_schema_svc
 import container_service_extension.rde.utils as def_utils
-from container_service_extension.security.context.user_context import UserContext  # noqa: E501
 import container_service_extension.server.compute_policy_manager as compute_policy_manager  # noqa: E501
 from container_service_extension.server.vcdbroker import get_all_clusters as get_all_cse_clusters  # noqa: E501
 
@@ -100,8 +99,12 @@ def check_cse_installation(config, msg_update_callback=utils.NullPrinter()):
         if log_wire:
             log_filename = SERVER_CLI_WIRELOG_FILEPATH
 
+        # Since the config param has been read from file by
+        # get_validated_config method, we can safely use the
+        # default_api_version key, it will be set to the highest api
+        # version supported by VCD and CSE.
         client = Client(config['vcd']['host'],
-                        api_version=config['vcd']['api_version'],
+                        api_version=config['service']['default_api_version'],
                         verify_ssl_certs=config['vcd']['verify'],
                         log_file=log_filename,
                         log_requests=log_wire,
@@ -266,8 +269,12 @@ def install_cse(config_file_name, config, skip_template_creation,
         if log_wire:
             log_filename = INSTALL_WIRELOG_FILEPATH
 
+        # Since the config param has been read from file by
+        # get_validated_config method, we can safely use the
+        # default_api_version key, it will be set to the highest api
+        # version supported by VCD and CSE.
         client = Client(config['vcd']['host'],
-                        api_version=config['vcd']['api_version'],
+                        api_version=config['service']['default_api_version'],
                         verify_ssl_certs=config['vcd']['verify'],
                         log_file=log_filename,
                         log_requests=log_wire,
@@ -449,8 +456,12 @@ def install_template(template_name, template_revision, config_file_name,
         if log_wire:
             log_filename = INSTALL_WIRELOG_FILEPATH
 
+        # Since the config param has been read from file by
+        # get_validated_config method, we can safely use the
+        # default_api_version key, it will be set to the highest api
+        # version supported by VCD and CSE.
         client = Client(config['vcd']['host'],
-                        api_version=config['vcd']['api_version'],
+                        api_version=config['service']['default_api_version'],
                         verify_ssl_certs=config['vcd']['verify'],
                         log_file=log_filename,
                         log_requests=log_wire,
@@ -612,8 +623,12 @@ def upgrade_cse(config_file_name, config, skip_template_creation,
         if log_wire:
             log_filename = INSTALL_WIRELOG_FILEPATH
 
+        # Since the config param has been read from file by
+        # get_validated_config method, we can safely use the
+        # default_api_version key, it will be set to the highest api
+        # version supported by VCD and CSE.
         client = Client(config['vcd']['host'],
-                        api_version=config['vcd']['api_version'],
+                        api_version=config['service']['default_api_version'],
                         verify_ssl_certs=config['vcd']['verify'],
                         log_file=log_filename,
                         log_requests=log_wire,
@@ -896,8 +911,8 @@ def _check_mqtt_extension_installation(client, msg_update_callback, err_msgs):
         err_msgs.append(msg)
 
 
-def _construct_cse_extension_description(rde_version_in_use):
-    """."""
+def _construct_cse_extension_description(
+        rde_version_in_use: Union[semantic_version.Version, str]) -> str:
     cse_version = server_utils.get_installed_cse_version()
     global LEGACY_MODE
     if not rde_version_in_use:
@@ -1109,15 +1124,8 @@ def _update_user_role_with_right_bundle(right_bundle_name,
     # Only a user from System Org can execute this function
     vcd_utils.raise_error_if_user_not_from_system_org(client)
 
-    logger_wire = SERVER_CLOUDAPI_WIRE_LOGGER if log_wire else NULL_LOGGER
-    cloudapi_client = vcd_utils.get_cloudapi_client_from_vcd_client(
-        client=client,
-        logger_debug=logger_debug,
-        logger_wire=logger_wire)
-
     # Determine role name for the user
-    user_context = UserContext(client, cloudapi_client)
-    role_name = user_context.role
+    role_name = vcd_utils.get_user_role_name(client)
 
     # Given that this user is sysadmin, Org must be System
     # If its not, we should receive an exception during one of the below
@@ -1181,17 +1189,13 @@ def _register_def_schema(client: Client,
     msg_update_callback.info(msg)
     INSTALL_LOGGER.info(msg)
     logger_wire = SERVER_CLOUDAPI_WIRE_LOGGER if log_wire else NULL_LOGGER
-    cloudapi_client = vcd_utils.get_cloudapi_client_from_vcd_client(client=client,  # noqa: E501
-                                                                    logger_debug=INSTALL_LOGGER,  # noqa: E501
-                                                                    logger_wire=logger_wire)  # noqa: E501
+    cloudapi_client = vcd_utils.get_cloudapi_client_from_vcd_client(
+        client=client, logger_debug=INSTALL_LOGGER, logger_wire=logger_wire)
     # TODO update CSE install to create client from max_vcd_api_version
-    max_vcd_api_version_supported = utils.get_max_api_version(config['service']['supported_api_versions'])   # noqa: E501
     try:
         def_utils.raise_error_if_def_not_supported(cloudapi_client)
-        rde_version: str = \
-            def_utils.get_runtime_rde_version_by_vcd_api_version(
-                max_vcd_api_version_supported)
-        msg_update_callback.general(f"Using RDE version: {rde_version}")
+        rde_version: str = str(config['service']['rde_version_in_use'])
+        msg_update_callback.general(f"Using RDE version: {str(rde_version)}")
         # Obtain RDE metadata needed to initialize CSE
         rde_metadata: dict = def_utils.get_rde_metadata(rde_version)
 
@@ -2271,11 +2275,9 @@ def _upgrade_non_legacy_clusters(
     entity_svc = def_entity_svc.DefEntityService(cloudapi_client)
     schema_svc = def_schema_svc.DefSchemaService(cloudapi_client)
 
-    max_vcd_api_version_supported = utils.get_max_api_version(config['service']['supported_api_versions'])  # noqa: E501
     # TODO: get proper site information
     site = config['vcd']['host']
-    runtime_rde_version: str = \
-        def_utils.get_runtime_rde_version_by_vcd_api_version(max_vcd_api_version_supported)  # noqa: E501
+    runtime_rde_version: str = str(config['service']['rde_version_in_use'])
     rde_metadata: dict = def_utils.get_rde_metadata(runtime_rde_version)
     entity_type_metadata = rde_metadata[def_constants.RDEMetadataKey.ENTITY_TYPE]  # noqa: E501
     target_entity_type = schema_svc.get_entity_type(entity_type_metadata.get_id())  # noqa: E501
@@ -2347,11 +2349,9 @@ def _upgrade_legacy_clusters(
     entity_svc = def_entity_svc.DefEntityService(cloudapi_client)
     schema_svc = def_schema_svc.DefSchemaService(cloudapi_client)
 
-    max_vcd_api_version_supported = utils.get_max_api_version(config['service']['supported_api_versions'])   # noqa: E501
     # TODO: get proper site information
     site = config['vcd']['host']
-    runtime_rde_version: str = \
-        def_utils.get_runtime_rde_version_by_vcd_api_version(max_vcd_api_version_supported)  # noqa: E501
+    runtime_rde_version: str = str(config['service']['rde_version_in_use'])
     rde_metadata: dict = def_utils.get_rde_metadata(runtime_rde_version)
     entity_type_metadata = rde_metadata[def_constants.RDEMetadataKey.ENTITY_TYPE]  # noqa: E501
     target_entity_type = schema_svc.get_entity_type(entity_type_metadata.get_id())  # noqa: E501
@@ -2557,4 +2557,4 @@ def _get_native_def_entity_types(client):
     )
     schema_svc = def_schema_svc.DefSchemaService(cloudapi_client)
     return [entity_type for entity_type in schema_svc.list_entity_types()
-            if entity_type.nss == def_constants.Nss.NATIVE_ClUSTER.value]
+            if entity_type.nss == def_constants.Nss.NATIVE_CLUSTER.value]

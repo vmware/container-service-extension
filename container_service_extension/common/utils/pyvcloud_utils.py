@@ -5,6 +5,7 @@
 """Utility module to perform operations which involve pyvcloud calls."""
 
 import pathlib
+from typing import Optional
 import urllib
 
 import pyvcloud.vcd.client as vcd_client
@@ -17,19 +18,15 @@ import pyvcloud.vcd.vapp as vcd_vapp
 from pyvcloud.vcd.vdc import VDC
 import requests
 
-from container_service_extension.common.constants.server_constants import SYSTEM_ORG_NAME  # noqa: E501
-from container_service_extension.common.constants.shared_constants import CSE_PAGINATION_DEFAULT_PAGE_SIZE  # noqa: E501
-from container_service_extension.common.constants.shared_constants import CSE_PAGINATION_FIRST_PAGE_NUMBER  # noqa: E501
-from container_service_extension.common.constants.shared_constants import PaginationKey  # noqa: E501
-from container_service_extension.common.constants.shared_constants import USER_URN_PREFIX  # noqa: E501
+import container_service_extension.common.constants.server_constants as server_constants  # noqa: E501
+import container_service_extension.common.constants.shared_constants as shared_constants  # noqa: E501
 from container_service_extension.common.utils.core_utils import extract_id_from_href  # noqa: E501
 from container_service_extension.common.utils.core_utils import NullPrinter
 from container_service_extension.common.utils.core_utils import str_to_bool
 from container_service_extension.common.utils.server_utils import get_server_runtime_config  # noqa: E501
-import container_service_extension.lib.cloudapi.cloudapi_client as cloudApiClient  # noqa: E501
+import container_service_extension.lib.cloudapi.cloudapi_client as cloud_api_client  # noqa: E501
 from container_service_extension.logging.logger import NULL_LOGGER
 from container_service_extension.logging.logger import SERVER_DEBUG_WIRELOG_FILEPATH  # noqa: E501
-from container_service_extension.logging.logger import SERVER_LOGGER
 
 
 # Cache to keep ovdc_id to org_name mapping for vcd cse cluster list
@@ -39,22 +36,31 @@ ORG_ADMIN_RIGHTS = ['General: Administrator Control',
 
 
 def raise_error_if_user_not_from_system_org(client: vcd_client.Client):
+    # ToDo: current implementation of client.is_sysadmin checks if
+    # org of the user is System or not. If implementation changes,
+    # we should adapt accordingly.
     if not client.is_sysadmin():
-        raise ValueError("Client should be sysadmin.")
+        raise ValueError("Client does not belong to System Org.")
 
 
-def connect_vcd_user_via_token(tenant_auth_token, is_jwt_token):
+def connect_vcd_user_via_token(
+        tenant_auth_token: str,
+        is_jwt_token: bool,
+        api_version: Optional[str]):
     server_config = get_server_runtime_config()
-    vcd_uri = server_config['vcd']['host']
-    version = server_config['vcd']['api_version']
+    if not api_version:
+        api_version = server_config['service']['default_api_version']
     verify_ssl_certs = server_config['vcd']['verify']
+    if not verify_ssl_certs:
+        requests.packages.urllib3.disable_warnings()
     log_filename = None
     log_wire = str_to_bool(server_config['service'].get('log_wire'))
     if log_wire:
         log_filename = SERVER_DEBUG_WIRELOG_FILEPATH
+
     client_tenant = vcd_client.Client(
-        uri=vcd_uri,
-        api_version=version,
+        uri=server_config['vcd']['host'],
+        api_version=api_version,
         verify_ssl_certs=verify_ssl_certs,
         log_file=log_filename,
         log_requests=log_wire,
@@ -64,28 +70,29 @@ def connect_vcd_user_via_token(tenant_auth_token, is_jwt_token):
     return client_tenant
 
 
-def get_sys_admin_client():
+def get_sys_admin_client(api_version: Optional[str]):
     server_config = get_server_runtime_config()
-    if not server_config['vcd']['verify']:
-        SERVER_LOGGER.warning("InsecureRequestWarning: Unverified HTTPS "
-                              "request is being made. Adding certificate "
-                              "verification is strongly advised.")
+    if not api_version:
+        api_version = server_config['service']['default_api_version']
+    verify_ssl_certs = server_config['vcd']['verify']
+    if not verify_ssl_certs:
         requests.packages.urllib3.disable_warnings()
     log_filename = None
     log_wire = str_to_bool(server_config['service'].get('log_wire'))
     if log_wire:
         log_filename = SERVER_DEBUG_WIRELOG_FILEPATH
+
     client = vcd_client.Client(
         uri=server_config['vcd']['host'],
-        api_version=server_config['vcd']['api_version'],
-        verify_ssl_certs=server_config['vcd']['verify'],
+        api_version=api_version,
+        verify_ssl_certs=verify_ssl_certs,
         log_file=log_filename,
         log_requests=log_wire,
         log_headers=log_wire,
         log_bodies=log_wire)
     credentials = vcd_client.BasicLoginCredentials(
         server_config['vcd']['username'],
-        SYSTEM_ORG_NAME,
+        server_constants.SYSTEM_ORG_NAME,
         server_config['vcd']['password'])
     client.set_credentials(credentials)
     return client
@@ -116,7 +123,7 @@ def get_vdc(client, vdc_id=None, vdc_name=None, org=None, org_name=None,
             is_admin_operation=False):
     """Get the specified VDC object.
 
-    Atleast one of vdc_id or vdc_name must be specified. If org or org_name
+    At least one of vdc_id or vdc_name must be specified. If org or org_name
     both are not specified, the currently logged in user's org will be used to
     look for the vdc.
 
@@ -166,6 +173,7 @@ def get_org_name_href_from_ovdc_id(sysadmin_client: vcd_client.Client, vdc_id):
 
     Update OVDC_TO_ORG_MAP for new vdc_id
 
+    :param pyvcloud.vcd.client.Client sysadmin_client:
     :param vdc_id: unique ovdc id
 
     :return: org's name and href
@@ -201,7 +209,7 @@ def get_org_href_from_ovdc_id(sysadmin_client: vcd_client.Client, vdc_id):
     return get_org_name_href_from_ovdc_id(sysadmin_client, vdc_id).get('href')
 
 
-def get_pvdc_id(sysadmin_client: vcd_client.Client, ovdc: VDC):
+def get_pvdc_id(ovdc: VDC):
     """Get id of pvdc backing an ovdc.
 
     :param pyvcloud.vcd.VDC ovdc: This ovdc object has to be created with a
@@ -211,18 +219,10 @@ def get_pvdc_id(sysadmin_client: vcd_client.Client, ovdc: VDC):
 
     :rtype: str
     """
-    raise_error_if_user_not_from_system_org(sysadmin_client)
-
+    raise_error_if_user_not_from_system_org(ovdc.client)
     pvdc_element = ovdc.get_resource().ProviderVdcReference
-    # To support <= VCD 9.1 where no 'id' is present in pvdc
-    # element, it has to be extracted from href. Once VCD 9.1 support
-    # is discontinued, this code is not required.
-    if float(sysadmin_client.get_api_version()) < float(vcd_client.ApiVersion.VERSION_31.value): # noqa: E501
-        pvdc_href = pvdc_element.get('href')
-        return pvdc_href.split("/")[-1]
-    else:
-        pvdc_id = pvdc_element.get('id')
-        return extract_id(pvdc_id)
+    pvdc_id = pvdc_element.get('id')
+    return extract_id(pvdc_id)
 
 
 def get_pvdc_id_from_pvdc_name(name, vc_name_in_vcd):
@@ -239,7 +239,7 @@ def get_pvdc_id_from_pvdc_name(name, vc_name_in_vcd):
     # this is used only by PksCache, which is initialized on server start
     client = None
     try:
-        client = get_sys_admin_client()
+        client = get_sys_admin_client(api_version=None)
         query = client.get_typed_query(
             vcd_client.ResourceType.PROVIDER_VDC.value,
             query_result_format=vcd_client.QueryResultFormat.RECORDS,
@@ -469,12 +469,12 @@ def get_parent_network_name_of_vapp(vapp):
     if hasattr(vapp_resource, 'NetworkConfigSection'):
         network_config_section = vapp_resource.NetworkConfigSection
     network_config = None
-    if network_config_section is not None and hasattr(network_config_section, 'NetworkConfig'): # noqa: E501
+    if network_config_section is not None and hasattr(network_config_section, 'NetworkConfig'):  # noqa: E501
         network_config = network_config_section.NetworkConfig
     configuration_section = None
-    if network_config is not None and hasattr(network_config, 'Configuration'): # noqa: E501
+    if network_config is not None and hasattr(network_config, 'Configuration'):  # noqa: E501
         configuration_section = network_config.Configuration
-    if configuration_section is not None and hasattr(configuration_section, 'ParentNetwork'): # noqa: E501
+    if configuration_section is not None and hasattr(configuration_section, 'ParentNetwork'):  # noqa: E501
         parent_network = configuration_section.ParentNetwork
         network_name = parent_network.get('name')
 
@@ -496,12 +496,12 @@ def get_storage_profile_name_of_first_vm_in_vapp(vapp):
     if hasattr(first_vm, 'VmSpecSection'):
         vm_spec_section = first_vm.VmSpecSection
     disk_section = None
-    if vm_spec_section is not None and hasattr(vm_spec_section, 'DiskSection'): # noqa : E501
+    if vm_spec_section is not None and hasattr(vm_spec_section, 'DiskSection'):  # noqa : E501
         disk_section = vm_spec_section.DiskSection
     disk_settings = None
-    if disk_section is not None and hasattr(disk_section, 'DiskSettings'): # noqa: E501
+    if disk_section is not None and hasattr(disk_section, 'DiskSettings'):  # noqa: E501
         disk_settings = disk_section.DiskSettings
-    if disk_settings is not None and hasattr(disk_settings, 'StorageProfile'): # noqa: E501
+    if disk_settings is not None and hasattr(disk_settings, 'StorageProfile'):  # noqa: E501
         storage_profile = disk_settings.StorageProfile
         storage_profile_name = storage_profile.get('name')
 
@@ -516,18 +516,18 @@ def get_cloudapi_client_from_vcd_client(client: vcd_client.Client,
     if not token:
         token = client.get_xvcloud_authorization_token()
         is_jwt = False
-    return cloudApiClient.CloudApiClient(base_url=client.get_cloudapi_uri(),
-                                         token=token,
-                                         is_jwt_token=is_jwt,
-                                         api_version=client.get_api_version(),
-                                         logger_debug=logger_debug,
-                                         logger_wire=logger_wire,
-                                         verify_ssl=client._verify_ssl_certs,
-                                         is_sys_admin=client.is_sysadmin())
+    return cloud_api_client.CloudApiClient(
+        base_url=client.get_cloudapi_uri(),
+        token=token,
+        is_jwt_token=is_jwt,
+        api_version=client.get_api_version(),
+        logger_debug=logger_debug,
+        logger_wire=logger_wire,
+        verify_ssl=client._verify_ssl_certs,
+        is_sys_admin=client.is_sysadmin())
 
 
 def get_all_ovdcs(client: vcd_client.Client):
-    query = None
     if client.is_sysadmin():
         # use adminOrgVdc in typed query
         query = client.get_typed_query(
@@ -545,9 +545,9 @@ def create_cse_page_uri(client: vcd_client.Client, cse_path: str, vcd_uri=None, 
     """Create a CSE URI equivalent to the VCD uri.
 
     :param vcd_client.Client client:
-    :param str path:
+    :param str cse_path:
     :param str vcd_uri:
-    :param dict query_params
+    :param dict query_params:
 
     Example: To convert a vCD generated Next page URI to CSE server next page
         url:
@@ -561,19 +561,19 @@ def create_cse_page_uri(client: vcd_client.Client, cse_path: str, vcd_uri=None, 
     if vcd_uri:
         base_uri = f"{client.get_api_uri().strip('/')}{cse_path}"
         query_dict = dict(urllib.parse.parse_qsl(urllib.parse.urlsplit(vcd_uri).query))  # noqa: E501
-        page_number = int(query_dict.get(PaginationKey.PAGE_NUMBER))
-        page_size = int(query_dict.get(PaginationKey.PAGE_SIZE))
+        page_number = int(query_dict.get(shared_constants.PaginationKey.PAGE_NUMBER))  # noqa: E501
+        page_size = int(query_dict.get(shared_constants.PaginationKey.PAGE_SIZE))  # noqa: E501
         cse_uri = f"{base_uri}?page={page_number}&pageSize={page_size}"
         for key, value in query_params.items():
             cse_uri += f"&{key}={value}"
         return cse_uri
 
 
-def get_ovdcs_by_page(client: vcd_client.Client,
-                      page=CSE_PAGINATION_FIRST_PAGE_NUMBER,
-                      page_size=CSE_PAGINATION_DEFAULT_PAGE_SIZE):
+def get_ovdcs_by_page(
+        client: vcd_client.Client,
+        page=shared_constants.CSE_PAGINATION_FIRST_PAGE_NUMBER,
+        page_size=shared_constants.CSE_PAGINATION_DEFAULT_PAGE_SIZE):
     """Get the list of ovdcs in the page."""
-    query = None
     if client.is_sysadmin():
         # use adminOrgVdc in typed query
         query = client.get_typed_query(
@@ -608,8 +608,20 @@ def create_org_user_id_to_name_dict(client: vcd_client.Client, org_name):
     for user_str_elem in users:
         curr_user_dict = to_dict(user_str_elem, exclude=[])
         user_name = curr_user_dict['name']
-        user_urn = USER_URN_PREFIX + \
+        user_urn = shared_constants.USER_URN_PREFIX + \
             extract_id_from_href(curr_user_dict['href'])
         user_id_to_name_dict[user_urn] = user_name
 
     return user_id_to_name_dict
+
+
+def get_user_role_name(client: vcd_client.Client):
+    """Get the name of the role of the currently logged in user.
+
+    :param vcd_client.Client client:
+
+    :returns: name of the logged in users' role.
+
+    :rtype: str
+    """
+    return client.get_vcloud_session().get('roles')

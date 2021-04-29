@@ -3,6 +3,7 @@
 # SPDX-License-Identifier: BSD-2-Clause
 # import copy
 from dataclasses import asdict
+from typing import Optional
 
 import pyvcloud.vcd.client as vcd_client
 import pyvcloud.vcd.task as vcd_task
@@ -24,15 +25,15 @@ import container_service_extension.common.utils.thread_utils as thread_utils
 from container_service_extension.lib.telemetry.constants import CseOperation
 from container_service_extension.lib.telemetry.constants import OperationStatus
 from container_service_extension.lib.telemetry.constants import PayloadKey
-import container_service_extension.lib.telemetry.telemetry_handler as telemetry_handler # noqa: E501
+import container_service_extension.lib.telemetry.telemetry_handler as telemetry_handler  # noqa: E501
 import container_service_extension.logging.logger as logger
 import container_service_extension.rde.models.common_models as common_models
 import container_service_extension.security.context.operation_context as ctx
-import container_service_extension.server.compute_policy_manager as compute_policy_manager # noqa: E501
+import container_service_extension.server.compute_policy_manager as compute_policy_manager  # noqa: E501
 
 
 def update_ovdc(operation_context: ctx.OperationContext,
-                ovdc_id: str, ovdc_spec: common_models.Ovdc) -> dict: # noqa: 501
+                ovdc_id: str, ovdc_spec: common_models.Ovdc) -> dict:  # noqa: 501
     """Update ovdc with the updated k8s runtimes list.
 
     :param ctx.OperationContext operation_context: context for the request
@@ -48,7 +49,7 @@ def update_ovdc(operation_context: ctx.OperationContext,
     task = vcd_task.Task(operation_context.sysadmin_client)
     org = vcd_utils.get_org(operation_context.client)
     user_href = org.get_user(operation_context.user.name).get('href')
-    vdc = vcd_utils.get_vdc(operation_context.sysadmin_client, vdc_id=ovdc_id, # noqa: E501
+    vdc = vcd_utils.get_vdc(operation_context.sysadmin_client, vdc_id=ovdc_id,  # noqa: E501
                             is_admin_operation=True)
     logger.SERVER_LOGGER.debug(msg)
     task_resource = task.update(
@@ -79,15 +80,15 @@ def update_ovdc(operation_context: ctx.OperationContext,
         logger.SERVER_LOGGER.debug(msg)
         raise Exception(msg)
     policy_list = [RUNTIME_DISPLAY_NAME_TO_INTERNAL_NAME_MAP[p] for p in ovdc_spec.k8s_runtime]  # noqa: E501
-    _update_ovdc_using_placement_policy_async(operation_context=operation_context, # noqa:E501
+    _update_ovdc_using_placement_policy_async(operation_context=operation_context,  # noqa:E501
                                               task=task,
                                               task_href=task_href,
                                               user_href=user_href,
-                                              policy_list=policy_list, # noqa:E501
+                                              policy_list=policy_list,  # noqa:E501
                                               ovdc_id=ovdc_id,
                                               vdc=vdc,
                                               org_name=ovdc_spec.org_name,
-                                              remove_cp_from_vms_on_disable=ovdc_spec.remove_cp_from_vms_on_disable) # noqa:E501
+                                              remove_cp_from_vms_on_disable=ovdc_spec.remove_cp_from_vms_on_disable)  # noqa:E501
     return {'task_href': task_href}
 
 
@@ -109,7 +110,7 @@ def get_ovdc(operation_context: ctx.OperationContext, ovdc_id: str) -> dict:
                                                  cse_params=cse_params)
     config = server_utils.get_server_runtime_config()
     log_wire = utils.str_to_bool(config.get('service', {}).get('log_wire'))
-    result = asdict(get_ovdc_k8s_runtime_details(operation_context.sysadmin_client, # noqa: E501
+    result = asdict(get_ovdc_k8s_runtime_details(operation_context.sysadmin_client,  # noqa: E501
                                                  ovdc_id=ovdc_id,
                                                  log_wire=log_wire))
     # TODO: Find a better way to avoid sending remove_cp_from_vms_on_disable
@@ -208,19 +209,21 @@ def get_ovdc_k8s_runtime_details(sysadmin_client: vcd_client.Client,
                                  ovdc_id=None,
                                  ovdc_name=None,
                                  org_name=None,
-                                 cpm: compute_policy_manager.ComputePolicyManager = None,  # noqa: E501
+                                 cpm: Optional[compute_policy_manager.ComputePolicyManager] = None,  # noqa: E501
                                  log_wire=False) -> common_models.Ovdc:
     """Get k8s runtime details for an ovdc.
 
-    Atleast ovdc_id and ovdc_name or org_name and ovdc_name should be provided.
-    Additional call to get ovdc details can be avoided by providing ovdc_id and
-    ovdc_name.
+    At least ovdc_id and ovdc_name or org_name and ovdc_name should be
+    provided. Additional call to get ovdc details can be avoided by providing
+    ovdc_id and ovdc_name.
 
-    :param sysadmin_client vcd_client.Client: vcd sysadmin client
-    :param str org_name:
-    :param str ovdc_name:
+    :param vcd_client.Client sysadmin_client: vcd sysadmin client
     :param str ovdc_id:
+    :param str ovdc_name:
+    :param str org_name:
+    :param compute_policy_manager.ComputePolicyManager cpm:
     :param bool log_wire:
+
     :return: Ovdc object with k8s runtimes
     :rtype: common_models.Ovdc
     """
@@ -246,7 +249,7 @@ def get_ovdc_k8s_runtime_details(sysadmin_client: vcd_client.Client,
     for cse_policy in \
             compute_policy_manager.list_cse_placement_policies_on_vdc(cpm, ovdc_id):  # noqa: E501
         policies.append(RUNTIME_INTERNAL_NAME_TO_DISPLAY_NAME_MAP[cse_policy['display_name']])  # noqa: E501
-    return common_models.Ovdc(ovdc_name=ovdc_name, ovdc_id=ovdc_id, k8s_runtime=policies) # noqa: E501
+    return common_models.Ovdc(ovdc_name=ovdc_name, ovdc_id=ovdc_id, k8s_runtime=policies)  # noqa: E501
 
 
 @thread_utils.run_async
@@ -363,9 +366,9 @@ def _update_ovdc_using_placement_policy_async(operation_context: ctx.OperationCo
                                                                        is_placement_policy=True)  # noqa: E501
             cpm.remove_compute_policy_from_vdc_sync(vdc=vdc,
                                                     compute_policy_href=policy['href'],  # noqa: E501
-                                                    force=remove_cp_from_vms_on_disable, # noqa: E501
+                                                    force=remove_cp_from_vms_on_disable,  # noqa: E501
                                                     is_placement_policy=True,
-                                                    task_resource=task_resource) # noqa: E501
+                                                    task_resource=task_resource)  # noqa: E501
         msg = f"Successfully updated OVDC: {vdc.name}"
         logger.SERVER_LOGGER.debug(msg)
         task.update(status=vcd_client.TaskStatus.SUCCESS.value,
@@ -384,10 +387,10 @@ def _update_ovdc_using_placement_policy_async(operation_context: ctx.OperationCo
         # Record telemetry
         if k8s_runtimes_added:
             telemetry_handler.record_user_action(CseOperation.OVDC_ENABLE,
-                                                 status=OperationStatus.SUCCESS) # noqa: E501
+                                                 status=OperationStatus.SUCCESS)  # noqa: E501
         if k8s_runtimes_deleted:
             telemetry_handler.record_user_action(CseOperation.OVDC_DISABLE,
-                                                 status=OperationStatus.SUCCESS) # noqa: E501
+                                                 status=OperationStatus.SUCCESS)  # noqa: E501
     except Exception as err:
         # Record telemetry
         if k8s_runtimes_added:

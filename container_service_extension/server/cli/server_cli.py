@@ -4,13 +4,9 @@
 # Copyright (c) 2019 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 
-import json
 import os
-import shutil
 import sys
-import tempfile
 import time
-from zipfile import ZipFile
 
 import click
 import cryptography
@@ -26,7 +22,6 @@ from container_service_extension.common.constants.server_constants import CONFIG
 from container_service_extension.common.constants.server_constants import LocalTemplateKey  # noqa: E501
 from container_service_extension.common.constants.server_constants import RemoteTemplateKey  # noqa: E501
 from container_service_extension.common.constants.server_constants import SYSTEM_ORG_NAME  # noqa: E501
-from container_service_extension.common.constants.shared_constants import RequestMethod  # noqa: E501
 from container_service_extension.common.constants.shared_constants import SUPPORTED_VCD_API_VERSIONS  # noqa: E501
 import container_service_extension.common.utils.core_utils as utils
 import container_service_extension.common.utils.pyvcloud_utils as vcd_utils
@@ -37,7 +32,6 @@ from container_service_extension.installer.cse_service_role_mgr import create_cs
 from container_service_extension.installer.sample_generator import generate_sample_config  # noqa: E501
 import container_service_extension.installer.templates.local_template_manager as ltm  # noqa: E501
 from container_service_extension.installer.templates.remote_template_manager import RemoteTemplateManager  # noqa: E501
-from container_service_extension.lib.cloudapi.constants import CloudApiResource
 from container_service_extension.lib.telemetry.constants import CseOperation
 from container_service_extension.lib.telemetry.constants import OperationStatus
 from container_service_extension.lib.telemetry.constants import PayloadKey
@@ -272,28 +266,6 @@ def template(ctx):
     pass
 
 
-@cli.group('ui-plugin', short_help='Manage CSE UI plugin')
-@click.pass_context
-def uiplugin(ctx):
-    """Manage vCD UI plugin lifecycle.
-
-\b
-    Examples below. By default the following commands expect an encrypted CSE
-    configuration file. To use a plain-text configuration file instead, specify
-    the flag --skip-config-decryption/-s.
-\b
-        cse ui-plugin register './container-ui-plugin.zip`
-            --config my_config.yaml -s
-\b
-        cse ui-plugin list --config my_config.yaml -s
-\b
-        cse ui-plugin deregister
-            'urn:vcloud:uiPlugin:6cae8802-35fb-4cc7-b143-9898b65c3adb'
-            --config my_config.yaml -s
-    """
-    pass
-
-
 @cli.command(short_help='Display CSE version')
 @click.pass_context
 def version(ctx):
@@ -390,7 +362,7 @@ def create_service_role(ctx, vcd_host, skip_verify_ssl_certs):
 @click.option(
     '-o',
     '--output',
-    'output',
+    'output_file_name',
     required=False,
     default=None,
     metavar='OUTPUT_FILE_NAME',
@@ -405,12 +377,12 @@ def create_service_role(ctx, vcd_host, skip_verify_ssl_certs):
     '--api-version',
     'api_version',
     required=False,
-    default=vcd_client.ApiVersion.VERSION_35.value,
+    default=vcd_client.ApiVersion.VERSION_36.value,
     show_default=True,
     metavar='API_VERSION',
     help=f'vCD API version: {SUPPORTED_VCD_API_VERSIONS}. '
          f'Not needed if only generating PKS config.')
-def sample(ctx, output, pks_config, api_version):
+def sample(ctx, output_file_name, pks_config, api_version):
     """Display sample CSE config file contents."""
     SERVER_CLI_LOGGER.debug(f"Executing command: {ctx.command_path}")
     console_message_printer = utils.ConsoleMessagePrinter()
@@ -421,9 +393,10 @@ def sample(ctx, output, pks_config, api_version):
 
     try:
         api_version = float(api_version)
-        sample_config = generate_sample_config(output=output,
-                                               generate_pks_config=pks_config,
-                                               api_version=api_version)
+        sample_config = generate_sample_config(
+            output_file_name=output_file_name,
+            generate_pks_config=pks_config,
+            api_version=api_version)
     except Exception as err:
         console_message_printer.error(str(err))
         SERVER_CLI_LOGGER.error(str(err))
@@ -1010,6 +983,8 @@ def list_template(ctx, config_file_path, skip_config_decryption,
                 if log_wire:
                     log_wire_file = SERVER_DEBUG_WIRELOG_FILEPATH
 
+                # Note: This will get us a client with highest supported
+                # VCD api version.
                 client, _ = _get_clients_from_config(config_dict,
                                                      log_wire_file=log_wire_file,  # noqa: E501
                                                      log_wire=log_wire)
@@ -1186,7 +1161,6 @@ def install_cse_template(ctx, template_name, template_revision,
     Use '*' for TEMPLATE_NAME and TEMPLATE_REVISION to install
     all listed templates.
     """
-    # TODO(VCDA-2236) Validate legacy_mode in extension
     # NOTE: For CSE 3.0, if `enable_tkg_plus` flag in config is set to false,
     # Throw an error if TKG+ template creation is issued.
     SERVER_CLI_LOGGER.debug(f"Executing command: {ctx.command_path}")
@@ -1240,289 +1214,6 @@ def install_cse_template(ctx, template_name, template_revision,
         time.sleep(3)
 
 
-@uiplugin.command('register', short_help="Register UI plugin with vCD.")
-@click.pass_context
-@click.argument('plugin_file_path',
-                metavar='PLUGIN_FILE_PATH',
-                type=click.Path(exists=True))
-@click.option(
-    '-c',
-    '--config',
-    'config_file_path',
-    default='config.yaml',
-    metavar='CONFIG_FILE_PATH',
-    type=click.Path(exists=True),
-    envvar='CSE_CONFIG',
-    required=True,
-    help="(Required) Filepath to CSE config file")
-@click.option(
-    '-s',
-    '--skip-config-decryption',
-    is_flag=True,
-    help='Skip decryption of CSE config file')
-def register_ui_plugin(ctx, plugin_file_path, config_file_path,
-                       skip_config_decryption):
-    """."""
-    SERVER_CLI_LOGGER.debug(f"Executing command: {ctx.command_path}")
-    console_message_printer = utils.ConsoleMessagePrinter()
-    utils.check_python_version(console_message_printer)
-
-    client = None
-    tempdir = None
-    try:
-        # We don't want to validate config file, because server startup or
-        # installation is not being performed. If values in config file are
-        # missing or bad, appropriate exception will be raised while accessing
-        # or using them.
-        config_dict = _get_unvalidated_config(
-            config_file_path=config_file_path,
-            skip_config_decryption=skip_config_decryption,
-            msg_update_callback=console_message_printer)
-
-        tempdir = tempfile.mkdtemp(dir='.')
-        plugin_zip = ZipFile(plugin_file_path, 'r')
-        plugin_zip.extractall(path=tempdir)
-        plugin_zip.close()
-        manifest_file = None
-        extracted_files = os.listdir(tempdir)
-        for filename in extracted_files:
-            if filename == 'manifest.json':
-                manifest_file = os.path.join(tempdir, filename)
-                break
-        if manifest_file is None:
-            raise Exception('Invalid plugin zip. Manifest file not found.')
-
-        manifest = json.load(open(manifest_file, 'r'))
-        register_request_payload = {
-            'pluginName': manifest['name'],
-            'vendor': manifest['vendor'],
-            'description': manifest['description'],
-            'version': manifest['version'],
-            'license': manifest['license'],
-            'link': manifest['link'],
-            'tenant_scoped': "tenant" in manifest['scope'],
-            'provider_scoped': "service-provider" in manifest['scope'],
-            'enabled': True
-        }
-
-        log_wire_file = None
-        log_wire = utils.str_to_bool(config_dict['service'].get('log_wire'))
-        if log_wire:
-            log_wire_file = SERVER_DEBUG_WIRELOG_FILEPATH
-
-        client, cloudapi_client = _get_clients_from_config(
-            config_dict, log_wire_file=log_wire_file, log_wire=log_wire)
-
-        msg = "Registering plugin with vCD."
-        SERVER_CLI_LOGGER.debug(msg)
-        console_message_printer.info(msg)
-        try:
-            response_body = cloudapi_client.do_request(
-                method=RequestMethod.POST,
-                resource_url_relative_path=f"{CloudApiResource.EXTENSION_UI}",
-                payload=register_request_payload)
-            plugin_id = response_body.get('id')
-        except requests.exceptions.HTTPError as err:
-            if err.response.status_code == requests.codes.bad_request and \
-                    'VCD_50012' in err.response.text:
-                raise Exception("Plugin is already registered. Please "
-                                "de-register it first if you wish to register "
-                                "it again.")
-            raise
-
-        msg = "Preparing to upload plugin to vCD."
-        SERVER_CLI_LOGGER.debug(msg)
-        console_message_printer.info(msg)
-        transfer_request_payload = {
-            "fileName": os.path.split(plugin_file_path)[1],
-            "size": os.stat(plugin_file_path).st_size
-        }
-        cloudapi_client.do_request(
-            method=RequestMethod.POST,
-            resource_url_relative_path=f"{CloudApiResource.EXTENSION_UI}/{plugin_id}/plugin",  # noqa: E501
-            payload=transfer_request_payload)
-
-        msg = "Uploading plugin to vCD."
-        SERVER_CLI_LOGGER.debug(msg)
-        console_message_printer.info(msg)
-        transfer_url = None
-        content_type = None
-        response_headers = cloudapi_client.get_last_response_headers()
-        # E.g. Link Header - <https://bos1-vcd-sp-static-199-101.eng.vmware.com/transfer/f7fd8885-1fdb-4e3c-90cc-9411363abdcb/container-ui-plugin.zip>;rel="upload:default";type="application/octet-stream" # noqa: E501
-        tokens = response_headers.get("Link").split(";")
-        for token in tokens:
-            if token.startswith("<"):
-                transfer_url = token[1:-1]  # get rid of the < and >
-            if token.startswith("type"):
-                fragments = token.split("\"")
-                content_type = fragments[1]
-        file_content = open(plugin_file_path, 'rb')
-        cloudapi_client.do_request(
-            method=RequestMethod.PUT,
-            resource_url_absolute_path=transfer_url,
-            payload=file_content,
-            content_type=content_type)
-        msg = "Plugin upload complete."
-        SERVER_CLI_LOGGER.debug(msg)
-        console_message_printer.general(msg)
-
-        msg = "Waiting for plugin to be ready."
-        console_message_printer.info(msg)
-        SERVER_CLI_LOGGER.debug(msg)
-        while True:
-            response_body = cloudapi_client.do_request(
-                method=RequestMethod.GET,
-                resource_url_relative_path=f"{CloudApiResource.EXTENSION_UI}/{plugin_id}")  # noqa: E501
-            plugin_status = response_body.get('plugin_status')
-            msg = f"Plugin status : {plugin_status}"
-            console_message_printer.info(msg)
-            SERVER_CLI_LOGGER.debug(msg)
-            if plugin_status == 'ready':
-                break
-        msg = "Plugin registration complete."
-        SERVER_CLI_LOGGER.debug(msg)
-        console_message_printer.general(msg)
-    except Exception as err:
-        SERVER_CLI_LOGGER.error(str(err))
-        console_message_printer.error(str(err))
-        sys.exit(1)
-    finally:
-        if client:
-            client.logout()
-        if tempdir:
-            shutil.rmtree(tempdir)
-
-
-@uiplugin.command('deregister', short_help="De-register UI plugin from vCD.")
-@click.pass_context
-@click.argument('plugin_id', metavar='PLUGIN_ID')
-@click.option(
-    '-c',
-    '--config',
-    'config_file_path',
-    default='config.yaml',
-    metavar='CONFIG_FILE_PATH',
-    type=click.Path(exists=True),
-    envvar='CSE_CONFIG',
-    required=True,
-    help="(Required) Filepath to CSE config file")
-@click.option(
-    '-s',
-    '--skip-config-decryption',
-    is_flag=True,
-    help='Skip decryption of CSE config file')
-def deregister_ui_plugin(ctx, plugin_id, config_file_path,
-                         skip_config_decryption):
-    """."""
-    SERVER_CLI_LOGGER.debug(f"Executing command: {ctx.command_path}")
-    console_message_printer = utils.ConsoleMessagePrinter()
-    utils.check_python_version(console_message_printer)
-
-    client = None
-    try:
-        # We don't want to validate config file, because server startup or
-        # installation is not being performed. If values in config file are
-        # missing or bad, appropriate exception will be raised while accessing
-        # or using them.
-        config_dict = _get_unvalidated_config(
-            config_file_path=config_file_path,
-            skip_config_decryption=skip_config_decryption,
-            msg_update_callback=console_message_printer)
-
-        log_filename = None
-        log_wire = utils.str_to_bool(config_dict['service'].get('log_wire'))
-        if log_wire:
-            log_filename = SERVER_CLI_WIRELOG_FILEPATH
-
-        client, cloudapi_client = _get_clients_from_config(
-            config_dict, log_wire_file=log_filename, log_wire=log_wire)
-
-        cloudapi_client.do_request(
-            method=RequestMethod.DELETE,
-            resource_url_relative_path=f"{CloudApiResource.EXTENSION_UI}/{plugin_id}")  # noqa: E501
-
-        msg = f"Removed plugin with id : {plugin_id}."
-        SERVER_CLI_LOGGER.debug(msg)
-        console_message_printer.general(msg)
-    except Exception as err:
-        SERVER_CLI_LOGGER.debug(str(err))
-        console_message_printer.error(str(err))
-        sys.exit(1)
-    finally:
-        if client:
-            client.logout()
-
-
-@uiplugin.command('list',
-                  short_help="List all UI plugins registered with vCD.")
-@click.pass_context
-@click.option(
-    '-c',
-    '--config',
-    'config_file_path',
-    default='config.yaml',
-    metavar='CONFIG_FILE_PATH',
-    type=click.Path(exists=True),
-    envvar='CSE_CONFIG',
-    required=True,
-    help="(Required) Filepath to CSE config file")
-@click.option(
-    '-s',
-    '--skip-config-decryption',
-    is_flag=True,
-    help='Skip decryption of CSE config file')
-def list_ui_plugin(ctx, config_file_path, skip_config_decryption):
-    """."""
-    SERVER_CLI_LOGGER.debug(f"Executing command: {ctx.command_path}")
-    console_message_printer = utils.ConsoleMessagePrinter()
-    # Suppress the python version check message from being printed on
-    # console
-    utils.check_python_version()
-
-    client = None
-    try:
-        # We don't want to validate config file, because server startup or
-        # installation is not being performed. If values in config file are
-        # missing or bad, appropriate exception will be raised while accessing
-        # or using them.
-        config_dict = _get_unvalidated_config(
-            config_file_path=config_file_path,
-            skip_config_decryption=skip_config_decryption,
-            msg_update_callback=console_message_printer)
-
-        log_filename = None
-        log_wire = utils.str_to_bool(config_dict['service'].get('log_wire'))
-        if log_wire:
-            log_filename = SERVER_DEBUG_WIRELOG_FILEPATH
-
-        client, cloudapi_client = _get_clients_from_config(
-            config_dict, log_wire_file=log_filename, log_wire=log_wire)
-
-        result = []
-        response_body = cloudapi_client.do_request(
-            method=RequestMethod.GET,
-            resource_url_relative_path=f"{CloudApiResource.EXTENSION_UI}")  # noqa: E501
-        if len(response_body) > 0:
-            for plugin in response_body:
-                ui_plugin = {
-                    'name': plugin['pluginName'],
-                    'vendor': plugin['vendor'],
-                    'version': plugin['version'],
-                    'id': plugin['id']
-                }
-                result.append(ui_plugin)
-
-        stdout(result, ctx, sort_headers=False, show_id=True)
-        SERVER_CLI_LOGGER.debug(result)
-    except Exception as err:
-        SERVER_CLI_LOGGER.error(str(err))
-        console_message_printer.error(str(err))
-        sys.exit(1)
-    finally:
-        if client:
-            client.logout()
-
-
 def _get_unvalidated_config(config_file_path,
                             skip_config_decryption,
                             msg_update_callback=utils.NullPrinter()):
@@ -1564,7 +1255,6 @@ def _get_unvalidated_config(config_file_path,
 def _get_clients_from_config(config, log_wire_file, log_wire):
     client = vcd_client.Client(
         config['vcd']['host'],
-        api_version=config['vcd'].get('api_version'),
         verify_ssl_certs=config['vcd']['verify'],
         log_file=log_wire_file,
         log_requests=log_wire,

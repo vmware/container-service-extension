@@ -80,13 +80,13 @@ def prompt_text(text, color='black', hide_input=False):
     return click.prompt(click_text, hide_input=hide_input, type=str)
 
 
-def is_environment_variable_enabled(env_name):
+def is_environment_variable_enabled(env_var_name):
     """Check if the environment variable is set.
 
-    :param str env_name: Name of the environment variable
+    :param str env_var_name: Name of the environment variable
     :rtype: bool
     """
-    return str_to_bool(os.getenv(env_name))
+    return str_to_bool(os.getenv(env_var_name))
 
 
 def get_duplicate_items_in_list(items):
@@ -384,5 +384,8 @@ def extract_id_from_href(href):
     return href
 
 
-def get_max_api_version(api_versions: List[str]) -> float:
-    return max(float(x) for x in api_versions)
+# ToDo: Device a better way to find the max api version
+# without converting the strings to float.
+# e.g. 5.20 will be smaller than 5.8 if compared as float, which is wrong
+def get_max_api_version(api_versions: List[str]) -> str:
+    return str(max(float(x) for x in api_versions))
