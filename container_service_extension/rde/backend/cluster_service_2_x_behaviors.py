@@ -1658,13 +1658,15 @@ class ClusterService(abstract_broker.AbstractBroker):
                               message=msg,
                               error_message=str(err))
 
-    def _sync_def_entity(self, cluster_id, curr_entity=None, vapp=None):
+    def _sync_def_entity(self, cluster_id: str, curr_entity=None, vapp=None):
         """Sync the defined entity with the latest vApp status."""
         # NOTE: This function should not be relied to update the defined entity
         # unless it is sure that the Vapp with the cluster-id exists
         if not curr_entity:
             curr_entity: common_models.DefEntity = self.entity_svc.get_entity(
                 cluster_id)
+        if not curr_entity.externalId and not vapp:
+            return curr_entity
         if not vapp:
             client_v36 = self.context.get_client(
                 api_version=DEFAULT_API_VERSION)
