@@ -136,14 +136,14 @@ class FlattenedClusterSpecKey1X(Enum):
 
 @unique
 class FlattenedClusterSpecKey2X(Enum):
-    WORKERS_COUNT = 'workers.count'
-    WORKERS_SIZING_CLASS = 'workers.sizingClass'
-    WORKERS_STORAGE_PROFILE = 'workers.storageProfile'
-    NFS_COUNT = 'nfs.count'
-    NFS_SIZING_CLASS = 'nfs.sizingClass'
-    NFS_STORAGE_PROFILE = 'nfs.storageProfile'
-    TEMPLATE_NAME = 'k8Distribution.templateName'
-    TEMPLATE_REVISION = 'k8Distribution.templateRevision'
+    WORKERS_COUNT = 'topology.workers.count'
+    WORKERS_SIZING_CLASS = 'topology.workers.sizingClass'
+    WORKERS_STORAGE_PROFILE = 'topology.workers.storageProfile'
+    NFS_COUNT = 'topology.nfs.count'
+    NFS_SIZING_CLASS = 'topology.nfs.sizingClass'
+    NFS_STORAGE_PROFILE = 'topology.nfs.storageProfile'
+    TEMPLATE_NAME = 'distribution.templateName'
+    TEMPLATE_REVISION = 'distribution.templateRevision'
     EXPOSE = 'expose'
 
 
