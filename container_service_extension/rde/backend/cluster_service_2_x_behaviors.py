@@ -404,7 +404,7 @@ class ClusterService(abstract_broker.AbstractBroker):
         # trigger async operation
         self.context.is_async = True
         self._monitor_resize(cluster_id=cluster_id,
-                             cluster_spec=input_native_entity)
+                             input_native_entity=input_native_entity)
         # TODO(test-resize): verify if multiple messages are not published
         #   in update_cluster()
         return self.mqtt_publisher.construct_behavior_payload(
@@ -463,8 +463,7 @@ class ClusterService(abstract_broker.AbstractBroker):
         # NOTE: The async method will mark the task as succeeded which will
         # allow the RDE framework to delete the cluster defined entity
         self._delete_cluster_async(cluster_name=cluster_name,
-                                   org_name=org_name, ovdc_name=ovdc_name,
-                                   def_entity=curr_entity)
+                                   org_name=org_name, ovdc_name=ovdc_name)
         return self.mqtt_publisher.construct_behavior_payload(
             message=CLUSTER_DELETE_IN_PROGRESS_MESSAGE,
             status=BehaviorTaskStatus.RUNNING.value, progress='5')
@@ -1748,7 +1747,7 @@ class ClusterService(abstract_broker.AbstractBroker):
 
         # update the cluster_rde with external_id if provided by the caller
         if external_id:
-            cluster_rde.entity.externalId = external_id
+            cluster_rde.externalId = external_id
         # Update entity status with new values
         cluster_rde.entity.status = native_entity_status
 
