@@ -128,7 +128,7 @@ def _get_sample_tkg_cluster_configuration():
         "metadata": {
             "name": "cluster_name",
             "placementPolicy": "placement_policy_name",
-            "virtualDataCenterName": "org_virtual_datacenter_name"
+            "virtualDataCenterName": "org_virtual_data_center_name"
         }
     }
     sample_apply_spec = yaml.dump(sample_tkg_plus_config)

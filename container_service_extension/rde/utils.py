@@ -130,22 +130,25 @@ def construct_2_0_0_cluster_spec_from_entity_status(entity_status: rde_2_0_0.Sta
         nfs = rde_2_0_0.Nfs(
             sizing_class=entity_status.nodes.nfs[0].sizing_class,  # noqa: E501
             storage_profile=entity_status.nodes.nfs[
-                0].storageProfile, count=nfs_count)
+                0].storage_profile, count=nfs_count)
 
     k8_distribution = rde_2_0_0.Distribution(
-        template_name=entity_status.cloud_properties.k8_distribution.template_name,  # noqa: E501
-        template_revision=entity_status.cloud_properties.k8_distribution.template_revision)  # noqa: E501
+        template_name=entity_status.cloud_properties.distribution.template_name,  # noqa: E501
+        template_revision=entity_status.cloud_properties.distribution.template_revision)  # noqa: E501
 
     settings = rde_2_0_0.Settings(
         network=entity_status.cloud_properties.ovdc_network_name,
         ssh_key=entity_status.cloud_properties.ssh_key,
         rollback_on_failure=entity_status.cloud_properties.rollback_on_failure)  # noqa: E501
 
+    topology = rde_2_0_0.Topology(
+        control_plane=control_plane,
+        workers=workers,
+        nfs=nfs)
+
     return rde_2_0_0.ClusterSpec(settings=settings,
-                                 k8_distribution=k8_distribution,
-                                 control_plane=control_plane,
-                                 workers=workers,
-                                 nfs=nfs,
+                                 distribution=k8_distribution,
+                                 topology=topology,
                                  expose=entity_status.exposed)
 
 

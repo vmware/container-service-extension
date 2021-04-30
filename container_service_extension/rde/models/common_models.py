@@ -25,7 +25,7 @@ class DefInterface:
     """Provides interface for the defined entity type."""
 
     name: str
-    id: str = None
+    id: Optional[str] = None
     readonly: bool = False
     vendor: str = Vendor.CSE.value
     nss: str = Nss.KUBERNETES.value
@@ -56,7 +56,7 @@ class DefEntityType:
     schema: dict
     interfaces: List[str]
     version: str
-    id: str = None
+    id: Optional[str] = None
     externalId: Optional[str] = None
     readonly: bool = False
     vendor: str = Vendor.CSE.value
@@ -112,15 +112,15 @@ class DefEntityType2_0:
 @dataclass_json
 @dataclass
 class Owner:
-    name: str = None
-    id: str = None
+    name: Optional[str] = None
+    id: Optional[str] = None
 
 
 @dataclass_json
 @dataclass
 class Org:
-    name: str = None
-    id: str = None
+    name: Optional[str] = None
+    id: Optional[str] = None
 
 
 @dataclass_json
@@ -173,20 +173,20 @@ class DefEntity:
 @dataclass()
 class Ovdc:
     k8s_runtime: List[str]
-    ovdc_name: str = None
-    ovdc_id: str = None
-    org_name: str = None
+    ovdc_name: Optional[str] = None
+    ovdc_id: Optional[str] = None
+    org_name: Optional[str] = None
     remove_cp_from_vms_on_disable: bool = False
 
 
 @dataclass()
 class ClusterAclEntry:
-    accessLevelId: str = None
-    memberId: str = None
-    id: str = None
-    grantType: str = None
-    objectId: str = None
-    username: str = None
+    accessLevelId: Optional[str] = None
+    memberId: Optional[str] = None
+    id: Optional[str] = None
+    grantType: Optional[str] = None
+    objectId: Optional[str] = None
+    username: Optional[str] = None
 
     def construct_filtered_dict(self, include=None):
         if include is None:
@@ -222,10 +222,10 @@ class GenericClusterEntity:
     #   def_entity.entity.status.phase for both native and TKG
     # owner:
     #   def_entity.owner.name for both native and TKG
-    name: str = None
-    org: Org = None
+    name: Optional[str] = None
+    org: Optional[Org] = None
     entity = None
-    owner: Owner = None
+    owner: Optional[Owner] = None
 
     def __init__(self, name: str, org: Org, entityType: str, entity,
                  owner: Owner, **kwargs):
@@ -252,7 +252,7 @@ class GenericClusterEntity:
 
 @dataclass()
 class TKGDistribution:
-    version: str = None
+    version: Optional[str] = None
 
     def __init__(self, version: str, **kwargs):
         self.version = version
@@ -260,7 +260,7 @@ class TKGDistribution:
 
 @dataclass()
 class TKGSpec:
-    distribution: TKGDistribution = None
+    distribution: Optional[TKGDistribution] = None
 
     def __init__(self, distribution: TKGDistribution, **kwargs):
         self.distribution = TKGDistribution(**distribution) \
@@ -269,7 +269,7 @@ class TKGSpec:
 
 @dataclass()
 class TKGStatus:
-    phase: str = None
+    phase: Optional[str] = None
 
     def __init__(self, phase: str, **kwargs):
         self.phase = phase
@@ -277,7 +277,7 @@ class TKGStatus:
 
 @dataclass()
 class TKGMetadata:
-    virtualDataCenterName: str = None
+    virtualDataCenterName: Optional[str] = None
 
     def __init__(self, virtualDataCenterName: str, **kwargs):
         self.virtualDataCenterName = virtualDataCenterName
@@ -285,10 +285,10 @@ class TKGMetadata:
 
 @dataclass()
 class TKGEntity:
-    kind: str = None
-    spec: TKGSpec = None
-    status: TKGStatus = None
-    metadata: TKGMetadata = None
+    kind: Optional[str] = None
+    spec: Optional[TKGSpec] = None
+    status: Optional[TKGStatus] = None
+    metadata: Optional[TKGMetadata] = None
 
     def __init__(self, kind: str, spec: TKGSpec, status: TKGStatus,
                  metadata: TKGMetadata, **kwargs):
