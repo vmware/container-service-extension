@@ -77,10 +77,36 @@ class DefEntityType:
             return self.id
 
 
-class DefEntityType2_0(DefEntityType):
+@dataclass_json(undefined=Undefined.EXCLUDE)
+@dataclass(frozen=True)
+class DefEntityType2_0:
     """Defined Entity type schema for the apiVersion = 36.0."""
 
+    name: str
+    description: str
+    schema: dict
+    interfaces: List[str]
+    version: str
+    id: str = None
+    externalId: Optional[str] = None
+    readonly: bool = False
+    vendor: str = Vendor.CSE.value
+    nss: str = Nss.NATIVE_CLUSTER.value
     hooks: dict = None
+
+    def get_id(self):
+        """Get or generate entity type id.
+
+        Example : "urn:vcloud:interface:cse.native:1.0.0
+
+        By no means, id generation in this method, guarantees the actual
+        entity type registration with vCD.
+        """
+        if self.id is None:
+            return def_utils.\
+                generate_entity_type_id(self.vendor, self.nss, self.version)
+        else:
+            return self.id
 
 
 @dataclass_json
@@ -303,13 +329,13 @@ class EntityType(Enum):
                                                 version='2.0.0',
                                                 vendor=Vendor.CSE.value,
                                                 nss=Nss.NATIVE_CLUSTER.value,
-                                                description=''
+                                                description='',
                                                 # TODO Uncomment this portion when the behavior integration is complete.  # noqa: E501
                                                 #  Uncommenting below, today (Apr 16,2021), will break the existing native api endpoints.  # noqa: E501
-                                                # hooks={
-                                                #     'PostCreate': BehaviorOperation.CREATE_CLUSTER.value.id,  # noqa: E501
-                                                #     'PostUpdate': BehaviorOperation.UPDATE_CLUSTER.value.id,  # noqa: E501
-                                                #     'PreDelete': BehaviorOperation.DELETE_CLUSTER.value.id}  # noqa: E501
+                                                hooks={
+                                                    'PostCreate': BehaviorOperation.CREATE_CLUSTER.value.id,  # noqa: E501
+                                                    'PostUpdate': BehaviorOperation.UPDATE_CLUSTER.value.id,  # noqa: E501
+                                                    'PreDelete': BehaviorOperation.DELETE_CLUSTER.value.id}  # noqa: E501
                                                 )
     TKG_ENTITY_TYPE_1_0_0 = DefEntityType(name='TKG Cluster',
                                           id=f"{DEF_ENTITY_TYPE_ID_PREFIX}:{Vendor.VMWARE.value}:{Nss.TKG}:1.0.0",  # noqa: E501
