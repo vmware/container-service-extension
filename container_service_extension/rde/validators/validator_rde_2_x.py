@@ -71,8 +71,8 @@ class Validator_2_0_0(AbstractValidator):
             if not entity_id or not entity:
                 raise ValueError('Both entity_id and entity are required to validate the Update operation.')  # noqa: E501
             current_entity: AbstractNativeEntity = entity_svc.get_entity(entity_id).entity  # noqa: E501
-            input_entity_spec = input_entity.spec
-            current_entity_status = current_entity.status
+            input_entity_spec: rde_2_0_0.ClusterSpec = input_entity.spec
+            current_entity_status: rde_2_0_0.Status = current_entity.status
             current_entity_spec = \
                 rde_utils.construct_cluster_spec_from_entity_status(
                     current_entity_status, rde_constants.RDEVersion.RDE_2_0_0.value)  # noqa: E501
@@ -96,12 +96,12 @@ def validate_cluster_update_request_and_check_cluster_upgrade(input_spec: rde_2_
     :raises: BadRequestError for invalid payload.
     """
     exclude_fields = []
-    if reference_spec.workers.count == 0:
+    if reference_spec.topology.workers.count == 0:
         # Exclude worker nodes' sizing class and storage profile from
         # validation if worker count is 0
         exclude_fields.append(FlattenedClusterSpecKey2X.WORKERS_SIZING_CLASS.value)  # noqa: E501
         exclude_fields.append(FlattenedClusterSpecKey2X.WORKERS_STORAGE_PROFILE.value)  # noqa: E501
-    if reference_spec.nfs.count == 0:
+    if reference_spec.topology.nfs.count == 0:
         # Exclude nfs nodes' sizing class and storage profile from validation
         # if nfs count is 0
         exclude_fields.append(FlattenedClusterSpecKey2X.NFS_SIZING_CLASS.value)

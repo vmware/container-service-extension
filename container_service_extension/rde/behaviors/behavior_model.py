@@ -4,6 +4,7 @@
 from dataclasses import dataclass
 from enum import Enum
 from enum import unique
+from typing import Optional
 
 from container_service_extension.common.constants.server_constants import AclAccessLevelId, ExtensionType, MQTT_EXTENSION_URN   # noqa: E501
 from container_service_extension.rde.constants import Nss, Vendor
@@ -61,10 +62,10 @@ class Execution:
 @dataclass
 class Behavior:
     name: str
-    description: str = None
-    id: str = None
-    ref: str = None
-    execution: Execution = None
+    description: Optional[str] = None
+    id: Optional[str] = None
+    ref: Optional[str] = None
+    execution: Optional[Execution] = None
 
     def __init__(self, name: str, description: str = None, id: str = None,
                  ref: str = None, execution: Execution = None, **kwargs):
@@ -115,8 +116,8 @@ class BehaviorAcl(Enum):
 @dataclass()
 class BehaviorError:
     majorErrorCode: str = '400'
-    minorErrorCode: str = None
-    message: str = None
+    minorErrorCode: Optional[str] = None
+    message: Optional[str] = None
 
 
 @unique
