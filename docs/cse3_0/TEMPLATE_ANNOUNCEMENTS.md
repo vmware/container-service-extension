@@ -4,7 +4,7 @@ title: Template Announcements
 ---
 # Template Announcements
 
-## April 28, 2021
+## April 30, 2021
 
 All templates currently available:
 * New templates are highlighted
@@ -13,7 +13,7 @@ All templates currently available:
 
 | Template Name                        | Revision | Operating System  | Kubernetes  | Weave     | Docker                  |
 |--------------------------------------|----------|-------------------|-------------|-----------|-------------------------|
-| **ubuntu-16.04_k8-1.20_weave-2.6.5** | 1        | Ubuntu-16.04      | 1.20.5      | 2.6.5     | Docker-ce 19.03.15      |
+| **ubuntu-16.04_k8-1.20_weave-2.6.5** | 1        | Ubuntu-16.04      | 1.20.6      | 2.6.5     | Docker-ce 19.03.15      |
 | ubuntu-16.04_k8-1.19_weave-2.6.5     | 1        | Ubuntu-16.04      | 1.19.3      | 2.6.5     | Docker-ce 19.03.12      |
 | ubuntu-16.04_k8-1.18_weave-2.6.5     | 1        | Ubuntu-16.04      | 1.18.6      | 2.6.5     | Docker-ce 19.03.12      |
 | ubuntu-16.04_k8-1.17_weave-2.6.0 *   | 2        | Ubuntu 16.04      | 1.17.9      | 2.6.0     | Docker-ce 19.03.5       |
