@@ -610,7 +610,7 @@ def apply(ctx, cluster_config_file_path, generate_sample_config, k8_runtime, out
                 # CSE server.
                 server_rde_version = \
                     def_utils.get_runtime_rde_version_by_vcd_api_version(
-                        float(client.get_api_version()))
+                        client.get_api_version())
                 sample_cluster_config = \
                     client_sample_generator.get_sample_cluster_configuration(
                         output=output,

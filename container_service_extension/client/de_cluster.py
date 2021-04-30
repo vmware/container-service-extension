@@ -109,14 +109,12 @@ class DECluster:
                             cli_constants.CLIOutputKey.OWNER.value: de.owner.name  # noqa: E501
                         }
                         if isinstance(entity, AbstractNativeEntity):
-                            # TODO remove if-else logic once model classes
-                            #   start using snake_case
                             if hasattr(entity.metadata, 'ovdc_name'):
                                 cluster[cli_constants.CLIOutputKey.VDC.value] = \
                                     entity.metadata.ovdc_name  # noqa: E501
-                            elif hasattr(entity.metadata, 'ovdcName'):
+                            elif hasattr(entity.metadata, 'virtual_data_center_name'):  # noqa: E501
                                 cluster[cli_constants.CLIOutputKey.VDC.value] = \
-                                    entity.metadata.ovdcName  # noqa: E501
+                                    entity.metadata.virtual_data_center_name  # noqa: E501
                             cluster[cli_constants.CLIOutputKey.K8S_RUNTIME.value] = entity.kind  # noqa: E501
                             cluster[cli_constants.CLIOutputKey.K8S_VERSION.value] = entity.status.kubernetes  # noqa: E501
                             cluster[cli_constants.CLIOutputKey.STATUS.value] = entity.status.phase  # noqa: E501
