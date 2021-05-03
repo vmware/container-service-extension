@@ -220,97 +220,116 @@ class ClusterService(abstract_broker.AbstractBroker):
         :return: dictionary representing mqtt response published
         :rtype: dict
         """
-        cluster_name = input_native_entity.metadata.name
-        org_name = input_native_entity.metadata.org_name
-        ovdc_name = input_native_entity.metadata.virtual_data_center_name
-
-        # Pick default template name and revision if both template name
-        # and template revision is not provided in the input native entity
-        if not input_native_entity.spec.distribution.template_name and \
-                not input_native_entity.spec.distribution.template_revision:
-            server_config: dict = server_utils.get_server_runtime_config()
-            input_native_entity.spec.distribution = rde_2_x.Distribution(
-                template_name=server_config['broker']['default_template_name'],
-                template_revision=int(server_config['broker']['default_template_revision']))  # noqa: E501
-        template_name = input_native_entity.spec.distribution.template_name
-        template_revision = input_native_entity.spec.distribution.template_revision  # noqa: E501
-
-        # check that cluster name is syntactically valid
-        if not _is_valid_cluster_name(cluster_name):
-            raise exceptions.CseServerError(
-                f"Invalid cluster name '{cluster_name}'")
-
-        # Check that cluster name doesn't already exist.
-        # Do not replace the below with the check to verify if defined entity
-        # already exists. It will not give accurate result as even sys-admin
-        # cannot view all the defined entities unless native entity type admin
-        # view right is assigned.
-        client_v36 = self.context.get_client(api_version=DEFAULT_API_VERSION)
-        if _cluster_exists(client_v36, cluster_name,
-                           org_name=org_name,
-                           ovdc_name=ovdc_name):
-            raise exceptions.ClusterAlreadyExistsError(
-                f"Cluster '{cluster_name}' already exists.")
-
-        # check that requested/default template is valid
-        template = _get_template(
-            name=template_name, revision=template_revision)
-
-        # TODO(DEF) design and implement telemetry VCDA-1564 defined entity
-        #  based clusters
-        k8_distribution = rde_2_x.Distribution(
-            template_name=template_name,
-            template_revision=template_revision
-        )
-        cloud_properties = rde_2_x.CloudProperties(
-            distribution=k8_distribution,
-            org_name=org_name,
-            virtual_data_center_name=ovdc_name,
-            ovdc_network_name=input_native_entity.spec.settings.network,
-            rollback_on_failure=input_native_entity.spec.settings.rollback_on_failure,  # noqa: E501
-            ssh_key=input_native_entity.spec.settings.ssh_key
-        )
-        new_status: rde_2_x.Status = rde_2_x.Status(
-            phase=str(DefEntityPhase(DefEntityOperation.CREATE,
-                                     DefEntityOperationStatus.IN_PROGRESS)),
-            kubernetes=_create_k8s_software_string(
-                template[LocalTemplateKey.KUBERNETES],
-                template[LocalTemplateKey.KUBERNETES_VERSION]),
-            cni=_create_k8s_software_string(
-                template[LocalTemplateKey.CNI],
-                template[LocalTemplateKey.CNI_VERSION]),
-            docker_version=template[LocalTemplateKey.DOCKER_VERSION],
-            os=template[LocalTemplateKey.OS],
-            cloud_properties=cloud_properties
-        )
-
-        msg = f"Creating cluster '{cluster_name}' " \
-              f"from template '{template_name}' (revision {template_revision})"
-        self._update_task(BehaviorTaskStatus.RUNNING, message=msg)
-        new_status.task_href = self.task_href
         try:
-            self._update_cluster_entity(entity_id,
-                                        new_status)
-        except Exception as err:
-            msg = f"Error updating the cluster '{cluster_name}' with the status"  # noqa: E501
-            LOGGER.error(f"{msg}: {err}")
+            cluster_name = input_native_entity.metadata.name
+            org_name = input_native_entity.metadata.org_name
+            ovdc_name = input_native_entity.metadata.virtual_data_center_name
+
+            # Pick default template name and revision if both template name
+            # and template revision is not provided in the input native entity
+            if not input_native_entity.spec.distribution.template_name and \
+                    not input_native_entity.spec.distribution.template_revision:  # noqa: E501
+                server_config: dict = server_utils.get_server_runtime_config()
+                input_native_entity.spec.distribution = rde_2_x.Distribution(
+                    template_name=server_config['broker']['default_template_name'],  # noqa: E501
+                    template_revision=int(server_config['broker']['default_template_revision']))  # noqa: E501
+            template_name = input_native_entity.spec.distribution.template_name
+            template_revision = input_native_entity.spec.distribution.template_revision  # noqa: E501
+
+            # check that cluster name is syntactically valid
+            if not _is_valid_cluster_name(cluster_name):
+                raise exceptions.CseServerError(
+                    f"Invalid cluster name '{cluster_name}'")
+
+            # Check that cluster name doesn't already exist.
+            # Do not replace the below with the check to verify if defined
+            # entity already exists. It will not give accurate result as even
+            # sys-admin cannot view all the defined entities unless
+            # native entity type admin view right is assigned.
+            client_v36 = \
+                self.context.get_client(api_version=DEFAULT_API_VERSION)
+            if _cluster_exists(client_v36, cluster_name,
+                               org_name=org_name,
+                               ovdc_name=ovdc_name):
+                raise exceptions.ClusterAlreadyExistsError(
+                    f"Cluster '{cluster_name}' already exists.")
+
+            # check that requested/default template is valid
+            template = _get_template(
+                name=template_name, revision=template_revision)
+
+            # TODO(DEF) design and implement telemetry VCDA-1564 defined entity
+            #  based clusters
+            k8_distribution = rde_2_x.Distribution(
+                template_name=template_name,
+                template_revision=template_revision
+            )
+            cloud_properties = rde_2_x.CloudProperties(
+                distribution=k8_distribution,
+                org_name=org_name,
+                virtual_data_center_name=ovdc_name,
+                ovdc_network_name=input_native_entity.spec.settings.network,
+                rollback_on_failure=input_native_entity.spec.settings.rollback_on_failure,  # noqa: E501
+                ssh_key=input_native_entity.spec.settings.ssh_key
+            )
+            new_status: rde_2_x.Status = rde_2_x.Status(
+                phase=str(DefEntityPhase(DefEntityOperation.CREATE,
+                                         DefEntityOperationStatus.IN_PROGRESS)),  # noqa: E501
+                kubernetes=_create_k8s_software_string(
+                    template[LocalTemplateKey.KUBERNETES],
+                    template[LocalTemplateKey.KUBERNETES_VERSION]),
+                cni=_create_k8s_software_string(
+                    template[LocalTemplateKey.CNI],
+                    template[LocalTemplateKey.CNI_VERSION]),
+                docker_version=template[LocalTemplateKey.DOCKER_VERSION],
+                os=template[LocalTemplateKey.OS],
+                cloud_properties=cloud_properties
+            )
+
+            msg = f"Creating cluster '{cluster_name}' " \
+                  f"from template '{template_name}' " \
+                  f"(revision {template_revision})"
+            self._update_task(BehaviorTaskStatus.RUNNING, message=msg)
+            new_status.task_href = self.task_href
+            try:
+                self._update_cluster_entity(entity_id,
+                                            new_status)
+            except Exception as err:
+                msg = f"Error updating the cluster '{cluster_name}' with the status"  # noqa: E501
+                LOGGER.error(f"{msg}: {err}")
+                raise
+            telemetry_handler.record_user_action_details(
+                cse_operation=telemetry_constants.CseOperation.V36_CLUSTER_APPLY,  # noqa: E501
+                cse_params={
+                    CLUSTER_ENTITY: input_native_entity,
+                    telemetry_constants.PayloadKey.SOURCE_DESCRIPTION: thread_local_data.get_thread_local_data(ThreadLocalData.USER_AGENT)  # noqa: E501
+                }
+            )
+            # trigger async operation
+            self.context.is_async = True
+            self._create_cluster_async(entity_id, input_native_entity)
+            self._update_task(status=BehaviorTaskStatus.RUNNING,
+                              message='Hurray cluster task-update is working',
+                              progress=3)
+            return self.mqtt_publisher.construct_behavior_payload(
+                message=CLUSTER_CREATE_IN_PROGRESS_MESSAGE,
+                status=BehaviorTaskStatus.RUNNING.value,
+                progress='5')
+        except Exception:
+            # Since defined entity is already created by defined entity
+            # framework, we need to delete the defined entity if rollback
+            # is set to true
+            # NOTE: As per schema definition, default value for rollback is
+            #   True
+            # TODO: Should the defined entity be deleted here even if rollback
+            #   is set to False? Because cluster won't really be created as
+            #   failure in sync portion may mean invalid request.
+            if input_native_entity.spec.settings.rollback_on_failure:
+                # delete defined entity
+                # TODO: Check if defined entity should be resolved to delete
+                #   the defined entity without invoking the hooks
+                self.sysadmin_entity_svc.delete_entity(entity_id)
             raise
-        telemetry_handler.record_user_action_details(
-            cse_operation=telemetry_constants.CseOperation.V36_CLUSTER_APPLY,
-            cse_params={
-                CLUSTER_ENTITY: input_native_entity,
-                telemetry_constants.PayloadKey.SOURCE_DESCRIPTION: thread_local_data.get_thread_local_data(ThreadLocalData.USER_AGENT)  # noqa: E501
-            }
-        )
-        # trigger async operation
-        self.context.is_async = True
-        self._create_cluster_async(entity_id, input_native_entity)
-        self._update_task(status=BehaviorTaskStatus.RUNNING,
-                          message='Hurray cluster task-update is working',
-                          progress=3)
-        return self.mqtt_publisher.construct_behavior_payload(
-            message=CLUSTER_CREATE_IN_PROGRESS_MESSAGE,
-            status=BehaviorTaskStatus.RUNNING.value, progress='5')
 
     def resize_cluster(self, cluster_id: str,
                        input_native_entity: rde_2_x.NativeEntity):
