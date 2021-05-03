@@ -507,8 +507,8 @@ class ClusterService(abstract_broker.AbstractBroker):
         """
         # TODO: Make use of current entity in the behavior payload
         curr_entity = self.entity_svc.get_entity(cluster_id)
-        cur_native_entity: rde_2_x.NativeEntity = curr_entity.entity
-        cluster_name = cur_native_entity.metadata.name
+        curr_native_entity: rde_2_x.NativeEntity = curr_entity.entity
+        cluster_name = curr_native_entity.metadata.name
         new_template_name = input_native_entity.spec.distribution.template_name
         new_template_revision = input_native_entity.spec.distribution.template_revision  # noqa: E501
 
@@ -516,6 +516,7 @@ class ClusterService(abstract_broker.AbstractBroker):
         phase: DefEntityPhase = DefEntityPhase.from_phase(
             curr_native_entity.status.phase)
 
+        state = curr_entity.state
         if state != def_constants.DEF_RESOLVED_STATE or phase.is_entity_busy():
             raise exceptions.CseServerError(
                 f"Cluster {cluster_name} with id {cluster_id} is not in a "
@@ -524,8 +525,8 @@ class ClusterService(abstract_broker.AbstractBroker):
         # check that the specified template is a valid upgrade target
         template = {}
         valid_templates = _get_cluster_upgrade_target_templates(
-            cur_native_entity.status.cloud_properties.distribution.template_name,  # noqa: E501
-            str(cur_native_entity.status.cloud_properties.distribution.template_revision))  # noqa: E501
+            curr_native_entity.status.cloud_properties.distribution.template_name,  # noqa: E501
+            str(curr_native_entity.status.cloud_properties.distribution.template_revision))  # noqa: E501
 
         for t in valid_templates:
             if (t[LocalTemplateKey.NAME], str(t[LocalTemplateKey.REVISION])) == (new_template_name, str(new_template_revision)):  # noqa: E501
