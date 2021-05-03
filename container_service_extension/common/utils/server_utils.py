@@ -27,20 +27,6 @@ def get_server_runtime_config():
     return cse_service.Service().get_service_config()
 
 
-def get_server_api_version():
-    """Get the API version with which CSE server is running.
-
-    :return: api version
-    """
-    config = get_server_runtime_config()
-    return config['vcd']['api_version']
-
-
-def get_default_storage_profile():
-    config = get_server_runtime_config()
-    return config['broker']['storage_profile']
-
-
 def get_rde_version_in_use() -> str:
     """Get the RDE version used by CSE server.
 

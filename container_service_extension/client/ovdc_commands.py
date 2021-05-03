@@ -216,7 +216,7 @@ Examples
                                       ovdc_name=ovdc_name,
                                       org_name=org_name,
                                       k8s_runtime=k8_runtime,
-                                      remove_cp_from_vms_on_disable=remove_cp_from_vms_on_disable) # noqa: E501
+                                      remove_cp_from_vms_on_disable=remove_cp_from_vms_on_disable)  # noqa: E501
             stdout(result, ctx)
             CLIENT_LOGGER.debug(result)
         else:
@@ -288,7 +288,7 @@ Examples
 \b
     vcd cse ovdc compute-policy remove POLICY_NAME --org ORG_NAME --vdc VDC_NAME
         Remove a compute policy from a specific ovdc in a specific org.
-    """ # noqa: E501
+    """  # noqa: E501
     pass
 
 
@@ -399,11 +399,12 @@ def compute_policy_remove(ctx, org_name, ovdc_name, compute_policy_name,
             raise Exception("Insufficient permission to perform operation.")
 
         ovdc = Ovdc(client)
-        result = ovdc.update_ovdc_compute_policies(ovdc_name,
-                                                   org_name,
-                                                   compute_policy_name,
-                                                   shared_constants.ComputePolicyAction.REMOVE, # noqa: E501
-                                                   remove_compute_policy_from_vms) # noqa: E501
+        result = ovdc.update_ovdc_compute_policies(
+            ovdc_name,
+            org_name,
+            compute_policy_name,
+            shared_constants.ComputePolicyAction.REMOVE,
+            remove_compute_policy_from_vms)
         stdout(result, ctx)
         CLIENT_LOGGER.debug(result)
     except Exception as e:

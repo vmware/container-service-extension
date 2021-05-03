@@ -35,7 +35,7 @@ class Vendor(str, Enum):
 @unique
 class Nss(str, Enum):
     KUBERNETES = 'k8s'
-    NATIVE_ClUSTER = 'nativeCluster'
+    NATIVE_CLUSTER = 'nativeCluster'
     TKG = 'tkgcluster'
 
 
@@ -46,7 +46,7 @@ class SchemaFile(str, Enum):
 
 
 DEF_NATIVE_ENTITY_TYPE_RIGHT_BUNDLE = \
-    f'{Vendor.CSE.value}:{Nss.NATIVE_ClUSTER.value} Entitlement'
+    f'{Vendor.CSE.value}:{Nss.NATIVE_CLUSTER.value} Entitlement'
 
 
 # Defines the RDE version CSE server uses at runtime.
@@ -78,7 +78,7 @@ class RDEMetadataKey(str, Enum):
     ENTITY_TYPE = 'entity_type'
     INTERFACES = 'interfaces'
     INTERFACE_TO_BEHAVIORS_MAP = 'map_from_interface_id_to_behaviors'
-    ENTITY_TYPE_TO_OVERRIDABLE_BEHAVIORS_MAP = 'map_from_entitytype_id_to_behaviors_to_override'  # noqa: E501
+    ENTITY_TYPE_TO_OVERRIDABLE_BEHAVIORS_MAP = 'map_from_entity_type_id_to_behaviors_to_override'  # noqa: E501
     BEHAVIOR_TO_ACL_MAP = 'map_from_behavior_id_to_behavior_acls'
 
 
@@ -120,8 +120,8 @@ class RDEMetadataKey(str, Enum):
 # 37.0: 3.0.0 (Newly introduced RDE)
 # }
 MAP_VCD_API_VERSION_TO_RUNTIME_RDE_VERSION = {
-    35.0: RuntimeRDEVersion.RDE_1_X.value,
-    36.0: RuntimeRDEVersion.RDE_2_X.value
+    '35.0': RuntimeRDEVersion.RDE_1_X.value,
+    '36.0': RuntimeRDEVersion.RDE_2_X.value
 }
 
 # Below map answers the question - "what is the RDE version introduced by CSE
@@ -139,8 +139,8 @@ MAP_VCD_API_VERSION_TO_RUNTIME_RDE_VERSION = {
 #     37.0: RDEVersion.RDE_3_0_0
 # }
 MAP_VCD_API_VERSION_TO_RDE_VERSION = {
-    35.0: RDEVersion.RDE_1_0_0.value,
-    36.0: RDEVersion.RDE_2_0_0.value
+    '35.0': RDEVersion.RDE_1_0_0.value,
+    '36.0': RDEVersion.RDE_2_0_0.value
 }
 
 MAP_INPUT_PAYLOAD_VERSION_TO_RDE_VERSION = {

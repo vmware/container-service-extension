@@ -122,15 +122,15 @@ SAMPLE_SERVICE_CONFIG = {
 
 SAMPLE_BROKER_CONFIG = {
     'broker': {
-        'org': 'myorg',
-        'vdc': 'myorgvdc',
+        'org': 'my_org',
+        'vdc': 'my_org_vdc',
         'catalog': 'cse',
-        'network': 'mynetwork',
+        'network': 'my_network',
         'ip_allocation_mode': 'pool',
         'storage_profile': '*',
         'default_template_name': 'my_template',
         'default_template_revision': 0,
-        'remote_template_cookbook_url': 'http://raw.githubusercontent.com/vmware/container-service-extension-templates/upgrades/template_v2.yaml', # noqa: E501
+        'remote_template_cookbook_url': 'http://raw.githubusercontent.com/vmware/container-service-extension-templates/upgrades/template_v2.yaml',  # noqa: E501
     }
 }
 
@@ -296,16 +296,16 @@ SAMPLE_PKS_NSXT_SERVERS_SECTION = {
 }
 
 
-def generate_sample_config(output=None, generate_pks_config=False,
-                           api_version=MQTT_MIN_API_VERSION):
+def generate_sample_config(
+        output_file_name: str, generate_pks_config: bool, api_version: str):
     """Generate sample configs for cse.
 
-    If config file names are
-    provided, configs are dumped into respective files.
+    If output config file name is provided, config is dumped into the file.
 
-    :param str output: name of the config file to dump the CSE configs.
+    :param str output_file_name: name of the config file to dump the
+        CSE configs.
     :param bool generate_pks_config: Flag to generate sample of PKS specific
-    configuration file instead of sample regular CSE configuration file.
+        configuration file instead of sample regular CSE configuration file.
     :param float api_version: the desired api version for the config file.
 
     :return: sample config
@@ -327,24 +327,29 @@ def generate_sample_config(output=None, generate_pks_config=False,
             sample_config = yaml.safe_dump(SAMPLE_AMQP_CONFIG,
                                            default_flow_style=False) + '\n'
 
-        api_version_vcd_config = dict(SAMPLE_VCD_CONFIG)
-        api_version_vcd_config['vcd']['api_version'] = api_version_str
-        sample_config += yaml.safe_dump(api_version_vcd_config,
+        sample_config += yaml.safe_dump(SAMPLE_VCD_CONFIG,
                                         default_flow_style=False) + '\n'
         sample_config += yaml.safe_dump(SAMPLE_VCS_CONFIG,
                                         default_flow_style=False) + '\n'
-        sample_config += yaml.safe_dump(SAMPLE_SERVICE_CONFIG,
+
+        updated_service_config = dict(SAMPLE_SERVICE_CONFIG)
+        if api_version < float(ApiVersion.VERSION_35.value):
+            updated_service_config['service']['legacy_mode'] = True
+        sample_config += yaml.safe_dump(updated_service_config,
                                         default_flow_style=False) + '\n'
+
         sample_config += yaml.safe_dump(SAMPLE_BROKER_CONFIG,
                                         default_flow_style=False) + '\n'
-        if api_version < float(ApiVersion.VERSION_35.value):
+
+        if updated_service_config['service']['legacy_mode']:
             sample_config += TEMPLATE_RULE_NOTE + '\n'
     else:
         sample_config = yaml.safe_dump(
             SAMPLE_PKS_SERVERS_SECTION, default_flow_style=False) + '\n'
         sample_config += yaml.safe_dump(
             SAMPLE_PKS_ACCOUNTS_SECTION, default_flow_style=False) + '\n'
-        # Org - PKS account mapping section will be supressed for CSE 2.0 alpha
+        # Org - PKS account mapping section will be suppressed for
+        #   CSE 2.0 alpha
         # sample_pks_config += yaml.safe_dump(
         # SAMPLE_PKS_ORGS_SECTION, default_flow_style=False) + '\n'
         sample_config += yaml.safe_dump(
@@ -353,8 +358,8 @@ def generate_sample_config(output=None, generate_pks_config=False,
             SAMPLE_PKS_NSXT_SERVERS_SECTION, default_flow_style=False)
         sample_config = f"{INSTRUCTIONS_FOR_PKS_CONFIG_FILE}\n{sample_config}"
 
-    if output:
-        with open(output, 'w') as f:
+    if output_file_name:
+        with open(output_file_name, 'w') as f:
             f.write(sample_config)
 
     return sample_config.strip()

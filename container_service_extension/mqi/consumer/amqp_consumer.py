@@ -5,6 +5,7 @@
 import json
 import sys
 from threading import Lock
+from typing import Optional
 
 from lru import LRU
 import pika
@@ -31,10 +32,10 @@ class AMQPConsumer(object):
                  exchange,
                  routing_key,
                  num_processors):
-        self._connection: pika.connection.Connection = None
+        self._connection: Optional[pika.connection.Connection] = None
         self._channel: pika.channel.Channel = None
         self._closing = False
-        self._consumer_tag: str = None
+        self._consumer_tag: Optional[str] = None
         self.host = host
         self.port = port
         self.vhost = vhost
@@ -98,7 +99,7 @@ class AMQPConsumer(object):
 
     def add_on_channel_close_callback(self):
         LOGGER.debug("Adding channel close callback")
-        self._channel.add_on_close_callback(self.on_channel_closed)
+        self._channel.add_on_close_callback(callback=self.on_channel_closed)
 
     def on_channel_closed(self, channel, amqp_exception):
         LOGGER.warning(
@@ -109,13 +110,13 @@ class AMQPConsumer(object):
             return
         try:
             self._connection.close()
-        except pika.exceptions.ConnectionWrongStateError as cwse:
-            LOGGER.warning(f"Connection is closed or closing: ({cwse})")
+        except pika.exceptions.ConnectionWrongStateError as err:
+            LOGGER.warning(f"Connection is closed or closing: ({err})")
 
     def setup_exchange(self, exchange_name):
         LOGGER.debug(f"Declaring exchange {exchange_name}")
         self._channel.exchange_declare(
-            exchange_name,
+            exchange=exchange_name,
             exchange_type=EXCHANGE_TYPE,
             passive=True,
             durable=True,
@@ -129,14 +130,14 @@ class AMQPConsumer(object):
     def setup_queue(self, queue_name):
         LOGGER.debug(f"Declaring queue ({queue_name})")
         self._channel.queue_declare(
-            queue_name, callback=self.on_queue_declareok)
+            queue=queue_name, callback=self.on_queue_declareok)
 
     def on_queue_declareok(self, method_frame):
         LOGGER.debug(f"Binding ({self.exchange}) to ({self.queue}) with "
                      f"({self.routing_key})")
-        self._channel.queue_bind(self.queue, self.exchange,
-                                 routing_key=self.routing_key,
-                                 callback=self.on_bindok)
+        self._channel.queue_bind(
+            queue=self.queue, exchange=self.exchange,
+            routing_key=self.routing_key, callback=self.on_bindok)
 
     def on_bindok(self, unused_frame):
         LOGGER.debug("Queue bound")
@@ -146,12 +147,13 @@ class AMQPConsumer(object):
         LOGGER.debug("Issuing consumer related RPC commands")
         self.add_on_cancel_callback()
         self._consumer_tag = self._channel.basic_consume(
-            self.queue, self.on_message)
+            queue=self.queue, on_message_callback=self.on_message)
         LOGGER.debug(f"Started consumer with tag ({self._consumer_tag})")
 
     def add_on_cancel_callback(self):
         LOGGER.debug("Adding consumer cancellation callback")
-        self._channel.add_on_cancel_callback(self.on_consumer_cancelled)
+        self._channel.add_on_cancel_callback(
+            callback=self.on_consumer_cancelled)
 
     def on_consumer_cancelled(self, method_frame):
         LOGGER.debug(f"Consumer was cancelled remotely, shutting down: "
@@ -187,7 +189,7 @@ class AMQPConsumer(object):
                 reply_body_str=reply_body_str)
 
             self.send_response(reply_msg, properties)
-            LOGGER.debug(f"Sucessfully sent reply: {reply_msg} to AMQP.")
+            LOGGER.debug(f"Successfully sent reply: {reply_msg} to AMQP.")
 
         global REQUESTS_BEING_PROCESSED, LRU_LOCK
         LRU_LOCK.acquire()
@@ -271,7 +273,9 @@ class AMQPConsumer(object):
             LOGGER.info(
                 f"Sending a Basic.Cancel RPC command to RabbitMQ for consumer "
                 f"({self._consumer_tag})")
-            self._channel.basic_cancel(self.on_cancelok, self._consumer_tag)
+            self._channel.basic_cancel(
+                delivery_tag=self._consumer_tag,
+                callback=self.on_cancelok)
 
     def on_cancelok(self, unused_frame):
         LOGGER.debug("RabbitMQ acknowledged the cancellation of the consumer")
@@ -284,9 +288,9 @@ class AMQPConsumer(object):
             return
         try:
             self._channel.close()
-        except pika.exceptions.ConnectionWrongStateError as cwse:
+        except pika.exceptions.ConnectionWrongStateError as err:
             LOGGER.warn(
-                f"Trying to close channel with unexpected state: [{cwse}]")
+                f"Trying to close channel with unexpected state: [{err}]")
 
     def run(self):
         self._connection = self.connect()

@@ -32,9 +32,10 @@ from container_service_extension.lib.telemetry.telemetry_handler import record_u
 from container_service_extension.lib.telemetry.telemetry_handler import record_user_action_telemetry  # noqa: E501
 import container_service_extension.logging.logger as logger
 import container_service_extension.security.context.operation_context as ctx
-import container_service_extension.server.compute_policy_manager as compute_policy_manager # noqa: E501
+import container_service_extension.server.compute_policy_manager as compute_policy_manager  # noqa: E501
 import container_service_extension.server.request_handlers.request_utils as req_utils  # noqa: E501
 
+DEFAULT_API_VERSION = vcd_client.ApiVersion.VERSION_33.value
 SYSTEM_DEFAULT_COMPUTE_POLICY_NAME = "System Default"
 
 
@@ -71,8 +72,10 @@ def ovdc_update(request_data, op_ctx: ctx.OperationContext):
     record_user_action_details(cse_operation=cse_operation, cse_params=cse_params)  # noqa: E501
 
     try:
+        sysadmin_client_v33 = \
+            op_ctx.get_sysadmin_client(api_version=DEFAULT_API_VERSION)
         task = ovdc_utils.update_ovdc_k8s_provider_metadata(
-            op_ctx.sysadmin_client,
+            sysadmin_client_v33,
             validated_data[RequestKey.OVDC_ID],
             k8s_provider_data=k8s_provider_info,
             k8s_provider=k8s_provider)
@@ -106,8 +109,10 @@ def ovdc_info(request_data, op_ctx: ctx.OperationContext):
     record_user_action_details(cse_operation=CseOperation.OVDC_INFO,
                                cse_params=cse_params)
 
+    sysadmin_client_v33 = \
+        op_ctx.get_sysadmin_client(api_version=DEFAULT_API_VERSION)
     return ovdc_utils.get_ovdc_k8s_provider_metadata(
-        op_ctx.sysadmin_client,
+        sysadmin_client_v33,
         ovdc_id=request_data[RequestKey.OVDC_ID])
 
 
@@ -152,8 +157,11 @@ def ovdc_list(request_data, op_ctx: ctx.OperationContext):
     record_user_action_details(cse_operation=CseOperation.OVDC_LIST,
                                cse_params=cse_params)
 
-    org_vdcs = vcd_utils.get_all_ovdcs(op_ctx.client)
-    return _get_cse_ovdc_list(op_ctx.sysadmin_client, org_vdcs)
+    client_v33 = op_ctx.get_client(api_version=DEFAULT_API_VERSION)
+    sysadmin_client_v33 = \
+        op_ctx.get_sysadmin_client(api_version=DEFAULT_API_VERSION)
+    org_vdcs = vcd_utils.get_all_ovdcs(client_v33)
+    return _get_cse_ovdc_list(sysadmin_client_v33, org_vdcs)
 
 
 # TODO: Record telemetry in a different telemetry handler
@@ -184,35 +192,35 @@ def org_vdc_list(request_data, op_ctx: ctx.OperationContext):
     cse_params[PayloadKey.SOURCE_DESCRIPTION] = thread_local_data.get_thread_local_data(ThreadLocalData.USER_AGENT)  # noqa: E501
     record_user_action_details(cse_operation=CseOperation.OVDC_LIST,
                                cse_params=cse_params)
-    result = \
-        vcd_utils.get_ovdcs_by_page(op_ctx.client,
-                                    page=page_number,
-                                    page_size=page_size)
+    client_v33 = op_ctx.get_client(api_version=DEFAULT_API_VERSION)
+    result = vcd_utils.get_ovdcs_by_page(
+        client_v33, page=page_number, page_size=page_size)
     org_vdcs = result[PaginationKey.VALUES]
     result_total = result[PaginationKey.RESULT_TOTAL]
     next_page_uri = result.get(PaginationKey.NEXT_PAGE_URI)
     prev_page_uri = result.get(PaginationKey.PREV_PAGE_URI)
 
-    ovdcs = _get_cse_ovdc_list(op_ctx.sysadmin_client, org_vdcs)
+    sysadmin_client_v33 = \
+        op_ctx.get_sysadmin_client(api_version=DEFAULT_API_VERSION)
+    ovdcs = _get_cse_ovdc_list(sysadmin_client_v33, org_vdcs)
 
     api_path = CseServerOperationInfo.ORG_VDC_LIST.api_path_format
-    next_page_uri = vcd_utils.create_cse_page_uri(op_ctx.client,
-                                                  api_path,
-                                                  vcd_uri=next_page_uri)
-    prev_page_uri = vcd_utils.create_cse_page_uri(op_ctx.client,
-                                                  api_path,
-                                                  vcd_uri=prev_page_uri)
-    return server_utils.construct_paginated_response(values=ovdcs,
-                                                     result_total=result_total,
-                                                     page_number=page_number,
-                                                     page_size=page_size,
-                                                     next_page_uri=next_page_uri,  # noqa: E501
-                                                     prev_page_uri=prev_page_uri)  # noqa: E501
+    next_page_uri = vcd_utils.create_cse_page_uri(
+        client_v33, api_path, vcd_uri=next_page_uri)
+    prev_page_uri = vcd_utils.create_cse_page_uri(
+        client_v33, api_path, vcd_uri=prev_page_uri)
+    return server_utils.construct_paginated_response(
+        values=ovdcs,
+        result_total=result_total,
+        page_number=page_number,
+        page_size=page_size,
+        next_page_uri=next_page_uri,
+        prev_page_uri=prev_page_uri)
 
 
 @record_user_action_telemetry(cse_operation=CseOperation.OVDC_COMPUTE_POLICY_LIST)  # noqa: E501
-def ovdc_compute_policy_list(request_data,
-                             op_ctx: ctx.OperationContext):
+def ovdc_compute_policy_list(
+        request_data, op_ctx: ctx.OperationContext):
     """Request handler for ovdc compute-policy list operation.
 
     Required data: ovdc_id
@@ -225,8 +233,10 @@ def ovdc_compute_policy_list(request_data,
     req_utils.validate_payload(request_data, required)
 
     config = server_utils.get_server_runtime_config()
+    sysadmin_client_v33 = \
+        op_ctx.get_sysadmin_client(api_version=DEFAULT_API_VERSION)
     cpm = compute_policy_manager.ComputePolicyManager(
-        op_ctx.sysadmin_client,
+        sysadmin_client_v33,
         log_wire=utils.str_to_bool(config['service'].get('log_wire')))
     compute_policies = []
     for cp in \
@@ -242,8 +252,8 @@ def ovdc_compute_policy_list(request_data,
     return compute_policies
 
 
-def ovdc_compute_policy_update(request_data,
-                               op_ctx: ctx.OperationContext):
+def ovdc_compute_policy_update(
+        request_data, op_ctx: ctx.OperationContext):
     """Request handler for ovdc compute-policy update operation.
 
     Required data: ovdc_id, compute_policy_action, compute_policy_names
@@ -267,12 +277,14 @@ def ovdc_compute_policy_update(request_data,
     action = validated_data[RequestKey.COMPUTE_POLICY_ACTION]
     cp_name = validated_data[RequestKey.COMPUTE_POLICY_NAME]
     ovdc_id = validated_data[RequestKey.OVDC_ID]
-    remove_compute_policy_from_vms = validated_data[RequestKey.REMOVE_COMPUTE_POLICY_FROM_VMS] # noqa: E501
+    remove_compute_policy_from_vms = validated_data[RequestKey.REMOVE_COMPUTE_POLICY_FROM_VMS]  # noqa: E501
     try:
         config = server_utils.get_server_runtime_config()
+        sysadmin_client_v33 = \
+            op_ctx.get_sysadmin_client(api_version=DEFAULT_API_VERSION)
         cpm = compute_policy_manager.ComputePolicyManager(
-            op_ctx.sysadmin_client,
-            log_wire=utils.str_to_bool(config['service'].get('log_wire'))) # noqa: E501
+            sysadmin_client_v33,
+            log_wire=utils.str_to_bool(config['service'].get('log_wire')))  # noqa: E501
         cp_href = None
         cp_id = None
         if cp_name == SYSTEM_DEFAULT_COMPUTE_POLICY_NAME:
@@ -329,15 +341,17 @@ def ovdc_compute_policy_update(request_data,
 
 @thread_utils.run_async
 def _follow_task(op_ctx: ctx.OperationContext, task_href: str, ovdc_id: str):
+    sysadmin_client_v33 = \
+        op_ctx.get_sysadmin_client(api_version=DEFAULT_API_VERSION)
     try:
-        task = vcd_task.Task(client=op_ctx.sysadmin_client)
-        session = op_ctx.sysadmin_client.get_vcloud_session()
-        vdc = vcd_utils.get_vdc(op_ctx.sysadmin_client, vdc_id=ovdc_id)
-        org = vcd_utils.get_org(op_ctx.sysadmin_client)
+        task = vcd_task.Task(client=sysadmin_client_v33)
+        session = sysadmin_client_v33.get_vcloud_session()
+        vdc = vcd_utils.get_vdc(sysadmin_client_v33, vdc_id=ovdc_id)
+        org = vcd_utils.get_org(sysadmin_client_v33)
         user_name = session.get('user')
         user_href = org.get_user(user_name).get('href')
         msg = "Remove ovdc compute policy"
-        # TODO(pyvcloud): Add method to retireve task from task href
+        # TODO(pyvcloud): Add method to retrieve task from task href
         t = task.update(
             status=vcd_task.TaskStatus.RUNNING.value,
             namespace='vcloud.cse',
@@ -352,9 +366,9 @@ def _follow_task(op_ctx: ctx.OperationContext, task_href: str, ovdc_id: str):
             user_name=user_name,
             org_href=op_ctx.user.org_href,
             task_href=task_href)
-        op_ctx.sysadmin_client.get_task_monitor().wait_for_status(t)
+        sysadmin_client_v33.get_task_monitor().wait_for_status(t)
     except Exception as err:
         logger.SERVER_LOGGER.error(f"{err}")
     finally:
-        if op_ctx.sysadmin_client:
+        if sysadmin_client_v33:
             op_ctx.end()

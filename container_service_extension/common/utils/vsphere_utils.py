@@ -20,7 +20,7 @@ vsphere_list = []
 
 
 def populate_vsphere_list(vcs):
-    """Populate the gloabl variable holding info on vCenter servers.
+    """Populate the global variable holding info on vCenter servers.
 
     This method must be called before a call to get_vsphere.
 
@@ -34,6 +34,7 @@ def populate_vsphere_list(vcs):
 def get_vsphere(sys_admin_client, vapp, vm_name, logger=NULL_LOGGER):
     """Get the VSphere object for a specific VM inside a VApp.
 
+    :param pyvcloud.vcd.client.Client sys_admin_client:
     :param pyvcloud.vcd.vapp.VApp vapp: VApp used to get the VM ID.
     :param str vm_name:
     :param logging.Logger logger: logger to log with.

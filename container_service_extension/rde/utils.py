@@ -14,7 +14,7 @@ import semantic_version
 
 import container_service_extension.common.utils.core_utils as core_utils
 import container_service_extension.common.utils.server_utils as server_utils
-import container_service_extension.exception.exceptions as excptn
+import container_service_extension.exception.exceptions as exceptions
 from container_service_extension.lib.cloudapi.cloudapi_client import CloudApiClient  # noqa: E501
 import container_service_extension.rde.constants as def_constants
 from container_service_extension.rde.models.abstractNativeEntity import AbstractNativeEntity  # noqa: E501
@@ -30,8 +30,9 @@ def raise_error_if_def_not_supported(cloudapi_client: CloudApiClient):
     """
     if float(cloudapi_client.get_api_version()) < \
             def_constants.DEF_API_MIN_VERSION:
-        raise excptn.DefNotSupportedException("Defined entity framework is not"
-                                              " supported for {cloudapi_client.get_api_version()}")  # noqa: E501
+        raise exceptions.DefNotSupportedException(
+            "Defined entity framework is not"
+            " supported for {cloudapi_client.get_api_version()}")
 
 
 def generate_interface_id(vendor, nss, version):
@@ -64,12 +65,15 @@ def generate_entity_type_id(vendor, nss, version):
     return f"{def_constants.DEF_ENTITY_TYPE_ID_PREFIX}:{vendor}:{nss}:{version}"  # noqa: E501
 
 
-def get_runtime_rde_version_by_vcd_api_version(vcd_api_version: float) -> str:
-    major_vcd_api_version = math.floor(vcd_api_version)
-    return def_constants.MAP_VCD_API_VERSION_TO_RUNTIME_RDE_VERSION[major_vcd_api_version]  # noqa: E501
+def get_runtime_rde_version_by_vcd_api_version(vcd_api_version: str) -> str:
+    major_vcd_api_version = str(math.floor(float(vcd_api_version)) * 1.0)
+    val = def_constants.MAP_VCD_API_VERSION_TO_RUNTIME_RDE_VERSION.get(major_vcd_api_version)  # noqa: E501
+    if not val:
+        val = '0.0.0'
+    return val
 
 
-def get_rde_version_introduced_at_api_version(vcd_api_version: float) -> str:
+def get_rde_version_introduced_at_api_version(vcd_api_version: str) -> str:
     return def_constants.MAP_VCD_API_VERSION_TO_RDE_VERSION[vcd_api_version]
 
 
@@ -174,7 +178,7 @@ def raise_error_if_unsupported_payload_version(payload_version: str):
     input_rde_version = def_constants.MAP_INPUT_PAYLOAD_VERSION_TO_RDE_VERSION.get(payload_version, def_constants.PayloadKey.UNKNOWN)  # noqa: E501
     runtime_rde_version = server_utils.get_rde_version_in_use()
     if input_rde_version == def_constants.PayloadKey.UNKNOWN or semantic_version.Version(input_rde_version) > semantic_version.Version(runtime_rde_version):  # noqa: E501
-        raise excptn.BadRequestError(f"Unsupported payload version: {payload_version}")  # noqa: E501
+        raise exceptions.BadRequestError(f"Unsupported payload version: {payload_version}")  # noqa: E501
 
 
 def convert_input_rde_to_runtime_rde_format(input_entity: dict):

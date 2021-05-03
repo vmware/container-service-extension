@@ -45,7 +45,7 @@ class Validator_2_0_0(AbstractValidator):
             raise ValueError('Either entity_id or entity is required to validate.')  # noqa: E501
         entity_svc = DefEntityService(cloudapi_client=cloudapi_client)
 
-        api_version: float = float(cloudapi_client.get_api_version())
+        api_version: str = cloudapi_client.get_api_version()
         rde_version_introduced_at_api_version: str = rde_utils.get_rde_version_introduced_at_api_version(api_version)  # noqa: E501
 
         # TODO Reject the request if payload_version does not match with
@@ -56,6 +56,7 @@ class Validator_2_0_0(AbstractValidator):
         # Any operation specific validation is handled further down
         NativeEntityClass: AbstractNativeEntity = rde_factory. \
             get_rde_model(rde_version_introduced_at_api_version)
+        input_entity = None
         if entity:
             input_entity: AbstractNativeEntity = NativeEntityClass.from_dict(entity)  # noqa: E501
 

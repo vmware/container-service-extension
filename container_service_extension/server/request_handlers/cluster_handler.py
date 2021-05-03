@@ -54,6 +54,7 @@ def cluster_create(data: dict, op_ctx: ctx.OperationContext):
 
     # Validate the Input payload based on the (Operation, payload_version).
     # Get the validator based on the payload_version
+    # ToDo : Don't use default cloudapi_client. Use the specific versioned one
     rde_validator_factory.get_validator(
         rde_version=rde_constants.MAP_INPUT_PAYLOAD_VERSION_TO_RDE_VERSION[
             payload_version]).validate(cloudapi_client=op_ctx.cloudapi_client,
@@ -163,6 +164,7 @@ def cluster_update(data: dict, op_ctx: ctx.OperationContext):
 
     # Validate the Input payload based on the (Operation, payload_version).
     # Get the validator based on the payload_version
+    # ToDo : Don't use default cloudapi_client. Use the specific versioned one
     rde_validator_factory.get_validator(
         rde_version=rde_constants.MAP_INPUT_PAYLOAD_VERSION_TO_RDE_VERSION[
             payload_version]). \

@@ -4,6 +4,7 @@
 
 from copy import deepcopy
 import json
+import logging
 from urllib import parse
 
 import requests
@@ -15,14 +16,14 @@ class CloudApiClient(object):
     """REST based client for cloudapi server."""
 
     def __init__(self,
-                 base_url,
-                 token,
-                 is_jwt_token,
-                 api_version,
-                 logger_debug,
-                 logger_wire,
-                 verify_ssl=True,
-                 is_sys_admin=False):
+                 base_url: str,
+                 token: str,
+                 is_jwt_token: str,
+                 api_version: str,
+                 logger_debug: logging.Logger,
+                 logger_wire: logging.Logger,
+                 verify_ssl: bool = True,
+                 is_sys_admin: bool = False):
         if not base_url.endswith('/'):
             base_url += '/'
         self._base_url = base_url
@@ -65,7 +66,7 @@ class CloudApiClient(object):
                    payload=None,
                    content_type=None,
                    additional_headers=None):
-        """Make a request to cloudpai server.
+        """Make a request to vCD server at /cloudapi endpoint.
 
         :param shared_constants.RequestMethod method: One of the HTTP verb
             defined in the enum.
@@ -98,7 +99,7 @@ class CloudApiClient(object):
                 url += f"{cloudapi_version}/"
             url += f"{resource_url_relative_path}"
 
-        self.LOGGER_WIRE.debug(f"Request uri : {(method.value).upper()} {url}")
+        self.LOGGER_WIRE.debug(f"Request uri : {method.value.upper()} {url}")
         headers = deepcopy(self._headers)
         if additional_headers:
             headers.update(additional_headers)

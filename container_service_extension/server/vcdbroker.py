@@ -7,6 +7,7 @@ import random
 import re
 import string
 import time
+from typing import Dict, List, Optional, Union
 import urllib
 import uuid
 
@@ -21,8 +22,8 @@ import requests
 import semantic_version as semver
 
 from container_service_extension.common.constants.server_constants import ClusterMetadataKey  # noqa: E501
-from container_service_extension.common.constants.server_constants import CSE_CLUSTER_KUBECONFIG_PATH # noqa: E501
-from container_service_extension.common.constants.server_constants import CSE_NATIVE_DEPLOY_RIGHT_NAME # noqa: E501
+from container_service_extension.common.constants.server_constants import CSE_CLUSTER_KUBECONFIG_PATH  # noqa: E501
+from container_service_extension.common.constants.server_constants import CSE_NATIVE_DEPLOY_RIGHT_NAME  # noqa: E501
 from container_service_extension.common.constants.server_constants import K8S_PROVIDER_KEY  # noqa: E501
 from container_service_extension.common.constants.server_constants import K8sProvider  # noqa: E501
 from container_service_extension.common.constants.server_constants import KwargKey  # noqa: E501
@@ -54,12 +55,14 @@ import container_service_extension.security.context.operation_context as ctx
 import container_service_extension.server.abstract_broker as abstract_broker
 import container_service_extension.server.request_handlers.request_utils as req_utils  # noqa: E501
 
+DEFAULT_API_VERSION = vcd_client.ApiVersion.VERSION_33.value
+
 
 class VcdBroker(abstract_broker.AbstractBroker):
     """Handles cluster operations for 'native' k8s provider."""
 
     def __init__(self, op_ctx: ctx.OperationContext):
-        self.context: ctx.OperationContext = None
+        self.context: Optional[ctx.OperationContext] = None
         # populates above attributes
         super().__init__(op_ctx)
 
@@ -89,7 +92,8 @@ class VcdBroker(abstract_broker.AbstractBroker):
         req_utils.validate_payload(validated_data, required)
 
         cluster_name = validated_data[RequestKey.CLUSTER_NAME]
-        cluster = _get_cluster(self.context.client, cluster_name,
+        client_v33 = self.context.get_client(api_version=DEFAULT_API_VERSION)
+        cluster = _get_cluster(client_v33, cluster_name,
                                org_name=validated_data[RequestKey.ORG_NAME],
                                ovdc_name=validated_data[RequestKey.OVDC_NAME])
 
@@ -102,7 +106,7 @@ class VcdBroker(abstract_broker.AbstractBroker):
                                        cse_params=cse_params)
 
         cluster[K8S_PROVIDER_KEY] = K8sProvider.NATIVE
-        _update_cluster_dict_with_node_info(self.context.client, cluster)
+        _update_cluster_dict_with_node_info(client_v33, cluster)
 
         return cluster
 
@@ -134,16 +138,19 @@ class VcdBroker(abstract_broker.AbstractBroker):
                 cse_operation=CseOperation.CLUSTER_LIST,
                 cse_params=copy.deepcopy(validated_data))
 
+        client_v33 = self.context.get_client(api_version=DEFAULT_API_VERSION)
         # "raw clusters" do not have well-defined cluster data keys
         raw_clusters_info = get_all_clusters(
-            self.context.client,
+            client_v33,
             org_name=validated_data[RequestKey.ORG_NAME],
             ovdc_name=validated_data[RequestKey.OVDC_NAME],
             page_number=page_number,
             page_size=page_size)
 
+        sysadmin_client_v33 = \
+            self.context.get_sysadmin_client(api_version=DEFAULT_API_VERSION)
         raw_clusters_info[PaginationKey.VALUES] = \
-            _extract_cse_cluster_list_info(self.context.sysadmin_client,
+            _extract_cse_cluster_list_info(sysadmin_client_v33,
                                            raw_clusters_info[PaginationKey.VALUES])  # noqa: E501
         return raw_clusters_info
 
@@ -176,9 +183,10 @@ class VcdBroker(abstract_broker.AbstractBroker):
                 cse_operation=CseOperation.CLUSTER_LIST,
                 cse_params=cse_params)
 
+        client_v33 = self.context.get_client(api_version=DEFAULT_API_VERSION)
         # "raw clusters" do not have well-defined cluster data keys
         raw_clusters_info = get_all_clusters(
-            self.context.client,
+            client_v33,
             org_name=validated_data[RequestKey.ORG_NAME],
             ovdc_name=validated_data[RequestKey.OVDC_NAME])
         if isinstance(raw_clusters_info, list):
@@ -186,7 +194,9 @@ class VcdBroker(abstract_broker.AbstractBroker):
         else:
             raw_clusters = raw_clusters_info[PaginationKey.VALUES]
 
-        return _extract_cse_cluster_list_info(self.context.sysadmin_client,
+        sysadmin_client_v33 = \
+            self.context.get_sysadmin_client(api_version=DEFAULT_API_VERSION)
+        return _extract_cse_cluster_list_info(sysadmin_client_v33,
                                               raw_clusters)
 
     def get_cluster_config(self, **kwargs):
@@ -213,10 +223,11 @@ class VcdBroker(abstract_broker.AbstractBroker):
         req_utils.validate_payload(validated_data, required)
 
         cluster_name = validated_data[RequestKey.CLUSTER_NAME]
-        cluster = _get_cluster(self.context.client, cluster_name,
+        client_v33 = self.context.get_client(api_version=DEFAULT_API_VERSION)
+        cluster = _get_cluster(client_v33, cluster_name,
                                org_name=validated_data[RequestKey.ORG_NAME],
                                ovdc_name=validated_data[RequestKey.OVDC_NAME])
-        vapp = vcd_vapp.VApp(self.context.client, href=cluster[ClusterDetailsKey.VAPP_HREF])  # noqa: E501
+        vapp = vcd_vapp.VApp(client_v33, href=cluster[ClusterDetailsKey.VAPP_HREF])  # noqa: E501
         node_names = _get_node_names(vapp, NodeType.CONTROL_PLANE)
 
         all_results = []
@@ -233,7 +244,9 @@ class VcdBroker(abstract_broker.AbstractBroker):
         for node_name in node_names:
             LOGGER.debug(f"getting file from node {node_name}")
             password = vapp.get_admin_password(node_name)
-            vs = vs_utils.get_vsphere(self.context.sysadmin_client, vapp,
+            sysadmin_client_v33 = self.context.get_sysadmin_client(
+                api_version=DEFAULT_API_VERSION)
+            vs = vs_utils.get_vsphere(sysadmin_client_v33, vapp,
                                       vm_name=node_name, logger=LOGGER)
             vs.connect()
             moid = vapp.get_vm_moid(node_name)
@@ -242,7 +255,7 @@ class VcdBroker(abstract_broker.AbstractBroker):
                                                  CSE_CLUSTER_KUBECONFIG_PATH)
             all_results.append(result)
 
-        if len(all_results) == 0 or all_results[0].status_code != requests.codes.ok: # noqa: E501
+        if len(all_results) == 0 or all_results[0].status_code != requests.codes.ok:  # noqa: E501
             raise e.ClusterOperationError("Couldn't get cluster configuration")
         return all_results[0].content.decode()
 
@@ -269,7 +282,8 @@ class VcdBroker(abstract_broker.AbstractBroker):
         validated_data = {**defaults, **data}
         req_utils.validate_payload(validated_data, required)
 
-        cluster = _get_cluster(self.context.client,
+        client_v33 = self.context.get_client(api_version=DEFAULT_API_VERSION)
+        cluster = _get_cluster(client_v33,
                                validated_data[RequestKey.CLUSTER_NAME],
                                org_name=validated_data[RequestKey.ORG_NAME],
                                ovdc_name=validated_data[RequestKey.OVDC_NAME])
@@ -289,7 +303,7 @@ class VcdBroker(abstract_broker.AbstractBroker):
         config = server_utils.get_server_runtime_config()
         for t in config['broker']['templates']:
             if src_name in t[LocalTemplateKey.UPGRADE_FROM]:
-                if t[LocalTemplateKey.NAME] == src_name and int(t[LocalTemplateKey.REVISION]) <= int(src_rev): # noqa: E501
+                if t[LocalTemplateKey.NAME] == src_name and int(t[LocalTemplateKey.REVISION]) <= int(src_rev):  # noqa: E501
                     continue
                 upgrades.append(t)
 
@@ -301,7 +315,7 @@ class VcdBroker(abstract_broker.AbstractBroker):
 
         Common broker function that validates data for the 'create cluster'
         operation and returns a dictionary with cluster detail and task
-        information. Calls the asyncronous cluster create function that
+        information. Calls the asynchronous cluster create function that
         actually performs the work. The returned `result['task_href']` can
         be polled to get updates on task progress.
 
@@ -325,8 +339,9 @@ class VcdBroker(abstract_broker.AbstractBroker):
         if not _is_valid_cluster_name(cluster_name):
             raise e.CseServerError(f"Invalid cluster name '{cluster_name}'")
         # check that cluster name doesn't already exist
+        client_v33 = self.context.get_client(api_version=DEFAULT_API_VERSION)
         try:
-            _get_cluster(self.context.client, cluster_name,
+            _get_cluster(client_v33, cluster_name,
                          org_name=data[RequestKey.ORG_NAME],
                          ovdc_name=data[RequestKey.OVDC_NAME])
             raise e.ClusterAlreadyExistsError(
@@ -381,7 +396,7 @@ class VcdBroker(abstract_broker.AbstractBroker):
             network_name=validated_data[RequestKey.NETWORK_NAME],
             num_cpu=validated_data[RequestKey.NUM_CPU],
             mb_memory=validated_data[RequestKey.MB_MEMORY],
-            storage_profile_name=validated_data[RequestKey.STORAGE_PROFILE_NAME], # noqa: E501
+            storage_profile_name=validated_data[RequestKey.STORAGE_PROFILE_NAME],  # noqa: E501
             ssh_key=validated_data[RequestKey.SSH_KEY],
             enable_nfs=validated_data[RequestKey.ENABLE_NFS],
             rollback=validated_data[RequestKey.ROLLBACK])
@@ -391,11 +406,11 @@ class VcdBroker(abstract_broker.AbstractBroker):
             cse_params = copy.deepcopy(validated_data)
             cse_params[PayloadKey.CLUSTER_ID] = cluster_id
             cse_params[LocalTemplateKey.MEMORY] = validated_data.get(RequestKey.MB_MEMORY)  # noqa: E501
-            cse_params[LocalTemplateKey.CPU] = validated_data.get(RequestKey.NUM_CPU) # noqa: E501
+            cse_params[LocalTemplateKey.CPU] = validated_data.get(RequestKey.NUM_CPU)  # noqa: E501
             cse_params[LocalTemplateKey.KUBERNETES] = template.get(LocalTemplateKey.KUBERNETES)  # noqa: E501
             cse_params[LocalTemplateKey.KUBERNETES_VERSION] = template.get(LocalTemplateKey.KUBERNETES_VERSION)  # noqa: E501
             cse_params[LocalTemplateKey.OS] = template.get(LocalTemplateKey.OS)
-            cse_params[LocalTemplateKey.CNI] = template.get(LocalTemplateKey.CNI) # noqa: E501
+            cse_params[LocalTemplateKey.CNI] = template.get(LocalTemplateKey.CNI)  # noqa: E501
             cse_params[LocalTemplateKey.CNI_VERSION] = template.get(LocalTemplateKey.CNI_VERSION)  # noqa: E501
             cse_params[PayloadKey.SOURCE_DESCRIPTION] = thread_local_data.get_thread_local_data(ThreadLocalData.USER_AGENT)  # noqa: E501
             record_user_action_details(
@@ -441,7 +456,7 @@ class VcdBroker(abstract_broker.AbstractBroker):
             RequestKey.ENABLE_NFS: False,
             RequestKey.ROLLBACK: True,
         }
-        validated_data = {**defaults, **data}
+        validated_data: Dict[str, Union[Optional, str, int]] = {**defaults, **data}  # noqa: E501
         req_utils.validate_payload(validated_data, required)
 
         cluster_name = validated_data[RequestKey.CLUSTER_NAME]
@@ -464,9 +479,9 @@ class VcdBroker(abstract_broker.AbstractBroker):
         if kwargs.get(KwargKey.TELEMETRY, True):
             # Record the telemetry data
             cse_params = copy.deepcopy(validated_data)
-            cse_params[PayloadKey.CLUSTER_ID] = cluster_info[ClusterDetailsKey.CLUSTER_ID.value] # noqa: E501
-            cse_params[LocalTemplateKey.MEMORY] = validated_data.get(RequestKey.MB_MEMORY) # noqa: E501
-            cse_params[LocalTemplateKey.CPU] = validated_data.get(RequestKey.NUM_CPU) # noqa: E501
+            cse_params[PayloadKey.CLUSTER_ID] = cluster_info[ClusterDetailsKey.CLUSTER_ID.value]  # noqa: E501
+            cse_params[LocalTemplateKey.MEMORY] = validated_data.get(RequestKey.MB_MEMORY)  # noqa: E501
+            cse_params[LocalTemplateKey.CPU] = validated_data.get(RequestKey.NUM_CPU)  # noqa: E501
             cse_params[PayloadKey.SOURCE_DESCRIPTION] = thread_local_data.get_thread_local_data(ThreadLocalData.USER_AGENT)  # noqa: E501
             record_user_action_details(
                 cse_operation=CseOperation.CLUSTER_RESIZE,
@@ -477,8 +492,8 @@ class VcdBroker(abstract_broker.AbstractBroker):
             return self.create_nodes(data=validated_data, telemetry=False)
         else:
             num_workers_to_be_deleted = num_workers - num_workers_wanted
-            node_list = cluster_info[ClusterDetailsKey.WORKER_NODE_LIST]
-            validated_data[RequestKey.NODE_NAMES_LIST] = [node['name'] for node in node_list[0:num_workers_to_be_deleted]] # noqa: E501
+            node_list: List[Dict[str, str]] = cluster_info[ClusterDetailsKey.WORKER_NODE_LIST]  # noqa: E501
+            validated_data[RequestKey.NODE_NAMES_LIST] = [node['name'] for node in node_list[0:num_workers_to_be_deleted]]  # noqa: E501
             return self.delete_nodes(data=validated_data, telemetry=False)
 
     @auth.secure(required_rights=[CSE_NATIVE_DEPLOY_RIGHT_NAME])
@@ -506,8 +521,8 @@ class VcdBroker(abstract_broker.AbstractBroker):
         req_utils.validate_payload(validated_data, required)
 
         cluster_name = validated_data[RequestKey.CLUSTER_NAME]
-
-        cluster = _get_cluster(self.context.client, cluster_name,
+        client_v33 = self.context.get_client(api_version=DEFAULT_API_VERSION)
+        cluster = _get_cluster(client_v33, cluster_name,
                                org_name=validated_data[RequestKey.ORG_NAME],
                                ovdc_name=validated_data[RequestKey.OVDC_NAME])
         cluster_id = cluster[ClusterDetailsKey.CLUSTER_ID.value]
@@ -571,7 +586,7 @@ class VcdBroker(abstract_broker.AbstractBroker):
         valid_templates = self.get_cluster_upgrade_plan(data=validated_data,
                                                         telemetry=False)
         for t in valid_templates:
-            if (t[LocalTemplateKey.NAME], str(t[LocalTemplateKey.REVISION])) == (template_name, str(template_revision)): # noqa: E501
+            if (t[LocalTemplateKey.NAME], str(t[LocalTemplateKey.REVISION])) == (template_name, str(template_revision)):  # noqa: E501
                 template = t
                 break
         if not template:
@@ -637,7 +652,8 @@ class VcdBroker(abstract_broker.AbstractBroker):
         cluster_name = validated_data[RequestKey.CLUSTER_NAME]
         node_name = validated_data[RequestKey.NODE_NAME]
 
-        cluster = _get_cluster(self.context.client, cluster_name,
+        client_v33 = self.context.get_client(api_version=DEFAULT_API_VERSION)
+        cluster = _get_cluster(client_v33, cluster_name,
                                org_name=validated_data[RequestKey.ORG_NAME],
                                ovdc_name=validated_data[RequestKey.OVDC_NAME])
 
@@ -650,7 +666,7 @@ class VcdBroker(abstract_broker.AbstractBroker):
                 cse_operation=CseOperation.NODE_INFO,
                 cse_params=cse_params)
 
-        vapp = vcd_vapp.VApp(self.context.client, href=cluster[ClusterDetailsKey.VAPP_HREF])  # noqa: E501
+        vapp = vcd_vapp.VApp(client_v33, href=cluster[ClusterDetailsKey.VAPP_HREF])  # noqa: E501
         vms = vapp.get_all_vms()
         node_info = None
         for vm in vms:
@@ -662,12 +678,12 @@ class VcdBroker(abstract_broker.AbstractBroker):
                 'name': vm_name,
                 'numberOfCpus': '',
                 'memoryMB': '',
-                'status': vcd_client.VCLOUD_STATUS_MAP.get(int(vm.get('status'))), # noqa: E501
+                'status': vcd_client.VCLOUD_STATUS_MAP.get(int(vm.get('status'))),  # noqa: E501
                 'ipAddress': ''
             }
             if hasattr(vm, 'VmSpecSection'):
                 node_info['numberOfCpus'] = vm.VmSpecSection.NumCpus.text
-                node_info['memoryMB'] = vm.VmSpecSection.MemoryResourceMb.Configured.text # noqa: E501
+                node_info['memoryMB'] = vm.VmSpecSection.MemoryResourceMb.Configured.text  # noqa: E501
             try:
                 node_info['ipAddress'] = vapp.get_primary_ip(vm_name)
             except Exception:
@@ -678,7 +694,9 @@ class VcdBroker(abstract_broker.AbstractBroker):
                 node_info['node_type'] = 'worker'
             elif vm_name.startswith(NodeType.NFS):
                 node_info['node_type'] = 'nfs'
-                node_info['exports'] = _get_nfs_exports(self.context.sysadmin_client, node_info['ipAddress'], vapp, vm_name) # noqa: E501
+                sysadmin_client_v33 = self.context.get_sysadmin_client(
+                    api_version=DEFAULT_API_VERSION)
+                node_info['exports'] = _get_nfs_exports(sysadmin_client_v33, node_info['ipAddress'], vapp, vm_name)  # noqa: E501
         if node_info is None:
             raise e.NodeNotFoundError(f"Node '{node_name}' not found in "
                                       f"cluster '{cluster_name}'")
@@ -742,7 +760,8 @@ class VcdBroker(abstract_broker.AbstractBroker):
             raise e.CseServerError(f"Worker node count must be > 0 "
                                    f"(received {num_workers}).")
 
-        cluster = _get_cluster(self.context.client, cluster_name,
+        client_v33 = self.context.get_client(api_version=DEFAULT_API_VERSION)
+        cluster = _get_cluster(client_v33, cluster_name,
                                org_name=validated_data[RequestKey.ORG_NAME],
                                ovdc_name=validated_data[RequestKey.OVDC_NAME])
         cluster_id = cluster[ClusterDetailsKey.CLUSTER_ID.value]
@@ -752,11 +771,11 @@ class VcdBroker(abstract_broker.AbstractBroker):
             cse_params = copy.deepcopy(validated_data)
             cse_params[PayloadKey.CLUSTER_ID] = cluster_id
             cse_params[LocalTemplateKey.MEMORY] = validated_data.get(RequestKey.MB_MEMORY)  # noqa: E501
-            cse_params[LocalTemplateKey.CPU] = validated_data.get(RequestKey.NUM_CPU) # noqa: E501
+            cse_params[LocalTemplateKey.CPU] = validated_data.get(RequestKey.NUM_CPU)  # noqa: E501
             cse_params[LocalTemplateKey.KUBERNETES] = template.get(LocalTemplateKey.KUBERNETES)  # noqa: E501
             cse_params[LocalTemplateKey.KUBERNETES_VERSION] = template.get(LocalTemplateKey.KUBERNETES_VERSION)  # noqa: E501
             cse_params[LocalTemplateKey.OS] = template.get(LocalTemplateKey.OS)
-            cse_params[LocalTemplateKey.CNI] = template.get(LocalTemplateKey.CNI) # noqa: E501
+            cse_params[LocalTemplateKey.CNI] = template.get(LocalTemplateKey.CNI)  # noqa: E501
             cse_params[LocalTemplateKey.CNI_VERSION] = template.get(LocalTemplateKey.CNI_VERSION)  # noqa: E501
             cse_params[PayloadKey.SOURCE_DESCRIPTION] = thread_local_data.get_thread_local_data(ThreadLocalData.USER_AGENT)  # noqa: E501
             record_user_action_details(cse_operation=CseOperation.NODE_CREATE,
@@ -782,7 +801,7 @@ class VcdBroker(abstract_broker.AbstractBroker):
             network_name=validated_data[RequestKey.NETWORK_NAME],
             num_cpu=num_cpu,
             mb_memory=mb_memory,
-            storage_profile_name=validated_data[RequestKey.STORAGE_PROFILE_NAME], # noqa: E501
+            storage_profile_name=validated_data[RequestKey.STORAGE_PROFILE_NAME],  # noqa: E501
             ssh_key=validated_data[RequestKey.SSH_KEY],
             enable_nfs=validated_data[RequestKey.ENABLE_NFS],
             rollback=validated_data[RequestKey.ROLLBACK])
@@ -829,7 +848,8 @@ class VcdBroker(abstract_broker.AbstractBroker):
             if node.startswith(NodeType.CONTROL_PLANE):
                 raise e.CseServerError(f"Can't delete control plane node: '{node}'.")  # noqa: E501
 
-        cluster = _get_cluster(self.context.client, cluster_name,
+        client_v33 = self.context.get_client(api_version=DEFAULT_API_VERSION)
+        cluster = _get_cluster(client_v33, cluster_name,
                                org_name=validated_data[RequestKey.ORG_NAME],
                                ovdc_name=validated_data[RequestKey.OVDC_NAME])
         cluster_id = cluster[ClusterDetailsKey.CLUSTER_ID.value]
@@ -871,9 +891,10 @@ class VcdBroker(abstract_broker.AbstractBroker):
                               network_name, num_cpu, mb_memory,
                               storage_profile_name, ssh_key, enable_nfs,
                               rollback):
+        client_v33 = self.context.get_client(api_version=DEFAULT_API_VERSION)
         try:
-            org = vcd_utils.get_org(self.context.client, org_name=org_name)
-            vdc = vcd_utils.get_vdc(self.context.client,
+            org = vcd_utils.get_org(client_v33, org_name=org_name)
+            vdc = vcd_utils.get_vdc(client_v33,
                                     vdc_name=ovdc_name,
                                     org=org)
 
@@ -893,27 +914,27 @@ class VcdBroker(abstract_broker.AbstractBroker):
                 msg = f"Error while creating vApp: {err}"
                 LOGGER.debug(str(err))
                 raise e.ClusterOperationError(msg)
-            self.context.client.get_task_monitor().wait_for_status(vapp_resource.Tasks.Task[0]) # noqa: E501
+            client_v33.get_task_monitor().wait_for_status(vapp_resource.Tasks.Task[0])  # noqa: E501
 
             template = _get_template(template_name, template_revision)
 
             LOGGER.debug(f"Setting metadata on cluster vApp '{cluster_name}'")
             tags = {
                 ClusterMetadataKey.CLUSTER_ID: cluster_id,
-                ClusterMetadataKey.CSE_VERSION: pkg_resources.require('container-service-extension')[0].version, # noqa: E501
-                ClusterMetadataKey.TEMPLATE_NAME: template[LocalTemplateKey.NAME], # noqa: E501
-                ClusterMetadataKey.TEMPLATE_REVISION: template[LocalTemplateKey.REVISION], # noqa: E501
-                ClusterMetadataKey.OS: template[LocalTemplateKey.OS], # noqa: E501
-                ClusterMetadataKey.DOCKER_VERSION: template[LocalTemplateKey.DOCKER_VERSION], # noqa: E501
-                ClusterMetadataKey.KUBERNETES: template[LocalTemplateKey.KUBERNETES], # noqa: E501
-                ClusterMetadataKey.KUBERNETES_VERSION: template[LocalTemplateKey.KUBERNETES_VERSION], # noqa: E501
+                ClusterMetadataKey.CSE_VERSION: pkg_resources.require('container-service-extension')[0].version,  # noqa: E501
+                ClusterMetadataKey.TEMPLATE_NAME: template[LocalTemplateKey.NAME],  # noqa: E501
+                ClusterMetadataKey.TEMPLATE_REVISION: template[LocalTemplateKey.REVISION],  # noqa: E501
+                ClusterMetadataKey.OS: template[LocalTemplateKey.OS],  # noqa: E501
+                ClusterMetadataKey.DOCKER_VERSION: template[LocalTemplateKey.DOCKER_VERSION],  # noqa: E501
+                ClusterMetadataKey.KUBERNETES: template[LocalTemplateKey.KUBERNETES],  # noqa: E501
+                ClusterMetadataKey.KUBERNETES_VERSION: template[LocalTemplateKey.KUBERNETES_VERSION],  # noqa: E501
                 ClusterMetadataKey.CNI: template[LocalTemplateKey.CNI],
-                ClusterMetadataKey.CNI_VERSION: template[LocalTemplateKey.CNI_VERSION] # noqa: E501
+                ClusterMetadataKey.CNI_VERSION: template[LocalTemplateKey.CNI_VERSION]  # noqa: E501
             }
-            vapp = vcd_vapp.VApp(self.context.client,
+            vapp = vcd_vapp.VApp(client_v33,
                                  href=vapp_resource.get('href'))
             task = vapp.set_multiple_metadata(tags)
-            self.context.client.get_task_monitor().wait_for_status(task)
+            client_v33.get_task_monitor().wait_for_status(task)
 
             msg = f"Creating control plane node for cluster '{cluster_name}'" \
                   f" ({cluster_id})"
@@ -923,7 +944,7 @@ class VcdBroker(abstract_broker.AbstractBroker):
             server_config = server_utils.get_server_runtime_config()
             catalog_name = server_config['broker']['catalog']
             try:
-                _add_nodes(self.context.client,
+                _add_nodes(client_v33,
                            num_nodes=1,
                            node_type=NodeType.CONTROL_PLANE,
                            org=org,
@@ -945,21 +966,23 @@ class VcdBroker(abstract_broker.AbstractBroker):
             LOGGER.debug(msg)
             self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
             vapp.reload()
-            _init_cluster(self.context.sysadmin_client,
+            sysadmin_client_v33 = self.context.get_sysadmin_client(
+                api_version=DEFAULT_API_VERSION)
+            _init_cluster(sysadmin_client_v33,
                           vapp,
                           template[LocalTemplateKey.NAME],
                           template[LocalTemplateKey.REVISION])
-            control_plane_ip = _get_control_plane_ip(self.context.sysadmin_client, vapp)  # noqa: E501
+            control_plane_ip = _get_control_plane_ip(sysadmin_client_v33, vapp)  # noqa: E501
             task = vapp.set_metadata('GENERAL', 'READWRITE', 'cse.master.ip',
                                      control_plane_ip)
-            self.context.client.get_task_monitor().wait_for_status(task)
+            client_v33.get_task_monitor().wait_for_status(task)
 
             msg = f"Creating {num_workers} node(s) for cluster " \
                   f"'{cluster_name}' ({cluster_id})"
             LOGGER.debug(msg)
             self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
             try:
-                _add_nodes(self.context.client,
+                _add_nodes(client_v33,
                            num_nodes=num_workers,
                            node_type=NodeType.WORKER,
                            org=org,
@@ -981,7 +1004,7 @@ class VcdBroker(abstract_broker.AbstractBroker):
             LOGGER.debug(msg)
             self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
             vapp.reload()
-            _join_cluster(self.context.sysadmin_client,
+            _join_cluster(sysadmin_client_v33,
                           vapp,
                           template[LocalTemplateKey.NAME],
                           template[LocalTemplateKey.REVISION])
@@ -992,7 +1015,7 @@ class VcdBroker(abstract_broker.AbstractBroker):
                 LOGGER.debug(msg)
                 self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
                 try:
-                    _add_nodes(self.context.client,
+                    _add_nodes(client_v33,
                                num_nodes=1,
                                node_type=NodeType.NFS,
                                org=org,
@@ -1021,12 +1044,12 @@ class VcdBroker(abstract_broker.AbstractBroker):
                 LOGGER.debug(msg)
                 self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
                 try:
-                    cluster = _get_cluster(self.context.client,
+                    cluster = _get_cluster(client_v33,
                                            cluster_name,
                                            cluster_id=cluster_id,
                                            org_name=org_name,
                                            ovdc_name=ovdc_name)
-                    _delete_vapp(self.context.client, cluster[ClusterDetailsKey.VDC_HREF],  # noqa: E501
+                    _delete_vapp(client_v33, cluster[ClusterDetailsKey.VDC_HREF],  # noqa: E501
                                  cluster_name)
                 except Exception:
                     LOGGER.error(f"Failed to delete cluster '{cluster_name}'",
@@ -1038,7 +1061,7 @@ class VcdBroker(abstract_broker.AbstractBroker):
                               error_message=str(err))
             # raising an exception here prints a stacktrace to server console
         except Exception as err:
-            msg = "Unknown error occured while creating " \
+            msg = "Unknown error occurred while creating " \
                   f"cluster '{cluster_name}'"
             LOGGER.error(msg, exc_info=True)
             self._update_task(vcd_client.TaskStatus.ERROR,
@@ -1055,10 +1078,14 @@ class VcdBroker(abstract_broker.AbstractBroker):
                             num_workers, network_name, num_cpu, mb_memory,
                             storage_profile_name, ssh_key, enable_nfs,
                             rollback):
+        sysadmin_client_v33 = \
+            self.context.get_sysadmin_client(api_version=DEFAULT_API_VERSION)
         try:
-            org = vcd_utils.get_org(self.context.client)
-            vdc = VDC(self.context.client, href=cluster_vdc_href)
-            vapp = vcd_vapp.VApp(self.context.client, href=vapp_href)
+            client_v33 = self.context.get_client(
+                api_version=DEFAULT_API_VERSION)
+            org = vcd_utils.get_org(client_v33)
+            vdc = VDC(client_v33, href=cluster_vdc_href)
+            vapp = vcd_vapp.VApp(client_v33, href=vapp_href)
             template = _get_template(name=template_name,
                                      revision=template_revision)
             server_config = server_utils.get_server_runtime_config()
@@ -1074,7 +1101,7 @@ class VcdBroker(abstract_broker.AbstractBroker):
             LOGGER.debug(msg)
             self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
 
-            new_nodes = _add_nodes(self.context.client,
+            new_nodes = _add_nodes(client_v33,
                                    num_nodes=num_workers,
                                    node_type=node_type,
                                    org=org,
@@ -1102,7 +1129,8 @@ class VcdBroker(abstract_broker.AbstractBroker):
                 for spec in new_nodes['specs']:
                     target_nodes.append(spec['target_vm_name'])
                 vapp.reload()
-                _join_cluster(self.context.sysadmin_client,
+
+                _join_cluster(sysadmin_client_v33,
                               vapp,
                               template[LocalTemplateKey.NAME],
                               template[LocalTemplateKey.REVISION],
@@ -1119,7 +1147,7 @@ class VcdBroker(abstract_broker.AbstractBroker):
                 LOGGER.debug(msg)
                 self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
                 try:
-                    _delete_nodes(self.context.sysadmin_client,
+                    _delete_nodes(sysadmin_client_v33,
                                   vapp_href,
                                   err.node_names,
                                   cluster_name=cluster_name)
@@ -1153,9 +1181,11 @@ class VcdBroker(abstract_broker.AbstractBroker):
             LOGGER.debug(msg)
             self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
 
+            sysadmin_client_v33 = self.context.get_sysadmin_client(
+                api_version=DEFAULT_API_VERSION)
             # if nodes fail to drain, continue with node deletion anyways
             try:
-                _drain_nodes(self.context.sysadmin_client,
+                _drain_nodes(sysadmin_client_v33,
                              vapp_href,
                              node_names_list,
                              cluster_name=cluster_name)
@@ -1169,7 +1199,7 @@ class VcdBroker(abstract_broker.AbstractBroker):
             LOGGER.debug(msg)
             self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
 
-            _delete_nodes(self.context.sysadmin_client,
+            _delete_nodes(sysadmin_client_v33,
                           vapp_href,
                           node_names_list,
                           cluster_name=cluster_name)
@@ -1195,7 +1225,9 @@ class VcdBroker(abstract_broker.AbstractBroker):
             msg = f"Deleting cluster '{cluster_name}'"
             LOGGER.debug(msg)
             self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
-            _delete_vapp(self.context.client, cluster_vdc_href, cluster_name)
+            client_v33 = self.context.get_client(
+                api_version=DEFAULT_API_VERSION)
+            _delete_vapp(client_v33, cluster_vdc_href, cluster_name)
             msg = f"Deleted cluster '{cluster_name}'"
             LOGGER.debug(msg)
             self._update_task(vcd_client.TaskStatus.SUCCESS, message=msg)
@@ -1226,19 +1258,22 @@ class VcdBroker(abstract_broker.AbstractBroker):
             c_docker = cluster[ClusterDetailsKey.DOCKER_VERSION]
             t_docker = template[LocalTemplateKey.DOCKER_VERSION]
             c_k8s = semver.Version(cluster[ClusterDetailsKey.KUBERNETES_VERSION])  # noqa: E501
-            t_k8s = semver.Version(template[LocalTemplateKey.KUBERNETES_VERSION]) # noqa: E501
+            t_k8s = semver.Version(template[LocalTemplateKey.KUBERNETES_VERSION])  # noqa: E501
             c_cni = semver.Version(cluster[ClusterDetailsKey.CNI_VERSION])
             t_cni = semver.Version(template[LocalTemplateKey.CNI_VERSION])
 
             upgrade_docker = t_docker > c_docker
             upgrade_k8s = t_k8s >= c_k8s
-            upgrade_cni = t_cni > c_cni or t_k8s.major > c_k8s.major or t_k8s.minor > c_k8s.minor # noqa: E501
+            upgrade_cni = t_cni > c_cni or t_k8s.major > c_k8s.major or t_k8s.minor > c_k8s.minor  # noqa: E501
+
+            sysadmin_client_v33 = self.context.get_sysadmin_client(
+                api_version=DEFAULT_API_VERSION)
 
             if upgrade_k8s:
                 msg = f"Draining control plane node {control_plane_node_names}"
                 LOGGER.debug(msg)
                 self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
-                _drain_nodes(self.context.sysadmin_client, vapp_href,
+                _drain_nodes(sysadmin_client_v33, vapp_href,
                              control_plane_node_names, cluster_name=cluster_name)  # noqa: E501
 
                 msg = f"Upgrading Kubernetes ({c_k8s} -> {t_k8s}) " \
@@ -1250,13 +1285,13 @@ class VcdBroker(abstract_broker.AbstractBroker):
                     template_revision,
                     ScriptFile.CONTROL_PLANE_K8S_UPGRADE)
                 script = utils.read_data_file(filepath, logger=LOGGER)
-                _run_script_in_nodes(self.context.sysadmin_client, vapp_href,
+                _run_script_in_nodes(sysadmin_client_v33, vapp_href,
                                      control_plane_node_names, script)
 
                 msg = f"Uncordoning control plane node {control_plane_node_names}"  # noqa: E501
                 LOGGER.debug(msg)
                 self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
-                _uncordon_nodes(self.context.sysadmin_client,
+                _uncordon_nodes(sysadmin_client_v33,
                                 vapp_href,
                                 control_plane_node_names,
                                 cluster_name=cluster_name)
@@ -1271,7 +1306,7 @@ class VcdBroker(abstract_broker.AbstractBroker):
                     LOGGER.debug(msg)
                     self._update_task(vcd_client.TaskStatus.RUNNING,
                                       message=msg)
-                    _drain_nodes(self.context.sysadmin_client,
+                    _drain_nodes(sysadmin_client_v33,
                                  vapp_href,
                                  [node],
                                  cluster_name=cluster_name)
@@ -1281,14 +1316,14 @@ class VcdBroker(abstract_broker.AbstractBroker):
                     LOGGER.debug(msg)
                     self._update_task(vcd_client.TaskStatus.RUNNING,
                                       message=msg)
-                    _run_script_in_nodes(self.context.sysadmin_client,
+                    _run_script_in_nodes(sysadmin_client_v33,
                                          vapp_href, [node], script)
 
                     msg = f"Uncordoning node {node}"
                     LOGGER.debug(msg)
                     self._update_task(vcd_client.TaskStatus.RUNNING,
                                       message=msg)
-                    _uncordon_nodes(self.context.sysadmin_client,
+                    _uncordon_nodes(sysadmin_client_v33,
                                     vapp_href, [node],
                                     cluster_name=cluster_name)
 
@@ -1296,7 +1331,7 @@ class VcdBroker(abstract_broker.AbstractBroker):
                 msg = f"Draining all nodes {all_node_names}"
                 LOGGER.debug(msg)
                 self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
-                _drain_nodes(self.context.sysadmin_client,
+                _drain_nodes(sysadmin_client_v33,
                              vapp_href, all_node_names,
                              cluster_name=cluster_name)
 
@@ -1309,26 +1344,26 @@ class VcdBroker(abstract_broker.AbstractBroker):
                                                    template_revision,
                                                    ScriptFile.DOCKER_UPGRADE)
                 script = utils.read_data_file(filepath, logger=LOGGER)
-                _run_script_in_nodes(self.context.sysadmin_client, vapp_href,
+                _run_script_in_nodes(sysadmin_client_v33, vapp_href,
                                      all_node_names, script)
 
             if upgrade_cni:
                 msg = f"Applying CNI ({cluster[ClusterDetailsKey.CNI_NAME]} {c_cni} -> {t_cni}) " \
-                      f"incontrol plane node {control_plane_node_names}"  # noqa: E501
+                      f"in control plane node {control_plane_node_names}"  # noqa: E501
                 LOGGER.debug(msg)
                 self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
                 filepath = ltm.get_script_filepath(template_name,
                                                    template_revision,
                                                    ScriptFile.CONTROL_PLANE_CNI_APPLY)  # noqa: E501
                 script = utils.read_data_file(filepath, logger=LOGGER)
-                _run_script_in_nodes(self.context.sysadmin_client, vapp_href,
+                _run_script_in_nodes(sysadmin_client_v33, vapp_href,
                                      control_plane_node_names, script)
 
             # uncordon all nodes (sometimes redundant)
             msg = f"Uncordoning all nodes {all_node_names}"
             LOGGER.debug(msg)
             self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
-            _uncordon_nodes(self.context.sysadmin_client, vapp_href,
+            _uncordon_nodes(sysadmin_client_v33, vapp_href,
                             all_node_names, cluster_name=cluster_name)
 
             # update cluster metadata
@@ -1336,16 +1371,18 @@ class VcdBroker(abstract_broker.AbstractBroker):
             LOGGER.debug(msg)
             self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
             metadata = {
-                ClusterMetadataKey.TEMPLATE_NAME: template[LocalTemplateKey.NAME], # noqa: E501
-                ClusterMetadataKey.TEMPLATE_REVISION: template[LocalTemplateKey.REVISION], # noqa: E501
-                ClusterMetadataKey.DOCKER_VERSION: template[LocalTemplateKey.DOCKER_VERSION], # noqa: E501
-                ClusterMetadataKey.KUBERNETES_VERSION: template[LocalTemplateKey.KUBERNETES_VERSION], # noqa: E501
+                ClusterMetadataKey.TEMPLATE_NAME: template[LocalTemplateKey.NAME],  # noqa: E501
+                ClusterMetadataKey.TEMPLATE_REVISION: template[LocalTemplateKey.REVISION],  # noqa: E501
+                ClusterMetadataKey.DOCKER_VERSION: template[LocalTemplateKey.DOCKER_VERSION],  # noqa: E501
+                ClusterMetadataKey.KUBERNETES_VERSION: template[LocalTemplateKey.KUBERNETES_VERSION],  # noqa: E501
                 ClusterMetadataKey.CNI: template[LocalTemplateKey.CNI],
-                ClusterMetadataKey.CNI_VERSION: template[LocalTemplateKey.CNI_VERSION] # noqa: E501
+                ClusterMetadataKey.CNI_VERSION: template[LocalTemplateKey.CNI_VERSION]  # noqa: E501
             }
-            vapp = vcd_vapp.VApp(self.context.client, href=vapp_href)
+            client_v33 = self.context.get_client(
+                api_version=DEFAULT_API_VERSION)
+            vapp = vcd_vapp.VApp(client_v33, href=vapp_href)
             task = vapp.set_multiple_metadata(metadata)
-            self.context.client.get_task_monitor().wait_for_status(task)
+            client_v33.get_task_monitor().wait_for_status(task)
 
             msg = f"Successfully upgraded cluster '{cluster_name}' software " \
                   f"to match template {template_name} (revision " \
@@ -1379,17 +1416,20 @@ class VcdBroker(abstract_broker.AbstractBroker):
         because if any unknown errors occur during an operation, there should
         be a finally clause that takes care of logging out.
         """
-        if not self.context.client.is_sysadmin():
+        client_v33 = self.context.get_client(api_version=DEFAULT_API_VERSION)
+        if not client_v33.is_sysadmin():
             stack_trace = ''
 
         if self.task is None:
-            self.task = vcd_task.Task(self.context.sysadmin_client)
+            sysadmin_client_v33 = self.context.get_sysadmin_client(
+                api_version=DEFAULT_API_VERSION)
+            self.task = vcd_task.Task(sysadmin_client_v33)
 
         task_href = None
         if self.task_resource is not None:
             task_href = self.task_resource.get('href')
 
-        org = vcd_utils.get_org(self.context.client)
+        org = vcd_utils.get_org(client_v33)
         user_href = org.get_user(self.context.user.name).get('href')
 
         self.task_resource = self.task.update(
@@ -1587,6 +1627,7 @@ def get_all_clusters(client, cluster_name=None, cluster_id=None,
                      page_number=None, page_size=None):
     """Get list of dictionaries containing data for each visible cluster.
 
+    :param vcd_client.Client client:
     :param str cluster_name: name of the cluster to search for
     :param str cluster_id: id of the cluster to search for
     :param str org_name: restrict the cluster search to a specific org with
@@ -1599,7 +1640,7 @@ def get_all_clusters(client, cluster_name=None, cluster_id=None,
     :param int page_number: return clusters in a specific page number
     :param int page_size: return page_size results
     :return: list of clusters if page_number is not specified. Else, a dict
-        containing cluster list and paginaion information
+        containing cluster list and pagination information
 
     NOTE: if page_number is provided, the return type will be a dictionary
         containing pagination information along with the cluster list
@@ -1612,7 +1653,7 @@ def get_all_clusters(client, cluster_name=None, cluster_id=None,
     """
     query_filter = f'metadata:{ClusterMetadataKey.CLUSTER_ID}==STRING:*'
     if cluster_id is not None:
-        query_filter = f'metadata:{ClusterMetadataKey.CLUSTER_ID}==STRING:{urllib.parse.quote(cluster_id)}' # noqa: E501
+        query_filter = f'metadata:{ClusterMetadataKey.CLUSTER_ID}==STRING:{urllib.parse.quote(cluster_id)}'  # noqa: E501
     if cluster_name is not None:
         query_filter += f';name=={urllib.parse.quote(cluster_name)}'
     if ovdc_name is not None:
@@ -1620,10 +1661,10 @@ def get_all_clusters(client, cluster_name=None, cluster_id=None,
     resource_type = vcd_client.ResourceType.VAPP.value
     if client.is_sysadmin():
         resource_type = vcd_client.ResourceType.ADMIN_VAPP.value
-        if org_name is not None and org_name.lower() != SYSTEM_ORG_NAME.lower(): # noqa: E501
+        if org_name is not None and org_name.lower() != SYSTEM_ORG_NAME.lower():  # noqa: E501
             org_resource = client.get_org_by_name(org_name)
             org = vcd_org.Org(client, resource=org_resource)
-            query_filter += f";org=={urllib.parse.quote(org.resource.get('id'))}" # noqa: E501
+            query_filter += f";org=={urllib.parse.quote(org.resource.get('id'))}"  # noqa: E501
 
     # 2 queries are required because each query can only return 8 metadata
     q = client.get_typed_query(
@@ -1665,7 +1706,6 @@ def get_all_clusters(client, cluster_name=None, cluster_id=None,
     }
 
     clusters = {}
-    cluster_list = []
     result_total = None
     if page_number:
         # since page_number is provided during query creation, the return type
@@ -1713,7 +1753,7 @@ def get_all_clusters(client, cluster_name=None, cluster_id=None,
         if hasattr(record, 'Metadata'):
             for element in record.Metadata.MetadataEntry:
                 if element.Key in metadata_key_to_cluster_key:
-                    clusters[vapp_id][metadata_key_to_cluster_key[element.Key]] = str(element.TypedValue.Value) # noqa: E501
+                    clusters[vapp_id][metadata_key_to_cluster_key[element.Key]] = str(element.TypedValue.Value)  # noqa: E501
 
     if page_number:
         # since page_number is provided during query creation, the return type
@@ -1730,7 +1770,7 @@ def get_all_clusters(client, cluster_name=None, cluster_id=None,
         if hasattr(record, 'Metadata'):
             for element in record.Metadata.MetadataEntry:
                 if element.Key in metadata_key_to_cluster_key:
-                    clusters[vapp_id][metadata_key_to_cluster_key[element.Key]] = str(element.TypedValue.Value) # noqa: E501
+                    clusters[vapp_id][metadata_key_to_cluster_key[element.Key]] = str(element.TypedValue.Value)  # noqa: E501
 
     if fetch_details:
         for cluster in clusters.values():
@@ -1771,14 +1811,14 @@ def _get_cluster(client, cluster_name, cluster_id=None, org_name=None,
 
 
 def _get_template(name=None, revision=None):
-    if (name is None and revision is not None) or (name is not None and revision is None): # noqa: E501
+    if (name is None and revision is not None) or (name is not None and revision is None):  # noqa: E501
         raise ValueError("If template revision is specified, then template "
                          "name must also be specified (and vice versa).")
     server_config = server_utils.get_server_runtime_config()
     name = name or server_config['broker']['default_template_name']
     revision = revision or server_config['broker']['default_template_revision']
     for template in server_config['broker']['templates']:
-        if (template[LocalTemplateKey.NAME], str(template[LocalTemplateKey.REVISION])) == (name, str(revision)): # noqa: E501
+        if (template[LocalTemplateKey.NAME], str(template[LocalTemplateKey.REVISION])) == (name, str(revision)):  # noqa: E501
             return template
     raise Exception(f"Template '{name}' at revision {revision} not found.")
 
@@ -1815,9 +1855,8 @@ def _add_nodes(client, num_nodes, node_type, org, vdc, vapp,
 
             vapp.reload()
             for n in range(num_nodes):
-                name = None
                 while True:
-                    name = f"{node_type}-{''.join(random.choices(string.ascii_lowercase + string.digits, k=4))}" # noqa: E501
+                    name = f"{node_type}-{''.join(random.choices(string.ascii_lowercase + string.digits, k=4))}"  # noqa: E501
                     try:
                         vapp.get_vm(name)
                     except Exception:
@@ -1912,7 +1951,7 @@ def _extract_cse_cluster_list_info(sysadmin_client: vcd_client.Client,
 
 
 def _get_node_names(vapp, node_type):
-    return [vm.get('name') for vm in vapp.get_all_vms() if vm.get('name').startswith(node_type)] # noqa: E501
+    return [vm.get('name') for vm in vapp.get_all_vms() if vm.get('name').startswith(node_type)]  # noqa: E501
 
 
 def _wait_for_tools_ready_callback(message, exception=None):
@@ -1968,7 +2007,7 @@ def _init_cluster(sysadmin_client: vcd_client.Client, vapp, template_name,
                 f"Initialize cluster script execution failed on node "
                 f"{node_names}:{errors}")
         if result[0][0] != 0:
-            raise e.ClusterInitializationError(f"Couldn't initialize cluster:\n{result[0][2].content.decode()}") # noqa: E501
+            raise e.ClusterInitializationError(f"Couldn't initialize cluster:\n{result[0][2].content.decode()}")  # noqa: E501
     except Exception as err:
         LOGGER.error(err, exc_info=True)
         raise e.ClusterInitializationError(

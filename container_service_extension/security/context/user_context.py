@@ -1,13 +1,16 @@
+# container-service-extension
+# Copyright (c) 2020 VMware, Inc. All Rights Reserved.
+# SPDX-License-Identifier: BSD-2-Clause
+
+from typing import List, Optional
+
 import lxml.objectify as lxml
 import pyvcloud.vcd.client as vcd_client
 import pyvcloud.vcd.org as vcd_org
 import pyvcloud.vcd.role as vcd_role
 
-import container_service_extension.common.utils.pyvcloud_utils as vcd_utils
-import container_service_extension.common.utils.server_utils as server_utils
-import container_service_extension.lib.cloudapi.cloudapi_client as cloudApiClient  # noqa: E501
+import container_service_extension.lib.cloudapi.cloudapi_client as cloudapi_client  # noqa: E501
 import container_service_extension.logging.logger as logger
-
 
 ORG_ADMIN_RIGHTS = [
     'General: Administrator Control',
@@ -17,20 +20,17 @@ ORG_ADMIN_RIGHTS = [
 
 class UserContext:
     def __init__(self, client: vcd_client.Client,
-                 cloudapi_client: cloudApiClient.CloudApiClient):
+                 cloud_api_client: cloudapi_client.CloudApiClient):
         self.client: vcd_client.Client = client
-        self._cloudapi_client: cloudApiClient.CloudApiClient = cloudapi_client
-        self._session: lxml.ObjectifiedElement = None
-        self._name: str = None
-        self._id: str = None
-        self._org_name: str = None
-        self._org_href: str = None
-        self._role: str = None
-        self._rights: [str] = None
-
-        self._sysadmin_client: vcd_client.Client = None
-        self._sysadmin_cloudapi_client: cloudApiClient.CloudApiClient = None
-        self._is_sys_admin: bool = None
+        self.cloud_api_client: cloudapi_client.CloudApiClient = \
+            cloud_api_client
+        self._session: Optional[lxml.ObjectifiedElement] = None
+        self._name: Optional[str] = None
+        self._id: Optional[str] = None
+        self._org_name: Optional[str] = None
+        self._org_href: Optional[str] = None
+        self._role: Optional[str] = None
+        self._rights: Optional[List[str]] = None
 
     @property
     def session(self):
@@ -53,12 +53,6 @@ class UserContext:
         return self._id
 
     @property
-    def is_sys_admin(self):
-        if self._is_sys_admin is None:
-            self._is_sys_admin = self.client.is_sysadmin()
-        return self._is_sys_admin
-
-    @property
     def org_name(self):
         if self._org_name is None:
             self._org_name = self.session.get('org')
@@ -67,9 +61,7 @@ class UserContext:
     @property
     def org_href(self):
         if self._org_href is None:
-            # href of the org that the user belongs to
-            self._org_href = self.client._get_wk_endpoint(
-                vcd_client._WellKnownEndpoint.LOGGED_IN_ORG)
+            self._org_href = self.client.get_org().get('href')
         return self._org_href
 
     @property
@@ -80,50 +72,27 @@ class UserContext:
 
     @property
     def rights(self):
+        # If the user is unable to fetch the list of rights, then they
+        # can't be sys admin or org admin. And anyone other than those
+        # two shouldn't be able to see their own set of rights.
         if self._rights is None:
-            # Query is restricted to system administrator
-            org = vcd_org.Org(self.sysadmin_client, href=self.org_href)
-            role = vcd_role.Role(self.sysadmin_client,
-                                 resource=org.get_role_resource(self.role))
+            try:
+                org = vcd_org.Org(self.client, href=self.org_href)
+                role = vcd_role.Role(self.client,
+                                     resource=org.get_role_resource(self.role))
 
-            self._rights = []
-            for right_dict in role.list_rights():
-                right_name = right_dict.get('name')
-                if right_name is not None:
-                    self._rights.append(right_name)
+                self._rights = []
+                for right_dict in role.list_rights():
+                    right_name = right_dict.get('name')
+                    if right_name is not None:
+                        self._rights.append(right_name)
+            # maybe replace with Forbidden exception?
+            except Exception:
+                msg = f"Unable to fetch right records for User: {self.name}"
+                logger.SERVER_LOGGER.debug(msg, exc_info=True)
 
         return self._rights
 
     @property
     def has_org_admin_rights(self):
         return all(right in self.rights for right in ORG_ADMIN_RIGHTS)
-
-    @property
-    def sysadmin_client(self):
-        if self._sysadmin_client is None:
-            self._sysadmin_client = vcd_utils.get_sys_admin_client()
-        return self._sysadmin_client
-
-    @property
-    def sysadmin_cloudapi_client(self):
-        if self._sysadmin_cloudapi_client is None:
-            log_wire = server_utils.get_server_runtime_config() \
-                .get('service', {}).get('log_wire', False)
-            logger_wire = logger.NULL_LOGGER
-            if log_wire:
-                logger_wire = logger.SERVER_CLOUDAPI_WIRE_LOGGER
-            self._sysadmin_cloudapi_client = \
-                vcd_utils.get_cloudapi_client_from_vcd_client(
-                    self.sysadmin_client,
-                    logger.SERVER_LOGGER,
-                    logger_wire)
-        return self._sysadmin_cloudapi_client
-
-    def end(self):
-        try:
-            self._sysadmin_client.logout()
-        except Exception:
-            pass
-        finally:
-            self._sysadmin_client = None
-            self._cloudapi_client = None

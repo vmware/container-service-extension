@@ -60,7 +60,7 @@ class DefEntityType:
     externalId: Optional[str] = None
     readonly: bool = False
     vendor: str = Vendor.CSE.value
-    nss: str = Nss.NATIVE_ClUSTER.value
+    nss: str = Nss.NATIVE_CLUSTER.value
 
     def get_id(self):
         """Get or generate entity type id.
@@ -77,10 +77,36 @@ class DefEntityType:
             return self.id
 
 
-class DefEntityType2_0(DefEntityType):
+@dataclass_json(undefined=Undefined.EXCLUDE)
+@dataclass(frozen=True)
+class DefEntityType2_0:
     """Defined Entity type schema for the apiVersion = 36.0."""
 
+    name: str
+    description: str
+    schema: dict
+    interfaces: List[str]
+    version: str
+    id: str = None
+    externalId: Optional[str] = None
+    readonly: bool = False
+    vendor: str = Vendor.CSE.value
+    nss: str = Nss.NATIVE_CLUSTER.value
     hooks: dict = None
+
+    def get_id(self):
+        """Get or generate entity type id.
+
+        Example : "urn:vcloud:interface:cse.native:1.0.0
+
+        By no means, id generation in this method, guarantees the actual
+        entity type registration with vCD.
+        """
+        if self.id is None:
+            return def_utils.\
+                generate_entity_type_id(self.vendor, self.nss, self.version)
+        else:
+            return self.id
 
 
 @dataclass_json
@@ -126,7 +152,7 @@ class DefEntity:
         entity_type_version = self.entityType.split(":")[-1]
         self.entity = entity
         if isinstance(entity, dict):
-            # Parse the enitty to the right entity class
+            # Parse the entity to the right entity class
             NativeEntityClass = get_rde_model(entity_type_version)
             self.entity = NativeEntityClass.from_dict(entity)
 
@@ -178,7 +204,7 @@ class ClusterAclEntry:
 # include the following properties:
 @dataclass()
 class GenericClusterEntity:
-    # Properties being used for List operation attributes representiing them
+    # Properties being used for List operation attributes representing them
     # for native and TKG clusters:
     # name:
     #   def_entity.name
@@ -212,7 +238,7 @@ class GenericClusterEntity:
                  shared_constants.ClusterEntityKind.TKG_PLUS.value]:
             # Get the entity type version from entity type urn
             entity_type_version = self.entityType.split(":")[-1]
-            # Parse the enitty to the right entity class
+            # Parse the entity to the right entity class
             NativeEntityClass = get_rde_model(entity_type_version)
             self.entity: AbstractNativeEntity = \
                 NativeEntityClass.from_dict(entity_dict) if isinstance(entity, dict) else entity  # noqa: E501
@@ -287,22 +313,22 @@ class K8Interface(Enum):
 @unique
 class EntityType(Enum):
     NATIVE_ENTITY_TYPE_1_0_0 = DefEntityType(name='nativeClusterEntityType',
-                                             id=f"{DEF_ENTITY_TYPE_ID_PREFIX}:{Vendor.CSE.value}:{Nss.NATIVE_ClUSTER}:1.0.0",  # noqa: E501
+                                             id=f"{DEF_ENTITY_TYPE_ID_PREFIX}:{Vendor.CSE.value}:{Nss.NATIVE_CLUSTER}:1.0.0",  # noqa: E501
                                              schema=load_rde_schema(SchemaFile.SCHEMA_1_0_0),  # noqa: E501
                                              interfaces=[K8Interface.VCD_INTERFACE.value.id],  # noqa: E501
                                              version='1.0.0',
                                              vendor=Vendor.CSE.value,
-                                             nss=Nss.NATIVE_ClUSTER.value,
+                                             nss=Nss.NATIVE_CLUSTER.value,
                                              description='')
     NATIVE_ENTITY_TYPE_2_0_0 = DefEntityType2_0(name='nativeClusterEntityType',
-                                                id=f"{DEF_ENTITY_TYPE_ID_PREFIX}:{Vendor.CSE.value}:{Nss.NATIVE_ClUSTER}:2.0.0",  # noqa: E501
+                                                id=f"{DEF_ENTITY_TYPE_ID_PREFIX}:{Vendor.CSE.value}:{Nss.NATIVE_CLUSTER}:2.0.0",  # noqa: E501
                                                 schema=load_rde_schema(SchemaFile.SCHEMA_2_0_0),  # noqa: E501
                                                 interfaces=[
                                                     K8Interface.VCD_INTERFACE.value.id,  # noqa: E501
                                                     K8Interface.CSE_INTERFACE.value.id],  # noqa: E501
                                                 version='2.0.0',
                                                 vendor=Vendor.CSE.value,
-                                                nss=Nss.NATIVE_ClUSTER.value,
+                                                nss=Nss.NATIVE_CLUSTER.value,
                                                 description=''
                                                 # TODO Uncomment this portion when the behavior integration is complete.  # noqa: E501
                                                 #  Uncommenting below, today (Apr 16,2021), will break the existing native api endpoints.  # noqa: E501
@@ -313,7 +339,7 @@ class EntityType(Enum):
                                                 )
     TKG_ENTITY_TYPE_1_0_0 = DefEntityType(name='TKG Cluster',
                                           id=f"{DEF_ENTITY_TYPE_ID_PREFIX}:{Vendor.VMWARE.value}:{Nss.TKG}:1.0.0",  # noqa: E501
-                                          schema='',
+                                          schema={},
                                           interfaces=[K8Interface.VCD_INTERFACE.value.id],  # noqa: E501
                                           version='1.0.0',
                                           vendor=Vendor.VMWARE.value,

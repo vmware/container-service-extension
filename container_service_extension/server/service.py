@@ -10,10 +10,9 @@ import threading
 from threading import Thread
 import time
 import traceback
-from typing import List
+from typing import List, Optional
 
 import click
-from pyvcloud.vcd.client import ApiVersion as vCDApiVersion
 from pyvcloud.vcd.client import BasicLoginCredentials
 from pyvcloud.vcd.client import Client
 from pyvcloud.vcd.exceptions import EntityNotFoundException
@@ -105,9 +104,6 @@ def verify_version_compatibility(
         sysadmin_client: Client,
         should_cse_run_in_legacy_mode: bool,
         is_mqtt_extension: bool):
-    cse_version = server_utils.get_installed_cse_version()
-    runtime_rde_version = semantic_version.Version(server_utils.get_rde_version_in_use())  # noqa: E501
-
     dikt = configure_cse.parse_cse_extension_description(
         sysadmin_client, is_mqtt_extension)
     ext_cse_version = dikt[server_constants.CSE_VERSION_KEY]
@@ -118,32 +114,54 @@ def verify_version_compatibility(
     if ext_cse_version == server_constants.UNKNOWN_CSE_VERSION:
         raise cse_exception.VersionCompatibilityError(
             "CSE and VCD API version data not found on VCD. "
-            "Upgrade CSE to update version data.")
+            "Please upgrade CSE and retry.")
 
     error_msg = ''
+    cse_version = server_utils.get_installed_cse_version()
+    # Trying to use newer version of CSE without running `cse upgrade`
     if cse_version > ext_cse_version:
         error_msg += \
             f"CSE Server version ({cse_version}) is higher than what was " \
             f"previously registered with VCD ({ext_cse_version}). " \
-            f"Upgrade CSE to update CSE version on VCD."
+            "Please upgrade CSE and retry."
+    # Trying to use an older version of CSE
     if cse_version < ext_cse_version:
         error_msg += \
             f"CSE Server version ({cse_version}) cannot be lower than what " \
-            f"was previously registered with VCD ({ext_cse_version})."
+            f"was previously registered with VCD ({ext_cse_version}). " \
+            "Please use a newer version of CSE."
 
+    # Trying to run a legacy CSE in non-legacy mode
     if not should_cse_run_in_legacy_mode and ext_in_legacy_mode:
         error_msg += \
             "Installed CSE is configured in legacy mode. Unable to run it " \
-            "in non-legacy mode. Please use `cse upgrade` to first " \
-            "configure CSE to operate in non-legacy mode."
+            "in non-legacy mode. Please use `cse upgrade` to configure " \
+            "CSE to operate in non-legacy mode."
+
+    # Trying to run a non legacy CSE in legacy mode
     if should_cse_run_in_legacy_mode and not ext_in_legacy_mode:
         error_msg += \
             "Installed CSE is configured in non-legacy mode. Unable to run " \
             "it in legacy mode."
-    if not ext_in_legacy_mode and ext_rde_in_use < runtime_rde_version:
-        error_msg += f"Installed CSE RDE version ({ext_rde_in_use}) " \
-            f"is lower than the supported Server RDE version " \
-            f"({runtime_rde_version}). Upgrade CSE to update RDE."
+
+    expected_runtime_rde_version = semantic_version.Version(server_utils.get_rde_version_in_use())  # noqa: E501
+    if not ext_in_legacy_mode:
+        # VCD downgrade?
+        if ext_rde_in_use > expected_runtime_rde_version:
+            error_msg += \
+                "Installed CSE Runtime Defined Entity (RDE) version " \
+                f"({ext_rde_in_use}) is higher than the expected RDE " \
+                f"version ({expected_runtime_rde_version}). Please " \
+                "upgrade VCD to proceed."
+
+        # VCD got upgraded without `cse upgrade` being run.
+        if ext_rde_in_use < expected_runtime_rde_version:
+            error_msg += \
+                "Installed CSE Runtime Defined Entity (RDE) version " \
+                f"({ext_rde_in_use}) is lower than the expected RDE " \
+                f"version ({expected_runtime_rde_version}). Please " \
+                "use `cse upgrade` to upgrade CSE RDE version and " \
+                "retry."
 
     if error_msg:
         raise cse_exception.VersionCompatibilityError(error_msg)
@@ -194,8 +212,8 @@ class Service(object, metaclass=Singleton):
         self.skip_config_decryption = skip_config_decryption
         self.pks_cache = None
         self._state = ServerState.STOPPED
-        self._kubernetesInterface: common_models.DefInterface = None
-        self._nativeEntityType: common_models.DefEntityType = None
+        self._kubernetesInterface: Optional[common_models.DefInterface] = None
+        self._nativeEntityType: Optional[common_models.DefEntityType] = None
         self.consumer = None
         self.consumer_thread = None
         self._consumer_watchdog = None
@@ -225,7 +243,7 @@ class Service(object, metaclass=Singleton):
     def info(self, get_sysadmin_info=False):
         result = utils.get_cse_info()
         server_config = server_utils.get_server_runtime_config()
-        result[shared_constants.CSE_SERVER_API_VERSION] = server_config['vcd']['api_version']  # noqa: E501
+        result[shared_constants.CSE_SERVER_API_VERSION] = server_config['service']['default_api_version']  # noqa: E501
         result[shared_constants.CSE_SERVER_SUPPORTED_API_VERSIONS] = server_config['service']['supported_api_versions']  # noqa: E501
         result[shared_constants.CSE_SERVER_LEGACY_MODE] = server_config['service']['legacy_mode']  # noqa: E501
         if get_sysadmin_info:
@@ -292,7 +310,7 @@ class Service(object, metaclass=Singleton):
     def run(self, msg_update_callback=utils.NullPrinter()):
         sysadmin_client = None
         try:
-            sysadmin_client = vcd_utils.get_sys_admin_client()
+            sysadmin_client = vcd_utils.get_sys_admin_client(api_version=None)
             verify_version_compatibility(
                 sysadmin_client,
                 should_cse_run_in_legacy_mode=self.config['service']['legacy_mode'],  # noqa: E501
@@ -307,7 +325,8 @@ class Service(object, metaclass=Singleton):
         if server_utils.should_use_mqtt_protocol(self.config):
             # Store/setup MQTT extension, api filter, and token info
             try:
-                sysadmin_client = vcd_utils.get_sys_admin_client()
+                sysadmin_client = \
+                    vcd_utils.get_sys_admin_client(api_version=None)
                 mqtt_ext_manager = MQTTExtensionManager(sysadmin_client)
                 ext_info = mqtt_ext_manager.get_extension_info(
                     ext_name=server_constants.CSE_SERVICE_NAME,
@@ -354,7 +373,7 @@ class Service(object, metaclass=Singleton):
         self._load_placement_policy_details(
             msg_update_callback=msg_update_callback)
 
-        if float(self.config['vcd']['api_version']) < float(vCDApiVersion.VERSION_35.value):  # noqa: E501
+        if self.config['service']['legacy_mode']:
             # Read templates rules from config and update template definition
             # in server run-time config
             self._process_template_rules(
@@ -481,7 +500,7 @@ class Service(object, metaclass=Singleton):
         """
         sysadmin_client = None
         try:
-            sysadmin_client = vcd_utils.get_sys_admin_client()
+            sysadmin_client = vcd_utils.get_sys_admin_client(api_version=None)
             logger_wire = logger.NULL_LOGGER
             if utils.str_to_bool(utils.str_to_bool(self.config['service'].get('log_wire', False))):  # noqa: E501
                 logger_wire = logger.SERVER_CLOUDAPI_WIRE_LOGGER
@@ -534,13 +553,13 @@ class Service(object, metaclass=Singleton):
             if sysadmin_client:
                 sysadmin_client.logout()
 
-    def _load_placement_policy_details(self,
-                                       msg_update_callback=utils.NullPrinter()):  # noqa: E501
+    def _load_placement_policy_details(
+            self, msg_update_callback=utils.NullPrinter()):
         msg = "Loading kubernetes runtime placement policies."
         logger.SERVER_LOGGER.info(msg)
         msg_update_callback.general(msg)
         try:
-            sysadmin_client = vcd_utils.get_sys_admin_client()
+            sysadmin_client = vcd_utils.get_sys_admin_client(api_version=None)
             if float(sysadmin_client.get_api_version()) < compute_policy_manager.GLOBAL_PVDC_COMPUTE_POLICY_MIN_VERSION:  # noqa: E501
                 msg = "Placement policies for kubernetes runtimes not " \
                       " supported in api version " \
@@ -568,8 +587,8 @@ class Service(object, metaclass=Singleton):
             logger.SERVER_LOGGER.error(msg)
             raise
 
-    def _load_template_definition_from_catalog(self,
-                                               msg_update_callback=utils.NullPrinter()):  # noqa: E501
+    def _load_template_definition_from_catalog(
+            self, msg_update_callback=utils.NullPrinter()):
         # NOTE: If `enable_tkg_plus` in the config file is set to false,
         # CSE server will skip loading the TKG+ template this will prevent
         # users from performing TKG+ related operations.
@@ -585,13 +604,18 @@ class Service(object, metaclass=Singleton):
             if log_wire:
                 log_filename = logger.SERVER_DEBUG_WIRELOG_FILEPATH
 
-            client = Client(self.config['vcd']['host'],
-                            api_version=self.config['vcd']['api_version'],
-                            verify_ssl_certs=self.config['vcd']['verify'],
-                            log_file=log_filename,
-                            log_requests=log_wire,
-                            log_headers=log_wire,
-                            log_bodies=log_wire)
+            # Since the config param has been read from file by
+            # get_validated_config method, we can safely use the
+            # default_api_version key, it will be set to the highest api
+            # version supported by VCD and CSE.
+            client = Client(
+                self.config['vcd']['host'],
+                api_version=self.config['service']['default_api_version'],
+                verify_ssl_certs=self.config['vcd']['verify'],
+                log_file=log_filename,
+                log_requests=log_wire,
+                log_headers=log_wire,
+                log_bodies=log_wire)
             credentials = BasicLoginCredentials(self.config['vcd']['username'],
                                                 server_constants.SYSTEM_ORG_NAME,  # noqa: E501
                                                 self.config['vcd']['password'])
@@ -682,7 +706,7 @@ class Service(object, metaclass=Singleton):
         catalog_name = self.config['broker']['catalog']
         sysadmin_client = None
         try:
-            sysadmin_client = vcd_utils.get_sys_admin_client()
+            sysadmin_client = vcd_utils.get_sys_admin_client(api_version=None)
             cpm = compute_policy_manager.ComputePolicyManager(sysadmin_client,
                                                               log_wire=self.config['service'].get('log_wire'))  # noqa: E501
 

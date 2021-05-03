@@ -64,7 +64,7 @@ class MQTTPublisher:
         {'majorErrorCode':'500','minorErrorCode':None,'message':None}
         :param str message: Task update message
         :param str status: Status of the task to be updated.
-        :param str progress:
+        :param int progress:
 
         :return: The constructed task payload.
         :rtype: dict
@@ -77,7 +77,7 @@ class MQTTPublisher:
             if progress:
                 payload['progress'] = progress
         elif status == 'success':
-            payload['result'] = message
+            payload['result'] = {'resultContent': message}
         elif status == 'error':
             payload['error'] = error_details
         return payload
@@ -92,7 +92,6 @@ class MQTTPublisher:
         :return: Behavior response
         :rtype: dict
         """
-        status = payload['status']
         response_json = {
             "type": "BEHAVIOR_RESPONSE",
             "headers": {
@@ -102,8 +101,6 @@ class MQTTPublisher:
             },
             "payload": json.dumps(payload)
         }
-        if status == 'success':
-            del response_json['headers']['contentType']
         return response_json
 
     def send_response(self, response_json):
