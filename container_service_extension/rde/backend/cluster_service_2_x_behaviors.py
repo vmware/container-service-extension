@@ -283,7 +283,8 @@ class ClusterService(abstract_broker.AbstractBroker):
                     template[LocalTemplateKey.CNI_VERSION]),
                 docker_version=template[LocalTemplateKey.DOCKER_VERSION],
                 os=template[LocalTemplateKey.OS],
-                cloud_properties=cloud_properties
+                cloud_properties=cloud_properties,
+                uid=entity_id
             )
 
             msg = f"Creating cluster '{cluster_name}' " \
@@ -384,6 +385,7 @@ class ClusterService(abstract_broker.AbstractBroker):
 
         # check if cluster is in a valid state
         if state != def_constants.DEF_RESOLVED_STATE or phase.is_entity_busy():
+            # TODO fix the exception type raised
             raise exceptions.CseServerError(
                 f"Cluster {cluster_name} with id {cluster_id} is not in a "
                 f"valid state to be resized. Please contact the administrator")
