@@ -150,22 +150,24 @@ class NativeEntity(AbstractNativeEntity):
     {
         "kind": "native",
         "spec": {
-            "workers": {
-                "count": 2,
-                "sizingClass": "small",
-                "storageProfile": "Any"
-            },
-            "controlPlane": {
-                "count": 1,
-                "sizingClass": "Large",
-                "storageProfile": "Any"
-            },
+            "topology": {
+                "workers": {    
+                    "count": 2,
+                    "sizingClass": "small",
+                    "storageProfile": "Any"
+                },
+                "controlPlane": {
+                    "count": 1,
+                    "sizingClass": "Large",
+                    "storageProfile": "Any"
+                },
+            }
             "settings": {
                 "network": "net",
                 "sshKey": null,
-                "rollback_on_failure": true
+                "rollbackOnFailure": true
             },
-            "k8Distribution": {
+            "distribution": {
                 "templateName": "k81.17",
                 "templateRevision": 1
             }
@@ -174,14 +176,14 @@ class NativeEntity(AbstractNativeEntity):
             "id": null,
             "cni": null,
             "phase": null,
-            "master_ip": "10.150.23.45"
         },
         "metadata": {
-            "org_name": "org1",
+            "orgName": "org1",
             "virtualDataCenterName": "ovdc1",
-            "cluster_name": "myCluster"
+            "name": "myCluster"
+            "site": "vcd_site"
         },
-        "api_version": ""
+        "apiVersion": ""
     }
     """
 
