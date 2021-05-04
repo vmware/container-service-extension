@@ -140,7 +140,7 @@ def cluster_config(data: dict, op_ctx: ctx.OperationContext):
 @telemetry_handler.record_user_action_telemetry(cse_operation=telemetry_constants.CseOperation.V36_CLUSTER_APPLY)  # noqa: E501
 @request_utils.cluster_api_exception_handler
 def cluster_update(data: dict, op_ctx: ctx.OperationContext):
-    """Request handler for cluster resize operation.
+    """Request handler for cluster update operation.
 
     :return: Defined entity of the native cluster
     :rtype: container_service_extension.def_.models.DefEntity

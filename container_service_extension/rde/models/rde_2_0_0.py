@@ -112,6 +112,7 @@ class Status:
     nodes: Optional[Nodes] = None
     uid: Optional[str] = None
     cloud_properties: CloudProperties = CloudProperties()
+    exposed: bool = False
 
 
 @dataclass_json(letter_case=LetterCase.CAMEL)
@@ -128,6 +129,7 @@ class ClusterSpec:
     workers: Workers = Workers()
     nfs: Nfs = Nfs()
     k8_distribution: Distribution = Distribution()
+    expose: bool = False
 
 
 @dataclass_json(letter_case=LetterCase.CAMEL)
@@ -224,7 +226,8 @@ class NativeEntity(AbstractNativeEntity):
                             os=rde_1_x_entity.status.os,
                             nodes=rde_1_x_entity.status.nodes,
                             uid=None,
-                            cloud_properties=cloud_properties)
+                            cloud_properties=cloud_properties,
+                            exposed=rde_1_x_entity.status.exposed)
             # NOTE: since details for the field `site` is not present in
             # RDE 1.0, it is left empty.
             # Proper value for `site` should be populated after RDE is
@@ -253,7 +256,8 @@ class NativeEntity(AbstractNativeEntity):
                     count=rde_1_x_entity.spec.nfs.count),
                 k8_distribution=Distribution(
                     template_name=rde_1_x_entity.spec.k8_distribution.template_name,  # noqa: E501
-                    template_revision=rde_1_x_entity.spec.k8_distribution.template_revision))  # noqa: E501
+                    template_revision=rde_1_x_entity.spec.k8_distribution.template_revision),  # noqa: E501
+                expose=rde_1_x_entity.spec.expose)
             rde_2_entity = cls(metadata=metadata,
                                spec=spec,
                                status=status,

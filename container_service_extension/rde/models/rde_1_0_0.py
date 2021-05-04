@@ -93,6 +93,7 @@ class Status:
     docker_version: Optional[str] = None
     os: Optional[str] = None
     nodes: Optional[Nodes] = None
+    exposed: bool = False
 
 
 @dataclass_json
@@ -109,6 +110,7 @@ class ClusterSpec:
     workers: Workers = Workers()
     nfs: Nfs = Nfs()
     k8_distribution: Distribution = Distribution()
+    expose: bool = False
 
 
 @dataclass_json
@@ -218,7 +220,8 @@ class NativeEntity(AbstractNativeEntity):
                 k8_distribution=k8_distribution,
                 control_plane=control_plane,
                 workers=workers,
-                nfs=nfs
+                nfs=nfs,
+                expose=rde_2_x_entity.spec.expose
             )
 
             status = Status(
@@ -228,7 +231,8 @@ class NativeEntity(AbstractNativeEntity):
                 kubernetes=rde_2_x_entity.status.kubernetes,
                 docker_version=rde_2_x_entity.status.dockerVersion,
                 os=rde_2_x_entity.status.os,
-                nodes=rde_2_x_entity.status.nodes
+                nodes=rde_2_x_entity.status.nodes,
+                exposed=rde_2_x_entity.status.exposed
             )
 
             rde_1_entity = cls(

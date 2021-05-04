@@ -66,7 +66,8 @@ def cluster_resize(data: dict, op_ctx: ctx.OperationContext):
     request_utils.validate_request_payload(
         converted_native_entity.spec.to_dict(), curr_entity.entity.spec.to_dict(),  # noqa: E501
         exclude_fields=[FlattenedClusterSpecKey1X.WORKERS_COUNT.value,
-                        FlattenedClusterSpecKey1X.NFS_COUNT.value])
+                        FlattenedClusterSpecKey1X.NFS_COUNT.value,
+                        FlattenedClusterSpecKey1X.EXPOSE.value])
     new_rde: common_models.DefEntity = svc.resize_cluster(cluster_id, converted_native_entity)  # noqa: E501
     # convert the resized rde back to input rde version
     new_native_entity: AbstractNativeEntity = rde_utils.convert_runtime_rde_to_input_rde_version_format(  # noqa: E501

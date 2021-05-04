@@ -11,10 +11,13 @@ import urllib
 
 import pkg_resources
 import pyvcloud.vcd.client as vcd_client
+from pyvcloud.vcd.exceptions import EntityNotFoundException
+import pyvcloud.vcd.gateway as vcd_gateway
 import pyvcloud.vcd.org as vcd_org
 import pyvcloud.vcd.task as vcd_task
 import pyvcloud.vcd.vapp as vcd_vapp
 from pyvcloud.vcd.vdc import VDC
+import pyvcloud.vcd.vdc_network as vdc_network
 import pyvcloud.vcd.vm as vcd_vm
 import semantic_version as semver
 
@@ -25,13 +28,18 @@ from container_service_extension.common.constants.server_constants import CSE_CL
 from container_service_extension.common.constants.server_constants import DefEntityOperation  # noqa: E501
 from container_service_extension.common.constants.server_constants import DefEntityOperationStatus  # noqa: E501
 from container_service_extension.common.constants.server_constants import DefEntityPhase  # noqa: E501
+from container_service_extension.common.constants.server_constants import EXPOSE_CLUSTER_NAME_FRAGMENT  # noqa: E501
+from container_service_extension.common.constants.server_constants import IP_PORT_REGEX  # noqa: E501
 from container_service_extension.common.constants.server_constants import LocalTemplateKey  # noqa: E501
+from container_service_extension.common.constants.server_constants import NETWORK_URN_PREFIX  # noqa: E501
 from container_service_extension.common.constants.server_constants import NodeType  # noqa: E501
 from container_service_extension.common.constants.server_constants import SYSTEM_ORG_NAME  # noqa: E501
 from container_service_extension.common.constants.server_constants import ThreadLocalData  # noqa: E501
-import container_service_extension.common.constants.shared_constants as shared_constants  # noqa: E501
+from container_service_extension.common.constants.server_constants import VdcNetworkInfoKey  # noqa: E501
+import container_service_extension.common.constants.shared_constants as shared_constants # noqa: E501
 from container_service_extension.common.constants.shared_constants import CSE_PAGINATION_DEFAULT_PAGE_SIZE  # noqa: E501
 from container_service_extension.common.constants.shared_constants import CSE_PAGINATION_FIRST_PAGE_NUMBER  # noqa: E501
+from container_service_extension.common.constants.shared_constants import RequestMethod  # noqa: E501
 import container_service_extension.common.thread_local_data as thread_local_data  # noqa: E501
 import container_service_extension.common.utils.core_utils as utils
 import container_service_extension.common.utils.pyvcloud_utils as vcd_utils
@@ -41,6 +49,8 @@ import container_service_extension.common.utils.thread_utils as thread_utils
 import container_service_extension.common.utils.vsphere_utils as vs_utils
 import container_service_extension.exception.exceptions as exceptions
 import container_service_extension.installer.templates.local_template_manager as ltm  # noqa: E501
+import container_service_extension.lib.cloudapi.constants as cloudapi_constants
+from container_service_extension.lib.nsxt.nsxt_backed_gateway_service import NsxtBackedGatewayService  # noqa: E501
 import container_service_extension.lib.telemetry.constants as telemetry_constants  # noqa: E501
 import container_service_extension.lib.telemetry.telemetry_handler as telemetry_handler  # noqa: E501
 from container_service_extension.logging.logger import SERVER_LOGGER as LOGGER
@@ -320,7 +330,13 @@ class ClusterService(abstract_broker.AbstractBroker):
 
     def resize_cluster(self, cluster_id: str,
                        cluster_spec: rde_2_x.NativeEntity):
-        """Start the resize cluster operation.
+        """Start the update cluster operation.
+
+        Note: the method name is not 'update_cluster' in order to preserve the
+        AbstractBroker class
+
+        Allows for resizing the cluster or exposing an NSX-T cluster.
+
 
         :param str cluster_id: Defined entity Id of the cluster
         :param DefEntity cluster_spec: Input cluster spec
@@ -351,18 +367,23 @@ class ClusterService(abstract_broker.AbstractBroker):
         num_workers_to_add: int = desired_worker_count - curr_worker_count
         num_nfs_to_add: int = desired_nfs_count - curr_nfs_count
 
-        # Check if the desired worker and nfs count is valid
-        if num_workers_to_add == 0 and num_nfs_to_add == 0:
+        # Check for unexposing the cluster
+        desired_expose_state: bool = cluster_spec.spec.expose
+        is_exposed: bool = curr_entity.entity.status.exposed
+        unexpose: bool = is_exposed and not desired_expose_state
+
+        # Check if the desired worker and nfs count is valid and raise
+        # an exception if the cluster does not need to be unexposed
+        if not unexpose and num_workers_to_add == 0 and num_nfs_to_add == 0:
             raise exceptions.CseServerError(
-                f"Cluster '{cluster_name}' already has "
-                f"{desired_worker_count} workers and "
-                f"{desired_nfs_count} nfs nodes.")
-        elif desired_worker_count < 0:
+                f"Cluster '{cluster_name}' already has {desired_worker_count} "
+                f"workers and {desired_nfs_count} nfs nodes and is already "
+                f"not exposed.")
+        elif not unexpose and desired_worker_count < 0:
             raise exceptions.CseServerError(
                 f"Worker count must be >= 0 (received {desired_worker_count})")
-        elif num_nfs_to_add < 0:
-            raise exceptions.CseServerError(
-                "Scaling down nfs nodes is not supported")
+        elif not unexpose and num_nfs_to_add < 0:
+            raise exceptions.CseServerError("Scaling down nfs nodes is not supported")  # noqa: E501
 
         # check if cluster is in a valid state
         if state != def_constants.DEF_RESOLVED_STATE or phase.is_entity_busy():
@@ -387,6 +408,8 @@ class ClusterService(abstract_broker.AbstractBroker):
         msg = f"Resizing the cluster '{cluster_name}' ({cluster_id}) to the " \
               f"desired worker count {desired_worker_count} and " \
               f"nfs count {desired_nfs_count}"
+        if unexpose:
+            msg += " and unexposing the cluster"
         self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
         curr_native_entity.status.task_href = self.task_resource.get('href')
         curr_native_entity.status.phase = str(
@@ -407,7 +430,7 @@ class ClusterService(abstract_broker.AbstractBroker):
             raise
         # trigger async operation
         self.context.is_async = True
-        self._monitor_resize(cluster_id=cluster_id,
+        self._monitor_update(cluster_id=cluster_id,
                              cluster_spec=cluster_spec)
         return curr_entity
 
@@ -595,9 +618,12 @@ class ClusterService(abstract_broker.AbstractBroker):
         current_nfs_count = current_spec.nfs.count
         desired_workers_count = update_spec.spec.workers.count
         desired_nfs_count = update_spec.spec.nfs.count
+        desired_expose_state: bool = update_spec.spec.expose
+        is_exposed: bool = curr_entity.entity.status.exposed
+        unexpose: bool = is_exposed and not desired_expose_state
 
         if current_workers_count != desired_workers_count or \
-                current_nfs_count != desired_nfs_count:
+                current_nfs_count != desired_nfs_count or unexpose:
             return self.resize_cluster(cluster_id, update_spec)
 
         current_template_name = current_spec.k8_distribution.template_name
@@ -734,6 +760,7 @@ class ClusterService(abstract_broker.AbstractBroker):
         # Default value from rde_2_0_0 model class
         rollback = True
         vapp = None
+        expose_ip: str = ''
         client_v36 = self.context.get_client(api_version=DEFAULT_API_VERSION)
         try:
             cluster_name = cluster_spec.metadata.name
@@ -752,6 +779,8 @@ class ClusterService(abstract_broker.AbstractBroker):
             template_revision = cluster_spec.spec.k8_distribution.template_revision  # noqa: E501
             ssh_key = cluster_spec.spec.settings.ssh_key
             rollback = cluster_spec.spec.settings.rollback_on_failure
+            expose = cluster_spec.spec.expose
+            vapp = None
 
             org = vcd_utils.get_org(client_v36, org_name=org_name)
             vdc = vcd_utils.get_vdc(client_v36,
@@ -826,11 +855,31 @@ class ClusterService(abstract_broker.AbstractBroker):
             LOGGER.debug(msg)
             self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
             vapp.reload()
+            control_plane_ip = _get_control_plane_ip(
+                sysadmin_client_v36, vapp, check_tools=True)
+
+            # Handle exposing cluster
+            if expose:
+                try:
+                    expose_ip = _expose_cluster(
+                        client=self.context.client,
+                        org_name=org_name,
+                        ovdc_name=ovdc_name,
+                        network_name=cluster_spec.spec.settings.network,
+                        cluster_name=cluster_name,
+                        cluster_id=cluster_id,
+                        internal_ip=control_plane_ip)
+                    if expose_ip:
+                        control_plane_ip = expose_ip
+                except Exception as err:
+                    LOGGER.error(f'Exposing cluster failed: {str(err)}')
+                    expose_ip = ''
+
             _init_cluster(sysadmin_client_v36,
                           vapp,
                           template[LocalTemplateKey.KUBERNETES_VERSION],
-                          template[LocalTemplateKey.CNI_VERSION])
-            control_plane_ip = _get_control_plane_ip(sysadmin_client_v36, vapp)  # noqa: E501
+                          template[LocalTemplateKey.CNI_VERSION],
+                          expose_ip=expose_ip)
             task = vapp.set_metadata('GENERAL', 'READWRITE', 'cse.master.ip',
                                      control_plane_ip)
             client_v36.get_task_monitor().wait_for_status(task)
@@ -905,6 +954,13 @@ class ClusterService(abstract_broker.AbstractBroker):
             native_entity.status.nodes = _get_nodes_details(
                 sysadmin_client_v36, vapp)
 
+            # Update defined entity with exposed ip
+            if expose_ip:
+                def_entity.entity.status.exposed = True
+                if def_entity.entity.status.nodes and \
+                        def_entity.entity.status.nodes.control_plane.ip:
+                    def_entity.entity.status.nodes.control_plane.ip = expose_ip
+
             self.entity_svc.update_entity(cluster_id, def_entity)
             self.entity_svc.resolve_entity(cluster_id)
 
@@ -933,6 +989,23 @@ class ClusterService(abstract_broker.AbstractBroker):
                 except Exception:
                     LOGGER.error(f"Failed to delete cluster '{cluster_name}'",
                                  exc_info=True)
+
+                if expose_ip:
+                    try:
+                        _handle_delete_expose_dnat_rule(
+                            client=self.context.client,
+                            org_name=org_name,
+                            ovdc_name=ovdc_name,
+                            network_name=network_name,
+                            cluster_name=cluster_name,
+                            cluster_id=cluster_id)
+                        LOGGER.info(f'Deleted dnat rule for cluster '
+                                    f'{cluster_name} ({cluster_id})')
+                    except Exception as err:
+                        LOGGER.error(f'Failed to delete dnat rule for '
+                                     f'{cluster_name} ({cluster_id}) with '
+                                     f'error: {str(err)}')
+
                 try:
                     # Delete the corresponding defined entity
                     self.sysadmin_entity_svc.resolve_entity(cluster_id)
@@ -1005,12 +1078,14 @@ class ClusterService(abstract_broker.AbstractBroker):
             self.context.end()
 
     @thread_utils.run_async
-    def _monitor_resize(self, cluster_id, cluster_spec: rde_2_x.NativeEntity):  # noqa: E501
-        """Triggers and monitors one or more async threads of resize.
+    def _monitor_update(self, cluster_id, cluster_spec: rde_2_x.NativeEntity):  # noqa: E501
+        """Triggers and monitors one or more async threads of update.
 
         This method (or) thread triggers two async threads (for node
         addition and deletion) in parallel. It waits for both the threads to
-        join before calling the resize operation complete.
+        join before calling the update operation complete. This method also
+        handles un-exposing an nsx-t cluster.
+
 
         Performs below once child threads join back.
         - updates the defined entity
@@ -1061,6 +1136,48 @@ class ClusterService(abstract_broker.AbstractBroker):
                 if t.getName().endswith(curr_thread_id):
                     t.join()
 
+            # Handle deleting the dnat rule if the cluster was exposed and
+            # the user's current desire is to un-expose the cluster
+            desired_expose_state: bool = cluster_spec.spec.expose
+            is_exposed: bool = curr_entity.entity.status.exposed
+            unexpose: bool = is_exposed and not desired_expose_state
+            unexpose_success: bool = False
+            if unexpose:
+                org_name: str = curr_entity.entity.metadata.org_name
+                ovdc_name: str = curr_entity.entity.metadata.ovdc_name
+                network_name: str = curr_entity.entity.spec.settings.network
+                try:
+                    # Get internal ip
+                    vapp_href = curr_entity.externalId
+                    vapp = vcd_vapp.VApp(self.context.client,
+                                         href=vapp_href)
+                    control_plane_internal_ip = _get_control_plane_ip(
+                        sysadmin_client=self.context.sysadmin_client,
+                        vapp=vapp,
+                        check_tools=True)
+
+                    # update kubeconfig with internal ip
+                    self._replace_kubeconfig_expose_ip(
+                        internal_ip=control_plane_internal_ip,
+                        cluster_id=cluster_id,
+                        vapp=vapp)
+
+                    # Delete dnat rule
+                    _handle_delete_expose_dnat_rule(
+                        client=self.context.client,
+                        org_name=org_name,
+                        ovdc_name=ovdc_name,
+                        network_name=network_name,
+                        cluster_name=cluster_name,
+                        cluster_id=cluster_id)
+
+                    # Update RDE control plane ip to be internal ip
+                    curr_entity.entity.status.nodes.control_plane.ip = control_plane_internal_ip  # noqa: E501
+                    curr_entity.entity.status.exposed = False
+                    unexpose_success = True
+                except Exception as err:
+                    LOGGER.error(f'Failed to unexpose cluster with error: {str(err)}')  # noqa: E501
+
             # update the defined entity and the task status. Check if one of
             # the child threads had set the status to ERROR.
             curr_task_status = self.task_resource.get('status')
@@ -1075,6 +1192,10 @@ class ClusterService(abstract_broker.AbstractBroker):
                 msg = f"Resized the cluster '{cluster_name}' ({cluster_id}) " \
                       f"to the desired worker count {desired_worker_count} " \
                       f"and nfs count {desired_nfs_count}"
+                if unexpose_success:
+                    msg += " and un-exposed the cluster"
+                elif unexpose and not unexpose_success:
+                    msg += " and failed to un-expose the cluster"
                 self._update_task(vcd_client.TaskStatus.SUCCESS, message=msg)
                 curr_native_entity.status.phase = str(
                     DefEntityPhase(DefEntityOperation.UPDATE,
@@ -1298,7 +1419,8 @@ class ClusterService(abstract_broker.AbstractBroker):
                               error_message=str(err))
 
     @thread_utils.run_async
-    def _delete_cluster_async(self, cluster_name, org_name, ovdc_name):
+    def _delete_cluster_async(self, cluster_name, org_name, ovdc_name,
+                              def_entity: common_models.DefEntity = None):
         """Delete the cluster asynchronously.
 
         :param cluster_name: Name of the cluster to be deleted.
@@ -1311,7 +1433,30 @@ class ClusterService(abstract_broker.AbstractBroker):
             client_v36 = self.context.get_client(
                 api_version=DEFAULT_API_VERSION)
             _delete_vapp(client_v36, org_name, ovdc_name, cluster_name)
+
+            # Handle deleting dnat rule is cluster is exposed
+            exposed: bool = bool(def_entity) and def_entity.entity.status.exposed  # noqa: E501
+            dnat_delete_success: bool = False
+            if exposed:
+                network_name: str = def_entity.entity.spec.settings.network
+                cluster_id = def_entity.id
+                try:
+                    _handle_delete_expose_dnat_rule(
+                        client=self.context.client,
+                        org_name=org_name,
+                        ovdc_name=ovdc_name,
+                        network_name=network_name,
+                        cluster_name=cluster_name,
+                        cluster_id=cluster_id)
+                    dnat_delete_success = True
+                except Exception as err:
+                    LOGGER.error(f'Failed to delete dnat rule for '
+                                 f'{cluster_name} ({cluster_id}) with error: '
+                                 f'{str(err)}')
+
             msg = f"Deleted cluster '{cluster_name}'"
+            if exposed and not dnat_delete_success:
+                msg += ' with failed dnat rule deletion'
             self._update_task(vcd_client.TaskStatus.SUCCESS, message=msg)
         except Exception as err:
             msg = f"Unexpected error while deleting cluster {cluster_name}"
@@ -1702,6 +1847,12 @@ class ClusterService(abstract_broker.AbstractBroker):
             api_version=DEFAULT_API_VERSION)
         curr_nodes_status = _get_nodes_details(sysadmin_client_v36, vapp)
         if curr_nodes_status:
+            # Retrieve external ip for exposed NSX-T cluster
+            if curr_entity.entity.status.exposed and \
+                    curr_entity.entity.status.nodes and \
+                    curr_entity.entity.status.nodes.control_plane:
+                curr_nodes_status.control_plane.ip = curr_entity.entity.status.nodes.control_plane.ip  # noqa: E501
+
             curr_entity.entity.status.nodes = curr_nodes_status
         return self.entity_svc.update_entity(cluster_id, curr_entity)
 
@@ -1771,6 +1922,32 @@ class ClusterService(abstract_broker.AbstractBroker):
                 error_message=error_message,
                 stack_trace=stack_trace
             )
+
+    def _replace_kubeconfig_expose_ip(self, internal_ip: str, cluster_id: str,
+                                      vapp: vcd_vapp.VApp):
+        # Form kubeconfig with internal ip
+        expose_kubeconfig = self.get_cluster_config(cluster_id)
+        internal_ip_kubeconfig = re.sub(
+            pattern=IP_PORT_REGEX,
+            repl=f'{internal_ip}:6443',
+            string=expose_kubeconfig)
+
+        # Output new kubeconfig
+        script = f"#!/usr/bin/env bash\n" \
+                 f"echo \'{internal_ip_kubeconfig}\' > " \
+                 f"{CSE_CLUSTER_KUBECONFIG_PATH}\n"
+        node_names = _get_node_names(vapp, NodeType.CONTROL_PLANE)
+        result = _execute_script_in_nodes(self.context.sysadmin_client,
+                                          vapp=vapp,
+                                          node_names=node_names,
+                                          script=script,
+                                          check_tools=True)
+
+        errors = _get_script_execution_errors(result)
+        if errors:
+            raise exceptions.ScriptExecutionError(
+                f"Failed to overwrite kubeconfig with internal ip: "
+                f"{internal_ip}: {errors}")
 
 
 def _get_cluster_upgrade_target_templates(
@@ -2179,7 +2356,8 @@ def _get_node_names(vapp, node_type):
     return [vm.get('name') for vm in vapp.get_all_vms() if vm.get('name').startswith(node_type)]  # noqa: E501
 
 
-def _get_control_plane_ip(sysadmin_client: vcd_client.Client, vapp):
+def _get_control_plane_ip(sysadmin_client: vcd_client.Client, vapp,
+                          check_tools=False):
     vcd_utils.raise_error_if_user_not_from_system_org(sysadmin_client)
 
     LOGGER.debug(f"Getting control_plane IP for vapp: "
@@ -2190,7 +2368,7 @@ def _get_control_plane_ip(sysadmin_client: vcd_client.Client, vapp):
     node_names = _get_node_names(vapp, NodeType.CONTROL_PLANE)
     result = _execute_script_in_nodes(sysadmin_client, vapp=vapp,
                                       node_names=node_names, script=script,
-                                      check_tools=False)
+                                      check_tools=check_tools)
     errors = _get_script_execution_errors(result)
     if errors:
         raise exceptions.ScriptExecutionError(
@@ -2204,7 +2382,7 @@ def _get_control_plane_ip(sysadmin_client: vcd_client.Client, vapp):
 
 
 def _init_cluster(sysadmin_client: vcd_client.Client, vapp, k8s_version,
-                  cni_version):
+                  cni_version, expose_ip=None):
     vcd_utils.raise_error_if_user_not_from_system_org(sysadmin_client)
 
     try:
@@ -2213,6 +2391,9 @@ def _init_cluster(sysadmin_client: vcd_client.Client, vapp, k8s_version,
         script = templated_script.format(
             k8s_version=k8s_version,
             cni_version=cni_version)
+        if expose_ip:
+            script = _form_expose_ip_init_cluster_script(script, expose_ip)
+
         node_names = _get_node_names(vapp, NodeType.CONTROL_PLANE)
         result = _execute_script_in_nodes(sysadmin_client, vapp=vapp,
                                           node_names=node_names, script=script)
@@ -2229,6 +2410,40 @@ def _init_cluster(sysadmin_client: vcd_client.Client, vapp, k8s_version,
             f"Couldn't initialize cluster: {str(err)}")
 
 
+def _form_expose_ip_init_cluster_script(script: str, expose_ip: str):
+    """Form init cluster script with expose ip control plane endpoint option.
+
+    If the '--control-plane-endpoint' option is already present, this option
+    will be replaced with this option specifying the exposed ip. If this option
+    is not specified, the '--control-plane-endpoint' option will be added.
+
+    :param str script: the init cluster script
+    :param str expose_ip: the ip to expose the cluster
+
+    :return: the updated init cluster script
+    :rtype: str
+    """
+    # Get line with 'kubeadm init'
+    kubeadm_init_match: re.Match = re.search('kubeadm init .+\n', script)
+    if not kubeadm_init_match:
+        return script
+    kubeadm_init_line: str = kubeadm_init_match.group(0)
+
+    # Either add or replace the control plane endpoint option
+    expose_control_plane_endpoint_option = f'--control-plane-endpoint=\"{expose_ip}:6443\"'  # noqa: E501
+    expose_kubeadm_init_line = re.sub(
+        f'--control-plane-endpoint={IP_PORT_REGEX}',
+        expose_control_plane_endpoint_option,
+        kubeadm_init_line)
+    if kubeadm_init_line == expose_kubeadm_init_line:  # no option was replaced
+        expose_kubeadm_init_line = kubeadm_init_line.replace(
+            'kubeadm init',
+            f'kubeadm init --control-plane-endpoint=\"{expose_ip}:6443\"')
+
+    # Replace current kubeadm init line with line containing expose_ip
+    return script.replace(kubeadm_init_line, expose_kubeadm_init_line)
+
+
 def _join_cluster(sysadmin_client: vcd_client.Client, vapp, target_nodes=None):
     vcd_utils.raise_error_if_user_not_from_system_org(sysadmin_client)
     try:
@@ -2236,6 +2451,7 @@ def _join_cluster(sysadmin_client: vcd_client.Client, vapp, target_nodes=None):
         script = """
                  #!/usr/bin/env bash
                  kubeadm token create --print-join-command
+                 ip route get 1 | awk '{print $NF;exit}'
             """
 
         node_names = _get_node_names(vapp, NodeType.CONTROL_PLANE)
@@ -2250,11 +2466,12 @@ def _join_cluster(sysadmin_client: vcd_client.Client, vapp, target_nodes=None):
                 f"control plane node {node_names}:{errors}")
         # kubeadm join <ip:port> --token <token> --discovery-token-ca-cert-hash <discovery_token> # noqa: E501
         join_info = control_plane_result[0][1].content.decode().split()
+        local_ip_port = f"{join_info[7]}:6443"
 
         templated_script = get_cluster_script_file_contents(
             ClusterScriptFile.NODE, ClusterScriptFile.VERSION_2_X)
         script = templated_script.format(
-            ip_port=join_info[2],
+            ip_port=local_ip_port,
             token=join_info[4],
             discovery_token_ca_cert_hash=join_info[6])
 
@@ -2279,6 +2496,111 @@ def _join_cluster(sysadmin_client: vcd_client.Client, vapp, target_nodes=None):
         LOGGER.error(err, exc_info=True)
         raise exceptions.ClusterJoiningError(
             f"Couldn't join cluster: {str(err)}")
+
+
+def _get_vdc_network_response(cloudapi_client, network_urn_id: str):
+    relative_path = f'{cloudapi_constants.CloudApiResource.ORG_VDC_NETWORKS}' \
+                    f'?filter=id=={network_urn_id}'
+    response = cloudapi_client.do_request(
+        method=RequestMethod.GET,
+        cloudapi_version=cloudapi_constants.CloudApiVersion.VERSION_1_0_0,
+        resource_url_relative_path=relative_path)
+    return response
+
+
+def _get_gateway_href(vdc: VDC, gateway_name):
+    edge_gateways = vdc.list_edge_gateways()
+    for gateway_dict in edge_gateways:
+        if gateway_dict['name'] == gateway_name:
+            return gateway_dict['href']
+    return None
+
+
+def _get_gateway(client: vcd_client.Client, org_name: str, ovdc_name: str,
+                 network_name: str):
+    # Check if routed org vdc network
+    cloudapi_client = vcd_utils.get_cloudapi_client_from_vcd_client(client)
+    ovdc = vcd_utils.get_vdc(client, org_name=org_name, vdc_name=ovdc_name)
+    try:
+        routed_network_resource = ovdc.get_routed_orgvdc_network(network_name)
+    except EntityNotFoundException:
+        raise Exception(f'No routed network found named: {network_name} '
+                        f'in ovdc {ovdc_name} and org {org_name}')
+    routed_vdc_network = vdc_network.VdcNetwork(
+        client=client,
+        resource=routed_network_resource)
+    network_id = utils.extract_id_from_href(routed_vdc_network.href)
+    network_urn_id = f'{NETWORK_URN_PREFIX}:{network_id}'
+    try:
+        vdc_network_response = _get_vdc_network_response(
+            cloudapi_client, network_urn_id)
+    except Exception:
+        return None
+    gateway_name = vdc_network_response[VdcNetworkInfoKey.VALUES][0][
+        VdcNetworkInfoKey.CONNECTION][VdcNetworkInfoKey.ROUTER_REF][
+        VdcNetworkInfoKey.NAME]
+    gateway_href = _get_gateway_href(ovdc, gateway_name)
+    gateway = vcd_gateway.Gateway(client, name=gateway_name, href=gateway_href)
+    return gateway
+
+
+def _get_nsxt_backed_gateway_service(client: vcd_client.Client, org_name: str,
+                                     ovdc_name: str, network_name: str):
+    # Check if NSX-T backed gateway
+    gateway: vcd_gateway.Gateway = _get_gateway(
+        client=client,
+        org_name=org_name,
+        ovdc_name=ovdc_name,
+        network_name=network_name)
+    if not gateway:
+        raise Exception(f'No gateway found for network: {network_name}')
+    if not gateway.is_nsxt_backed():
+        raise Exception('Gateway is not NSX-T backed for exposing cluster.')
+
+    return NsxtBackedGatewayService(gateway, client)
+
+
+def _form_expose_dnat_rule_name(cluster_name: str, cluster_id: str):
+    """Form dnat rule name for expose cluster.
+
+    Dnat rule name includes cluster name to show users the cluster rule
+    corresponds to. The cluster id is used to make the name unique
+    """
+    return f"{cluster_name}_{cluster_id}_{EXPOSE_CLUSTER_NAME_FRAGMENT}"
+
+
+def _expose_cluster(client: vcd_client.Client, org_name: str, ovdc_name: str,
+                    network_name: str, cluster_name: str, cluster_id: str,
+                    internal_ip: str):
+
+    # Auto reserve ip and add dnat rule
+    nsxt_gateway_svc = _get_nsxt_backed_gateway_service(
+        client, org_name, ovdc_name, network_name)
+    expose_ip = nsxt_gateway_svc.get_available_ip()
+    if not expose_ip:
+        raise Exception(f'No available ips found for cluster {cluster_name} ({cluster_id})') # noqa: E501
+    try:
+        dnat_rule_name = _form_expose_dnat_rule_name(cluster_name, cluster_id)
+        nsxt_gateway_svc.add_dnat_rule(
+            name=dnat_rule_name,
+            internal_address=internal_ip,
+            external_address=expose_ip)
+    except Exception as err:
+        raise Exception(f'Unable to add dnat rule with error: {str(err)}')
+    return expose_ip
+
+
+def _handle_delete_expose_dnat_rule(client: vcd_client.Client,
+                                    org_name: str,
+                                    ovdc_name: str,
+                                    network_name: str,
+                                    cluster_name: str,
+                                    cluster_id: str):
+    nsxt_gateway_svc = _get_nsxt_backed_gateway_service(
+        client, org_name, ovdc_name, network_name)
+    expose_dnat_rule_name = _form_expose_dnat_rule_name(cluster_name,
+                                                        cluster_id)
+    nsxt_gateway_svc.delete_dnat_rule(expose_dnat_rule_name)
 
 
 def _wait_for_tools_ready_callback(message, exception=None):

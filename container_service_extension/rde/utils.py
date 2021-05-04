@@ -145,7 +145,8 @@ def construct_2_0_0_cluster_spec_from_entity_status(entity_status: rde_2_0_0.Sta
                                  k8_distribution=k8_distribution,
                                  control_plane=control_plane,
                                  workers=workers,
-                                 nfs=nfs)
+                                 nfs=nfs,
+                                 expose=entity_status.exposed)
 
 
 def load_rde_schema(schema_file: str) -> dict:
