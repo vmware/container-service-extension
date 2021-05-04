@@ -153,7 +153,7 @@ class NativeEntity(AbstractNativeEntity):
         "kind": "native",
         "spec": {
             "topology": {
-                "workers": {    
+                "workers": {
                     "count": 2,
                     "sizingClass": "small",
                     "storageProfile": "Any"
