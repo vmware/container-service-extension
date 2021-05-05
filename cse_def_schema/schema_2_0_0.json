@@ -149,6 +149,7 @@
             },
             "status": {
                 "type": "object",
+                "x-vcloud-restricted" : "protected",
                 "description":"The current status of the cluster.",
                 "required": [
                     "nodes",
