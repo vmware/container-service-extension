@@ -327,8 +327,6 @@ class ClusterService(abstract_broker.AbstractBroker):
             #   failure in sync portion may mean invalid request.
             if input_native_entity.spec.settings.rollback_on_failure:
                 # delete defined entity
-                # TODO: Check if defined entity should be resolved to delete
-                #   the defined entity without invoking the hooks
                 self.sysadmin_entity_svc.delete_entity(entity_id)
             raise
 
