@@ -222,18 +222,18 @@ class ClusterService(abstract_broker.AbstractBroker):
         """
         cluster_name = input_native_entity.metadata.name
         org_name = input_native_entity.metadata.org_name
-        ovdc_name = input_native_entity.metadata.ovdc_name
+        ovdc_name = input_native_entity.metadata.virtual_data_center_name
 
         # Pick default template name and revision if both template name
         # and template revision is not provided in the input native entity
-        if not input_native_entity.spec.k8_distribution.template_name and \
-                not input_native_entity.spec.k8_distribution.template_revision:
+        if not input_native_entity.spec.distribution.template_name and \
+                not input_native_entity.spec.distribution.template_revision:
             server_config: dict = server_utils.get_server_runtime_config()
-            input_native_entity.spec.k8_distribution = rde_2_x.Distribution(
+            input_native_entity.spec.distribution = rde_2_x.Distribution(
                 template_name=server_config['broker']['default_template_name'],
                 template_revision=int(server_config['broker']['default_template_revision']))  # noqa: E501
-        template_name = input_native_entity.spec.k8_distribution.template_name
-        template_revision = input_native_entity.spec.k8_distribution.template_revision  # noqa: E501
+        template_name = input_native_entity.spec.distribution.template_name
+        template_revision = input_native_entity.spec.distribution.template_revision  # noqa: E501
 
         # check that cluster name is syntactically valid
         if not _is_valid_cluster_name(cluster_name):
@@ -263,9 +263,9 @@ class ClusterService(abstract_broker.AbstractBroker):
             template_revision=template_revision
         )
         cloud_properties = rde_2_x.CloudProperties(
-            k8_distribution=k8_distribution,
+            distribution=k8_distribution,
             org_name=org_name,
-            ovdc_name=ovdc_name,
+            virtual_data_center_name=ovdc_name,
             ovdc_network_name=input_native_entity.spec.settings.network,
             rollback_on_failure=input_native_entity.spec.settings.rollback_on_failure,  # noqa: E501
             ssh_key=input_native_entity.spec.settings.ssh_key
@@ -336,16 +336,17 @@ class ClusterService(abstract_broker.AbstractBroker):
             def_utils.construct_cluster_spec_from_entity_status(
                 curr_native_entity.status,
                 server_utils.get_rde_version_in_use())
-        curr_worker_count: int = current_spec.workers.count
-        curr_nfs_count: int = current_spec.nfs.count
+        curr_worker_count: int = current_spec.topology.workers.count
+        curr_nfs_count: int = current_spec.topology.nfs.count
+        state: str = curr_entity.state
         phase: DefEntityPhase = DefEntityPhase.from_phase(
             curr_native_entity.status.phase)
 
         # compute the values of workers and nfs to be added or removed by
         # comparing the desired and the current state. "num_workers_to_add"
         # can hold either +ve or -ve value.
-        desired_worker_count: int = input_native_entity.spec.workers.count
-        desired_nfs_count: int = input_native_entity.spec.nfs.count
+        desired_worker_count: int = input_native_entity.spec.topology.workers.count  # noqa: E501
+        desired_nfs_count: int = input_native_entity.spec.topology.nfs.count
         num_workers_to_add: int = desired_worker_count - curr_worker_count
         num_nfs_to_add: int = desired_nfs_count - curr_nfs_count
 
@@ -386,7 +387,6 @@ class ClusterService(abstract_broker.AbstractBroker):
               f"desired worker count {desired_worker_count} and " \
               f"nfs count {desired_nfs_count}"
         self._update_task(BehaviorTaskStatus.RUNNING, message=msg)
-
         # set entity status to busy
         new_status: rde_2_x.Status = curr_native_entity.status
         new_status.task_href = self.task_href
@@ -421,7 +421,7 @@ class ClusterService(abstract_broker.AbstractBroker):
         curr_native_entity: rde_2_x.NativeEntity = curr_entity.entity
         cluster_name: str = curr_entity.name
         org_name: str = curr_native_entity.metadata.org_name
-        ovdc_name: str = curr_native_entity.metadata.ovdc_name
+        ovdc_name: str = curr_native_entity.metadata.virtual_data_center_name
         phase: DefEntityPhase = DefEntityPhase.from_phase(
             curr_native_entity.status.phase)
 
@@ -488,8 +488,8 @@ class ClusterService(abstract_broker.AbstractBroker):
             }
         )
         return _get_cluster_upgrade_target_templates(
-            curr_native_entity.status.cloud_properties.k8_distribution.template_name,  # noqa: E501
-            str(curr_native_entity.status.cloud_properties.k8_distribution.template_revision))  # noqa: E501
+            curr_native_entity.status.cloud_properties.distribution.template_name,  # noqa: E501
+            str(curr_native_entity.status.cloud_properties.distribution.template_revision))  # noqa: E501
 
     def upgrade_cluster(self, cluster_id: str,
                         input_native_entity: rde_2_x.NativeEntity):
@@ -509,14 +509,14 @@ class ClusterService(abstract_broker.AbstractBroker):
         curr_entity = self.entity_svc.get_entity(cluster_id)
         curr_native_entity: rde_2_x.NativeEntity = curr_entity.entity
         cluster_name = curr_native_entity.metadata.name
-        state = curr_entity.state
-        new_template_name = input_native_entity.spec.k8_distribution.template_name  # noqa: E501
-        new_template_revision = input_native_entity.spec.k8_distribution.template_revision # noqa: E501
+        new_template_name = input_native_entity.spec.distribution.template_name
+        new_template_revision = input_native_entity.spec.distribution.template_revision  # noqa: E501
 
         # check if cluster is in a valid state
         phase: DefEntityPhase = DefEntityPhase.from_phase(
             curr_native_entity.status.phase)
 
+        state = curr_entity.state
         if state != def_constants.DEF_RESOLVED_STATE or phase.is_entity_busy():
             raise exceptions.CseServerError(
                 f"Cluster {cluster_name} with id {cluster_id} is not in a "
@@ -525,8 +525,8 @@ class ClusterService(abstract_broker.AbstractBroker):
         # check that the specified template is a valid upgrade target
         template = {}
         valid_templates = _get_cluster_upgrade_target_templates(
-            curr_native_entity.status.cloud_properties.k8_distribution.template_name, # noqa: E501
-            str(curr_native_entity.status.cloud_properties.k8_distribution.template_revision)) # noqa: E501
+            curr_native_entity.status.cloud_properties.distribution.template_name,  # noqa: E501
+            str(curr_native_entity.status.cloud_properties.distribution.template_revision))  # noqa: E501
 
         for t in valid_templates:
             if (t[LocalTemplateKey.NAME], str(t[LocalTemplateKey.REVISION])) == (new_template_name, str(new_template_revision)):  # noqa: E501
@@ -600,18 +600,18 @@ class ClusterService(abstract_broker.AbstractBroker):
             def_utils.construct_cluster_spec_from_entity_status(
                 input_native_entity.status,
                 server_utils.get_rde_version_in_use())
-        current_workers_count = current_spec.workers.count
-        current_nfs_count = current_spec.nfs.count
-        desired_workers_count = input_native_entity.spec.workers.count
-        desired_nfs_count = input_native_entity.spec.nfs.count
+        current_workers_count = current_spec.topology.workers.count
+        current_nfs_count = current_spec.topology.nfs.count
+        desired_workers_count = input_native_entity.spec.topology.workers.count
+        desired_nfs_count = input_native_entity.spec.topology.nfs.count
 
         if current_workers_count != desired_workers_count or current_nfs_count != desired_nfs_count:  # noqa: E501
             return self.resize_cluster(cluster_id, input_native_entity)
 
-        current_template_name = current_spec.k8_distribution.template_name
-        current_template_revision = current_spec.k8_distribution.template_revision  # noqa: E501
-        desired_template_name = input_native_entity.spec.k8_distribution.template_name  # noqa: E501
-        desired_template_revision = input_native_entity.spec.k8_distribution.template_revision  # noqa: E501
+        current_template_name = current_spec.distribution.template_name
+        current_template_revision = current_spec.distribution.template_revision
+        desired_template_name = input_native_entity.spec.distribution.template_name  # noqa: E501
+        desired_template_revision = input_native_entity.spec.distribution.template_revision  # noqa: E501
         if current_template_name != desired_template_name or current_template_revision != desired_template_revision:  # noqa: E501
             return self.upgrade_cluster(cluster_id, input_native_entity)
         raise exceptions.CseServerError("update not supported for the specified input specification")  # noqa: E501
@@ -750,18 +750,18 @@ class ClusterService(abstract_broker.AbstractBroker):
         try:
             cluster_name = input_native_entity.metadata.name
             org_name = input_native_entity.metadata.org_name
-            ovdc_name = input_native_entity.metadata.ovdc_name
-            num_workers = input_native_entity.spec.workers.count
-            control_plane_sizing_class = input_native_entity.spec.control_plane.sizing_class  # noqa: E501
-            worker_sizing_class = input_native_entity.spec.workers.sizing_class
-            control_plane_storage_profile = input_native_entity.spec.control_plane.storage_profile  # noqa: E501
-            worker_storage_profile = input_native_entity.spec.workers.storage_profile  # noqa: E501
-            nfs_count = input_native_entity.spec.nfs.count
-            nfs_sizing_class = input_native_entity.spec.nfs.sizing_class
-            nfs_storage_profile = input_native_entity.spec.nfs.storage_profile
+            ovdc_name = input_native_entity.metadata.virtual_data_center_name
+            num_workers = input_native_entity.spec.topology.workers.count
+            control_plane_sizing_class = input_native_entity.spec.topology.control_plane.sizing_class  # noqa: E501
+            worker_sizing_class = input_native_entity.spec.topology.workers.sizing_class  # noqa: E501
+            control_plane_storage_profile = input_native_entity.spec.topology.control_plane.storage_profile  # noqa: E501
+            worker_storage_profile = input_native_entity.spec.topology.workers.storage_profile  # noqa: E501
+            nfs_count = input_native_entity.spec.topology.nfs.count
+            nfs_sizing_class = input_native_entity.spec.topology.nfs.sizing_class  # noqa: E501
+            nfs_storage_profile = input_native_entity.spec.topology.nfs.storage_profile  # noqa: E501
             network_name = input_native_entity.spec.settings.network
-            template_name = input_native_entity.spec.k8_distribution.template_name  # noqa: E501
-            template_revision = input_native_entity.spec.k8_distribution.template_revision  # noqa: E501
+            template_name = input_native_entity.spec.distribution.template_name  # noqa: E501
+            template_revision = input_native_entity.spec.distribution.template_revision  # noqa: E501
             ssh_key = input_native_entity.spec.settings.ssh_key
             rollback = input_native_entity.spec.settings.rollback_on_failure
             vapp = None
@@ -1040,13 +1040,15 @@ class ClusterService(abstract_broker.AbstractBroker):
                 def_utils.construct_cluster_spec_from_entity_status(
                     curr_native_entity.status,
                     server_utils.get_rde_version_in_use())
-            curr_worker_count: int = current_spec.workers.count
-            curr_nfs_count: int = current_spec.nfs.count
-            template_name = current_spec.k8_distribution.template_name
-            template_revision = current_spec.k8_distribution.template_revision
+            curr_worker_count: int = current_spec.topology.workers.count
+            curr_nfs_count: int = current_spec.topology.nfs.count
+            template_name = current_spec.distribution.template_name
+            template_revision = current_spec.distribution.template_revision
 
-            desired_worker_count: int = input_native_entity.spec.workers.count
-            desired_nfs_count: int = input_native_entity.spec.nfs.count
+            desired_worker_count: int = \
+                input_native_entity.spec.topology.workers.count
+            desired_nfs_count: int = \
+                input_native_entity.spec.topology.nfs.count
             num_workers_to_add: int = desired_worker_count - curr_worker_count
             num_nfs_to_add: int = desired_nfs_count - curr_nfs_count
 
@@ -1162,27 +1164,27 @@ class ClusterService(abstract_broker.AbstractBroker):
                     curr_native_entity.status,
                     server_utils.get_rde_version_in_use())
             org_name = curr_native_entity.metadata.org_name
-            ovdc_name = curr_native_entity.metadata.ovdc_name
-            curr_worker_count: int = current_spec.workers.count
-            curr_nfs_count: int = current_spec.nfs.count
+            ovdc_name = curr_native_entity.metadata.virtual_data_center_name
+            curr_worker_count: int = current_spec.topology.workers.count
+            curr_nfs_count: int = current_spec.topology.nfs.count
 
             # use the same settings with which cluster was originally created
             # viz., template, storage_profile, and network among others.
-            worker_storage_profile = current_spec.workers.storage_profile
-            worker_sizing_class = current_spec.workers.sizing_class
-            nfs_storage_profile = current_spec.nfs.storage_profile
-            nfs_sizing_class = current_spec.nfs.sizing_class
+            worker_storage_profile = current_spec.topology.workers.storage_profile  # noqa: E501
+            worker_sizing_class = current_spec.topology.workers.sizing_class
+            nfs_storage_profile = current_spec.topology.nfs.storage_profile
+            nfs_sizing_class = current_spec.topology.nfs.sizing_class
             network_name = current_spec.settings.network
             ssh_key = current_spec.settings.ssh_key
             rollback = current_spec.settings.rollback_on_failure
-            template_name = current_spec.k8_distribution.template_name
-            template_revision = current_spec.k8_distribution.template_revision
+            template_name = current_spec.distribution.template_name
+            template_revision = current_spec.distribution.template_revision
             template = _get_template(template_name, template_revision)
 
             # compute the values of workers and nfs to be added or removed
-            desired_worker_count: int = input_native_entity.spec.workers.count
+            desired_worker_count: int = input_native_entity.spec.topology.workers.count  # noqa: E501
             num_workers_to_add = desired_worker_count - curr_worker_count
-            desired_nfs_count = input_native_entity.spec.nfs.count
+            desired_nfs_count = input_native_entity.spec.topology.nfs.count
             num_nfs_to_add = desired_nfs_count - curr_nfs_count
 
             server_config = server_utils.get_server_runtime_config()
@@ -1485,7 +1487,7 @@ class ClusterService(abstract_broker.AbstractBroker):
 
             curr_entity_status: rde_2_x.Status = curr_native_entity.status
             # update defined entity of the cluster
-            curr_entity_status.cloud_properties.k8_distribution = \
+            curr_entity_status.cloud_properties.distribution = \
                 rde_2_x.Distribution(template_name=template[LocalTemplateKey.NAME],  # noqa: E501
                                      template_revision=int(template[LocalTemplateKey.REVISION]))  # noqa: E501
             curr_entity_status.cni = \
@@ -1636,7 +1638,7 @@ class ClusterService(abstract_broker.AbstractBroker):
                 raise exceptions.CseServerError(
                     f"No nodes specified to delete from "
                     f"cluster {cluster_name}({cluster_id})")
-            desired_worker_count = input_native_entity.spec.workers.count
+            desired_worker_count = input_native_entity.spec.topology.workers.count  # noqa: E501
             nodes_to_del = [node.name for node in
                             curr_native_entity.status.nodes.workers[desired_worker_count:]]  # noqa: E501
 

@@ -19,7 +19,7 @@ import container_service_extension.rde.models.rde_1_0_0 as rde_1_0_0
 class Metadata:
     name: str
     org_name: str
-    ovdc_name: str
+    virtual_data_center_name: str
     site: str
 
 
@@ -52,6 +52,14 @@ class Workers:
 class Distribution:
     template_name: Optional[str] = ''
     template_revision: Optional[int] = 0
+
+
+@dataclass_json(letter_case=LetterCase.CAMEL)
+@dataclass
+class Topology:
+    control_plane: ControlPlane = ControlPlane()
+    workers: Workers = Workers()
+    nfs: Nfs = Nfs()
 
 
 @dataclass_json(letter_case=LetterCase.CAMEL)
@@ -90,9 +98,9 @@ class Nodes:
 class CloudProperties:
     site: Optional[str] = None
     org_name: Optional[str] = None
-    ovdc_name: Optional[str] = None
+    virtual_data_center_name: Optional[str] = None
     ovdc_network_name: Optional[str] = None
-    k8_distribution: Distribution = Distribution()
+    distribution: Distribution = Distribution()
 
     # TODO contemplate the need to keep this attribute
     ssh_key: Optional[str] = None
@@ -125,10 +133,8 @@ class ClusterSpec:
     """
 
     settings: Settings
-    control_plane: ControlPlane = ControlPlane()
-    workers: Workers = Workers()
-    nfs: Nfs = Nfs()
-    k8_distribution: Distribution = Distribution()
+    topology: Topology = Topology()
+    distribution: Distribution = Distribution()
     expose: bool = False
 
 
@@ -146,22 +152,24 @@ class NativeEntity(AbstractNativeEntity):
     {
         "kind": "native",
         "spec": {
-            "workers": {
-                "count": 2,
-                "sizingClass": "small",
-                "storageProfile": "Any"
-            },
-            "controlPlane": {
-                "count": 1,
-                "sizingClass": "Large",
-                "storageProfile": "Any"
-            },
+            "topology": {
+                "workers": {
+                    "count": 2,
+                    "sizingClass": "small",
+                    "storageProfile": "Any"
+                },
+                "controlPlane": {
+                    "count": 1,
+                    "sizingClass": "Large",
+                    "storageProfile": "Any"
+                },
+            }
             "settings": {
                 "network": "net",
                 "sshKey": null,
-                "rollback_on_failure": true
+                "rollbackOnFailure": true
             },
-            "k8Distribution": {
+            "distribution": {
                 "templateName": "k81.17",
                 "templateRevision": 1
             }
@@ -170,14 +178,14 @@ class NativeEntity(AbstractNativeEntity):
             "id": null,
             "cni": null,
             "phase": null,
-            "master_ip": "10.150.23.45"
         },
         "metadata": {
-            "org_name": "org1",
-            "ovdc_name": "ovdc1",
-            "cluster_name": "myCluster"
+            "orgName": "org1",
+            "virtualDataCenterName": "ovdc1",
+            "name": "myCluster"
+            "site": "vcd_site"
         },
-        "api_version": ""
+        "apiVersion": ""
     }
     """
 
@@ -209,9 +217,9 @@ class NativeEntity(AbstractNativeEntity):
             # RDE 1.0, it is left empty
             cloud_properties = CloudProperties(site=None,
                                                org_name=rde_1_x_entity.metadata.org_name,  # noqa: E501
-                                               ovdc_name=rde_1_x_entity.metadata.ovdc_name,  # noqa: E501
+                                               virtual_data_center_name=rde_1_x_entity.metadata.ovdc_name,  # noqa: E501
                                                ovdc_network_name=rde_1_x_entity.spec.settings.network,  # noqa: E501
-                                               k8_distribution=rde_1_x_entity.spec.k8_distribution,  # noqa: E501
+                                               distribution=rde_1_x_entity.spec.k8_distribution,  # noqa: E501
                                                ssh_key=rde_1_x_entity.spec.settings.ssh_key,  # noqa: E501
                                                rollback_on_failure=rde_1_x_entity.spec.settings.rollback_on_failure)  # noqa: E501
             # NOTE: since details for the field `uid` is not present in
@@ -235,13 +243,9 @@ class NativeEntity(AbstractNativeEntity):
             # for RDE 2.0
             metadata = Metadata(name=rde_1_x_entity.metadata.cluster_name,
                                 org_name=rde_1_x_entity.metadata.org_name,
-                                ovdc_name=rde_1_x_entity.metadata.ovdc_name,
+                                virtual_data_center_name=rde_1_x_entity.metadata.ovdc_name,  # noqa: E501
                                 site='')
-            spec = ClusterSpec(
-                settings=Settings(
-                    network=rde_1_x_entity.spec.settings.network,
-                    ssh_key=rde_1_x_entity.spec.settings.ssh_key,
-                    rollback_on_failure=rde_1_x_entity.spec.settings.rollback_on_failure),  # noqa: E501,
+            topology = Topology(
                 control_plane=ControlPlane(
                     sizing_class=rde_1_x_entity.spec.control_plane.sizing_class,  # noqa: E501
                     storage_profile=rde_1_x_entity.spec.control_plane.storage_profile,  # noqa: E501
@@ -254,7 +258,14 @@ class NativeEntity(AbstractNativeEntity):
                     sizing_class=rde_1_x_entity.spec.nfs.sizing_class,
                     storage_profile=rde_1_x_entity.spec.nfs.storage_profile,
                     count=rde_1_x_entity.spec.nfs.count),
-                k8_distribution=Distribution(
+            )
+            spec = ClusterSpec(
+                settings=Settings(
+                    network=rde_1_x_entity.spec.settings.network,
+                    ssh_key=rde_1_x_entity.spec.settings.ssh_key,
+                    rollback_on_failure=rde_1_x_entity.spec.settings.rollback_on_failure),  # noqa: E501,
+                topology=topology,
+                distribution=Distribution(
                     template_name=rde_1_x_entity.spec.k8_distribution.template_name,  # noqa: E501
                     template_revision=rde_1_x_entity.spec.k8_distribution.template_revision),  # noqa: E501
                 expose=rde_1_x_entity.spec.expose)
@@ -292,30 +303,33 @@ class NativeEntity(AbstractNativeEntity):
 
         cloud_properties = CloudProperties(site=site,
                                            org_name=cluster['org_name'],
-                                           ovdc_name=cluster['vdc_name'],
+                                           virtual_data_center_name=cluster['vdc_name'],  # noqa: E501
                                            ovdc_network_name=cluster['network_name'],  # noqa: E501
-                                           k8_distribution=k8_distribution,
+                                           distribution=k8_distribution,
                                            ssh_key='')
+        topology = Topology(
+            workers=Workers(
+                count=len(cluster['nodes']),
+                storage_profile=cluster['storage_profile_name']
+            ),
+            control_plane=ControlPlane(
+                count=len(cluster['master_nodes']),
+                storage_profile=cluster['storage_profile_name']
+            ),
+            nfs=Nfs(
+                count=len(cluster['nfs_nodes']),
+                storage_profile=cluster['storage_profile_name']
+            )
+        )
         cluster_entity = cls(
             kind=kind,
             spec=ClusterSpec(
-                workers=Workers(
-                    count=len(cluster['nodes']),
-                    storage_profile=cluster['storage_profile_name']
-                ),
-                control_plane=ControlPlane(
-                    count=len(cluster['master_nodes']),
-                    storage_profile=cluster['storage_profile_name']
-                ),
-                nfs=Nfs(
-                    count=len(cluster['nfs_nodes']),
-                    storage_profile=cluster['storage_profile_name']
-                ),
+                topology=topology,
                 settings=Settings(
                     network=cluster['network_name'],
                     ssh_key=""
                 ),
-                k8_distribution=k8_distribution
+                distribution=k8_distribution
             ),
             status=Status(
                 phase=str(server_constants.DefEntityPhase(
@@ -339,7 +353,7 @@ class NativeEntity(AbstractNativeEntity):
             metadata=Metadata(
                 site=site,
                 org_name=cluster['org_name'],
-                ovdc_name=cluster['vdc_name'],
+                virtual_data_center_name=cluster['vdc_name'],
                 name=cluster['name']
             ),
             api_version=rde_constants.PAYLOAD_VERSION_2_0
@@ -349,7 +363,7 @@ class NativeEntity(AbstractNativeEntity):
     @classmethod
     def sample_native_entity(cls, k8_runtime: str = shared_constants.ClusterEntityKind.NATIVE.value):  # noqa: E501
         metadata = Metadata('cluster_name', 'organization_name',
-                            'org_virtual_datacenter_name', 'VCD_site')
+                            'org_virtual_data_center_name', 'VCD_site')
         status = Status()
         settings = Settings(network='ovdc_network_name', ssh_key=None)
         k8_distribution = Distribution(
@@ -373,12 +387,16 @@ class NativeEntity(AbstractNativeEntity):
             storage_profile='Platinum_storage_profile_name'
         )
 
-        cluster_spec = ClusterSpec(
+        topology = Topology(
             control_plane=control_plane,
-            k8_distribution=k8_distribution,
-            settings=settings,
             workers=workers,
             nfs=nfs
+        )
+
+        cluster_spec = ClusterSpec(
+            topology=topology,
+            distribution=k8_distribution,
+            settings=settings,
         )
 
         return NativeEntity(api_version=rde_constants.PAYLOAD_VERSION_2_0,
