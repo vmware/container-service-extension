@@ -65,7 +65,8 @@ class CloudApiClient(object):
                    resource_url_absolute_path=None,
                    payload=None,
                    content_type=None,
-                   additional_headers=None):
+                   additional_headers=None,
+                   return_headers=False):
         """Make a request to vCD server at /cloudapi endpoint.
 
         :param shared_constants.RequestMethod method: One of the HTTP verb
@@ -130,7 +131,12 @@ class CloudApiClient(object):
 
         response.raise_for_status()
         if response.text:
-            return json.loads(response.text)
+            if return_headers:
+                return json.loads(response.text), response.headers
+            else:
+                return json.loads(response.text)
+        elif return_headers:
+            return None, response.headers
 
     def get_cursor_param(self) -> str:
         """Get cursor param from response header links.

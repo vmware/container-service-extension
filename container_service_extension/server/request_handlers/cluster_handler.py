@@ -29,7 +29,10 @@ import container_service_extension.lib.telemetry.constants as telemetry_constant
 import container_service_extension.lib.telemetry.telemetry_handler as telemetry_handler  # noqa: E501
 import container_service_extension.rde.backend.cluster_service_factory as cluster_service_factory  # noqa: E501
 from container_service_extension.rde.behaviors.behavior_model import BehaviorOperation  # noqa: E501
+import container_service_extension.rde.common.entity_service as entity_service
 import container_service_extension.rde.constants as rde_constants
+from container_service_extension.rde.models.abstractNativeEntity import AbstractNativeEntity  # noqa: E501
+import container_service_extension.rde.models.common_models as common_models
 import container_service_extension.rde.utils as rde_utils
 import container_service_extension.rde.validators.validator_factory as rde_validator_factory  # noqa: E501
 import container_service_extension.security.context.operation_context as ctx
@@ -51,23 +54,15 @@ def cluster_create(data: dict, op_ctx: ctx.OperationContext):
     input_entity: dict = data[RequestKey.INPUT_SPEC]
     payload_version = input_entity.get(rde_constants.PayloadKey.PAYLOAD_VERSION)  # noqa: E501
     rde_utils.raise_error_if_unsupported_payload_version(payload_version)
-
-    # Validate the Input payload based on the (Operation, payload_version).
-    # Get the validator based on the payload_version
-    # ToDo : Don't use default cloudapi_client. Use the specific versioned one
-    rde_validator_factory.get_validator(
-        rde_version=rde_constants.MAP_INPUT_PAYLOAD_VERSION_TO_RDE_VERSION[
-            payload_version]).validate(cloudapi_client=op_ctx.cloudapi_client,
-                                       entity=input_entity)
-
-    # Convert the input entity to runtime rde format.
-    # Based on the runtime rde, call the appropriate backend method.
-    converted_native_entity = rde_utils.convert_input_rde_to_runtime_rde_format(input_entity)  # noqa: E501
-    svc = cluster_service_factory.ClusterServiceFactory(op_ctx).get_cluster_service()  # noqa: E501
-    # TODO: Response RDE must be compatible with the request RDE.
-    #  Conversions may be needed especially if there is a major version
-    #  difference in the input RDE and runtime RDE.
-    return svc.create_cluster(converted_native_entity).to_dict()
+    def_entity_service = entity_service.DefEntityService(op_ctx.cloudapi_client)  # noqa: E501
+    entity_type = server_utils.get_registered_def_entity_type()
+    converted_entity: AbstractNativeEntity = rde_utils.convert_input_rde_to_runtime_rde_format(input_entity)  # noqa: E501
+    def_entity = common_models.DefEntity(entity=converted_entity, entityType=entity_type.id)  # noqa: E501
+    _, headers = def_entity_service.create_entity(entity_type_id=entity_type.id, entity=def_entity, return_headers=True)  # noqa: E501
+    def_entity = def_entity_service.get_native_rde_by_name_and_rde_version(
+        name=converted_entity.metadata.name, version=entity_type.version)
+    def_entity.entity.status.task_href = headers['Location']
+    return def_entity.to_dict()
 
 
 @telemetry_handler.record_user_action_telemetry(cse_operation=telemetry_constants.CseOperation.V36_CLUSTER_LIST)  # noqa: E501
@@ -174,12 +169,16 @@ def cluster_update(data: dict, op_ctx: ctx.OperationContext):
 
     # Convert the input entity to runtime rde format.
     # Based on the runtime rde, call the appropriate backend method.
-    converted_native_entity = rde_utils.convert_input_rde_to_runtime_rde_format(input_entity)  # noqa: E501
-    svc = cluster_service_factory.ClusterServiceFactory(op_ctx).get_cluster_service()  # noqa: E501
+    converted_native_entity: AbstractNativeEntity = rde_utils.convert_input_rde_to_runtime_rde_format(input_entity)  # noqa: E501
+    def_entity_service = entity_service.DefEntityService(op_ctx.cloudapi_client)  # noqa: E501
+    entity_type = server_utils.get_registered_def_entity_type()
+    def_entity = common_models.DefEntity(entity=converted_native_entity, entityType=entity_type.id)  # noqa: E501
+    updated_def_entity, headers = def_entity_service.update_entity(entity_id=cluster_id, entity=def_entity, return_headers=True)  # noqa: E501
+    updated_def_entity.entity.status.task_href = headers['Location']
     # TODO: Response RDE must be compatible with the request RDE.
     #  Conversions may be needed especially if there is a major version
     #  difference in the input RDE and runtime RDE.
-    return svc.update_cluster(cluster_id, converted_native_entity).to_dict()
+    return updated_def_entity.to_dict()
 
 
 @telemetry_handler.record_user_action_telemetry(cse_operation=telemetry_constants.CseOperation.V36_CLUSTER_UPGRADE_PLAN)  # noqa: E501
@@ -205,9 +204,12 @@ def cluster_delete(data: dict, op_ctx: ctx.OperationContext):
 
     :return: Dict
     """
-    svc = cluster_service_factory.ClusterServiceFactory(op_ctx).get_cluster_service()  # noqa: E501
     cluster_id = data[RequestKey.CLUSTER_ID]
-    return svc.delete_cluster(cluster_id).to_dict()
+    def_entity_service = entity_service.DefEntityService(op_ctx.cloudapi_client)  # noqa: E501
+    def_entity: common_models.DefEntity = def_entity_service.get_entity(cluster_id)  # noqa: E501
+    _, headers = def_entity_service.delete_entity(cluster_id, return_headers=True)  # noqa: E501
+    def_entity.entity.status.task_href = headers['Location']
+    return def_entity.to_dict()
 
 
 @telemetry_handler.record_user_action_telemetry(cse_operation=telemetry_constants.CseOperation.V36_NODE_DELETE)  # noqa: E501
@@ -266,3 +268,7 @@ def cluster_acl_update(data: dict, op_ctx: ctx.OperationContext):
     cluster_id = data[RequestKey.CLUSTER_ID]
     update_acl_entries = data.get(RequestKey.INPUT_SPEC, {}).get(ClusterAclKey.ACCESS_SETTING)  # noqa: E501
     svc.update_cluster_acl(cluster_id, update_acl_entries)
+
+
+def _get_behavior_context():
+    pass
