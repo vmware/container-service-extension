@@ -40,10 +40,10 @@ def exception_handler(func):
         try:
             result = func(*args, **kwargs)
         except (KeyError, TypeError, ValueError) as error:
-            LOGGER.error(error)
+            LOGGER.error(error, exc_info=True)
             raise cse_exception.BadRequestError(error_message=str(error))
         except Exception as error:
-            LOGGER.error(error)
+            LOGGER.error(error, exc_info=True)
             if not isinstance(error, cse_exception.CseRequestError):
                 raise cse_exception.InternalServerRequestError(error_message=str(error))  # noqa: E501
             raise error
@@ -102,7 +102,11 @@ def update_cluster(behavior_ctx: BehaviorRequestContext):
 
 @exception_handler
 def delete_cluster(behavior_ctx: BehaviorRequestContext):
-    return "Successfully deleted the cluster."
+    entity_id: str = behavior_ctx.entity_id
+
+    svc = cluster_service_factory.ClusterServiceFactory(behavior_ctx).get_cluster_service()  # noqa: E501
+
+    return svc.delete_cluster(entity_id)
 
 
 @exception_handler

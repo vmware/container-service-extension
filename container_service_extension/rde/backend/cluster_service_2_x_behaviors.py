@@ -449,7 +449,7 @@ class ClusterService(abstract_broker.AbstractBroker):
         # TODO: Cannot delete the defined entity if not in RESOLVED state.
         #   Add check for resolved state before deleting the Vapp
         # Check if cluster is busy
-        if phase.is_entity_busy():
+        if curr_entity.state != def_constants.DEF_RESOLVED_STATE or phase.is_entity_busy():  # noqa: E501
             raise exceptions.CseServerError(
                 f"Cluster {cluster_name} with id {cluster_id} is not in a "
                 f"valid state to be deleted. Please contact administrator.")
@@ -480,11 +480,13 @@ class ClusterService(abstract_broker.AbstractBroker):
             msg = f"Error updating the cluster '{cluster_name}' with the status"  # noqa: E501
             LOGGER.error(f"{msg}: {err}")
             raise
+
         self.context.is_async = True
         # NOTE: The async method will mark the task as succeeded which will
         # allow the RDE framework to delete the cluster defined entity
         self._delete_cluster_async(cluster_name=cluster_name,
-                                   org_name=org_name, ovdc_name=ovdc_name)
+                                   org_name=org_name, ovdc_name=ovdc_name,
+                                   curr_entity=curr_entity)
         return self.mqtt_publisher.construct_behavior_payload(
             message=CLUSTER_DELETE_IN_PROGRESS_MESSAGE,
             status=BehaviorTaskStatus.RUNNING.value, progress='5')
@@ -1333,26 +1335,36 @@ class ClusterService(abstract_broker.AbstractBroker):
                               error_message=str(err))
 
     @thread_utils.run_async
-    def _delete_cluster_async(self, cluster_name, org_name, ovdc_name):
+    def _delete_cluster_async(self, cluster_name: str, org_name: str,
+                              ovdc_name: str, curr_entity: common_models.DefEntity):  # noqa: E501
         """Delete the cluster asynchronously.
 
         :param cluster_name: Name of the cluster to be deleted.
         :param org_name: Name of the org where the cluster resides.
         :param ovdc_name: Name of the ovdc where the cluster resides.
+        :param str cluster_id: ID of the cluster
         needs to be recreated in the failure case of cluster vapp deletion.
         """
+        cluster_id = curr_entity.id
         try:
             msg = f"Deleting cluster '{cluster_name}'"
             self._update_task(BehaviorTaskStatus.RUNNING, message=msg)
             client_v36 = self.context.get_client(
                 api_version=DEFAULT_API_VERSION)
-            _delete_vapp(client_v36, org_name, ovdc_name, cluster_name)
-            msg = f"Deleted cluster '{cluster_name}'"
+            if curr_entity.externalId:
+                # Delete Vapp if RDE is linked with a VApp
+                _delete_vapp(client_v36, org_name, ovdc_name, cluster_name)
+                msg = f"Deleted cluster '{cluster_name}'"
             self._update_task(BehaviorTaskStatus.SUCCESS, message=msg)
         except Exception as err:
             msg = f"Unexpected error while deleting cluster {cluster_name}"
             LOGGER.error(f"{msg}",
                          exc_info=True)
+            try:
+                self._fail_operation(cluster_id, DefEntityOperation.DELETE)
+            except Exception:
+                msg = f"Failed to update defined entity status for cluster {cluster_id}"  # noqa: E501
+                LOGGER.error(msg, exc_info=True)
             self._update_task(BehaviorTaskStatus.ERROR,
                               message=msg,
                               error_message=str(err))
