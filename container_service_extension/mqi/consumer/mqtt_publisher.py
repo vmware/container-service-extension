@@ -64,7 +64,7 @@ class MQTTPublisher:
         {'majorErrorCode':'500','minorErrorCode':None,'message':None}
         :param str message: Task update message
         :param str status: Status of the task to be updated.
-        :param str progress:
+        :param int progress:
 
         :return: The constructed task payload.
         :rtype: dict

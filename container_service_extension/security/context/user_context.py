@@ -61,7 +61,7 @@ class UserContext:
     @property
     def org_href(self):
         if self._org_href is None:
-            self._org_href = self.client.get_org().href
+            self._org_href = self.client.get_org().get('href')
         return self._org_href
 
     @property

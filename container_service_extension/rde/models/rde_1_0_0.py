@@ -93,6 +93,7 @@ class Status:
     docker_version: Optional[str] = None
     os: Optional[str] = None
     nodes: Optional[Nodes] = None
+    exposed: bool = False
 
 
 @dataclass_json
@@ -109,6 +110,7 @@ class ClusterSpec:
     workers: Workers = Workers()
     nfs: Nfs = Nfs()
     k8_distribution: Distribution = Distribution()
+    expose: bool = False
 
 
 @dataclass_json
@@ -180,37 +182,37 @@ class NativeEntity(AbstractNativeEntity):
 
             metadata = Metadata(
                 cluster_name=rde_2_x_entity.metadata.name,
-                org_name=rde_2_x_entity.metadata.orgName,
-                ovdc_name=rde_2_x_entity.metadata.ovdcName
+                org_name=rde_2_x_entity.metadata.org_name,
+                ovdc_name=rde_2_x_entity.metadata.virtual_data_center_name
             )
 
             settings = Settings(
                 network=rde_2_x_entity.spec.settings.network,
-                ssh_key=rde_2_x_entity.spec.settings.sshKey,
-                rollback_on_failure=rde_2_x_entity.spec.settings.rollbackOnFailure  # noqa: E501
+                ssh_key=rde_2_x_entity.spec.settings.ssh_key,
+                rollback_on_failure=rde_2_x_entity.spec.settings.rollback_on_failure  # noqa: E501
             )
 
             k8_distribution = Distribution(
-                template_name=rde_2_x_entity.spec.k8Distribution.templateName,
-                template_revision=rde_2_x_entity.spec.k8Distribution.templateRevision  # noqa: E501
+                template_name=rde_2_x_entity.spec.distribution.template_name,
+                template_revision=rde_2_x_entity.spec.distribution.template_revision  # noqa: E501
             )
 
             control_plane = ControlPlane(
-                sizing_class=rde_2_x_entity.spec.controlPlane.sizingClass,
-                storage_profile=rde_2_x_entity.spec.controlPlane.storageProfile,  # noqa: E501
-                count=rde_2_x_entity.spec.controlPlane.count
+                sizing_class=rde_2_x_entity.spec.topology.control_plane.sizing_class,  # noqa: E501
+                storage_profile=rde_2_x_entity.spec.topology.control_plane.storage_profile,  # noqa: E501
+                count=rde_2_x_entity.spec.topology.control_plane.count
             )
 
             workers = Workers(
-                sizing_class=rde_2_x_entity.spec.workers.sizingClass,
-                storage_profile=rde_2_x_entity.spec.workers.storageProfile,
-                count=rde_2_x_entity.spec.workers.count
+                sizing_class=rde_2_x_entity.spec.topology.workers.sizing_class,
+                storage_profile=rde_2_x_entity.spec.topology.workers.storage_profile,  # noqa: E501
+                count=rde_2_x_entity.spec.topology.workers.count
             )
 
             nfs = Nfs(
-                sizing_class=rde_2_x_entity.spec.nfs.sizingClass,
-                storage_profile=rde_2_x_entity.spec.nfs.storageProfile,
-                count=rde_2_x_entity.spec.nfs.count
+                sizing_class=rde_2_x_entity.spec.topology.nfs.sizing_class,
+                storage_profile=rde_2_x_entity.spec.topology.nfs.storage_profile,  # noqa: E501
+                count=rde_2_x_entity.spec.topology.nfs.count
             )
 
             spec = ClusterSpec(
@@ -218,17 +220,19 @@ class NativeEntity(AbstractNativeEntity):
                 k8_distribution=k8_distribution,
                 control_plane=control_plane,
                 workers=workers,
-                nfs=nfs
+                nfs=nfs,
+                expose=rde_2_x_entity.spec.expose
             )
 
             status = Status(
                 phase=rde_2_x_entity.status.phase,
                 cni=rde_2_x_entity.status.cni,
-                task_href=rde_2_x_entity.status.taskHref,
+                task_href=rde_2_x_entity.status.task_href,
                 kubernetes=rde_2_x_entity.status.kubernetes,
-                docker_version=rde_2_x_entity.status.dockerVersion,
+                docker_version=rde_2_x_entity.status.docker_version,
                 os=rde_2_x_entity.status.os,
-                nodes=rde_2_x_entity.status.nodes
+                nodes=rde_2_x_entity.status.nodes,
+                exposed=rde_2_x_entity.status.exposed
             )
 
             rde_1_entity = cls(
@@ -316,7 +320,7 @@ class NativeEntity(AbstractNativeEntity):
     @classmethod
     def sample_native_entity(cls, k8_runtime: str = shared_constants.ClusterEntityKind.NATIVE.value):  # noqa: E501
         metadata = Metadata('cluster_name', 'organization_name',
-                            'org_virtual_datacenter_name')
+                            'org_virtual_data_center_name')
         status = Status()
         settings = Settings(network='ovdc_network_name', ssh_key=None)
         k8_distribution = Distribution(
