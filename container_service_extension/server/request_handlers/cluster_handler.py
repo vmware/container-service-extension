@@ -173,8 +173,10 @@ def cluster_update(data: dict, op_ctx: ctx.OperationContext):
     def_entity_service = entity_service.DefEntityService(op_ctx.cloudapi_client)  # noqa: E501
     entity_type = server_utils.get_registered_def_entity_type()
     def_entity = common_models.DefEntity(entity=converted_native_entity, entityType=entity_type.id)  # noqa: E501
-    updated_def_entity, headers = def_entity_service.update_entity(entity_id=cluster_id, entity=def_entity, return_headers=True)  # noqa: E501
-    updated_def_entity.entity.status.task_href = headers['Location']
+    updated_def_entity, headers = def_entity_service.update_entity(
+        entity_id=cluster_id, entity=def_entity,
+        invoke_hooks=True, return_headers=True)
+    updated_def_entity.entity.status.task_href = headers.get('Location') or headers.get('X-VMWARE-VCOULD-TASK-LOCATION')  # noqa: E501
     # TODO: Response RDE must be compatible with the request RDE.
     #  Conversions may be needed especially if there is a major version
     #  difference in the input RDE and runtime RDE.
