@@ -36,16 +36,8 @@ def cluster_create(data: dict, op_ctx: ctx.OperationContext):
     # Convert the input entity to runtime rde format.
     # Based on the runtime rde, call the appropriate backend method.
     converted_native_entity: AbstractNativeEntity = rde_utils.convert_input_rde_to_runtime_rde_format(input_entity)  # noqa: E501
-
-    if rde_in_use == rde_constants.RDEVersion.RDE_1_0_0:
-        svc = cluster_service_factory.ClusterServiceFactory(
-            op_ctx).get_cluster_service()  # noqa: E501
-        new_rde: common_models.DefEntity = svc.create_cluster(
-            converted_native_entity)  # noqa: E501
-    else:
-        rde = cluster_handler.create_cluster()
-
-
+    svc = cluster_service_factory.ClusterServiceFactory(op_ctx).get_cluster_service()  # noqa: E501
+    new_rde: common_models.DefEntity = svc.create_cluster(converted_native_entity)  # noqa: E501
     # convert the created rde back to input rde version
     new_native_entity: AbstractNativeEntity = rde_utils.convert_runtime_rde_to_input_rde_version_format(  # noqa: E501
         new_rde.entity, rde_constants.RDEVersion.RDE_1_0_0)
