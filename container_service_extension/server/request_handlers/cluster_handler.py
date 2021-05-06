@@ -35,6 +35,7 @@ from container_service_extension.rde.models.abstractNativeEntity import Abstract
 import container_service_extension.rde.models.common_models as common_models
 import container_service_extension.rde.utils as rde_utils
 import container_service_extension.rde.validators.validator_factory as rde_validator_factory  # noqa: E501
+import container_service_extension.security.context.behavior_request_context as behavior_ctx  # noqa: E501
 import container_service_extension.security.context.operation_context as ctx
 import container_service_extension.server.request_handlers.request_utils as request_utils  # noqa: E501
 
@@ -72,7 +73,7 @@ def native_cluster_list(data: dict, op_ctx: ctx.OperationContext):
 
     :return: List
     """
-    svc = cluster_service_factory.ClusterServiceFactory(op_ctx).get_cluster_service()  # noqa: E501
+    svc = cluster_service_factory.ClusterServiceFactory(_get_request_context(op_ctx)).get_cluster_service()  # noqa: E501
     filters = data.get(RequestKey.QUERY_PARAMS, {})
     page_number = int(filters.get(PaginationKey.PAGE_NUMBER,
                                   CSE_PAGINATION_FIRST_PAGE_NUMBER))
@@ -107,7 +108,7 @@ def cluster_list(data: dict, op_ctx: ctx.OperationContext):
 
     :return: List
     """
-    svc = cluster_service_factory.ClusterServiceFactory(op_ctx).get_cluster_service()  # noqa: E501
+    svc = cluster_service_factory.ClusterServiceFactory(_get_request_context(op_ctx)).get_cluster_service()  # noqa: E501
     # response should not be paginated
     return [def_entity.to_dict() for def_entity in
             svc.list_clusters(data.get(RequestKey.QUERY_PARAMS, {}))]
@@ -125,7 +126,7 @@ def cluster_info(data: dict, op_ctx: ctx.OperationContext):
 
     :return: Dict
     """
-    svc = cluster_service_factory.ClusterServiceFactory(op_ctx).get_cluster_service()  # noqa: E501
+    svc = cluster_service_factory.ClusterServiceFactory(_get_request_context(op_ctx)).get_cluster_service()  # noqa: E501
     cluster_id = data[RequestKey.CLUSTER_ID]
     return svc.get_cluster_info(cluster_id).to_dict()
 
@@ -139,7 +140,7 @@ def cluster_config(data: dict, op_ctx: ctx.OperationContext):
 
     :return: Dict
     """
-    svc = cluster_service_factory.ClusterServiceFactory(op_ctx).get_cluster_service()  # noqa: E501
+    svc = cluster_service_factory.ClusterServiceFactory(_get_request_context(op_ctx)).get_cluster_service()  # noqa: E501
     cluster_id = data[RequestKey.CLUSTER_ID]
     return svc.get_cluster_config(cluster_id)
 
@@ -190,7 +191,7 @@ def cluster_upgrade_plan(data, op_ctx: ctx.OperationContext):
 
     :return: List[Tuple(str, str)]
     """
-    svc = cluster_service_factory.ClusterServiceFactory(op_ctx).get_cluster_service()  # noqa: E501
+    svc = cluster_service_factory.ClusterServiceFactory(_get_request_context(op_ctx)).get_cluster_service()  # noqa: E501
     return svc.get_cluster_upgrade_plan(data[RequestKey.CLUSTER_ID])
 
 
@@ -226,7 +227,7 @@ def nfs_node_delete(data, op_ctx: ctx.OperationContext):
 
     :return: Dict
     """
-    svc = cluster_service_factory.ClusterServiceFactory(op_ctx).get_cluster_service()  # noqa: E501
+    svc = cluster_service_factory.ClusterServiceFactory(_get_request_context(op_ctx)).get_cluster_service()  # noqa: E501
     cluster_id = data[RequestKey.CLUSTER_ID]
     node_name = data[RequestKey.NODE_NAME]
 
@@ -246,7 +247,7 @@ def nfs_node_delete(data, op_ctx: ctx.OperationContext):
 @request_utils.cluster_api_exception_handler
 def cluster_acl_info(data: dict, op_ctx: ctx.OperationContext):
     """Request handler for cluster acl list operation."""
-    svc = cluster_service_factory.ClusterServiceFactory(op_ctx).get_cluster_service()  # noqa: E501
+    svc = cluster_service_factory.ClusterServiceFactory(_get_request_context(op_ctx)).get_cluster_service()  # noqa: E501
     cluster_id = data[RequestKey.CLUSTER_ID]
     query = data.get(RequestKey.QUERY_PARAMS, {})
     page = int(query.get(PaginationKey.PAGE_NUMBER, CSE_PAGINATION_FIRST_PAGE_NUMBER))  # noqa: E501
@@ -266,11 +267,28 @@ def cluster_acl_info(data: dict, op_ctx: ctx.OperationContext):
 @request_utils.cluster_api_exception_handler
 def cluster_acl_update(data: dict, op_ctx: ctx.OperationContext):
     """Request handler for cluster acl update operation."""
-    svc = cluster_service_factory.ClusterServiceFactory(op_ctx).get_cluster_service()  # noqa: E501
+    svc = cluster_service_factory.ClusterServiceFactory(_get_request_context(op_ctx)).get_cluster_service()  # noqa: E501
     cluster_id = data[RequestKey.CLUSTER_ID]
     update_acl_entries = data.get(RequestKey.INPUT_SPEC, {}).get(ClusterAclKey.ACCESS_SETTING)  # noqa: E501
     svc.update_cluster_acl(cluster_id, update_acl_entries)
 
 
-def _get_behavior_context():
-    pass
+def _get_request_context(op_ctx: ctx.OperationContext):
+    """Get the request context from operation context.
+
+    :param op_ctx: operation context
+    :return: RequestContext
+    :rtype: behavior_ctx.RequestContext
+    """
+    return behavior_ctx.RequestContext(
+        behavior_id=None,
+        task_id=None,
+        entity_id=None,
+        entity=None,
+        entity_type_id=None,
+        payload=None,
+        api_version=None,
+        request_id=None,
+        op_ctx=op_ctx,
+        user_context=None,
+        mqtt_publisher=None)

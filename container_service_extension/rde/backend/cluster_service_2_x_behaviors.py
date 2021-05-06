@@ -52,7 +52,7 @@ import container_service_extension.rde.constants as def_constants
 import container_service_extension.rde.models.common_models as common_models
 import container_service_extension.rde.models.rde_2_0_0 as rde_2_x
 import container_service_extension.rde.utils as def_utils
-from container_service_extension.security.context.behavior_request_context import BehaviorRequestContext  # noqa: E501
+from container_service_extension.security.context.behavior_request_context import RequestContext  # noqa: E501
 import container_service_extension.security.context.operation_context as operation_context  # noqa: E501
 import container_service_extension.server.abstract_broker as abstract_broker
 import container_service_extension.server.compute_policy_manager as compute_policy_manager  # noqa: E501
@@ -69,7 +69,7 @@ CLUSTER_UPGRADE_IN_PROGRESS_MESSAGE = 'Upgrade cluster in progress'
 class ClusterService(abstract_broker.AbstractBroker):
     """Handles cluster operations for native DEF based clusters."""
 
-    def __init__(self, ctx: BehaviorRequestContext):
+    def __init__(self, ctx: RequestContext):
         self.context: Optional[operation_context.OperationContext] = None
         # populates above attributes
         super().__init__(ctx.op_ctx)

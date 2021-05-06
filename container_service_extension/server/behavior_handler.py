@@ -12,7 +12,7 @@ from container_service_extension.rde.backend import cluster_service_factory
 import container_service_extension.rde.constants as rde_constants
 import container_service_extension.rde.utils as rde_utils
 import container_service_extension.rde.validators.validator_factory as rde_validator_factory  # noqa: E501
-from container_service_extension.security.context.behavior_request_context import BehaviorRequestContext  # noqa: E501
+from container_service_extension.security.context.behavior_request_context import RequestContext  # noqa: E501
 
 
 # Responsibility of the functions in this file:
@@ -52,7 +52,7 @@ def exception_handler(func):
 
 
 @exception_handler
-def create_cluster(behavior_ctx: BehaviorRequestContext):
+def create_cluster(behavior_ctx: RequestContext):
     entity_id: str = behavior_ctx.entity_id
     input_entity: dict = behavior_ctx.entity
     cloudapi_client: CloudApiClient = behavior_ctx.op_ctx.cloudapi_client
@@ -110,5 +110,5 @@ def delete_cluster(behavior_ctx: BehaviorRequestContext):
 
 
 @exception_handler
-def get_kubeconfig(behavior_ctx: BehaviorRequestContext):
+def get_kubeconfig(behavior_ctx: RequestContext):
     return "Returning the kubeconfig"
