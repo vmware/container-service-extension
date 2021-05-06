@@ -11,7 +11,7 @@ from container_service_extension.mqi.consumer.mqtt_publisher import \
 from container_service_extension.rde.behaviors.behavior_model import \
     BehaviorError, BehaviorOperation, BehaviorTaskStatus  # noqa: E501
 from container_service_extension.security.context.behavior_request_context \
-    import BehaviorRequestContext, BehaviorUserContext
+    import BehaviorUserContext, RequestContext
 from container_service_extension.security.context.operation_context import OperationContext  # noqa: E501
 import container_service_extension.server.behavior_handler as handler
 
@@ -41,17 +41,17 @@ def process_behavior_request(msg_json, mqtt_publisher: MQTTPublisher):
 
     # Initializing Behavior operation context
     op_ctx = OperationContext(auth_token=auth_token, is_jwt=True, request_id=request_id)  # noqa: E501
-    behavior_ctx = BehaviorRequestContext(behavior_id=behavior_id,
-                                          task_id=task_id,
-                                          entity_id=entity_id,
-                                          payload=payload,
-                                          api_version=float(api_version),
-                                          entity=entity,
-                                          user_context=usr_ctx,
-                                          entity_type_id=entity_type_id,
-                                          request_id=request_id,
-                                          op_ctx=op_ctx,
-                                          mqtt_publisher=mqtt_publisher)
+    behavior_ctx = RequestContext(behavior_id=behavior_id,
+                                  task_id=task_id,
+                                  entity_id=entity_id,
+                                  payload=payload,
+                                  api_version=float(api_version),
+                                  entity=entity,
+                                  user_context=usr_ctx,
+                                  entity_type_id=entity_type_id,
+                                  request_id=request_id,
+                                  op_ctx=op_ctx,
+                                  mqtt_publisher=mqtt_publisher)
 
     # Invoke the handler method and return the response in the string format.
     try:
