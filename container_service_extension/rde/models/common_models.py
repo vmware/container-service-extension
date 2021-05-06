@@ -332,10 +332,10 @@ class EntityType(Enum):
                                                 description='',
                                                 # TODO Uncomment this portion when the behavior integration is complete.  # noqa: E501
                                                 #  Uncommenting below, today (Apr 16,2021), will break the existing native api endpoints.  # noqa: E501
-                                                # hooks={
-                                                #     'PostCreate': BehaviorOperation.CREATE_CLUSTER.value.id,  # noqa: E501
-                                                #     'PostUpdate': BehaviorOperation.UPDATE_CLUSTER.value.id,  # noqa: E501
-                                                #     'PreDelete': BehaviorOperation.DELETE_CLUSTER.value.id}  # noqa: E501
+                                                hooks={
+                                                    'PostCreate': BehaviorOperation.CREATE_CLUSTER.value.id,  # noqa: E501
+                                                    'PostUpdate': BehaviorOperation.UPDATE_CLUSTER.value.id,  # noqa: E501
+                                                    'PreDelete': BehaviorOperation.DELETE_CLUSTER.value.id}  # noqa: E501
                                                 )
     TKG_ENTITY_TYPE_1_0_0 = DefEntityType(name='TKG Cluster',
                                           id=f"{DEF_ENTITY_TYPE_ID_PREFIX}:{Vendor.VMWARE.value}:{Nss.TKG}:1.0.0",  # noqa: E501

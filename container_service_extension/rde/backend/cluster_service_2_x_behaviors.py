@@ -220,6 +220,9 @@ class ClusterService(abstract_broker.AbstractBroker):
         :return: dictionary representing mqtt response published
         :rtype: dict
         """
+        cluster_name: Optional[str] = None
+        org_name: Optional[str] = None
+        ovdc_name: Optional[str] = None
         try:
             cluster_name = input_native_entity.metadata.name
             org_name = input_native_entity.metadata.org_name
@@ -309,25 +312,32 @@ class ClusterService(abstract_broker.AbstractBroker):
             # trigger async operation
             self.context.is_async = True
             self._create_cluster_async(entity_id, input_native_entity)
-            self._update_task(status=BehaviorTaskStatus.RUNNING,
-                              message='Hurray cluster task-update is working',
-                              progress=3)
             return self.mqtt_publisher.construct_behavior_payload(
                 message=CLUSTER_CREATE_IN_PROGRESS_MESSAGE,
                 status=BehaviorTaskStatus.RUNNING.value,
                 progress='5')
-        except Exception:
+        except Exception as err:
+            # NOTE: Should update the task first before attempting delete or
+            #   else entity delete will fail.
+            msg = f"Failed to create cluster {cluster_name} in org {org_name} and VDC {ovdc_name}"  # noqa: E501
+            self._update_task(BehaviorTaskStatus.ERROR,
+                              message=msg, error_message=str(err))
             # Since defined entity is already created by defined entity
             # framework, we need to delete the defined entity if rollback
             # is set to true
             # NOTE: As per schema definition, default value for rollback is
             #   True
-            # TODO: Should the defined entity be deleted here even if rollback
-            #   is set to False? Because cluster won't really be created as
-            #   failure in sync portion may mean invalid request.
             if input_native_entity.spec.settings.rollback_on_failure:
                 # delete defined entity
                 self.sysadmin_entity_svc.delete_entity(entity_id)
+            else:
+                # update status to CREATE:FAILED
+                try:
+                    self._fail_operation(entity_id, DefEntityOperation.CREATE)
+                except Exception as err:
+                    msg = f"Failed to update defined entity status for" \
+                          f" cluster {cluster_name}({entity_id})"
+                    LOGGER.error(f"{msg}", exc_info=True)
             raise
 
     def resize_cluster(self, cluster_id: str,
@@ -617,9 +627,12 @@ class ClusterService(abstract_broker.AbstractBroker):
         :return: dictionary representing mqtt response published
         :rtype: dict
         """
+        # TODO: Make use of current entity in the behavior payload
+        curr_entity = self.entity_svc.get_entity(cluster_id)
+        curr_native_entity: rde_2_x.NativeEntity = curr_entity.entity
         current_spec: rde_2_x.ClusterSpec = \
             def_utils.construct_cluster_spec_from_entity_status(
-                input_native_entity.status,
+                curr_native_entity.status,
                 server_utils.get_rde_version_in_use())
         current_workers_count = current_spec.topology.workers.count
         current_nfs_count = current_spec.topology.nfs.count
@@ -1779,7 +1792,7 @@ class ClusterService(abstract_broker.AbstractBroker):
             self.entity_svc.get_entity(cluster_id)
 
         # update the cluster_rde with external_id if provided by the caller
-        if external_id:
+        if external_id is not None:
             cluster_rde.externalId = external_id
         # Update entity status with new values
         cluster_rde.entity.status = native_entity_status
