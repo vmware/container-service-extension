@@ -258,7 +258,7 @@ class DefEntityService:
                 method=RequestMethod.PUT,
                 cloudapi_version=CloudApiVersion.VERSION_1_0_0,
                 resource_url_relative_path=resource_url_relative_path,
-                payload=entity.to_dict()),
+                payload=entity.to_dict())
             return DefEntity(**response_body)
 
     @handle_entity_service_exception
