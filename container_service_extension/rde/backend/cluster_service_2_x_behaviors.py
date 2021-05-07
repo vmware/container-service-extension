@@ -342,7 +342,7 @@ class ClusterService(abstract_broker.AbstractBroker):
                 # update status to CREATE:FAILED
                 try:
                     self._fail_operation(entity_id, DefEntityOperation.CREATE)
-                except Exception as err:
+                except Exception:
                     msg = f"Failed to update defined entity status for" \
                           f" cluster {cluster_name}({entity_id})"
                     LOGGER.error(f"{msg}", exc_info=True)

@@ -323,7 +323,6 @@ class DefEntityService:
             upon deleting the defined entity
         :return: None
         """
-        
         self._cloudapi_client.do_request(
             method=RequestMethod.DELETE,
             cloudapi_version=CloudApiVersion.VERSION_1_0_0,
