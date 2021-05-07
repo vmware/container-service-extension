@@ -346,6 +346,7 @@ class ClusterService(abstract_broker.AbstractBroker):
                     msg = f"Failed to update defined entity status for" \
                           f" cluster {cluster_name}({entity_id})"
                     LOGGER.error(f"{msg}", exc_info=True)
+            raise
 
     def resize_cluster(self, cluster_id: str,
                        input_native_entity: rde_2_x.NativeEntity):
