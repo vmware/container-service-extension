@@ -482,8 +482,7 @@ class ClusterService(abstract_broker.AbstractBroker):
             raise
         self.context.is_async = True
         self._delete_cluster_async(cluster_name=cluster_name,
-                                   org_name=org_name, ovdc_name=ovdc_name,
-                                   def_entity=curr_entity)
+                                   org_name=org_name, ovdc_name=ovdc_name)
         return curr_entity
 
     def get_cluster_upgrade_plan(self, cluster_id: str):

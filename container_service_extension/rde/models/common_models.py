@@ -329,7 +329,7 @@ class EntityType(Enum):
                                                 version='2.0.0',
                                                 vendor=Vendor.CSE.value,
                                                 nss=Nss.NATIVE_CLUSTER.value,
-                                                description=''
+                                                description='',
                                                 # TODO Uncomment this portion when the behavior integration is complete.  # noqa: E501
                                                 #  Uncommenting below, today (Apr 16,2021), will break the existing native api endpoints.  # noqa: E501
                                                 # hooks={

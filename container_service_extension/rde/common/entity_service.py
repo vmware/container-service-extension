@@ -237,7 +237,7 @@ class DefEntityService:
         vcd_api_version = self._cloudapi_client.get_api_version()
         # TODO Float conversions must be changed to Semantic versioning.
         if float(vcd_api_version) >= float(ApiVersion.VERSION_36.value):
-            resource_url_relative_path += f"?invokeHooks={invoke_hooks}"
+            resource_url_relative_path += f"?invokeHooks={str(invoke_hooks).lower()}"  # noqa: E501
         response_body = self._cloudapi_client.do_request(
             method=RequestMethod.PUT,
             cloudapi_version=CloudApiVersion.VERSION_1_0_0,
@@ -315,17 +315,19 @@ class DefEntityService:
             return entity
 
     @handle_entity_service_exception
-    def delete_entity(self, entity_id: str) -> None:
+    def delete_entity(self, entity_id: str, invoke_hooks: bool = False) -> None:  # noqa: E501
         """Delete the defined entity.
 
         :param str entity_id: Id of the entity.
+        :param bool invoke_hooks: set to true if hooks need to be invoked
+            upon deleting the defined entity
         :return: None
         """
         self._cloudapi_client.do_request(
             method=RequestMethod.DELETE,
             cloudapi_version=CloudApiVersion.VERSION_1_0_0,
             resource_url_relative_path=f"{CloudApiResource.ENTITIES}/"
-                                       f"{entity_id}")
+                                       f"{entity_id}?invokeHooks={str(invoke_hooks).lower()}")  # noqa: E501
 
     def resolve_entity(self, entity_id: str, entity_type_id: str = None) -> DefEntity:  # noqa: E501
         """Resolve the entity.

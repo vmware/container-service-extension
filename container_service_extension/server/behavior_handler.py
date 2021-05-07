@@ -40,10 +40,10 @@ def exception_handler(func):
         try:
             result = func(*args, **kwargs)
         except (KeyError, TypeError, ValueError) as error:
-            LOGGER.error(error)
+            LOGGER.error(error, exc_info=True)
             raise cse_exception.BadRequestError(error_message=str(error))
         except Exception as error:
-            LOGGER.error(error)
+            LOGGER.error(error, exc_info=True)
             if not isinstance(error, cse_exception.CseRequestError):
                 raise cse_exception.InternalServerRequestError(error_message=str(error))  # noqa: E501
             raise error
@@ -76,12 +76,37 @@ def create_cluster(behavior_ctx: BehaviorRequestContext):
 
 @exception_handler
 def update_cluster(behavior_ctx: BehaviorRequestContext):
-    return "Cluster update successful."
+    entity_id: str = behavior_ctx.entity_id
+    input_entity: dict = behavior_ctx.entity
+    cloudapi_client: CloudApiClient = behavior_ctx.op_ctx.cloudapi_client
+
+    payload_version: str = input_entity.get(rde_constants.PayloadKey.PAYLOAD_VERSION)  # noqa: E501
+    rde_utils.raise_error_if_unsupported_payload_version(
+        payload_version=payload_version)
+
+    # Validate the Input payload based on the (Operation, payload_version).
+    # Get the validator based on the payload_version
+    input_rde_version = rde_constants.MAP_INPUT_PAYLOAD_VERSION_TO_RDE_VERSION[payload_version]  # noqa: E501
+    rde_validator_factory.get_validator(
+        rde_version=input_rde_version). \
+        validate(cloudapi_client=cloudapi_client, entity=input_entity)
+
+    svc = cluster_service_factory.ClusterServiceFactory(behavior_ctx).get_cluster_service()  # noqa: E501
+
+    # Convert the input entity to runtime rde format.
+    # Based on the runtime rde, call the appropriate backend method.
+    converted_input_entity = rde_utils.convert_input_rde_to_runtime_rde_format(input_entity)  # noqa: E501
+    svc = cluster_service_factory.ClusterServiceFactory(behavior_ctx).get_cluster_service()  # noqa: E501
+    return svc.update_cluster(entity_id, input_native_entity=converted_input_entity)  # noqa: E501
 
 
 @exception_handler
 def delete_cluster(behavior_ctx: BehaviorRequestContext):
-    return "Successfully deleted the cluster."
+    entity_id: str = behavior_ctx.entity_id
+
+    svc = cluster_service_factory.ClusterServiceFactory(behavior_ctx).get_cluster_service()  # noqa: E501
+
+    return svc.delete_cluster(entity_id)
 
 
 @exception_handler
