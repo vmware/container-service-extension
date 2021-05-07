@@ -328,8 +328,16 @@ class ClusterService(abstract_broker.AbstractBroker):
             # NOTE: As per schema definition, default value for rollback is
             #   True
             if input_native_entity.spec.settings.rollback_on_failure:
-                # delete defined entity
-                self.sysadmin_entity_svc.delete_entity(entity_id)
+                try:
+                    # TODO can reduce try - catch by raising more specific
+                    # exceptions
+                    # delete defined entity
+                    self.sysadmin_entity_svc.delete_entity(
+                        entity_id,
+                        invoke_hooks=False)
+                except Exception:
+                    msg = f"Failed to delete defined entity for cluster " \
+                          f"{cluster_name} ({entity_id})"
             else:
                 # update status to CREATE:FAILED
                 try:
@@ -338,7 +346,6 @@ class ClusterService(abstract_broker.AbstractBroker):
                     msg = f"Failed to update defined entity status for" \
                           f" cluster {cluster_name}({entity_id})"
                     LOGGER.error(f"{msg}", exc_info=True)
-            raise
 
     def resize_cluster(self, cluster_id: str,
                        input_native_entity: rde_2_x.NativeEntity):
@@ -493,8 +500,9 @@ class ClusterService(abstract_broker.AbstractBroker):
         # NOTE: The async method will mark the task as succeeded which will
         # allow the RDE framework to delete the cluster defined entity
         self._delete_cluster_async(cluster_name=cluster_name,
-                                   org_name=org_name, ovdc_name=ovdc_name,
-                                   curr_entity=curr_entity)
+                                   org_name=org_name,
+                                   ovdc_name=ovdc_name,
+                                   curr_rde=curr_entity)
         return self.mqtt_publisher.construct_behavior_payload(
             message=CLUSTER_DELETE_IN_PROGRESS_MESSAGE,
             status=BehaviorTaskStatus.RUNNING.value, progress='5')
@@ -564,6 +572,11 @@ class ClusterService(abstract_broker.AbstractBroker):
                 template = t
                 break
         if not template:
+            try:
+                self._fail_operation(cluster_id, DefEntityOperation.UPGRADE)
+            except Exception:
+                msg = f"Failed to update defined entity status for cluster {cluster_id}"  # noqa: E501
+                LOGGER.error(f"{msg}", exc_info=True)
             # TODO all of these e.CseServerError instances related to request
             # should be changed to BadRequestError (400)
             raise exceptions.CseServerError(
@@ -952,7 +965,6 @@ class ClusterService(abstract_broker.AbstractBroker):
             self._update_cluster_entity(cluster_id,
                                         new_status,
                                         external_id=vapp_resource.get('href'))
-            # self.entity_svc.resolve_entity(cluster_id)
 
             # cluster creation succeeded. Mark the task as success
             msg = f"Created cluster '{cluster_name}' ({cluster_id})"
@@ -981,9 +993,8 @@ class ClusterService(abstract_broker.AbstractBroker):
                     LOGGER.error(f"Failed to delete cluster '{cluster_name}'",
                                  exc_info=True)
                 try:
-                    # Delete the corresponding defined entity
-                    self.sysadmin_entity_svc.resolve_entity(cluster_id)
-                    self.sysadmin_entity_svc.delete_entity(cluster_id)
+                    self.sysadmin_entity_svc.delete_entity(cluster_id,
+                                                           invoke_hooks=False)
                 except Exception:
                     LOGGER.error("Failed to delete the defined entity for "
                                  f"cluster '{cluster_name}'", exc_info=True)
@@ -1004,12 +1015,6 @@ class ClusterService(abstract_broker.AbstractBroker):
                     self._sync_def_entity(cluster_id, vapp=vapp)
                 except Exception:
                     msg = f"Failed to sync defined entity for cluster {cluster_id}"  # noqa: E501
-                    LOGGER.error(f"{msg}", exc_info=True)
-
-                try:
-                    self.entity_svc.resolve_entity(cluster_id)
-                except Exception:
-                    msg = f"Failed to resolve defined entity for cluster {cluster_id}"  # noqa: E501
                     LOGGER.error(f"{msg}", exc_info=True)
 
             self._update_task(BehaviorTaskStatus.ERROR,
@@ -1034,12 +1039,6 @@ class ClusterService(abstract_broker.AbstractBroker):
                 self._sync_def_entity(cluster_id, vapp=vapp)
             except Exception:
                 msg = f"Failed to sync defined entity for cluster {cluster_id}"  # noqa: E501
-                LOGGER.error(f"{msg}", exc_info=True)
-
-            try:
-                self.entity_svc.resolve_entity(cluster_id)
-            except Exception:
-                msg = f"Failed to resolve defined entity for cluster {cluster_id}"  # noqa: E501
                 LOGGER.error(f"{msg}", exc_info=True)
 
             self._update_task(BehaviorTaskStatus.ERROR,
@@ -1347,7 +1346,7 @@ class ClusterService(abstract_broker.AbstractBroker):
 
     @thread_utils.run_async
     def _delete_cluster_async(self, cluster_name: str, org_name: str,
-                              ovdc_name: str, curr_entity: common_models.DefEntity):  # noqa: E501
+                              ovdc_name: str, curr_rde: common_models.DefEntity):  # noqa: E501
         """Delete the cluster asynchronously.
 
         :param cluster_name: Name of the cluster to be deleted.
@@ -1356,16 +1355,19 @@ class ClusterService(abstract_broker.AbstractBroker):
         :param str cluster_id: ID of the cluster
         needs to be recreated in the failure case of cluster vapp deletion.
         """
-        cluster_id = curr_entity.id
+        cluster_id = curr_rde.id
         try:
             msg = f"Deleting cluster '{cluster_name}'"
             self._update_task(BehaviorTaskStatus.RUNNING, message=msg)
             client_v36 = self.context.get_client(
                 api_version=DEFAULT_API_VERSION)
-            if curr_entity.externalId:
+            if curr_rde.externalId:
                 # Delete Vapp if RDE is linked with a VApp
                 _delete_vapp(client_v36, org_name, ovdc_name, cluster_name)
                 msg = f"Deleted cluster '{cluster_name}'"
+            else:
+                msg = f"VApp for cluster {cluster_name} ({cluster_id}) not present"  # noqa: E501
+            LOGGER.info(msg)
             self._update_task(BehaviorTaskStatus.SUCCESS, message=msg)
         except Exception as err:
             msg = f"Unexpected error while deleting cluster {cluster_name}"
