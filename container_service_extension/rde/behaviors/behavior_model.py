@@ -15,6 +15,14 @@ KUBE_CONFIG_BEHAVIOR_INTERFACE_ID = f"{BEHAVIOR_INTERFACE_ID_PREFIX}:" \
                                     f"{KUBE_CONFIG_BEHAVIOR_INTERFACE_NAME}:" \
                                     f"{Vendor.VMWARE.value}:" \
                                     f"{Nss.KUBERNETES.value}:1.0.0"
+KUBE_CONFIG_BEHAVIOR_TYPE_NAME = 'createKubeConfig'
+BEHAVIOR_TYPE_ID_PREFIX = 'urn:vcloud:behavior-type'
+KUBE_CONFIG_BEHAVIOR_TYPE_ID = f'{BEHAVIOR_TYPE_ID_PREFIX}:' \
+                               f'{KUBE_CONFIG_BEHAVIOR_TYPE_NAME}:' \
+                               f'{Vendor.CSE.value}:' \
+                               f'{Nss.NATIVE_CLUSTER.value}:2.0.0:' \
+                               f'{Vendor.VMWARE.value}:' \
+                               f'{Nss.KUBERNETES.value}:1.0.0'
 CREATE_CLUSTER_BEHAVIOR_NAME = 'createCluster'
 CREATE_CLUSTER_BEHAVIOR_INTERFACE_ID = f"{BEHAVIOR_INTERFACE_ID_PREFIX}:" \
                                        f"{CREATE_CLUSTER_BEHAVIOR_NAME}:" \
@@ -97,7 +105,7 @@ class BehaviorOperation(Enum):
                               description='Deletes native cluster',
                               id=DELETE_CLUSTER_BEHAVIOR_INTERFACE_ID)
     GET_KUBE_CONFIG = Behavior(name=KUBE_CONFIG_BEHAVIOR_INTERFACE_NAME,
-                               id=KUBE_CONFIG_BEHAVIOR_INTERFACE_ID,
+                               id=KUBE_CONFIG_BEHAVIOR_TYPE_ID,
                                ref=KUBE_CONFIG_BEHAVIOR_INTERFACE_ID)
 
 
