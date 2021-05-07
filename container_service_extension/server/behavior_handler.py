@@ -75,7 +75,7 @@ def create_cluster(behavior_ctx: RequestContext):
 
 
 @exception_handler
-def update_cluster(behavior_ctx: BehaviorRequestContext):
+def update_cluster(behavior_ctx: RequestContext):
     entity_id: str = behavior_ctx.entity_id
     input_entity: dict = behavior_ctx.entity
     cloudapi_client: CloudApiClient = behavior_ctx.op_ctx.cloudapi_client
@@ -101,7 +101,7 @@ def update_cluster(behavior_ctx: BehaviorRequestContext):
 
 
 @exception_handler
-def delete_cluster(behavior_ctx: BehaviorRequestContext):
+def delete_cluster(behavior_ctx: RequestContext):
     entity_id: str = behavior_ctx.entity_id
 
     svc = cluster_service_factory.ClusterServiceFactory(behavior_ctx).get_cluster_service()  # noqa: E501
