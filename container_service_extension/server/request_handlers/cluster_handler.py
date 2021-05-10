@@ -198,8 +198,8 @@ def cluster_delete(data: dict, op_ctx: ctx.OperationContext):
     cluster_id = data[RequestKey.CLUSTER_ID]
     def_entity_service = entity_service.DefEntityService(op_ctx.cloudapi_client)  # noqa: E501
     def_entity: common_models.DefEntity = def_entity_service.get_entity(cluster_id)  # noqa: E501
-    _, headers = def_entity_service.delete_entity(cluster_id, return_headers=True)  # noqa: E501
-    def_entity.entity.status.task_href = headers['Location']
+    _, headers = def_entity_service.delete_entity(cluster_id, invoke_hooks=True, return_headers=True)  # noqa: E501
+    def_entity.entity.status.task_href = headers.get('Location') or headers.get('X-VMWARE-VCOULD-TASK-LOCATION')  # noqa: E501
     return def_entity.to_dict()
 
 
