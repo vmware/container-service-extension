@@ -28,13 +28,11 @@ import container_service_extension.common.utils.server_utils as server_utils
 import container_service_extension.lib.telemetry.constants as telemetry_constants  # noqa: E501
 import container_service_extension.lib.telemetry.telemetry_handler as telemetry_handler  # noqa: E501
 import container_service_extension.rde.backend.cluster_service_factory as cluster_service_factory  # noqa: E501
-from container_service_extension.rde.behaviors.behavior_model import BehaviorOperation  # noqa: E501
 import container_service_extension.rde.common.entity_service as entity_service
 import container_service_extension.rde.constants as rde_constants
 from container_service_extension.rde.models.abstractNativeEntity import AbstractNativeEntity  # noqa: E501
 import container_service_extension.rde.models.common_models as common_models
 import container_service_extension.rde.utils as rde_utils
-import container_service_extension.rde.validators.validator_factory as rde_validator_factory  # noqa: E501
 import container_service_extension.security.context.behavior_request_context as behavior_ctx  # noqa: E501
 import container_service_extension.security.context.operation_context as ctx
 import container_service_extension.server.request_handlers.request_utils as request_utils  # noqa: E501
@@ -158,24 +156,14 @@ def cluster_update(data: dict, op_ctx: ctx.OperationContext):
     payload_version = input_entity.get(rde_constants.PayloadKey.PAYLOAD_VERSION)  # noqa: E501
     rde_utils.raise_error_if_unsupported_payload_version(payload_version)
 
-    # Validate the Input payload based on the (Operation, payload_version).
-    # Get the validator based on the payload_version
-    # ToDo : Don't use default cloudapi_client. Use the specific versioned one
-    rde_validator_factory.get_validator(
-        rde_version=rde_constants.MAP_INPUT_PAYLOAD_VERSION_TO_RDE_VERSION[
-            payload_version]). \
-        validate(cloudapi_client=op_ctx.cloudapi_client, entity_id=cluster_id,
-                 entity=input_entity,
-                 operation=BehaviorOperation.UPDATE_CLUSTER)
-
     # Convert the input entity to runtime rde format.
     # Based on the runtime rde, call the appropriate backend method.
-    converted_native_entity: AbstractNativeEntity = rde_utils.convert_input_rde_to_runtime_rde_format(input_entity)  # noqa: E501
     def_entity_service = entity_service.DefEntityService(op_ctx.cloudapi_client)  # noqa: E501
-    entity_type = server_utils.get_registered_def_entity_type()
-    def_entity = common_models.DefEntity(entity=converted_native_entity, entityType=entity_type.id)  # noqa: E501
+    converted_native_entity: AbstractNativeEntity = rde_utils.convert_input_rde_to_runtime_rde_format(input_entity)  # noqa: E501
+    cluster_def_entity: common_models.DefEntity = def_entity_service.get_entity(cluster_id)  # noqa: E501
+    cluster_def_entity.entity.spec = converted_native_entity.spec
     updated_def_entity, headers = def_entity_service.update_entity(
-        entity_id=cluster_id, entity=def_entity,
+        entity_id=cluster_id, entity=cluster_def_entity,
         invoke_hooks=True, return_headers=True)
     updated_def_entity.entity.status.task_href = headers.get('Location') or headers.get('X-VMWARE-VCOULD-TASK-LOCATION')  # noqa: E501
     # TODO: Response RDE must be compatible with the request RDE.
