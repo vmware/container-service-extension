@@ -1,0 +1,94 @@
+{
+	"id": "8892f8d8-4192-4bd9-8448-9b48da7cebfe",
+	"values": [
+		{
+			"key": "CLUSTER_NAME",
+			"value": "ani-clus-4",
+			"enabled": false
+		},
+		{
+			"key": "WORKERS_COUNT",
+			"value": "0",
+			"enabled": true
+		},
+		{
+			"key": "NFS_COUNT",
+			"value": "0",
+			"enabled": true
+		},
+		{
+			"key": "ORG_NAME",
+			"value": "myorg",
+			"enabled": true
+		},
+		{
+			"key": "OVDC_NAME",
+			"value": "myorgvdc",
+			"enabled": true
+		},
+		{
+			"key": "CONTROL_PLANE_COUNT",
+			"value": "1",
+			"enabled": true
+		},
+		{
+			"key": "SIZING_CLASS",
+			"value": "med",
+			"enabled": true
+		},
+		{
+			"key": "STORAGE_PROFILE",
+			"value": "Development",
+			"enabled": true
+		},
+		{
+			"key": "TEMPLATE_NAME",
+			"value": "ubuntu-16.04_k8-1.18_weave-2.6.5",
+			"enabled": true
+		},
+		{
+			"key": "TEMPLATE_REVISION",
+			"value": "2",
+			"enabled": true
+		},
+		{
+			"key": "OVDC_NETWORK",
+			"value": "mynet",
+			"enabled": true
+		},
+		{
+			"key": "ENTITY_STATUS",
+			"value": "",
+			"enabled": true
+		},
+		{
+			"key": "UPDATE_CLUSTER_TASK_URL",
+			"value": "",
+			"enabled": true
+		},
+		{
+			"key": "UPDATE_CLUSTER_TASK_STATUS",
+			"value": "",
+			"enabled": true
+		},
+		{
+			"key": "CREATE_CLUSTER_TASK_URL",
+			"value": "",
+			"enabled": true
+		},
+		{
+			"key": "CREATE_CLUSTER_TASK_STATUS",
+			"value": "",
+			"enabled": true
+		},
+		{
+			"key": "VAPP_HREF",
+			"value": "",
+			"enabled": true
+		}
+	],
+	"name": "My Workspace Globals",
+	"_postman_variable_scope": "globals",
+	"_postman_exported_at": "2021-05-06T23:23:14.200Z",
+	"_postman_exported_using": "Postman/8.3.1"
+}

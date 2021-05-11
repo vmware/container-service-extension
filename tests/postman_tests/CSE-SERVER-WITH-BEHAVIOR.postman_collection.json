@@ -1,0 +1,2674 @@
+{
+	"info": {
+		"_postman_id": "244b475a-f5b1-436a-bbed-5f17827c885a",
+		"name": "CSE-SERVER-WITH-BEHAVIOR",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Create Entity (Behavior)",
+			"item": [
+				{
+					"name": "create entity",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"// testBehaviors = pm.environment.get(\"TEST_BEHAVIORS\");",
+									"testBehaviors = false",
+									"",
+									"pm.test(\"Status code is 202 (Accepted\", function () {",
+									"    pm.response.to.have.status(202);",
+									"    clusterCreateTask = pm.response.headers.get('Location');",
+									"    pm.globals.set(\"CREATE_CLUSTER_TASK_URL\", clusterCreateTask);",
+									"    console.log('Create cluster task: ' + clusterCreateTask);",
+									"});",
+									"",
+									"if (testBehaviors == 'true') {",
+									"    // follow if the behavior tasks complete successfully",
+									"    vcdIP = pm.environment.get('VCD_IP')",
+									"    taskUrl = pm.globals.get('CREATE_CLUSTER_TASK_URL')",
+									"    taskRunning = 'running'",
+									"    while(taskRunning == 'running') {",
+									"        pm.sendRequest({",
+									"            url: taskUrl,",
+									"            header: {",
+									"                'Accept': 'application/*+json;version=36.0',",
+									"                'x-vcloud-authorization': pm.environment.get('X_VCLOUD_AUTH')",
+									"            }",
+									"        }, function (err, response) {",
+									"            taskResponse = response.json()",
+									"            taskStatus = taskResponse.status",
+									"            pm.globals.set('CREATE_CLUSTER_TASK_STATUS', taskStatus)",
+									"            console.log(taskResponse)",
+									"        });",
+									"",
+									"        taskRunning = pm.globals.get('CREATE_CLUSTER_TASK_STATUS')",
+									"        ",
+									"        setTimeout(function() {}, 5000);",
+									"    }",
+									"",
+									"    pm.test(\"Task finished successfully\", function () {",
+									"        pm.expect(pm.globals.get('CREATE_CLUSTER_TASK_STATUS')).to.eql('success')",
+									"    })",
+									"",
+									"    pm.globals.unset(\"CREATE_CLUSTER_TASK_STATUS\");",
+									"    pm.globals.unset('CREATE_CLUSTER_TASK_URL')",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"type": "text",
+								"value": "application/json;version={{API_VERSION}}"
+							},
+							{
+								"key": "x-vcloud-authorization",
+								"type": "text",
+								"value": "{{X_VCLOUD_AUTH}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"{{CLUSTER_NAME}}\",\n    \"entity\": {\n        \"apiVersion\": \"cse.vmware.com/v2.0\",\n        \"kind\": \"native\",\n        \"metadata\": {\n            \"name\": \"{{CLUSTER_NAME}}\",\n            \"orgName\": \"{{ORG_NAME}}\",\n            \"virtualDataCenterName\": \"{{OVDC_NAME}}\",\n            \"site\": \"bos1-vcloud-static-170-167.eng.vmware.com\"\n        },\n        \"spec\": {\n            \"topology\": {\n                \"controlPlane\": {\n                    \"count\": {{CONTROL_PLANE_COUNT}},\n                    \"sizingClass\": \"{{SIZING_CLASS}}\",\n                    \"storageProfile\": \"{{STORAGE_PROFILE}}\"\n                },\n                \"nfs\": {\n                    \"count\": {{NFS_COUNT}},\n                    \"sizingClass\": \"{{SIZING_CLASS}}\",\n                    \"storageProfile\": \"{{STORAGE_PROFILE}}\"\n                },\n                \"workers\": {\n                    \"count\": {{WORKERS_COUNT}},\n                    \"sizingClass\": \"{{SIZING_CLASS}}\",\n                    \"storageProfile\": \"{{STORAGE_PROFILE}}\"\n                }\n            },\n            \"distribution\": {\n                \"templateName\": \"{{TEMPLATE_NAME}}\",\n                \"templateRevision\": {{TEMPLATE_REVISION}}\n            },\n            \"settings\": {\n                \"network\": \"{{OVDC_NETWORK}}\",\n                \"rollbackOnFailure\": false,\n                \"sshKey\": \"\"\n            }\n        }\n    }\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "https://{{VCD_IP}}/cloudapi/1.0.0/entityTypes/urn:vcloud:type:cse:nativeCluster:{{RDE_VERSION}}",
+							"protocol": "https",
+							"host": [
+								"{{VCD_IP}}"
+							],
+							"path": [
+								"cloudapi",
+								"1.0.0",
+								"entityTypes",
+								"urn:vcloud:type:cse:nativeCluster:{{RDE_VERSION}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Track create task",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"",
+									"    var jsonData = pm.response.json();",
+									"",
+									"    pm.globals.set(\"CREATE_CLUSTER_TASK_STATUS\", jsonData.status);",
+									"    pm.environment.set(\"CLUSTER_ID\", jsonData.owner.id)",
+									"});",
+									"",
+									"task_status = pm.globals.get(\"CREATE_CLUSTER_TASK_STATUS\")",
+									"if (task_status == \"running\") {",
+									"    postman.setNextRequest(\"Track create task\")",
+									"} else {",
+									"    pm.test(\"Task finished successfully\", function () {",
+									"        var jsonData = pm.response.json();",
+									"        pm.expect(jsonData.status).to.eql(\"success\");",
+									"        setTimeout(function(){}, 2000);",
+									"    });",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"type": "text",
+								"value": "application/*+json;version=35.0"
+							},
+							{
+								"key": "x-vcloud-authorization",
+								"type": "text",
+								"value": "{{X_VCLOUD_AUTH}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{CREATE_CLUSTER_TASK_URL}}",
+							"host": [
+								"{{CREATE_CLUSTER_TASK_URL}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get enitity",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Cluster should exist\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Entity status has phase CREATE:SUCCEEDED\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.entity.status.phase).to.eql(\"CREATE:SUCCEEDED\");",
+									"});",
+									"",
+									"pm.test(\"Entity state is RESOLVED\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.state).to.eql(\"RESOLVED\");",
+									"});",
+									"",
+									"pm.test(\"Any node created\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.entity.status.nodes).to.not.eql(null);",
+									"});",
+									"",
+									"pm.test(\"All control plane nodes are valid\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    controlPlane = jsonData.entity.status.nodes.controlPlane;",
+									"    pm.expect(controlPlane.ip).to.not.eql(null);",
+									"    pm.expect(controlPlane.sizingClass).to.eql(pm.globals.get('SIZING_CLASS'));",
+									"    pm.expect(controlPlane.storageProfile).to.eql(pm.globals.get('STORAGE_PROFILE'));",
+									"});",
+									"",
+									"pm.test(\"All worker nodes are valid\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    workers = jsonData.entity.status.nodes.workers;",
+									"    pm.expect(workers.length).to.eql(parseInt(pm.globals.get('WORKERS_COUNT')));",
+									"    if (workers.length > 0) {",
+									"        pm.expect(workers[0].sizingClass).to.eql(pm.globals.get('SIZING_CLASS'))",
+									"        pm.expect(workers[0].storageProfile).to.eql(pm.globals.get('STORAGE_PROFILE'));",
+									"    }",
+									"});",
+									"",
+									"pm.test(\"All nfs nodes are valid\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    nfs = jsonData.entity.status.nodes.nfs;",
+									"    pm.expect(nfs.length).to.eql(parseInt(pm.globals.get('NFS_COUNT')));",
+									"    if (nfs.length > 0) {",
+									"        pm.expect(nfs[0].sizingClass).to.eql(pm.globals.get('SIZING_CLASS'))",
+									"        pm.expect(nfs[0].storageProfile).to.eql(pm.globals.get('STORAGE_PROFILE'));",
+									"    }",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"type": "text",
+								"value": "application/json;version=36.0"
+							},
+							{
+								"key": "x-vcloud-authorization",
+								"type": "text",
+								"value": "{{X_VCLOUD_AUTH}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"id\": \"urn:vcloud:entity:cse:nativeCluster:1.0.0:4a2a08a0-d152-43e5-883b-84114d5caa12\",\n    \"entityType\": \"urn:vcloud:type:cse:nativeCluster:1.0.0\",\n    \"name\": \"ubu-clus-ani-21\",\n    \"externalId\": null,\n    \"entity\": {\n        \"kind\": \"native\",\n        \"spec\": {\n            \"nfs\": {\n                \"count\": 0,\n                \"sizing_class\": null,\n                \"storage_profile\": \"*\"\n            },\n            \"workers\": {\n                \"count\": 0,\n                \"sizing_class\": null,\n                \"storage_profile\": \"*\"\n            },\n            \"settings\": {\n                \"network\": \"mynet\",\n                \"ssh_key\": \"ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDvCF4kkt3Il1IUNjFB5JpCglobFilTD9w4A/ssgAIyWReCxJKfGZymYG0/0H+tuXgwI2gxPSWDS+6as51Pfkizrx5incmWyUIHXWJtsoVyoJwsZeTn9NOV2SPbNKDCLfHnhaaEFUCcCr/zXNnUhcnA44s0QO1I9LNKrJACU5vb0o5/0jrjlIcXnYiYkAVpONWArAtgxAkq6VZQTYQXbxSvfW8tXsFqJdDKYgqqkTrnZq9IaoF/ZSyCGYYVz7p3vgHLUP5Gn7a9DUoNBAwgb5S7FQnYEVadPwt7JL0uK7/dsN41WhMydsiWZFutFMbT66Q+QRGGvp8TYWVNUkf1MOyb shamasundara@shamasundar-a01.vmware.com\",\n                \"rollback_on_failure\": false\n            },\n            \"control_plane\": {\n                \"count\": 1,\n                \"sizing_class\": null,\n                \"storage_profile\": \"*\"\n            },\n            \"k8_distribution\": {\n                \"template_name\": \"ubuntu-16.04_k8-1.19_weave-2.6.5\",\n                \"template_revision\": 1\n            }\n        },\n        \"status\": {\n            \"os\": \"ubuntu-16.04\",\n            \"cni\": \"weave 2.6.5\",\n            \"nodes\": {\n                \"nfs\": [],\n                \"workers\": [],\n                \"control_plane\": {\n                    \"ip\": \"10.150.161.75\",\n                    \"name\": \"mstr-g3gj\",\n                    \"sizing_class\": null\n                }\n            },\n            \"phase\": \"UPGRADE:SUCCEEDED\",\n            \"task_href\": \"https://bos1-vcloud-static-176-61.eng.vmware.com/api/task/34e1e7c8-d3b5-484b-9f0a-3429880cd521\",\n            \"kubernetes\": \"upstream 1.19.3\",\n            \"docker_version\": \"19.03.12\"\n        },\n        \"metadata\": {\n            \"org_name\": \"myorg\",\n            \"ovdc_name\": \"myorgvdc\",\n            \"cluster_name\": \"ubu-clus-ani-12\"\n        },\n        \"api_version\": \"\"\n    },\n    \"state\": \"PRE_CREATED\",\n    \"owner\": {\n        \"name\": \"administrator\",\n        \"id\": \"urn:vcloud:orgMember:21180376-55e5-4d7d-8ed9-e9c8f621cecc\"\n    },\n    \"org\": {\n        \"name\": \"System\",\n        \"id\": \"urn:vcloud:org:a93c9db9-7471-3192-8d09-a8f7eeda85f9\"\n    }\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "https://{{VCD_IP}}/cloudapi/1.0.0/entities/{{CLUSTER_ID}}",
+							"protocol": "https",
+							"host": [
+								"{{VCD_IP}}"
+							],
+							"path": [
+								"cloudapi",
+								"1.0.0",
+								"entities",
+								"{{CLUSTER_ID}}"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Create Entity (Behavior) Invalid cluster name",
+			"item": [
+				{
+					"name": "create entity",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"// testBehaviors = pm.environment.get(\"TEST_BEHAVIORS\");",
+									"testBehaviors = false",
+									"",
+									"pm.test(\"Status code is 202 (Accepted\", function () {",
+									"    pm.response.to.have.status(202);",
+									"    clusterCreateTask = pm.response.headers.get('Location');",
+									"    pm.globals.set(\"CREATE_CLUSTER_TASK_URL\", clusterCreateTask);",
+									"    console.log('Create cluster task: ' + clusterCreateTask);",
+									"});",
+									"",
+									"if (testBehaviors == 'true') {",
+									"    // follow if the behavior tasks complete successfully",
+									"    vcdIP = pm.environment.get('VCD_IP')",
+									"    taskUrl = pm.globals.get('CREATE_CLUSTER_TASK_URL')",
+									"    taskRunning = 'running'",
+									"    while(taskRunning == 'running') {",
+									"        pm.sendRequest({",
+									"            url: taskUrl,",
+									"            header: {",
+									"                'Accept': 'application/*+json;version=36.0',",
+									"                'x-vcloud-authorization': pm.environment.get('X_VCLOUD_AUTH')",
+									"            }",
+									"        }, function (err, response) {",
+									"            taskResponse = response.json()",
+									"            taskStatus = taskResponse.status",
+									"            pm.globals.set('CREATE_CLUSTER_TASK_STATUS', taskStatus)",
+									"            console.log(taskResponse)",
+									"        });",
+									"",
+									"        taskRunning = pm.globals.get('CREATE_CLUSTER_TASK_STATUS')",
+									"        ",
+									"        setTimeout(function() {}, 5000);",
+									"    }",
+									"",
+									"    pm.test(\"Task finished successfully\", function () {",
+									"        pm.expect(pm.globals.get('CREATE_CLUSTER_TASK_STATUS')).to.eql('success')",
+									"    })",
+									"",
+									"    pm.globals.unset(\"CREATE_CLUSTER_TASK_STATUS\");",
+									"    pm.globals.unset('CREATE_CLUSTER_TASK_URL')",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"type": "text",
+								"value": "application/json;version={{API_VERSION}}"
+							},
+							{
+								"key": "x-vcloud-authorization",
+								"type": "text",
+								"value": "{{X_VCLOUD_AUTH}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"1{{CLUSTER_NAME}}\",\n    \"entity\": {\n        \"apiVersion\": \"cse.vmware.com/v2.0\",\n        \"kind\": \"native\",\n        \"metadata\": {\n            \"name\": \"1{{CLUSTER_NAME}}\",\n            \"orgName\": \"myorg\",\n            \"virtualDataCenterName\": \"myorgvdc\",\n            \"site\": \"bos1-vcloud-static-170-167.eng.vmware.com\"\n        },\n        \"spec\": {\n            \"topology\": {\n                \"controlPlane\": {\n                    \"count\": 1,\n                    \"sizingClass\": \"med\",\n                    \"storageProfile\": \"Development\"\n                },\n                \"nfs\": {\n                    \"count\": 0,\n                    \"sizingClass\": \"med\",\n                    \"storageProfile\": \"Development\"\n                },\n                \"workers\": {\n                    \"count\": 0,\n                    \"sizingClass\": \"med\",\n                    \"storageProfile\": \"Development\"\n                }\n            },\n            \"distribution\": {\n                \"templateName\": \"ubuntu-16.04_k8-1.18_weave-2.6.5\",\n                \"templateRevision\": 2\n            },\n            \"settings\": {\n                \"network\": \"mynet\",\n                \"rollbackOnFailure\": true,\n                \"sshKey\": \"\"\n            }\n        }\n    }\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "https://{{VCD_IP}}/cloudapi/1.0.0/entityTypes/urn:vcloud:type:cse:nativeCluster:{{RDE_VERSION}}",
+							"protocol": "https",
+							"host": [
+								"{{VCD_IP}}"
+							],
+							"path": [
+								"cloudapi",
+								"1.0.0",
+								"entityTypes",
+								"urn:vcloud:type:cse:nativeCluster:{{RDE_VERSION}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Track create task",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"",
+									"    var jsonData = pm.response.json();",
+									"",
+									"    pm.globals.set(\"CREATE_CLUSTER_TASK_STATUS\", jsonData.status);",
+									"    pm.environment.set(\"CLUSTER_ID\", jsonData.owner.id)",
+									"});",
+									"",
+									"task_status = pm.globals.get(\"CREATE_CLUSTER_TASK_STATUS\")",
+									"if (task_status == \"running\") {",
+									"    postman.setNextRequest(\"Track create task\")",
+									"} else {",
+									"    pm.test(\"Task should fail\", function () {",
+									"        var jsonData = pm.response.json();",
+									"        pm.expect(jsonData.status).to.eql(\"error\");",
+									"        setTimeout(function(){}, 2000);",
+									"    });",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"type": "text",
+								"value": "application/*+json;version=35.0"
+							},
+							{
+								"key": "x-vcloud-authorization",
+								"type": "text",
+								"value": "{{X_VCLOUD_AUTH}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{CREATE_CLUSTER_TASK_URL}}",
+							"host": [
+								"{{CREATE_CLUSTER_TASK_URL}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get enitity",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Cluster should not exist\", function () {",
+									"    pm.response.to.not.have.status(200);",
+									"    pm.response.to.have.status(400);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"type": "text",
+								"value": "application/json;version=36.0"
+							},
+							{
+								"key": "x-vcloud-authorization",
+								"type": "text",
+								"value": "{{X_VCLOUD_AUTH}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"id\": \"urn:vcloud:entity:cse:nativeCluster:1.0.0:4a2a08a0-d152-43e5-883b-84114d5caa12\",\n    \"entityType\": \"urn:vcloud:type:cse:nativeCluster:1.0.0\",\n    \"name\": \"ubu-clus-ani-21\",\n    \"externalId\": null,\n    \"entity\": {\n        \"kind\": \"native\",\n        \"spec\": {\n            \"nfs\": {\n                \"count\": 0,\n                \"sizing_class\": null,\n                \"storage_profile\": \"*\"\n            },\n            \"workers\": {\n                \"count\": 0,\n                \"sizing_class\": null,\n                \"storage_profile\": \"*\"\n            },\n            \"settings\": {\n                \"network\": \"mynet\",\n                \"ssh_key\": \"ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDvCF4kkt3Il1IUNjFB5JpCglobFilTD9w4A/ssgAIyWReCxJKfGZymYG0/0H+tuXgwI2gxPSWDS+6as51Pfkizrx5incmWyUIHXWJtsoVyoJwsZeTn9NOV2SPbNKDCLfHnhaaEFUCcCr/zXNnUhcnA44s0QO1I9LNKrJACU5vb0o5/0jrjlIcXnYiYkAVpONWArAtgxAkq6VZQTYQXbxSvfW8tXsFqJdDKYgqqkTrnZq9IaoF/ZSyCGYYVz7p3vgHLUP5Gn7a9DUoNBAwgb5S7FQnYEVadPwt7JL0uK7/dsN41WhMydsiWZFutFMbT66Q+QRGGvp8TYWVNUkf1MOyb shamasundara@shamasundar-a01.vmware.com\",\n                \"rollback_on_failure\": false\n            },\n            \"control_plane\": {\n                \"count\": 1,\n                \"sizing_class\": null,\n                \"storage_profile\": \"*\"\n            },\n            \"k8_distribution\": {\n                \"template_name\": \"ubuntu-16.04_k8-1.19_weave-2.6.5\",\n                \"template_revision\": 1\n            }\n        },\n        \"status\": {\n            \"os\": \"ubuntu-16.04\",\n            \"cni\": \"weave 2.6.5\",\n            \"nodes\": {\n                \"nfs\": [],\n                \"workers\": [],\n                \"control_plane\": {\n                    \"ip\": \"10.150.161.75\",\n                    \"name\": \"mstr-g3gj\",\n                    \"sizing_class\": null\n                }\n            },\n            \"phase\": \"UPGRADE:SUCCEEDED\",\n            \"task_href\": \"https://bos1-vcloud-static-176-61.eng.vmware.com/api/task/34e1e7c8-d3b5-484b-9f0a-3429880cd521\",\n            \"kubernetes\": \"upstream 1.19.3\",\n            \"docker_version\": \"19.03.12\"\n        },\n        \"metadata\": {\n            \"org_name\": \"myorg\",\n            \"ovdc_name\": \"myorgvdc\",\n            \"cluster_name\": \"ubu-clus-ani-12\"\n        },\n        \"api_version\": \"\"\n    },\n    \"state\": \"PRE_CREATED\",\n    \"owner\": {\n        \"name\": \"administrator\",\n        \"id\": \"urn:vcloud:orgMember:21180376-55e5-4d7d-8ed9-e9c8f621cecc\"\n    },\n    \"org\": {\n        \"name\": \"System\",\n        \"id\": \"urn:vcloud:org:a93c9db9-7471-3192-8d09-a8f7eeda85f9\"\n    }\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "https://{{VCD_IP}}/cloudapi/1.0.0/entities/{{CLUSTER_ID}}",
+							"protocol": "https",
+							"host": [
+								"{{VCD_IP}}"
+							],
+							"path": [
+								"cloudapi",
+								"1.0.0",
+								"entities",
+								"{{CLUSTER_ID}}"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Create Entity (Behavior) Invalid cluster name (rollback=False)",
+			"item": [
+				{
+					"name": "create entity",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"// testBehaviors = pm.environment.get(\"TEST_BEHAVIORS\");",
+									"testBehaviors = false",
+									"",
+									"pm.test(\"Status code is 202 (Accepted\", function () {",
+									"    pm.response.to.have.status(202);",
+									"    clusterCreateTask = pm.response.headers.get('Location');",
+									"    pm.globals.set(\"CREATE_CLUSTER_TASK_URL\", clusterCreateTask);",
+									"    console.log('Create cluster task: ' + clusterCreateTask);",
+									"});",
+									"",
+									"if (testBehaviors == 'true') {",
+									"    // follow if the behavior tasks complete successfully",
+									"    vcdIP = pm.environment.get('VCD_IP')",
+									"    taskUrl = pm.globals.get('CREATE_CLUSTER_TASK_URL')",
+									"    taskRunning = 'running'",
+									"    while(taskRunning == 'running') {",
+									"        pm.sendRequest({",
+									"            url: taskUrl,",
+									"            header: {",
+									"                'Accept': 'application/*+json;version=36.0',",
+									"                'x-vcloud-authorization': pm.environment.get('X_VCLOUD_AUTH')",
+									"            }",
+									"        }, function (err, response) {",
+									"            taskResponse = response.json()",
+									"            taskStatus = taskResponse.status",
+									"            pm.globals.set('CREATE_CLUSTER_TASK_STATUS', taskStatus)",
+									"            console.log(taskResponse)",
+									"        });",
+									"",
+									"        taskRunning = pm.globals.get('CREATE_CLUSTER_TASK_STATUS')",
+									"        ",
+									"        setTimeout(function() {}, 5000);",
+									"    }",
+									"",
+									"    pm.test(\"Task finished successfully\", function () {",
+									"        pm.expect(pm.globals.get('CREATE_CLUSTER_TASK_STATUS')).to.eql('success')",
+									"    })",
+									"",
+									"    pm.globals.unset(\"CREATE_CLUSTER_TASK_STATUS\");",
+									"    pm.globals.unset('CREATE_CLUSTER_TASK_URL')",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"type": "text",
+								"value": "application/json;version={{API_VERSION}}"
+							},
+							{
+								"key": "x-vcloud-authorization",
+								"type": "text",
+								"value": "{{X_VCLOUD_AUTH}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"1{{CLUSTER_NAME}}\",\n    \"entity\": {\n        \"apiVersion\": \"cse.vmware.com/v2.0\",\n        \"kind\": \"native\",\n        \"metadata\": {\n            \"name\": \"1{{CLUSTER_NAME}}\",\n            \"orgName\": \"myorg\",\n            \"virtualDataCenterName\": \"myorgvdc\",\n            \"site\": \"bos1-vcloud-static-170-167.eng.vmware.com\"\n        },\n        \"spec\": {\n            \"topology\": {\n                \"controlPlane\": {\n                    \"count\": 1,\n                    \"sizingClass\": \"med\",\n                    \"storageProfile\": \"Development\"\n                },\n                \"nfs\": {\n                    \"count\": 0,\n                    \"sizingClass\": \"med\",\n                    \"storageProfile\": \"Development\"\n                },\n                \"workers\": {\n                    \"count\": 0,\n                    \"sizingClass\": \"med\",\n                    \"storageProfile\": \"Development\"\n                }\n            },\n            \"distribution\": {\n                \"templateName\": \"ubuntu-16.04_k8-1.18_weave-2.6.5\",\n                \"templateRevision\": 2\n            },\n            \"settings\": {\n                \"network\": \"mynet\",\n                \"rollbackOnFailure\": false,\n                \"sshKey\": \"\"\n            }\n        }\n    }\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "https://{{VCD_IP}}/cloudapi/1.0.0/entityTypes/urn:vcloud:type:cse:nativeCluster:{{RDE_VERSION}}",
+							"protocol": "https",
+							"host": [
+								"{{VCD_IP}}"
+							],
+							"path": [
+								"cloudapi",
+								"1.0.0",
+								"entityTypes",
+								"urn:vcloud:type:cse:nativeCluster:{{RDE_VERSION}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Track create task",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"",
+									"    var jsonData = pm.response.json();",
+									"",
+									"    pm.globals.set(\"CREATE_CLUSTER_TASK_STATUS\", jsonData.status);",
+									"    pm.environment.set(\"CLUSTER_ID\", jsonData.owner.id)",
+									"});",
+									"",
+									"task_status = pm.globals.get(\"CREATE_CLUSTER_TASK_STATUS\")",
+									"if (task_status == \"running\") {",
+									"    postman.setNextRequest(\"Track create task\")",
+									"} else {",
+									"    pm.test(\"Task should fail\", function () {",
+									"        var jsonData = pm.response.json();",
+									"        pm.expect(jsonData.status).to.eql(\"error\");",
+									"        setTimeout(function(){}, 2000);",
+									"    });",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"type": "text",
+								"value": "application/*+json;version=35.0"
+							},
+							{
+								"key": "x-vcloud-authorization",
+								"type": "text",
+								"value": "{{X_VCLOUD_AUTH}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{CREATE_CLUSTER_TASK_URL}}",
+							"host": [
+								"{{CREATE_CLUSTER_TASK_URL}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get enitity",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Cluster should exist\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Entity status has phase CREATE:FAILED\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.entity.status.phase).to.eql(\"CREATE:FAILED\");",
+									"});",
+									"",
+									"pm.test(\"Defined entity is not resolved\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.state).to.not.eql(\"RESOLVED\");",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"type": "text",
+								"value": "application/json;version=36.0"
+							},
+							{
+								"key": "x-vcloud-authorization",
+								"type": "text",
+								"value": "{{X_VCLOUD_AUTH}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"id\": \"urn:vcloud:entity:cse:nativeCluster:1.0.0:4a2a08a0-d152-43e5-883b-84114d5caa12\",\n    \"entityType\": \"urn:vcloud:type:cse:nativeCluster:1.0.0\",\n    \"name\": \"ubu-clus-ani-21\",\n    \"externalId\": null,\n    \"entity\": {\n        \"kind\": \"native\",\n        \"spec\": {\n            \"nfs\": {\n                \"count\": 0,\n                \"sizing_class\": null,\n                \"storage_profile\": \"*\"\n            },\n            \"workers\": {\n                \"count\": 0,\n                \"sizing_class\": null,\n                \"storage_profile\": \"*\"\n            },\n            \"settings\": {\n                \"network\": \"mynet\",\n                \"ssh_key\": \"ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDvCF4kkt3Il1IUNjFB5JpCglobFilTD9w4A/ssgAIyWReCxJKfGZymYG0/0H+tuXgwI2gxPSWDS+6as51Pfkizrx5incmWyUIHXWJtsoVyoJwsZeTn9NOV2SPbNKDCLfHnhaaEFUCcCr/zXNnUhcnA44s0QO1I9LNKrJACU5vb0o5/0jrjlIcXnYiYkAVpONWArAtgxAkq6VZQTYQXbxSvfW8tXsFqJdDKYgqqkTrnZq9IaoF/ZSyCGYYVz7p3vgHLUP5Gn7a9DUoNBAwgb5S7FQnYEVadPwt7JL0uK7/dsN41WhMydsiWZFutFMbT66Q+QRGGvp8TYWVNUkf1MOyb shamasundara@shamasundar-a01.vmware.com\",\n                \"rollback_on_failure\": false\n            },\n            \"control_plane\": {\n                \"count\": 1,\n                \"sizing_class\": null,\n                \"storage_profile\": \"*\"\n            },\n            \"k8_distribution\": {\n                \"template_name\": \"ubuntu-16.04_k8-1.19_weave-2.6.5\",\n                \"template_revision\": 1\n            }\n        },\n        \"status\": {\n            \"os\": \"ubuntu-16.04\",\n            \"cni\": \"weave 2.6.5\",\n            \"nodes\": {\n                \"nfs\": [],\n                \"workers\": [],\n                \"control_plane\": {\n                    \"ip\": \"10.150.161.75\",\n                    \"name\": \"mstr-g3gj\",\n                    \"sizing_class\": null\n                }\n            },\n            \"phase\": \"UPGRADE:SUCCEEDED\",\n            \"task_href\": \"https://bos1-vcloud-static-176-61.eng.vmware.com/api/task/34e1e7c8-d3b5-484b-9f0a-3429880cd521\",\n            \"kubernetes\": \"upstream 1.19.3\",\n            \"docker_version\": \"19.03.12\"\n        },\n        \"metadata\": {\n            \"org_name\": \"myorg\",\n            \"ovdc_name\": \"myorgvdc\",\n            \"cluster_name\": \"ubu-clus-ani-12\"\n        },\n        \"api_version\": \"\"\n    },\n    \"state\": \"PRE_CREATED\",\n    \"owner\": {\n        \"name\": \"administrator\",\n        \"id\": \"urn:vcloud:orgMember:21180376-55e5-4d7d-8ed9-e9c8f621cecc\"\n    },\n    \"org\": {\n        \"name\": \"System\",\n        \"id\": \"urn:vcloud:org:a93c9db9-7471-3192-8d09-a8f7eeda85f9\"\n    }\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "https://{{VCD_IP}}/cloudapi/1.0.0/entities/{{CLUSTER_ID}}",
+							"protocol": "https",
+							"host": [
+								"{{VCD_IP}}"
+							],
+							"path": [
+								"cloudapi",
+								"1.0.0",
+								"entities",
+								"{{CLUSTER_ID}}"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Update Entity (Behavior)",
+			"item": [
+				{
+					"name": "Get enitity",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Your test name\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.environment.set(\"CLUSTER_NAME\", jsonData.entity.metadata.name)",
+									"    pm.globals.set(\"WORKERS_COUNT\", jsonData.entity.spec.topology.workers.count+1);",
+									"    pm.globals.set(\"NFS_COUNT\", jsonData.entity.spec.topology.nfs.count);",
+									"    pm.globals.set(\"ENTITY_STATUS\", JSON.stringify(jsonData.entity.status))",
+									"    pm.globals.set(\"VAPP_HREF\", jsonData.externalId)",
+									"    pm.globals.set(\"TEMPLATE_NAME\", jsonData.entity.spec.distribution.templateName)",
+									"    pm.globals.set(\"TEMPLATE_REVISION\", jsonData.entity.spec.distribution.templateRevision)",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"type": "text",
+								"value": "application/json;version=36.0"
+							},
+							{
+								"key": "x-vcloud-authorization",
+								"type": "text",
+								"value": "{{X_VCLOUD_AUTH}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "https://{{VCD_IP}}/cloudapi/1.0.0/entities/{{CLUSTER_ID}}",
+							"protocol": "https",
+							"host": [
+								"{{VCD_IP}}"
+							],
+							"path": [
+								"cloudapi",
+								"1.0.0",
+								"entities",
+								"{{CLUSTER_ID}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "update entity",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"",
+									"pm.test(\"Status code is 200 (OK)\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Response has a valid Location header\", function () {",
+									"    pm.response.to.have.header('X-VMWARE-VCOULD-TASK-LOCATION')",
+									"    clusterUpdateTask = pm.response.headers.get('X-VMWARE-VCOULD-TASK-LOCATION');",
+									"    pm.globals.set(\"UPDATE_CLUSTER_TASK_URL\", clusterUpdateTask);",
+									"    console.log('Update cluster task: ' + clusterUpdateTask);",
+									"    pm.globals.set(\"UPDATE_CLUSTER_TASK_STATUS\", '')",
+									"})",
+									"",
+									""
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Accept",
+								"type": "text",
+								"value": "application/json;version={{API_VERSION}}"
+							},
+							{
+								"key": "x-vcloud-authorization",
+								"type": "text",
+								"value": "{{X_VCLOUD_AUTH}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"id\": \"{{CLUSTER_ID}}\",\n    \"entityType\": \"urn:vcloud:type:cse:nativeCluster:2.0.0\",\n    \"name\": \"{{CLUSTER_NAME}}\",\n    \"externalId\": \"{{VAPP_HREF}}\",\n    \"entity\": {\n        \"metadata\": {\n            \"name\": \"{{CLUSTER_NAME}}\",\n            \"site\": \"bos1-vcloud-static-170-167.eng.vmware.com\",\n            \"orgName\": \"{{ORG_NAME}}\",\n            \"virtualDataCenterName\": \"{{OVDC_NAME}}\"\n        },\n        \"apiVersion\": \"cse.vmware.com/v2.0\",\n        \"kind\": \"native\",\n        \"spec\": {\n            \"expose\": false,\n            \"settings\": {\n                \"sshKey\": \"\",\n                \"network\": \"{{OVDC_NETWORK}}\",\n                \"rollbackOnFailure\": false\n            },\n            \"topology\": {\n                \"nfs\": {\n                    \"count\": {{NFS_COUNT}},\n                    \"sizingClass\": \"{{SIZING_CLASS}}\",\n                    \"storageProfile\": \"{{STORAGE_PROFILE}}\"\n                },\n                \"workers\": {\n                    \"count\": {{WORKERS_COUNT}},\n                    \"sizingClass\": \"{{SIZING_CLASS}}\",\n                    \"storageProfile\": \"{{STORAGE_PROFILE}}\"\n                },\n                \"controlPlane\": {\n                    \"count\": {{CONTROL_PLANE_COUNT}},\n                    \"sizingClass\": \"{{SIZING_CLASS}}\",\n                    \"storageProfile\": \"{{STORAGE_PROFILE}}\"\n                }\n            },\n            \"distribution\": {\n                \"templateName\": \"{{TEMPLATE_NAME}}\",\n                \"templateRevision\": {{TEMPLATE_REVISION}}\n            }\n        },\n        \"status\": {{ENTITY_STATUS}}\n    },\n    \"state\": \"RESOLVED\",\n    \"owner\": {\n        \"name\": \"administrator\",\n        \"id\": \"urn:vcloud:user:6bae589c-d30e-4050-ad02-49af6313885b\"\n    },\n    \"org\": {\n        \"name\": \"System\",\n        \"id\": \"urn:vcloud:org:a93c9db9-7471-3192-8d09-a8f7eeda85f9\"\n    }\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "https://{{VCD_IP}}/cloudapi/1.0.0/entities/{{CLUSTER_ID}}",
+							"protocol": "https",
+							"host": [
+								"{{VCD_IP}}"
+							],
+							"path": [
+								"cloudapi",
+								"1.0.0",
+								"entities",
+								"{{CLUSTER_ID}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Track update task",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"",
+									"    var jsonData = pm.response.json();",
+									"",
+									"    pm.globals.set(\"UPDATE_CLUSTER_TASK_STATUS\", jsonData.status);",
+									"});",
+									"",
+									"task_status = pm.globals.get(\"UPDATE_CLUSTER_TASK_STATUS\")",
+									"if (task_status == \"running\" || task_status == 'queued') {",
+									"    postman.setNextRequest(\"Track update task\")",
+									"} else {",
+									"    pm.test(\"Task finished successfully\", function () {",
+									"        var jsonData = pm.response.json();",
+									"        pm.expect(jsonData.status).to.eql(\"success\");",
+									"    });",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"type": "text",
+								"value": "application/*+json;version=35.0"
+							},
+							{
+								"key": "x-vcloud-authorization",
+								"type": "text",
+								"value": " {{X_VCLOUD_AUTH}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"clus-ani-9\",\n    \"entity\": {\n        \"apiVersion\": \"cse.vmware.com/v2.0\",\n        \"kind\": \"native\",\n        \"metadata\": {\n            \"name\": \"clus-ani-9\",\n            \"orgName\": \"myorg\",\n            \"ovdcName\": \"myorgvdc\",\n            \"site\": \"bos1-vcloud-static-170-167.eng.vmware.com\"\n        },\n        \"spec\": {\n            \"controlPlane\": {\n                \"count\": 1,\n                \"sizingClass\": null,\n                \"storageProfile\": null\n            },\n            \"k8Distribution\": {\n                \"templateName\": \"ubuntu-16.04_k8-1.18_weave-2.6.5\",\n                \"templateRevision\": 2\n            },\n            \"nfs\": {\n                \"count\": 0,\n                \"sizingClass\": \"med\",\n                \"storageProfile\": \"Development\"\n            },\n            \"settings\": {\n                \"network\": \"mynet\",\n                \"rollbackOnFailure\": true,\n                \"sshKey\": \"\"\n            },\n            \"workers\": {\n                \"count\": 0,\n                \"sizingClass\": \"med\",\n                \"storageProfile\": \"Development\"\n            }\n        }\n    }\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{UPDATE_CLUSTER_TASK_URL}}",
+							"host": [
+								"{{UPDATE_CLUSTER_TASK_URL}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Verify update",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Cluster should exist\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Entity status has phase UPDATE:SUCCEEDED\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.entity.status.phase).to.eql(\"UPDATE:SUCCEEDED\");",
+									"});",
+									"",
+									"pm.test(\"Entity state is RESOLVED\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.state).to.eql(\"RESOLVED\");",
+									"});",
+									"",
+									"pm.test(\"Any node created\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.entity.status.nodes).to.not.eql(null);",
+									"});",
+									"",
+									"pm.test(\"All control plane nodes are valid\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    controlPlane = jsonData.entity.status.nodes.controlPlane;",
+									"    pm.expect(controlPlane.ip).to.not.eql(null);",
+									"    pm.expect(controlPlane.sizingClass).to.eql(pm.globals.get('SIZING_CLASS'));",
+									"    pm.expect(controlPlane.storageProfile).to.eql(pm.globals.get('STORAGE_PROFILE'));",
+									"});",
+									"",
+									"pm.test(\"All worker nodes are valid\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    workers = jsonData.entity.status.nodes.workers;",
+									"    pm.expect(workers.length).to.eql(parseInt(pm.globals.get('WORKERS_COUNT')));",
+									"    if (workers.length > 0) {",
+									"        pm.expect(workers[0].sizingClass).to.eql(pm.globals.get('SIZING_CLASS'))",
+									"        pm.expect(workers[0].storageProfile).to.eql(pm.globals.get('STORAGE_PROFILE'));",
+									"    }",
+									"});",
+									"",
+									"pm.test(\"All nfs nodes are valid\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    nfs = jsonData.entity.status.nodes.nfs;",
+									"    pm.expect(nfs.length).to.eql(parseInt(pm.globals.get('NFS_COUNT')));",
+									"    if (nfs.length > 0) {",
+									"        pm.expect(nfs[0].sizingClass).to.eql(pm.globals.get('SIZING_CLASS'))",
+									"        pm.expect(nfs[0].storageProfile).to.eql(pm.globals.get('STORAGE_PROFILE'));",
+									"    }",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"type": "text",
+								"value": "application/json;version=36.0"
+							},
+							{
+								"key": "x-vcloud-authorization",
+								"type": "text",
+								"value": "{{X_VCLOUD_AUTH}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"id\": \"urn:vcloud:entity:cse:nativeCluster:1.0.0:4a2a08a0-d152-43e5-883b-84114d5caa12\",\n    \"entityType\": \"urn:vcloud:type:cse:nativeCluster:1.0.0\",\n    \"name\": \"ubu-clus-ani-21\",\n    \"externalId\": null,\n    \"entity\": {\n        \"kind\": \"native\",\n        \"spec\": {\n            \"nfs\": {\n                \"count\": 0,\n                \"sizing_class\": null,\n                \"storage_profile\": \"*\"\n            },\n            \"workers\": {\n                \"count\": 0,\n                \"sizing_class\": null,\n                \"storage_profile\": \"*\"\n            },\n            \"settings\": {\n                \"network\": \"mynet\",\n                \"ssh_key\": \"ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDvCF4kkt3Il1IUNjFB5JpCglobFilTD9w4A/ssgAIyWReCxJKfGZymYG0/0H+tuXgwI2gxPSWDS+6as51Pfkizrx5incmWyUIHXWJtsoVyoJwsZeTn9NOV2SPbNKDCLfHnhaaEFUCcCr/zXNnUhcnA44s0QO1I9LNKrJACU5vb0o5/0jrjlIcXnYiYkAVpONWArAtgxAkq6VZQTYQXbxSvfW8tXsFqJdDKYgqqkTrnZq9IaoF/ZSyCGYYVz7p3vgHLUP5Gn7a9DUoNBAwgb5S7FQnYEVadPwt7JL0uK7/dsN41WhMydsiWZFutFMbT66Q+QRGGvp8TYWVNUkf1MOyb shamasundara@shamasundar-a01.vmware.com\",\n                \"rollback_on_failure\": false\n            },\n            \"control_plane\": {\n                \"count\": 1,\n                \"sizing_class\": null,\n                \"storage_profile\": \"*\"\n            },\n            \"k8_distribution\": {\n                \"template_name\": \"ubuntu-16.04_k8-1.19_weave-2.6.5\",\n                \"template_revision\": 1\n            }\n        },\n        \"status\": {\n            \"os\": \"ubuntu-16.04\",\n            \"cni\": \"weave 2.6.5\",\n            \"nodes\": {\n                \"nfs\": [],\n                \"workers\": [],\n                \"control_plane\": {\n                    \"ip\": \"10.150.161.75\",\n                    \"name\": \"mstr-g3gj\",\n                    \"sizing_class\": null\n                }\n            },\n            \"phase\": \"UPGRADE:SUCCEEDED\",\n            \"task_href\": \"https://bos1-vcloud-static-176-61.eng.vmware.com/api/task/34e1e7c8-d3b5-484b-9f0a-3429880cd521\",\n            \"kubernetes\": \"upstream 1.19.3\",\n            \"docker_version\": \"19.03.12\"\n        },\n        \"metadata\": {\n            \"org_name\": \"myorg\",\n            \"ovdc_name\": \"myorgvdc\",\n            \"cluster_name\": \"ubu-clus-ani-12\"\n        },\n        \"api_version\": \"\"\n    },\n    \"state\": \"PRE_CREATED\",\n    \"owner\": {\n        \"name\": \"administrator\",\n        \"id\": \"urn:vcloud:orgMember:21180376-55e5-4d7d-8ed9-e9c8f621cecc\"\n    },\n    \"org\": {\n        \"name\": \"System\",\n        \"id\": \"urn:vcloud:org:a93c9db9-7471-3192-8d09-a8f7eeda85f9\"\n    }\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "https://{{VCD_IP}}/cloudapi/1.0.0/entities/{{CLUSTER_ID}}",
+							"protocol": "https",
+							"host": [
+								"{{VCD_IP}}"
+							],
+							"path": [
+								"cloudapi",
+								"1.0.0",
+								"entities",
+								"{{CLUSTER_ID}}"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Update Entity (Behavior) No change in spec",
+			"item": [
+				{
+					"name": "Get enitity",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Your test name\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.environment.set(\"CLUSTER_NAME\", jsonData.entity.metadata.name)",
+									"    pm.globals.set(\"WORKERS_COUNT\", jsonData.entity.spec.topology.workers.count);",
+									"    pm.globals.set(\"NFS_COUNT\", jsonData.entity.spec.topology.nfs.count);",
+									"    pm.globals.set(\"ENTITY_STATUS\", JSON.stringify(jsonData.entity.status))",
+									"    pm.globals.set(\"VAPP_HREF\", jsonData.externalId)",
+									"    pm.globals.set(\"TEMPLATE_NAME\", jsonData.entity.spec.distribution.templateName)",
+									"    pm.globals.set(\"TEMPLATE_REVISION\", jsonData.entity.spec.distribution.templateRevision)",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"type": "text",
+								"value": "application/json;version=36.0"
+							},
+							{
+								"key": "x-vcloud-authorization",
+								"type": "text",
+								"value": "{{X_VCLOUD_AUTH}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "https://{{VCD_IP}}/cloudapi/1.0.0/entities/{{CLUSTER_ID}}",
+							"protocol": "https",
+							"host": [
+								"{{VCD_IP}}"
+							],
+							"path": [
+								"cloudapi",
+								"1.0.0",
+								"entities",
+								"{{CLUSTER_ID}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "update entity",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"",
+									"pm.test(\"Status code is 200 (OK)\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Response has a valid Location header\", function () {",
+									"    pm.response.to.have.header('X-VMWARE-VCOULD-TASK-LOCATION')",
+									"    clusterUpdateTask = pm.response.headers.get('X-VMWARE-VCOULD-TASK-LOCATION');",
+									"    pm.globals.set(\"UPDATE_CLUSTER_TASK_URL\", clusterUpdateTask);",
+									"    console.log('Update cluster task: ' + clusterUpdateTask);",
+									"    pm.globals.set(\"UPDATE_CLUSTER_TASK_STATUS\", '')",
+									"})",
+									"",
+									""
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Accept",
+								"type": "text",
+								"value": "application/json;version={{API_VERSION}}"
+							},
+							{
+								"key": "x-vcloud-authorization",
+								"type": "text",
+								"value": "{{X_VCLOUD_AUTH}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"id\": \"{{CLUSTER_ID}}\",\n    \"entityType\": \"urn:vcloud:type:cse:nativeCluster:2.0.0\",\n    \"name\": \"{{CLUSTER_NAME}}\",\n    \"externalId\": \"{{VAPP_HREF}}\",\n    \"entity\": {\n        \"metadata\": {\n            \"name\": \"{{CLUSTER_NAME}}\",\n            \"site\": \"bos1-vcloud-static-170-167.eng.vmware.com\",\n            \"orgName\": \"{{ORG_NAME}}\",\n            \"virtualDataCenterName\": \"{{OVDC_NAME}}\"\n        },\n        \"apiVersion\": \"cse.vmware.com/v2.0\",\n        \"kind\": \"native\",\n        \"spec\": {\n            \"expose\": false,\n            \"settings\": {\n                \"sshKey\": \"\",\n                \"network\": \"{{OVDC_NETWORK}}\",\n                \"rollbackOnFailure\": false\n            },\n            \"topology\": {\n                \"nfs\": {\n                    \"count\": {{NFS_COUNT}},\n                    \"sizingClass\": \"{{SIZING_CLASS}}\",\n                    \"storageProfile\": \"{{STORAGE_PROFILE}}\"\n                },\n                \"workers\": {\n                    \"count\": {{WORKERS_COUNT}},\n                    \"sizingClass\": \"{{SIZING_CLASS}}\",\n                    \"storageProfile\": \"{{STORAGE_PROFILE}}\"\n                },\n                \"controlPlane\": {\n                    \"count\": {{CONTROL_PLANE_COUNT}},\n                    \"sizingClass\": \"{{SIZING_CLASS}}\",\n                    \"storageProfile\": \"{{STORAGE_PROFILE}}\"\n                }\n            },\n            \"distribution\": {\n                \"templateName\": \"{{TEMPLATE_NAME}}\",\n                \"templateRevision\": {{TEMPLATE_REVISION}}\n            }\n        },\n        \"status\": {{ENTITY_STATUS}}\n    }\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "https://{{VCD_IP}}/cloudapi/1.0.0/entities/{{CLUSTER_ID}}",
+							"protocol": "https",
+							"host": [
+								"{{VCD_IP}}"
+							],
+							"path": [
+								"cloudapi",
+								"1.0.0",
+								"entities",
+								"{{CLUSTER_ID}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Track update task",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"",
+									"    var jsonData = pm.response.json();",
+									"",
+									"    pm.globals.set(\"UPDATE_CLUSTER_TASK_STATUS\", jsonData.status);",
+									"});",
+									"",
+									"task_status = pm.globals.get(\"UPDATE_CLUSTER_TASK_STATUS\")",
+									"if (task_status == \"running\" || task_status == \"queued\") {",
+									"    postman.setNextRequest(\"Track create task\")",
+									"    // setTimeout(function(){}, 2000);",
+									"} else {",
+									"    pm.test(\"Task should rise an error\", function () {",
+									"        var jsonData = pm.response.json();",
+									"        pm.expect(jsonData.status).to.eql(\"error\");",
+									"        // setTimeout(function(){}, 2000);",
+									"    });",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"type": "text",
+								"value": "application/*+json;version=35.0"
+							},
+							{
+								"key": "x-vcloud-authorization",
+								"type": "text",
+								"value": " {{X_VCLOUD_AUTH}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"clus-ani-9\",\n    \"entity\": {\n        \"apiVersion\": \"cse.vmware.com/v2.0\",\n        \"kind\": \"native\",\n        \"metadata\": {\n            \"name\": \"clus-ani-9\",\n            \"orgName\": \"myorg\",\n            \"ovdcName\": \"myorgvdc\",\n            \"site\": \"bos1-vcloud-static-170-167.eng.vmware.com\"\n        },\n        \"spec\": {\n            \"controlPlane\": {\n                \"count\": 1,\n                \"sizingClass\": null,\n                \"storageProfile\": null\n            },\n            \"k8Distribution\": {\n                \"templateName\": \"ubuntu-16.04_k8-1.18_weave-2.6.5\",\n                \"templateRevision\": 2\n            },\n            \"nfs\": {\n                \"count\": 0,\n                \"sizingClass\": \"med\",\n                \"storageProfile\": \"Development\"\n            },\n            \"settings\": {\n                \"network\": \"mynet\",\n                \"rollbackOnFailure\": true,\n                \"sshKey\": \"\"\n            },\n            \"workers\": {\n                \"count\": 0,\n                \"sizingClass\": \"med\",\n                \"storageProfile\": \"Development\"\n            }\n        }\n    }\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{UPDATE_CLUSTER_TASK_URL}}",
+							"host": [
+								"{{UPDATE_CLUSTER_TASK_URL}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Verify update failed",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Cluster should exist\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Entity status has phase UPDATE:FAILED\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.entity.status.phase).to.eql(\"UPDATE:FAILED\");",
+									"});",
+									"",
+									"pm.test(\"Entity state is RESOLVED\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.state).to.eql(\"RESOLVED\");",
+									"});",
+									"",
+									"pm.test(\"Any node created\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.entity.status.nodes).to.not.eql(null);",
+									"});",
+									"",
+									"pm.test(\"All control plane nodes are valid\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    controlPlane = jsonData.entity.status.nodes.controlPlane;",
+									"    pm.expect(controlPlane.ip).to.not.eql(null);",
+									"    pm.expect(controlPlane.sizingClass).to.eql(pm.globals.get('SIZING_CLASS'));",
+									"    pm.expect(controlPlane.storageProfile).to.eql(pm.globals.get('STORAGE_PROFILE'));",
+									"});",
+									"",
+									"pm.test(\"All worker nodes are valid\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    workers = jsonData.entity.status.nodes.workers;",
+									"    pm.expect(workers.length).to.eql(parseInt(pm.globals.get('WORKERS_COUNT')));",
+									"    if (workers.length > 0) {",
+									"        pm.expect(workers[0].sizingClass).to.eql(pm.globals.get('SIZING_CLASS'))",
+									"        pm.expect(workers[0].storageProfile).to.eql(pm.globals.get('STORAGE_PROFILE'));",
+									"    }",
+									"});",
+									"",
+									"pm.test(\"All nfs nodes are valid\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    nfs = jsonData.entity.status.nodes.nfs;",
+									"    pm.expect(nfs.length).to.eql(parseInt(pm.globals.get('NFS_COUNT')));",
+									"    if (nfs.length > 0) {",
+									"        pm.expect(nfs[0].sizingClass).to.eql(pm.globals.get('SIZING_CLASS'))",
+									"        pm.expect(nfs[0].storageProfile).to.eql(pm.globals.get('STORAGE_PROFILE'));",
+									"    }",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"type": "text",
+								"value": "application/json;version=36.0"
+							},
+							{
+								"key": "x-vcloud-authorization",
+								"type": "text",
+								"value": "{{X_VCLOUD_AUTH}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"id\": \"urn:vcloud:entity:cse:nativeCluster:1.0.0:4a2a08a0-d152-43e5-883b-84114d5caa12\",\n    \"entityType\": \"urn:vcloud:type:cse:nativeCluster:1.0.0\",\n    \"name\": \"ubu-clus-ani-21\",\n    \"externalId\": null,\n    \"entity\": {\n        \"kind\": \"native\",\n        \"spec\": {\n            \"nfs\": {\n                \"count\": 0,\n                \"sizing_class\": null,\n                \"storage_profile\": \"*\"\n            },\n            \"workers\": {\n                \"count\": 0,\n                \"sizing_class\": null,\n                \"storage_profile\": \"*\"\n            },\n            \"settings\": {\n                \"network\": \"mynet\",\n                \"ssh_key\": \"ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDvCF4kkt3Il1IUNjFB5JpCglobFilTD9w4A/ssgAIyWReCxJKfGZymYG0/0H+tuXgwI2gxPSWDS+6as51Pfkizrx5incmWyUIHXWJtsoVyoJwsZeTn9NOV2SPbNKDCLfHnhaaEFUCcCr/zXNnUhcnA44s0QO1I9LNKrJACU5vb0o5/0jrjlIcXnYiYkAVpONWArAtgxAkq6VZQTYQXbxSvfW8tXsFqJdDKYgqqkTrnZq9IaoF/ZSyCGYYVz7p3vgHLUP5Gn7a9DUoNBAwgb5S7FQnYEVadPwt7JL0uK7/dsN41WhMydsiWZFutFMbT66Q+QRGGvp8TYWVNUkf1MOyb shamasundara@shamasundar-a01.vmware.com\",\n                \"rollback_on_failure\": false\n            },\n            \"control_plane\": {\n                \"count\": 1,\n                \"sizing_class\": null,\n                \"storage_profile\": \"*\"\n            },\n            \"k8_distribution\": {\n                \"template_name\": \"ubuntu-16.04_k8-1.19_weave-2.6.5\",\n                \"template_revision\": 1\n            }\n        },\n        \"status\": {\n            \"os\": \"ubuntu-16.04\",\n            \"cni\": \"weave 2.6.5\",\n            \"nodes\": {\n                \"nfs\": [],\n                \"workers\": [],\n                \"control_plane\": {\n                    \"ip\": \"10.150.161.75\",\n                    \"name\": \"mstr-g3gj\",\n                    \"sizing_class\": null\n                }\n            },\n            \"phase\": \"UPGRADE:SUCCEEDED\",\n            \"task_href\": \"https://bos1-vcloud-static-176-61.eng.vmware.com/api/task/34e1e7c8-d3b5-484b-9f0a-3429880cd521\",\n            \"kubernetes\": \"upstream 1.19.3\",\n            \"docker_version\": \"19.03.12\"\n        },\n        \"metadata\": {\n            \"org_name\": \"myorg\",\n            \"ovdc_name\": \"myorgvdc\",\n            \"cluster_name\": \"ubu-clus-ani-12\"\n        },\n        \"api_version\": \"\"\n    },\n    \"state\": \"PRE_CREATED\",\n    \"owner\": {\n        \"name\": \"administrator\",\n        \"id\": \"urn:vcloud:orgMember:21180376-55e5-4d7d-8ed9-e9c8f621cecc\"\n    },\n    \"org\": {\n        \"name\": \"System\",\n        \"id\": \"urn:vcloud:org:a93c9db9-7471-3192-8d09-a8f7eeda85f9\"\n    }\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "https://{{VCD_IP}}/cloudapi/1.0.0/entities/{{CLUSTER_ID}}",
+							"protocol": "https",
+							"host": [
+								"{{VCD_IP}}"
+							],
+							"path": [
+								"cloudapi",
+								"1.0.0",
+								"entities",
+								"{{CLUSTER_ID}}"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Update Entity (Behavior) remove worker node",
+			"item": [
+				{
+					"name": "Get enitity",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Your test name\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.environment.set(\"CLUSTER_NAME\", jsonData.entity.metadata.name)",
+									"    pm.globals.set(\"WORKERS_COUNT\", jsonData.entity.spec.topology.workers.count-1);",
+									"    pm.globals.set(\"NFS_COUNT\", jsonData.entity.spec.topology.nfs.count);",
+									"    pm.globals.set(\"ENTITY_STATUS\", JSON.stringify(jsonData.entity.status))",
+									"    pm.globals.set(\"VAPP_HREF\", jsonData.externalId)",
+									"    pm.globals.set(\"TEMPLATE_NAME\", jsonData.entity.spec.distribution.templateName)",
+									"    pm.globals.set(\"TEMPLATE_REVISION\", jsonData.entity.spec.distribution.templateRevision)",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"type": "text",
+								"value": "application/json;version=36.0"
+							},
+							{
+								"key": "x-vcloud-authorization",
+								"type": "text",
+								"value": "{{X_VCLOUD_AUTH}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "https://{{VCD_IP}}/cloudapi/1.0.0/entities/{{CLUSTER_ID}}",
+							"protocol": "https",
+							"host": [
+								"{{VCD_IP}}"
+							],
+							"path": [
+								"cloudapi",
+								"1.0.0",
+								"entities",
+								"{{CLUSTER_ID}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "update entity",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"",
+									"pm.test(\"Status code is 200 (OK)\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Response has a valid Location header\", function () {",
+									"    pm.response.to.have.header('X-VMWARE-VCOULD-TASK-LOCATION')",
+									"    clusterUpdateTask = pm.response.headers.get('X-VMWARE-VCOULD-TASK-LOCATION');",
+									"    pm.globals.set(\"UPDATE_CLUSTER_TASK_URL\", clusterUpdateTask);",
+									"    console.log('Update cluster task: ' + clusterUpdateTask);",
+									"    pm.globals.set(\"UPDATE_CLUSTER_TASK_STATUS\", '')",
+									"})",
+									"",
+									""
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Accept",
+								"type": "text",
+								"value": "application/json;version={{API_VERSION}}"
+							},
+							{
+								"key": "x-vcloud-authorization",
+								"type": "text",
+								"value": "{{X_VCLOUD_AUTH}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"id\": \"{{CLUSTER_ID}}\",\n    \"entityType\": \"urn:vcloud:type:cse:nativeCluster:2.0.0\",\n    \"name\": \"{{CLUSTER_NAME}}\",\n    \"externalId\": \"{{VAPP_HREF}}\",\n    \"entity\": {\n        \"metadata\": {\n            \"name\": \"{{CLUSTER_NAME}}\",\n            \"site\": \"bos1-vcloud-static-170-167.eng.vmware.com\",\n            \"orgName\": \"{{ORG_NAME}}\",\n            \"virtualDataCenterName\": \"{{OVDC_NAME}}\"\n        },\n        \"apiVersion\": \"cse.vmware.com/v2.0\",\n        \"kind\": \"native\",\n        \"spec\": {\n            \"expose\": false,\n            \"settings\": {\n                \"sshKey\": \"\",\n                \"network\": \"{{OVDC_NETWORK}}\",\n                \"rollbackOnFailure\": false\n            },\n            \"topology\": {\n                \"nfs\": {\n                    \"count\": {{NFS_COUNT}},\n                    \"sizingClass\": \"{{SIZING_CLASS}}\",\n                    \"storageProfile\": \"{{STORAGE_PROFILE}}\"\n                },\n                \"workers\": {\n                    \"count\": {{WORKERS_COUNT}},\n                    \"sizingClass\": \"{{SIZING_CLASS}}\",\n                    \"storageProfile\": \"{{STORAGE_PROFILE}}\"\n                },\n                \"controlPlane\": {\n                    \"count\": {{CONTROL_PLANE_COUNT}},\n                    \"sizingClass\": \"{{SIZING_CLASS}}\",\n                    \"storageProfile\": \"{{STORAGE_PROFILE}}\"\n                }\n            },\n            \"distribution\": {\n                \"templateName\": \"{{TEMPLATE_NAME}}\",\n                \"templateRevision\": {{TEMPLATE_REVISION}}\n            }\n        },\n        \"status\": {{ENTITY_STATUS}}\n    },\n    \"state\": \"RESOLVED\",\n    \"owner\": {\n        \"name\": \"administrator\",\n        \"id\": \"urn:vcloud:user:6bae589c-d30e-4050-ad02-49af6313885b\"\n    },\n    \"org\": {\n        \"name\": \"System\",\n        \"id\": \"urn:vcloud:org:a93c9db9-7471-3192-8d09-a8f7eeda85f9\"\n    }\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "https://{{VCD_IP}}/cloudapi/1.0.0/entities/{{CLUSTER_ID}}",
+							"protocol": "https",
+							"host": [
+								"{{VCD_IP}}"
+							],
+							"path": [
+								"cloudapi",
+								"1.0.0",
+								"entities",
+								"{{CLUSTER_ID}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Track update task",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"",
+									"    var jsonData = pm.response.json();",
+									"",
+									"    pm.globals.set(\"UPDATE_CLUSTER_TASK_STATUS\", jsonData.status);",
+									"});",
+									"",
+									"task_status = pm.globals.get(\"UPDATE_CLUSTER_TASK_STATUS\")",
+									"if (task_status == \"running\" || task_status == 'queued') {",
+									"    postman.setNextRequest(\"Track update task\")",
+									"} else {",
+									"    pm.test(\"Task finished successfully\", function () {",
+									"        var jsonData = pm.response.json();",
+									"        pm.expect(jsonData.status).to.eql(\"success\");",
+									"    });",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"type": "text",
+								"value": "application/*+json;version=35.0"
+							},
+							{
+								"key": "x-vcloud-authorization",
+								"type": "text",
+								"value": " {{X_VCLOUD_AUTH}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"clus-ani-9\",\n    \"entity\": {\n        \"apiVersion\": \"cse.vmware.com/v2.0\",\n        \"kind\": \"native\",\n        \"metadata\": {\n            \"name\": \"clus-ani-9\",\n            \"orgName\": \"myorg\",\n            \"ovdcName\": \"myorgvdc\",\n            \"site\": \"bos1-vcloud-static-170-167.eng.vmware.com\"\n        },\n        \"spec\": {\n            \"controlPlane\": {\n                \"count\": 1,\n                \"sizingClass\": null,\n                \"storageProfile\": null\n            },\n            \"k8Distribution\": {\n                \"templateName\": \"ubuntu-16.04_k8-1.18_weave-2.6.5\",\n                \"templateRevision\": 2\n            },\n            \"nfs\": {\n                \"count\": 0,\n                \"sizingClass\": \"med\",\n                \"storageProfile\": \"Development\"\n            },\n            \"settings\": {\n                \"network\": \"mynet\",\n                \"rollbackOnFailure\": true,\n                \"sshKey\": \"\"\n            },\n            \"workers\": {\n                \"count\": 0,\n                \"sizingClass\": \"med\",\n                \"storageProfile\": \"Development\"\n            }\n        }\n    }\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{UPDATE_CLUSTER_TASK_URL}}",
+							"host": [
+								"{{UPDATE_CLUSTER_TASK_URL}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Verify update",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Cluster should exist\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Entity status has phase UPDATE:SUCCEEDED\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.entity.status.phase).to.eql(\"UPDATE:SUCCEEDED\");",
+									"});",
+									"",
+									"pm.test(\"Entity state is RESOLVED\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.state).to.eql(\"RESOLVED\");",
+									"});",
+									"",
+									"pm.test(\"Any node created\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.entity.status.nodes).to.not.eql(null);",
+									"});",
+									"",
+									"pm.test(\"All control plane nodes are valid\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    controlPlane = jsonData.entity.status.nodes.controlPlane;",
+									"    pm.expect(controlPlane.ip).to.not.eql(null);",
+									"    pm.expect(controlPlane.sizingClass).to.eql(pm.globals.get('SIZING_CLASS'));",
+									"    pm.expect(controlPlane.storageProfile).to.eql(pm.globals.get('STORAGE_PROFILE'));",
+									"});",
+									"",
+									"pm.test(\"All worker nodes are valid\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    workers = jsonData.entity.status.nodes.workers;",
+									"    pm.expect(workers.length).to.eql(parseInt(pm.globals.get('WORKERS_COUNT')));",
+									"    if (workers.length > 0) {",
+									"        pm.expect(workers[0].sizingClass).to.eql(pm.globals.get('SIZING_CLASS'))",
+									"        pm.expect(workers[0].storageProfile).to.eql(pm.globals.get('STORAGE_PROFILE'));",
+									"    }",
+									"});",
+									"",
+									"pm.test(\"All nfs nodes are valid\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    nfs = jsonData.entity.status.nodes.nfs;",
+									"    pm.expect(nfs.length).to.eql(parseInt(pm.globals.get('NFS_COUNT')));",
+									"    if (nfs.length > 0) {",
+									"        pm.expect(nfs[0].sizingClass).to.eql(pm.globals.get('SIZING_CLASS'))",
+									"        pm.expect(nfs[0].storageProfile).to.eql(pm.globals.get('STORAGE_PROFILE'));",
+									"    }",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"type": "text",
+								"value": "application/json;version=36.0"
+							},
+							{
+								"key": "x-vcloud-authorization",
+								"type": "text",
+								"value": "{{X_VCLOUD_AUTH}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"id\": \"urn:vcloud:entity:cse:nativeCluster:1.0.0:4a2a08a0-d152-43e5-883b-84114d5caa12\",\n    \"entityType\": \"urn:vcloud:type:cse:nativeCluster:1.0.0\",\n    \"name\": \"ubu-clus-ani-21\",\n    \"externalId\": null,\n    \"entity\": {\n        \"kind\": \"native\",\n        \"spec\": {\n            \"nfs\": {\n                \"count\": 0,\n                \"sizing_class\": null,\n                \"storage_profile\": \"*\"\n            },\n            \"workers\": {\n                \"count\": 0,\n                \"sizing_class\": null,\n                \"storage_profile\": \"*\"\n            },\n            \"settings\": {\n                \"network\": \"mynet\",\n                \"ssh_key\": \"ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDvCF4kkt3Il1IUNjFB5JpCglobFilTD9w4A/ssgAIyWReCxJKfGZymYG0/0H+tuXgwI2gxPSWDS+6as51Pfkizrx5incmWyUIHXWJtsoVyoJwsZeTn9NOV2SPbNKDCLfHnhaaEFUCcCr/zXNnUhcnA44s0QO1I9LNKrJACU5vb0o5/0jrjlIcXnYiYkAVpONWArAtgxAkq6VZQTYQXbxSvfW8tXsFqJdDKYgqqkTrnZq9IaoF/ZSyCGYYVz7p3vgHLUP5Gn7a9DUoNBAwgb5S7FQnYEVadPwt7JL0uK7/dsN41WhMydsiWZFutFMbT66Q+QRGGvp8TYWVNUkf1MOyb shamasundara@shamasundar-a01.vmware.com\",\n                \"rollback_on_failure\": false\n            },\n            \"control_plane\": {\n                \"count\": 1,\n                \"sizing_class\": null,\n                \"storage_profile\": \"*\"\n            },\n            \"k8_distribution\": {\n                \"template_name\": \"ubuntu-16.04_k8-1.19_weave-2.6.5\",\n                \"template_revision\": 1\n            }\n        },\n        \"status\": {\n            \"os\": \"ubuntu-16.04\",\n            \"cni\": \"weave 2.6.5\",\n            \"nodes\": {\n                \"nfs\": [],\n                \"workers\": [],\n                \"control_plane\": {\n                    \"ip\": \"10.150.161.75\",\n                    \"name\": \"mstr-g3gj\",\n                    \"sizing_class\": null\n                }\n            },\n            \"phase\": \"UPGRADE:SUCCEEDED\",\n            \"task_href\": \"https://bos1-vcloud-static-176-61.eng.vmware.com/api/task/34e1e7c8-d3b5-484b-9f0a-3429880cd521\",\n            \"kubernetes\": \"upstream 1.19.3\",\n            \"docker_version\": \"19.03.12\"\n        },\n        \"metadata\": {\n            \"org_name\": \"myorg\",\n            \"ovdc_name\": \"myorgvdc\",\n            \"cluster_name\": \"ubu-clus-ani-12\"\n        },\n        \"api_version\": \"\"\n    },\n    \"state\": \"PRE_CREATED\",\n    \"owner\": {\n        \"name\": \"administrator\",\n        \"id\": \"urn:vcloud:orgMember:21180376-55e5-4d7d-8ed9-e9c8f621cecc\"\n    },\n    \"org\": {\n        \"name\": \"System\",\n        \"id\": \"urn:vcloud:org:a93c9db9-7471-3192-8d09-a8f7eeda85f9\"\n    }\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "https://{{VCD_IP}}/cloudapi/1.0.0/entities/{{CLUSTER_ID}}",
+							"protocol": "https",
+							"host": [
+								"{{VCD_IP}}"
+							],
+							"path": [
+								"cloudapi",
+								"1.0.0",
+								"entities",
+								"{{CLUSTER_ID}}"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Update Entity (Behavior) Upgrade cluster",
+			"item": [
+				{
+					"name": "Get enitity",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Your test name\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.environment.set(\"CLUSTER_NAME\", jsonData.entity.metadata.name)",
+									"    pm.globals.set(\"WORKERS_COUNT\", jsonData.entity.spec.topology.workers.count);",
+									"    pm.globals.set(\"NFS_COUNT\", jsonData.entity.spec.topology.nfs.count);",
+									"    pm.globals.set(\"ENTITY_STATUS\", JSON.stringify(jsonData.entity.status))",
+									"    pm.globals.set(\"VAPP_HREF\", jsonData.externalId)",
+									"    pm.globals.set(\"TEMPLATE_NAME\", jsonData.entity.spec.distribution.templateName)",
+									"    pm.globals.set(\"TEMPLATE_REVISION\", jsonData.entity.spec.distribution.templateRevision)",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"type": "text",
+								"value": "application/json;version=36.0"
+							},
+							{
+								"key": "x-vcloud-authorization",
+								"type": "text",
+								"value": "{{X_VCLOUD_AUTH}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "https://{{VCD_IP}}/cloudapi/1.0.0/entities/{{CLUSTER_ID}}",
+							"protocol": "https",
+							"host": [
+								"{{VCD_IP}}"
+							],
+							"path": [
+								"cloudapi",
+								"1.0.0",
+								"entities",
+								"{{CLUSTER_ID}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "update entity",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"",
+									"pm.test(\"Status code is 200 (OK)\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Response has a valid Location header\", function () {",
+									"    pm.response.to.have.header('X-VMWARE-VCOULD-TASK-LOCATION')",
+									"    clusterUpdateTask = pm.response.headers.get('X-VMWARE-VCOULD-TASK-LOCATION');",
+									"    pm.globals.set(\"UPDATE_CLUSTER_TASK_URL\", clusterUpdateTask);",
+									"    console.log('Update cluster task: ' + clusterUpdateTask);",
+									"    pm.globals.set(\"UPDATE_CLUSTER_TASK_STATUS\", '')",
+									"})",
+									"",
+									""
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Accept",
+								"type": "text",
+								"value": "application/json;version={{API_VERSION}}"
+							},
+							{
+								"key": "x-vcloud-authorization",
+								"type": "text",
+								"value": "{{X_VCLOUD_AUTH}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"id\": \"{{CLUSTER_ID}}\",\n    \"entityType\": \"urn:vcloud:type:cse:nativeCluster:2.0.0\",\n    \"name\": \"{{CLUSTER_NAME}}\",\n    \"externalId\": \"{{VAPP_HREF}}\",\n    \"entity\": {\n        \"metadata\": {\n            \"name\": \"{{CLUSTER_NAME}}\",\n            \"site\": \"bos1-vcloud-static-170-167.eng.vmware.com\",\n            \"orgName\": \"{{ORG_NAME}}\",\n            \"virtualDataCenterName\": \"{{OVDC_NAME}}\"\n        },\n        \"apiVersion\": \"cse.vmware.com/v2.0\",\n        \"kind\": \"native\",\n        \"spec\": {\n            \"expose\": false,\n            \"settings\": {\n                \"sshKey\": \"\",\n                \"network\": \"{{OVDC_NETWORK}}\",\n                \"rollbackOnFailure\": false\n            },\n            \"topology\": {\n                \"nfs\": {\n                    \"count\": {{NFS_COUNT}},\n                    \"sizingClass\": \"{{SIZING_CLASS}}\",\n                    \"storageProfile\": \"{{STORAGE_PROFILE}}\"\n                },\n                \"workers\": {\n                    \"count\": {{WORKERS_COUNT}},\n                    \"sizingClass\": \"{{SIZING_CLASS}}\",\n                    \"storageProfile\": \"{{STORAGE_PROFILE}}\"\n                },\n                \"controlPlane\": {\n                    \"count\": {{CONTROL_PLANE_COUNT}},\n                    \"sizingClass\": \"{{SIZING_CLASS}}\",\n                    \"storageProfile\": \"{{STORAGE_PROFILE}}\"\n                }\n            },\n            \"distribution\": {\n                \"templateName\": \"{{TARGET_TEMPLATE_NAME}}\",\n                \"templateRevision\": {{TARGET_TEMPLATE_REVISION}}\n            }\n        },\n        \"status\": {{ENTITY_STATUS}}\n    }\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "https://{{VCD_IP}}/cloudapi/1.0.0/entities/{{CLUSTER_ID}}",
+							"protocol": "https",
+							"host": [
+								"{{VCD_IP}}"
+							],
+							"path": [
+								"cloudapi",
+								"1.0.0",
+								"entities",
+								"{{CLUSTER_ID}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Track update task",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"",
+									"    var jsonData = pm.response.json();",
+									"",
+									"    pm.globals.set(\"UPDATE_CLUSTER_TASK_STATUS\", jsonData.status);",
+									"});",
+									"",
+									"task_status = pm.globals.get(\"UPDATE_CLUSTER_TASK_STATUS\")",
+									"if (task_status == \"running\" || task_status == \"queued\") {",
+									"    postman.setNextRequest(\"Track update task\")",
+									"} else {",
+									"    pm.test(\"Task should rise an error\", function () {",
+									"        var jsonData = pm.response.json();",
+									"        pm.expect(jsonData.status).to.eql(\"success\");",
+									"    });",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"type": "text",
+								"value": "application/*+json;version=35.0"
+							},
+							{
+								"key": "x-vcloud-authorization",
+								"type": "text",
+								"value": " {{X_VCLOUD_AUTH}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"clus-ani-9\",\n    \"entity\": {\n        \"apiVersion\": \"cse.vmware.com/v2.0\",\n        \"kind\": \"native\",\n        \"metadata\": {\n            \"name\": \"clus-ani-9\",\n            \"orgName\": \"myorg\",\n            \"ovdcName\": \"myorgvdc\",\n            \"site\": \"bos1-vcloud-static-170-167.eng.vmware.com\"\n        },\n        \"spec\": {\n            \"controlPlane\": {\n                \"count\": 1,\n                \"sizingClass\": null,\n                \"storageProfile\": null\n            },\n            \"k8Distribution\": {\n                \"templateName\": \"ubuntu-16.04_k8-1.18_weave-2.6.5\",\n                \"templateRevision\": 2\n            },\n            \"nfs\": {\n                \"count\": 0,\n                \"sizingClass\": \"med\",\n                \"storageProfile\": \"Development\"\n            },\n            \"settings\": {\n                \"network\": \"mynet\",\n                \"rollbackOnFailure\": true,\n                \"sshKey\": \"\"\n            },\n            \"workers\": {\n                \"count\": 0,\n                \"sizingClass\": \"med\",\n                \"storageProfile\": \"Development\"\n            }\n        }\n    }\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{UPDATE_CLUSTER_TASK_URL}}",
+							"host": [
+								"{{UPDATE_CLUSTER_TASK_URL}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Verify update successful",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Cluster should exist\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Entity status has phase UPGRADE:SUCCEEDED\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.entity.status.phase).to.eql(\"UPGRADE:SUCCEEDED\");",
+									"});",
+									"",
+									"pm.test(\"Entity state is RESOLVED\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.state).to.eql(\"RESOLVED\");",
+									"});",
+									"",
+									"pm.test(\"Any node created\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.entity.status.nodes).to.not.eql(null);",
+									"});",
+									"",
+									"pm.test(\"template upgrade successful\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    cloudProperties = jsonData.entity.status.cloudProperties;",
+									"    pm.expect(cloudProperties.distribution.templateName).to.not.eql(pm.globals.get('TARGET_TEMPLATE_NAME'));",
+									"    pm.expect(cloudProperties.distribution.templateRevision).to.eql(parseInt(pm.globals.get(\"TARGET_TEMPLATE_REVISION\")));",
+									"    pm.expect(controlPlane.sizingClass).to.eql(pm.globals.get('SIZING_CLASS'));",
+									"    pm.expect(controlPlane.storageProfile).to.eql(pm.globals.get('STORAGE_PROFILE'));",
+									"});",
+									"",
+									"pm.test(\"All worker nodes are valid\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    workers = jsonData.entity.status.nodes.workers;",
+									"    pm.expect(workers.length).to.eql(parseInt(pm.globals.get('WORKERS_COUNT')));",
+									"    if (workers.length > 0) {",
+									"        pm.expect(workers[0].sizingClass).to.eql(pm.globals.get('SIZING_CLASS'))",
+									"        pm.expect(workers[0].storageProfile).to.eql(pm.globals.get('STORAGE_PROFILE'));",
+									"    }",
+									"});",
+									"",
+									"pm.test(\"All nfs nodes are valid\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    nfs = jsonData.entity.status.nodes.nfs;",
+									"    pm.expect(nfs.length).to.eql(parseInt(pm.globals.get('NFS_COUNT')));",
+									"    if (nfs.length > 0) {",
+									"        pm.expect(nfs[0].sizingClass).to.eql(pm.globals.get('SIZING_CLASS'))",
+									"        pm.expect(nfs[0].storageProfile).to.eql(pm.globals.get('STORAGE_PROFILE'));",
+									"    }",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"type": "text",
+								"value": "application/json;version=36.0"
+							},
+							{
+								"key": "x-vcloud-authorization",
+								"type": "text",
+								"value": "{{X_VCLOUD_AUTH}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"id\": \"urn:vcloud:entity:cse:nativeCluster:1.0.0:4a2a08a0-d152-43e5-883b-84114d5caa12\",\n    \"entityType\": \"urn:vcloud:type:cse:nativeCluster:1.0.0\",\n    \"name\": \"ubu-clus-ani-21\",\n    \"externalId\": null,\n    \"entity\": {\n        \"kind\": \"native\",\n        \"spec\": {\n            \"nfs\": {\n                \"count\": 0,\n                \"sizing_class\": null,\n                \"storage_profile\": \"*\"\n            },\n            \"workers\": {\n                \"count\": 0,\n                \"sizing_class\": null,\n                \"storage_profile\": \"*\"\n            },\n            \"settings\": {\n                \"network\": \"mynet\",\n                \"ssh_key\": \"ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDvCF4kkt3Il1IUNjFB5JpCglobFilTD9w4A/ssgAIyWReCxJKfGZymYG0/0H+tuXgwI2gxPSWDS+6as51Pfkizrx5incmWyUIHXWJtsoVyoJwsZeTn9NOV2SPbNKDCLfHnhaaEFUCcCr/zXNnUhcnA44s0QO1I9LNKrJACU5vb0o5/0jrjlIcXnYiYkAVpONWArAtgxAkq6VZQTYQXbxSvfW8tXsFqJdDKYgqqkTrnZq9IaoF/ZSyCGYYVz7p3vgHLUP5Gn7a9DUoNBAwgb5S7FQnYEVadPwt7JL0uK7/dsN41WhMydsiWZFutFMbT66Q+QRGGvp8TYWVNUkf1MOyb shamasundara@shamasundar-a01.vmware.com\",\n                \"rollback_on_failure\": false\n            },\n            \"control_plane\": {\n                \"count\": 1,\n                \"sizing_class\": null,\n                \"storage_profile\": \"*\"\n            },\n            \"k8_distribution\": {\n                \"template_name\": \"ubuntu-16.04_k8-1.19_weave-2.6.5\",\n                \"template_revision\": 1\n            }\n        },\n        \"status\": {\n            \"os\": \"ubuntu-16.04\",\n            \"cni\": \"weave 2.6.5\",\n            \"nodes\": {\n                \"nfs\": [],\n                \"workers\": [],\n                \"control_plane\": {\n                    \"ip\": \"10.150.161.75\",\n                    \"name\": \"mstr-g3gj\",\n                    \"sizing_class\": null\n                }\n            },\n            \"phase\": \"UPGRADE:SUCCEEDED\",\n            \"task_href\": \"https://bos1-vcloud-static-176-61.eng.vmware.com/api/task/34e1e7c8-d3b5-484b-9f0a-3429880cd521\",\n            \"kubernetes\": \"upstream 1.19.3\",\n            \"docker_version\": \"19.03.12\"\n        },\n        \"metadata\": {\n            \"org_name\": \"myorg\",\n            \"ovdc_name\": \"myorgvdc\",\n            \"cluster_name\": \"ubu-clus-ani-12\"\n        },\n        \"api_version\": \"\"\n    },\n    \"state\": \"PRE_CREATED\",\n    \"owner\": {\n        \"name\": \"administrator\",\n        \"id\": \"urn:vcloud:orgMember:21180376-55e5-4d7d-8ed9-e9c8f621cecc\"\n    },\n    \"org\": {\n        \"name\": \"System\",\n        \"id\": \"urn:vcloud:org:a93c9db9-7471-3192-8d09-a8f7eeda85f9\"\n    }\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "https://{{VCD_IP}}/cloudapi/1.0.0/entities/{{CLUSTER_ID}}",
+							"protocol": "https",
+							"host": [
+								"{{VCD_IP}}"
+							],
+							"path": [
+								"cloudapi",
+								"1.0.0",
+								"entities",
+								"{{CLUSTER_ID}}"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Update Entity (Behavior) Upgrade cluster fails",
+			"item": [
+				{
+					"name": "Get enitity",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Your test name\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.environment.set(\"CLUSTER_NAME\", jsonData.entity.metadata.name)",
+									"    pm.globals.set(\"WORKERS_COUNT\", jsonData.entity.spec.topology.workers.count);",
+									"    pm.globals.set(\"NFS_COUNT\", jsonData.entity.spec.topology.nfs.count);",
+									"    pm.globals.set(\"ENTITY_STATUS\", JSON.stringify(jsonData.entity.status))",
+									"    pm.globals.set(\"VAPP_HREF\", jsonData.externalId)",
+									"    pm.globals.set(\"TEMPLATE_NAME\", jsonData.entity.spec.distribution.templateName)",
+									"    pm.globals.set(\"TEMPLATE_REVISION\", jsonData.entity.spec.distribution.templateRevision)",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"type": "text",
+								"value": "application/json;version=36.0"
+							},
+							{
+								"key": "x-vcloud-authorization",
+								"type": "text",
+								"value": "{{X_VCLOUD_AUTH}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "https://{{VCD_IP}}/cloudapi/1.0.0/entities/{{CLUSTER_ID}}",
+							"protocol": "https",
+							"host": [
+								"{{VCD_IP}}"
+							],
+							"path": [
+								"cloudapi",
+								"1.0.0",
+								"entities",
+								"{{CLUSTER_ID}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "update entity",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"",
+									"pm.test(\"Status code is 200 (OK)\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Response has a valid Location header\", function () {",
+									"    pm.response.to.have.header('X-VMWARE-VCOULD-TASK-LOCATION')",
+									"    clusterUpdateTask = pm.response.headers.get('X-VMWARE-VCOULD-TASK-LOCATION');",
+									"    pm.globals.set(\"UPDATE_CLUSTER_TASK_URL\", clusterUpdateTask);",
+									"    console.log('Update cluster task: ' + clusterUpdateTask);",
+									"    pm.globals.set(\"UPDATE_CLUSTER_TASK_STATUS\", '')",
+									"})",
+									"",
+									""
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Accept",
+								"type": "text",
+								"value": "application/json;version={{API_VERSION}}"
+							},
+							{
+								"key": "x-vcloud-authorization",
+								"type": "text",
+								"value": "{{X_VCLOUD_AUTH}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"id\": \"{{CLUSTER_ID}}\",\n    \"entityType\": \"urn:vcloud:type:cse:nativeCluster:2.0.0\",\n    \"name\": \"{{CLUSTER_NAME}}\",\n    \"externalId\": \"{{VAPP_HREF}}\",\n    \"entity\": {\n        \"metadata\": {\n            \"name\": \"{{CLUSTER_NAME}}\",\n            \"site\": \"bos1-vcloud-static-170-167.eng.vmware.com\",\n            \"orgName\": \"{{ORG_NAME}}\",\n            \"virtualDataCenterName\": \"{{OVDC_NAME}}\"\n        },\n        \"apiVersion\": \"cse.vmware.com/v2.0\",\n        \"kind\": \"native\",\n        \"spec\": {\n            \"expose\": false,\n            \"settings\": {\n                \"sshKey\": \"\",\n                \"network\": \"{{OVDC_NETWORK}}\",\n                \"rollbackOnFailure\": false\n            },\n            \"topology\": {\n                \"nfs\": {\n                    \"count\": {{NFS_COUNT}},\n                    \"sizingClass\": \"{{SIZING_CLASS}}\",\n                    \"storageProfile\": \"{{STORAGE_PROFILE}}\"\n                },\n                \"workers\": {\n                    \"count\": {{WORKERS_COUNT}},\n                    \"sizingClass\": \"{{SIZING_CLASS}}\",\n                    \"storageProfile\": \"{{STORAGE_PROFILE}}\"\n                },\n                \"controlPlane\": {\n                    \"count\": {{CONTROL_PLANE_COUNT}},\n                    \"sizingClass\": \"{{SIZING_CLASS}}\",\n                    \"storageProfile\": \"{{STORAGE_PROFILE}}\"\n                }\n            },\n            \"distribution\": {\n                \"templateName\": \"ERROR{{TARGET_TEMPLATE_NAME}}\",\n                \"templateRevision\": {{TARGET_TEMPLATE_REVISION}}\n            }\n        },\n        \"status\": {{ENTITY_STATUS}}\n    }\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "https://{{VCD_IP}}/cloudapi/1.0.0/entities/{{CLUSTER_ID}}",
+							"protocol": "https",
+							"host": [
+								"{{VCD_IP}}"
+							],
+							"path": [
+								"cloudapi",
+								"1.0.0",
+								"entities",
+								"{{CLUSTER_ID}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Track update task",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"",
+									"    var jsonData = pm.response.json();",
+									"",
+									"    pm.globals.set(\"UPDATE_CLUSTER_TASK_STATUS\", jsonData.status);",
+									"});",
+									"",
+									"task_status = pm.globals.get(\"UPDATE_CLUSTER_TASK_STATUS\")",
+									"if (task_status == \"running\" || task_status == 'queued') {",
+									"    postman.setNextRequest(\"Track update task\")",
+									"} else {",
+									"    pm.test(\"Task rises an error\", function () {",
+									"        var jsonData = pm.response.json();",
+									"        pm.expect(jsonData.status).to.eql(\"error\");",
+									"    });",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"type": "text",
+								"value": "application/*+json;version=35.0"
+							},
+							{
+								"key": "x-vcloud-authorization",
+								"type": "text",
+								"value": " {{X_VCLOUD_AUTH}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"clus-ani-9\",\n    \"entity\": {\n        \"apiVersion\": \"cse.vmware.com/v2.0\",\n        \"kind\": \"native\",\n        \"metadata\": {\n            \"name\": \"clus-ani-9\",\n            \"orgName\": \"myorg\",\n            \"ovdcName\": \"myorgvdc\",\n            \"site\": \"bos1-vcloud-static-170-167.eng.vmware.com\"\n        },\n        \"spec\": {\n            \"controlPlane\": {\n                \"count\": 1,\n                \"sizingClass\": null,\n                \"storageProfile\": null\n            },\n            \"k8Distribution\": {\n                \"templateName\": \"ubuntu-16.04_k8-1.18_weave-2.6.5\",\n                \"templateRevision\": 2\n            },\n            \"nfs\": {\n                \"count\": 0,\n                \"sizingClass\": \"med\",\n                \"storageProfile\": \"Development\"\n            },\n            \"settings\": {\n                \"network\": \"mynet\",\n                \"rollbackOnFailure\": true,\n                \"sshKey\": \"\"\n            },\n            \"workers\": {\n                \"count\": 0,\n                \"sizingClass\": \"med\",\n                \"storageProfile\": \"Development\"\n            }\n        }\n    }\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{UPDATE_CLUSTER_TASK_URL}}",
+							"host": [
+								"{{UPDATE_CLUSTER_TASK_URL}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Verify update failed",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Cluster should exist\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Entity status has phase UPGRADE:FAILED\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.entity.status.phase).to.eql(\"UPGRADE:FAILED\");",
+									"});",
+									"",
+									"pm.test(\"Entity state is RESOLVED\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.state).to.eql(\"RESOLVED\");",
+									"});",
+									"",
+									"pm.test(\"Any node created\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.entity.status.nodes).to.not.eql(null);",
+									"});",
+									"",
+									"pm.test(\"template upgrade should fail\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    cloudProperties = jsonData.entity.status.cloudProperties;",
+									"    ",
+									"    controlPlane = jsonData.entity.status.nodes.controlPlane",
+									"    targetTemplate = \"ERROR\" + pm.globals.get('TARGET_TEMPLATE_NAME')",
+									"    pm.expect(cloudProperties.distribution.templateName).to.not.eql(targetTemplate);",
+									"    // pm.expect(cloudProperties.distribution.templateRevision).to.not.eql(parseInt(pm.globals.get(\"TARGET_TEMPLATE_REVISION\")));",
+									"    pm.expect(controlPlane.sizingClass).to.eql(pm.globals.get('SIZING_CLASS'));",
+									"    pm.expect(controlPlane.storageProfile).to.eql(pm.globals.get('STORAGE_PROFILE'));",
+									"});",
+									"",
+									"pm.test(\"All worker nodes are valid\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    workers = jsonData.entity.status.nodes.workers;",
+									"    pm.expect(workers.length).to.eql(parseInt(pm.globals.get('WORKERS_COUNT')));",
+									"    if (workers.length > 0) {",
+									"        pm.expect(workers[0].sizingClass).to.eql(pm.globals.get('SIZING_CLASS'))",
+									"        pm.expect(workers[0].storageProfile).to.eql(pm.globals.get('STORAGE_PROFILE'));",
+									"    }",
+									"});",
+									"",
+									"pm.test(\"All nfs nodes are valid\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    nfs = jsonData.entity.status.nodes.nfs;",
+									"    pm.expect(nfs.length).to.eql(parseInt(pm.globals.get('NFS_COUNT')));",
+									"    if (nfs.length > 0) {",
+									"        pm.expect(nfs[0].sizingClass).to.eql(pm.globals.get('SIZING_CLASS'))",
+									"        pm.expect(nfs[0].storageProfile).to.eql(pm.globals.get('STORAGE_PROFILE'));",
+									"    }",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"type": "text",
+								"value": "application/json;version=36.0"
+							},
+							{
+								"key": "x-vcloud-authorization",
+								"type": "text",
+								"value": "{{X_VCLOUD_AUTH}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"id\": \"urn:vcloud:entity:cse:nativeCluster:1.0.0:4a2a08a0-d152-43e5-883b-84114d5caa12\",\n    \"entityType\": \"urn:vcloud:type:cse:nativeCluster:1.0.0\",\n    \"name\": \"ubu-clus-ani-21\",\n    \"externalId\": null,\n    \"entity\": {\n        \"kind\": \"native\",\n        \"spec\": {\n            \"nfs\": {\n                \"count\": 0,\n                \"sizing_class\": null,\n                \"storage_profile\": \"*\"\n            },\n            \"workers\": {\n                \"count\": 0,\n                \"sizing_class\": null,\n                \"storage_profile\": \"*\"\n            },\n            \"settings\": {\n                \"network\": \"mynet\",\n                \"ssh_key\": \"ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDvCF4kkt3Il1IUNjFB5JpCglobFilTD9w4A/ssgAIyWReCxJKfGZymYG0/0H+tuXgwI2gxPSWDS+6as51Pfkizrx5incmWyUIHXWJtsoVyoJwsZeTn9NOV2SPbNKDCLfHnhaaEFUCcCr/zXNnUhcnA44s0QO1I9LNKrJACU5vb0o5/0jrjlIcXnYiYkAVpONWArAtgxAkq6VZQTYQXbxSvfW8tXsFqJdDKYgqqkTrnZq9IaoF/ZSyCGYYVz7p3vgHLUP5Gn7a9DUoNBAwgb5S7FQnYEVadPwt7JL0uK7/dsN41WhMydsiWZFutFMbT66Q+QRGGvp8TYWVNUkf1MOyb shamasundara@shamasundar-a01.vmware.com\",\n                \"rollback_on_failure\": false\n            },\n            \"control_plane\": {\n                \"count\": 1,\n                \"sizing_class\": null,\n                \"storage_profile\": \"*\"\n            },\n            \"k8_distribution\": {\n                \"template_name\": \"ubuntu-16.04_k8-1.19_weave-2.6.5\",\n                \"template_revision\": 1\n            }\n        },\n        \"status\": {\n            \"os\": \"ubuntu-16.04\",\n            \"cni\": \"weave 2.6.5\",\n            \"nodes\": {\n                \"nfs\": [],\n                \"workers\": [],\n                \"control_plane\": {\n                    \"ip\": \"10.150.161.75\",\n                    \"name\": \"mstr-g3gj\",\n                    \"sizing_class\": null\n                }\n            },\n            \"phase\": \"UPGRADE:SUCCEEDED\",\n            \"task_href\": \"https://bos1-vcloud-static-176-61.eng.vmware.com/api/task/34e1e7c8-d3b5-484b-9f0a-3429880cd521\",\n            \"kubernetes\": \"upstream 1.19.3\",\n            \"docker_version\": \"19.03.12\"\n        },\n        \"metadata\": {\n            \"org_name\": \"myorg\",\n            \"ovdc_name\": \"myorgvdc\",\n            \"cluster_name\": \"ubu-clus-ani-12\"\n        },\n        \"api_version\": \"\"\n    },\n    \"state\": \"PRE_CREATED\",\n    \"owner\": {\n        \"name\": \"administrator\",\n        \"id\": \"urn:vcloud:orgMember:21180376-55e5-4d7d-8ed9-e9c8f621cecc\"\n    },\n    \"org\": {\n        \"name\": \"System\",\n        \"id\": \"urn:vcloud:org:a93c9db9-7471-3192-8d09-a8f7eeda85f9\"\n    }\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "https://{{VCD_IP}}/cloudapi/1.0.0/entities/{{CLUSTER_ID}}",
+							"protocol": "https",
+							"host": [
+								"{{VCD_IP}}"
+							],
+							"path": [
+								"cloudapi",
+								"1.0.0",
+								"entities",
+								"{{CLUSTER_ID}}"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Delete entity cluster",
+			"item": [
+				{
+					"name": "delete entity",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"testBehaviors = false",
+									"",
+									"pm.test(\"Status code is 202 (Accepted)\", function () {",
+									"    pm.response.to.have.status(202);",
+									"});",
+									"",
+									"pm.test(\"Response has a valid Location header\", function () {",
+									"    pm.response.to.have.header('Location')",
+									"    clusterDeleteTask = pm.response.headers.get('Location');",
+									"    pm.globals.set(\"DELETE_CLUSTER_TASK_URL\", clusterDeleteTask);",
+									"    console.log('Delete cluster task: ' + clusterDeleteTask);",
+									"    pm.globals.set(\"DELETE_CLUSTER_TASK_STATUS\", \"\");",
+									"})"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Accept",
+								"type": "text",
+								"value": "application/json;version={{API_VERSION}}"
+							},
+							{
+								"key": "x-vcloud-authorization",
+								"type": "text",
+								"value": "{{X_VCLOUD_AUTH}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "https://{{VCD_IP}}/cloudapi/1.0.0/entities/{{CLUSTER_ID}}",
+							"protocol": "https",
+							"host": [
+								"{{VCD_IP}}"
+							],
+							"path": [
+								"cloudapi",
+								"1.0.0",
+								"entities",
+								"{{CLUSTER_ID}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "track delete task",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"",
+									"    var jsonData = pm.response.json();",
+									"",
+									"    pm.globals.set(\"DELETE_CLUSTER_TASK_URL\", jsonData.status);",
+									"});",
+									"",
+									"task_status = pm.globals.get(\"DELETE_CLUSTER_TASK_STATUS\")",
+									"if (task_status == \"running\" || task_status == 'queued') {",
+									"    postman.setNextRequest(\"Track delete task\")",
+									"} else {",
+									"    pm.test(\"Task succeeds\", function () {",
+									"        var jsonData = pm.response.json();",
+									"        pm.expect(jsonData.status).to.eql(\"success\");",
+									"    });",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"type": "text",
+								"value": "application/json;version=35.0"
+							},
+							{
+								"key": "x-vcloud-authorization",
+								"type": "text",
+								"value": " {{X_VCLOUD_AUTH}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"clus-ani-9\",\n    \"entity\": {\n        \"apiVersion\": \"cse.vmware.com/v2.0\",\n        \"kind\": \"native\",\n        \"metadata\": {\n            \"name\": \"clus-ani-9\",\n            \"orgName\": \"myorg\",\n            \"ovdcName\": \"myorgvdc\",\n            \"site\": \"bos1-vcloud-static-170-167.eng.vmware.com\"\n        },\n        \"spec\": {\n            \"controlPlane\": {\n                \"count\": 1,\n                \"sizingClass\": null,\n                \"storageProfile\": null\n            },\n            \"k8Distribution\": {\n                \"templateName\": \"ubuntu-16.04_k8-1.18_weave-2.6.5\",\n                \"templateRevision\": 2\n            },\n            \"nfs\": {\n                \"count\": 0,\n                \"sizingClass\": \"med\",\n                \"storageProfile\": \"Development\"\n            },\n            \"settings\": {\n                \"network\": \"mynet\",\n                \"rollbackOnFailure\": true,\n                \"sshKey\": \"\"\n            },\n            \"workers\": {\n                \"count\": 0,\n                \"sizingClass\": \"med\",\n                \"storageProfile\": \"Development\"\n            }\n        }\n    }\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "https://{{VCD_IP}}/cloudapi/1.0.0/entityTypes/urn:vcloud:type:cse:nativeCluster:{{RDE_VERSION}}",
+							"protocol": "https",
+							"host": [
+								"{{VCD_IP}}"
+							],
+							"path": [
+								"cloudapi",
+								"1.0.0",
+								"entityTypes",
+								"urn:vcloud:type:cse:nativeCluster:{{RDE_VERSION}}"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Get cluster kubeconfig",
+			"item": [
+				{
+					"name": "create kubeconfig",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"testBehaviors = false",
+									"",
+									"pm.test(\"Status code is 202 (Accepted)\", function () {",
+									"    pm.response.to.have.status(202);",
+									"});",
+									"",
+									"pm.test(\"Response has a valid Location header\", function () {",
+									"    pm.response.to.have.header('Location')",
+									"    createKubeconfigTask = pm.response.headers.get('Location');",
+									"    pm.globals.set(\"CREATE_KUBECONFIG_TASK_URL\", createKubeconfigTask);",
+									"    pm.globals.set(\"CREATE_KUBECONFIG_TASK_STATUS\", \"\")",
+									"    console.log('Create kubeconfig task: ' + createKubeconfigTask);",
+									"})"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"type": "text",
+								"value": "application/json;version={{API_VERSION}}"
+							},
+							{
+								"key": "x-vcloud-authorization",
+								"type": "text",
+								"value": "{{X_VCLOUD_AUTH}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "https://{{VCD_IP}}/cloudapi/1.0.0/entities/{{CLUSTER_ID}}/behaviors/urn:vcloud:behavior-interface:createKubeConfig:vmware:k8s:1.0.0/invocations",
+							"protocol": "https",
+							"host": [
+								"{{VCD_IP}}"
+							],
+							"path": [
+								"cloudapi",
+								"1.0.0",
+								"entities",
+								"{{CLUSTER_ID}}",
+								"behaviors",
+								"urn:vcloud:behavior-interface:createKubeConfig:vmware:k8s:1.0.0",
+								"invocations"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "track create kubeconfig task",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"",
+									"    var jsonData = pm.response.json();",
+									"",
+									"    pm.globals.set(\"CREATE_KUBECONFIG_TASK_STATUS\", jsonData.status);",
+									"});",
+									"",
+									"task_status = pm.globals.get(\"CREATE_KUBECONFIG_TASK_STATUS\")",
+									"if (task_status == \"running\" || task_status == 'queued') {",
+									"    postman.setNextRequest(\"track create kubeconfig task\")",
+									"} else {",
+									"    pm.test(\"Task rises an error\", function () {",
+									"        var jsonData = pm.response.json();",
+									"        pm.expect(jsonData.status).to.eql(\"success\");",
+									"    });",
+									"",
+									"    pm.test(\"Task contains valid kubeconfig\", function () {",
+									"        var jsonData = pm.response.json();",
+									"        kubeconfig = jsonData.result.resultContent;",
+									"        console.log(kubeconfig);",
+									"    });",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"type": "text",
+								"value": "application/*+json;version=35.0"
+							},
+							{
+								"key": "x-vcloud-authorization",
+								"type": "text",
+								"value": " {{X_VCLOUD_AUTH}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"clus-ani-9\",\n    \"entity\": {\n        \"apiVersion\": \"cse.vmware.com/v2.0\",\n        \"kind\": \"native\",\n        \"metadata\": {\n            \"name\": \"clus-ani-9\",\n            \"orgName\": \"myorg\",\n            \"ovdcName\": \"myorgvdc\",\n            \"site\": \"bos1-vcloud-static-170-167.eng.vmware.com\"\n        },\n        \"spec\": {\n            \"controlPlane\": {\n                \"count\": 1,\n                \"sizingClass\": null,\n                \"storageProfile\": null\n            },\n            \"k8Distribution\": {\n                \"templateName\": \"ubuntu-16.04_k8-1.18_weave-2.6.5\",\n                \"templateRevision\": 2\n            },\n            \"nfs\": {\n                \"count\": 0,\n                \"sizingClass\": \"med\",\n                \"storageProfile\": \"Development\"\n            },\n            \"settings\": {\n                \"network\": \"mynet\",\n                \"rollbackOnFailure\": true,\n                \"sshKey\": \"\"\n            },\n            \"workers\": {\n                \"count\": 0,\n                \"sizingClass\": \"med\",\n                \"storageProfile\": \"Development\"\n            }\n        }\n    }\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{CREATE_KUBECONFIG_TASK_URL}}",
+							"host": [
+								"{{CREATE_KUBECONFIG_TASK_URL}}"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Login",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Content-Type is present\", function () {",
+							"    pm.response.to.have.header(\"x-vcloud-authorization\");",
+							"    pm.response.headers.get('x-vcloud-authorization')",
+							"    pm.environment.set(\"X_VCLOUD_AUTH\", pm.response.headers.get('x-vcloud-authorization'));",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"auth": {
+					"type": "basic",
+					"basic": [
+						{
+							"key": "username",
+							"value": "administrator@system",
+							"type": "string"
+						},
+						{
+							"key": "password",
+							"value": "ca$hc0w",
+							"type": "string"
+						}
+					]
+				},
+				"method": "POST",
+				"header": [
+					{
+						"key": "Accept",
+						"value": "application/*+xml;version={{API_VERSION}}",
+						"type": "text"
+					}
+				],
+				"url": {
+					"raw": "https://{{VCD_IP}}/api/sessions",
+					"protocol": "https",
+					"host": [
+						"{{VCD_IP}}"
+					],
+					"path": [
+						"api",
+						"sessions"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "list all entities",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"// TODO add part to delete Vapps",
+							"pm.test(\"Your test name\", function () {",
+							"    var jsonData = pm.response.json();",
+							"",
+							"    deleteAllEntities = pm.environment.get(\"DELETE_ALL_ENTITIES\");",
+							"",
+							"    // load the first entity with SUCCESS state",
+							"    clusterIDArr = jsonData.values.map((entity) => entity['id']);",
+							"",
+							"    if (deleteAllEntities == \"true\") {",
+							"        clusterIDArr = jsonData.values.map((entity) => entity['id']);",
+							"        vcdIP = pm.environment.get('VCD_IP');",
+							"        xVath = pm.environment.get('X_VCLOUD_AUTH');",
+							"        apiVersion = pm.environment.get('API_VERSION');",
+							"        currHeader = pm.request.headers;",
+							"        reqHeader = {",
+							"            'x-vcloud-authorization': xVath,",
+							"            'Accept': 'application/json;version='+apiVersion",
+							"        }",
+							"        for (clusterId of clusterIDArr) {",
+							"            // resolve entity",
+							"            pm.sendRequest(",
+							"                {",
+							"                    url: 'https://'+vcdIP+'/cloudapi/1.0.0/entities/'+clusterId+'/resolve',",
+							"                    method: 'POST',",
+							"                    header: reqHeader,",
+							"                    body: null",
+							"                },",
+							"                function (err, response) {",
+							"                    console.log(response.json());",
+							"                }",
+							"            );",
+							"            console.log(\"Resolved cluster with id \"+clusterId)",
+							"            // delete entity",
+							"            pm.sendRequest(",
+							"                {",
+							"                    url: 'https://'+vcdIP+'/cloudapi/1.0.0/entities/'+clusterId+'?invokeHooks=false',",
+							"                    method: 'DELETE',",
+							"                    header: reqHeader,",
+							"                    body: null",
+							"                },",
+							"                function (err, response) {",
+							"                    console.log(response.json());",
+							"                }",
+							"            );",
+							"            console.log(\"Deleted cluster with id \"+clusterId)",
+							"        }",
+							"    }",
+							"});",
+							""
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"protocolProfileBehavior": {
+				"disableBodyPruning": true,
+				"disabledSystemHeaders": {
+					"accept": true,
+					"accept-encoding": true,
+					"user-agent": true
+				}
+			},
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Accept",
+						"type": "text",
+						"value": "application/json;version=36.0"
+					},
+					{
+						"key": "x-vcloud-authorization",
+						"type": "text",
+						"value": "{{X_VCLOUD_AUTH}}"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "",
+					"options": {
+						"raw": {
+							"language": "xml"
+						}
+					}
+				},
+				"url": {
+					"raw": "https://{{VCD_IP}}/cloudapi/1.0.0/entities/types/cse/nativeCluster/2.0.0",
+					"protocol": "https",
+					"host": [
+						"{{VCD_IP}}"
+					],
+					"path": [
+						"cloudapi",
+						"1.0.0",
+						"entities",
+						"types",
+						"cse",
+						"nativeCluster",
+						"2.0.0"
+					]
+				}
+			},
+			"response": []
+		}
+	]
+}
