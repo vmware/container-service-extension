@@ -15,15 +15,34 @@ release cycle of CSE.
   out of range of the given CSE version.
 
 ## API versioning
-(To be updated by Aritra)
-Update the CSE server supported API version set - (file references)
+The CSE server supported API version set is listed down in
+`\container_service_extension\common\constants\shared_constants.py`
+`SUPPORTED_VCD_API_VERSIONS = ['34.0', '35.0', '36.0']`
+As we add/remove support for VCD api versions in CSE, this map should be updated.
 
 ## API endpoints
-(To be updated by Aritra)
-Guidelines on
-- how to edit the request dispatcher maps.
-- when to add a new endpoint.
-- rules to follow to maintain backward compatibility
+Since CSE is an api extension to VCD, CSE api calls must have api version specified in the `Accept` header.
+CSE server on startup computes the common set of api version supported by CSE and the connected VCD.
+This forms the basis of the api versions that CSE server supports.
+
+The complete set of CSE apis in captured in the file
+`\container_service_extension\server\request_dispatcher.py`
+in form of handler maps.
+
+Each entry in the map(s), map a particular url + tuple of api versions to a handler function.
+
+The url can be templated, where template variables are prepended with the `$` sign.
+E.g. `/cse/cluster/$id` when matched with an incoming request URL of `/cse/cluster/abc-xyz`,
+the corresponding handler will be invoked and the handler would receive a dictionary which
+will contain the key-value pair `"id": "abc-xyz"`.
+
+As CSE server adds support for new api versions, corresponding entries should be made in the handler map(s).
+When support for a particular api version is removed, corresponding entries in the map must be removed too.
+Maintaining backward compatibility is of utmost importance and hence existing handler mapping and old handler
+behavior shouldn't be changed ever. If we ever feel that it is hard to maintain backward compatibility with a single
+handler function, we should choose to have two handler functions that map to their respective api versions in the
+handler map. Additioanly, any change in input/output of an endpoint that can't get a api version bump,
+should be moved to a new url.
 
 ## RDE
 RDEs offer persistence in VCD for otherwise CSE's K8 clusters. It contains two 
