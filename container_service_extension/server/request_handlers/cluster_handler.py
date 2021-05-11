@@ -57,7 +57,7 @@ def cluster_create(data: dict, op_ctx: ctx.OperationContext):
     entity_type = server_utils.get_registered_def_entity_type()
     converted_entity: AbstractNativeEntity = rde_utils.convert_input_rde_to_runtime_rde_format(input_entity)  # noqa: E501
     def_entity = common_models.DefEntity(entity=converted_entity, entityType=entity_type.id)  # noqa: E501
-    _, headers = def_entity_service.create_entity(entity_type_id=entity_type.id, entity=def_entity, return_headers=True)  # noqa: E501
+    _, headers = def_entity_service.create_entity(entity_type_id=entity_type.id, entity=def_entity, return_response_headers=True)  # noqa: E501
     def_entity = def_entity_service.get_native_rde_by_name_and_rde_version(
         name=converted_entity.metadata.name, version=entity_type.version)
     def_entity.entity.status.task_href = headers['Location']
@@ -164,8 +164,8 @@ def cluster_update(data: dict, op_ctx: ctx.OperationContext):
     cluster_def_entity.entity.spec = converted_native_entity.spec
     updated_def_entity, headers = def_entity_service.update_entity(
         entity_id=cluster_id, entity=cluster_def_entity,
-        invoke_hooks=True, return_headers=True)
-    updated_def_entity.entity.status.task_href = headers.get('Location') or headers.get('X-VMWARE-VCOULD-TASK-LOCATION')  # noqa: E501
+        invoke_hooks=True, return_response_headers=True)
+    updated_def_entity.entity.status.task_href = headers.get('X-VMWARE-VCOULD-TASK-LOCATION')  # noqa: E501
     # TODO: Response RDE must be compatible with the request RDE.
     #  Conversions may be needed especially if there is a major version
     #  difference in the input RDE and runtime RDE.
@@ -198,8 +198,8 @@ def cluster_delete(data: dict, op_ctx: ctx.OperationContext):
     cluster_id = data[RequestKey.CLUSTER_ID]
     def_entity_service = entity_service.DefEntityService(op_ctx.cloudapi_client)  # noqa: E501
     def_entity: common_models.DefEntity = def_entity_service.get_entity(cluster_id)  # noqa: E501
-    _, headers = def_entity_service.delete_entity(cluster_id, invoke_hooks=True, return_headers=True)  # noqa: E501
-    def_entity.entity.status.task_href = headers.get('Location') or headers.get('X-VMWARE-VCOULD-TASK-LOCATION')  # noqa: E501
+    _, headers = def_entity_service.delete_entity(cluster_id, invoke_hooks=True, return_response_headers=True)  # noqa: E501
+    def_entity.entity.status.task_href = headers.get('Location') # noqa: E501
     return def_entity.to_dict()
 
 
@@ -268,15 +268,4 @@ def _get_request_context(op_ctx: ctx.OperationContext):
     :return: RequestContext
     :rtype: behavior_ctx.RequestContext
     """
-    return behavior_ctx.RequestContext(
-        behavior_id=None,
-        task_id=None,
-        entity_id=None,
-        entity=None,
-        entity_type_id=None,
-        payload=None,
-        api_version=None,
-        request_id=None,
-        op_ctx=op_ctx,
-        user_context=None,
-        mqtt_publisher=None)
+    return behavior_ctx.RequestContext(op_ctx=op_ctx)

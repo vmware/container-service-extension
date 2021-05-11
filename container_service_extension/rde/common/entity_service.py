@@ -71,26 +71,26 @@ class DefEntityService:
     @handle_entity_service_exception
     def create_entity(self, entity_type_id: str, entity: DefEntity,
                       tenant_org_context: str = None,
-                      return_headers=False) -> Union[dict, Tuple[dict, dict]]:
+                      return_response_headers=False) -> Union[dict, Tuple[dict, dict]]:  # noqa: E501
         """Create defined entity instance of an entity type.
 
         :param str entity_type_id: ID of the DefEntityType
         :param DefEntity entity: Defined entity instance
-        :param bool return_headers: return response headers
+        :param bool return_response_headers: return response headers
         :return: created entity or created entity with response headers
         :rtype: Union[dict, Tuple[dict, dict]]
         """
-        additional_headers = {}
+        additional_request_headers = {}
         if tenant_org_context:
-            additional_headers['x-vmware-vcloud-tenant-context'] = tenant_org_context  # noqa: E501
+            additional_request_headers['x-vmware-vcloud-tenant-context'] = tenant_org_context  # noqa: E501
         return self._cloudapi_client.do_request(
             method=RequestMethod.POST,
             cloudapi_version=CloudApiVersion.VERSION_1_0_0,
             resource_url_relative_path=f"{CloudApiResource.ENTITY_TYPES}/"
                                        f"{entity_type_id}",
             payload=entity.to_dict(),
-            additional_headers=additional_headers,
-            return_headers=return_headers)
+            additional_request_headers=additional_request_headers,
+            return_response_headers=return_response_headers)
 
     @handle_entity_service_exception
     def list_entities_by_entity_type(self, vendor: str, nss: str, version: str,
@@ -228,14 +228,14 @@ class DefEntityService:
     @handle_entity_service_exception
     def update_entity(self, entity_id: str, entity: DefEntity,
                       invoke_hooks=False,
-                      return_headers=False) -> Union[DefEntity, Tuple[DefEntity, dict]]:  # noqa: E501
+                      return_response_headers=False) -> Union[DefEntity, Tuple[DefEntity, dict]]:  # noqa: E501
         """Update entity instance.
 
         :param str entity_id: Id of the entity to be updated.
         :param DefEntity entity: Modified entity to be updated.
         :param bool invoke_hooks: Value indicating whether hook-based-behaviors
         need to be triggered or not.
-        :param bool return_headers: return response headers
+        :param bool return_response_headers: return response headers
         :return: Updated entity or Updated entity and response headers
         :rtype: Union[DefEntity, Tuple[DefEntity, dict]]
         """
@@ -245,13 +245,13 @@ class DefEntityService:
         if float(vcd_api_version) >= float(ApiVersion.VERSION_36.value):
             resource_url_relative_path += f"?invokeHooks={str(invoke_hooks).lower()}"  # noqa: E501
 
-        if return_headers:
+        if return_response_headers:
             response_body, headers = self._cloudapi_client.do_request(
                 method=RequestMethod.PUT,
                 cloudapi_version=CloudApiVersion.VERSION_1_0_0,
                 resource_url_relative_path=resource_url_relative_path,
                 payload=entity.to_dict(),
-                return_headers=return_headers)
+                return_response_headers=return_response_headers)
             return DefEntity(**response_body), headers
         else:
             response_body = self._cloudapi_client.do_request(
@@ -331,12 +331,12 @@ class DefEntityService:
             return entity
 
     @handle_entity_service_exception
-    def delete_entity(self, entity_id: str, invoke_hooks: bool = False, return_headers=False) -> Union[dict, Tuple[dict, dict]]:  # noqa: E501
+    def delete_entity(self, entity_id: str, invoke_hooks: bool = False, return_response_headers=False) -> Union[dict, Tuple[dict, dict]]:  # noqa: E501
         """Delete the defined entity.
 
         :param str entity_id: Id of the entity.
         :param bool invoke_hooks: set to true if hooks need to be invoked
-        :param bool return_headers: return response headers
+        :param bool return_response_headers: return response headers
         :return: response body or response body and response headers
         :rtype: Union[dict, Tuple[dict, dict]]
         """
@@ -345,7 +345,7 @@ class DefEntityService:
             cloudapi_version=CloudApiVersion.VERSION_1_0_0,
             resource_url_relative_path=f"{CloudApiResource.ENTITIES}/"
                                        f"{entity_id}?invokeHooks={str(invoke_hooks).lower()}",  # noqa: E501
-            return_headers=return_headers)
+            return_response_headers=return_response_headers)
 
     def resolve_entity(self, entity_id: str, entity_type_id: str = None) -> DefEntity:  # noqa: E501
         """Resolve the entity.
