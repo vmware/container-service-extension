@@ -58,9 +58,13 @@ def cluster_create(data: dict, op_ctx: ctx.OperationContext):
     converted_entity: AbstractNativeEntity = rde_utils.convert_input_rde_to_runtime_rde_format(input_entity)  # noqa: E501
     def_entity = common_models.DefEntity(entity=converted_entity, entityType=entity_type.id)  # noqa: E501
     _, headers = def_entity_service.create_entity(entity_type_id=entity_type.id, entity=def_entity, return_response_headers=True)  # noqa: E501
-    def_entity = def_entity_service.get_native_rde_by_name_and_rde_version(
-        name=converted_entity.metadata.name, version=entity_type.version)
-    def_entity.entity.status.task_href = headers['Location']
+    # Get the created defined entity and update the task href
+    # TODO: Use the Htttp response status code to decide which header name to use for task_href  # noqa: E501
+    task_href = headers['Location']
+    task_resource = op_ctx.sysadmin_client.get_resource(task_href)
+    entity_id = task_resource.Owner.get('id')
+    def_entity = def_entity_service.get_entity(entity_id)
+    def_entity.entity.status.task_href = task_href
     return def_entity.to_dict()
 
 
@@ -165,6 +169,7 @@ def cluster_update(data: dict, op_ctx: ctx.OperationContext):
     updated_def_entity, headers = def_entity_service.update_entity(
         entity_id=cluster_id, entity=cluster_def_entity,
         invoke_hooks=True, return_response_headers=True)
+    # TODO: Use the Htttp response status code to decide which header name to use for task_href  # noqa: E501
     updated_def_entity.entity.status.task_href = headers.get('X-VMWARE-VCOULD-TASK-LOCATION')  # noqa: E501
     # TODO: Response RDE must be compatible with the request RDE.
     #  Conversions may be needed especially if there is a major version
@@ -199,7 +204,8 @@ def cluster_delete(data: dict, op_ctx: ctx.OperationContext):
     def_entity_service = entity_service.DefEntityService(op_ctx.cloudapi_client)  # noqa: E501
     def_entity: common_models.DefEntity = def_entity_service.get_entity(cluster_id)  # noqa: E501
     _, headers = def_entity_service.delete_entity(cluster_id, invoke_hooks=True, return_response_headers=True)  # noqa: E501
-    def_entity.entity.status.task_href = headers.get('Location') # noqa: E501
+    # TODO: Use the Htttp response status code to decide which header name to use for task_href  # noqa: E501
+    def_entity.entity.status.task_href = headers.get('Location')
     return def_entity.to_dict()
 
 
