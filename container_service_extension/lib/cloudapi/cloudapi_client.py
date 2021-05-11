@@ -65,8 +65,8 @@ class CloudApiClient(object):
                    resource_url_absolute_path=None,
                    payload=None,
                    content_type=None,
-                   additional_headers=None,
-                   return_headers=False):
+                   additional_request_headers=None,
+                   return_response_headers=False):
         """Make a request to vCD server at /cloudapi endpoint.
 
         :param shared_constants.RequestMethod method: One of the HTTP verb
@@ -82,7 +82,8 @@ class CloudApiClient(object):
             e.g. https://<vcd fqdn>/transfer/{id}/{file name}
         :param dict payload: JSON payload for the REST call.
         :param str content_type: content type of the body of the request
-        :param dict additional_headers: request specific headers
+        :param dict additional_request_headers: request specific headers
+        :param bool return_response_headers: should return response_headers?
 
         :return: body of the response text (JSON) in form of a dictionary and
             the response headers if return_headers is set
@@ -102,8 +103,8 @@ class CloudApiClient(object):
 
         self.LOGGER_WIRE.debug(f"Request uri : {method.value.upper()} {url}")
         headers = deepcopy(self._headers)
-        if additional_headers:
-            headers.update(additional_headers)
+        if additional_request_headers:
+            headers.update(additional_request_headers)
         if content_type and 'json' not in content_type:
             headers['Content-type'] = content_type
             response = requests.request(
@@ -131,11 +132,11 @@ class CloudApiClient(object):
 
         response.raise_for_status()
         if response.text:
-            if return_headers:
+            if return_response_headers:
                 return json.loads(response.text), response.headers
             else:
                 return json.loads(response.text)
-        elif return_headers:
+        elif return_response_headers:
             return None, response.headers
 
     def get_cursor_param(self) -> str:
