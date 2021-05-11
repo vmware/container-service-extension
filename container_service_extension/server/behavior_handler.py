@@ -91,8 +91,6 @@ def update_cluster(behavior_ctx: RequestContext):
         rde_version=input_rde_version). \
         validate(cloudapi_client=cloudapi_client, entity=input_entity)
 
-    svc = cluster_service_factory.ClusterServiceFactory(behavior_ctx).get_cluster_service()  # noqa: E501
-
     # Convert the input entity to runtime rde format.
     # Based on the runtime rde, call the appropriate backend method.
     converted_input_entity = rde_utils.convert_input_rde_to_runtime_rde_format(input_entity)  # noqa: E501
