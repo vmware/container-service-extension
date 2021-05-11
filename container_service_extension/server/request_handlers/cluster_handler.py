@@ -58,9 +58,12 @@ def cluster_create(data: dict, op_ctx: ctx.OperationContext):
     converted_entity: AbstractNativeEntity = rde_utils.convert_input_rde_to_runtime_rde_format(input_entity)  # noqa: E501
     def_entity = common_models.DefEntity(entity=converted_entity, entityType=entity_type.id)  # noqa: E501
     _, headers = def_entity_service.create_entity(entity_type_id=entity_type.id, entity=def_entity, return_response_headers=True)  # noqa: E501
-    def_entity = def_entity_service.get_native_rde_by_name_and_rde_version(
-        name=converted_entity.metadata.name, version=entity_type.version)
-    def_entity.entity.status.task_href = headers['Location']
+    # Get the created defined entity and update the task href
+    task_href = headers['Location']
+    task_resource = op_ctx.sysadmin_client.get_resource(task_href)
+    entity_id = task_resource.Owner.get('id')
+    def_entity = def_entity_service.get_entity(entity_id)
+    def_entity.entity.status.task_href = task_href
     return def_entity.to_dict()
 
 
