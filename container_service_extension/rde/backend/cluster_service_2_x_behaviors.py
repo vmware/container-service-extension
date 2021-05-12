@@ -173,9 +173,11 @@ class ClusterService(abstract_broker.AbstractBroker):
         curr_entity = self.entity_svc.get_entity(cluster_id)
         curr_native_entity: rde_2_x.NativeEntity = curr_entity.entity
         if curr_entity.state != def_constants.DEF_RESOLVED_STATE:
-            raise exceptions.CseServerError(
-                f"Cluster {curr_entity.name} with id {cluster_id} is not in a "
-                f"valid state for this operation. Please contact the administrator")  # noqa: E501
+            msg = f"Cluster {curr_entity.name} with id {cluster_id} is " \
+                  "not in a valid state for this operation. " \
+                  "Please contact the administrator"
+            LOGGER.error(msg)
+            raise exceptions.CseServerError(msg)
 
         telemetry_handler.record_user_action_details(
             cse_operation=telemetry_constants.CseOperation.V36_CLUSTER_CONFIG,
@@ -184,6 +186,12 @@ class ClusterService(abstract_broker.AbstractBroker):
                 telemetry_constants.PayloadKey.SOURCE_DESCRIPTION: thread_local_data.get_thread_local_data(ThreadLocalData.USER_AGENT)  # noqa: E501
             }
         )
+
+        if curr_entity.externalId is None:
+            msg = f"Cannot find VApp href for cluster {curr_entity.name} " \
+                  f"with id {cluster_id}"
+            LOGGER.error(msg)
+            raise exceptions.CseServerError(msg)
 
         client_v36 = self.context.get_client(api_version=DEFAULT_API_VERSION)
         vapp = vcd_vapp.VApp(client_v36, href=curr_entity.externalId)
@@ -203,10 +211,13 @@ class ClusterService(abstract_broker.AbstractBroker):
                                              CSE_CLUSTER_KUBECONFIG_PATH)
 
         if not result:
-            raise exceptions.ClusterOperationError(
-                "Couldn't get cluster configuration")
+            msg = "Failed to get cluster kube-config"
+            LOGGER.error(msg)
+            raise exceptions.ClusterOperationError(msg)
 
-        return result.content.decode()
+        return self.mqtt_publisher.construct_behavior_payload(
+            message=result.content.decode(),
+            status=BehaviorTaskStatus.SUCCESS.value)
 
     def create_cluster(self, entity_id: str, input_native_entity: rde_2_x.NativeEntity):  # noqa: E501
         """Start the cluster creation operation.
