@@ -18,30 +18,30 @@ release cycle of CSE.
 The CSE server supported API version set is listed down in
 `\container_service_extension\common\constants\shared_constants.py`
 `SUPPORTED_VCD_API_VERSIONS = ['34.0', '35.0', '36.0']`
-As we add/remove support for VCD api versions in CSE, this map should be updated.
+As we add/remove support for VCD API versions in CSE, this map should be updated.
 
 ## API endpoints
-Since CSE is an api extension to VCD, CSE api calls must have api version specified in the `Accept` header.
-CSE server on startup computes the common set of api version supported by CSE and the connected VCD.
-This forms the basis of the api versions that CSE server supports.
+Since CSE is an API extension to VCD, CSE API calls must have API version specified in the `Accept` header.
+CSE server on startup computes the common set of API version supported by CSE and the connected VCD.
+This forms the basis of the API versions that CSE server supports.
 
-The complete set of CSE apis in captured in the file
+The complete set of CSE apis is captured in the file
 `\container_service_extension\server\request_dispatcher.py`
 in form of handler maps.
 
-Each entry in the map(s), map a particular url + tuple of api versions to a handler function.
+Each entry in the map(s), maps a particular url + tuple of API versions to a handler function.
 
 The url can be templated, where template variables are prepended with the `$` sign.
 E.g. `/cse/cluster/$id` when matched with an incoming request URL of `/cse/cluster/abc-xyz`,
 the corresponding handler will be invoked and the handler would receive a dictionary which
 will contain the key-value pair `"id": "abc-xyz"`.
 
-As CSE server adds support for new api versions, corresponding entries should be made in the handler map(s).
-When support for a particular api version is removed, corresponding entries in the map must be removed too.
+As CSE server adds support for new API versions, corresponding entries should be made in the handler map(s).
+When support for a particular API version is removed, corresponding entries in the map must be removed too.
 Maintaining backward compatibility is of utmost importance and hence existing handler mapping and old handler
 behavior shouldn't be changed ever. If we ever feel that it is hard to maintain backward compatibility with a single
-handler function, we should choose to have two handler functions that map to their respective api versions in the
-handler map. Additioanly, any change in input/output of an endpoint that can't get a api version bump,
+handler function, we should choose to have two handler functions that map to their respective API versions in the
+handler map. Additioanly, any change in input/output of an endpoint that can't get an API version bump,
 should be moved to a new url.
 
 ## RDE
@@ -91,7 +91,7 @@ Steps:
 3. Upgrade existing RDE instances to newer runtime RDE chosen by the server (references and guidelines - to be updated)
 
 ## CSE start-up
-1. Make sure feature flags, VCD api version in extension are not changed after CSE install/upgrade
+1. Make sure feature flags, VCD API version in extension are not changed after CSE install/upgrade
 2. Ensure that unsupported templates are not loaded into runtime config.
 3. Ensure native placement policies are set up and are loaded to runtime config.
 4. Determine the CSE server API version at runtime.
@@ -103,9 +103,9 @@ Steps:
 
 # CLI
 1. Update any new NativeEntity models with sample_native_entity()
-2. Ensure proper mapping between VCD api version and Runtime RDE version for all supported VCD API versions are available.
+2. Ensure proper mapping between VCD API version and Runtime RDE version for all supported VCD API versions are available.
 3. Update mappings in command_filter.py and make sure right commands and sub-commands are exposed at the right API versions.
-4. Auto-negotiate the VCD api version to be used to communicate with CSE server.
+4. Auto-negotiate the VCD API version to be used to communicate with CSE server.
    - Update the CSE CLI supported API version set.
 5. Ensure the right cloudapi endpoint is used for cluster list and cluster info operations.
 6. Dynamically compute the RDE version to use based on the CSE server side configuration.
