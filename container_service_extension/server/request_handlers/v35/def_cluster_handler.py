@@ -35,6 +35,10 @@ def cluster_create(data: dict, op_ctx: ctx.OperationContext):
     :return: Defined entity of the native cluster
     :rtype: container_service_extension.def_.models.DefEntity
     """
+    rde_in_use = server_utils.get_rde_version_in_use()
+    if semantic_version.Version(rde_in_use) >= semantic_version.Version(rde_constants.RDEVersion.RDE_2_0_0.value):  # noqa: E501
+        return cluster_handler.cluster_create(data=data, op_ctx=op_ctx)
+
     input_entity: dict = data[RequestKey.INPUT_SPEC]
     # Convert the input entity to runtime rde format.
     # Based on the runtime rde, call the appropriate backend method.
@@ -58,6 +62,10 @@ def cluster_resize(data: dict, op_ctx: ctx.OperationContext):
     :return: Defined entity of the native cluster
     :rtype: container_service_extension.def_.models.DefEntity
     """
+    rde_in_use = server_utils.get_rde_version_in_use()
+    if semantic_version.Version(rde_in_use) >= semantic_version.Version(rde_constants.RDEVersion.RDE_2_0_0.value):  # noqa: E501
+        return cluster_handler.cluster_update(data=data, op_ctx=op_ctx)
+
     input_entity: dict = data[RequestKey.INPUT_SPEC]
     # Convert the input entity to runtime rde format.
     # Based on the runtime rde, call the appropriate backend method.
@@ -92,6 +100,9 @@ def cluster_delete(data: dict, op_ctx: ctx.OperationContext):
     :return: Dict
     """
     rde_in_use = server_utils.get_rde_version_in_use()
+    if semantic_version.Version(rde_in_use) >= semantic_version.Version(rde_constants.RDEVersion.RDE_2_0_0.value):  # noqa: E501
+        return cluster_handler.cluster_delete(data=data, op_ctx=op_ctx)
+
     svc = cluster_service_factory.ClusterServiceFactory(op_ctx). \
         get_cluster_service(rde_in_use)
     cluster_id = data[RequestKey.CLUSTER_ID]
@@ -111,6 +122,9 @@ def cluster_info(data: dict, op_ctx: ctx.OperationContext):
     :return: Dict
     """
     rde_in_use = server_utils.get_rde_version_in_use()
+    if semantic_version.Version(rde_in_use) >= semantic_version.Version(rde_constants.RDEVersion.RDE_2_0_0.value):  # noqa: E501
+        return cluster_handler.cluster_info(data=data, op_ctx=op_ctx)
+
     svc = cluster_service_factory.ClusterServiceFactory(op_ctx). \
         get_cluster_service(rde_in_use)
     cluster_id = data[RequestKey.CLUSTER_ID]
@@ -127,6 +141,9 @@ def cluster_config(data: dict, op_ctx: ctx.OperationContext):
     :return: Dict
     """
     rde_in_use = server_utils.get_rde_version_in_use()
+    if semantic_version.Version(rde_in_use) >= semantic_version.Version(rde_constants.RDEVersion.RDE_2_0_0.value):  # noqa: E501
+        return cluster_handler.cluster_config(data=data, op_ctx=op_ctx)
+
     svc = cluster_service_factory.ClusterServiceFactory(op_ctx). \
         get_cluster_service(rde_in_use)
     cluster_id = data[RequestKey.CLUSTER_ID]
@@ -141,6 +158,9 @@ def cluster_upgrade_plan(data, op_ctx: ctx.OperationContext):
     :return: List[Tuple(str, str)]
     """
     rde_in_use = server_utils.get_rde_version_in_use()
+    if semantic_version.Version(rde_in_use) >= semantic_version.Version(rde_constants.RDEVersion.RDE_2_0_0.value):  # noqa: E501
+        return cluster_handler.cluster_upgrade_plan(data=data, op_ctx=op_ctx)
+
     svc = cluster_service_factory.ClusterServiceFactory(op_ctx). \
         get_cluster_service(rde_in_use)
     return svc.get_cluster_upgrade_plan(data[RequestKey.CLUSTER_ID])
@@ -155,6 +175,10 @@ def cluster_upgrade(data, op_ctx: ctx.OperationContext):
 
     :return: Dict
     """
+    rde_in_use = server_utils.get_rde_version_in_use()
+    if semantic_version.Version(rde_in_use) >= semantic_version.Version(rde_constants.RDEVersion.RDE_2_0_0.value):  # noqa: E501
+        return cluster_handler.cluster_update(data=data, op_ctx=op_ctx)
+
     input_entity: dict = data[RequestKey.INPUT_SPEC]
     # Convert the input entity to runtime rde format.
     # Based on the runtime rde, call the appropriate backend method.
@@ -183,6 +207,9 @@ def native_cluster_list(data: dict, op_ctx: ctx.OperationContext):
     :return: List
     """
     rde_in_use = server_utils.get_rde_version_in_use()
+    if semantic_version.Version(rde_in_use) >= semantic_version.Version(rde_constants.RDEVersion.RDE_2_0_0.value):  # noqa: E501
+        return cluster_handler.native_cluster_list(data=data, op_ctx=op_ctx)
+
     svc = cluster_service_factory.ClusterServiceFactory(op_ctx). \
         get_cluster_service(rde_in_use)
     filters = data.get(RequestKey.QUERY_PARAMS, {})
@@ -217,6 +244,9 @@ def native_cluster_list(data: dict, op_ctx: ctx.OperationContext):
 def cluster_acl_info(data: dict, op_ctx: ctx.OperationContext):
     """Request handler for cluster acl list operation."""
     rde_in_use = server_utils.get_rde_version_in_use()
+    if semantic_version.Version(rde_in_use) >= semantic_version.Version(rde_constants.RDEVersion.RDE_2_0_0.value):  # noqa: E501
+        return cluster_handler.cluster_acl_info(data=data, op_ctx=op_ctx)
+
     svc = cluster_service_factory.ClusterServiceFactory(op_ctx). \
         get_cluster_service(rde_in_use)
     cluster_id = data[RequestKey.CLUSTER_ID]
@@ -239,6 +269,9 @@ def cluster_acl_info(data: dict, op_ctx: ctx.OperationContext):
 def cluster_acl_update(data: dict, op_ctx: ctx.OperationContext):
     """Request handler for cluster acl update operation."""
     rde_in_use = server_utils.get_rde_version_in_use()
+    if semantic_version.Version(rde_in_use) >= semantic_version.Version(rde_constants.RDEVersion.RDE_2_0_0.value):  # noqa: E501
+        return cluster_handler.cluster_acl_update(data=data, op_ctx=op_ctx)
+
     svc = cluster_service_factory.ClusterServiceFactory(op_ctx). \
         get_cluster_service(rde_in_use)
     cluster_id = data[RequestKey.CLUSTER_ID]
@@ -254,6 +287,9 @@ def cluster_list(data: dict, op_ctx: ctx.OperationContext):
     :return: List
     """
     rde_in_use = server_utils.get_rde_version_in_use()
+    if semantic_version.Version(rde_in_use) >= semantic_version.Version(rde_constants.RDEVersion.RDE_2_0_0.value):  # noqa: E501
+        return cluster_handler.cluster_list(data=data, op_ctx=op_ctx)
+
     svc = cluster_service_factory.ClusterServiceFactory(op_ctx). \
         get_cluster_service(rde_in_use)
 
