@@ -21,6 +21,7 @@ import container_service_extension.common.constants.server_constants as server_c
 from container_service_extension.common.constants.shared_constants import ClusterAclKey  # noqa: E501
 from container_service_extension.common.constants.shared_constants import CSE_PAGINATION_DEFAULT_PAGE_SIZE  # noqa: E501
 from container_service_extension.common.constants.shared_constants import CSE_PAGINATION_FIRST_PAGE_NUMBER  # noqa: E501
+from container_service_extension.common.constants.shared_constants import HttpHeaders  # noqa: E501
 from container_service_extension.common.constants.shared_constants import PaginationKey  # noqa: E501
 from container_service_extension.common.constants.shared_constants import RequestKey  # noqa: E501
 import container_service_extension.common.thread_local_data as thread_local_data  # noqa: E501
@@ -28,11 +29,13 @@ import container_service_extension.common.utils.server_utils as server_utils
 import container_service_extension.lib.telemetry.constants as telemetry_constants  # noqa: E501
 import container_service_extension.lib.telemetry.telemetry_handler as telemetry_handler  # noqa: E501
 import container_service_extension.rde.backend.cluster_service_factory as cluster_service_factory  # noqa: E501
+from container_service_extension.rde.behaviors.behavior_model import BehaviorOperation  # noqa: E501
 import container_service_extension.rde.common.entity_service as entity_service
 import container_service_extension.rde.constants as rde_constants
 from container_service_extension.rde.models.abstractNativeEntity import AbstractNativeEntity  # noqa: E501
 import container_service_extension.rde.models.common_models as common_models
 import container_service_extension.rde.utils as rde_utils
+import container_service_extension.rde.validators.validator_factory as rde_validator_factory  # noqa: E501
 import container_service_extension.security.context.behavior_request_context as behavior_ctx  # noqa: E501
 import container_service_extension.security.context.operation_context as ctx
 import container_service_extension.server.request_handlers.request_utils as request_utils  # noqa: E501
@@ -53,6 +56,15 @@ def cluster_create(data: dict, op_ctx: ctx.OperationContext):
     input_entity: dict = data[RequestKey.INPUT_SPEC]
     payload_version = input_entity.get(rde_constants.PayloadKey.PAYLOAD_VERSION)  # noqa: E501
     rde_utils.raise_error_if_unsupported_payload_version(payload_version)
+
+    # Validate the Input payload based on the (Operation, payload_version).
+    # Get the validator based on the payload_version
+    # ToDo : Don't use default cloudapi_client. Use the specific versioned one
+    rde_validator_factory.get_validator(
+        rde_version=rde_constants.MAP_INPUT_PAYLOAD_VERSION_TO_RDE_VERSION[
+            payload_version]).validate(cloudapi_client=op_ctx.cloudapi_client,
+                                       entity=input_entity)
+
     def_entity_service = entity_service.DefEntityService(op_ctx.cloudapi_client)  # noqa: E501
     entity_type = server_utils.get_registered_def_entity_type()
     converted_entity: AbstractNativeEntity = rde_utils.convert_input_rde_to_runtime_rde_format(input_entity)  # noqa: E501
@@ -60,7 +72,8 @@ def cluster_create(data: dict, op_ctx: ctx.OperationContext):
     _, headers = def_entity_service.create_entity(entity_type_id=entity_type.id, entity=def_entity, return_response_headers=True)  # noqa: E501
     # Get the created defined entity and update the task href
     # TODO: Use the Htttp response status code to decide which header name to use for task_href  # noqa: E501
-    task_href = headers['Location']
+    # 202 - location header, 200 - xvcloud-task-location needs to be used
+    task_href = headers[HttpHeaders.LOCATION.value]
     task_resource = op_ctx.sysadmin_client.get_resource(task_href)
     entity_id = task_resource.Owner.get('id')
     def_entity = def_entity_service.get_entity(entity_id)
@@ -160,6 +173,16 @@ def cluster_update(data: dict, op_ctx: ctx.OperationContext):
     payload_version = input_entity.get(rde_constants.PayloadKey.PAYLOAD_VERSION)  # noqa: E501
     rde_utils.raise_error_if_unsupported_payload_version(payload_version)
 
+    # Validate the Input payload based on the (Operation, payload_version).
+    # Get the validator based on the payload_version
+    # ToDo : Don't use default cloudapi_client. Use the specific versioned one
+    rde_validator_factory.get_validator(
+        rde_version=rde_constants.MAP_INPUT_PAYLOAD_VERSION_TO_RDE_VERSION[
+            payload_version]). \
+        validate(cloudapi_client=op_ctx.cloudapi_client, entity_id=cluster_id,
+                 entity=input_entity,
+                 operation=BehaviorOperation.UPDATE_CLUSTER)
+
     # Convert the input entity to runtime rde format.
     # Based on the runtime rde, call the appropriate backend method.
     def_entity_service = entity_service.DefEntityService(op_ctx.cloudapi_client)  # noqa: E501
@@ -170,7 +193,8 @@ def cluster_update(data: dict, op_ctx: ctx.OperationContext):
         entity_id=cluster_id, entity=cluster_def_entity,
         invoke_hooks=True, return_response_headers=True)
     # TODO: Use the Htttp response status code to decide which header name to use for task_href  # noqa: E501
-    updated_def_entity.entity.status.task_href = headers.get('X-VMWARE-VCOULD-TASK-LOCATION')  # noqa: E501
+    # 202 - location header, 200 - xvcloud-task-location needs to be used
+    updated_def_entity.entity.status.task_href = headers.get(HttpHeaders.X_VMWARE_VCOULD_TASK_LOCATION.value)  # noqa: E501
     # TODO: Response RDE must be compatible with the request RDE.
     #  Conversions may be needed especially if there is a major version
     #  difference in the input RDE and runtime RDE.
@@ -205,7 +229,8 @@ def cluster_delete(data: dict, op_ctx: ctx.OperationContext):
     def_entity: common_models.DefEntity = def_entity_service.get_entity(cluster_id)  # noqa: E501
     _, headers = def_entity_service.delete_entity(cluster_id, invoke_hooks=True, return_response_headers=True)  # noqa: E501
     # TODO: Use the Htttp response status code to decide which header name to use for task_href  # noqa: E501
-    def_entity.entity.status.task_href = headers.get('Location')
+    # 202 - location header, 200 - xvcloud-task-location needs to be used
+    def_entity.entity.status.task_href = headers.get(HttpHeaders.LOCATION.value)  # noqa: E501
     return def_entity.to_dict()
 
 
