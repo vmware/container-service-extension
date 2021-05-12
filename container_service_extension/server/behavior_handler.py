@@ -108,7 +108,7 @@ def delete_cluster(behavior_ctx: RequestContext):
 
 
 @exception_handler
-def get_kubeconfig(behavior_ctx: BehaviorRequestContext):
+def get_kubeconfig(behavior_ctx: RequestContext):
     cluster_id: str = behavior_ctx.entity_id
     svc = cluster_service_factory.ClusterServiceFactory(behavior_ctx).get_cluster_service()  # noqa: E501
     return svc.get_cluster_config(cluster_id)
