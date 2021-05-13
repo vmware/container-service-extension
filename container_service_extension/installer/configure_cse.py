@@ -2411,7 +2411,7 @@ def _create_cluster_rde(client, cluster, kind, runtime_rde_version,
         # Update with the correct cluster id
         native_entity_2_x: rde_2_x.NativeEntity = def_entity.entity
         native_entity_2_x.status.uid = def_entity_id
-        native_entity_2_x.status.cloudProperties.site = site
+        native_entity_2_x.status.cloud_properties.site = site
         native_entity_2_x.metadata.site = site
 
     def_entity.externalId = cluster['vapp_href']
