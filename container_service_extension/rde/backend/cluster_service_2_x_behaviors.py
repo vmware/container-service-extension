@@ -64,6 +64,7 @@ CLUSTER_CREATE_IN_PROGRESS_MESSAGE = 'Create cluster in progress'
 CLUSTER_RESIZE_IN_PROGRESS_MESSAGE = 'Resize cluster in progress'
 CLUSTER_DELETE_IN_PROGRESS_MESSAGE = 'Delete cluster in progress'
 CLUSTER_UPGRADE_IN_PROGRESS_MESSAGE = 'Upgrade cluster in progress'
+NFS_NODE_DELETE_IN_PROGRESS_MESSAGE = 'NFS node delete in progress'
 
 
 class ClusterService(abstract_broker.AbstractBroker):
@@ -794,7 +795,9 @@ class ClusterService(abstract_broker.AbstractBroker):
         self.context.is_async = True
         self._monitor_delete_nodes(cluster_id=cluster_id,
                                    nodes_to_del=nodes_to_del)
-        return curr_entity
+        return self.mqtt_publisher.construct_behavior_payload(
+            message=NFS_NODE_DELETE_IN_PROGRESS_MESSAGE,
+            status=BehaviorTaskStatus.RUNNING.value, progress=5)
 
     @thread_utils.run_async
     def _create_cluster_async(self, cluster_id: str,
@@ -1215,15 +1218,15 @@ class ClusterService(abstract_broker.AbstractBroker):
 
             # use the same settings with which cluster was originally created
             # viz., template, storage_profile, and network among others.
-            worker_storage_profile = current_spec.topology.workers.storage_profile  # noqa: E501
-            worker_sizing_class = current_spec.topology.workers.sizing_class
-            nfs_storage_profile = current_spec.topology.nfs.storage_profile
-            nfs_sizing_class = current_spec.topology.nfs.sizing_class
-            network_name = current_spec.settings.network
-            ssh_key = current_spec.settings.ssh_key
-            rollback = current_spec.settings.rollback_on_failure
-            template_name = current_spec.distribution.template_name
-            template_revision = current_spec.distribution.template_revision
+            worker_storage_profile = input_native_entity.spec.topology.workers.storage_profile  # noqa: E501
+            worker_sizing_class = input_native_entity.spec.topology.workers.sizing_class  # noqa: E501
+            nfs_storage_profile = input_native_entity.spec.topology.nfs.storage_profile  # noqa: E501
+            nfs_sizing_class = input_native_entity.spec.topology.nfs.sizing_class  # noqa: E501
+            network_name = input_native_entity.spec.settings.network
+            ssh_key = input_native_entity.spec.settings.ssh_key
+            rollback = input_native_entity.spec.settings.rollback_on_failure
+            template_name = input_native_entity.spec.distribution.template_name
+            template_revision = input_native_entity.spec.distribution.template_revision  # noqa: E501
             template = _get_template(template_name, template_revision)
 
             # compute the values of workers and nfs to be added or removed
@@ -1647,9 +1650,7 @@ class ClusterService(abstract_broker.AbstractBroker):
                 msg = f"Failed to update defined entity status " \
                       f" for cluster {cluster_id}"
                 LOGGER.error(f"{msg}", exc_info=True)
-            # NOTE: Since the defined entity is assumed to be
-            # resolved during cluster creation, there is no need
-            # to resolve the defined entity again
+
             try:
                 self._sync_def_entity(cluster_id)
             except Exception:

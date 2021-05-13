@@ -20,7 +20,8 @@ MAP_BEHAVIOR_ID_TO_HANDLER_METHOD = {
     BehaviorOperation.CREATE_CLUSTER.value.id: handler.create_cluster,
     BehaviorOperation.UPDATE_CLUSTER.value.id: handler.update_cluster,
     BehaviorOperation.DELETE_CLUSTER.value.id: handler.delete_cluster,
-    BehaviorOperation.GET_KUBE_CONFIG.value.id: handler.get_kubeconfig
+    BehaviorOperation.GET_KUBE_CONFIG.value.id: handler.get_kubeconfig,
+    BehaviorOperation.DELETE_NFS_NODE.value.id: handler.nfs_node_delete
 }
 
 
@@ -38,6 +39,7 @@ def process_behavior_request(msg_json, mqtt_publisher: MQTTPublisher):
     api_version: str = payload['_metadata']['apiVersion']
     auth_token: str = payload['_metadata']['actAsToken']
     request_id: str = payload['_metadata']['requestId']
+    arguments: dict = payload['arguments']
 
     # Initializing Behavior operation context
     op_ctx = OperationContext(auth_token=auth_token, is_jwt=True, request_id=request_id)  # noqa: E501
@@ -55,7 +57,7 @@ def process_behavior_request(msg_json, mqtt_publisher: MQTTPublisher):
 
     # Invoke the handler method and return the response in the string format.
     try:
-        return MAP_BEHAVIOR_ID_TO_HANDLER_METHOD[behavior_id](behavior_ctx)  # noqa: E501
+        return MAP_BEHAVIOR_ID_TO_HANDLER_METHOD[behavior_id](behavior_ctx, **arguments)  # noqa: E501
     except CseRequestError as e:
         error_details = asdict(BehaviorError(majorErrorCode=e.status_code,
                                              minorErrorCode=e.minor_error_code,

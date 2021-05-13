@@ -38,6 +38,11 @@ DELETE_CLUSTER_BEHAVIOR_INTERFACE_ID = f"{BEHAVIOR_INTERFACE_ID_PREFIX}:" \
                                        f"{DELETE_CLUSTER_BEHAVIOR_NAME}:" \
                                        f"{Vendor.CSE.value}:" \
                                        f"{Nss.KUBERNETES.value}:1.0.0"
+DELETE_NFS_NODE_BEHAVIOR_NAME = 'deleteNfsNode'
+DELETE_NFS_NODE_BEHAVIOR_ID = f"{BEHAVIOR_INTERFACE_ID_PREFIX}:" \
+                              f"{DELETE_NFS_NODE_BEHAVIOR_NAME}:" \
+                              f"{Vendor.CSE.value}:" \
+                              f"{Nss.KUBERNETES.value}:1.0.0"
 
 
 @dataclass()
@@ -107,6 +112,9 @@ class BehaviorOperation(Enum):
     GET_KUBE_CONFIG = Behavior(name=KUBE_CONFIG_BEHAVIOR_INTERFACE_NAME,
                                id=KUBE_CONFIG_BEHAVIOR_TYPE_ID,
                                ref=KUBE_CONFIG_BEHAVIOR_INTERFACE_ID)
+    DELETE_NFS_NODE = Behavior(name=DELETE_NFS_NODE_BEHAVIOR_NAME,
+                               id=DELETE_NFS_NODE_BEHAVIOR_ID,
+                               ref=DELETE_NFS_NODE_BEHAVIOR_ID)
 
 
 @unique
@@ -119,6 +127,8 @@ class BehaviorAcl(Enum):
                                           AclAccessLevelId.AccessLevelFullControl)  # noqa: E501
     KUBE_CONFIG_ACL = BehaviorAclEntry(KUBE_CONFIG_BEHAVIOR_INTERFACE_ID,
                                        AclAccessLevelId.AccessLevelReadOnly)
+    DELETE_NFS_NODE_ACL = BehaviorAclEntry(DELETE_NFS_NODE_BEHAVIOR_ID,
+                                           AclAccessLevelId.AccessLevelReadWrite)  # noqa: E501
 
 
 @dataclass()
