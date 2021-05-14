@@ -25,6 +25,7 @@ from container_service_extension.common.constants.shared_constants import HttpRe
 from container_service_extension.common.constants.shared_constants import PaginationKey  # noqa: E501
 from container_service_extension.common.constants.shared_constants import RequestKey  # noqa: E501
 import container_service_extension.common.thread_local_data as thread_local_data  # noqa: E501
+import container_service_extension.common.utils.pyvcloud_utils as pyvcloud_utils  # noqa: E501
 import container_service_extension.common.utils.server_utils as server_utils
 import container_service_extension.lib.telemetry.constants as telemetry_constants  # noqa: E501
 import container_service_extension.lib.telemetry.telemetry_handler as telemetry_handler  # noqa: E501
@@ -69,7 +70,14 @@ def cluster_create(data: dict, op_ctx: ctx.OperationContext):
     entity_type = server_utils.get_registered_def_entity_type()
     converted_entity: AbstractNativeEntity = rde_utils.convert_input_rde_to_runtime_rde_format(input_entity)  # noqa: E501
     def_entity = common_models.DefEntity(entity=converted_entity, entityType=entity_type.id)  # noqa: E501
-    _, headers = def_entity_service.create_entity(entity_type_id=entity_type.id, entity=def_entity, return_response_headers=True)  # noqa: E501
+
+    # No need to set org context for non sysadmin users
+    org_context = None
+    if op_ctx.client.is_sysadmin():
+        org_resource = pyvcloud_utils.get_org(op_ctx.client, org_name=converted_entity.metadata.org_name)  # noqa: E501
+        org_context = org_resource.href.split('/')[-1]
+
+    _, headers = def_entity_service.create_entity(entity_type_id=entity_type.id, entity=def_entity, tenant_org_context=org_context, return_response_headers=True)  # noqa: E501
     # Get the created defined entity and update the task href
     # TODO: Use the Htttp response status code to decide which header name to use for task_href  # noqa: E501
     # 202 - location header, 200 - xvcloud-task-location needs to be used
