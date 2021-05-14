@@ -307,4 +307,4 @@ def _get_request_context(op_ctx: ctx.OperationContext):
     :return: RequestContext
     :rtype: behavior_ctx.RequestContext
     """
-    return behavior_ctx.RequestContext(op_ctx=op_ctx)
+    return behavior_ctx.RequestContext(op_ctx=op_ctx, mqtt_publisher=op_ctx.mqtt_publisher)  # noqa: E501

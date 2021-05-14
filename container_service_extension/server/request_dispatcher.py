@@ -824,7 +824,7 @@ def _get_api_version_from_accept_header(api_version_header: str):
 
 
 @handle_exception
-def process_request(message):
+def process_request(message, mqtt_publisher=None):
     """
     Determine the correct api handler to invoke and invoke it.
 
@@ -987,7 +987,7 @@ def process_request(message):
 
     # create operation context
     operation_ctx = ctx.OperationContext(
-        tenant_auth_token, is_jwt=is_jwt_token, request_id=message['id'])
+        tenant_auth_token, is_jwt=is_jwt_token, request_id=message['id'], mqtt_publisher=mqtt_publisher)  # noqa: E501
 
     try:
         body_content = handler_method(request_data, operation_ctx)
