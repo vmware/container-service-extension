@@ -18,6 +18,11 @@ release cycle of CSE.
 (To be updated by Aritra)
 Update the CSE server supported API version set - (file references)
 
+Starting 3.1, CSE is going to be liberal at what it accepts and conservative in what it sends out.
+One cluster API handler (request_handlers/cluster_handler.py) is expected to 
+accept and process all the requests coming at any API version (>=36) and any 
+RDE payload version (>= 2.0)
+
 ## API endpoints
 (To be updated by Aritra)
 Guidelines on
@@ -47,6 +52,12 @@ Versioning guidelines:
   on older versions of VCD. When this cannot be achieved for any reason, that 
   is an indication to bump up the major version.
   
+Code organization:
+- cluster_service_2x.py represents the backend related to RDE major version = 2. 
+  We are supposed to overwrite the file for any changes related to minor version 
+  increments under major version = 2.
+- The idea is to maintain one cluster_service_XX file per each major version line.
+
 Steps:
 1. Create new schema file under /cse_def_schema/schema_x_y_z.json.
 2. Update below classes and tables for the finalized RDE version. There could 

@@ -172,6 +172,7 @@
         },
         "status":{
             "type":"object",
+            "x-vcloud-restricted" : "protected",
             "description":"The current status of the cluster.",
             "required":[
                 "nodes",
@@ -260,6 +261,11 @@
                         }
                     },
                     "additionalProperties":true
+                },
+                "private": {
+                    "type": "object",
+                    "x-vcloud-restricted" : "private",
+                    "description": "Placeholder for the properties invisible to non-admin users."
                 }
             },
             "additionalProperties":true
