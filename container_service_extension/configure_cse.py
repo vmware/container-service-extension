@@ -378,12 +378,14 @@ def install_cse(config_file_name, config, skip_template_creation,
 
         # set up placement policies for all types of clusters
         is_tkg_plus_enabled = utils.is_tkg_plus_enabled(config=config)
+        is_tkgm_enabled = utils.is_tkgm_enabled(config=config)
         _setup_placement_policies(
             client=client,
             policy_list=shared_constants.CLUSTER_RUNTIME_PLACEMENT_POLICIES,
             is_tkg_plus_enabled=is_tkg_plus_enabled,
             msg_update_callback=msg_update_callback,
-            log_wire=log_wire)
+            log_wire=log_wire,
+            is_tkgm_enabled=is_tkgm_enabled)
 
         # set up cse catalog
         org = vcd_utils.get_org(client, org_name=config['broker']['org'])
@@ -960,7 +962,8 @@ def _setup_placement_policies(client,
                               policy_list,
                               is_tkg_plus_enabled,
                               msg_update_callback=utils.NullPrinter(),
-                              log_wire=False):
+                              log_wire=False,
+                              is_tkgm_enabled=False):
     """Create placement policies for each cluster type.
 
     Create the global pvdc compute policy if not present and create placement
@@ -998,6 +1001,9 @@ def _setup_placement_policies(client,
         for policy_name in policy_list:
             if not is_tkg_plus_enabled and \
                     policy_name == shared_constants.TKG_PLUS_CLUSTER_RUNTIME_INTERNAL_NAME:  # noqa: E501
+                continue
+            if not is_tkgm_enabled and \
+                    policy_name == shared_constants.TKGM_CLUSTER_RUNTIME_INTERNAL_NAME:  # noqa: E501
                 continue
             try:
                 compute_policy_manager.get_cse_vdc_compute_policy(
@@ -1623,6 +1629,7 @@ def _upgrade_to_35(client, config, ext_vcd_api_version,
         components were not installed correctly
     """
     is_tkg_plus_enabled = utils.is_tkg_plus_enabled(config=config)
+    is_tkgm_enabled = utils.is_tkgm_enabled(config=config)
 
     # Add global placement polcies
     _setup_placement_policies(
@@ -1630,7 +1637,8 @@ def _upgrade_to_35(client, config, ext_vcd_api_version,
         policy_list=shared_constants.CLUSTER_RUNTIME_PLACEMENT_POLICIES,
         is_tkg_plus_enabled=is_tkg_plus_enabled,
         msg_update_callback=msg_update_callback,
-        log_wire=log_wire)
+        log_wire=log_wire,
+        is_tkgm_enabled=is_tkgm_enabled)
 
     # Register def schema
     _register_def_schema(
