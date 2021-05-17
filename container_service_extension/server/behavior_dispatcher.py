@@ -6,6 +6,7 @@ from dataclasses import asdict
 import json
 
 from container_service_extension.exception.exceptions import CseRequestError
+from container_service_extension.logging.logger import SERVER_LOGGER as LOGGER
 from container_service_extension.mqi.consumer.mqtt_publisher import \
     MQTTPublisher
 from container_service_extension.rde.behaviors.behavior_model import \
@@ -65,6 +66,7 @@ def process_behavior_request(msg_json, mqtt_publisher: MQTTPublisher):
         payload = mqtt_publisher. \
             construct_behavior_payload(status=BehaviorTaskStatus.ERROR.value,
                                        error_details=error_details)
+        LOGGER.error(f"Error while executing handler: {error_details}", exc_info=True)  # noqa: E501
         return payload
     except Exception as e:
         error_details = asdict(BehaviorError(majorErrorCode='500',
@@ -72,5 +74,5 @@ def process_behavior_request(msg_json, mqtt_publisher: MQTTPublisher):
         payload = mqtt_publisher. \
             construct_behavior_payload(status=BehaviorTaskStatus.ERROR.value,
                                        error_details=error_details)
-
+        LOGGER.error(f"Error while executing handler: {error_details}", exc_info=True)  # noqa: E501
         return payload

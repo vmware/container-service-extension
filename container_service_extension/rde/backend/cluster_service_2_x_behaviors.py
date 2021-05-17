@@ -307,9 +307,9 @@ class ClusterService(abstract_broker.AbstractBroker):
                   f"(revision {template_revision})"
             self._update_task(BehaviorTaskStatus.RUNNING, message=msg)
             new_status.task_href = self.task_href
+            curr_entity: common_models.DefEntity = None
             try:
-                self._update_cluster_entity(entity_id,
-                                            new_status)
+                curr_entity = self._update_cluster_entity(entity_id, new_status)  # noqa: E501
             except Exception as err:
                 msg = f"Error updating the cluster '{cluster_name}' with the status"  # noqa: E501
                 LOGGER.error(f"{msg}: {err}")
@@ -317,7 +317,7 @@ class ClusterService(abstract_broker.AbstractBroker):
             telemetry_handler.record_user_action_details(
                 cse_operation=telemetry_constants.CseOperation.V36_CLUSTER_APPLY,  # noqa: E501
                 cse_params={
-                    CLUSTER_ENTITY: input_native_entity,
+                    CLUSTER_ENTITY: curr_entity,
                     telemetry_constants.PayloadKey.SOURCE_DESCRIPTION: thread_local_data.get_thread_local_data(ThreadLocalData.USER_AGENT)  # noqa: E501
                 }
             )
@@ -1007,12 +1007,6 @@ class ClusterService(abstract_broker.AbstractBroker):
                 except Exception:
                     LOGGER.error(f"Failed to delete cluster '{cluster_name}'",
                                  exc_info=True)
-                try:
-                    self.sysadmin_entity_svc.delete_entity(cluster_id,
-                                                           invoke_hooks=False)
-                except Exception:
-                    LOGGER.error("Failed to delete the defined entity for "
-                                 f"cluster '{cluster_name}'", exc_info=True)
             else:
                 # TODO: Avoid many try-except block. Check if it is a good
                 # practice
@@ -1035,6 +1029,15 @@ class ClusterService(abstract_broker.AbstractBroker):
             self._update_task(BehaviorTaskStatus.ERROR,
                               message=msg,
                               error_message=str(err))
+            # Should attempt deleting the defined entity after updating the
+            # task to ERROR
+            if rollback:
+                try:
+                    self.sysadmin_entity_svc.delete_entity(cluster_id,
+                                                           invoke_hooks=False)
+                except Exception:
+                    LOGGER.error("Failed to delete the defined entity for "
+                                 f"cluster '{cluster_name}'", exc_info=True)
         except Exception as err:
             msg = f"Unknown error creating cluster '{cluster_name}: {str(err)}'"   # noqa: E501
             LOGGER.error(msg, exc_info=True)

@@ -116,6 +116,7 @@ def get_kubeconfig(behavior_ctx: BehaviorRequestContext, **kwargs):
     svc = cluster_service_factory.ClusterServiceFactory(behavior_ctx).get_cluster_service()  # noqa: E501
     return svc.get_cluster_config(cluster_id)
 
+
 @exception_handler
 def nfs_node_delete(behavior_ctx: BehaviorRequestContext, **kwargs):
     entity_id: str = behavior_ctx.entity_id

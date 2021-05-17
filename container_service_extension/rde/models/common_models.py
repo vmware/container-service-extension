@@ -365,7 +365,8 @@ MAP_RDE_VERSION_TO_ITS_METADATA = {
             K8Interface.CSE_INTERFACE.value.id:
                 [BehaviorOperation.CREATE_CLUSTER.value,
                  BehaviorOperation.UPDATE_CLUSTER.value,
-                 BehaviorOperation.DELETE_CLUSTER.value]
+                 BehaviorOperation.DELETE_CLUSTER.value,
+                 BehaviorOperation.DELETE_NFS_NODE.value]
         },
         RDEMetadataKey.ENTITY_TYPE_TO_OVERRIDABLE_BEHAVIORS_MAP: {
             EntityType.NATIVE_ENTITY_TYPE_2_0_0.value.id:
@@ -376,7 +377,8 @@ MAP_RDE_VERSION_TO_ITS_METADATA = {
                 [BehaviorAcl.CREATE_CLUSTER_ACL.value,
                  BehaviorAcl.UPDATE_CLUSTER_ACL.value,
                  BehaviorAcl.DELETE_CLUSTER_ACL.value,
-                 BehaviorAcl.KUBE_CONFIG_ACL.value]
+                 BehaviorAcl.KUBE_CONFIG_ACL.value,
+                 BehaviorAcl.DELETE_NFS_NODE_ACL.value]
         }
     }
 }
