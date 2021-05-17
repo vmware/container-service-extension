@@ -34,6 +34,7 @@ class CloudApiClient(object):
         else:
             self._headers["x-vcloud-authorization"] = token
         self._headers["Accept"] = f"application/json;version={api_version}"
+        self._headers["Content-Type"] = "application/json"
 
         self._verify_ssl = verify_ssl
         self.LOGGER = logger_debug

@@ -31,6 +31,8 @@ import container_service_extension.lib.telemetry.constants as telemetry_constant
 import container_service_extension.lib.telemetry.telemetry_handler as telemetry_handler  # noqa: E501
 import container_service_extension.rde.backend.cluster_service_factory as cluster_service_factory  # noqa: E501
 from container_service_extension.rde.behaviors.behavior_model import BehaviorOperation  # noqa: E501
+from container_service_extension.rde.behaviors.behavior_model import KUBE_CONFIG_BEHAVIOR_INTERFACE_ID  # noqa: E501
+from container_service_extension.rde.behaviors.behavior_service import BehaviorService  # noqa: E501
 import container_service_extension.rde.common.entity_service as entity_service
 import container_service_extension.rde.constants as rde_constants
 from container_service_extension.rde.models.abstractNativeEntity import AbstractNativeEntity  # noqa: E501
@@ -40,7 +42,6 @@ import container_service_extension.rde.validators.validator_factory as rde_valid
 import container_service_extension.security.context.behavior_request_context as behavior_ctx  # noqa: E501
 import container_service_extension.security.context.operation_context as ctx
 import container_service_extension.server.request_handlers.request_utils as request_utils  # noqa: E501
-
 
 # TODO: Needs to evaluate if we want to handle RDE 1.0 requests coming
 #  in at 36.0 in this handler.
@@ -163,9 +164,19 @@ def cluster_config(data: dict, op_ctx: ctx.OperationContext):
 
     :return: Dict
     """
-    svc = cluster_service_factory.ClusterServiceFactory(_get_request_context(op_ctx)).get_cluster_service()  # noqa: E501
     cluster_id = data[RequestKey.CLUSTER_ID]
-    return svc.get_cluster_config(cluster_id)
+    behavior_svc = BehaviorService(cloudapi_client=op_ctx.cloudapi_client)
+    _, headers = behavior_svc.invoke_behavior(
+        entity_id=cluster_id,
+        behavior_interface_id=KUBE_CONFIG_BEHAVIOR_INTERFACE_ID,
+        return_response_headers=True)
+    # TODO: Use the Htttp response status code to decide which header name to use for task_href  # noqa: E501
+    # 202 - location header, 200 - xvcloud-task-location needs to be used
+    config_task_href = headers[HttpResponseHeader.LOCATION.value]
+    config_task = op_ctx.client.get_resource(config_task_href)
+    op_ctx.client.get_task_monitor().wait_for_success(config_task)
+    config_task = op_ctx.client.get_resource(config_task_href)
+    return config_task.Result.ResultContent.text
 
 
 @telemetry_handler.record_user_action_telemetry(cse_operation=telemetry_constants.CseOperation.V36_CLUSTER_APPLY)  # noqa: E501
