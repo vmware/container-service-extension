@@ -166,13 +166,10 @@ def cluster_config(data: dict, op_ctx: ctx.OperationContext):
     """
     cluster_id = data[RequestKey.CLUSTER_ID]
     behavior_svc = BehaviorService(cloudapi_client=op_ctx.cloudapi_client)
-    _, headers = behavior_svc.invoke_behavior(
+    config_task_href = behavior_svc.invoke_behavior(
         entity_id=cluster_id,
         behavior_interface_id=KUBE_CONFIG_BEHAVIOR_INTERFACE_ID,
         return_response_headers=True)
-    # TODO: Use the Htttp response status code to decide which header name to use for task_href  # noqa: E501
-    # 202 - location header, 200 - xvcloud-task-location needs to be used
-    config_task_href = headers[HttpResponseHeader.LOCATION.value]
     config_task = op_ctx.client.get_resource(config_task_href)
     op_ctx.client.get_task_monitor().wait_for_success(config_task)
     config_task = op_ctx.client.get_resource(config_task_href)
