@@ -67,7 +67,8 @@ class MQTTConsumer:
             msg_json, reply_body, status_code, req_id = utils.get_response_fields(  # noqa: E501
                 request_msg=msg,
                 fsencoding=self.fsencoding,
-                is_mqtt=True)
+                is_mqtt=True,
+                mqtt_publisher=self._mqtt_publisher)
 
             LOGGER.debug(f"Received message with request_id: {req_id}, mid: "
                          f"{msg.mid}, and msg json: {msg_json}")

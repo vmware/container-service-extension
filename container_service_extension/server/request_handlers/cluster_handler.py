@@ -21,20 +21,27 @@ import container_service_extension.common.constants.server_constants as server_c
 from container_service_extension.common.constants.shared_constants import ClusterAclKey  # noqa: E501
 from container_service_extension.common.constants.shared_constants import CSE_PAGINATION_DEFAULT_PAGE_SIZE  # noqa: E501
 from container_service_extension.common.constants.shared_constants import CSE_PAGINATION_FIRST_PAGE_NUMBER  # noqa: E501
+from container_service_extension.common.constants.shared_constants import HttpResponseHeader  # noqa: E501
 from container_service_extension.common.constants.shared_constants import PaginationKey  # noqa: E501
 from container_service_extension.common.constants.shared_constants import RequestKey  # noqa: E501
 import container_service_extension.common.thread_local_data as thread_local_data  # noqa: E501
+import container_service_extension.common.utils.pyvcloud_utils as pyvcloud_utils  # noqa: E501
 import container_service_extension.common.utils.server_utils as server_utils
 import container_service_extension.lib.telemetry.constants as telemetry_constants  # noqa: E501
 import container_service_extension.lib.telemetry.telemetry_handler as telemetry_handler  # noqa: E501
 import container_service_extension.rde.backend.cluster_service_factory as cluster_service_factory  # noqa: E501
 from container_service_extension.rde.behaviors.behavior_model import BehaviorOperation  # noqa: E501
+from container_service_extension.rde.behaviors.behavior_model import KUBE_CONFIG_BEHAVIOR_INTERFACE_ID  # noqa: E501
+from container_service_extension.rde.behaviors.behavior_service import BehaviorService  # noqa: E501
+import container_service_extension.rde.common.entity_service as entity_service
 import container_service_extension.rde.constants as rde_constants
+from container_service_extension.rde.models.abstractNativeEntity import AbstractNativeEntity  # noqa: E501
+import container_service_extension.rde.models.common_models as common_models
 import container_service_extension.rde.utils as rde_utils
 import container_service_extension.rde.validators.validator_factory as rde_validator_factory  # noqa: E501
+import container_service_extension.security.context.behavior_request_context as behavior_ctx  # noqa: E501
 import container_service_extension.security.context.operation_context as ctx
 import container_service_extension.server.request_handlers.request_utils as request_utils  # noqa: E501
-
 
 # TODO: Needs to evaluate if we want to handle RDE 1.0 requests coming
 #  in at 36.0 in this handler.
@@ -60,14 +67,27 @@ def cluster_create(data: dict, op_ctx: ctx.OperationContext):
             payload_version]).validate(cloudapi_client=op_ctx.cloudapi_client,
                                        entity=input_entity)
 
-    # Convert the input entity to runtime rde format.
-    # Based on the runtime rde, call the appropriate backend method.
-    converted_native_entity = rde_utils.convert_input_rde_to_runtime_rde_format(input_entity)  # noqa: E501
-    svc = cluster_service_factory.ClusterServiceFactory(op_ctx).get_cluster_service()  # noqa: E501
-    # TODO: Response RDE must be compatible with the request RDE.
-    #  Conversions may be needed especially if there is a major version
-    #  difference in the input RDE and runtime RDE.
-    return svc.create_cluster(converted_native_entity).to_dict()
+    def_entity_service = entity_service.DefEntityService(op_ctx.cloudapi_client)  # noqa: E501
+    entity_type = server_utils.get_registered_def_entity_type()
+    converted_entity: AbstractNativeEntity = rde_utils.convert_input_rde_to_runtime_rde_format(input_entity)  # noqa: E501
+    def_entity = common_models.DefEntity(entity=converted_entity, entityType=entity_type.id)  # noqa: E501
+
+    # No need to set org context for non sysadmin users
+    org_context = None
+    if op_ctx.client.is_sysadmin():
+        org_resource = pyvcloud_utils.get_org(op_ctx.client, org_name=converted_entity.metadata.org_name)  # noqa: E501
+        org_context = org_resource.href.split('/')[-1]
+
+    _, headers = def_entity_service.create_entity(entity_type_id=entity_type.id, entity=def_entity, tenant_org_context=org_context, return_response_headers=True)  # noqa: E501
+    # Get the created defined entity and update the task href
+    # TODO: Use the Htttp response status code to decide which header name to use for task_href  # noqa: E501
+    # 202 - location header, 200 - xvcloud-task-location needs to be used
+    task_href = headers[HttpResponseHeader.LOCATION.value]
+    task_resource = op_ctx.sysadmin_client.get_resource(task_href)
+    entity_id = task_resource.Owner.get('id')
+    def_entity = def_entity_service.get_entity(entity_id)
+    def_entity.entity.status.task_href = task_href
+    return def_entity.to_dict()
 
 
 @telemetry_handler.record_user_action_telemetry(cse_operation=telemetry_constants.CseOperation.V36_CLUSTER_LIST)  # noqa: E501
@@ -77,7 +97,7 @@ def native_cluster_list(data: dict, op_ctx: ctx.OperationContext):
 
     :return: List
     """
-    svc = cluster_service_factory.ClusterServiceFactory(op_ctx).get_cluster_service()  # noqa: E501
+    svc = cluster_service_factory.ClusterServiceFactory(_get_request_context(op_ctx)).get_cluster_service()  # noqa: E501
     filters = data.get(RequestKey.QUERY_PARAMS, {})
     page_number = int(filters.get(PaginationKey.PAGE_NUMBER,
                                   CSE_PAGINATION_FIRST_PAGE_NUMBER))
@@ -112,7 +132,7 @@ def cluster_list(data: dict, op_ctx: ctx.OperationContext):
 
     :return: List
     """
-    svc = cluster_service_factory.ClusterServiceFactory(op_ctx).get_cluster_service()  # noqa: E501
+    svc = cluster_service_factory.ClusterServiceFactory(_get_request_context(op_ctx)).get_cluster_service()  # noqa: E501
     # response should not be paginated
     return [def_entity.to_dict() for def_entity in
             svc.list_clusters(data.get(RequestKey.QUERY_PARAMS, {}))]
@@ -130,7 +150,7 @@ def cluster_info(data: dict, op_ctx: ctx.OperationContext):
 
     :return: Dict
     """
-    svc = cluster_service_factory.ClusterServiceFactory(op_ctx).get_cluster_service()  # noqa: E501
+    svc = cluster_service_factory.ClusterServiceFactory(_get_request_context(op_ctx)).get_cluster_service()  # noqa: E501
     cluster_id = data[RequestKey.CLUSTER_ID]
     return svc.get_cluster_info(cluster_id).to_dict()
 
@@ -144,9 +164,19 @@ def cluster_config(data: dict, op_ctx: ctx.OperationContext):
 
     :return: Dict
     """
-    svc = cluster_service_factory.ClusterServiceFactory(op_ctx).get_cluster_service()  # noqa: E501
     cluster_id = data[RequestKey.CLUSTER_ID]
-    return svc.get_cluster_config(cluster_id)
+    behavior_svc = BehaviorService(cloudapi_client=op_ctx.cloudapi_client)
+    _, headers = behavior_svc.invoke_behavior(
+        entity_id=cluster_id,
+        behavior_interface_id=KUBE_CONFIG_BEHAVIOR_INTERFACE_ID,
+        return_response_headers=True)
+    # TODO: Use the Htttp response status code to decide which header name to use for task_href  # noqa: E501
+    # 202 - location header, 200 - xvcloud-task-location needs to be used
+    config_task_href = headers[HttpResponseHeader.LOCATION.value]
+    config_task = op_ctx.client.get_resource(config_task_href)
+    op_ctx.client.get_task_monitor().wait_for_success(config_task)
+    config_task = op_ctx.client.get_resource(config_task_href)
+    return config_task.Result.ResultContent.text
 
 
 @telemetry_handler.record_user_action_telemetry(cse_operation=telemetry_constants.CseOperation.V36_CLUSTER_APPLY)  # noqa: E501
@@ -174,12 +204,20 @@ def cluster_update(data: dict, op_ctx: ctx.OperationContext):
 
     # Convert the input entity to runtime rde format.
     # Based on the runtime rde, call the appropriate backend method.
-    converted_native_entity = rde_utils.convert_input_rde_to_runtime_rde_format(input_entity)  # noqa: E501
-    svc = cluster_service_factory.ClusterServiceFactory(op_ctx).get_cluster_service()  # noqa: E501
+    def_entity_service = entity_service.DefEntityService(op_ctx.cloudapi_client)  # noqa: E501
+    converted_native_entity: AbstractNativeEntity = rde_utils.convert_input_rde_to_runtime_rde_format(input_entity)  # noqa: E501
+    cluster_def_entity: common_models.DefEntity = def_entity_service.get_entity(cluster_id)  # noqa: E501
+    cluster_def_entity.entity.spec = converted_native_entity.spec
+    updated_def_entity, headers = def_entity_service.update_entity(
+        entity_id=cluster_id, entity=cluster_def_entity,
+        invoke_hooks=True, return_response_headers=True)
+    # TODO: Use the Htttp response status code to decide which header name to use for task_href  # noqa: E501
+    # 202 - location header, 200 - xvcloud-task-location needs to be used
+    updated_def_entity.entity.status.task_href = headers.get(HttpResponseHeader.X_VMWARE_VCOULD_TASK_LOCATION.value)  # noqa: E501
     # TODO: Response RDE must be compatible with the request RDE.
     #  Conversions may be needed especially if there is a major version
     #  difference in the input RDE and runtime RDE.
-    return svc.update_cluster(cluster_id, converted_native_entity).to_dict()
+    return updated_def_entity.to_dict()
 
 
 @telemetry_handler.record_user_action_telemetry(cse_operation=telemetry_constants.CseOperation.V36_CLUSTER_UPGRADE_PLAN)  # noqa: E501
@@ -189,7 +227,7 @@ def cluster_upgrade_plan(data, op_ctx: ctx.OperationContext):
 
     :return: List[Tuple(str, str)]
     """
-    svc = cluster_service_factory.ClusterServiceFactory(op_ctx).get_cluster_service()  # noqa: E501
+    svc = cluster_service_factory.ClusterServiceFactory(_get_request_context(op_ctx)).get_cluster_service()  # noqa: E501
     return svc.get_cluster_upgrade_plan(data[RequestKey.CLUSTER_ID])
 
 
@@ -205,9 +243,14 @@ def cluster_delete(data: dict, op_ctx: ctx.OperationContext):
 
     :return: Dict
     """
-    svc = cluster_service_factory.ClusterServiceFactory(op_ctx).get_cluster_service()  # noqa: E501
     cluster_id = data[RequestKey.CLUSTER_ID]
-    return svc.delete_cluster(cluster_id).to_dict()
+    def_entity_service = entity_service.DefEntityService(op_ctx.cloudapi_client)  # noqa: E501
+    def_entity: common_models.DefEntity = def_entity_service.get_entity(cluster_id)  # noqa: E501
+    _, headers = def_entity_service.delete_entity(cluster_id, invoke_hooks=True, return_response_headers=True)  # noqa: E501
+    # TODO: Use the Htttp response status code to decide which header name to use for task_href  # noqa: E501
+    # 202 - location header, 200 - xvcloud-task-location needs to be used
+    def_entity.entity.status.task_href = headers.get(HttpResponseHeader.LOCATION.value)  # noqa: E501
+    return def_entity.to_dict()
 
 
 @telemetry_handler.record_user_action_telemetry(cse_operation=telemetry_constants.CseOperation.V36_NODE_DELETE)  # noqa: E501
@@ -222,7 +265,7 @@ def nfs_node_delete(data, op_ctx: ctx.OperationContext):
 
     :return: Dict
     """
-    svc = cluster_service_factory.ClusterServiceFactory(op_ctx).get_cluster_service()  # noqa: E501
+    svc = cluster_service_factory.ClusterServiceFactory(_get_request_context(op_ctx)).get_cluster_service()  # noqa: E501
     cluster_id = data[RequestKey.CLUSTER_ID]
     node_name = data[RequestKey.NODE_NAME]
 
@@ -242,7 +285,7 @@ def nfs_node_delete(data, op_ctx: ctx.OperationContext):
 @request_utils.cluster_api_exception_handler
 def cluster_acl_info(data: dict, op_ctx: ctx.OperationContext):
     """Request handler for cluster acl list operation."""
-    svc = cluster_service_factory.ClusterServiceFactory(op_ctx).get_cluster_service()  # noqa: E501
+    svc = cluster_service_factory.ClusterServiceFactory(_get_request_context(op_ctx)).get_cluster_service()  # noqa: E501
     cluster_id = data[RequestKey.CLUSTER_ID]
     query = data.get(RequestKey.QUERY_PARAMS, {})
     page = int(query.get(PaginationKey.PAGE_NUMBER, CSE_PAGINATION_FIRST_PAGE_NUMBER))  # noqa: E501
@@ -262,7 +305,17 @@ def cluster_acl_info(data: dict, op_ctx: ctx.OperationContext):
 @request_utils.cluster_api_exception_handler
 def cluster_acl_update(data: dict, op_ctx: ctx.OperationContext):
     """Request handler for cluster acl update operation."""
-    svc = cluster_service_factory.ClusterServiceFactory(op_ctx).get_cluster_service()  # noqa: E501
+    svc = cluster_service_factory.ClusterServiceFactory(_get_request_context(op_ctx)).get_cluster_service()  # noqa: E501
     cluster_id = data[RequestKey.CLUSTER_ID]
     update_acl_entries = data.get(RequestKey.INPUT_SPEC, {}).get(ClusterAclKey.ACCESS_SETTING)  # noqa: E501
     svc.update_cluster_acl(cluster_id, update_acl_entries)
+
+
+def _get_request_context(op_ctx: ctx.OperationContext):
+    """Get the request context from operation context.
+
+    :param op_ctx: operation context
+    :return: RequestContext
+    :rtype: behavior_ctx.RequestContext
+    """
+    return behavior_ctx.RequestContext(op_ctx=op_ctx, mqtt_publisher=op_ctx.mqtt_publisher)  # noqa: E501

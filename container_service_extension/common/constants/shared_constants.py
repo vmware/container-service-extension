@@ -222,3 +222,9 @@ class ClusterDetailsKey(str, Enum):
     VDC_HREF = 'vdc_href'
     VDC_ID = 'vdc_id'
     VDC_NAME = 'vdc_name'
+
+
+@unique
+class HttpResponseHeader(str, Enum):
+    LOCATION = 'Location'
+    X_VMWARE_VCOULD_TASK_LOCATION = 'X-VMWARE-VCOULD-TASK-LOCATION'

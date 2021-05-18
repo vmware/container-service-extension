@@ -3,6 +3,7 @@
 # SPDX-License-Identifier: BSD-2-Clause
 
 from dataclasses import dataclass
+from typing import Optional
 
 from container_service_extension.mqi.consumer.mqtt_publisher import \
     MQTTPublisher
@@ -17,15 +18,15 @@ class BehaviorUserContext:
 
 
 @dataclass(frozen=True)
-class BehaviorRequestContext:
-    behavior_id: str
-    task_id: str
-    entity_id: str
-    entity: dict
-    entity_type_id: str
-    payload: dict
-    api_version: float
-    request_id: str
-    op_ctx: OperationContext
-    user_context: BehaviorUserContext
-    mqtt_publisher: MQTTPublisher
+class RequestContext:
+    behavior_id: Optional[str] = None
+    task_id: Optional[str] = None
+    entity_id: Optional[str] = None
+    entity: Optional[str] = None
+    entity_type_id: Optional[str] = None
+    payload: Optional[str] = None
+    api_version: Optional[str] = None
+    request_id: Optional[str] = None
+    op_ctx: Optional[OperationContext] = None
+    user_context: Optional[BehaviorUserContext] = None
+    mqtt_publisher: Optional[MQTTPublisher] = None

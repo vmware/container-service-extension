@@ -11,7 +11,7 @@ import container_service_extension.security.context.user_context as user_context
 
 
 class OperationContext:
-    def __init__(self, auth_token: str, is_jwt: bool = True, request_id: Optional[str] = None):  # noqa: E501
+    def __init__(self, auth_token: str, is_jwt: bool = True, request_id: Optional[str] = None, mqtt_publisher=None):  # noqa: E501
         self._auth_token: str = auth_token
         self._is_jwt: bool = is_jwt
         # Request ID; may be None if OperationContext is initialized outside of
@@ -30,6 +30,8 @@ class OperationContext:
 
         # async operations should call end() when they are finished
         self.is_async: bool = False
+
+        self.mqtt_publisher = mqtt_publisher
 
     @property
     def client(self):

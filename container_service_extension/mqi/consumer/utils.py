@@ -32,7 +32,7 @@ def get_request_id(request_msg, fsencoding):
     return request_id
 
 
-def get_response_fields(request_msg, fsencoding, is_mqtt):
+def get_response_fields(request_msg, fsencoding, is_mqtt, mqtt_publisher=None):
     """Get the msg json and response fields request message."""
     msg_json, request_id = None, None
     try:
@@ -54,7 +54,7 @@ def get_response_fields(request_msg, fsencoding, is_mqtt):
 
         thread_local_data.set_thread_local_data(ThreadLocalData.REQUEST_ID, request_id)  # noqa: E501
         thread_local_data.set_thread_local_data(ThreadLocalData.USER_AGENT, msg_json['headers'].get('User-Agent'))  # noqa: E501
-        result = request_dispatcher.process_request(msg_json)
+        result = request_dispatcher.process_request(msg_json, mqtt_publisher=mqtt_publisher)  # noqa: E501
         status_code = result['status_code']
         reply_body = result['body']
 
