@@ -146,10 +146,10 @@
                 "settings":{
                     "type":"object",
                     "required":[
-                        "network"
+                        "ovdcNetwork"
                     ],
                     "properties":{
-                        "network":{
+                        "ovdcNetwork":{
                             "type":"string",
                             "description":"Name of the Organization's virtual data center network"
                         },
@@ -160,6 +160,47 @@
                         "rollbackOnFailure":{
                             "type":"boolean",
                             "description":"On any cluster operation failure, if the value is set to true, affected node VMs will be automatically deleted."
+                        },
+                        "network": {
+                            "type": "object",
+                            "description": "The network-related settings for the cluster.",
+                            "properties": {
+                                "cni": {
+                                    "type": "object",
+                                    "description": "The CNI to use.",
+                                    "properties": {
+                                        "name": {
+                                            "type": "string"
+                                        }
+                                    }
+                                },
+                                "pods": {
+                                    "type": "object",
+                                    "description": "The network settings for Kubernetes pods.",
+                                    "properties": {
+                                        "cidrBlocks": {
+                                            "type": "array",
+                                            "description": "Specifies a range of IP addresses to use for Kubernetes pods.",
+                                            "items": {
+                                                "type": "string"
+                                            }
+                                        }
+                                    }
+                                },
+                                "services": {
+                                    "type": "object",
+                                    "description": "The network settings for Kubernetes services",
+                                    "properties": {
+                                        "cidrBlocks": {
+                                            "type": "array",
+                                            "description": "The range of IP addresses to use for Kubernetes services",
+                                            "items": {
+                                                "type": "string"
+                                            }
+                                        }
+                                    }
+                                }
+                            }
                         }
                     },
                     "additionalProperties":true
@@ -265,7 +306,35 @@
                 "private": {
                     "type": "object",
                     "x-vcloud-restricted" : "private",
-                    "description": "Placeholder for the properties invisible to non-admin users."
+                    "description": "Placeholder for the properties invisible to non-admin users.",
+                    "properties": {
+                        "kubeConfig": {
+                            "type": "string",
+                            "description": "Admin kube config to access the Kubernetes cluster."
+                        },
+                        "kubeToken": {
+                            "type": "string",
+                            "description": "Kube token to join the nodes to the Kubernetes cluster."
+                        },
+                        "certificates": {
+                            "type": "string",
+                            "description": "The root certificate of the control plane."
+                        }
+                    }
+                },
+                "persistentVolumes": {
+                    "type": "array",
+                    "description": "VCD references to the list of persistent volumes.",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "virtualIPs": {
+                    "type": "array",
+                    "description": "Array of virtual IPs consumed.",
+                    "items": {
+                        "type": "string"
+                    }
                 }
             },
             "additionalProperties":true
