@@ -351,6 +351,11 @@ class BehaviorService:
         """
         # TODO Invocation of the behavior must return the taskID retrieved from
         #  the response headers. This is yet to be done by Extensibility team.
+        payload = None
+        if arguments:
+            payload = {
+                "arguments": arguments
+            }
         _, response_headers = self._cloudapi_client.do_request(
             method=cse_shared_constants.RequestMethod.POST,
             cloudapi_version=CloudApiVersion.VERSION_1_0_0,
@@ -359,6 +364,6 @@ class BehaviorService:
                                        f"/{CloudApiResource.BEHAVIORS}"
                                        f"/{behavior_interface_id}"
                                        f"/{CloudApiResource.BEHAVIOR_INVOCATION}",  # noqa: E501
-            payload=arguments,
+            payload=payload,
             return_response_headers=True)
         return response_headers[cse_shared_constants.HttpResponseHeader.LOCATION]  # noqa: E501
