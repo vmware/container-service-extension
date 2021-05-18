@@ -205,8 +205,8 @@ class ClusterScriptFile(str, Enum):
 
     # Note that we need _ in the version instead of dots to allow
     # python package parsing methods to work well
-    VERSION_1_X = "1_x"
-    VERSION_2_X = "2_x"
+    VERSION_1_X = "v1_x"
+    VERSION_2_X = "v2_x"
 
 
 @unique
