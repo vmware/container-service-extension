@@ -42,6 +42,8 @@ from container_service_extension.server_constants import NETWORK_URN_PREFIX
 from container_service_extension.server_constants import NodeType
 from container_service_extension.server_constants import ScriptFile
 from container_service_extension.server_constants import SYSTEM_ORG_NAME
+from container_service_extension.server_constants import TKGM_POD_NETWORK_CIDR
+from container_service_extension.server_constants import TKGM_SERVICE_CIDR
 from container_service_extension.server_constants import TKGM_TEMPLATE_NAME_FRAGMENT  # noqa: E501
 from container_service_extension.server_constants import VdcNetworkInfoKey
 from container_service_extension.shared_constants import CSE_PAGINATION_DEFAULT_PAGE_SIZE  # noqa: E501
@@ -2100,6 +2102,10 @@ def _init_cluster(sysadmin_client: vcd_client.Client, vapp, template_name,
         # Expose cluster if given external ip
         if expose_ip:
             script = _form_expose_ip_init_cluster_script(script, expose_ip)
+        if TKGM_TEMPLATE_NAME_FRAGMENT in template_name:
+            script = script.format(
+                pod_network_cidr=TKGM_POD_NETWORK_CIDR,
+                service_cidr=TKGM_SERVICE_CIDR)
 
         node_names = _get_node_names(vapp, NodeType.CONTROL_PLANE)
         result = _execute_script_in_nodes(sysadmin_client, vapp=vapp,
