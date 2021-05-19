@@ -147,6 +147,21 @@ def is_tkg_plus_enabled(config: dict = None):
     return False
 
 
+def is_tkgm_enabled(config: dict = None):
+    if not config:
+        try:
+            config = get_server_runtime_config()
+        except Exception:
+            return False
+    service_section = config.get('service', {})
+    tkgm_enabled = service_section.get('enable_tkgm', False)
+    if isinstance(tkgm_enabled, bool):
+        return tkgm_enabled
+    elif isinstance(tkgm_enabled, str):
+        return str_to_bool(tkgm_enabled)
+    return False
+
+
 def is_environment_variable_enabled(env_name):
     return str_to_bool(os.getenv(env_name))
 
