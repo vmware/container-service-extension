@@ -11,6 +11,8 @@ import yaml
 import container_service_extension.local_template_manager as ltm
 from container_service_extension.logger import NULL_LOGGER
 from container_service_extension.server_constants import ScriptFile
+from container_service_extension.server_constants import TKGM_TEMPLATE_NAME_FRAGMENT  # noqa: E501
+from container_service_extension.server_constants import UPGRADE_SCRIPTS
 from container_service_extension.utils import download_file
 from container_service_extension.utils import NullPrinter
 
@@ -114,7 +116,11 @@ class RemoteTemplateManager():
         :param bool force_overwrite: if True, will download the script even if
             it already exists.
         """
+        is_tkgm = TKGM_TEMPLATE_NAME_FRAGMENT in template_name
         for script_file in ScriptFile:
+            # There is no upgrade supported to the TKGm template
+            if is_tkgm and script_file in UPGRADE_SCRIPTS:
+                continue
             remote_script_url = \
                 self._get_remote_script_url(template_name, revision,
                                             script_file)
