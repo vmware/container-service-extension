@@ -403,7 +403,7 @@ class NativeEntity(AbstractNativeEntity):
         metadata = Metadata('cluster_name', 'organization_name',
                             'org_virtual_data_center_name', 'VCD_site')
         status = Status()
-        settings = Settings(network='ovdc_network_name', ssh_key=None)
+        settings = Settings(ovdc_network='ovdc_network_name', ssh_key=None)
         k8_distribution = Distribution(
             template_name='ubuntu-16.04_k8-1.17_weave-2.6.0',
             template_revision=2
