@@ -116,7 +116,7 @@ class TemplateBuilder():
             self.org_name = build_params.get(TemplateBuildKey.ORG_NAME) # noqa: E501
             self.org = get_org(self.client, org_name=self.org_name)
         if UBUNTU_20_TEMPLATE_NAME_FRAGMENT in self.template_name:
-            time.sleep(10)
+            time.sleep(10)  # hack for ubuntu 20
         if vdc:
             self.vdc = vdc
             self.vdc.get_resource()  # to make sure vdc.resource is populated
@@ -298,7 +298,7 @@ class TemplateBuilder():
             msg_update_callback=self.msg_update_callback)
         is_ubuntu_20 = UBUNTU_20_TEMPLATE_NAME_FRAGMENT in self.template_name
         if is_ubuntu_20:
-            time.sleep(60)
+            time.sleep(60)  # hack for ubuntu 20
         vs = get_vsphere(self.sys_admin_client, vapp, vm_name,
                          logger=self.logger)
         callback = vgr_callback(
@@ -308,7 +308,7 @@ class TemplateBuilder():
         wait_until_tools_ready(vapp, vm_name, vs, callback=callback)
         password_auto = vapp.get_admin_password(vm_name)
         if is_ubuntu_20:
-            time.sleep(120)
+            time.sleep(120)  # hack for ubuntu 20
 
         try:
             result = vs.execute_script_in_guest(
@@ -471,13 +471,13 @@ class TemplateBuilder():
         vapp = self._create_temp_vapp()
         is_ubuntu_20 = UBUNTU_20_TEMPLATE_NAME_FRAGMENT in self.template_name
         if is_ubuntu_20:
-            time.sleep(60)
+            time.sleep(60)  # hack for ubuntu 20
         self._customize_vm(vapp, self.temp_vm_name)
         if is_ubuntu_20:
-            time.sleep(60)
+            time.sleep(60)  # hack for ubuntu 20
         self._capture_temp_vapp(vapp)
         if is_ubuntu_20:
-            time.sleep(60)
+            time.sleep(60)  # hack for ubuntu 20
         self._tag_with_cse_placement_policy()
         if not retain_temp_vapp:
             self._delete_temp_vapp()
