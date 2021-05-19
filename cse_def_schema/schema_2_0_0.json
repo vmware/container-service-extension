@@ -317,8 +317,11 @@
                             "description": "Kube token to join the nodes to the Kubernetes cluster."
                         },
                         "certificates": {
-                            "type": "string",
-                            "description": "The root certificate of the control plane."
+                            "type": "array",
+                            "description": "Kubernetes certificates.",
+                            "items": {
+                                "type": "string"
+                            }
                         }
                     }
                 },
