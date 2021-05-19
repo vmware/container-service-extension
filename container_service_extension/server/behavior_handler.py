@@ -53,7 +53,7 @@ def exception_handler(func):
 
 
 @exception_handler
-def create_cluster(behavior_ctx: RequestContext, **kwargs):
+def create_cluster(behavior_ctx: RequestContext):
     entity_id: str = behavior_ctx.entity_id
     input_entity: dict = behavior_ctx.entity
     cloudapi_client: CloudApiClient = behavior_ctx.op_ctx.cloudapi_client
@@ -76,7 +76,7 @@ def create_cluster(behavior_ctx: RequestContext, **kwargs):
 
 
 @exception_handler
-def update_cluster(behavior_ctx: RequestContext, **kwargs):
+def update_cluster(behavior_ctx: RequestContext):
     entity_id: str = behavior_ctx.entity_id
     input_entity: dict = behavior_ctx.entity
     cloudapi_client: CloudApiClient = behavior_ctx.op_ctx.cloudapi_client
@@ -100,7 +100,7 @@ def update_cluster(behavior_ctx: RequestContext, **kwargs):
 
 
 @exception_handler
-def delete_cluster(behavior_ctx: RequestContext, **kwargs):
+def delete_cluster(behavior_ctx: RequestContext):
     entity_id: str = behavior_ctx.entity_id
 
     svc = cluster_service_factory.ClusterServiceFactory(behavior_ctx).get_cluster_service()  # noqa: E501
@@ -109,15 +109,15 @@ def delete_cluster(behavior_ctx: RequestContext, **kwargs):
 
 
 @exception_handler
-def get_kubeconfig(behavior_ctx: RequestContext, **kwargs):
+def get_kubeconfig(behavior_ctx: RequestContext):
     cluster_id: str = behavior_ctx.entity_id
     svc = cluster_service_factory.ClusterServiceFactory(behavior_ctx).get_cluster_service()  # noqa: E501
     return svc.get_cluster_config(cluster_id)
 
 
 @exception_handler
-def nfs_node_delete(behavior_ctx: RequestContext, **kwargs):
+def nfs_node_delete(behavior_ctx: RequestContext):
     entity_id: str = behavior_ctx.entity_id
-    node_to_delete: str = kwargs[RequestKey.NODE_NAME]
+    node_to_delete: str = behavior_ctx.arguments.get(RequestKey.NODE_NAME)
     svc = cluster_service_factory.ClusterServiceFactory(behavior_ctx).get_cluster_service()  # noqa: E501
     return svc.delete_nodes(entity_id, nodes_to_del=[node_to_delete])

@@ -64,7 +64,6 @@ CLUSTER_CREATE_IN_PROGRESS_MESSAGE = 'Create cluster in progress'
 CLUSTER_RESIZE_IN_PROGRESS_MESSAGE = 'Resize cluster in progress'
 CLUSTER_DELETE_IN_PROGRESS_MESSAGE = 'Delete cluster in progress'
 CLUSTER_UPGRADE_IN_PROGRESS_MESSAGE = 'Upgrade cluster in progress'
-NFS_NODE_DELETE_IN_PROGRESS_MESSAGE = 'NFS node delete in progress'
 
 
 class ClusterService(abstract_broker.AbstractBroker):
@@ -795,8 +794,9 @@ class ClusterService(abstract_broker.AbstractBroker):
         self.context.is_async = True
         self._monitor_delete_nodes(cluster_id=cluster_id,
                                    nodes_to_del=nodes_to_del)
+        msg = f"Deleting NFS nodes: {nodes_to_del} for cluster {curr_entity.name} ({cluster_id})"  # noqa: E501
         return self.mqtt_publisher.construct_behavior_payload(
-            message=NFS_NODE_DELETE_IN_PROGRESS_MESSAGE,
+            message=msg,
             status=BehaviorTaskStatus.RUNNING.value, progress=5)
 
     @thread_utils.run_async
