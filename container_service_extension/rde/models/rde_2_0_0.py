@@ -64,10 +64,37 @@ class Topology:
 
 @dataclass_json(letter_case=LetterCase.CAMEL)
 @dataclass
+class Cni:
+    name: Optional[str] = 'antrea'
+
+
+@dataclass_json(letter_case=LetterCase.CAMEL)
+@dataclass
+class Pods:
+    cidr_blocks: Optional[List[str]] = None
+
+
+@dataclass_json(letter_case=LetterCase.CAMEL)
+@dataclass
+class Services:
+    cidr_blocks: Optional[List[str]] = None
+
+
+@dataclass_json(letter_case=LetterCase.CAMEL)
+@dataclass
+class Network:
+    cni: Optional[Cni] = None
+    pods: Optional[Pods] = None
+    services: Optional[Services] = None
+
+
+@dataclass_json(letter_case=LetterCase.CAMEL)
+@dataclass
 class Settings:
-    network: str
+    ovdc_network: str
     ssh_key: Optional[str] = None
     rollback_on_failure: bool = True
+    network: Optional[Network] = None
 
 
 @dataclass_json(letter_case=LetterCase.CAMEL)
@@ -110,6 +137,14 @@ class CloudProperties:
 
 @dataclass_json(letter_case=LetterCase.CAMEL)
 @dataclass
+class Private:
+    kube_config: Optional[str] = None
+    kube_token: Optional[str] = None
+    certificates: Optional[List[str]] = None
+
+
+@dataclass_json(letter_case=LetterCase.CAMEL)
+@dataclass
 class Status:
     phase: Optional[str] = None
     cni: Optional[str] = None
@@ -121,6 +156,9 @@ class Status:
     uid: Optional[str] = None
     cloud_properties: CloudProperties = CloudProperties()
     exposed: bool = False
+    persistent_volumes: Optional[List[str]] = None
+    virtual_IPs: Optional[List[str]] = None
+    private: Optional[Private] = None
 
 
 @dataclass_json(letter_case=LetterCase.CAMEL)
