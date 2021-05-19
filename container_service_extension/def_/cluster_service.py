@@ -42,6 +42,9 @@ from container_service_extension.server_constants import NETWORK_URN_PREFIX
 from container_service_extension.server_constants import NodeType
 from container_service_extension.server_constants import ScriptFile
 from container_service_extension.server_constants import SYSTEM_ORG_NAME
+from container_service_extension.server_constants import TKGM_DEFAULT_POD_NETWORK_CIDR  # noqa: E501
+from container_service_extension.server_constants import TKGM_DEFAULT_SERVICE_CIDR  # noqa: E501
+from container_service_extension.server_constants import TKGM_TEMPLATE_NAME_FRAGMENT  # noqa: E501
 from container_service_extension.server_constants import VdcNetworkInfoKey
 from container_service_extension.shared_constants import CSE_PAGINATION_DEFAULT_PAGE_SIZE  # noqa: E501
 from container_service_extension.shared_constants import CSE_PAGINATION_FIRST_PAGE_NUMBER  # noqa: E501
@@ -2099,6 +2102,10 @@ def _init_cluster(sysadmin_client: vcd_client.Client, vapp, template_name,
         # Expose cluster if given external ip
         if expose_ip:
             script = _form_expose_ip_init_cluster_script(script, expose_ip)
+        if TKGM_TEMPLATE_NAME_FRAGMENT in template_name:
+            script = script.format(
+                pod_network_cidr=TKGM_DEFAULT_POD_NETWORK_CIDR,
+                service_cidr=TKGM_DEFAULT_SERVICE_CIDR)
 
         node_names = _get_node_names(vapp, NodeType.CONTROL_PLANE)
         result = _execute_script_in_nodes(sysadmin_client, vapp=vapp,
@@ -2153,10 +2160,16 @@ def _form_expose_ip_init_cluster_script(script: str, expose_ip: str):
 def _join_cluster(sysadmin_client: vcd_client.Client, vapp, template_name,
                   template_revision, target_nodes=None):
     vcd_utils.raise_error_if_user_not_from_system_org(sysadmin_client)
+    is_tkgm = TKGM_TEMPLATE_NAME_FRAGMENT in template_name
     try:
-        script = "#!/usr/bin/env bash\n" \
-                 "kubeadm token create\n" \
-                 "ip route get 1 | awk '{print $NF;exit}'\n"
+        if is_tkgm:
+            script = "#!/usr/bin/env bash\n" \
+                     "kubeadm token create --print-join-command\n" \
+                     "ip route get 1 | awk '{print $NF;exit}'\n"
+        else:
+            script = "#!/usr/bin/env bash\n" \
+                     "kubeadm token create\n" \
+                     "ip route get 1 | awk '{print $NF;exit}'\n"
         node_names = _get_node_names(vapp, NodeType.CONTROL_PLANE)
         control_plane_result = _execute_script_in_nodes(sysadmin_client,
                                                         vapp=vapp,
@@ -2167,7 +2180,7 @@ def _join_cluster(sysadmin_client: vcd_client.Client, vapp, template_name,
             raise E.ClusterJoiningError(
                 "Join cluster script execution failed on "
                 f"control plane node {node_names}:{errors}")
-        init_info = control_plane_result[0][1].content.decode().split()
+        join_info = control_plane_result[0][1].content.decode().split()
 
         node_names = _get_node_names(vapp, NodeType.WORKER)
         if target_nodes is not None:
@@ -2176,7 +2189,13 @@ def _join_cluster(sysadmin_client: vcd_client.Client, vapp, template_name,
                                                       template_revision,
                                                       ScriptFile.NODE)
         tmp_script = utils.read_data_file(tmp_script_filepath, logger=LOGGER)
-        script = tmp_script.format(token=init_info[0], ip=init_info[1])
+        if is_tkgm:
+            script = tmp_script.format(
+                ip_port=join_info[2],
+                token=join_info[4],
+                discovery_token_ca_cert_hash=join_info[6])
+        else:
+            script = tmp_script.format(token=join_info[0], ip=join_info[1])
         worker_results = _execute_script_in_nodes(sysadmin_client, vapp=vapp,
                                                   node_names=node_names,
                                                   script=script)

@@ -101,6 +101,14 @@ AVAILABLE_IP_PATH_FRAGMENT = 'availableIpAddresses'
 # NSX-T realized status
 NSXT_GATEWAY_REALIZED_STATUS = 'REALIZED'
 
+# Template fragments
+UBUNTU_20_TEMPLATE_NAME_FRAGMENT = 'ubuntu-20.04'
+TKGM_TEMPLATE_NAME_FRAGMENT = 'tkgm'
+
+# TKGM init values
+TKGM_DEFAULT_POD_NETWORK_CIDR = '100.66.0.0/16'
+TKGM_DEFAULT_SERVICE_CIDR = '100.77.0.0/16'
+
 
 @unique
 class NodeType(str, Enum):
@@ -149,6 +157,12 @@ class ScriptFile(str, Enum):
     CONTROL_PLANE_CNI_APPLY = 'cluster-upgrade/master-cni-apply.sh'
     CONTROL_PLANE_K8S_UPGRADE = 'cluster-upgrade/master-k8s-upgrade.sh'
     WORKER_K8S_UPGRADE = 'cluster-upgrade/worker-k8s-upgrade.sh'
+
+
+UPGRADE_SCRIPTS = [ScriptFile.DOCKER_UPGRADE,
+                   ScriptFile.CONTROL_PLANE_CNI_APPLY,
+                   ScriptFile.CONTROL_PLANE_K8S_UPGRADE,
+                   ScriptFile.WORKER_K8S_UPGRADE]
 
 
 @unique
