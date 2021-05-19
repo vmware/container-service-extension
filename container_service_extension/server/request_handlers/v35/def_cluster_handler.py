@@ -36,13 +36,17 @@ def cluster_create(data: dict, op_ctx: ctx.OperationContext):
     :rtype: container_service_extension.def_.models.DefEntity
     """
     rde_in_use = server_utils.get_rde_version_in_use()
-    if semantic_version.Version(rde_in_use) >= semantic_version.Version(rde_constants.RDEVersion.RDE_2_0_0.value):  # noqa: E501
-        return cluster_handler.cluster_create(data=data, op_ctx=op_ctx)
-
     input_entity: dict = data[RequestKey.INPUT_SPEC]
-    # Convert the input entity to runtime rde format.
-    # Based on the runtime rde, call the appropriate backend method.
+    # Convert the input entity to runtime rde format
     converted_native_entity: AbstractNativeEntity = rde_utils.convert_input_rde_to_runtime_rde_format(input_entity)  # noqa: E501
+
+    # Redirect to generic handler if the backend supports RDE-2.0
+    if semantic_version.Version(rde_in_use) >= semantic_version.Version(rde_constants.RDEVersion.RDE_2_0_0.value):  # noqa: E501
+        return cluster_handler.cluster_create(
+            data={RequestKey.INPUT_SPEC: converted_native_entity.to_dict()},
+            op_ctx=op_ctx)
+
+    # Based on the runtime rde, call the appropriate backend method.
     svc = cluster_service_factory.ClusterServiceFactory(op_ctx).get_cluster_service()  # noqa: E501
     new_rde: common_models.DefEntity = svc.create_cluster(converted_native_entity)  # noqa: E501
     # convert the created rde back to input rde version
@@ -63,16 +67,18 @@ def cluster_resize(data: dict, op_ctx: ctx.OperationContext):
     :rtype: container_service_extension.def_.models.DefEntity
     """
     rde_in_use = server_utils.get_rde_version_in_use()
+    input_entity: dict = data[RequestKey.INPUT_SPEC]
+    # Convert the input entity to runtime rde format
+    converted_native_entity: AbstractNativeEntity = rde_utils.convert_input_rde_to_runtime_rde_format(input_entity)  # noqa: E501
+
+    # Redirect to generic handler if the backend supports RDE-2.0
     if semantic_version.Version(rde_in_use) >= semantic_version.Version(rde_constants.RDEVersion.RDE_2_0_0.value):  # noqa: E501
+        data[RequestKey.INPUT_SPEC] = converted_native_entity.to_dict()
         return cluster_handler.cluster_update(data=data, op_ctx=op_ctx)
 
-    input_entity: dict = data[RequestKey.INPUT_SPEC]
-    # Convert the input entity to runtime rde format.
     # Based on the runtime rde, call the appropriate backend method.
-    converted_native_entity: AbstractNativeEntity = rde_utils.convert_input_rde_to_runtime_rde_format(input_entity)  # noqa: E501
     svc = cluster_service_factory.ClusterServiceFactory(op_ctx).get_cluster_service()  # noqa: E501
     cluster_id = data[RequestKey.CLUSTER_ID]
-
     curr_entity = svc.entity_svc.get_entity(cluster_id)
     request_utils.validate_request_payload(
         converted_native_entity.spec.to_dict(), curr_entity.entity.spec.to_dict(),  # noqa: E501
@@ -100,6 +106,7 @@ def cluster_delete(data: dict, op_ctx: ctx.OperationContext):
     :return: Dict
     """
     rde_in_use = server_utils.get_rde_version_in_use()
+    # Redirect to generic handler if the backend supports RDE-2.0
     if semantic_version.Version(rde_in_use) >= semantic_version.Version(rde_constants.RDEVersion.RDE_2_0_0.value):  # noqa: E501
         return cluster_handler.cluster_delete(data=data, op_ctx=op_ctx)
 
@@ -122,6 +129,8 @@ def cluster_info(data: dict, op_ctx: ctx.OperationContext):
     :return: Dict
     """
     rde_in_use = server_utils.get_rde_version_in_use()
+
+    # Redirect to generic handler if the backend supports RDE-2.0
     if semantic_version.Version(rde_in_use) >= semantic_version.Version(rde_constants.RDEVersion.RDE_2_0_0.value):  # noqa: E501
         return cluster_handler.cluster_info(data=data, op_ctx=op_ctx)
 
@@ -141,6 +150,8 @@ def cluster_config(data: dict, op_ctx: ctx.OperationContext):
     :return: Dict
     """
     rde_in_use = server_utils.get_rde_version_in_use()
+
+    # Redirect to generic handler if the backend supports RDE-2.0
     if semantic_version.Version(rde_in_use) >= semantic_version.Version(rde_constants.RDEVersion.RDE_2_0_0.value):  # noqa: E501
         return cluster_handler.cluster_config(data=data, op_ctx=op_ctx)
 
@@ -158,6 +169,8 @@ def cluster_upgrade_plan(data, op_ctx: ctx.OperationContext):
     :return: List[Tuple(str, str)]
     """
     rde_in_use = server_utils.get_rde_version_in_use()
+
+    # Redirect to generic handler if the backend supports RDE-2.0
     if semantic_version.Version(rde_in_use) >= semantic_version.Version(rde_constants.RDEVersion.RDE_2_0_0.value):  # noqa: E501
         return cluster_handler.cluster_upgrade_plan(data=data, op_ctx=op_ctx)
 
@@ -176,13 +189,16 @@ def cluster_upgrade(data, op_ctx: ctx.OperationContext):
     :return: Dict
     """
     rde_in_use = server_utils.get_rde_version_in_use()
+    input_entity: dict = data[RequestKey.INPUT_SPEC]
+    # Convert the input entity to runtime rde format
+    converted_native_entity: AbstractNativeEntity = rde_utils.convert_input_rde_to_runtime_rde_format(input_entity)  # noqa: E501
+
+    # Redirect to generic handler if the backend supports RDE-2.0
     if semantic_version.Version(rde_in_use) >= semantic_version.Version(rde_constants.RDEVersion.RDE_2_0_0.value):  # noqa: E501
+        data[RequestKey.INPUT_SPEC] = converted_native_entity.to_dict()
         return cluster_handler.cluster_update(data=data, op_ctx=op_ctx)
 
-    input_entity: dict = data[RequestKey.INPUT_SPEC]
-    # Convert the input entity to runtime rde format.
     # Based on the runtime rde, call the appropriate backend method.
-    converted_native_entity: AbstractNativeEntity = rde_utils.convert_input_rde_to_runtime_rde_format(input_entity)  # noqa: E501
     svc = cluster_service_factory.ClusterServiceFactory(op_ctx).get_cluster_service()  # noqa: E501
     cluster_id = data[RequestKey.CLUSTER_ID]
     curr_entity = svc.entity_svc.get_entity(cluster_id)
@@ -207,6 +223,8 @@ def native_cluster_list(data: dict, op_ctx: ctx.OperationContext):
     :return: List
     """
     rde_in_use = server_utils.get_rde_version_in_use()
+
+    # Redirect to generic handler if the backend supports RDE-2.0
     if semantic_version.Version(rde_in_use) >= semantic_version.Version(rde_constants.RDEVersion.RDE_2_0_0.value):  # noqa: E501
         return cluster_handler.native_cluster_list(data=data, op_ctx=op_ctx)
 
@@ -244,6 +262,8 @@ def native_cluster_list(data: dict, op_ctx: ctx.OperationContext):
 def cluster_acl_info(data: dict, op_ctx: ctx.OperationContext):
     """Request handler for cluster acl list operation."""
     rde_in_use = server_utils.get_rde_version_in_use()
+
+    # Redirect to generic handler if the backend supports RDE-2.0
     if semantic_version.Version(rde_in_use) >= semantic_version.Version(rde_constants.RDEVersion.RDE_2_0_0.value):  # noqa: E501
         return cluster_handler.cluster_acl_info(data=data, op_ctx=op_ctx)
 
@@ -269,6 +289,8 @@ def cluster_acl_info(data: dict, op_ctx: ctx.OperationContext):
 def cluster_acl_update(data: dict, op_ctx: ctx.OperationContext):
     """Request handler for cluster acl update operation."""
     rde_in_use = server_utils.get_rde_version_in_use()
+
+    # Redirect to generic handler if the backend supports RDE-2.0
     if semantic_version.Version(rde_in_use) >= semantic_version.Version(rde_constants.RDEVersion.RDE_2_0_0.value):  # noqa: E501
         return cluster_handler.cluster_acl_update(data=data, op_ctx=op_ctx)
 
@@ -287,6 +309,8 @@ def cluster_list(data: dict, op_ctx: ctx.OperationContext):
     :return: List
     """
     rde_in_use = server_utils.get_rde_version_in_use()
+
+    # Redirect to generic handler if the backend supports RDE-2.0
     if semantic_version.Version(rde_in_use) >= semantic_version.Version(rde_constants.RDEVersion.RDE_2_0_0.value):  # noqa: E501
         return cluster_handler.cluster_list(data=data, op_ctx=op_ctx)
 
