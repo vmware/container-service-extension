@@ -347,6 +347,7 @@ class DefEntityService:
                                        f"{entity_id}?invokeHooks={str(invoke_hooks).lower()}",  # noqa: E501
             return_response_headers=return_response_headers)
 
+    @handle_entity_service_exception
     def resolve_entity(self, entity_id: str, entity_type_id: str = None) -> DefEntity:  # noqa: E501
         """Resolve the entity.
 
@@ -383,3 +384,20 @@ class DefEntityService:
             resource_url_relative_path=f"{CloudApiResource.ENTITIES}/"
                                        f"{entity_id}")
         return def_constants.DEF_NATIVE_ENTITY_TYPE_NSS in response_body['entityType']  # noqa: E501
+
+    @handle_entity_service_exception
+    def upgrade_entity(self, entity_id: str, target_entity_type_id: str):
+        """Upgrade entity type of the entity to the specified one.
+
+        :param str entity_id: ID of the entity to upgrade
+        :param str target_entity_type_id: ID of the entity type with new
+            version
+        :return: dont know
+        :rtype: god knows
+        """
+        rde = self.get_entity(entity_id)
+
+        # Update only the entityType property
+        rde.entityType = target_entity_type_id
+
+        return self.update_entity(entity_id, rde, invoke_hooks=False)
