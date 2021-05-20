@@ -283,7 +283,6 @@ def nfs_node_delete(data, op_ctx: ctx.OperationContext):
     cluster_def_entity: common_models.DefEntity = def_entity_service.get_entity(cluster_id)  # noqa: E501
     cluster_def_entity.entity.status.task_href = delete_nfs_node_task
 
-    # TODO: How to get to know what format of output the caller is expecting?
     return cluster_def_entity.to_dict()
 
 
