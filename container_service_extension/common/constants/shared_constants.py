@@ -32,6 +32,7 @@ class ClusterEntityKind(Enum):
     NATIVE = 'native'
     TKG = 'TanzuKubernetesCluster'
     TKG_PLUS = 'TKG+'
+    TKGm = 'TKGm'
 
 
 # Cluster runtimes and placement policies
