@@ -204,4 +204,5 @@ class RDEFilterKey(Enum):
 
 class PayloadKey(str, Enum):
     PAYLOAD_VERSION = 'apiVersion'
+    PAYLOAD_VERSION_RDE_1_0 = 'api_version'
     UNKNOWN = 'unknown'
