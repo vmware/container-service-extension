@@ -50,7 +50,8 @@
             "enum":[
                 "native",
                 "TanzuKubernetesCluster",
-                "TKG+"
+                "TKG+",
+                "TKGm"
             ],
             "type":"string",
             "description":"The kind of the Kubernetes cluster."
