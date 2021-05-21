@@ -20,6 +20,7 @@ from container_service_extension.lib.cloudapi.constants import CloudApiResource
 from container_service_extension.lib.cloudapi.constants import CloudApiVersion
 from container_service_extension.logging.logger import SERVER_LOGGER as LOGGER
 import container_service_extension.rde.constants as def_constants
+from container_service_extension.rde.models.abstractNativeEntity import AbstractNativeEntity  # noqa: E501
 from container_service_extension.rde.models.common_models import DefEntity
 from container_service_extension.rde.models.common_models import DefEntityType
 from container_service_extension.rde.models.common_models import GenericClusterEntity   # noqa: E501
@@ -386,16 +387,21 @@ class DefEntityService:
         return def_constants.DEF_NATIVE_ENTITY_TYPE_NSS in response_body['entityType']  # noqa: E501
 
     @handle_entity_service_exception
-    def upgrade_entity(self, entity_id: str, target_entity_type_id: str):
+    def upgrade_entity(self, entity_id: str,
+                       upgraded_native_entity: AbstractNativeEntity,
+                       target_entity_type_id: str):
         """Upgrade entity type of the entity to the specified one.
 
         :param str entity_id: ID of the entity to upgrade
-        :param str target_entity_type_id: ID of the entity type with new
-            version
-        :return: dont know
-        :rtype: god knows
+        :param str upgraded_native_entity: dataclass representing the native
+            entity with upgraded fields.
+        :param str target_entity_type_id: target entity type version to which
+            the defined entity should be upgraded to.
+        :return: DefEntity representing the upgraded defined entity
+        :rtype: DefEntity
         """
         rde = self.get_entity(entity_id)
+        rde.entity = upgraded_native_entity
 
         # Update only the entityType property
         rde.entityType = target_entity_type_id
