@@ -293,9 +293,9 @@ def nfs_node_delete(data, op_ctx: ctx.OperationContext):
     """
     rde_in_use = server_utils.get_rde_version_in_use()
     if semantic_version.Version(rde_in_use) >= semantic_version.Version(rde_constants.RDEVersion.RDE_2_0_0.value):  # noqa: E501
-        # NOTE: cluster_handler is always expected to return RDE version
-        #   2.0.0 or more
         cluster_dict = cluster_handler.nfs_node_delete(data=data, op_ctx=op_ctx)  # noqa: E501
+        # NOTE: cluster_handler is always expected to return RDE version
+        #   2.0.0 or more. Hence a convertion to 1.0 is needed
         rde_class = rde_factory.get_rde_model(rde_in_use)
         cluster_entity: AbstractNativeEntity = rde_class.from_dict(cluster_dict['entity'])  # noqa: E501
         new_native_entity: AbstractNativeEntity = rde_utils.convert_runtime_rde_to_input_rde_version_format(  # noqa: E501
