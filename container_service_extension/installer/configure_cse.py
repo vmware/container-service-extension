@@ -2468,11 +2468,11 @@ def _create_cluster_rde(client, cluster, kind, runtime_rde_version,
     msg_update_callback.general(msg)
 
 
-def _upgrade_cluster_rde(client, cluster, def_entity_to_upgrade,
+def _upgrade_cluster_rde(client, cluster, rde_to_upgrade,
                          runtime_rde_version, target_entity_type,
                          entity_svc, site=None, msg_update_callback=utils.NullPrinter()):  # noqa: E501
     TargetNativeEntity = get_rde_model(runtime_rde_version)
-    new_native_entity = TargetNativeEntity.from_native_entity(def_entity_to_upgrade.entity)  # noqa: E501
+    new_native_entity = TargetNativeEntity.from_native_entity(rde_to_upgrade.entity)  # noqa: E501
 
     # Adding missing fields in RDE 2.0
     # TODO: Need to find a better approach to avoid conditional logic for
@@ -2481,12 +2481,12 @@ def _upgrade_cluster_rde(client, cluster, def_entity_to_upgrade,
             semantic_version.Version(def_constants.RDEVersion.RDE_2_0_0).major:
         # RDE upgrade possible only from RDE 1.0 or RDE 2.x
         native_entity_2_x: rde_2_x.NativeEntity = new_native_entity
-        native_entity_2_x.status.uid = def_entity_to_upgrade.id
+        native_entity_2_x.status.uid = rde_to_upgrade.id
         native_entity_2_x.status.cloud_properties.site = site
         native_entity_2_x.metadata.site = site
 
     upgraded_rde: common_models.DefEntity = \
-        entity_svc.upgrade_entity(def_entity_to_upgrade.id,
+        entity_svc.upgrade_entity(rde_to_upgrade.id,
                                   new_native_entity,
                                   target_entity_type.id)
 
