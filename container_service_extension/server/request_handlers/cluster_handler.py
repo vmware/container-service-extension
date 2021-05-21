@@ -83,7 +83,6 @@ def cluster_create(data: dict, op_ctx: ctx.OperationContext):
         entity_type_id=entity_type.id,
         entity=def_entity,
         tenant_org_context=org_context,
-        delete_status_from_payload=True,
         return_response_headers=True)
 
     # Get the created defined entity and update the task href

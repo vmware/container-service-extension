@@ -71,7 +71,7 @@ class DefEntityService:
     @handle_entity_service_exception
     def create_entity(self, entity_type_id: str, entity: DefEntity,
                       tenant_org_context: str = None,
-                      delete_status_from_payload=False,
+                      delete_status_from_payload=True,
                       return_response_headers=False) -> Union[dict, Tuple[dict, dict]]:  # noqa: E501
         """Create defined entity instance of an entity type.
 
