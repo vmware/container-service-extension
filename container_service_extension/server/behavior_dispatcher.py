@@ -6,6 +6,7 @@ from dataclasses import asdict
 import json
 
 from container_service_extension.exception.exceptions import CseRequestError
+from container_service_extension.logging.logger import SERVER_LOGGER as LOGGER
 from container_service_extension.mqi.consumer.mqtt_publisher import \
     MQTTPublisher
 from container_service_extension.rde.behaviors.behavior_model import \
@@ -20,7 +21,8 @@ MAP_BEHAVIOR_ID_TO_HANDLER_METHOD = {
     BehaviorOperation.CREATE_CLUSTER.value.id: handler.create_cluster,
     BehaviorOperation.UPDATE_CLUSTER.value.id: handler.update_cluster,
     BehaviorOperation.DELETE_CLUSTER.value.id: handler.delete_cluster,
-    BehaviorOperation.GET_KUBE_CONFIG.value.id: handler.get_kubeconfig
+    BehaviorOperation.GET_KUBE_CONFIG.value.id: handler.get_kubeconfig,
+    BehaviorOperation.DELETE_NFS_NODE.value.id: handler.nfs_node_delete
 }
 
 
@@ -38,6 +40,7 @@ def process_behavior_request(msg_json, mqtt_publisher: MQTTPublisher):
     api_version: str = payload['_metadata']['apiVersion']
     auth_token: str = payload['_metadata']['actAsToken']
     request_id: str = payload['_metadata']['requestId']
+    arguments: dict = payload['arguments']
 
     # Initializing Behavior operation context
     op_ctx = OperationContext(auth_token=auth_token, is_jwt=True, request_id=request_id)  # noqa: E501
@@ -51,11 +54,12 @@ def process_behavior_request(msg_json, mqtt_publisher: MQTTPublisher):
                                   entity_type_id=entity_type_id,
                                   request_id=request_id,
                                   op_ctx=op_ctx,
-                                  mqtt_publisher=mqtt_publisher)
+                                  mqtt_publisher=mqtt_publisher,
+                                  arguments=arguments)
 
     # Invoke the handler method and return the response in the string format.
     try:
-        return MAP_BEHAVIOR_ID_TO_HANDLER_METHOD[behavior_id](behavior_ctx)  # noqa: E501
+        return MAP_BEHAVIOR_ID_TO_HANDLER_METHOD[behavior_id](behavior_ctx)
     except CseRequestError as e:
         error_details = asdict(BehaviorError(majorErrorCode=e.status_code,
                                              minorErrorCode=e.minor_error_code,
@@ -63,6 +67,7 @@ def process_behavior_request(msg_json, mqtt_publisher: MQTTPublisher):
         payload = mqtt_publisher. \
             construct_behavior_payload(status=BehaviorTaskStatus.ERROR.value,
                                        error_details=error_details)
+        LOGGER.error(f"Error while executing handler: {error_details}", exc_info=True)  # noqa: E501
         return payload
     except Exception as e:
         error_details = asdict(BehaviorError(majorErrorCode='500',
@@ -70,5 +75,5 @@ def process_behavior_request(msg_json, mqtt_publisher: MQTTPublisher):
         payload = mqtt_publisher. \
             construct_behavior_payload(status=BehaviorTaskStatus.ERROR.value,
                                        error_details=error_details)
-
+        LOGGER.error(f"Error while executing handler: {error_details}", exc_info=True)  # noqa: E501
         return payload

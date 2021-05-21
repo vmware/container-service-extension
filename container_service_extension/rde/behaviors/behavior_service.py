@@ -334,7 +334,7 @@ class BehaviorService:
 
     @handle_behavior_service_exception
     def invoke_behavior(self, entity_id: str, behavior_interface_id: str,
-                        arguments: dict = None, return_response_headers=False):
+                        arguments: dict = None) -> str:
         """Invoke behavior on the RDE.
 
         Below is the optional sample payload for the behavior invocation.
@@ -346,11 +346,17 @@ class BehaviorService:
         :param entity_id: Id of the entity
         :param behavior_interface_id: Id of the behavior interface
         :param arguments: Arguments to the behavior
-        :param return_response_headers: should return response_headers?
+        :return: task href in the Location header
+        :rtype: str
         """
         # TODO Invocation of the behavior must return the taskID retrieved from
         #  the response headers. This is yet to be done by Extensibility team.
-        return self._cloudapi_client.do_request(
+        payload = None
+        if arguments:
+            payload = {
+                "arguments": arguments
+            }
+        _, response_headers = self._cloudapi_client.do_request(
             method=cse_shared_constants.RequestMethod.POST,
             cloudapi_version=CloudApiVersion.VERSION_1_0_0,
             resource_url_relative_path=f"{CloudApiResource.ENTITIES}"
@@ -358,5 +364,6 @@ class BehaviorService:
                                        f"/{CloudApiResource.BEHAVIORS}"
                                        f"/{behavior_interface_id}"
                                        f"/{CloudApiResource.BEHAVIOR_INVOCATION}",  # noqa: E501
-            payload=arguments,
-            return_response_headers=return_response_headers)
+            payload=payload,
+            return_response_headers=True)
+        return response_headers[cse_shared_constants.HttpResponseHeader.LOCATION]  # noqa: E501

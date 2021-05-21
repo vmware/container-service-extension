@@ -3,6 +3,7 @@
 # SPDX-License-Identifier: BSD-2-Clause
 
 from dataclasses import dataclass
+from typing import Dict
 from typing import Optional
 
 from container_service_extension.mqi.consumer.mqtt_publisher import \
@@ -30,3 +31,4 @@ class RequestContext:
     op_ctx: Optional[OperationContext] = None
     user_context: Optional[BehaviorUserContext] = None
     mqtt_publisher: Optional[MQTTPublisher] = None
+    arguments: Optional[Dict[str, str]] = None
