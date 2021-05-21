@@ -71,11 +71,13 @@ class DefEntityService:
     @handle_entity_service_exception
     def create_entity(self, entity_type_id: str, entity: DefEntity,
                       tenant_org_context: str = None,
+                      delete_status_from_payload=True,
                       return_response_headers=False) -> Union[dict, Tuple[dict, dict]]:  # noqa: E501
         """Create defined entity instance of an entity type.
 
         :param str entity_type_id: ID of the DefEntityType
         :param DefEntity entity: Defined entity instance
+        :param bool delete_status_from_payload: should delete status from payload?  # noqa: E501
         :param bool return_response_headers: return response headers
         :return: created entity or created entity with response headers
         :rtype: Union[dict, Tuple[dict, dict]]
@@ -83,12 +85,17 @@ class DefEntityService:
         additional_request_headers = {}
         if tenant_org_context:
             additional_request_headers['x-vmware-vcloud-tenant-context'] = tenant_org_context  # noqa: E501
+
+        payload: dict = entity.to_dict()
+        if delete_status_from_payload:
+            payload.get('entity', {}).pop('status', None)
+
         return self._cloudapi_client.do_request(
             method=RequestMethod.POST,
             cloudapi_version=CloudApiVersion.VERSION_1_0_0,
             resource_url_relative_path=f"{CloudApiResource.ENTITY_TYPES}/"
                                        f"{entity_type_id}",
-            payload=entity.to_dict(),
+            payload=payload,
             additional_request_headers=additional_request_headers,
             return_response_headers=return_response_headers)
 
