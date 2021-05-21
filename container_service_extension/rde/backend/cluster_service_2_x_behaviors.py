@@ -306,9 +306,9 @@ class ClusterService(abstract_broker.AbstractBroker):
                   f"(revision {template_revision})"
             self._update_task(BehaviorTaskStatus.RUNNING, message=msg)
             new_status.task_href = self.task_href
+            curr_entity: common_models.DefEntity = None
             try:
-                self._update_cluster_entity(entity_id,
-                                            new_status)
+                curr_entity = self._update_cluster_entity(entity_id, new_status)  # noqa: E501
             except Exception as err:
                 msg = f"Error updating the cluster '{cluster_name}' with the status"  # noqa: E501
                 LOGGER.error(f"{msg}: {err}")
@@ -316,7 +316,7 @@ class ClusterService(abstract_broker.AbstractBroker):
             telemetry_handler.record_user_action_details(
                 cse_operation=telemetry_constants.CseOperation.V36_CLUSTER_APPLY,  # noqa: E501
                 cse_params={
-                    CLUSTER_ENTITY: input_native_entity,
+                    CLUSTER_ENTITY: curr_entity,
                     telemetry_constants.PayloadKey.SOURCE_DESCRIPTION: thread_local_data.get_thread_local_data(ThreadLocalData.USER_AGENT)  # noqa: E501
                 }
             )
@@ -794,7 +794,10 @@ class ClusterService(abstract_broker.AbstractBroker):
         self.context.is_async = True
         self._monitor_delete_nodes(cluster_id=cluster_id,
                                    nodes_to_del=nodes_to_del)
-        return curr_entity
+        msg = f"Deleting NFS nodes: {nodes_to_del} for cluster {curr_entity.name} ({cluster_id})"  # noqa: E501
+        return self.mqtt_publisher.construct_behavior_payload(
+            message=msg,
+            status=BehaviorTaskStatus.RUNNING.value, progress=5)
 
     @thread_utils.run_async
     def _create_cluster_async(self, cluster_id: str,
@@ -1004,12 +1007,6 @@ class ClusterService(abstract_broker.AbstractBroker):
                 except Exception:
                     LOGGER.error(f"Failed to delete cluster '{cluster_name}'",
                                  exc_info=True)
-                try:
-                    self.sysadmin_entity_svc.delete_entity(cluster_id,
-                                                           invoke_hooks=False)
-                except Exception:
-                    LOGGER.error("Failed to delete the defined entity for "
-                                 f"cluster '{cluster_name}'", exc_info=True)
             else:
                 # TODO: Avoid many try-except block. Check if it is a good
                 # practice
@@ -1032,6 +1029,15 @@ class ClusterService(abstract_broker.AbstractBroker):
             self._update_task(BehaviorTaskStatus.ERROR,
                               message=msg,
                               error_message=str(err))
+            # Should attempt deleting the defined entity after updating the
+            # task to ERROR
+            if rollback:
+                try:
+                    self.sysadmin_entity_svc.delete_entity(cluster_id,
+                                                           invoke_hooks=False)
+                except Exception:
+                    LOGGER.error("Failed to delete the defined entity for "
+                                 f"cluster '{cluster_name}'", exc_info=True)
         except Exception as err:
             msg = f"Unknown error creating cluster '{cluster_name}: {str(err)}'"   # noqa: E501
             LOGGER.error(msg, exc_info=True)
@@ -1215,15 +1221,15 @@ class ClusterService(abstract_broker.AbstractBroker):
 
             # use the same settings with which cluster was originally created
             # viz., template, storage_profile, and network among others.
-            worker_storage_profile = current_spec.topology.workers.storage_profile  # noqa: E501
-            worker_sizing_class = current_spec.topology.workers.sizing_class
-            nfs_storage_profile = current_spec.topology.nfs.storage_profile
-            nfs_sizing_class = current_spec.topology.nfs.sizing_class
-            network_name = current_spec.settings.ovdc_network
-            ssh_key = current_spec.settings.ssh_key
-            rollback = current_spec.settings.rollback_on_failure
-            template_name = current_spec.distribution.template_name
-            template_revision = current_spec.distribution.template_revision
+            worker_storage_profile = input_native_entity.spec.topology.workers.storage_profile  # noqa: E501
+            worker_sizing_class = input_native_entity.spec.topology.workers.sizing_class  # noqa: E501
+            nfs_storage_profile = input_native_entity.spec.topology.nfs.storage_profile  # noqa: E501
+            nfs_sizing_class = input_native_entity.spec.topology.nfs.sizing_class  # noqa: E501
+            network_name = input_native_entity.spec.settings.ovdc_network
+            ssh_key = input_native_entity.spec.settings.ssh_key
+            rollback = input_native_entity.spec.settings.rollback_on_failure
+            template_name = input_native_entity.spec.distribution.template_name
+            template_revision = input_native_entity.spec.distribution.template_revision  # noqa: E501
             template = _get_template(template_name, template_revision)
 
             # compute the values of workers and nfs to be added or removed
@@ -1647,9 +1653,7 @@ class ClusterService(abstract_broker.AbstractBroker):
                 msg = f"Failed to update defined entity status " \
                       f" for cluster {cluster_id}"
                 LOGGER.error(f"{msg}", exc_info=True)
-            # NOTE: Since the defined entity is assumed to be
-            # resolved during cluster creation, there is no need
-            # to resolve the defined entity again
+
             try:
                 self._sync_def_entity(cluster_id)
             except Exception:

@@ -4,6 +4,7 @@
 
 import functools
 
+from container_service_extension.common.constants.shared_constants import RequestKey  # noqa: E501
 import container_service_extension.exception.exceptions as cse_exception
 from container_service_extension.lib.cloudapi.cloudapi_client import \
     CloudApiClient
@@ -112,3 +113,11 @@ def get_kubeconfig(behavior_ctx: RequestContext):
     cluster_id: str = behavior_ctx.entity_id
     svc = cluster_service_factory.ClusterServiceFactory(behavior_ctx).get_cluster_service()  # noqa: E501
     return svc.get_cluster_config(cluster_id)
+
+
+@exception_handler
+def nfs_node_delete(behavior_ctx: RequestContext):
+    entity_id: str = behavior_ctx.entity_id
+    node_to_delete: str = behavior_ctx.arguments.get(RequestKey.NODE_NAME)
+    svc = cluster_service_factory.ClusterServiceFactory(behavior_ctx).get_cluster_service()  # noqa: E501
+    return svc.delete_nodes(entity_id, nodes_to_del=[node_to_delete])

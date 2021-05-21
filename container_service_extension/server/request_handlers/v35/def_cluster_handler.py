@@ -1,6 +1,7 @@
 # container-service-extension
 # Copyright (c) 2020 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
+import semantic_version
 
 from container_service_extension.common.constants.server_constants import FlattenedClusterSpecKey1X  # noqa: E501
 from container_service_extension.common.constants.server_constants import ThreadLocalData  # noqa: E501
@@ -17,8 +18,10 @@ import container_service_extension.rde.backend.cluster_service_factory as cluste
 import container_service_extension.rde.constants as rde_constants
 from container_service_extension.rde.models.abstractNativeEntity import AbstractNativeEntity  # noqa: E501
 import container_service_extension.rde.models.common_models as common_models
+import container_service_extension.rde.models.rde_factory as rde_factory
 import container_service_extension.rde.utils as rde_utils
 import container_service_extension.security.context.operation_context as ctx
+import container_service_extension.server.request_handlers.cluster_handler as cluster_handler  # noqa: E501
 import container_service_extension.server.request_handlers.request_utils as request_utils  # noqa: E501
 
 _OPERATION_KEY = 'operation'
@@ -289,6 +292,18 @@ def nfs_node_delete(data, op_ctx: ctx.OperationContext):
     :return: Dict
     """
     rde_in_use = server_utils.get_rde_version_in_use()
+    if semantic_version.Version(rde_in_use) >= semantic_version.Version(rde_constants.RDEVersion.RDE_2_0_0.value):  # noqa: E501
+        cluster_dict = cluster_handler.nfs_node_delete(data=data, op_ctx=op_ctx)  # noqa: E501
+        # NOTE: cluster_handler is always expected to return RDE version
+        #   2.0.0 or more. Hence a convertion to 1.0 is needed
+        rde_class = rde_factory.get_rde_model(rde_in_use)
+        cluster_entity: AbstractNativeEntity = rde_class.from_dict(cluster_dict['entity'])  # noqa: E501
+        new_native_entity: AbstractNativeEntity = rde_utils.convert_runtime_rde_to_input_rde_version_format(  # noqa: E501
+            cluster_entity, rde_constants.RDEVersion.RDE_1_0_0)
+        cluster_dict['entity'] = new_native_entity.to_dict()
+        cluster_dict['entityType'] = common_models.EntityType.NATIVE_ENTITY_TYPE_1_0_0.value.id  # noqa: E501
+        return cluster_dict
+
     svc = cluster_service_factory.ClusterServiceFactory(op_ctx). \
         get_cluster_service(rde_in_use)
     cluster_id = data[RequestKey.CLUSTER_ID]
