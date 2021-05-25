@@ -29,4 +29,3 @@ class ClusterServiceFactory:
             return ClusterService1X(op_ctx=self.req_ctx)
         elif rde_version.major == 2:
             return ClusterService2X(self.req_ctx)
-
