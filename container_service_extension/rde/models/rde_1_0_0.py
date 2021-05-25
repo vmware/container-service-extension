@@ -224,6 +224,35 @@ class NativeEntity(AbstractNativeEntity):
                 expose=rde_2_x_entity.spec.expose
             )
 
+            control_plane = Node(
+                name=rde_2_x_entity.status.nodes.control_plane.name,
+                ip=rde_2_x_entity.status.nodes.control_plane.ip,
+                sizing_class=rde_2_x_entity.status.nodes.control_plane.sizing_class  # noqa: E501
+            )
+
+            workers = []
+            for worker_node in rde_2_x_entity.status.nodes.workers:
+                worker_node_1_x = Node(
+                    name=worker_node.name,
+                    ip=worker_node.ip,
+                    sizing_class=worker_node.sizing_class
+                )
+                workers.append(worker_node_1_x)
+
+            nfs_nodes = []
+            for nfs_node in nfs_nodes:
+                nfs_node_1_x = Node(
+                    name=nfs_node.name,
+                    ip=nfs_node.ip,
+                    sizing_class=nfs_node.sizing_class)
+                nfs_nodes.append(nfs_node_1_x)
+
+            nodes = Nodes(
+                control_plane=control_plane,
+                workers=workers,
+                nfs=nfs_nodes
+            )
+
             status = Status(
                 phase=rde_2_x_entity.status.phase,
                 cni=rde_2_x_entity.status.cni,
@@ -231,7 +260,7 @@ class NativeEntity(AbstractNativeEntity):
                 kubernetes=rde_2_x_entity.status.kubernetes,
                 docker_version=rde_2_x_entity.status.docker_version,
                 os=rde_2_x_entity.status.os,
-                nodes=rde_2_x_entity.status.nodes,
+                nodes=nodes,
                 exposed=rde_2_x_entity.status.exposed
             )
 
