@@ -2307,7 +2307,8 @@ def _upgrade_non_legacy_clusters(
                 msg_update_callback.info(msg)
             continue
         except Exception as err:
-            INSTALL_LOGGER.debug(str(err))
+            INSTALL_LOGGER.error(str(err), exc_info=True)
+            msg_update_callback.error(f"Failed to upgrade cluster '{cluster['name']}'")  # noqa: E501
 
     msg = "Finished processing all clusters."
     INSTALL_LOGGER.info(msg)
@@ -2327,6 +2328,7 @@ def _upgrade_non_legacy_clusters(
                 schema_svc.delete_entity_type(entity_type.id)
     except Exception as err:
         INSTALL_LOGGER.debug(str(err))
+        msg_update_callback.error("Failed to delete old entity types")
 
 
 def _upgrade_legacy_clusters(
@@ -2466,11 +2468,11 @@ def _create_cluster_rde(client, cluster, kind, runtime_rde_version,
     msg_update_callback.general(msg)
 
 
-def _upgrade_cluster_rde(client, cluster, def_entity_to_upgrade,
+def _upgrade_cluster_rde(client, cluster, rde_to_upgrade,
                          runtime_rde_version, target_entity_type,
                          entity_svc, site=None, msg_update_callback=utils.NullPrinter()):  # noqa: E501
     TargetNativeEntity = get_rde_model(runtime_rde_version)
-    new_native_entity = TargetNativeEntity.from_native_entity(def_entity_to_upgrade.entity)  # noqa: E501
+    new_native_entity = TargetNativeEntity.from_native_entity(rde_to_upgrade.entity)  # noqa: E501
 
     # Adding missing fields in RDE 2.0
     # TODO: Need to find a better approach to avoid conditional logic for
@@ -2479,24 +2481,19 @@ def _upgrade_cluster_rde(client, cluster, def_entity_to_upgrade,
             semantic_version.Version(def_constants.RDEVersion.RDE_2_0_0).major:
         # RDE upgrade possible only from RDE 1.0 or RDE 2.x
         native_entity_2_x: rde_2_x.NativeEntity = new_native_entity
-        native_entity_2_x.status.uid = def_entity_to_upgrade.id
+        native_entity_2_x.status.uid = rde_to_upgrade.id
         native_entity_2_x.status.cloud_properties.site = site
         native_entity_2_x.metadata.site = site
 
-    new_def_entity = common_models.DefEntity(
-        entity=new_native_entity, entityType=target_entity_type.id)  # noqa: E501
-    org_resource = vcd_utils.get_org(client, org_name=cluster['org_name'])  # noqa: E501
-    org_id = org_resource.href.split('/')[-1]
-    # TODO(): Changing entity type and update entity does not work
-    entity_svc.create_entity(entity_type_id=target_entity_type.id,
-                             entity=new_def_entity,
-                             tenant_org_context=org_id)
-    created_entity = entity_svc.get_native_rde_by_name_and_rde_version(cluster['name'], runtime_rde_version)  # noqa: E501
-    entity_svc.resolve_entity(entity_id=created_entity.id)
+    upgraded_rde: common_models.DefEntity = \
+        entity_svc.upgrade_entity(rde_to_upgrade.id,
+                                  new_native_entity,
+                                  target_entity_type.id)
 
-    # Update cluster metadata with new cluster id
+    # Update cluster metadata with new cluster id. This step is still needed
+    # because the format of the entity ID has changed to ommit version string.
     tags = {
-        server_constants.ClusterMetadataKey.CLUSTER_ID: created_entity.id,  # noqa: E501
+        server_constants.ClusterMetadataKey.CLUSTER_ID: upgraded_rde.id,
         server_constants.ClusterMetadataKey.CSE_VERSION: server_utils.get_installed_cse_version()  # noqa: E501
     }
     vapp = VApp(client, href=cluster['vapp_href'])
@@ -2505,9 +2502,6 @@ def _upgrade_cluster_rde(client, cluster, def_entity_to_upgrade,
     msg = f"Updated cluster id of cluster '{cluster['name']}'"
     INSTALL_LOGGER.info(msg)
     msg_update_callback.general(msg)
-
-    # Remove old defined entity
-    entity_svc.delete_entity(entity_id=def_entity_to_upgrade.id)
 
 
 def _print_users_in_need_of_def_rights(

@@ -20,6 +20,7 @@ from container_service_extension.lib.cloudapi.constants import CloudApiResource
 from container_service_extension.lib.cloudapi.constants import CloudApiVersion
 from container_service_extension.logging.logger import SERVER_LOGGER as LOGGER
 import container_service_extension.rde.constants as def_constants
+from container_service_extension.rde.models.abstractNativeEntity import AbstractNativeEntity  # noqa: E501
 from container_service_extension.rde.models.common_models import DefEntity
 from container_service_extension.rde.models.common_models import DefEntityType
 from container_service_extension.rde.models.common_models import GenericClusterEntity   # noqa: E501
@@ -71,11 +72,13 @@ class DefEntityService:
     @handle_entity_service_exception
     def create_entity(self, entity_type_id: str, entity: DefEntity,
                       tenant_org_context: str = None,
+                      delete_status_from_payload=True,
                       return_response_headers=False) -> Union[dict, Tuple[dict, dict]]:  # noqa: E501
         """Create defined entity instance of an entity type.
 
         :param str entity_type_id: ID of the DefEntityType
         :param DefEntity entity: Defined entity instance
+        :param bool delete_status_from_payload: should delete status from payload?  # noqa: E501
         :param bool return_response_headers: return response headers
         :return: created entity or created entity with response headers
         :rtype: Union[dict, Tuple[dict, dict]]
@@ -83,12 +86,17 @@ class DefEntityService:
         additional_request_headers = {}
         if tenant_org_context:
             additional_request_headers['x-vmware-vcloud-tenant-context'] = tenant_org_context  # noqa: E501
+
+        payload: dict = entity.to_dict()
+        if delete_status_from_payload:
+            payload.get('entity', {}).pop('status', None)
+
         return self._cloudapi_client.do_request(
             method=RequestMethod.POST,
             cloudapi_version=CloudApiVersion.VERSION_1_0_0,
             resource_url_relative_path=f"{CloudApiResource.ENTITY_TYPES}/"
                                        f"{entity_type_id}",
-            payload=entity.to_dict(),
+            payload=payload,
             additional_request_headers=additional_request_headers,
             return_response_headers=return_response_headers)
 
@@ -347,6 +355,7 @@ class DefEntityService:
                                        f"{entity_id}?invokeHooks={str(invoke_hooks).lower()}",  # noqa: E501
             return_response_headers=return_response_headers)
 
+    @handle_entity_service_exception
     def resolve_entity(self, entity_id: str, entity_type_id: str = None) -> DefEntity:  # noqa: E501
         """Resolve the entity.
 
@@ -383,3 +392,25 @@ class DefEntityService:
             resource_url_relative_path=f"{CloudApiResource.ENTITIES}/"
                                        f"{entity_id}")
         return def_constants.DEF_NATIVE_ENTITY_TYPE_NSS in response_body['entityType']  # noqa: E501
+
+    @handle_entity_service_exception
+    def upgrade_entity(self, entity_id: str,
+                       upgraded_native_entity: AbstractNativeEntity,
+                       target_entity_type_id: str):
+        """Upgrade entity type of the entity to the specified one.
+
+        :param str entity_id: ID of the entity to upgrade
+        :param str upgraded_native_entity: dataclass representing the native
+            entity with upgraded fields.
+        :param str target_entity_type_id: target entity type version to which
+            the defined entity should be upgraded to.
+        :return: DefEntity representing the upgraded defined entity
+        :rtype: DefEntity
+        """
+        rde = self.get_entity(entity_id)
+        rde.entity = upgraded_native_entity
+
+        # Update only the entityType property
+        rde.entityType = target_entity_type_id
+
+        return self.update_entity(entity_id, rde, invoke_hooks=False)

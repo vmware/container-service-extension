@@ -251,15 +251,46 @@ class NativeEntity(AbstractNativeEntity):
             # TODO should change very much
             rde_1_x_entity: rde_1_0_0.NativeEntity = native_entity
 
+            distribution = Distribution(
+                template_name=rde_1_x_entity.spec.k8_distribution.template_name,  # noqa: E501
+                template_revision=rde_1_x_entity.spec.k8_distribution.template_revision  # noqa: E501
+            )
             # NOTE: since details for the field `site` is not present in
             # RDE 1.0, it is left empty
             cloud_properties = CloudProperties(site=None,
                                                org_name=rde_1_x_entity.metadata.org_name,  # noqa: E501
                                                virtual_data_center_name=rde_1_x_entity.metadata.ovdc_name,  # noqa: E501
                                                ovdc_network_name=rde_1_x_entity.spec.settings.network,  # noqa: E501
-                                               distribution=rde_1_x_entity.spec.k8_distribution,  # noqa: E501
+                                               distribution=distribution,
                                                ssh_key=rde_1_x_entity.spec.settings.ssh_key,  # noqa: E501
                                                rollback_on_failure=rde_1_x_entity.spec.settings.rollback_on_failure)  # noqa: E501
+            # RDE 1.0 don't have storage_profile in Node definition
+            control_plane = Node(
+                name=rde_1_x_entity.status.nodes.control_plane.name,
+                ip=rde_1_x_entity.status.nodes.control_plane.ip,
+                sizing_class=rde_1_x_entity.status.nodes.control_plane.sizing_class  # noqa: E501
+            )
+            workers = []
+            for worker in rde_1_x_entity.status.nodes.workers:
+                worker_node_2_x = Node(
+                    name=worker.name,
+                    ip=worker.ip,
+                    sizing_class=worker.sizing_class
+                )
+                workers.append(worker_node_2_x)
+            nfs_nodes = []
+            for nfs_node in rde_1_x_entity.status.nodes.nfs:
+                nfs_node_2_x = Node(
+                    name=nfs_node.name,
+                    ip=nfs_node.ip,
+                    sizing_class=nfs_node.sizing_class
+                )
+                nfs_nodes.append(nfs_node_2_x)
+            nodes = Nodes(
+                control_plane=control_plane,
+                workers=workers,
+                nfs=nfs_nodes
+            )
             # NOTE: since details for the field `uid` is not present in
             # RDE 1.0, it is left empty.
             # Proper value for `uid` should be populated after RDE is converted
@@ -270,7 +301,7 @@ class NativeEntity(AbstractNativeEntity):
                             kubernetes=rde_1_x_entity.status.kubernetes,
                             docker_version=rde_1_x_entity.status.docker_version,  # noqa: E501
                             os=rde_1_x_entity.status.os,
-                            nodes=rde_1_x_entity.status.nodes,
+                            nodes=nodes,
                             uid=None,
                             cloud_properties=cloud_properties,
                             exposed=rde_1_x_entity.status.exposed)
