@@ -104,7 +104,7 @@
                                 "count":{
                                     "type":"integer",
                                     "description":"Worker nodes can be scaled up and down.",
-                                    "maximum":100,
+                                    "maximum":200,
                                     "minimum":0
                                 },
                                 "sizingClass":{
@@ -128,7 +128,7 @@
                                 "count":{
                                     "type":"integer",
                                     "description":"Nfs nodes can only be scaled-up; they cannot be scaled-down.",
-                                    "maximum":100,
+                                    "maximum":200,
                                     "minimum":0
                                 },
                                 "sizingClass":{
