@@ -65,7 +65,7 @@ class Topology:
 @dataclass_json(letter_case=LetterCase.CAMEL)
 @dataclass
 class Cni:
-    name: Optional[str] = 'antrea'
+    name: Optional[str] = None
 
 
 @dataclass_json(letter_case=LetterCase.CAMEL)
