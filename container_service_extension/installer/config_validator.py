@@ -32,6 +32,7 @@ from container_service_extension.common.utils.core_utils import NullPrinter
 from container_service_extension.common.utils.core_utils import str_to_bool
 from container_service_extension.common.utils.server_utils import should_use_mqtt_protocol  # noqa: E501
 from container_service_extension.exception.exceptions import AmqpConnectionError  # noqa: E501
+from container_service_extension.exception.exceptions import AmqpError
 from container_service_extension.installer.sample_generator import \
     PKS_ACCOUNTS_SECTION_KEY, PKS_NSXT_SERVERS_SECTION_KEY, \
     PKS_ORGS_SECTION_KEY, PKS_PVDCS_SECTION_KEY, PKS_SERVERS_SECTION_KEY, \
@@ -56,6 +57,9 @@ import container_service_extension.rde.utils as rde_utils
 from container_service_extension.security.encryption_engine import \
     get_decrypted_file_contents
 from container_service_extension.server.pks.pks_cache import Credentials
+
+
+_AMQP_MAX_API_VERSION = '35.0'
 
 
 def get_validated_config(config_file_name,
@@ -163,6 +167,14 @@ def get_validated_config(config_file_name,
                                location="config file 'service->telemetry' "
                                         "section",
                                msg_update_callback=msg_update_callback)
+
+    config = _add_additional_details_to_config(
+        config=config, log_wire=log_wire, log_wire_file=log_wire_file)
+    _raise_error_if_amqp_not_supported(
+        use_mqtt,
+        config['service']['default_api_version'],
+        logger=logger_debug)
+
     msg_update_callback.general(
         f"Config file '{config_file_name}' is valid")
 
@@ -195,8 +207,6 @@ def get_validated_config(config_file_name,
     else:
         config['pks_config'] = None
 
-    config = _add_additional_details_to_config(
-        config=config, log_wire=log_wire, log_wire_file=log_wire_file)
     return config
 
 
@@ -271,6 +281,23 @@ def _add_additional_details_to_config(
     store_telemetry_settings(config)
 
     return config
+
+
+def _raise_error_if_amqp_not_supported(is_mqtt_used, default_api_version,
+                                       logger=NULL_LOGGER):  # noqa: E501
+    """Raise error if CSE is configured with AMQP but AMQP bus not supported.
+
+    AMQP cannot be used if CSE 3.1 or above is configured with 10.3 or above.
+
+    :param bool is_mqtt_used: boolean indicating if mqtt is used
+    :param str default_api_version: max VCD API version used by CSE.
+    :raises: AmqpError
+    """
+    if not is_mqtt_used and float(default_api_version) > float(_AMQP_MAX_API_VERSION):  # noqa: E501
+        msg = f"Cannot use AMQP message bus when working with api version" \
+            f" {default_api_version}. Please upgrade to MQTT."
+        logger.error(msg)
+        raise AmqpError(msg)
 
 
 def _validate_amqp_config(amqp_dict, msg_update_callback=NullPrinter()):
