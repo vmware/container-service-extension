@@ -282,7 +282,7 @@ class ClusterService(abstract_broker.AbstractBroker):
                 distribution=k8_distribution,
                 org_name=org_name,
                 virtual_data_center_name=ovdc_name,
-                ovdc_network_name=input_native_entity.spec.settings.network,
+                ovdc_network_name=input_native_entity.spec.settings.ovdc_network,  # noqa: E501
                 rollback_on_failure=input_native_entity.spec.settings.rollback_on_failure,  # noqa: E501
                 ssh_key=input_native_entity.spec.settings.ssh_key
             )
@@ -821,7 +821,7 @@ class ClusterService(abstract_broker.AbstractBroker):
             nfs_count = input_native_entity.spec.topology.nfs.count
             nfs_sizing_class = input_native_entity.spec.topology.nfs.sizing_class  # noqa: E501
             nfs_storage_profile = input_native_entity.spec.topology.nfs.storage_profile  # noqa: E501
-            network_name = input_native_entity.spec.settings.network
+            network_name = input_native_entity.spec.settings.ovdc_network
             template_name = input_native_entity.spec.distribution.template_name  # noqa: E501
             template_revision = input_native_entity.spec.distribution.template_revision  # noqa: E501
             ssh_key = input_native_entity.spec.settings.ssh_key
@@ -1225,7 +1225,7 @@ class ClusterService(abstract_broker.AbstractBroker):
             worker_sizing_class = input_native_entity.spec.topology.workers.sizing_class  # noqa: E501
             nfs_storage_profile = input_native_entity.spec.topology.nfs.storage_profile  # noqa: E501
             nfs_sizing_class = input_native_entity.spec.topology.nfs.sizing_class  # noqa: E501
-            network_name = input_native_entity.spec.settings.network
+            network_name = input_native_entity.spec.settings.ovdc_network
             ssh_key = input_native_entity.spec.settings.ssh_key
             rollback = input_native_entity.spec.settings.rollback_on_failure
             template_name = input_native_entity.spec.distribution.template_name

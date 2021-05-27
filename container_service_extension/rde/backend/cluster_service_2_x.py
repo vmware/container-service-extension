@@ -287,7 +287,7 @@ class ClusterService(abstract_broker.AbstractBroker):
         native_entity.status.cloud_properties.distribution.template_revision = template_revision  # noqa: E501
         native_entity.status.cloud_properties.org_name = org_name
         native_entity.status.cloud_properties.virtual_data_center_name = ovdc_name  # noqa: E501
-        native_entity.status.cloud_properties.ovdc_network_name = cluster_spec.spec.settings.network  # noqa: E501
+        native_entity.status.cloud_properties.ovdc_network_name = cluster_spec.spec.settings.ovdc_network  # noqa: E501
         native_entity.status.cloud_properties.rollback_on_failure = cluster_spec.spec.settings.rollback_on_failure  # noqa: E501
         native_entity.status.cloud_properties.ssh_key = cluster_spec.spec.settings.ssh_key  # noqa: E501
         # No need to set org context for non sysadmin users
@@ -773,7 +773,7 @@ class ClusterService(abstract_broker.AbstractBroker):
             nfs_count = cluster_spec.spec.topology.nfs.count
             nfs_sizing_class = cluster_spec.spec.topology.nfs.sizing_class
             nfs_storage_profile = cluster_spec.spec.topology.nfs.storage_profile  # noqa: E501
-            network_name = cluster_spec.spec.settings.network
+            network_name = cluster_spec.spec.settings.ovdc_network
             template_name = cluster_spec.spec.distribution.template_name
             template_revision = cluster_spec.spec.distribution.template_revision  # noqa: E501
             ssh_key = cluster_spec.spec.settings.ssh_key
@@ -864,7 +864,7 @@ class ClusterService(abstract_broker.AbstractBroker):
                         client=self.context.client,
                         org_name=org_name,
                         ovdc_name=ovdc_name,
-                        network_name=cluster_spec.spec.settings.network,
+                        network_name=cluster_spec.spec.settings.ovdc_network,
                         cluster_name=cluster_name,
                         cluster_id=cluster_id,
                         internal_ip=control_plane_ip)
@@ -1144,7 +1144,7 @@ class ClusterService(abstract_broker.AbstractBroker):
             if unexpose:
                 org_name: str = curr_entity.entity.metadata.org_name
                 ovdc_name: str = curr_entity.entity.metadata.ovdc_name
-                network_name: str = curr_entity.entity.spec.settings.network
+                network_name: str = curr_entity.entity.spec.settings.ovdc_network  # noqa: E501
                 try:
                     # Get internal ip
                     vapp_href = curr_entity.externalId
@@ -1280,7 +1280,7 @@ class ClusterService(abstract_broker.AbstractBroker):
             worker_sizing_class = current_spec.topology.workers.sizing_class
             nfs_storage_profile = current_spec.topology.nfs.storage_profile
             nfs_sizing_class = current_spec.topology.nfs.sizing_class
-            network_name = current_spec.settings.network
+            network_name = current_spec.settings.ovdc_network
             ssh_key = current_spec.settings.ssh_key
             rollback = current_spec.settings.rollback_on_failure
             template_name = current_spec.distribution.template_name
@@ -1437,7 +1437,7 @@ class ClusterService(abstract_broker.AbstractBroker):
             exposed: bool = bool(def_entity) and def_entity.entity.status.exposed  # noqa: E501
             dnat_delete_success: bool = False
             if exposed:
-                network_name: str = def_entity.entity.spec.settings.network
+                network_name: str = def_entity.entity.spec.settings.ovdc_network  # noqa: E501
                 cluster_id = def_entity.id
                 try:
                     _handle_delete_expose_dnat_rule(

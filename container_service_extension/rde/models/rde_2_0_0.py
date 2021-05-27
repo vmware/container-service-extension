@@ -64,10 +64,37 @@ class Topology:
 
 @dataclass_json(letter_case=LetterCase.CAMEL)
 @dataclass
+class Cni:
+    name: Optional[str] = None
+
+
+@dataclass_json(letter_case=LetterCase.CAMEL)
+@dataclass
+class Pods:
+    cidr_blocks: Optional[List[str]] = None
+
+
+@dataclass_json(letter_case=LetterCase.CAMEL)
+@dataclass
+class Services:
+    cidr_blocks: Optional[List[str]] = None
+
+
+@dataclass_json(letter_case=LetterCase.CAMEL)
+@dataclass
+class Network:
+    cni: Optional[Cni] = None
+    pods: Optional[Pods] = None
+    services: Optional[Services] = None
+
+
+@dataclass_json(letter_case=LetterCase.CAMEL)
+@dataclass
 class Settings:
-    network: str
+    ovdc_network: str
     ssh_key: Optional[str] = None
     rollback_on_failure: bool = True
+    network: Optional[Network] = None
 
 
 @dataclass_json(letter_case=LetterCase.CAMEL)
@@ -110,6 +137,14 @@ class CloudProperties:
 
 @dataclass_json(letter_case=LetterCase.CAMEL)
 @dataclass
+class Private:
+    kube_config: Optional[str] = None
+    kube_token: Optional[str] = None
+    certificates: Optional[List[str]] = None
+
+
+@dataclass_json(letter_case=LetterCase.CAMEL)
+@dataclass
 class Status:
     phase: Optional[str] = None
     cni: Optional[str] = None
@@ -121,6 +156,9 @@ class Status:
     uid: Optional[str] = None
     cloud_properties: CloudProperties = CloudProperties()
     exposed: bool = False
+    persistent_volumes: Optional[List[str]] = None
+    virtual_IPs: Optional[List[str]] = None
+    private: Optional[Private] = None
 
 
 @dataclass_json(letter_case=LetterCase.CAMEL)
@@ -396,7 +434,7 @@ class NativeEntity(AbstractNativeEntity):
         metadata = Metadata('cluster_name', 'organization_name',
                             'org_virtual_data_center_name', 'VCD_site')
         status = Status()
-        settings = Settings(network='ovdc_network_name', ssh_key=None)
+        settings = Settings(ovdc_network='ovdc_network_name', ssh_key=None)
         k8_distribution = Distribution(
             template_name='ubuntu-16.04_k8-1.17_weave-2.6.0',
             template_revision=2
