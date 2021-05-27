@@ -1144,7 +1144,7 @@ class ClusterService(abstract_broker.AbstractBroker):
             if unexpose:
                 org_name: str = curr_entity.entity.metadata.org_name
                 ovdc_name: str = curr_entity.entity.metadata.ovdc_name
-                network_name: str = curr_entity.entity.spec.settings.ovdc_network
+                network_name: str = curr_entity.entity.spec.settings.ovdc_network  # noqa: E501
                 try:
                     # Get internal ip
                     vapp_href = curr_entity.externalId
@@ -1437,7 +1437,7 @@ class ClusterService(abstract_broker.AbstractBroker):
             exposed: bool = bool(def_entity) and def_entity.entity.status.exposed  # noqa: E501
             dnat_delete_success: bool = False
             if exposed:
-                network_name: str = def_entity.entity.spec.settings.ovdc_network
+                network_name: str = def_entity.entity.spec.settings.ovdc_network  # noqa: E501
                 cluster_id = def_entity.id
                 try:
                     _handle_delete_expose_dnat_rule(
