@@ -156,8 +156,7 @@ Example
 
         client = ctx.obj['client']
         if client_utils.is_cli_for_tkg_only():
-            if k8_runtime in [shared_constants.ClusterEntityKind.NATIVE.value,
-                              shared_constants.ClusterEntityKind.TKG_PLUS.value]:  # noqa: E501
+            if k8_runtime in shared_constants.CSE_SERVER_RUNTIMES:
                 # Cannot run the command as cse cli is enabled only for native
                 raise CseServerNotRunningError()
             k8_runtime = shared_constants.ClusterEntityKind.TKG.value
@@ -552,6 +551,15 @@ Examples
     help="should be used with --sample, this flag generates sample yaml for k8 runtime: TKG+"  # noqa: E501
 )
 @click.option(
+    '-m',
+    '--tkgm',
+    'k8_runtime',
+    is_flag=True,
+    hidden=not utils.is_environment_variable_enabled(cli_constants.ENV_CSE_TKGM_ENABLED),  # noqa: E501
+    flag_value=shared_constants.ClusterEntityKind.TKGM,
+    help="should be used with --sample, this flag generates sample yaml for k8 runtime: TKGm"  # noqa: E501
+)
+@click.option(
     '-o',
     '--output',
     'output',
@@ -600,6 +608,9 @@ def apply(ctx, cluster_config_file_path, generate_sample_config, k8_runtime, out
             elif k8_runtime == shared_constants.ClusterEntityKind.TKG_PLUS \
                     and not utils.is_environment_variable_enabled(cli_constants.ENV_CSE_TKG_PLUS_ENABLED):  # noqa: E501
                 raise Exception(f"{shared_constants.ClusterEntityKind.TKG_PLUS.value} not enabled")  # noqa: E501
+            elif k8_runtime == shared_constants.ClusterEntityKind.TKGM \
+                    and not utils.is_environment_variable_enabled(cli_constants.ENV_CSE_TKGM_ENABLED):  # noqa: E501
+                raise Exception(f"{shared_constants.ClusterEntityKind.TKGM.value} not enabled")  # noqa: E501
             else:
                 sample_cluster_config = client_sample_generator.get_sample_cluster_configuration(output=output, k8_runtime=k8_runtime)  # noqa: E501
                 console_message_printer.general_no_color(sample_cluster_config)
@@ -613,8 +624,7 @@ def apply(ctx, cluster_config_file_path, generate_sample_config, k8_runtime, out
         if not k8_runtime:
             raise Exception("Cluster kind missing from the spec.")
         if client_utils.is_cli_for_tkg_only():
-            if k8_runtime in [shared_constants.ClusterEntityKind.NATIVE.value,
-                              shared_constants.ClusterEntityKind.TKG_PLUS.value]:  # noqa: E501
+            if k8_runtime in shared_constants.CSE_SERVER_RUNTIMES:
                 # Cannot run the command as cse cli is enabled only for native
                 raise CseServerNotRunningError()
             k8_runtime = shared_constants.ClusterEntityKind.TKG.value
@@ -718,8 +728,7 @@ Examples
     try:
         client_utils.cse_restore_session(ctx)
         if client_utils.is_cli_for_tkg_only():
-            if k8_runtime in [shared_constants.ClusterEntityKind.NATIVE.value,
-                              shared_constants.ClusterEntityKind.TKG_PLUS.value]:  # noqa: E501
+            if k8_runtime in shared_constants.CSE_SERVER_RUNTIMES:
                 # Cannot run the command as cse cli is enabled only for native
                 raise CseServerNotRunningError()
             k8_runtime = shared_constants.ClusterEntityKind.TKG.value
@@ -800,8 +809,7 @@ Example
     try:
         client_utils.cse_restore_session(ctx)
         if client_utils.is_cli_for_tkg_only():
-            if k8_runtime in [shared_constants.ClusterEntityKind.NATIVE.value,
-                              shared_constants.ClusterEntityKind.TKG_PLUS.value]:  # noqa: E501
+            if k8_runtime in shared_constants.CSE_SERVER_RUNTIMES:
                 # Cannot run the command as cse cli is enabled only for native
                 raise CseServerNotRunningError()
             k8_runtime = shared_constants.ClusterEntityKind.TKG.value
@@ -882,8 +890,7 @@ Examples:
                             "Note that '--id' flag is applicable for API versions >= 35 only.")  # noqa: E501
         client_utils.cse_restore_session(ctx)
         if client_utils.is_cli_for_tkg_only():
-            if k8_runtime in [shared_constants.ClusterEntityKind.NATIVE.value,
-                              shared_constants.ClusterEntityKind.TKG_PLUS.value]:  # noqa: E501
+            if k8_runtime in shared_constants.CSE_SERVER_RUNTIMES:
                 # Cannot run the command as cse cli is enabled only for native
                 raise CseServerNotRunningError()
             k8_runtime = shared_constants.ClusterEntityKind.TKG.value
@@ -965,8 +972,7 @@ Example
                             "Note that '--id' flag is applicable for API versions >= 35 only.")  # noqa: E501
         client_utils.cse_restore_session(ctx)
         if client_utils.is_cli_for_tkg_only():
-            if k8_runtime in [shared_constants.ClusterEntityKind.NATIVE.value,
-                              shared_constants.ClusterEntityKind.TKG_PLUS.value]:  # noqa: E501
+            if k8_runtime in shared_constants.CSE_SERVER_RUNTIMES:
                 # Cannot run the command as cse cli is enabled only for native
                 raise CseServerNotRunningError()
             k8_runtime = shared_constants.ClusterEntityKind.TKG.value

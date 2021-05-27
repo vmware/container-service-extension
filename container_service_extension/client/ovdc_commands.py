@@ -93,7 +93,16 @@ Example
     hidden=not utils.is_environment_variable_enabled(cli_constants.ENV_CSE_TKG_PLUS_ENABLED),  # noqa: E501
     help="Enable OVDC for k8 runtime TKG plus"
 )
-def ovdc_enable(ctx, ovdc_name, org_name, enable_native, enable_tkg_plus=None):
+@click.option(
+    '-m',
+    '--tkgm',
+    'enable_tkgm',
+    is_flag=True,
+    hidden=not utils.is_environment_variable_enabled(cli_constants.ENV_CSE_TKGM_ENABLED),  # noqa: E501
+    help="Enable OVDC for k8 runtime TKGm"
+)
+def ovdc_enable(ctx, ovdc_name, org_name, enable_native, enable_tkg_plus=None,
+                enable_tkgm=None):
     """Set Kubernetes provider for an org VDC.
 
 \b
@@ -116,6 +125,8 @@ Example
         k8_runtime.append(shared_constants.ClusterEntityKind.NATIVE.value)
     if enable_tkg_plus:
         k8_runtime.append(shared_constants.ClusterEntityKind.TKG_PLUS.value)
+    if enable_tkgm:
+        k8_runtime.append(shared_constants.ClusterEntityKind.TKGM.value)
     try:
         client_utils.cse_restore_session(ctx)
         client = ctx.obj['client']
@@ -168,6 +179,14 @@ Example
     help="Disable OVDC for k8 runtime TKG plus"
 )
 @click.option(
+    '-m',
+    '--tkgm',
+    'disable_tkgm',
+    is_flag=True,
+    hidden=not utils.is_environment_variable_enabled(cli_constants.ENV_CSE_TKGM_ENABLED),  # noqa: E501
+    help="Disable OVDC for k8 runtime TKGm"
+)
+@click.option(
     '-f',
     '--force',
     'remove_cp_from_vms_on_disable',
@@ -175,7 +194,7 @@ Example
     help="Remove the compute policies from deployed VMs as well. "
          "Does not remove the compute policy from vApp templates in catalog. ")
 def ovdc_disable(ctx, ovdc_name, org_name,
-                 disable_native, disable_tkg_plus=None,
+                 disable_native, disable_tkg_plus=None, disable_tkgm=None,
                  remove_cp_from_vms_on_disable=False):
     """Disable Kubernetes cluster deployment for an org VDC.
 
@@ -205,6 +224,8 @@ Examples
         k8_runtime.append(shared_constants.ClusterEntityKind.NATIVE.value)
     if disable_tkg_plus:
         k8_runtime.append(shared_constants.ClusterEntityKind.TKG_PLUS.value)
+    if disable_tkgm:
+        k8_runtime.append(shared_constants.ClusterEntityKind.TKGM.value)
     try:
         client_utils.cse_restore_session(ctx)
         client = ctx.obj['client']
