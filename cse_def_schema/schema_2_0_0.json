@@ -335,7 +335,7 @@
                 },
                 "virtualIPs": {
                     "type": "array",
-                    "description": "Array of virtual IPs consumed.",
+                    "description": "Array of virtual IPs consumed by the cluster.",
                     "items": {
                         "type": "string"
                     }

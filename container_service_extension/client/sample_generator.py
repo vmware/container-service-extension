@@ -100,6 +100,11 @@ def _get_sample_cluster_configuration_by_k8_runtime(k8_runtime, server_rde_in_us
     # remove status part of the entity dict
     del native_entity_dict['status']
 
+    # Hiding the network spec section for Andromeda (CSE 3.1)
+    # spec.settings.network is targeted for CSE 3.1.1 to accommodate CNI=Antrea
+    # Below line can be deleted post Andromeda (CSE 3.1)
+    del native_entity_dict['spec']['settings']['network']
+
     sample_apply_spec = yaml.dump(native_entity_dict)
     CLIENT_LOGGER.info(sample_apply_spec)
     return sample_apply_spec
