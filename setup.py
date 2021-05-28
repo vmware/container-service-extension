@@ -12,7 +12,9 @@ osl = 'open_source_license_container-service-extension_3.1_Beta.txt'
 
 setup(
     setup_requires=['pbr>=1.9', 'setuptools>=17.1'],
-    packages=['container_service_extension', 'cse_def_schema', 'cluster_scripts'],
+    packages=['container_service_extension',
+              'cse_def_schema',
+              'cluster_scripts'],
     data_files=[
         (str(Path('/')), ['LICENSE.txt', 'NOTICE.txt', osl]),
     ],
