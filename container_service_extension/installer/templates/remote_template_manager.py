@@ -64,13 +64,10 @@ class RemoteTemplateManager():
         self.msg_update_callback = msg_update_callback
         self.filtered_cookbook = None
         self.unfiltered_cookbook = None
+        self.cookbook_version = None
 
     def _get_base_url_from_remote_template_cookbook_url(self):
-        tokens = self.url.split('/')
-        if tokens[-1] in [REMOTE_TEMPLATE_COOKBOOK_V2_FILENAME,
-                          REMOTE_TEMPLATE_COOKBOOK_FILENAME]:
-            return '/'.join(tokens[:-1])
-        raise ValueError("Invalid url for template cookbook.")
+        return os.path.dirname(self.url)
 
     def _get_remote_script_url(self, template_name, revision,
                                script_file_name):
@@ -162,19 +159,23 @@ class RemoteTemplateManager():
             msg = "No 'templates' found."
             is_cookbook_invalid = True
 
+        # Validate template yaml contents
         for template_descriptor in self.unfiltered_cookbook.get('templates', []):  # noqa: E501
-            is_min_max_key_present = \
-                RemoteTemplateKey.MIN_CSE_VERSION in template_descriptor and \
-                RemoteTemplateKey.MAX_CSE_VERSION in template_descriptor
-            if is_min_max_key_present and self.legacy_mode:
-                # min_cse_version and max_cse_version keys are not supported
-                # in the template descriptor if running in legacy_mode
-                invalid_template_cookbook_msg += \
-                    "min_cse_version and max_cse_version keys are " \
-                    "not supported in the template descriptor " \
-                    "if running in legacy_mode."
-                is_cookbook_invalid = True
-                break
+            if self.cookbook_version == '2.0' and (RemoteTemplateKey.MIN_CSE_VERSION not in template_descriptor or RemoteTemplateKey.MAX_CSE_VERSION not in template_descriptor):
+                # version 2.0 template cookbook should contain min_cse_version
+                # and max_cse_version keys.
+                is_min_max_key_present = \
+                    RemoteTemplateKey.MIN_CSE_VERSION in template_descriptor and \
+                    RemoteTemplateKey.MAX_CSE_VERSION in template_descriptor
+                if is_min_max_key_present:
+                    # min_cse_version and max_cse_version keys are not supported
+                    # in the template descriptor if running in legacy_mode
+                    invalid_template_cookbook_msg += \
+                        "min_cse_version and max_cse_version keys are " \
+                        "not supported in the template descriptor " \
+                        "if running in legacy_mode."
+                    is_cookbook_invalid = True
+                    break
             elif not is_min_max_key_present and not self.legacy_mode:
                 # min_cse_version and max_cse_version keys are required in the
                 # template descriptor if not running in legacy_mode
@@ -193,6 +194,17 @@ class RemoteTemplateManager():
         msg = f"Template cookbook {self.url} is valid"
         self.logger.debug(msg)
         self.msg_update_callback.general(msg)
+
+    def _verify_cookbook_compatibility(self):
+        """Verifies if the template yaml is compatible with the CSE server."""
+        if (self.legacy_mode and self.cookbook_version != '1.0') or \
+                (not self.legacy_mode and self.cookbook_version != '2.0'):
+            incompatible_template_cookbook_msg = \
+                f"Template cookbook version {self.cookbook_version} is " \
+                f"incompatible with CSE executing in legacy_mode: {self.legacy_mode}"  # noqa: E501
+            self.logger.error(incompatible_template_cookbook_msg)
+            self.msg_update_callback.error(incompatible_template_cookbook_msg)
+            raise Exception(incompatible_template_cookbook_msg)
 
     def get_filtered_remote_template_cookbook(self):
         """Get the remote template cookbook as a dictionary.
@@ -235,6 +247,15 @@ class RemoteTemplateManager():
             msg = f"Downloaded remote template cookbook from {self.url}"
             self.logger.debug(msg)
             self.msg_update_callback.general(msg)
+
+            # get template cookbook version. If version string is not present,
+            # set the version string to 1.0
+            self.cookbook_version = self.unfiltered_cookbook.get('version', '1.0')  # noqa: E501
+            msg = f"template cookbook version: {self.cookbook_version}"
+            self.logger.debug(msg)
+            self.msg_update_callback.general(msg)
+
+            self._verify_cookbook_compatibility()
             self._validate_remote_template_cookbook()
         return self.unfiltered_cookbook
 
