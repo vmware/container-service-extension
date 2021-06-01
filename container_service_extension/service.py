@@ -10,6 +10,7 @@ import threading
 from threading import Thread
 import time
 import traceback
+from typing import Optional
 
 import click
 from pyvcloud.vcd.client import ApiVersion as vCDApiVersion
@@ -183,8 +184,8 @@ class Service(object, metaclass=Singleton):
         self.skip_config_decryption = skip_config_decryption
         self.pks_cache = None
         self._state = ServerState.STOPPED
-        self._kubernetesInterface: def_models.DefInterface = None
-        self._nativeEntityType: def_models.DefEntityType = None
+        self._kubernetesInterface: Optional[def_models.DefInterface] = None
+        self._nativeEntityType: Optional[def_models.DefEntityType] = None
         self.consumer = None
         self.consumer_thread = None
         self._consumer_watchdog = None
@@ -340,7 +341,7 @@ class Service(object, metaclass=Singleton):
             msg_update_callback=msg_update_callback)
 
         if float(self.config['vcd']['api_version']) < float(vCDApiVersion.VERSION_35.value): # noqa: E501
-            # Read templates rules from config and update template deinfition
+            # Read templates rules from config and update template definition
             # in server run-time config
             self._process_template_rules(
                 msg_update_callback=msg_update_callback)
@@ -371,9 +372,9 @@ class Service(object, metaclass=Singleton):
                 nsxt_servers=pks_config.get('nsxt_servers', []))
 
         num_processors = self.config['service']['processors']
+        name = server_constants.MESSAGE_CONSUMER_THREAD
         try:
             self.consumer = MessageConsumer(self.config, num_processors)
-            name = server_constants.MESSAGE_CONSUMER_THREAD
             consumer_thread = Thread(name=name, target=consumer_thread_run,
                                      args=(self.consumer, ))
             consumer_thread.daemon = True
@@ -462,7 +463,7 @@ class Service(object, metaclass=Singleton):
         defined entity interface and defined entity type registered during
         server install
 
-        :param utils.ConsoleMessagePrinter msg_update_callback
+        :param utils.ConsoleMessagePrinter msg_update_callback:
         """
         sysadmin_client = None
         try:
@@ -499,12 +500,12 @@ class Service(object, metaclass=Singleton):
             msg = f"Error while loading defined entity schema: {e.minor_error_code}"  # noqa: E501
             msg_update_callback.error(msg)
             logger.SERVER_LOGGER.debug(msg)
-            raise e
+            raise
         except Exception as e:
             msg = f"Failed to load defined entity schema to global context: {str(e)}" # noqa: E501
-            msg_update_callback.error(e)
-            logger.SERVER_LOGGER.error(e)
-            raise(e)
+            msg_update_callback.error(msg)
+            logger.SERVER_LOGGER.error(msg)
+            raise
         finally:
             if sysadmin_client:
                 sysadmin_client.logout()
@@ -543,8 +544,8 @@ class Service(object, metaclass=Singleton):
             logger.SERVER_LOGGER.error(msg)
             raise
 
-    def _load_template_definition_from_catalog(self,
-                                               msg_update_callback=utils.NullPrinter()): # noqa: E501
+    def _load_template_definition_from_catalog(
+            self, msg_update_callback=utils.NullPrinter()):
         # NOTE: If `enable_tkg_plus` in the config file is set to false,
         # CSE server will skip loading the TKG+ template this will prevent
         # users from performing TKG+ related operations.
@@ -573,6 +574,7 @@ class Service(object, metaclass=Singleton):
             client.set_credentials(credentials)
 
             is_tkg_plus_enabled = utils.is_tkg_plus_enabled(self.config)
+            is_tkgm_enabled = utils.is_tkgm_enabled(self.config)
             org_name = self.config['broker']['org']
             catalog_name = self.config['broker']['catalog']
             k8_templates = ltm.get_all_k8s_local_template_definition(
@@ -595,18 +597,29 @@ class Service(object, metaclass=Singleton):
             found_default_template = False
             for template in k8_templates:
                 api_version = float(client.get_api_version())
-                if api_version >= float(vCDApiVersion.VERSION_35.value) and \
-                        template[server_constants.LocalTemplateKey.KIND] == \
-                        shared_constants.ClusterEntityKind.TKG_PLUS.value and \
-                        not is_tkg_plus_enabled:
-                    # TKG+ is not enabled on CSE config. Skip the template and
-                    # log the relevant information.
-                    msg = "Skipping loading template data for " \
-                          f"'{template[server_constants.LocalTemplateKey.NAME]}' as " \
-                          "TKG+ is not enabled"  # noqa: E501
-                    logger.SERVER_LOGGER.debug(msg)
-                    k8_templates.remove(template)
-                    continue
+                if api_version >= float(vCDApiVersion.VERSION_35.value):
+                    if template[server_constants.LocalTemplateKey.KIND] == \
+                            shared_constants.ClusterEntityKind.TKG_PLUS.value and \
+                            not is_tkg_plus_enabled:
+                        # TKG+ is not enabled on CSE config. Skip the template and
+                        # log the relevant information.
+                        msg = "Skipping loading template data for " \
+                              f"'{template[server_constants.LocalTemplateKey.NAME]}' as " \
+                              "TKG+ is not enabled"  # noqa: E501
+                        logger.SERVER_LOGGER.debug(msg)
+                        k8_templates.remove(template)
+                        continue
+                    if template[server_constants.LocalTemplateKey.KIND] == \
+                            shared_constants.ClusterEntityKind.TKG_M.value and \
+                            not is_tkgm_enabled:
+                        # TKGm is not enabled on CSE config. Skip the template and
+                        # log the relevant information.
+                        msg = "Skipping loading template data for " \
+                              f"'{template[server_constants.LocalTemplateKey.NAME]}' as " \
+                              "TKGm is not enabled"  # noqa: E501
+                        logger.SERVER_LOGGER.debug(msg)
+                        k8_templates.remove(template)
+                        continue
                 if str(template[server_constants.LocalTemplateKey.REVISION]) == default_template_revision and \
                         template[server_constants.LocalTemplateKey.NAME] == default_template_name: # noqa: E501
                     found_default_template = True

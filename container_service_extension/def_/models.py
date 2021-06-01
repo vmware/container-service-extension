@@ -142,7 +142,6 @@ class Status:
     cni: str = None
     task_href: str = None
     kubernetes: str = None
-    cni: str = None
     docker_version: str = None
     os: str = None
     nodes: Nodes = None
@@ -310,7 +309,7 @@ class Ovdc:
 # include the following properties:
 @dataclass()
 class GenericClusterEntity:
-    # Properties being used for List operation attributes representiing them
+    # Properties being used for List operation attributes representing them
     # for native and TKG clusters:
     # name:
     #   def_entity.name
@@ -339,7 +338,8 @@ class GenericClusterEntity:
         entity_dict = asdict(entity) if not isinstance(entity, dict) else entity  # noqa: E501
         if entity_dict['kind'] in \
                 [shared_constants.ClusterEntityKind.NATIVE.value,
-                 shared_constants.ClusterEntityKind.TKG_PLUS.value]:
+                 shared_constants.ClusterEntityKind.TKG_PLUS.value,
+                 shared_constants.ClusterEntityKind.TKG_M.value]:
             self.entity = NativeEntity(**entity_dict) if isinstance(entity, dict) else entity  # noqa: E501
         elif entity_dict['kind'] == \
                 shared_constants.ClusterEntityKind.TKG.value:

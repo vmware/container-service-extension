@@ -228,7 +228,7 @@ def _check_mqtt_extension_installation(client, msg_update_callback, err_msgs):
         api_filters_status = mqtt_ext_manager.check_api_filters_setup(
             ext_uuid, API_FILTER_PATTERNS)
         if not api_filters_status:
-            msg = f"Could not find MQTT API FIlter: " \
+            msg = f"Could not find MQTT API Filter: " \
                   f"{server_constants.MQTT_API_FILTER_PATTERN}"
             msg_update_callback.error(msg)
             SERVER_CLI_LOGGER.error(msg)
@@ -290,7 +290,7 @@ def parse_cse_extension_description(sys_admin_client, is_mqtt_extension):
         vcd_api_tokens = tokens[1].split("-")
         if len(vcd_api_tokens) == 2:
             vcd_api_version = vcd_api_tokens[1]
-    return (cse_version, vcd_api_version)
+    return cse_version, vcd_api_version
 
 
 def install_cse(config_file_name, config, skip_template_creation,
@@ -318,7 +318,7 @@ def install_cse(config_file_name, config, skip_template_creation,
     :raises cse_exception.AmqpError: (when using AMQP) if AMQP exchange
         could not be created.
     :raises requests.exceptions.HTTPError: (when using MQTT) if there is an
-        issue in retrieiving MQTT info or in setting up the MQTT components
+        issue in retrieving MQTT info or in setting up the MQTT components
     """
     populate_vsphere_list(config['vcs'])
 
@@ -620,7 +620,7 @@ def _deregister_cse_amqp_extension(client,
         namespace=server_constants.CSE_SERVICE_NAMESPACE)
     ext.delete_extension(name=server_constants.CSE_SERVICE_NAME,
                          namespace=server_constants.CSE_SERVICE_NAMESPACE)
-    msg = "Successfully deregistered CSE AMQP extension from VCD"
+    msg = "Successfully de-registered CSE AMQP extension from VCD"
     msg_update_callback.general(msg)
     INSTALL_LOGGER.info(msg)
 
@@ -667,18 +667,21 @@ def _update_user_role_with_right_bundle(right_bundle_name,
     """Add defined entity rights to user's role.
 
     This method should only be called on valid configurations.
-    In order to call this function, caller has to make sure that the contexual
-    defined entity is already created inside VCD and corresppnding right-bundle
-    exists in VCD.
+    In order to call this function, caller has to make sure that the
+    contextual defined entity is already created inside VCD and corresponding
+    right-bundle exists in VCD.
     The defined entity right bundle is created by VCD at the time of defined
     entity creation, dynamically. Hence, it doesn't exist before-hand
-    (when user initiated the opetation).
-    :param str : right_bundle_name
-    :param pyvcloud.vcd.client.Client  : client
+    (when user initiated the operation).
+    :param str right_bundle_name:
+    :param pyvcloud.vcd.client.Client client:
     :param utils.ConsoleMessagePrinter msg_update_callback: Callback object.
     :param bool log_wire: wire logging enabled
-    :rtype bool: result of operation. If the rights were added to user's role
-    or not
+
+    :rtype: bool
+
+    :return: result of operation. If the rights were added to user's role or
+     not
     """
     # Only a user from System Org can execute this function
     vcd_utils.raise_error_if_user_not_from_system_org(client)
@@ -701,7 +704,7 @@ def _update_user_role_with_right_bundle(right_bundle_name,
     # Using the Org, determine Role object (using Role-name we identified)
     role_record = system_org.get_role_record(role_name)
     role_record_read_only = role_record.get("isReadOnly").lower() in ["true"]
-    if (role_record_read_only):
+    if role_record_read_only:
         msg = "User has predefined non editable role. Not adding native entitlement rights." # noqa: E501
         msg_update_callback.general(msg)
         return False
@@ -741,10 +744,11 @@ def _update_user_role_with_right_bundle(right_bundle_name,
     return True
 
 
-def _update_user_role_with_necessary_right_bundles(client: Client,
-                                                   msg_update_callback=utils.NullPrinter(), # noqa: E501
-                                                   logger_debug=NULL_LOGGER,
-                                                   log_wire=False):
+def _update_user_role_with_necessary_right_bundles(
+        client: Client,
+        msg_update_callback=utils.NullPrinter(),
+        logger_debug=NULL_LOGGER,
+        log_wire=False):
     """Add necessary rights from right bundles to user's role.
 
     As of now, CSE admin user requires:
@@ -753,8 +757,12 @@ def _update_user_role_with_necessary_right_bundles(client: Client,
 
     :param pyvcloud.vcd.client.Client  : client
     :param utils.ConsoleMessagePrinter msg_update_callback: Callback object.
+    :param logging.Logger logger_debug:
     :param bool log_wire: wire logging enabled
-    :rtype bool: result of operation. If the rights from any right bundles
+
+    :rtype: bool
+
+    :return: result of operation. If the rights from any right bundles
     were added to user's role or not
     """
     try:
@@ -842,7 +850,6 @@ def _register_def_schema(client: Client,
                           interfaces=[kubernetes_interface.get_id()],
                           readonly=False)
 
-        msg = ""
         try:
             schema_svc.get_entity_type(native_entity_type.get_id())
             msg = "Skipping creation of Defined Entity Type. Defined Entity Type already exists." # noqa: E501
@@ -945,7 +952,7 @@ def _register_right(client, right_name, description, category, bundle_key,
         msg = f"Assigning Right: {right_name} to System organization."
         msg_update_callback.general(msg)
         INSTALL_LOGGER.info(msg)
-        system_org.add_rights([right_name_in_vcd])
+        system_org.add_rights((right_name_in_vcd,))
     except EntityNotFoundException:
         # Registering a right via api extension end point, auto assigns it to
         # System org.
@@ -978,7 +985,6 @@ def _setup_placement_policies(client,
     INSTALL_LOGGER.info(msg)
     cpm = \
         compute_policy_manager.ComputePolicyManager(client, log_wire=log_wire)
-    pvdc_compute_policy = None
     try:
         try:
             pvdc_compute_policy = \
@@ -1028,10 +1034,13 @@ def _setup_placement_policies(client,
         INSTALL_LOGGER.info(msg)
 
 
-def _assign_placement_policies_to_existing_templates(client, config,
-                                                     is_tkg_plus_enabled,
-                                                     log_wire=False,
-                                                     msg_update_callback=utils.NullPrinter()):  # noqa: E501
+def _assign_placement_policies_to_existing_templates(
+        client,
+        config,
+        is_tkg_plus_enabled,
+        is_tkgm_enabled,
+        log_wire=False,
+        msg_update_callback=utils.NullPrinter()):
     """Read existing templates and assign respective placement policies.
 
     Read metadata of existing templates, get the value for the 'kind' metadata,
@@ -1039,7 +1048,8 @@ def _assign_placement_policies_to_existing_templates(client, config,
 
     :param vcdClient.Client client:
     :param dict config: content of the CSE config file.
-    :param bool is_tkg_plus_enable:
+    :param bool is_tkg_plus_enabled:
+    :param bool is_tkgm_enabled:
     :param bool log_wire:
     :param utils.ConsoleMessagePrinter msg_update_callback:
     """
@@ -1080,6 +1090,15 @@ def _assign_placement_policies_to_existing_templates(client, config,
                   "`cse upgrade` to process these vDC(s)."
             INSTALL_LOGGER.error(msg)
             raise cse_exception.CseUpgradeError(msg)
+        if kind == shared_constants.ClusterEntityKind.TKG_M.value and \
+                not is_tkgm_enabled:
+            msg = "Found a TKGm template. " \
+                  "However TKGm is not enabled on CSE. " \
+                  "Please enable TKGm for CSE via config file and re-run " \
+                  "`cse upgrade` to process these vDC(s)."
+            INSTALL_LOGGER.error(msg)
+            raise cse_exception.CseUpgradeError(msg)
+
         placement_policy_name = \
             shared_constants.RUNTIME_DISPLAY_NAME_TO_INTERNAL_NAME_MAP[kind]  # noqa: E501
         template_builder.assign_placement_policy_to_template(
@@ -1118,6 +1137,7 @@ def _install_all_templates(
             retain_temp_vapp=retain_temp_vapp,
             ssh_key=ssh_key,
             is_tkg_plus_enabled=utils.is_tkg_plus_enabled(config),
+            is_tkgm_enabled=utils.is_tkgm_enabled(config),
             msg_update_callback=msg_update_callback)
 
 
@@ -1216,6 +1236,7 @@ def install_template(template_name, template_revision, config_file_name,
                     retain_temp_vapp=retain_temp_vapp,
                     ssh_key=ssh_key,
                     is_tkg_plus_enabled=utils.is_tkg_plus_enabled(config),
+                    is_tkgm_enabled=utils.is_tkgm_enabled(config),
                     msg_update_callback=msg_update_callback)
 
         if not found_template:
@@ -1248,23 +1269,33 @@ def _install_single_template(
         client, remote_template_manager, template, org_name,
         vdc_name, catalog_name, network_name, ip_allocation_mode,
         storage_profile, force_update, retain_temp_vapp,
-        ssh_key, is_tkg_plus_enabled=False,
+        ssh_key, is_tkg_plus_enabled=False, is_tkgm_enabled=False,
         msg_update_callback=utils.NullPrinter()):
     # NOTE: For CSE 3.0, if the template is a TKG+ template
     # and `enable_tkg_plus` is set to false,
     # An error should be thrown and template installation should be skipped.
     api_version = float(client.get_api_version())
-    if api_version >= float(vCDApiVersion.VERSION_35.value) and\
-            template[server_constants.LocalTemplateKey.KIND] == \
-            shared_constants.ClusterEntityKind.TKG_PLUS.value and \
-            not is_tkg_plus_enabled:
-        msg = "Found a TKG+ template." \
-              " However TKG+ is not enabled on CSE. " \
-              "Please enable TKG+ for CSE via config file and re-run " \
-              "`cse upgrade` to process these vDC(s)."
-        INSTALL_LOGGER.error(msg)
-        msg_update_callback.error(msg)
-        raise Exception(msg)
+    if api_version >= float(vCDApiVersion.VERSION_35.value):
+        if template[server_constants.LocalTemplateKey.KIND] == \
+                shared_constants.ClusterEntityKind.TKG_PLUS.value and \
+                not is_tkg_plus_enabled:
+            msg = "Found a TKG+ template. " \
+                  "However TKG+ is not enabled on CSE. " \
+                  "Please enable TKG+ for CSE via config file and re-run " \
+                  "`cse upgrade` to process these vDC(s)."
+            INSTALL_LOGGER.error(msg)
+            msg_update_callback.error(msg)
+            raise Exception(msg)
+        if template[server_constants.LocalTemplateKey.KIND] == \
+                shared_constants.ClusterEntityKind.TKG_M.value and \
+                not is_tkgm_enabled:
+            msg = "Found a TKGm template. " \
+                  "However TKGm is not enabled on CSE. " \
+                  "Please enable TKGm for CSE via config file and re-run " \
+                  "`cse upgrade` to process these vDC(s)."
+            INSTALL_LOGGER.error(msg)
+            msg_update_callback.error(msg)
+            raise Exception(msg)
     localTemplateKey = server_constants.LocalTemplateKey
     templateBuildKey = server_constants.TemplateBuildKey
     remote_template_manager.download_template_scripts(
@@ -1477,7 +1508,7 @@ def upgrade_cse(config_file_name, config, skip_template_creation,
                 retain_temp_vapp=retain_temp_vapp,
                 admin_password=admin_password,
                 msg_update_callback=msg_update_callback)
-        elif target_vcd_api_version in (vCDApiVersion.VERSION_35.value):
+        elif target_vcd_api_version in (vCDApiVersion.VERSION_35.value,):
             _upgrade_to_35(
                 client=client,
                 config=config,
@@ -1543,9 +1574,7 @@ def _update_cse_amqp_extension(client, routing_key, exchange,
                                msg_update_callback=utils.NullPrinter()):
     """."""
     ext = api_extension.APIExtension(client)
-
     description = _construct_cse_extension_description(target_vcd_api_version)
-    msg = None
 
     ext.update_extension(
         name=server_constants.CSE_SERVICE_NAME,
@@ -1631,14 +1660,14 @@ def _upgrade_to_35(client, config, ext_vcd_api_version,
     is_tkg_plus_enabled = utils.is_tkg_plus_enabled(config=config)
     is_tkgm_enabled = utils.is_tkgm_enabled(config=config)
 
-    # Add global placement polcies
+    # Add global placement policies
     _setup_placement_policies(
         client=client,
         policy_list=shared_constants.CLUSTER_RUNTIME_PLACEMENT_POLICIES,
         is_tkg_plus_enabled=is_tkg_plus_enabled,
+        is_tkgm_enabled=is_tkgm_enabled,
         msg_update_callback=msg_update_callback,
-        log_wire=log_wire,
-        is_tkgm_enabled=is_tkgm_enabled)
+        log_wire=log_wire)
 
     # Register def schema
     _register_def_schema(
@@ -1655,6 +1684,7 @@ def _upgrade_to_35(client, config, ext_vcd_api_version,
             client=client,
             config=config,
             is_tkg_plus_enabled=is_tkg_plus_enabled,
+            is_tkgm_enabled=is_tkgm_enabled,
             log_wire=utils.str_to_bool(config['service'].get('log_wire')),
             msg_update_callback=msg_update_callback)
     else:
@@ -1926,30 +1956,30 @@ def _construct_template_name_from_history(metadata_dict):
     old_template_name = metadata_dict.get(
         server_constants.ClusterMetadataKey.BACKWARD_COMPATIBILE_TEMPLATE_NAME)
     if not old_template_name:
-        return
+        return ''
 
     new_template_name = None
     cse_version = metadata_dict.get(
         server_constants.ClusterMetadataKey.CSE_VERSION)
     if 'photon' in old_template_name:
         new_template_name = 'photon-v2'
-        if cse_version in ('1.0.0'):
+        if cse_version in ('1.0.0',):
             new_template_name += '_k8-1.8_weave-2.0.5'
         elif cse_version in ('1.1.0', '1.2.0', '1.2.1', '1.2.2', '1.2.3', '1.2.4'): # noqa: E501
             new_template_name += '_k8-1.9_weave-2.3.0'
         elif cse_version in ('1.2.5', '1.2.6', '1.2.7',): # noqa: E501
             new_template_name += '_k8-1.10_weave-2.3.0'
-        elif cse_version in ('2.0.0'):
+        elif cse_version in ('2.0.0',):
             new_template_name += '_k8-1.12_weave-2.3.0'
         else:
             new_template_name += '_k8-0.0_weave-0.0.0'
     elif 'ubuntu' in old_template_name:
         new_template_name = 'ubuntu-16.04'
-        if cse_version in ('1.0.0'):
+        if cse_version in ('1.0.0',):
             new_template_name += '_k8-1.9_weave-2.1.3'
         elif cse_version in ('1.1.0', '1.2.0', '1.2.1', '1.2.2', '1.2.3', '1.2.4', '1.2.5', '1.2.6', '1.2.7'): # noqa: E501
             new_template_name += '_k8-1.10_weave-2.3.0'
-        elif cse_version in ('2.0.0'):
+        elif cse_version in ('2.0.0',):
             new_template_name += '_k8-1.13_weave-2.3.0'
         else:
             new_template_name += '_k8-0.0_weave-0.0.0'
@@ -1987,7 +2017,7 @@ def _get_k8s_and_docker_versions_from_history(
             k8s_version = '1.10.1'
             if cse_version in ('1.2.5', '1.2.6, 1.2.7'):
                 k8s_version = '1.10.11'
-            if cse_version in ('1.2.7'):
+            if cse_version in ('1.2.7',):
                 docker_version = '18.06.2'
         elif '1.13' in template_name:
             docker_version = '18.06.3'
@@ -2058,12 +2088,12 @@ def _fix_cluster_admin_password(client,
             for href in vm_hrefs_for_password_update:
                 vm = VM(client=client, href=href)
                 try:
-                    msg = "Undeploying vm."
+                    msg = "Un-deploying vm."
                     INSTALL_LOGGER.info(msg)
                     msg_update_callback.info(msg)
                     task = vm.undeploy()
                     client.get_task_monitor().wait_for_success(task)
-                    msg = "Successfully undeployed vm"
+                    msg = "Successfully un-deployed vm"
                     INSTALL_LOGGER.info(msg)
                     msg_update_callback.general(msg)
                 except Exception as err:
@@ -2132,6 +2162,11 @@ def _get_placement_policy_name_from_template_name(template_name):
     if 'k8' in template_name:
         policy_name = \
             shared_constants.NATIVE_CLUSTER_RUNTIME_INTERNAL_NAME
+    # This check should be made before the broader 'tkg' check
+    # to make sure we deduce the correct template type.
+    elif 'tkgm' in template_name:
+        policy_name = \
+            shared_constants.TKG_M_CLUSTER_RUNTIME_INTERNAL_NAME
     elif 'tkg' in template_name or 'tkgplus' in template_name:
         policy_name = \
             shared_constants.TKG_PLUS_CLUSTER_RUNTIME_INTERNAL_NAME
@@ -2160,6 +2195,9 @@ def _assign_placement_policy_to_vdc_and_right_bundle_to_org(
     msg_update_callback.info(msg)
     INSTALL_LOGGER.info(msg)
 
+    # Since TKGm clusters are being introduced in CSE 3.0.3, we don't need to
+    # process those ovdcs separately, they will already have the proper
+    # compute policy published.
     tkg_plus_ovdcs = []
     native_ovdcs = []
     vdc_names = {}
@@ -2175,13 +2213,13 @@ def _assign_placement_policy_to_vdc_and_right_bundle_to_org(
             continue
 
         if policy_name == shared_constants.NATIVE_CLUSTER_RUNTIME_INTERNAL_NAME:  # noqa: E501
-            id = cluster['vdc_id']
-            native_ovdcs.append(id)
-            vdc_names[id] = cluster['vdc_name']
+            cluster_id = cluster['vdc_id']
+            native_ovdcs.append(cluster_id)
+            vdc_names[cluster_id] = cluster['vdc_name']
         elif policy_name == shared_constants.TKG_PLUS_CLUSTER_RUNTIME_INTERNAL_NAME:  # noqa: E501
-            id = cluster['vdc_id']
-            tkg_plus_ovdcs.append(id)
-            vdc_names[id] = cluster['vdc_name']
+            cluster_id = cluster['vdc_id']
+            tkg_plus_ovdcs.append(cluster_id)
+            vdc_names[cluster_id] = cluster['vdc_name']
         org_id = cluster['org_href'].split('/')[-1]
         org_ids.add(org_id)
 
@@ -2192,7 +2230,7 @@ def _assign_placement_policy_to_vdc_and_right_bundle_to_org(
         compute_policy_manager.ComputePolicyManager(client, log_wire=log_wire)
 
     if native_ovdcs:
-        msg = f"Found {len(native_ovdcs)} vDC(s) hosting NATIVE CSE custers."
+        msg = f"Found {len(native_ovdcs)} vDC(s) hosting NATIVE CSE clusters."
         msg_update_callback.info(msg)
         INSTALL_LOGGER.info(msg)
         native_policy = compute_policy_manager.get_cse_vdc_compute_policy(
@@ -2349,7 +2387,6 @@ def _create_def_entity_for_existing_clusters(
         logger_debug=INSTALL_LOGGER,
         logger_wire=logger_wire)
     entity_svc = def_entity_svc.DefEntityService(cloudapi_client)
-
     schema_svc = def_schema_svc.DefSchemaService(cloudapi_client)
     keys_map = def_utils.MAP_API_VERSION_TO_KEYS[float(client.get_api_version())] # noqa: E501
     entity_type_id = def_utils.generate_entity_type_id(
@@ -2365,7 +2402,7 @@ def _create_def_entity_for_existing_clusters(
 
         cluster_id = cluster['cluster_id']
         try:
-            def_entity = entity_svc.get_entity(cluster_id)
+            entity_svc.get_entity(cluster_id)
             msg = f"Skipping cluster '{cluster['name']}' since it has " \
                   "already been processed."
             INSTALL_LOGGER.info(msg)
@@ -2383,20 +2420,19 @@ def _create_def_entity_for_existing_clusters(
             INSTALL_LOGGER.info(msg)
             continue
 
-        if policy_name == \
-                shared_constants.TKG_PLUS_CLUSTER_RUNTIME_INTERNAL_NAME and \
-                not is_tkg_plus_enabled:
-            msg = "Found a TKG+ cluster." \
-                  " However TKG+ is not enabled on CSE. " \
-                  "Please enable TKG+ for CSE via config file and re-run" \
-                  "`cse upgrade` to process these clusters"
-            INSTALL_LOGGER.error(msg)
-            raise cse_exception.CseUpgradeError(msg)
+        kind = None
+        if policy_name == shared_constants.TKG_PLUS_CLUSTER_RUNTIME_INTERNAL_NAME:  #noqa: E501
+            if not is_tkg_plus_enabled:
+                msg = "Found a TKG+ cluster. " \
+                      "However TKG+ is not enabled on CSE. " \
+                      "Please enable TKG+ for CSE via config file and re-run" \
+                      "`cse upgrade` to process these clusters"
+                INSTALL_LOGGER.error(msg)
+                raise cse_exception.CseUpgradeError(msg)
+            else:
+                kind = shared_constants.ClusterEntityKind.TKG_PLUS.value
         if policy_name == shared_constants.NATIVE_CLUSTER_RUNTIME_INTERNAL_NAME:  # noqa: E501
-            # TODO combine to a single constant
             kind = shared_constants.ClusterEntityKind.NATIVE.value
-        elif policy_name == shared_constants.TKG_PLUS_CLUSTER_RUNTIME_INTERNAL_NAME:  # noqa: E501
-            kind = shared_constants.ClusterEntityKind.TKG_PLUS.value
 
         worker_nodes = []
         for item in cluster['nodes']:

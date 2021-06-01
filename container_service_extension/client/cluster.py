@@ -25,14 +25,15 @@ class Cluster:
         list_clusters()
 
         :param pyvcloud.vcd.client client: vcd client
-        :param dict cluster_config: cluster configuration
+        :param str k8_runtime:
+
         :return: instance of version specific client side cluster
         """
         api_version = client.get_api_version()
         if float(api_version) < float(vcd_client.ApiVersion.VERSION_35.value):   # noqa: E501
             return LegacyClusterNative(client)
         elif float(api_version) >= float(vcd_client.ApiVersion.VERSION_35.value):  # noqa: E501
-            if k8_runtime == ClusterEntityKind.NATIVE.value or k8_runtime == ClusterEntityKind.TKG_PLUS.value:  # noqa: E501
+            if k8_runtime in [ClusterEntityKind.NATIVE.value, ClusterEntityKind.TKG_PLUS.value, ClusterEntityKind.TKGM.value]:  # noqa: E501
                 return DEClusterNative(client)
             elif k8_runtime == ClusterEntityKind.TKG.value:
                 return DEClusterTKG(client)
