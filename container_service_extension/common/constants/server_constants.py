@@ -298,7 +298,31 @@ class LocalTemplateKey(str, Enum):
 
 
 @unique
-class RemoteTemplateKey(str, Enum):
+class RemoteTemplateKeyV1(str, Enum):
+    """Enumerate the keys that define a template."""
+
+    CNI = 'cni'
+    CNI_VERSION = 'cni_version'
+    COMPUTE_POLICY = 'compute_policy'
+    CPU = 'cpu'
+    DEPRECATED = 'deprecated'
+    DESCRIPTION = 'description'
+    DOCKER_VERSION = 'docker_version'
+    KIND = 'kind'
+    KUBERNETES = 'kubernetes'
+    KUBERNETES_VERSION = 'kubernetes_version'
+    MEMORY = 'mem'
+    NAME = 'name'
+    OS = 'os'
+    REVISION = 'revision'
+    SOURCE_OVA_HREF = 'source_ova'
+    SOURCE_OVA_NAME = 'source_ova_name'
+    SOURCE_OVA_SHA256 = 'sha256_ova'
+    UPGRADE_FROM = 'upgrade_from'
+
+
+@unique
+class RemoteTemplateKeyV2(str, Enum):
     """Enumerate the keys that define a template."""
 
     CNI = 'cni'
