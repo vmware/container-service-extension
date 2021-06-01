@@ -1551,7 +1551,7 @@ def _update_metadata_for_existing_templates(client: Client, config: dict,
     rtm.get_filtered_remote_template_cookbook()
     catalog_item_to_template_description_map = \
         _construct_catalog_item_name_to_template_description_map(
-            rtm.filtered_cookbook, rtm.cookbook_version)
+            rtm.filtered_cookbook)
     # List of keys for the new template metadata. This includes
     # min_cse_version and max_cse_version
     new_metadata_key_list = [k for k in server_constants.LocalTemplateKey]
