@@ -334,7 +334,7 @@ def generate_sample_config(
 
         updated_service_config = dict(SAMPLE_SERVICE_CONFIG)
         if api_version < float(ApiVersion.VERSION_35.value):
-            updated_service_config['service']['legacy_mode'] = True
+            updated_service_config['service']['legacy_mode'] = False
         sample_config += yaml.safe_dump(updated_service_config,
                                         default_flow_style=False) + '\n'
 
