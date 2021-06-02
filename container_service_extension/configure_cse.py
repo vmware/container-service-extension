@@ -1285,7 +1285,7 @@ def _install_single_template(
         if template[server_constants.LocalTemplateKey.KIND] == \
                 shared_constants.ClusterEntityKind.TKG_M.value and \
                 not is_tkgm_enabled:
-            msg = "Found a TKGm template. However TKG+ is not enabled on " \
+            msg = "Found a TKGm template. However TKGm is not enabled on " \
                   "CSE. Please enable TKGm for CSE via config file."
             INSTALL_LOGGER.error(msg)
             msg_update_callback.error(msg)
