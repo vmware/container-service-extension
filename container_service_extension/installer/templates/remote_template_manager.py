@@ -185,7 +185,7 @@ class RemoteTemplateManager():
                 (not self.legacy_mode and self.cookbook_version != '2.0'):
             incompatible_template_cookbook_msg = \
                 f"Template cookbook version {self.cookbook_version} is " \
-                f"incompatible with CSE executing in legacy_mode: {self.legacy_mode}"  # noqa: E501
+                f"incompatible with CSE running in legacy_mode: {self.legacy_mode}"  # noqa: E501
             self.logger.error(incompatible_template_cookbook_msg)
             self.msg_update_callback.error(incompatible_template_cookbook_msg)
             raise Exception(incompatible_template_cookbook_msg)
