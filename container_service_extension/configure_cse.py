@@ -1069,7 +1069,6 @@ def _assign_placement_policies_to_existing_templates(
             org_name=org_name,
             logger_debug=INSTALL_LOGGER)
     for template in all_templates:
-        msg_update_callback.general(f"Processing {template[server_constants.RemoteTemplateKey.NAME]}")
         kind = template.get(server_constants.LocalTemplateKey.KIND)
         catalog_item_name = ltm.get_revisioned_template_name(
             template[server_constants.RemoteTemplateKey.NAME],

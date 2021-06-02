@@ -204,9 +204,9 @@ def get_ovdc_k8s_runtime_details(sysadmin_client: vcd_client.Client,
                                  log_wire=False) -> def_models.Ovdc:
     """Get k8s runtime details for an ovdc.
 
-    At least ovdc_id and ovdc_name or org_name and ovdc_name should be provided.
-    Additional call to get ovdc details can be avoided by providing ovdc_id and
-    ovdc_name.
+    At least ovdc_id and ovdc_name or org_name and ovdc_name should be
+    provided. Additional call to get ovdc details can be avoided by
+    providing ovdc_id and ovdc_name.
 
     :param vcd_client.Client sysadmin_client: vcd sysadmin client
     :param str ovdc_id:

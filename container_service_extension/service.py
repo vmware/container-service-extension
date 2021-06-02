@@ -598,22 +598,18 @@ class Service(object, metaclass=Singleton):
             for template in k8_templates:
                 api_version = float(client.get_api_version())
                 if api_version >= float(vCDApiVersion.VERSION_35.value):
-                    if template[server_constants.LocalTemplateKey.KIND] == \
-                            shared_constants.ClusterEntityKind.TKG_PLUS.value and \
-                            not is_tkg_plus_enabled:
-                        # TKG+ is not enabled on CSE config. Skip the template and
-                        # log the relevant information.
+                    if template[server_constants.LocalTemplateKey.KIND] == shared_constants.ClusterEntityKind.TKG_PLUS.value and not is_tkg_plus_enabled:  # noqa: E501
+                        # TKG+ is not enabled on CSE config. Skip the template
+                        # and log the relevant information.
                         msg = "Skipping loading template data for " \
                               f"'{template[server_constants.LocalTemplateKey.NAME]}' as " \
                               "TKG+ is not enabled"  # noqa: E501
                         logger.SERVER_LOGGER.debug(msg)
                         k8_templates.remove(template)
                         continue
-                    if template[server_constants.LocalTemplateKey.KIND] == \
-                            shared_constants.ClusterEntityKind.TKG_M.value and \
-                            not is_tkgm_enabled:
-                        # TKGm is not enabled on CSE config. Skip the template and
-                        # log the relevant information.
+                    if template[server_constants.LocalTemplateKey.KIND] == shared_constants.ClusterEntityKind.TKG_M.value and not is_tkgm_enabled:  # noqa: E501
+                        # TKGm is not enabled on CSE config. Skip the template
+                        # and log the relevant information.
                         msg = "Skipping loading template data for " \
                               f"'{template[server_constants.LocalTemplateKey.NAME]}' as " \
                               "TKGm is not enabled"  # noqa: E501

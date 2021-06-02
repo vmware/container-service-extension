@@ -1049,23 +1049,23 @@ def list_template(ctx, config_file_path, skip_config_decryption,
                     str(config_dict['broker']['default_template_revision'])
                 api_version = float(client.get_api_version())
                 for definition in local_template_definitions:
-                    if api_version >= float(vcd_client.ApiVersion.VERSION_35.value):
+                    if api_version >= float(vcd_client.ApiVersion.VERSION_35.value):  # noqa: E501
                         if definition[LocalTemplateKey.KIND] == ClusterEntityKind.TKG_PLUS.value and \
                                 not is_tkg_plus_enabled:  # noqa: E501
-                            # TKG+ is not enabled on CSE config. Skip the template
-                            # and log the relevant information.
+                            # TKG+ is not enabled on CSE config. Skip the
+                            # template and log the relevant information.
                             msg = "Skipping loading template data for " \
-                                  f"'{definition[LocalTemplateKey.NAME]}' as " \
-                                  "TKG+ is not enabled"
+                                  f"'{definition[LocalTemplateKey.NAME]}' " \
+                                  "as TKG+ is not enabled"
                             SERVER_CLI_LOGGER.debug(msg)
                             continue
                         if definition[LocalTemplateKey.KIND] == ClusterEntityKind.TKG_M.value and \
                                 not is_tkgm_enabled:  # noqa: E501
-                            # TKGm is not enabled on CSE config. Skip the template
-                            # and log the relevant information.
+                            # TKGm is not enabled on CSE config. Skip the
+                            # template and log the relevant information.
                             msg = "Skipping loading template data for " \
-                                  f"'{definition[LocalTemplateKey.NAME]}' as " \
-                                  "TKGm is not enabled"
+                                  f"'{definition[LocalTemplateKey.NAME]}' " \
+                                  "as TKGm is not enabled"
                             SERVER_CLI_LOGGER.debug(msg)
                             continue
                     local_template = {
