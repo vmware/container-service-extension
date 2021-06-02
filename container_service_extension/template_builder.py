@@ -38,7 +38,6 @@ def assign_placement_policy_to_template(client, cse_placement_policy,
                                         org_name, logger=NULL_LOGGER,
                                         log_wire=False, msg_update_callback=NullPrinter()): # noqa: E501
 
-    policy = None
     cpm = compute_policy_manager.ComputePolicyManager(client,
                                                       log_wire=log_wire)
     try:
@@ -69,7 +68,7 @@ def assign_placement_policy_to_template(client, cse_placement_policy,
         raise
 
 
-class TemplateBuilder():
+class TemplateBuilder:
     """Builder calls for K8 templates."""
 
     def __init__(self, client, sys_admin_client, build_params, org=None,
@@ -168,7 +167,6 @@ class TemplateBuilder():
         build_params.
 
         :param str item_name: name of the item to delete.
-        :param str item_type
         """
         try:
             self.org.delete_catalog_item(name=self.catalog_name,

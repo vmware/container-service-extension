@@ -1009,7 +1009,7 @@ def _setup_placement_policies(client,
                     policy_name == shared_constants.TKG_PLUS_CLUSTER_RUNTIME_INTERNAL_NAME:  # noqa: E501
                 continue
             if not is_tkgm_enabled and \
-                    policy_name == shared_constants.TKGM_CLUSTER_RUNTIME_INTERNAL_NAME:  # noqa: E501
+                    policy_name == shared_constants.TKG_M_CLUSTER_RUNTIME_INTERNAL_NAME:  # noqa: E501
                 continue
             try:
                 compute_policy_manager.get_cse_vdc_compute_policy(
@@ -1069,6 +1069,7 @@ def _assign_placement_policies_to_existing_templates(
             org_name=org_name,
             logger_debug=INSTALL_LOGGER)
     for template in all_templates:
+        msg_update_callback.general(f"Processing {template[server_constants.RemoteTemplateKey.NAME]}")
         kind = template.get(server_constants.LocalTemplateKey.KIND)
         catalog_item_name = ltm.get_revisioned_template_name(
             template[server_constants.RemoteTemplateKey.NAME],
@@ -1084,18 +1085,16 @@ def _assign_placement_policies_to_existing_templates(
             continue
         if kind == shared_constants.ClusterEntityKind.TKG_PLUS.value and \
                 not is_tkg_plus_enabled:
-            msg = "Found a TKG+ template." \
-                  " However TKG+ is not enabled on CSE. " \
-                  "Please enable TKG+ for CSE via config file and re-run " \
-                  "`cse upgrade` to process these vDC(s)."
+            msg = "Found a TKG+ template. However TKG+ is not enabled on " \
+                  "CSE. Please enable TKG+ for CSE via config file and " \
+                  "re-run `cse upgrade` to process these template(s)."
             INSTALL_LOGGER.error(msg)
             raise cse_exception.CseUpgradeError(msg)
         if kind == shared_constants.ClusterEntityKind.TKG_M.value and \
                 not is_tkgm_enabled:
-            msg = "Found a TKGm template. " \
-                  "However TKGm is not enabled on CSE. " \
-                  "Please enable TKGm for CSE via config file and re-run " \
-                  "`cse upgrade` to process these vDC(s)."
+            msg = "Found a TKGm template. However TKGm is not enabled on " \
+                  "CSE. Please enable TKGm for CSE via config file and " \
+                  "re-run `cse upgrade` to process these template(s)."
             INSTALL_LOGGER.error(msg)
             raise cse_exception.CseUpgradeError(msg)
 
@@ -1279,20 +1278,16 @@ def _install_single_template(
         if template[server_constants.LocalTemplateKey.KIND] == \
                 shared_constants.ClusterEntityKind.TKG_PLUS.value and \
                 not is_tkg_plus_enabled:
-            msg = "Found a TKG+ template. " \
-                  "However TKG+ is not enabled on CSE. " \
-                  "Please enable TKG+ for CSE via config file and re-run " \
-                  "`cse upgrade` to process these vDC(s)."
+            msg = "Found a TKG+ template. However TKG+ is not enabled on " \
+                  "CSE. Please enable TKG+ for CSE via config file."
             INSTALL_LOGGER.error(msg)
             msg_update_callback.error(msg)
             raise Exception(msg)
         if template[server_constants.LocalTemplateKey.KIND] == \
                 shared_constants.ClusterEntityKind.TKG_M.value and \
                 not is_tkgm_enabled:
-            msg = "Found a TKGm template. " \
-                  "However TKGm is not enabled on CSE. " \
-                  "Please enable TKGm for CSE via config file and re-run " \
-                  "`cse upgrade` to process these vDC(s)."
+            msg = "Found a TKGm template. However TKG+ is not enabled on " \
+                  "CSE. Please enable TKGm for CSE via config file."
             INSTALL_LOGGER.error(msg)
             msg_update_callback.error(msg)
             raise Exception(msg)
@@ -1488,7 +1483,7 @@ def upgrade_cse(config_file_name, config, skip_template_creation,
         # CSE version info in extension description is only applicable for
         # CSE 2.6.02b.dev and CSE 3.0.0+ versions.
         cse_2_6_any_patch = semantic_version.SimpleSpec('>=2.6.0,<2.7.0')
-        cse_3_0_any_previous_patch = semantic_version.SimpleSpec('>=3.0.0,<=3.0.2')  # noqa: E501
+        cse_3_0_any_previous_patch = semantic_version.SimpleSpec('>=3.0.0,<=3.0.3')  # noqa: E501
         allow_upgrade = \
             ext_cse_version == server_constants.UNKNOWN_CSE_VERSION or \
             cse_2_6_any_patch.match(ext_cse_version) or \
@@ -1837,7 +1832,7 @@ def _fix_cluster_metadata(client,
             msg_update_callback.info(msg)
 
             task = vapp.remove_metadata(
-                server_constants.ClusterMetadataKey.BACKWARD_COMPATIBILE_TEMPLATE_NAME) # noqa: E501
+                server_constants.ClusterMetadataKey.BACKWARD_COMPATIBLE_TEMPLATE_NAME) # noqa: E501
             client.get_task_monitor().wait_for_success(task)
 
             new_metadata_to_add = {
@@ -1954,7 +1949,7 @@ def _fix_cluster_metadata(client,
 
 def _construct_template_name_from_history(metadata_dict):
     old_template_name = metadata_dict.get(
-        server_constants.ClusterMetadataKey.BACKWARD_COMPATIBILE_TEMPLATE_NAME)
+        server_constants.ClusterMetadataKey.BACKWARD_COMPATIBLE_TEMPLATE_NAME)
     if not old_template_name:
         return ''
 
@@ -2421,7 +2416,7 @@ def _create_def_entity_for_existing_clusters(
             continue
 
         kind = None
-        if policy_name == shared_constants.TKG_PLUS_CLUSTER_RUNTIME_INTERNAL_NAME:  #noqa: E501
+        if policy_name == shared_constants.TKG_PLUS_CLUSTER_RUNTIME_INTERNAL_NAME:  # noqa: E501
             if not is_tkg_plus_enabled:
                 msg = "Found a TKG+ cluster. " \
                       "However TKG+ is not enabled on CSE. " \
