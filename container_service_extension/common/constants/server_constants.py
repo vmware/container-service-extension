@@ -327,7 +327,6 @@ class RemoteTemplateKeyV2(str, Enum):
 
     CNI = 'cni'
     CNI_VERSION = 'cni_version'
-    COMPUTE_POLICY = 'compute_policy'
     CPU = 'cpu'
     DEPRECATED = 'deprecated'
     DESCRIPTION = 'description'
@@ -345,6 +344,14 @@ class RemoteTemplateKeyV2(str, Enum):
     UPGRADE_FROM = 'upgrade_from'
     MIN_CSE_VERSION = 'min_cse_version'
     MAX_CSE_VERSION = 'max_cse_version'
+
+
+@unique
+class RemoteTemplateCookbookVersion(Enum):
+    """Enumerate the remote template cookbook versions."""
+
+    Version1 = semantic_version.Version('1.0.0')
+    Version2 = semantic_version.Version('2.0.0')
 
 
 # CSE requests

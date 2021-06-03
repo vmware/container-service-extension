@@ -4,6 +4,7 @@
 
 """Server utility methods used only by the CSE server."""
 
+import enum
 import math
 
 import semantic_version
@@ -108,14 +109,14 @@ def should_use_mqtt_protocol(config):
         not utils.str_to_bool(config['service'].get('legacy_mode'))
 
 
-def get_template_descriptor_keys(cookbook_version):
+def get_template_descriptor_keys(cookbook_version: str) -> enum.EnumMeta:
     """Get template descriptor keys using the cookbook version."""
     # if cookbook version is None, use version 1.0
     if not cookbook_version:
-        cookbook_version = '1.0'
+        cookbook_version = '1.0.0'
     cookbook_version_to_template_descriptor_keys_map = {
-        '1.0': server_constants.RemoteTemplateKeyV1,
-        '2.0': server_constants.RemoteTemplateKeyV2
+        '1.0.0': server_constants.RemoteTemplateKeyV1,
+        '2.0.0': server_constants.RemoteTemplateKeyV2
     }
     return cookbook_version_to_template_descriptor_keys_map[cookbook_version]
 
