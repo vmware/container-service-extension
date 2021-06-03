@@ -73,6 +73,12 @@ def update_ovdc(operation_context: ctx.OperationContext,
               "server and try again."
         logger.SERVER_LOGGER.debug(msg)
         raise Exception(msg)
+    if ClusterEntityKind.TKG_M.value in ovdc_spec.k8s_runtime and \
+            not utils.is_tkg_m_enabled():
+        msg = "TKGm is not enabled on CSE server. Please enable TKGm in the " \
+              "server and try again."
+        logger.SERVER_LOGGER.debug(msg)
+        raise Exception(msg)
     policy_list = [RUNTIME_DISPLAY_NAME_TO_INTERNAL_NAME_MAP[p] for p in ovdc_spec.k8s_runtime]  # noqa: E501
     _update_ovdc_using_placement_policy_async(operation_context=operation_context, # noqa:E501
                                               task=task,
@@ -110,6 +116,9 @@ def get_ovdc(operation_context: ctx.OperationContext, ovdc_id: str) -> dict:
     if ClusterEntityKind.TKG_PLUS.value in result['k8s_runtime'] \
             and not utils.is_tkg_plus_enabled():
         result['k8s_runtime'].remove(ClusterEntityKind.TKG_PLUS.value)
+    if ClusterEntityKind.TKG_M.value in result['k8s_runtime'] \
+            and not utils.is_tkg_m_enabled():
+        result['k8s_runtime'].remove(ClusterEntityKind.TKG_M.value)
     del result['remove_cp_from_vms_on_disable']
     return result
 
@@ -132,6 +141,9 @@ def _get_cse_ovdc_list(sysadmin_client: vcd_client.Client, ovdc_list: list):
         if ClusterEntityKind.TKG_PLUS.value in ovdc_details['k8s_runtime'] \
                 and not utils.is_tkg_plus_enabled():  # noqa: E501
             ovdc_details['k8s_runtime'].remove(ClusterEntityKind.TKG_PLUS.value)  # noqa: E501
+        if ClusterEntityKind.TKG_M.value in ovdc_details['k8s_runtime'] \
+                and not utils.is_tkg_m_enabled():  # noqa: E501
+            ovdc_details['k8s_runtime'].remove(ClusterEntityKind.TKG_M.value)  # noqa: E501
         # TODO: Find a better way to remove remove_cp_from_vms_on_disable
         del ovdc_details['remove_cp_from_vms_on_disable']
         ovdcs.append(ovdc_details)
@@ -192,15 +204,17 @@ def get_ovdc_k8s_runtime_details(sysadmin_client: vcd_client.Client,
                                  log_wire=False) -> def_models.Ovdc:
     """Get k8s runtime details for an ovdc.
 
-    Atleast ovdc_id and ovdc_name or org_name and ovdc_name should be provided.
-    Additional call to get ovdc details can be avoided by providing ovdc_id and
-    ovdc_name.
+    At least ovdc_id and ovdc_name or org_name and ovdc_name should be
+    provided. Additional call to get ovdc details can be avoided by
+    providing ovdc_id and ovdc_name.
 
-    :param sysadmin_client vcd_client.Client: vcd sysadmin client
-    :param str org_name:
-    :param str ovdc_name:
+    :param vcd_client.Client sysadmin_client: vcd sysadmin client
     :param str ovdc_id:
+    :param str ovdc_name:
+    :param str org_name:
+    :param compute_policy_manager.ComputePolicyManager cpm:
     :param bool log_wire:
+
     :return: Ovdc object with k8s runtimes
     :rtype: def_models.Ovdc
     """

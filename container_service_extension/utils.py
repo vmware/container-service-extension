@@ -10,6 +10,7 @@ import platform
 import stat
 import sys
 import threading
+from typing import Optional
 import urllib
 
 import click
@@ -40,7 +41,7 @@ _type_to_string = {
 }
 
 
-class ConsoleMessagePrinter():
+class ConsoleMessagePrinter:
     """Callback object to print color coded message on console."""
 
     def general_no_color(self, msg):
@@ -56,7 +57,7 @@ class ConsoleMessagePrinter():
         click.secho(msg, fg='red')
 
 
-class NullPrinter():
+class NullPrinter:
     """Callback object which does nothing."""
 
     def general_no_color(self, msg):
@@ -93,7 +94,7 @@ def get_installed_cse_version():
 
 def prompt_text(text, color='black', hide_input=False):
     click_text = click.style(str(text), fg=color)
-    return click.prompt(click_text, hide_input=hide_input, type=str)
+    return click.prompt(click_text, hide_input=hide_input, type=click.STRING)
 
 
 def get_server_runtime_config():
@@ -147,7 +148,7 @@ def is_tkg_plus_enabled(config: dict = None):
     return False
 
 
-def is_tkgm_enabled(config: dict = None):
+def is_tkg_m_enabled(config: dict = None):
     if not config:
         try:
             config = get_server_runtime_config()
@@ -171,7 +172,7 @@ def get_duplicate_items_in_list(items):
 
     :param list items: list of items with possible duplicates.
 
-    :return: the items that occur more than once in niput list. Each duplicated
+    :return: the items that occur more than once in input list. Each duplicated
         item will be mentioned only once in the returned list.
 
     :rtype: list
@@ -236,7 +237,7 @@ def check_keys_and_value_types(dikt, ref_dict, location='dictionary',
 def check_python_version(msg_update_callback=NullPrinter()):
     """Ensure that user's Python version >= 3.7.3.
 
-    If the check fails, will exit the python interpretor with error status.
+    If the check fails, will exit the python interpreter with error status.
 
     :param utils.ConsoleMessagePrinter msg_update_callback: Callback object.
     """
@@ -256,7 +257,7 @@ def str_to_bool(s):
 
     The conversion is case insensitive.
 
-    :param val: input string
+    :param str s: input string
 
     :return: True if val is 'true' otherwise False
     """
@@ -381,7 +382,6 @@ def read_data_file(filepath, logger=NULL_LOGGER,
         found.
     """
     path = pathlib.Path(filepath)
-    contents = ''
     try:
         contents = path.read_text()
     except FileNotFoundError as err:
@@ -434,7 +434,7 @@ def should_use_mqtt_protocol(config):
     :param dict config: config yaml file as a dictionary
 
     :return: whether to use the mqtt protocol
-    :rtype: str
+    :rtype: bool
     """
     return config.get('mqtt') is not None and \
         config.get('vcd') is not None and \
@@ -522,16 +522,16 @@ def create_links_and_construct_paginated_result(base_uri, values, result_total,
                                                 query_params=None):
     if query_params is None:
         query_params = {}
-    next_page_uri: str = None
+    next_page_uri: Optional[str] = None
     if page_number * page_size < result_total:
         # TODO find a way to get the initial url part
         # ideally the request details should be passed down to each of the
-        # handler funcions as request context
+        # handler functions as request context
         next_page_uri = f"{base_uri}?page={page_number+1}&pageSize={page_size}"
         for q in query_params.keys():
             next_page_uri += f"&{q}={query_params[q]}"
 
-    prev_page_uri: str = None
+    prev_page_uri: Optional[str] = None
     if page_number > 1:
         prev_page_uri = f"{base_uri}?page={page_number-1}&pageSize={page_size}"
 

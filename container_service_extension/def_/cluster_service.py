@@ -6,7 +6,7 @@ import re
 import string
 import threading
 import time
-from typing import List
+from typing import List, Optional
 import urllib
 
 import pkg_resources
@@ -63,8 +63,8 @@ class ClusterService(abstract_broker.AbstractBroker):
 
     def __init__(self, op_ctx: ctx.OperationContext):
         # TODO(DEF) Once all the methods are modified to use defined entities,
-        #  the param OperationContext needs to be replaced by cloudapiclient.
-        self.context: ctx.OperationContext = None
+        #  the param OperationContext needs to be replaced by CloudApiClient.
+        self.context: Optional[ctx.OperationContext] = None
         # populates above attributes
         super().__init__(op_ctx)
 
@@ -95,7 +95,7 @@ class ClusterService(abstract_broker.AbstractBroker):
         """List clusters by page number and page size.
 
         :param dict filters: filters to use to filter the cluster response
-        :param int page_number: page number of the clusters to be fetchec
+        :param int page_number: page number of the clusters to be fetched
         :param int page_size: page size of the result
         :return: paginated response containing native clusters
         :rtype: dict
@@ -293,7 +293,7 @@ class ClusterService(abstract_broker.AbstractBroker):
         num_workers_to_add: int = desired_worker_count - curr_worker_count
         num_nfs_to_add: int = desired_nfs_count - curr_nfs_count
 
-        # Check for unexposing the cluster
+        # Check for un-exposing the cluster
         desired_expose_state: bool = cluster_spec.spec.expose
         is_exposed: bool = curr_entity.entity.status.exposed
         unexpose: bool = is_exposed and not desired_expose_state
@@ -327,7 +327,7 @@ class ClusterService(abstract_broker.AbstractBroker):
               f"desired worker count {desired_worker_count} and " \
               f"nfs count {desired_nfs_count}"
         if unexpose:
-            msg += " and unexposing the cluster"
+            msg += " and un-exposing the cluster"
         self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
         curr_entity.entity.status.task_href = self.task_resource.get('href')
         curr_entity.entity.status.phase = str(
@@ -408,8 +408,9 @@ class ClusterService(abstract_broker.AbstractBroker):
             cse_params=curr_entity
         )
 
-        return self._get_cluster_upgrade_plan(curr_entity.entity.spec.k8_distribution.template_name, # noqa: E501
-                                              curr_entity.entity.spec.k8_distribution.template_revision) # noqa: E501
+        return self._get_cluster_upgrade_plan(
+            curr_entity.entity.spec.k8_distribution.template_name,
+            curr_entity.entity.spec.k8_distribution.template_revision)
 
     def upgrade_cluster(self, cluster_id: str,
                         upgrade_spec: def_models.NativeEntity):
@@ -441,8 +442,9 @@ class ClusterService(abstract_broker.AbstractBroker):
 
         # check that the specified template is a valid upgrade target
         template = {}
-        valid_templates = self._get_cluster_upgrade_plan(curr_entity.entity.spec.k8_distribution.template_name, # noqa: E501
-                                                         curr_entity.entity.spec.k8_distribution.template_revision) # noqa: E501
+        valid_templates = self._get_cluster_upgrade_plan(
+            curr_entity.entity.spec.k8_distribution.template_name,
+            curr_entity.entity.spec.k8_distribution.template_revision)
 
         for t in valid_templates:
             if (t[LocalTemplateKey.NAME], str(t[LocalTemplateKey.REVISION])) == (new_template_name, str(new_template_revision)): # noqa: E501
@@ -534,6 +536,11 @@ class ClusterService(abstract_broker.AbstractBroker):
                               cluster_spec: def_models.NativeEntity):
         vapp = None
         expose_ip: str = ''
+        cluster_name = ''
+        rollback = False
+        org_name = ''
+        ovdc_name = ''
+        network_name = ''
         try:
             cluster_name = cluster_spec.metadata.cluster_name
             org_name = cluster_spec.metadata.org_name
@@ -783,9 +790,9 @@ class ClusterService(abstract_broker.AbstractBroker):
                 try:
                     self._fail_operation(cluster_id, DefEntityOperation.CREATE)
                 except Exception:
-                    msg = f"Failed to update defined entitty status for cluster {cluster_id}"  # noqa: E501
+                    msg = f"Failed to update defined entity status for cluster {cluster_id}"  # noqa: E501
                     LOGGER.error(msg, exc_info=True)
-                # NOTE: sync of the defined entitty should happen before call
+                # NOTE: sync of the defined entity should happen before call
                 # to resolve defined entity to prevent possible missing values
                 # in the defined entity
                 try:
@@ -809,9 +816,9 @@ class ClusterService(abstract_broker.AbstractBroker):
             try:
                 self._fail_operation(cluster_id, DefEntityOperation.CREATE)
             except Exception:
-                msg = f"Failed to update defined entitty status for cluster {cluster_id}"  # noqa: E501
+                msg = f"Failed to update defined entity status for cluster {cluster_id}"  # noqa: E501
                 LOGGER.error(msg, exc_info=True)
-            # NOTE: sync of the defined entitty should happen before call
+            # NOTE: sync of the defined entity should happen before call
             # to resolve defined entity to prevent possible missing values in
             # the defined entity
             try:
@@ -847,9 +854,10 @@ class ClusterService(abstract_broker.AbstractBroker):
         - updates the task status to SUCCESS
         - ends the client context
 
-        If the cluster is exposed and the spec shows to unexpose the cluster,
+        If the cluster is exposed and the spec shows to un-expose the cluster,
         it will be de-exposed.
         """
+        cluster_name = ''
         try:
             curr_entity: def_models.DefEntity = self.entity_svc.get_entity(
                 cluster_id)
@@ -929,7 +937,7 @@ class ClusterService(abstract_broker.AbstractBroker):
                     unexpose_success = True
                 except Exception as err:
                     LOGGER.error(
-                        f'Failed to unexpose cluster with error: {str(err)}')  # noqa: E501
+                        f'Failed to un-expose cluster with error: {str(err)}')  # noqa: E501
 
             # update the defined entity and the task status. Check if one of
             # the child threads had set the status to ERROR.
@@ -1007,6 +1015,9 @@ class ClusterService(abstract_broker.AbstractBroker):
          end the client context
         """
         vapp = None
+        cluster_name = ''
+        rollback = False
+        vapp_href = ''
         try:
             # get the current state of the defined entity
             curr_entity: def_models.DefEntity = self.entity_svc.get_entity(cluster_id)  # noqa: E501
@@ -1213,12 +1224,11 @@ class ClusterService(abstract_broker.AbstractBroker):
             # noqa: E501
             self.context.end()
 
-    def _get_cluster_upgrade_plan(self, source_template_name,
-                                  source_template_revision) -> List[dict]:
+    def _get_cluster_upgrade_plan(self, source_template_name, source_template_revision) -> List[dict]:  # noqa: E501
         """Get list of templates that a given cluster can upgrade to.
 
         :param str source_template_name:
-        :param str source_template_revision:
+        :param int source_template_revision:
         :return: List of dictionary containing templates
         :rtype: List[dict]
         """
@@ -1227,7 +1237,7 @@ class ClusterService(abstract_broker.AbstractBroker):
         for t in config['broker']['templates']:
             if source_template_name in t[LocalTemplateKey.UPGRADE_FROM]:
                 if t[LocalTemplateKey.NAME] == source_template_name and \
-                        int(t[LocalTemplateKey.REVISION]) <= int(source_template_revision): # noqa: E501
+                        int(t[LocalTemplateKey.REVISION]) <= source_template_revision: # noqa: E501
                     continue
                 upgrades.append(t)
 
@@ -1238,6 +1248,7 @@ class ClusterService(abstract_broker.AbstractBroker):
                                cluster_id: str,
                                template):
         vapp = None
+        cluster_name = ''
         try:
             curr_entity: def_models.DefEntity = self.entity_svc.get_entity(cluster_id) # noqa: E501
             cluster_name = curr_entity.entity.metadata.cluster_name
@@ -1432,6 +1443,7 @@ class ClusterService(abstract_broker.AbstractBroker):
         - updating the task status to SUCCESS
         - ending the client context
         """
+        cluster_name = ''
         try:
             curr_entity: def_models.DefEntity = self.entity_svc.get_entity(
                 cluster_id)
@@ -1668,7 +1680,7 @@ class ClusterService(abstract_broker.AbstractBroker):
         internal_ip_kubeconfig = re.sub(
             pattern=IP_PORT_REGEX,
             repl=f'{internal_ip}:6443',
-            string=expose_kubeconfig)
+            string=str(expose_kubeconfig))
 
         # Output new kubeconfig
         script = f"#!/usr/bin/env bash\n" \
@@ -1705,6 +1717,7 @@ def _get_nodes_details(sysadmin_client, vapp):
         vms = vapp.get_all_vms()
         workers = []
         nfs_nodes = []
+        control_plane = None
         for vm in vms:
             # skip processing vms in 'unresolved' state.
             if int(vm.get('status')) == 0:
@@ -1743,7 +1756,7 @@ def _get_nodes_details(sysadmin_client, vapp):
                                  exc_info=True)
                 nfs_nodes.append(def_models.NfsNode(name=vm_name, ip=ip,
                                                     sizing_class=sizing_class,
-                                                    exports=exports))
+                                                    exports=str(exports)))
         return def_models.Nodes(control_plane=control_plane, workers=workers,
                                 nfs=nfs_nodes)
     except Exception as err:
@@ -1830,6 +1843,7 @@ def _delete_vapp(client, org_name, ovdc_name, vapp_name):
     LOGGER.debug(
         f"Deleting vapp {vapp_name} in (org: {org_name}, vdc: {ovdc_name})")
 
+    vdc_href = ""
     try:
         org = vcd_org.Org(client=client,
                           resource=client.get_org_by_name(org_name))
@@ -1992,7 +2006,6 @@ def _add_nodes(sysadmin_client, num_nodes, node_type, org, vdc, vapp,
 
             vapp.reload()
             for n in range(num_nodes):
-                name = None
                 while True:
                     name = f"{node_type}-{''.join(random.choices(string.ascii_lowercase + string.digits, k=4))}" # noqa: E501
                     try:

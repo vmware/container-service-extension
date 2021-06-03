@@ -70,12 +70,12 @@ def get_validated_config(config_file_name,
     config file.
 
     :param str config_file_name: path to config file.
-    :param str pks_config_file_name: path to PKS config file.
+    :param Optional[str] pks_config_file_name: path to PKS config file.
     :param bool skip_config_decryption: do not decrypt the config file.
     :param str decryption_password: password to decrypt the config file.
     :param str log_wire_file: log_wire_file to use if needed to wire log
         pyvcloud requests and responses
-    :param logging.Logger logger: logger to log with.
+    :param logging.Logger logger_debug: logger to log with.
     :param utils.ConsoleMessagePrinter msg_update_callback: Callback object.
 
     :return: CSE config
@@ -141,10 +141,10 @@ def get_validated_config(config_file_name,
                                      log_wire=log_wire)
     except vim.fault.InvalidLogin:
         raise Exception(VCENTER_LOGIN_ERROR_MSG)
-    except requests.exceptions.ConnectionError as err:
-        raise Exception(f"Cannot connect to {err.request.url}.")
     except requests.exceptions.SSLError as err:
         raise Exception(f"SSL verification failed: {str(err)}")
+    except requests.exceptions.ConnectionError as err:
+        raise Exception(f"Cannot connect to {err.request.url}.")
 
     _validate_broker_config(config['broker'], msg_update_callback,
                             logger_debug)
@@ -471,9 +471,9 @@ def _validate_pks_config_data_integrity(pks_config,
                 continue
             for account in referenced_accounts:
                 if account not in all_pks_accounts:
-                    raise ValueError(f"Unknown PKS account : {account} refere"
-                                     f"nced by Org : {org.get('name')} in "
-                                     f"Section : {PKS_ORGS_SECTION_KEY}")
+                    raise ValueError(f"Unknown PKS account : {account} "
+                                     f"referenced by Org : {org.get('name')} "
+                                     f"in Section : {PKS_ORGS_SECTION_KEY}")
 
     # Check validity of all PKS api servers referenced in PVDC section
     for pvdc in pks_config[PKS_PVDCS_SECTION_KEY]:
@@ -550,6 +550,7 @@ def _validate_pks_config_data_integrity(pks_config,
         ipset_manager = IPSetManager(nsxt_client)
         if nsxt_server.get('nodes_ip_block_ids'):
             block_not_found = False
+            ip_block_id = ''
             try:
                 for ip_block_id in nsxt_server.get('nodes_ip_block_ids'):
                     if not ipset_manager.get_ip_block_by_id(ip_block_id):
@@ -561,6 +562,7 @@ def _validate_pks_config_data_integrity(pks_config,
                     f"Unknown Node IP Block : {ip_block_id} referenced by "
                     f"NSX-T server : {nsxt_server.get('name')}.")
         if nsxt_server.get('pods_ip_block_ids'):
+            ip_block_id = ''
             try:
                 block_not_found = False
                 for ip_block_id in nsxt_server.get('pods_ip_block_ids'):

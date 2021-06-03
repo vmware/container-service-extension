@@ -283,7 +283,7 @@ class CseOperation(Enum):
 
 @unique
 class ClusterMetadataKey(str, Enum):
-    BACKWARD_COMPATIBILE_TEMPLATE_NAME = 'cse.template'
+    BACKWARD_COMPATIBLE_TEMPLATE_NAME = 'cse.template'
     CLUSTER_ID = 'cse.cluster.id'
     CSE_VERSION = 'cse.version'
     CONTROL_PLANE_IP = 'cse.master.ip'

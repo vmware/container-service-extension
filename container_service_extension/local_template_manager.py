@@ -57,6 +57,7 @@ def get_all_k8s_local_template_definition(client, catalog_name, org=None,
     :param pyvcloud.vcd.Org org: Org object which hosts the catalog.
     :param str org_name: Name of the org that is hosting the catalog. Can be
         provided in lieu of param org, however param org takes precedence.
+    :param logging.Logger logger_debug:
 
     :return: list of dictionaries containing template data
 
@@ -80,6 +81,8 @@ def get_all_k8s_local_template_definition(client, catalog_name, org=None,
         num_missing_metadata_keys = len(missing_metadata_keys)
         if num_missing_metadata_keys == len(expected_metadata_keys):
             # This catalog item has no CSE related metadata, so skip it.
+            msg = f"No metadata found on catalog item `{item_name}`."
+            logger_debug.debug(msg)
             continue
         if num_missing_metadata_keys > 0:
             # This catalog item has partial CSE metadata, so skip it but also
