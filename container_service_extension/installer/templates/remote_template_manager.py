@@ -64,7 +64,7 @@ class RemoteTemplateManager():
         self.msg_update_callback = msg_update_callback
         self.filtered_cookbook = None
         self.unfiltered_cookbook = None
-        self.cookbook_version: str = None
+        self.cookbook_version: semantic_version.Version = None
         self.scripts_directory_path: str = None
 
     def _get_base_url_from_remote_template_cookbook_url(self) -> str:
