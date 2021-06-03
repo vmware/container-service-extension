@@ -502,7 +502,8 @@ def install_template(template_name, template_revision, config_file_name,
             logger=INSTALL_LOGGER, msg_update_callback=msg_update_callback)
 
         rtm.get_filtered_remote_template_cookbook()
-        remote_template_keys = server_utils.get_template_descriptor_keys(rtm.cookbook_version)  # noqa: E501
+        remote_template_keys = server_utils.get_template_descriptor_keys(
+            str(rtm.cookbook_version))
 
         found_template = False
         for template in rtm.filtered_cookbook['templates']:
@@ -1747,7 +1748,7 @@ def _install_single_template(
         raise Exception(msg)
     localTemplateKey = server_constants.LocalTemplateKey
     remote_template_keys = server_utils.get_template_descriptor_keys(
-        remote_template_manager.cookbook_version)
+        str(remote_template_manager.cookbook_version))
     if LEGACY_MODE:
         # if legacy_mode, make use of LegacyLocalTemplateKey which
         # doesn't contain min_cse_version and max_cse_version.

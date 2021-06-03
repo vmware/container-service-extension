@@ -142,9 +142,10 @@ class RemoteTemplateManager():
             msg += f" by CSE {current_cse_version}"
             self.logger.debug(msg)
             self.msg_update_callback.general(msg)
-        self.filtered_cookbook = {
-            'templates': supported_templates
-        }
+        self.filtered_cookbook = self.unfiltered_cookbook
+        # update templates list with only supported templates
+        self.filtered_cookbook['templates'] = supported_templates
+
         msg = "Successfully filtered unsupported templates."
         self.logger.debug(msg)
         self.msg_update_callback.general(msg)

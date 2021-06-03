@@ -18,7 +18,7 @@ import requests
 from vcd_cli.utils import stdout
 import yaml
 
-from container_service_extension.common.constants.server_constants import CONFIG_DECRYPTION_ERROR_MSG  # noqa: E501
+from container_service_extension.common.constants.server_constants import CONFIG_DECRYPTION_ERROR_MSG, LegacyLocalTemplateKey  # noqa: E501
 from container_service_extension.common.constants.server_constants import LocalTemplateKey  # noqa: E501
 from container_service_extension.common.constants.server_constants import SYSTEM_ORG_NAME  # noqa: E501
 from container_service_extension.common.constants.shared_constants import SUPPORTED_VCD_API_VERSIONS  # noqa: E501
@@ -1005,17 +1005,20 @@ def list_template(ctx, config_file_path, skip_config_decryption,
                     config_dict['broker']['default_template_name']
                 default_template_revision = \
                     str(config_dict['broker']['default_template_revision'])
+
                 for definition in local_template_definitions:
                     local_template = {
                         'name': definition[LocalTemplateKey.NAME],
                         'revision': int(definition[LocalTemplateKey.REVISION]),
-                        'compute_policy': definition[LocalTemplateKey.COMPUTE_POLICY],  # noqa: E501
                         'local': 'Yes',
                         'remote': 'No',
                         'cpu': definition[LocalTemplateKey.CPU],
                         'memory': definition[LocalTemplateKey.MEMORY],
                         'description': definition[LocalTemplateKey.DESCRIPTION]
                     }
+                    if legacy_mode:
+                        local_template['compute_policy'] = \
+                            definition[LegacyLocalTemplateKey.COMPUTE_POLICY]
                     # Any metadata read from vCD is sting due to how pyvcloud
                     # is coded, so we need to cast it back to int.
                     if (definition[LocalTemplateKey.NAME], str(definition[LocalTemplateKey.REVISION])) == (default_template_name, default_template_revision):  # noqa: E501
@@ -1038,18 +1041,21 @@ def list_template(ctx, config_file_path, skip_config_decryption,
             remote_template_cookbook = \
                 rtm.get_filtered_remote_template_cookbook()
             remote_template_definitions = remote_template_cookbook['templates']
-            remote_template_keys = server_utils.get_template_descriptor_keys(rtm.cookbook_version)  # noqa: E501
+            remote_template_keys = server_utils.get_template_descriptor_keys(
+                str(rtm.cookbook_version))
             for definition in remote_template_definitions:
                 remote_template = {
                     'name': definition[remote_template_keys.NAME],
                     'revision': definition[remote_template_keys.REVISION],
-                    'compute_policy': definition[remote_template_keys.COMPUTE_POLICY],  # noqa: E501
                     'local': 'No',
                     'remote': 'Yes',
                     'cpu': definition[remote_template_keys.CPU],
                     'memory': definition[remote_template_keys.MEMORY],
                     'description': definition[remote_template_keys.DESCRIPTION]
                 }
+                if legacy_mode:
+                    remote_template['compute_policy'] = \
+                        definition[remote_template_keys.COMPUTE_POLICY]
                 if display_option is DISPLAY_ALL:
                     remote_template['default'] = 'No'
                 remote_template['deprecated'] = 'Yes' if utils.str_to_bool(definition[remote_template_keys.DEPRECATED]) else 'No'  # noqa: E501
@@ -1066,8 +1072,9 @@ def list_template(ctx, config_file_path, skip_config_decryption,
                 found = False
                 for remote_template in remote_templates:
                     if (local_template[LocalTemplateKey.NAME], local_template[LocalTemplateKey.REVISION]) == (remote_template[remote_template_keys.NAME], remote_template[remote_template_keys.REVISION]):  # noqa: E501
-                        remote_template['compute_policy'] = \
-                            local_template['compute_policy']
+                        if legacy_mode:
+                            remote_template['compute_policy'] = \
+                                local_template['compute_policy']
                         remote_template['local'] = local_template['local']
                         remote_template['default'] = local_template['default']
                         found = True

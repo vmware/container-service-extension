@@ -280,7 +280,6 @@ class LocalTemplateKey(str, Enum):
     CATALOG_ITEM_NAME = 'catalog_item_name'
     CNI = 'cni'
     CNI_VERSION = 'cni_version'
-    COMPUTE_POLICY = 'compute_policy'
     CPU = 'cpu'
     DEPRECATED = 'deprecated'
     DESCRIPTION = 'description'
