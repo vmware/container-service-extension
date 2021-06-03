@@ -24,31 +24,31 @@ class ClusterEntityKind(Enum):
     NATIVE = 'native'
     TKG = 'TanzuKubernetesCluster'
     TKG_PLUS = 'TKG+'
-    TKGM = 'TKGm'
+    TKG_M = 'TKGm'
 
 
 CSE_SERVER_RUNTIMES = [ClusterEntityKind.NATIVE.value,
                        ClusterEntityKind.TKG_PLUS.value,
-                       ClusterEntityKind.TKGM.value]
+                       ClusterEntityKind.TKG_M.value]
 
 
 NATIVE_CLUSTER_RUNTIME_INTERNAL_NAME = 'native'
 TKG_PLUS_CLUSTER_RUNTIME_INTERNAL_NAME = 'tkgplus'
-TKGM_CLUSTER_RUNTIME_INTERNAL_NAME = 'tkgm'
+TKG_M_CLUSTER_RUNTIME_INTERNAL_NAME = 'tkgm'
 CLUSTER_RUNTIME_PLACEMENT_POLICIES = [NATIVE_CLUSTER_RUNTIME_INTERNAL_NAME,
                                       TKG_PLUS_CLUSTER_RUNTIME_INTERNAL_NAME,
-                                      TKGM_CLUSTER_RUNTIME_INTERNAL_NAME]
+                                      TKG_M_CLUSTER_RUNTIME_INTERNAL_NAME]
 
 RUNTIME_DISPLAY_NAME_TO_INTERNAL_NAME_MAP = {
     ClusterEntityKind.NATIVE.value: NATIVE_CLUSTER_RUNTIME_INTERNAL_NAME,
     ClusterEntityKind.TKG_PLUS.value: TKG_PLUS_CLUSTER_RUNTIME_INTERNAL_NAME,
-    ClusterEntityKind.TKGM.value: TKGM_CLUSTER_RUNTIME_INTERNAL_NAME
+    ClusterEntityKind.TKG_M.value: TKG_M_CLUSTER_RUNTIME_INTERNAL_NAME
 }
 
 RUNTIME_INTERNAL_NAME_TO_DISPLAY_NAME_MAP = {
     NATIVE_CLUSTER_RUNTIME_INTERNAL_NAME: ClusterEntityKind.NATIVE.value,
     TKG_PLUS_CLUSTER_RUNTIME_INTERNAL_NAME: ClusterEntityKind.TKG_PLUS.value,
-    TKGM_CLUSTER_RUNTIME_INTERNAL_NAME: ClusterEntityKind.TKGM.value
+    TKG_M_CLUSTER_RUNTIME_INTERNAL_NAME: ClusterEntityKind.TKG_M.value
 }
 
 

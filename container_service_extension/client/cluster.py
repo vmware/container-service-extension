@@ -26,7 +26,8 @@ class Cluster:
         list_clusters()
 
         :param pyvcloud.vcd.client client: vcd client
-        :param dict cluster_config: cluster configuration
+        :param str k8_runtime:
+
         :return: instance of version specific client side cluster
         """
         api_version = client.get_api_version()

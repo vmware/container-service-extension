@@ -1026,13 +1026,16 @@ def list_template(ctx, config_file_path, skip_config_decryption,
                 if log_wire:
                     log_wire_file = SERVER_DEBUG_WIRELOG_FILEPATH
 
-                client, _ = _get_clients_from_config(config_dict,
-                                                     log_wire_file=log_wire_file,  # noqa: E501
-                                                     log_wire=log_wire)
+                client, _ = _get_clients_from_config(
+                    config_dict,
+                    log_wire_file=log_wire_file,
+                    log_wire=log_wire)
 
                 org_name = config_dict['broker']['org']
                 catalog_name = config_dict['broker']['catalog']
                 is_tkg_plus_enabled = utils.is_tkg_plus_enabled(config_dict)
+                is_tkg_m_enabled = utils.is_tkg_m_enabled(config_dict)
+
                 local_template_definitions = \
                     ltm.get_all_k8s_local_template_definition(
                         client=client,
@@ -1046,16 +1049,25 @@ def list_template(ctx, config_file_path, skip_config_decryption,
                     str(config_dict['broker']['default_template_revision'])
                 api_version = float(client.get_api_version())
                 for definition in local_template_definitions:
-                    if api_version >= float(vcd_client.ApiVersion.VERSION_35.value) and \
-                            definition[LocalTemplateKey.KIND] == ClusterEntityKind.TKG_PLUS.value and \
-                            not is_tkg_plus_enabled:  # noqa: E501
-                        # TKG+ is not enabled on CSE config. Skip the template
-                        # and log the relevant information.
-                        msg = "Skipping loading template data for " \
-                              f"'{definition[LocalTemplateKey.NAME]}' as " \
-                              "TKG+ is not enabled"
-                        SERVER_CLI_LOGGER.debug(msg)
-                        continue
+                    if api_version >= float(vcd_client.ApiVersion.VERSION_35.value):  # noqa: E501
+                        if definition[LocalTemplateKey.KIND] == ClusterEntityKind.TKG_PLUS.value and \
+                                not is_tkg_plus_enabled:  # noqa: E501
+                            # TKG+ is not enabled on CSE config. Skip the
+                            # template and log the relevant information.
+                            msg = "Skipping loading template data for " \
+                                  f"'{definition[LocalTemplateKey.NAME]}' " \
+                                  "as TKG+ is not enabled"
+                            SERVER_CLI_LOGGER.debug(msg)
+                            continue
+                        if definition[LocalTemplateKey.KIND] == ClusterEntityKind.TKG_M.value and \
+                                not is_tkg_m_enabled:  # noqa: E501
+                            # TKGm is not enabled on CSE config. Skip the
+                            # template and log the relevant information.
+                            msg = "Skipping loading template data for " \
+                                  f"'{definition[LocalTemplateKey.NAME]}' " \
+                                  "as TKGm is not enabled"
+                            SERVER_CLI_LOGGER.debug(msg)
+                            continue
                     local_template = {
                         'name': definition[LocalTemplateKey.NAME],
                         # Any metadata read from vCD is string due to how
@@ -1360,7 +1372,7 @@ def register_ui_plugin(ctx, plugin_file_path, config_file_path,
             "fileName": os.path.split(plugin_file_path)[1],
             "size": os.stat(plugin_file_path).st_size
         }
-        response_body = cloudapi_client.do_request(
+        cloudapi_client.do_request(
             method=RequestMethod.POST,
             resource_url_relative_path=f"{CloudApiResource.EXTENSION_UI}/{plugin_id}/plugin",  # noqa: E501
             payload=transfer_request_payload)
