@@ -74,7 +74,7 @@ def update_ovdc(operation_context: ctx.OperationContext,
         logger.SERVER_LOGGER.debug(msg)
         raise Exception(msg)
     if ClusterEntityKind.TKG_M.value in ovdc_spec.k8s_runtime and \
-            not utils.is_tkgm_enabled():
+            not utils.is_tkg_m_enabled():
         msg = "TKGm is not enabled on CSE server. Please enable TKGm in the " \
               "server and try again."
         logger.SERVER_LOGGER.debug(msg)
@@ -117,7 +117,7 @@ def get_ovdc(operation_context: ctx.OperationContext, ovdc_id: str) -> dict:
             and not utils.is_tkg_plus_enabled():
         result['k8s_runtime'].remove(ClusterEntityKind.TKG_PLUS.value)
     if ClusterEntityKind.TKG_M.value in result['k8s_runtime'] \
-            and not utils.is_tkgm_enabled():
+            and not utils.is_tkg_m_enabled():
         result['k8s_runtime'].remove(ClusterEntityKind.TKG_M.value)
     del result['remove_cp_from_vms_on_disable']
     return result
@@ -142,7 +142,7 @@ def _get_cse_ovdc_list(sysadmin_client: vcd_client.Client, ovdc_list: list):
                 and not utils.is_tkg_plus_enabled():  # noqa: E501
             ovdc_details['k8s_runtime'].remove(ClusterEntityKind.TKG_PLUS.value)  # noqa: E501
         if ClusterEntityKind.TKG_M.value in ovdc_details['k8s_runtime'] \
-                and not utils.is_tkgm_enabled():  # noqa: E501
+                and not utils.is_tkg_m_enabled():  # noqa: E501
             ovdc_details['k8s_runtime'].remove(ClusterEntityKind.TKG_M.value)  # noqa: E501
         # TODO: Find a better way to remove remove_cp_from_vms_on_disable
         del ovdc_details['remove_cp_from_vms_on_disable']

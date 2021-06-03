@@ -574,7 +574,7 @@ class Service(object, metaclass=Singleton):
             client.set_credentials(credentials)
 
             is_tkg_plus_enabled = utils.is_tkg_plus_enabled(self.config)
-            is_tkgm_enabled = utils.is_tkgm_enabled(self.config)
+            is_tkg_m_enabled = utils.is_tkg_m_enabled(self.config)
             org_name = self.config['broker']['org']
             catalog_name = self.config['broker']['catalog']
             k8_templates = ltm.get_all_k8s_local_template_definition(
@@ -607,7 +607,7 @@ class Service(object, metaclass=Singleton):
                         logger.SERVER_LOGGER.debug(msg)
                         k8_templates.remove(template)
                         continue
-                    if template[server_constants.LocalTemplateKey.KIND] == shared_constants.ClusterEntityKind.TKG_M.value and not is_tkgm_enabled:  # noqa: E501
+                    if template[server_constants.LocalTemplateKey.KIND] == shared_constants.ClusterEntityKind.TKG_M.value and not is_tkg_m_enabled:  # noqa: E501
                         # TKGm is not enabled on CSE config. Skip the template
                         # and log the relevant information.
                         msg = "Skipping loading template data for " \

@@ -32,7 +32,8 @@ class ComputePolicyManager:
     Also provides an interface to assign/remove/list compute policies to/from
     vapp templates and org vdcs.
 
-    These operations are supposed to be performed by only sytem administrators.
+    These operations are supposed to be performed by only system
+    administrators.
 
     All policy names are prepended with CSE specific literal and restored to
     original names when returned back to the caller.
@@ -208,9 +209,10 @@ class ComputePolicyManager:
         """
         self._raise_error_if_not_supported()
         self._raise_error_if_global_pvdc_compute_policy_not_supported()
-        policy_info = {}
-        policy_info['name'] = name
-        policy_info['description'] = description
+        policy_info = {
+            'name': name,
+            'description': description
+        }
         resource = cloudapi_constants.CloudApiResource
 
         if self._cloudapi_version == \
@@ -312,8 +314,8 @@ class ComputePolicyManager:
         :param dict new_policy_info: updated policy information with name and
             optional description.
             Example: {"name": "new_name", "description": "my policy"}
-        :parma boolean is_placement_policy: True if the VCD compute policy is a
-            placment policy
+        :param bool is_placement_policy: True if the VCD compute policy is a
+            placement policy
 
         :return: updated policy information
         :rtype: dict
@@ -323,8 +325,9 @@ class ComputePolicyManager:
         policy_info = self.get_vdc_compute_policy(policy_name,
                                                   is_placement_policy=is_placement_policy) # noqa: E501
         if new_policy_info.get('name'):
-            payload = {}
-            payload['name'] = new_policy_info['name']
+            payload = {
+                'name': new_policy_info['name']
+            }
             if self._cloudapi_version == \
                     cloudapi_constants.CloudApiVersion.VERSION_2_0_0:
                 payload['policyType'] = VDC_VM_POLICY_NAME
@@ -364,6 +367,7 @@ class ComputePolicyManager:
 
         :param str vdc_id: id of the vdc for which policies need to be
          retrieved.
+        :param dict filters:
 
         :return: Generator that yields all placement policies associated with
             the vdc
@@ -380,10 +384,11 @@ class ComputePolicyManager:
 
         :param str vdc_id: id of the vdc for which policies need to be
          retrieved
+        :param dict filters:
 
-        :return: Generator that yields all placement policeis associated with
+        :return: Generator that yields all placement policies associated with
             the vdc
-        :rtpe: Generator[Dict, None, None]
+        :rtype: Generator[Dict, None, None]
         """
         if filters is None:
             filters = {}
@@ -535,8 +540,8 @@ class ComputePolicyManager:
         """Raise exception if higher api version is needed."""
         api_version = float(self._cloudapi_client.get_api_version())
         if api_version < GLOBAL_PVDC_COMPUTE_POLICY_MIN_VERSION: # noqa: E501
-            msg = f"Recieved api version {api_version}." \
-                  f" But atleast {GLOBAL_PVDC_COMPUTE_POLICY_MIN_VERSION} is required" # noqa: E501
+            msg = f"Received api version {api_version}." \
+                  f" But at least {GLOBAL_PVDC_COMPUTE_POLICY_MIN_VERSION} is required" # noqa: E501
             logger.SERVER_LOGGER.debug(msg)
             raise cse_exceptions.GlobalPvdcComputePolicyNotSupported(msg)
 
@@ -719,13 +724,13 @@ class ComputePolicyManager:
         :param str compute_policy_href: href of the compute policy to remove
         :param bool force: Force remove compute policy from vms in the VDC
             as well
+        :param bool is_placement_policy:
         :param lxml.objectify.Element task_resource: Task resource for
             the umbrella task
         """
         user_name = self._session.get('user')
 
         task = Task(self._sysadmin_client)
-        task_href = None
         is_umbrella_task = task_resource is not None
         # Create a task if not umbrella task
         if not is_umbrella_task:
@@ -766,7 +771,6 @@ class ComputePolicyManager:
                     ovdc_id=vdc_id)
                 target_vms = []
                 system_default_href = None
-                operation_msg = None
                 for cp_dict in self.list_compute_policies_on_vdc(vdc_id):
                     if cp_dict['name'] == _SYSTEM_DEFAULT_COMPUTE_POLICY:
                         system_default_href = cp_dict['href']
@@ -811,7 +815,6 @@ class ComputePolicyManager:
                     vm = VM(self._sysadmin_client,
                             href=vm_resource.get('href'))
                     _task = None
-                    operation_msg = None
                     if is_placement_policy:
                         if hasattr(vm_resource, 'ComputePolicy') and \
                                 not hasattr(vm_resource.ComputePolicy, 'VmSizingPolicy'):  # noqa: E501

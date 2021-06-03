@@ -148,7 +148,7 @@ def is_tkg_plus_enabled(config: dict = None):
     return False
 
 
-def is_tkgm_enabled(config: dict = None):
+def is_tkg_m_enabled(config: dict = None):
     if not config:
         try:
             config = get_server_runtime_config()

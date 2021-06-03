@@ -1034,7 +1034,7 @@ def list_template(ctx, config_file_path, skip_config_decryption,
                 org_name = config_dict['broker']['org']
                 catalog_name = config_dict['broker']['catalog']
                 is_tkg_plus_enabled = utils.is_tkg_plus_enabled(config_dict)
-                is_tkgm_enabled = utils.is_tkgm_enabled(config_dict)
+                is_tkg_m_enabled = utils.is_tkg_m_enabled(config_dict)
 
                 local_template_definitions = \
                     ltm.get_all_k8s_local_template_definition(
@@ -1060,7 +1060,7 @@ def list_template(ctx, config_file_path, skip_config_decryption,
                             SERVER_CLI_LOGGER.debug(msg)
                             continue
                         if definition[LocalTemplateKey.KIND] == ClusterEntityKind.TKG_M.value and \
-                                not is_tkgm_enabled:  # noqa: E501
+                                not is_tkg_m_enabled:  # noqa: E501
                             # TKGm is not enabled on CSE config. Skip the
                             # template and log the relevant information.
                             msg = "Skipping loading template data for " \
