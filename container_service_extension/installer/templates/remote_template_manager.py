@@ -18,11 +18,6 @@ import container_service_extension.common.utils.server_utils as server_utils
 import container_service_extension.installer.templates.local_template_manager as ltm  # noqa: E501
 from container_service_extension.logging.logger import NULL_LOGGER
 
-REMOTE_TEMPLATE_COOKBOOK_V2_FILENAME = 'template_v2.yaml'
-REMOTE_TEMPLATE_COOKBOOK_FILENAME = 'template.yaml'
-REMOTE_SCRIPTS_V2_DIR = 'scripts_v2'
-REMOTE_SCRIPTS_DIR = 'scripts'
-
 
 def download_file_into_memory(url):
     """Download a file and store it in memory.
