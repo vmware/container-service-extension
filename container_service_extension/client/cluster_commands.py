@@ -555,8 +555,8 @@ Examples
     '--tkgm',
     'k8_runtime',
     is_flag=True,
-    hidden=not utils.is_environment_variable_enabled(cli_constants.ENV_CSE_TKGM_ENABLED),  # noqa: E501
-    flag_value=shared_constants.ClusterEntityKind.TKGM,
+    hidden=not utils.is_environment_variable_enabled(cli_constants.ENV_CSE_TKG_M_ENABLED),  # noqa: E501
+    flag_value=shared_constants.ClusterEntityKind.TKG_M,
     help="should be used with --sample, this flag generates sample yaml for k8 runtime: TKGm"  # noqa: E501
 )
 @click.option(
@@ -608,9 +608,9 @@ def apply(ctx, cluster_config_file_path, generate_sample_config, k8_runtime, out
             elif k8_runtime == shared_constants.ClusterEntityKind.TKG_PLUS \
                     and not utils.is_environment_variable_enabled(cli_constants.ENV_CSE_TKG_PLUS_ENABLED):  # noqa: E501
                 raise Exception(f"{shared_constants.ClusterEntityKind.TKG_PLUS.value} not enabled")  # noqa: E501
-            elif k8_runtime == shared_constants.ClusterEntityKind.TKGM \
-                    and not utils.is_environment_variable_enabled(cli_constants.ENV_CSE_TKGM_ENABLED):  # noqa: E501
-                raise Exception(f"{shared_constants.ClusterEntityKind.TKGM.value} not enabled")  # noqa: E501
+            elif k8_runtime == shared_constants.ClusterEntityKind.TKG_M \
+                    and not utils.is_environment_variable_enabled(cli_constants.ENV_CSE_TKG_M_ENABLED):  # noqa: E501
+                raise Exception(f"{shared_constants.ClusterEntityKind.TKG_M.value} not enabled")  # noqa: E501
             else:
                 sample_cluster_config = client_sample_generator.get_sample_cluster_configuration(output=output, k8_runtime=k8_runtime)  # noqa: E501
                 console_message_printer.general_no_color(sample_cluster_config)

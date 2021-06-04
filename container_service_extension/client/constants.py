@@ -10,7 +10,7 @@ import container_service_extension.def_.utils as def_utils
 # Client environment variables
 ENV_CSE_CLIENT_WIRE_LOGGING = 'CSE_CLIENT_WIRE_LOGGING'
 ENV_CSE_TKG_PLUS_ENABLED = 'CSE_TKG_PLUS_ENABLED'
-ENV_CSE_TKGM_ENABLED = 'CSE_TKGM_ENABLED'
+ENV_CSE_TKG_M_ENABLED = 'CSE_TKG_M_ENABLED'
 
 TKG_ENTITY_TYPE_ID = def_utils.generate_entity_type_id(
     def_utils.DEF_VMWARE_VENDOR,
