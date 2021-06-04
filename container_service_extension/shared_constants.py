@@ -27,6 +27,11 @@ class ClusterEntityKind(Enum):
     TKG_M = 'TKGm'
 
 
+CSE_SERVER_RUNTIMES = [ClusterEntityKind.NATIVE.value,
+                       ClusterEntityKind.TKG_PLUS.value,
+                       ClusterEntityKind.TKG_M.value]
+
+
 NATIVE_CLUSTER_RUNTIME_INTERNAL_NAME = 'native'
 TKG_PLUS_CLUSTER_RUNTIME_INTERNAL_NAME = 'tkgplus'
 TKG_M_CLUSTER_RUNTIME_INTERNAL_NAME = 'tkgm'

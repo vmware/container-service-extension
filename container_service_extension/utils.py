@@ -155,11 +155,11 @@ def is_tkg_m_enabled(config: dict = None):
         except Exception:
             return False
     service_section = config.get('service', {})
-    tkgm_enabled = service_section.get('enable_tkgm', False)
-    if isinstance(tkgm_enabled, bool):
-        return tkgm_enabled
-    elif isinstance(tkgm_enabled, str):
-        return str_to_bool(tkgm_enabled)
+    tkg_m_enabled = service_section.get('enable_tkg_m', False)
+    if isinstance(tkg_m_enabled, bool):
+        return tkg_m_enabled
+    elif isinstance(tkg_m_enabled, str):
+        return str_to_bool(tkg_m_enabled)
     return False
 
 
