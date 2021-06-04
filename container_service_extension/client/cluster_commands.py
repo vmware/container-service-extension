@@ -552,7 +552,7 @@ Examples
 )
 @click.option(
     '-m',
-    '--tkgm',
+    '--tkg-m',
     'k8_runtime',
     is_flag=True,
     hidden=not utils.is_environment_variable_enabled(cli_constants.ENV_CSE_TKG_M_ENABLED),  # noqa: E501
@@ -608,19 +608,19 @@ def apply(ctx, cluster_config_file_path, generate_sample_config, k8_runtime, out
                 if tkg_plus_env_enabled:
                     msg += " or --tkg-plus"
                 if tkg_m_env_enabled:
-                    msg += " or --tkgm"
+                    msg += " or --tkg-m"
                 CLIENT_LOGGER.error(msg)
                 raise Exception(msg)
-            elif k8_runtime == shared_constants.ClusterEntityKind.TKG_PLUS \
+            if k8_runtime == shared_constants.ClusterEntityKind.TKG_PLUS \
                     and not tkg_plus_env_enabled:  # noqa: E501
                 raise Exception(f"{shared_constants.ClusterEntityKind.TKG_PLUS.value} not enabled")  # noqa: E501
-            elif k8_runtime == shared_constants.ClusterEntityKind.TKG_M \
+            if k8_runtime == shared_constants.ClusterEntityKind.TKG_M \
                     and not tkg_m_env_enabled:  # noqa: E501
                 raise Exception(f"{shared_constants.ClusterEntityKind.TKG_M.value} not enabled")  # noqa: E501
-            else:
-                sample_cluster_config = client_sample_generator.get_sample_cluster_configuration(output=output, k8_runtime=k8_runtime)  # noqa: E501
-                console_message_printer.general_no_color(sample_cluster_config)
-                return
+
+            sample_cluster_config = client_sample_generator.get_sample_cluster_configuration(output=output, k8_runtime=k8_runtime)  # noqa: E501
+            console_message_printer.general_no_color(sample_cluster_config)
+            return
 
         client = ctx.obj['client']
         with open(cluster_config_file_path) as f:

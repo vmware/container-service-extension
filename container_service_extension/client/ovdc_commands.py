@@ -95,7 +95,7 @@ Example
 )
 @click.option(
     '-m',
-    '--tkgm',
+    '--tkg-m',
     'enable_tkg_m',
     is_flag=True,
     hidden=not utils.is_environment_variable_enabled(cli_constants.ENV_CSE_TKG_M_ENABLED),  # noqa: E501
@@ -180,7 +180,7 @@ Example
 )
 @click.option(
     '-m',
-    '--tkgm',
+    '--tkg-m',
     'disable_tkg_m',
     is_flag=True,
     hidden=not utils.is_environment_variable_enabled(cli_constants.ENV_CSE_TKG_M_ENABLED),  # noqa: E501
