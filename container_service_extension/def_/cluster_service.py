@@ -45,6 +45,7 @@ from container_service_extension.server_constants import SYSTEM_ORG_NAME
 from container_service_extension.server_constants import TKGM_DEFAULT_POD_NETWORK_CIDR  # noqa: E501
 from container_service_extension.server_constants import TKGM_DEFAULT_SERVICE_CIDR  # noqa: E501
 from container_service_extension.server_constants import TKGM_TEMPLATE_NAME_FRAGMENT  # noqa: E501
+from container_service_extension.server_constants import UBUNTU_20_TEMPLATE_NAME_FRAGMENT  # noqa: E501
 from container_service_extension.server_constants import VdcNetworkInfoKey
 from container_service_extension.shared_constants import CSE_PAGINATION_DEFAULT_PAGE_SIZE  # noqa: E501
 from container_service_extension.shared_constants import CSE_PAGINATION_FIRST_PAGE_NUMBER  # noqa: E501
@@ -631,8 +632,10 @@ class ClusterService(abstract_broker.AbstractBroker):
             LOGGER.debug(msg)
             self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
             vapp.reload()
+            is_ubuntu_20 = UBUNTU_20_TEMPLATE_NAME_FRAGMENT in template_name
             control_plane_ip = _get_control_plane_ip(
-                self.context.sysadmin_client, vapp, check_tools=True)
+                self.context.sysadmin_client, vapp, check_tools=True,
+                use_ubuntu_20_sleep=is_ubuntu_20)
 
             # Handle exposing cluster
             if expose:
@@ -2079,7 +2082,7 @@ def _get_node_names(vapp, node_type):
 
 
 def _get_control_plane_ip(sysadmin_client: vcd_client.Client, vapp,
-                          check_tools=False):
+                          check_tools=False, use_ubuntu_20_sleep=False):
     vcd_utils.raise_error_if_user_not_from_system_org(sysadmin_client)
 
     LOGGER.debug(f"Getting control_plane IP for vapp: "
@@ -2090,7 +2093,8 @@ def _get_control_plane_ip(sysadmin_client: vcd_client.Client, vapp,
     node_names = _get_node_names(vapp, NodeType.CONTROL_PLANE)
     result = _execute_script_in_nodes(sysadmin_client, vapp=vapp,
                                       node_names=node_names, script=script,
-                                      check_tools=check_tools)
+                                      check_tools=check_tools,
+                                      use_ubuntu_20_sleep=use_ubuntu_20_sleep)
     errors = _get_script_execution_errors(result)
     if errors:
         raise E.ScriptExecutionError(f"Get control plane IP script execution "
@@ -2264,9 +2268,12 @@ def _wait_until_ready_to_exec(vs, vm, password, tries=30):
 
 def _execute_script_in_nodes(sysadmin_client: vcd_client.Client,
                              vapp, node_names, script,
-                             check_tools=True, wait=True):
+                             check_tools=True, wait=True,
+                             use_ubuntu_20_sleep=False):
     vcd_utils.raise_error_if_user_not_from_system_org(sysadmin_client)
     all_results = []
+    if use_ubuntu_20_sleep:
+        time.sleep(150)  # hack for ubuntu 20 cluster creation
     for node_name in node_names:
         try:
             LOGGER.debug(f"will try to execute script on {node_name}:\n"
