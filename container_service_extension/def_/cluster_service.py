@@ -2178,6 +2178,8 @@ def _join_cluster(sysadmin_client: vcd_client.Client, vapp, template_name,
                   template_revision, target_nodes=None):
     vcd_utils.raise_error_if_user_not_from_system_org(sysadmin_client)
     is_tkgm = TKGM_TEMPLATE_NAME_FRAGMENT in template_name
+    if is_tkgm:
+        time.sleep(40)  # hack for ubuntu 20/tkgm
     try:
         if is_tkgm:
             script = "#!/usr/bin/env bash\n" \
