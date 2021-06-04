@@ -600,16 +600,22 @@ def apply(ctx, cluster_config_file_path, generate_sample_config, k8_runtime, out
             raise Exception(msg)
 
         if generate_sample_config:
+            tkg_plus_env_enabled = utils.is_environment_variable_enabled(cli_constants.ENV_CSE_TKG_PLUS_ENABLED)  # noqa: E501
+            tkg_m_env_enabled = utils.is_environment_variable_enabled(cli_constants.ENV_CSE_TKG_M_ENABLED)  # noqa: E501
             if not k8_runtime:
                 console_message_printer.general_no_color(ctx.get_help())
-                msg = "with option --sample you must specify either of options: --native, --tkg, --tkg-plus, or --tkgm"  # noqa: E501
+                msg = "with option --sample you must specify one of the options: --native or --tkg"  # noqa: E501
+                if tkg_plus_env_enabled:
+                    msg += " or --tkg-plus"
+                if tkg_m_env_enabled:
+                    msg += " or --tkgm"
                 CLIENT_LOGGER.error(msg)
                 raise Exception(msg)
             elif k8_runtime == shared_constants.ClusterEntityKind.TKG_PLUS \
-                    and not utils.is_environment_variable_enabled(cli_constants.ENV_CSE_TKG_PLUS_ENABLED):  # noqa: E501
+                    and not tkg_plus_env_enabled:  # noqa: E501
                 raise Exception(f"{shared_constants.ClusterEntityKind.TKG_PLUS.value} not enabled")  # noqa: E501
             elif k8_runtime == shared_constants.ClusterEntityKind.TKG_M \
-                    and not utils.is_environment_variable_enabled(cli_constants.ENV_CSE_TKG_M_ENABLED):  # noqa: E501
+                    and not tkg_m_env_enabled:  # noqa: E501
                 raise Exception(f"{shared_constants.ClusterEntityKind.TKG_M.value} not enabled")  # noqa: E501
             else:
                 sample_cluster_config = client_sample_generator.get_sample_cluster_configuration(output=output, k8_runtime=k8_runtime)  # noqa: E501
