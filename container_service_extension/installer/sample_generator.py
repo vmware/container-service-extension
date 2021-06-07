@@ -332,16 +332,19 @@ def generate_sample_config(
         sample_config += yaml.safe_dump(SAMPLE_VCS_CONFIG,
                                         default_flow_style=False) + '\n'
 
-        updated_service_config = dict(SAMPLE_SERVICE_CONFIG)
         if api_version < float(ApiVersion.VERSION_35.value):
-            updated_service_config['service']['legacy_mode'] = False
-        sample_config += yaml.safe_dump(updated_service_config,
+            SAMPLE_SERVICE_CONFIG['service']['legacy_mode'] = True
+
+        sample_config += yaml.safe_dump(SAMPLE_SERVICE_CONFIG,
                                         default_flow_style=False) + '\n'
+
+        if api_version < float(ApiVersion.VERSION_35.value):
+            SAMPLE_BROKER_CONFIG['broker']['remote_template_cookbook_url'] = 'http://raw.githubusercontent.com/vmware/container-service-extension-templates/upgrades/template.yaml' # noqa: E501
 
         sample_config += yaml.safe_dump(SAMPLE_BROKER_CONFIG,
                                         default_flow_style=False) + '\n'
 
-        if updated_service_config['service']['legacy_mode']:
+        if SAMPLE_SERVICE_CONFIG['service']['legacy_mode']:
             sample_config += TEMPLATE_RULE_NOTE + '\n'
     else:
         sample_config = yaml.safe_dump(
