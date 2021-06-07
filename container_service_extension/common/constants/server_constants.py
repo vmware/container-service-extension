@@ -220,8 +220,8 @@ class TemplateScriptFile(str, Enum):
 
     # cluster upgrade scripts
     DOCKER_UPGRADE = 'cluster-upgrade/docker-upgrade.sh'
-    CONTROL_PLANE_CNI_APPLY = 'cluster-upgrade/master-cni-apply.sh'
-    CONTROL_PLANE_K8S_UPGRADE = 'cluster-upgrade/master-k8s-upgrade.sh'
+    CONTROL_PLANE_CNI_APPLY = 'cluster-upgrade/control-plane-cni-apply.sh'
+    CONTROL_PLANE_K8S_UPGRADE = 'cluster-upgrade/control-plane-k8s-upgrade.sh'
     WORKER_K8S_UPGRADE = 'cluster-upgrade/worker-k8s-upgrade.sh'
 
 

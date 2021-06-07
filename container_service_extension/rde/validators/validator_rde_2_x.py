@@ -58,7 +58,11 @@ class Validator_2_0_0(AbstractValidator):
             get_rde_model(rde_version_introduced_at_api_version)
         input_entity = None
         if entity:
-            input_entity: AbstractNativeEntity = NativeEntityClass.from_dict(entity)  # noqa: E501
+            try:
+                input_entity: AbstractNativeEntity = NativeEntityClass.from_dict(entity)  # noqa: E501
+            except Exception as err:
+                msg = f"Failed to parse request body: {err}"
+                raise BadRequestError(msg)
 
         # Return True if the operation is not specified.
         if not operation:
