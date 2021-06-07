@@ -571,7 +571,7 @@ def encrypt(ctx, input_file, output_file):
         sys.exit(1)
 
 
-@cli.command(short_help='Install CSE extension 3.0.0 on vCD')
+@cli.command(short_help='Install CSE extension 3.1.1 on vCD')
 @click.pass_context
 @click.option(
     '-c',
@@ -620,7 +620,14 @@ def encrypt(ctx, input_file, output_file):
 def install(ctx, config_file_path, pks_config_file_path,
             skip_config_decryption, skip_template_creation,
             retain_temp_vapp, ssh_key_file):
-    """Install CSE on vCloud Director."""
+    """Install CSE on vCloud Director.
+
+\b
+    NOTE: Validation on remote-template_cookbook-url is done based on
+    template cookbook version and legacy_mode setting in config.
+    Set legacy_mode=true to install CSE for VCD api_version < 35.
+    Set legacy_mode=false to install CSE for VCD api_version >= 35.
+    """
     # NOTE: For CSE 3.0, if `enable_tkg_plus` in config file is set to false
     # and if `cse install` is invoked without skipping template creation,
     # an Exception will be thrown if TKG+ template is present in the
@@ -762,7 +769,11 @@ def pks_configure(ctx, pks_config_file_path, skip_config_decryption):
     help='Skip decryption of CSE/PKS config file')
 def run(ctx, config_file_path, pks_config_file_path, skip_check,
         skip_config_decryption):
-    """Run CSE service."""
+    """Run CSE service.
+
+    NOTE: Validation on remote-template_cookbook-url is done based on
+          template cookbook version and legacy_mode setting in config.
+    """
     SERVER_CLI_LOGGER.debug(f"Executing command: {ctx.command_path}")
     console_message_printer = utils.ConsoleMessagePrinter()
     utils.check_python_version(console_message_printer)
@@ -809,7 +820,7 @@ def run(ctx, config_file_path, pks_config_file_path, skip_check,
 
 
 @cli.command('upgrade',
-             short_help="Upgrade CSE extension to version 3.0.0 on vCD")
+             short_help="Upgrade CSE extension to version 3.1.1 on vCD")
 @click.pass_context
 @click.option(
     '-c',
@@ -851,17 +862,24 @@ def run(ctx, config_file_path, pks_config_file_path, skip_check,
 def upgrade(ctx, config_file_path, skip_config_decryption,
             skip_template_creation, retain_temp_vapp,
             ssh_key_file):
-    """Upgrade existing CSE installation/entities to match CSE 3.1.
+    """Upgrade existing CSE installation/entities to match CSE 3.1.1.
 
 \b
-    - Add CSE / VCD API version info to VCD's extension data for CSE
+    - Add CSE, RDE version, Legacy mode info to VCD's extension data for CSE
     - Register defined entities schema of CSE k8s clusters with VCD
     - Create placement compute policies used by CSE
     - Remove old sizing compute policies created by CSE 2.6 and below
     - Install all templates from template repository linked in config file
-    - Update currently installed templates that are no longer defined in
-      CSE template repository to adhere to CSE 3.0 template requirements.
-    - Update existing CSE k8s cluster's to match CSE 3.0 k8s clusters.
+    - Currently installed templates that are no longer compliant with
+      CSE template cookbook specification will be ignored.
+    - Update existing CSE k8s cluster's to match CSE 3.1 k8s clusters.
+    - Upgrading legacy clusters would require new template creation supported
+      by CSE 3.1.1
+    - NOTE: Validation on remote-template_cookbook-url is done based on
+      template cookbook version and legacy_mode setting in config.
+      Set legacy_mode=true to upgrade CSE for VCD api_version < 35.
+      Set legacy_mode=false to upgrade CSE for VCD api_version >= 35.
+
     """
     # NOTE: For CSE 3.0, if `enable_tkg_plus` in the config is set to false,
     # an exception is thrown if
@@ -1160,6 +1178,9 @@ def install_cse_template(ctx, template_name, template_revision,
 
     Use '*' for TEMPLATE_NAME and TEMPLATE_REVISION to install
     all listed templates.
+
+    NOTE: Validation on remote-template_cookbook-url is done based on
+          template cookbook version and legacy_mode setting.
     """
     # NOTE: For CSE 3.0, if `enable_tkg_plus` flag in config is set to false,
     # Throw an error if TKG+ template creation is issued.
