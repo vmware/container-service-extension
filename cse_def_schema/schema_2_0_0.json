@@ -90,6 +90,14 @@
                                 "storageProfile":{
                                     "type":"string",
                                     "description":"The storage-profile with which control-plane needs to be provisioned in a given \"ovdc\". The specified storage-profile is expected to be available on the given ovdc."
+                                },
+                                "cpu": {
+                                    "type": "integer",
+                                    "description": "CPU size in Ghz"
+                                },
+                                "memory": {
+                                    "type": "integer",
+                                    "description": "Memory in Mb"
                                 }
                             },
                             "additionalProperties":true
@@ -114,6 +122,14 @@
                                 "storageProfile":{
                                     "type":"string",
                                     "description":"The storage-profile with which worker nodes need to be provisioned in a given \"ovdc\". The specified storage-profile is expected to be available on the given ovdc."
+                                },
+                                "cpu": {
+                                    "type": "integer",
+                                    "description": "CPU size in Ghz"
+                                },
+                                "memory": {
+                                    "type": "integer",
+                                    "description": "Memory in Mb"
                                 }
                             },
                             "additionalProperties":true
