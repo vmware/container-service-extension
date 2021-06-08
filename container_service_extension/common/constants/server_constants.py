@@ -220,8 +220,8 @@ class TemplateScriptFile(str, Enum):
 
     # cluster upgrade scripts
     DOCKER_UPGRADE = 'cluster-upgrade/docker-upgrade.sh'
-    CONTROL_PLANE_CNI_APPLY = 'cluster-upgrade/master-cni-apply.sh'
-    CONTROL_PLANE_K8S_UPGRADE = 'cluster-upgrade/master-k8s-upgrade.sh'
+    CONTROL_PLANE_CNI_APPLY = 'cluster-upgrade/control-plane-cni-apply.sh'
+    CONTROL_PLANE_K8S_UPGRADE = 'cluster-upgrade/control-plane-k8s-upgrade.sh'
     WORKER_K8S_UPGRADE = 'cluster-upgrade/worker-k8s-upgrade.sh'
 
 
@@ -280,7 +280,6 @@ class LocalTemplateKey(str, Enum):
     CATALOG_ITEM_NAME = 'catalog_item_name'
     CNI = 'cni'
     CNI_VERSION = 'cni_version'
-    COMPUTE_POLICY = 'compute_policy'
     CPU = 'cpu'
     DEPRECATED = 'deprecated'
     DESCRIPTION = 'description'
@@ -298,7 +297,7 @@ class LocalTemplateKey(str, Enum):
 
 
 @unique
-class RemoteTemplateKey(str, Enum):
+class RemoteTemplateKeyV1(str, Enum):
     """Enumerate the keys that define a template."""
 
     CNI = 'cni'
@@ -319,8 +318,39 @@ class RemoteTemplateKey(str, Enum):
     SOURCE_OVA_NAME = 'source_ova_name'
     SOURCE_OVA_SHA256 = 'sha256_ova'
     UPGRADE_FROM = 'upgrade_from'
+
+
+@unique
+class RemoteTemplateKeyV2(str, Enum):
+    """Enumerate the keys that define a template."""
+
+    CNI = 'cni'
+    CNI_VERSION = 'cni_version'
+    CPU = 'cpu'
+    DEPRECATED = 'deprecated'
+    DESCRIPTION = 'description'
+    DOCKER_VERSION = 'docker_version'
+    KIND = 'kind'
+    KUBERNETES = 'kubernetes'
+    KUBERNETES_VERSION = 'kubernetes_version'
+    MEMORY = 'mem'
+    NAME = 'name'
+    OS = 'os'
+    REVISION = 'revision'
+    SOURCE_OVA_HREF = 'source_ova'
+    SOURCE_OVA_NAME = 'source_ova_name'
+    SOURCE_OVA_SHA256 = 'sha256_ova'
+    UPGRADE_FROM = 'upgrade_from'
     MIN_CSE_VERSION = 'min_cse_version'
     MAX_CSE_VERSION = 'max_cse_version'
+
+
+@unique
+class RemoteTemplateCookbookVersion(Enum):
+    """Enumerate the remote template cookbook versions."""
+
+    Version1 = semantic_version.Version('1.0.0')
+    Version2 = semantic_version.Version('2.0.0')
 
 
 # CSE requests

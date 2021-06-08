@@ -137,7 +137,7 @@ def construct_2_0_0_cluster_spec_from_entity_status(entity_status: rde_2_0_0.Sta
         template_revision=entity_status.cloud_properties.distribution.template_revision)  # noqa: E501
 
     settings = rde_2_0_0.Settings(
-        network=entity_status.cloud_properties.ovdc_network_name,
+        ovdc_network=entity_status.cloud_properties.ovdc_network_name,
         ssh_key=entity_status.cloud_properties.ssh_key,
         rollback_on_failure=entity_status.cloud_properties.rollback_on_failure)  # noqa: E501
 

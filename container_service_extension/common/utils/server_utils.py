@@ -4,10 +4,12 @@
 
 """Server utility methods used only by the CSE server."""
 
+import enum
 import math
 
 import semantic_version
 
+import container_service_extension.common.constants.server_constants as server_constants  # noqa: E501
 import container_service_extension.common.constants.shared_constants as shared_constants  # noqa: E501
 import container_service_extension.common.utils.core_utils as utils
 import container_service_extension.rde.models.common_models as common_models
@@ -105,6 +107,18 @@ def should_use_mqtt_protocol(config):
     """
     return config.get('mqtt') is not None and \
         not utils.str_to_bool(config['service'].get('legacy_mode'))
+
+
+def get_template_descriptor_keys(cookbook_version: semantic_version.Version) -> enum.EnumMeta:  # noqa: E501
+    """Get template descriptor keys using the cookbook version."""
+    # if cookbook version is None, use version 1.0
+    if not cookbook_version:
+        cookbook_version = '1.0.0'
+    cookbook_version_to_template_descriptor_keys_map = {
+        '1.0.0': server_constants.RemoteTemplateKeyV1,
+        '2.0.0': server_constants.RemoteTemplateKeyV2
+    }
+    return cookbook_version_to_template_descriptor_keys_map[cookbook_version]
 
 
 def construct_paginated_response(values, result_total,

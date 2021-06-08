@@ -502,12 +502,14 @@ def install_template(template_name, template_revision, config_file_name,
             logger=INSTALL_LOGGER, msg_update_callback=msg_update_callback)
 
         rtm.get_filtered_remote_template_cookbook()
+        remote_template_keys = server_utils.get_template_descriptor_keys(
+            rtm.cookbook_version)
 
         found_template = False
         for template in rtm.filtered_cookbook['templates']:
-            template_name_matched = template_name in (template[server_constants.RemoteTemplateKey.NAME], '*')  # noqa: E501
+            template_name_matched = template_name in (template[remote_template_keys.NAME], '*')  # noqa: E501
             template_revision_matched = \
-                str(template_revision) in (str(template[server_constants.RemoteTemplateKey.REVISION]), '*')  # noqa: E501
+                str(template_revision) in (str(template[remote_template_keys.REVISION]), '*')  # noqa: E501
             if template_name_matched and template_revision_matched:
                 found_template = True
                 _install_single_template(
@@ -534,8 +536,8 @@ def install_template(template_name, template_revision, config_file_name,
             #   template_name is in unfiltered cookbook
             # if (template_name, template_revision) is in unfiltered cookbook
             for template in rtm.unfiltered_cookbook['templates']:
-                template_name_matched = template[server_constants.RemoteTemplateKey.NAME] == template_name  # noqa: E501
-                template_revision_matched = template_revision in (str(template[server_constants.RemoteTemplateKey.REVISION]), '*')  # noqa: E501
+                template_name_matched = template[remote_template_keys.NAME] == template_name  # noqa: E501
+                template_revision_matched = template_revision in (str(template[remote_template_keys.REVISION]), '*')  # noqa: E501
                 if template_name_matched and template_revision_matched:
                     msg = f"Template '{template_name}' at revision " \
                           f"'{template_revision}' is not supported by " \
@@ -1500,14 +1502,16 @@ def _construct_catalog_item_name_to_template_description_map(cookbook: dict) -> 
         as value
     :rtype: dict
     """
+    remote_template_keys = \
+        server_utils.get_template_descriptor_keys(semantic_version.Version(cookbook['version']))  # noqa: E501
     catalog_item_name_to_template_description = {}
     for template in cookbook['templates']:
         # For CSE 3.1, we can safely assume that all the catalog item names are
         # present in template metadata as CSE 3.1 can only be upgraded from
         # CSE 3.0
         catalog_item_name = ltm.get_revisioned_template_name(
-            template[server_constants.RemoteTemplateKey.NAME],
-            template[server_constants.RemoteTemplateKey.REVISION])
+            template[remote_template_keys.NAME],
+            template[remote_template_keys.REVISION])
         catalog_item_name_to_template_description[catalog_item_name] = template
     return catalog_item_name_to_template_description
 
@@ -1605,8 +1609,8 @@ def _assign_placement_policies_to_existing_templates(client: Client,
     for template in all_templates:
         kind = template.get(server_constants.LocalTemplateKey.KIND)
         catalog_item_name = ltm.get_revisioned_template_name(
-            template[server_constants.RemoteTemplateKey.NAME],
-            template[server_constants.RemoteTemplateKey.REVISION])
+            template[server_constants.LocalTemplateKey.NAME],
+            template[server_constants.LocalTemplateKey.REVISION])
         msg = f"Processing template {catalog_item_name}"
         INSTALL_LOGGER.debug(msg)
         msg_update_callback.general(msg)
@@ -1743,18 +1747,20 @@ def _install_single_template(
         msg_update_callback.error(msg)
         raise Exception(msg)
     localTemplateKey = server_constants.LocalTemplateKey
+    remote_template_keys = server_utils.get_template_descriptor_keys(
+        remote_template_manager.cookbook_version)
     if LEGACY_MODE:
         # if legacy_mode, make use of LegacyLocalTemplateKey which
         # doesn't contain min_cse_version and max_cse_version.
         localTemplateKey = server_constants.LegacyLocalTemplateKey
     templateBuildKey = server_constants.TemplateBuildKey
     remote_template_manager.download_template_scripts(
-        template_name=template[server_constants.RemoteTemplateKey.NAME],
-        revision=template[server_constants.RemoteTemplateKey.REVISION],
+        template_name=template[remote_template_keys.NAME],
+        revision=template[remote_template_keys.REVISION],
         force_overwrite=force_update)
     catalog_item_name = ltm.get_revisioned_template_name(
-        template[server_constants.RemoteTemplateKey.NAME],
-        template[server_constants.RemoteTemplateKey.REVISION])
+        template[remote_template_keys.NAME],
+        template[remote_template_keys.REVISION])
 
     # remote template data is a super set of local template data, barring
     # the key 'catalog_item_name'
@@ -1768,37 +1774,37 @@ def _install_single_template(
         raise ValueError(f"Invalid template data. Missing keys: {missing_keys}")  # noqa: E501
 
     temp_vm_name = (
-        f"{template[server_constants.RemoteTemplateKey.OS].replace('.', '')}-"
-        f"k8s{template[server_constants.RemoteTemplateKey.KUBERNETES_VERSION].replace('.', '')}-"  # noqa: E501
-        f"{template[server_constants.RemoteTemplateKey.CNI]}"
-        f"{template[server_constants.RemoteTemplateKey.CNI_VERSION].replace('.', '')}-vm"  # noqa: E501
+        f"{template[remote_template_keys.OS].replace('.', '')}-"
+        f"k8s{template[remote_template_keys.KUBERNETES_VERSION].replace('.', '')}-"  # noqa: E501
+        f"{template[remote_template_keys.CNI]}"
+        f"{template[remote_template_keys.CNI_VERSION].replace('.', '')}-vm"
     )
     build_params = {
-        templateBuildKey.TEMPLATE_NAME: template[server_constants.RemoteTemplateKey.NAME],  # noqa: E501
-        templateBuildKey.TEMPLATE_REVISION: template[server_constants.RemoteTemplateKey.REVISION],  # noqa: E501
-        templateBuildKey.SOURCE_OVA_NAME: template[server_constants.RemoteTemplateKey.SOURCE_OVA_NAME],  # noqa: E501
-        templateBuildKey.SOURCE_OVA_HREF: template[server_constants.RemoteTemplateKey.SOURCE_OVA_HREF],  # noqa: E501
-        templateBuildKey.SOURCE_OVA_SHA256: template[server_constants.RemoteTemplateKey.SOURCE_OVA_SHA256],  # noqa: E501
+        templateBuildKey.TEMPLATE_NAME: template[remote_template_keys.NAME],  # noqa: E501
+        templateBuildKey.TEMPLATE_REVISION: template[remote_template_keys.REVISION],  # noqa: E501
+        templateBuildKey.SOURCE_OVA_NAME: template[remote_template_keys.SOURCE_OVA_NAME],  # noqa: E501
+        templateBuildKey.SOURCE_OVA_HREF: template[remote_template_keys.SOURCE_OVA_HREF],  # noqa: E501
+        templateBuildKey.SOURCE_OVA_SHA256: template[remote_template_keys.SOURCE_OVA_SHA256],  # noqa: E501
         templateBuildKey.ORG_NAME: org_name,
         templateBuildKey.VDC_NAME: vdc_name,
         templateBuildKey.CATALOG_NAME: catalog_name,
         templateBuildKey.CATALOG_ITEM_NAME: catalog_item_name,
-        templateBuildKey.CATALOG_ITEM_DESCRIPTION: template[server_constants.RemoteTemplateKey.DESCRIPTION],  # noqa: E501
-        templateBuildKey.TEMP_VAPP_NAME: template[server_constants.RemoteTemplateKey.NAME] + '_temp',  # noqa: E501
+        templateBuildKey.CATALOG_ITEM_DESCRIPTION: template[remote_template_keys.DESCRIPTION],  # noqa: E501
+        templateBuildKey.TEMP_VAPP_NAME: template[remote_template_keys.NAME] + '_temp',  # noqa: E501
         templateBuildKey.TEMP_VM_NAME: temp_vm_name,
-        templateBuildKey.CPU: template[server_constants.RemoteTemplateKey.CPU],
-        templateBuildKey.MEMORY: template[server_constants.RemoteTemplateKey.MEMORY],  # noqa: E501
+        templateBuildKey.CPU: template[remote_template_keys.CPU],
+        templateBuildKey.MEMORY: template[remote_template_keys.MEMORY],  # noqa: E501
         templateBuildKey.NETWORK_NAME: network_name,
         templateBuildKey.IP_ALLOCATION_MODE: ip_allocation_mode,  # noqa: E501
         templateBuildKey.STORAGE_PROFILE: storage_profile
     }
     if not LEGACY_MODE:  # noqa: E501
         if template.get(
-                server_constants.RemoteTemplateKey.KIND) not in shared_constants.RUNTIME_DISPLAY_NAME_TO_INTERNAL_NAME_MAP:  # noqa: E501
-            raise ValueError(f"Cluster kind is {template.get(server_constants.RemoteTemplateKey.KIND)}"  # noqa: E501
+                remote_template_keys.KIND) not in shared_constants.RUNTIME_DISPLAY_NAME_TO_INTERNAL_NAME_MAP:  # noqa: E501
+            raise ValueError(f"Cluster kind is {template.get(remote_template_keys.KIND)}"  # noqa: E501
                              f" Expected { shared_constants.RUNTIME_DISPLAY_NAME_TO_INTERNAL_NAME_MAP.keys()}")  # noqa: E501
         build_params[templateBuildKey.CSE_PLACEMENT_POLICY] = \
-            shared_constants.RUNTIME_DISPLAY_NAME_TO_INTERNAL_NAME_MAP[template.get(server_constants.RemoteTemplateKey.KIND)]  # noqa: E501
+            shared_constants.RUNTIME_DISPLAY_NAME_TO_INTERNAL_NAME_MAP[template.get(remote_template_keys.KIND)]  # noqa: E501
     builder = template_builder.TemplateBuilder(client, client, build_params,
                                                ssh_key=ssh_key,
                                                logger=INSTALL_LOGGER,

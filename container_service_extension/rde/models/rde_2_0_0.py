@@ -330,7 +330,7 @@ class NativeEntity(AbstractNativeEntity):
             )
             spec = ClusterSpec(
                 settings=Settings(
-                    network=rde_1_x_entity.spec.settings.network,
+                    ovdc_network=rde_1_x_entity.spec.settings.network,
                     ssh_key=rde_1_x_entity.spec.settings.ssh_key,
                     rollback_on_failure=rde_1_x_entity.spec.settings.rollback_on_failure),  # noqa: E501,
                 topology=topology,
