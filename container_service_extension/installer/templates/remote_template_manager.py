@@ -124,7 +124,7 @@ class RemoteTemplateManager():
         # Fetch current CSE version
         current_cse_version = server_utils.get_installed_cse_version()
         supported_templates = []
-        remote_template_key = server_utils.get_template_descriptor_keys(str(self.cookbook_version))  # noqa: E501
+        remote_template_key = server_utils.get_template_descriptor_keys(self.cookbook_version)  # noqa: E501
         for template_description in self.unfiltered_cookbook['templates']:
             # only include the template if the current CSE version
             # supports it
@@ -169,7 +169,7 @@ class RemoteTemplateManager():
             self.msg_update_callback.error(msg)
             raise ValueError(msg)
 
-        template_decriptor_keys = server_utils.get_template_descriptor_keys(str(self.cookbook_version))  # noqa: E501
+        template_decriptor_keys = server_utils.get_template_descriptor_keys(self.cookbook_version)  # noqa: E501
         key_set_expected = set([k.value for k in template_decriptor_keys])
 
         # Validate template yaml contents

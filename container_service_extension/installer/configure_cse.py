@@ -503,7 +503,7 @@ def install_template(template_name, template_revision, config_file_name,
 
         rtm.get_filtered_remote_template_cookbook()
         remote_template_keys = server_utils.get_template_descriptor_keys(
-            str(rtm.cookbook_version))
+            rtm.cookbook_version)
 
         found_template = False
         for template in rtm.filtered_cookbook['templates']:
@@ -1503,7 +1503,7 @@ def _construct_catalog_item_name_to_template_description_map(cookbook: dict) -> 
     :rtype: dict
     """
     remote_template_keys = \
-        server_utils.get_template_descriptor_keys(cookbook['version'])
+        server_utils.get_template_descriptor_keys(semantic_version.Version(cookbook['version']))  # noqa: E501
     catalog_item_name_to_template_description = {}
     for template in cookbook['templates']:
         # For CSE 3.1, we can safely assume that all the catalog item names are
@@ -1748,7 +1748,7 @@ def _install_single_template(
         raise Exception(msg)
     localTemplateKey = server_constants.LocalTemplateKey
     remote_template_keys = server_utils.get_template_descriptor_keys(
-        str(remote_template_manager.cookbook_version))
+        remote_template_manager.cookbook_version)
     if LEGACY_MODE:
         # if legacy_mode, make use of LegacyLocalTemplateKey which
         # doesn't contain min_cse_version and max_cse_version.

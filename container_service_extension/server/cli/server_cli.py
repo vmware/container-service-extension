@@ -1042,7 +1042,7 @@ def list_template(ctx, config_file_path, skip_config_decryption,
                 rtm.get_filtered_remote_template_cookbook()
             remote_template_definitions = remote_template_cookbook['templates']
             remote_template_keys = server_utils.get_template_descriptor_keys(
-                str(rtm.cookbook_version))
+                rtm.cookbook_version)
             for definition in remote_template_definitions:
                 remote_template = {
                     'name': definition[remote_template_keys.NAME],

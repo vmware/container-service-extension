@@ -109,7 +109,7 @@ def should_use_mqtt_protocol(config):
         not utils.str_to_bool(config['service'].get('legacy_mode'))
 
 
-def get_template_descriptor_keys(cookbook_version: str) -> enum.EnumMeta:
+def get_template_descriptor_keys(cookbook_version: semantic_version.Version) -> enum.EnumMeta:  # noqa: E501
     """Get template descriptor keys using the cookbook version."""
     # if cookbook version is None, use version 1.0
     if not cookbook_version:
