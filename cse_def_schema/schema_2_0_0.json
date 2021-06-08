@@ -17,6 +17,14 @@
                 },
                 "storageProfile":{
                     "type":"string"
+                },
+                "cpu":{
+                    "type": "integer",
+                    "description": "CPU size in Ghz"
+                },
+                "memory": {
+                    "type": "integer",
+                    "description": "Memory in Mb"
                 }
             },
             "additionalProperties":true
