@@ -304,7 +304,7 @@ def generate_sample_config(
         configuration file instead of sample regular CSE configuration file.
     :param bool legacy_mode: if True to configure CSE with whose maximum
     supported api_version < 35. if False to configure CSE with whose maximum
-    supported api_version > 35
+    supported api_version >= 35
 
     :return: sample config
 
