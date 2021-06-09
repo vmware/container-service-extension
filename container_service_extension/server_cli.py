@@ -1263,7 +1263,6 @@ def install_cse_template(ctx, template_name, template_revision,
             retain_temp_vapp=retain_temp_vapp,
             ssh_key=ssh_key,
             skip_config_decryption=skip_config_decryption,
-            decryption_password=password,
             msg_update_callback=console_message_printer)
     except Exception as err:
         SERVER_CLI_LOGGER.error(str(err))

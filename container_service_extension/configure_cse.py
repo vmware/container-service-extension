@@ -770,29 +770,32 @@ def _update_user_role_with_necessary_right_bundles(
             def_utils.DEF_NATIVE_ENTITY_TYPE_RIGHT_BUNDLE,
             client=client,
             msg_update_callback=msg_update_callback,
-            logger_debug=INSTALL_LOGGER,
+            logger_debug=logger_debug,
             log_wire=log_wire)
-    except Exception as err:
+    except Exception:
         msg = "Error Adding Native Def Entity Rights in User Role"
         msg_update_callback.error(msg)
-        raise err
+        logger_debug.error(msg, exc_info=True)
+        raise
 
     try:
         _update_user_role_with_right_bundle(
             def_utils.DEF_TKG_ENTITY_TYPE_RIGHT_BUNDLE,
             client=client,
             msg_update_callback=msg_update_callback,
-            logger_debug=INSTALL_LOGGER,
+            logger_debug=logger_debug,
             log_wire=log_wire)
     except Exception as err:
         # TKG Def Entity Rights Bundle might not be present in VCD always
         # (e.g. VCD 10.1) so ignore the error and move on
         msg = "Error Adding TKG Def Entity Rights in User Role" + str(err)
         msg_update_callback.general_no_color(msg)
+        logger_debug.error(msg, exc_info=True)
 
 
 def _register_def_schema(client: Client,
                          config=None,
+                         update_schema=False,
                          msg_update_callback=utils.NullPrinter(),
                          log_wire=False):
     """Register defined entity interface and defined entity type.
@@ -851,8 +854,23 @@ def _register_def_schema(client: Client,
                           readonly=False)
 
         try:
-            schema_svc.get_entity_type(native_entity_type.get_id())
-            msg = "Skipping creation of Defined Entity Type. Defined Entity Type already exists." # noqa: E501
+            current_native_entity_type = \
+                schema_svc.get_entity_type(native_entity_type.get_id())
+            if update_schema:
+                updated_native_entity_type = def_models.DefEntityType(
+                    id=current_native_entity_type.id,
+                    name=native_entity_type.name, # updated
+                    description=current_native_entity_type.description,
+                    vendor=current_native_entity_type.vendor,
+                    nss=current_native_entity_type.nss,
+                    version=current_native_entity_type.version,
+                    schema=native_entity_type.schema, # updated
+                    interfaces=current_native_entity_type.interfaces,
+                    readonly=current_native_entity_type.readonly)
+                msg = "Updating existing CSE native Defined Entity Type."
+                schema_svc.update_entity_type(updated_native_entity_type)
+            else:
+                msg = "Skipping creation of Defined Entity Type. Defined Entity Type already exists."  # noqa: E501
         except cse_exception.DefSchemaServiceError:
             # TODO handle this part only if the entity type was not found
             native_entity_type = schema_svc.create_entity_type(native_entity_type)  # noqa: E501
@@ -1141,7 +1159,7 @@ def _install_all_templates(
 
 def install_template(template_name, template_revision, config_file_name,
                      config, force_create, retain_temp_vapp, ssh_key,
-                     skip_config_decryption=False, decryption_password=None,
+                     skip_config_decryption=False,
                      msg_update_callback=utils.NullPrinter()):
     """Install a particular template in CSE.
 
@@ -1158,7 +1176,6 @@ def install_template(template_name, template_revision, config_file_name,
     :param bool retain_temp_vapp: if True, temporary vApp will not destroyed,
         so the user can ssh into and debug the vm.
     :param bool skip_config_decryption: do not decrypt the config file.
-    :param str decryption_password: password to decrypt the config file.
     :param utils.ConsoleMessagePrinter msg_update_callback: Callback object.
     """
     populate_vsphere_list(config['vcs'])
@@ -1483,10 +1500,14 @@ def upgrade_cse(config_file_name, config, skip_template_creation,
         # CSE 2.6.02b.dev and CSE 3.0.0+ versions.
         cse_2_6_any_patch = semantic_version.SimpleSpec('>=2.6.0,<2.7.0')
         cse_3_0_any_previous_patch = semantic_version.SimpleSpec('>=3.0.0,<=3.0.3')  # noqa: E501
+        cse_3_0_patch_below_3 = semantic_version.SimpleSpec('>=3.0.0,<3.0.3')
         allow_upgrade = \
             ext_cse_version == server_constants.UNKNOWN_CSE_VERSION or \
             cse_2_6_any_patch.match(ext_cse_version) or \
             cse_3_0_any_previous_patch.match(ext_cse_version)
+        # The TKGm value for kind enum was added in CSE 3.0.3, so any
+        # upgrade from CSE 3.0.0, 3.0.1, 3.0.2 should update the schema.
+        update_schema = cse_3_0_patch_below_3.match(ext_cse_version)
 
         if not allow_upgrade:
             raise Exception(update_path_not_valid_msg)
@@ -1496,9 +1517,7 @@ def upgrade_cse(config_file_name, config, skip_template_creation,
             _legacy_upgrade_to_33_34(
                 client=client,
                 config=config,
-                ext_vcd_api_version=ext_vcd_api_version,
                 skip_template_creation=skip_template_creation,
-                ssh_key=ssh_key,
                 retain_temp_vapp=retain_temp_vapp,
                 admin_password=admin_password,
                 msg_update_callback=msg_update_callback)
@@ -1506,11 +1525,10 @@ def upgrade_cse(config_file_name, config, skip_template_creation,
             _upgrade_to_35(
                 client=client,
                 config=config,
-                ext_vcd_api_version=ext_vcd_api_version,
                 skip_template_creation=skip_template_creation,
-                ssh_key=ssh_key,
                 retain_temp_vapp=retain_temp_vapp,
                 admin_password=admin_password,
+                update_schema=update_schema,
                 msg_update_callback=msg_update_callback,
                 log_wire=log_wire)
         else:
@@ -1591,8 +1609,7 @@ def _update_cse_amqp_extension(client, routing_key, exchange,
     INSTALL_LOGGER.info(msg)
 
 
-def _legacy_upgrade_to_33_34(client, config, ext_vcd_api_version,
-                             skip_template_creation, ssh_key,
+def _legacy_upgrade_to_33_34(client, config, skip_template_creation,
                              retain_temp_vapp, admin_password,
                              msg_update_callback=utils.NullPrinter()):
     # create amqp exchange if it doesn't exist
@@ -1639,10 +1656,9 @@ def _legacy_upgrade_to_33_34(client, config, ext_vcd_api_version,
         msg_update_callback=msg_update_callback)
 
 
-def _upgrade_to_35(client, config, ext_vcd_api_version,
-                   skip_template_creation, ssh_key, retain_temp_vapp,
-                   admin_password, msg_update_callback=utils.NullPrinter(),
-                   log_wire=False):
+def _upgrade_to_35(client, config, skip_template_creation, retain_temp_vapp,
+                   admin_password, update_schema,
+                   msg_update_callback=utils.NullPrinter(), log_wire=False):
     """Handle upgrade to api version 35.
 
     :raises: MultipleRecordsException: (when using mqtt) if more than one
@@ -1667,6 +1683,7 @@ def _upgrade_to_35(client, config, ext_vcd_api_version,
     _register_def_schema(
         client=client,
         config=config,
+        update_schema=update_schema,
         msg_update_callback=msg_update_callback,
         log_wire=log_wire)
 
