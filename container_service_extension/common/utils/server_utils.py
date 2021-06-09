@@ -113,10 +113,11 @@ def get_template_descriptor_keys(cookbook_version: semantic_version.Version) -> 
     """Get template descriptor keys using the cookbook version."""
     # if cookbook version is None, use version 1.0
     if not cookbook_version:
-        cookbook_version = '1.0.0'
+        cookbook_version = \
+            server_constants.RemoteTemplateCookbookVersion.Version1.value
     cookbook_version_to_template_descriptor_keys_map = {
-        '1.0.0': server_constants.RemoteTemplateKeyV1,
-        '2.0.0': server_constants.RemoteTemplateKeyV2
+        server_constants.RemoteTemplateCookbookVersion.Version1.value: server_constants.RemoteTemplateKeyV1,  # noqa: E501
+        server_constants.RemoteTemplateCookbookVersion.Version2.value: server_constants.RemoteTemplateKeyV2  # noqa: E501
     }
     return cookbook_version_to_template_descriptor_keys_map[cookbook_version]
 
