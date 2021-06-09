@@ -79,9 +79,8 @@ def get_sample_cluster_configuration(output=None, k8_runtime=None):
     :return: sample cluster configuration
     :rtype: str
     """
-    if k8_runtime == shared_constants.ClusterEntityKind.TKG:
+    if k8_runtime == shared_constants.ClusterEntityKind.TKG.value:
         sample_cluster_config = SAMPLE_TKG_CLUSTER_SPEC_HELP + _get_sample_tkg_cluster_configuration()  # noqa: E501
-
     else:
         sample_cluster_config = SAMPLE_K8_CLUSTER_SPEC_HELP + _get_sample_cluster_configuration_by_k8_runtime(k8_runtime)  # noqa: E501
 
@@ -129,7 +128,7 @@ def _get_sample_cluster_configuration_by_k8_runtime(k8_runtime):
         metadata=metadata,
         spec=cluster_spec,
         status=status,
-        kind=k8_runtime.value
+        kind=k8_runtime
     )
 
     sample_cluster_config = yaml.dump(dataclasses.asdict(cluster_entity))

@@ -124,10 +124,10 @@ class GroupCommandFilter(click.Group):
 
     # TODO(Make get_command hierarchy aware): Since get_command() cannot know
     # the hierarchical context of 'cmd_name', there is a possibility that
-    # there will be unintended command ommition.
-    # Example: If 'node' command is ommited in cse group, and the filter is
+    # there will be unintended command omission.
+    # Example: If 'node' command is omitted in cse group, and the filter is
     # used in pks group (which is part of cse group), then the 'node' command
-    # under pks group also will be ommitted.
+    # under pks group also will be omitted.
     def get_command(self, ctx, cmd_name):
         """Override this click method to customize.
 
@@ -163,7 +163,7 @@ class GroupCommandFilter(click.Group):
             filtered_params = [param for param in cmd.params if param.name not in unsupported_params]  # noqa: E501
             cmd.params = filtered_params
         except Exception as e:
-            CLIENT_LOGGER.debug(f'exception while filtering {cmd_name}: {e}')
-            pass
+            CLIENT_LOGGER.debug(
+                f'exception while filtering {cmd_name}: {e}', exc_info=True)
 
         return click.Group.get_command(self, ctx, cmd_name)
