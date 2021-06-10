@@ -104,6 +104,13 @@ def _get_sample_cluster_configuration_by_k8_runtime(k8_runtime, server_rde_in_us
     # spec.settings.network is targeted for CSE 3.1.1 to accommodate CNI=Antrea
     # Below line can be deleted post Andromeda (CSE 3.1)
     del native_entity_dict['spec']['settings']['network']
+    # Hiding the cpu and memory properties from controlPlane and workers for
+    # Andromeda (CSE 3.1). Below lines can be deleted once cpu and memory
+    # support is added in CSE 3.1.1
+    del native_entity_dict['spec']['topology']['controlPlane']['cpu']
+    del native_entity_dict['spec']['topology']['controlPlane']['memory']
+    del native_entity_dict['spec']['topology']['workers']['cpu']
+    del native_entity_dict['spec']['topology']['workers']['memory']
 
     sample_apply_spec = yaml.dump(native_entity_dict)
     CLIENT_LOGGER.info(sample_apply_spec)
