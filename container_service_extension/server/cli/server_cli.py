@@ -21,7 +21,6 @@ import yaml
 from container_service_extension.common.constants.server_constants import CONFIG_DECRYPTION_ERROR_MSG, LegacyLocalTemplateKey  # noqa: E501
 from container_service_extension.common.constants.server_constants import LocalTemplateKey  # noqa: E501
 from container_service_extension.common.constants.server_constants import SYSTEM_ORG_NAME  # noqa: E501
-from container_service_extension.common.constants.shared_constants import SUPPORTED_VCD_API_VERSIONS  # noqa: E501
 import container_service_extension.common.utils.core_utils as utils
 import container_service_extension.common.utils.pyvcloud_utils as vcd_utils
 import container_service_extension.common.utils.server_utils as server_utils
@@ -372,16 +371,13 @@ def create_service_role(ctx, vcd_host, skip_verify_ssl_certs):
     is_flag=True,
     help='Generate only sample PKS config')
 @click.option(
-    '-v',
-    '--api-version',
-    'api_version',
+    '-l',
+    '--legacy-mode',
+    'legacy_mode',
     required=False,
-    default=vcd_client.ApiVersion.VERSION_36.value,
-    show_default=True,
-    metavar='API_VERSION',
-    help=f'vCD API version: {SUPPORTED_VCD_API_VERSIONS}. '
-         f'Not needed if only generating PKS config.')
-def sample(ctx, output_file_name, pks_config, api_version):
+    is_flag=True,
+    help="Generate sample config for legacy type")  # noqa: E501
+def sample(ctx, output_file_name, pks_config, legacy_mode):
     """Display sample CSE config file contents."""
     SERVER_CLI_LOGGER.debug(f"Executing command: {ctx.command_path}")
     console_message_printer = utils.ConsoleMessagePrinter()
@@ -391,11 +387,10 @@ def sample(ctx, output_file_name, pks_config, api_version):
     utils.check_python_version()
 
     try:
-        api_version = float(api_version)
         sample_config = generate_sample_config(
             output_file_name=output_file_name,
             generate_pks_config=pks_config,
-            api_version=api_version)
+            legacy_mode=legacy_mode)
     except Exception as err:
         console_message_printer.error(str(err))
         SERVER_CLI_LOGGER.error(str(err))
@@ -570,7 +565,7 @@ def encrypt(ctx, input_file, output_file):
         sys.exit(1)
 
 
-@cli.command(short_help='Install CSE extension 3.0.0 on vCD')
+@cli.command(short_help='Install CSE extension 3.1.0 on vCD')
 @click.pass_context
 @click.option(
     '-c',
@@ -619,7 +614,25 @@ def encrypt(ctx, input_file, output_file):
 def install(ctx, config_file_path, pks_config_file_path,
             skip_config_decryption, skip_template_creation,
             retain_temp_vapp, ssh_key_file):
-    """Install CSE on vCloud Director."""
+    """Install CSE on vCloud Director.
+
+\b
+    - legacy_mode is config property that is used to configure CSE with
+      desired version of VCD.
+    - Set legacy_mode=true if CSE 3.1 is configured with VCD whose maximum
+      supported api_version < 35.
+    - Set legacy_mode=false if CSE 3.1 is configured with VCD whose maximum
+      supported api_version >= 35.
+    - Note: legacy_mode=true is a valid condition for CSE 3.1 configured with
+      VCD whose maximum supported api_version >= 35. However, it is strongly
+      recommended to set the property to false to leverage the new
+      functionality.
+    - When legacy_mode=true, supported template information are based on
+      remote-template-cookbook version "1.0.0".
+    - When legacy_mode=false, supported template information are based on
+      remote-template-cookbook version "2.0.0", min_cse_version and
+      max_cse_version.
+    """
     # NOTE: For CSE 3.0, if `enable_tkg_plus` in config file is set to false
     # and if `cse install` is invoked without skipping template creation,
     # an Exception will be thrown if TKG+ template is present in the
@@ -761,7 +774,19 @@ def pks_configure(ctx, pks_config_file_path, skip_config_decryption):
     help='Skip decryption of CSE/PKS config file')
 def run(ctx, config_file_path, pks_config_file_path, skip_check,
         skip_config_decryption):
-    """Run CSE service."""
+    """Run CSE service.
+
+    legacy_mode is config property that is used to configure CSE with
+    desired version of VCD.
+    Set legacy_mode=true if CSE 3.1 is configured with VCD whose maximum
+    supported api_version < 35.
+    Set legacy_mode=false if CSE 3.1 is configured with VCD whose maximum
+    supported api_version >= 35.
+    Note: legacy_mode=true is a valid condition for CSE 3.1 configured with
+    VCD whose maximum supported api_version >= 35. However, it is strongly
+    recommended to set the property to false to leverage the new functionality.
+
+    """
     SERVER_CLI_LOGGER.debug(f"Executing command: {ctx.command_path}")
     console_message_printer = utils.ConsoleMessagePrinter()
     utils.check_python_version(console_message_printer)
@@ -808,7 +833,7 @@ def run(ctx, config_file_path, pks_config_file_path, skip_check,
 
 
 @cli.command('upgrade',
-             short_help="Upgrade CSE extension to version 3.0.0 on vCD")
+             short_help="Upgrade CSE extension to version 3.1.0 on vCD")
 @click.pass_context
 @click.option(
     '-c',
@@ -850,17 +875,36 @@ def run(ctx, config_file_path, pks_config_file_path, skip_check,
 def upgrade(ctx, config_file_path, skip_config_decryption,
             skip_template_creation, retain_temp_vapp,
             ssh_key_file):
-    """Upgrade existing CSE installation/entities to match CSE 3.1.
+    """Upgrade existing CSE installation/entities to match CSE 3.1.0.
 
 \b
-    - Add CSE / VCD API version info to VCD's extension data for CSE
+    - Add CSE, RDE version, Legacy mode info to VCD's extension data for CSE
     - Register defined entities schema of CSE k8s clusters with VCD
     - Create placement compute policies used by CSE
     - Remove old sizing compute policies created by CSE 2.6 and below
     - Install all templates from template repository linked in config file
-    - Update currently installed templates that are no longer defined in
-      CSE template repository to adhere to CSE 3.0 template requirements.
-    - Update existing CSE k8s cluster's to match CSE 3.0 k8s clusters.
+    - Currently installed templates that are no longer compliant with
+      new CSE template cookbook will not be recognized by CSE 3.1. Admins can
+      safely delete them once new templates are installed and the existing
+      clusters are upgraded to newer template revisions.
+    - Update existing CSE k8s cluster's to match CSE 3.1 k8s clusters.
+    - Upgrading legacy clusters would require new template creation supported
+      by CSE 3.1.0
+    - legacy_mode is config property that is used to configure CSE with
+      desired version of VCD.
+    - Set legacy_mode=true if CSE 3.1 is configured with VCD whose maximum
+      supported api_version < 35.
+    - Set legacy_mode=false if CSE 3.1 is configured with VCD whose maximum
+      supported api_version >= 35.
+    - NOTE: legacy_mode=true is a valid condition for CSE 3.1 configured with
+      VCD whose maximum supported api_version >= 35. However, it is strongly
+      recommended to set the property to false to leverage
+      the new functionality.
+    - When legacy_mode=true, supported template information are based on
+      remote-template-cookbook version "1.0.0".
+    - When legacy_mode=false, supported template information are based on
+      remote-template-cookbook version "2.0.0", min_cse_version and
+      max_cse_version.
     """
     # NOTE: For CSE 3.0, if `enable_tkg_plus` in the config is set to false,
     # an exception is thrown if
@@ -1167,6 +1211,16 @@ def install_cse_template(ctx, template_name, template_revision,
 
     Use '*' for TEMPLATE_NAME and TEMPLATE_REVISION to install
     all listed templates.
+
+    legacy_mode is config property that is used to configure CSE with
+    desired version of VCD.
+
+    When legacy_mode=true, supported template information are based on
+    remote-template-cookbook version "1.0.0".
+
+    When legacy_mode=false, supported template information are based on
+    remote-template-cookbook version "2.0.0", min_cse_version and
+    max_cse_version.
     """
     # NOTE: For CSE 3.0, if `enable_tkg_plus` flag in config is set to false,
     # Throw an error if TKG+ template creation is issued.
