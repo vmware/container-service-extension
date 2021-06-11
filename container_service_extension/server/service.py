@@ -711,8 +711,8 @@ class Service(object, metaclass=Singleton):
                                                               log_wire=self.config['service'].get('log_wire'))  # noqa: E501
 
             for template in self.config['broker']['templates']:
-                policy_name = template[server_constants.LocalTemplateKey.COMPUTE_POLICY]  # noqa: E501
-                catalog_item_name = template[server_constants.LocalTemplateKey.CATALOG_ITEM_NAME]  # noqa: E501
+                policy_name = template[server_constants.LegacyLocalTemplateKey.COMPUTE_POLICY]  # noqa: E501
+                catalog_item_name = template[server_constants.LegacyLocalTemplateKey.CATALOG_ITEM_NAME]  # noqa: E501
                 # if policy name is not empty, stamp it on the template
                 if policy_name:
                     try:
