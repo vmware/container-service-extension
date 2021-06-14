@@ -3,8 +3,9 @@
 # SPDX-License-Identifier: BSD-2-Clause
 
 """Utility module to perform operations which involve pyvcloud calls."""
-
+from datetime import datetime, timedelta
 import pathlib
+import time
 from typing import Optional
 import urllib
 
@@ -16,13 +17,16 @@ from pyvcloud.vcd.utils import get_admin_href
 from pyvcloud.vcd.utils import to_dict
 import pyvcloud.vcd.vapp as vcd_vapp
 from pyvcloud.vcd.vdc import VDC
+from pyvcloud.vcd.vm import VM
 import requests
 
+import container_service_extension.common.constants.server_constants as server_constants # noqa: E501
 import container_service_extension.common.constants.shared_constants as shared_constants  # noqa: E501
 from container_service_extension.common.utils.core_utils import extract_id_from_href  # noqa: E501
 from container_service_extension.common.utils.core_utils import NullPrinter
 from container_service_extension.common.utils.core_utils import str_to_bool
 from container_service_extension.common.utils.server_utils import get_server_runtime_config  # noqa: E501
+import container_service_extension.exception.exceptions as exceptions
 import container_service_extension.lib.cloudapi.cloudapi_client as cloud_api_client  # noqa: E501
 from container_service_extension.logging.logger import NULL_LOGGER
 from container_service_extension.logging.logger import SERVER_DEBUG_WIRELOG_FILEPATH  # noqa: E501
@@ -675,3 +679,56 @@ def get_org_id_from_vdc_name(client: vcd_client.Client, vdc_name: str):
         org_resource = client.get_org_by_name(org_name)
         org_urn_id = org_resource.attrib['id']
     return extract_id(org_urn_id)
+
+
+def get_vm_extra_config_element(vm: VM, element_name: str) -> str:
+    """Get the value of extra config element of given VM.
+
+    :param VM vm:
+    :param str element_name:
+    :return: value of config element
+    :rtype: str
+    """
+    vm_extra_config_elements: dict = vm.list_vm_extra_config_info()
+    return vm_extra_config_elements.get(element_name)
+
+
+def wait_for_completion_of_post_customization_step(
+        vm: VM,
+        customization_phase: str,
+        timeout=server_constants.DEFAULT_POST_CUSTOMIZATION_TIMEOUT_SEC,
+        poll_frequency=server_constants.DEFAULT_POST_CUSTOMIZATION_POLL_SEC,
+        expected_target_statuses=server_constants.DEFAULT_POST_CUSTOMIZATION_STATUSES):  # noqa: E501
+    """Wait for given post customization phase to reach final expected status.
+
+    :param VM vm: vm res
+    :param str customization_phase:
+    :param float timeout: Time in seconds to wait for customization phase to
+    finish
+    :param float poll_frequency: time in seconds for how often to poll the
+    status of customization_phase
+    :param list expected_target_statuses: list of expected target statuses
+    :return: str name of last customization phase
+    :rtype: str
+    :raises PostCustomizationTimeoutError: if customization phase is not
+    finished within given time
+    :raises InvalidCustomizationStatus: If customization enters a status
+    not in valid target status
+    """
+    start_time = datetime.now()
+    current_status = expected_target_statuses[0]
+    remaining_statuses = list(expected_target_statuses)
+    while True:
+        new_status = get_vm_extra_config_element(vm, customization_phase)
+        if new_status not in remaining_statuses:
+            raise exceptions.InvalidCustomizationStatus
+        # update the remaining statuses on status change
+        if new_status != current_status:
+            remaining_statuses.remove(current_status)
+        # Check for successful customization: reached last status
+        if new_status == expected_target_statuses[-1]:
+            return new_status
+        if datetime.now() - start_time > timedelta(seconds=timeout):
+            break
+        time.sleep(poll_frequency)
+    raise exceptions.PostCustomizationTimeoutError
