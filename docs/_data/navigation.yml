@@ -1,4 +1,4 @@
-- name: CSE 3.1
+- name: Work_in_progress
   subdir: cse3_1
   link: CSE31.html
   default: false
