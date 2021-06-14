@@ -707,3 +707,15 @@ NAT_DEFAULT_PAGE_SIZE = 25
 
 # Pagination constants for used IP addresses
 USED_IP_ADDRESS_PAGE_SIZE = 10
+
+
+@unique
+class PostCustomizationStatus(Enum):
+    NONE = None
+    IN_PROGRESS = 'IN_PROGRESS'
+    SUCCESSFUL = 'SUCCESSFUL'
+
+
+DEFAULT_POST_CUSTOMIZATION_STATUSES = [cust_status.value for cust_status in PostCustomizationStatus]  # noqa: E501
+DEFAULT_POST_CUSTOMIZATION_POLL_SEC = 5
+DEFAULT_POST_CUSTOMIZATION_TIMEOUT_SEC = 180
