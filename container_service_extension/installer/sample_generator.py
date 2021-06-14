@@ -2,11 +2,7 @@
 # Copyright (c) 2019 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 
-from pyvcloud.vcd.client import ApiVersion
 import yaml
-
-from container_service_extension.common.constants.server_constants import MQTT_MIN_API_VERSION  # noqa: E501
-from container_service_extension.common.constants.shared_constants import SUPPORTED_VCD_API_VERSIONS  # noqa: E501
 
 
 INSTRUCTIONS_FOR_PKS_CONFIG_FILE = "\
@@ -297,7 +293,7 @@ SAMPLE_PKS_NSXT_SERVERS_SECTION = {
 
 
 def generate_sample_config(
-        output_file_name: str, generate_pks_config: bool, api_version: str):
+        output_file_name: str, generate_pks_config: bool, legacy_mode=False):
     """Generate sample configs for cse.
 
     If output config file name is provided, config is dumped into the file.
@@ -306,21 +302,17 @@ def generate_sample_config(
         CSE configs.
     :param bool generate_pks_config: Flag to generate sample of PKS specific
         configuration file instead of sample regular CSE configuration file.
-    :param float api_version: the desired api version for the config file.
+    :param bool legacy_mode: if True to configure CSE with whose maximum
+    supported api_version < 35. if False to configure CSE with whose maximum
+    supported api_version >= 35
 
     :return: sample config
 
     :rtype: dict
     """
-    api_version_str = str(api_version)
-    if api_version_str not in SUPPORTED_VCD_API_VERSIONS:
-        raise Exception(f'vCD API version {api_version} is not supported. '
-                        f'Please pick one of the following API versions: '
-                        f'{SUPPORTED_VCD_API_VERSIONS}')
-
     if not generate_pks_config:
         # Select message protocol section
-        if api_version >= MQTT_MIN_API_VERSION:
+        if not legacy_mode:
             sample_config = COMMENTED_AMQP_SECTION + '\n'
             sample_config += yaml.safe_dump(SAMPLE_MQTT_CONFIG) + '\n'
         else:
@@ -332,16 +324,19 @@ def generate_sample_config(
         sample_config += yaml.safe_dump(SAMPLE_VCS_CONFIG,
                                         default_flow_style=False) + '\n'
 
-        updated_service_config = dict(SAMPLE_SERVICE_CONFIG)
-        if api_version < float(ApiVersion.VERSION_35.value):
-            updated_service_config['service']['legacy_mode'] = False
-        sample_config += yaml.safe_dump(updated_service_config,
+        if legacy_mode:
+            SAMPLE_SERVICE_CONFIG['service']['legacy_mode'] = True
+
+        sample_config += yaml.safe_dump(SAMPLE_SERVICE_CONFIG,
                                         default_flow_style=False) + '\n'
+
+        if legacy_mode:
+            SAMPLE_BROKER_CONFIG['broker']['remote_template_cookbook_url'] = 'http://raw.githubusercontent.com/vmware/container-service-extension-templates/upgrades/template.yaml' # noqa: E501
 
         sample_config += yaml.safe_dump(SAMPLE_BROKER_CONFIG,
                                         default_flow_style=False) + '\n'
 
-        if updated_service_config['service']['legacy_mode']:
+        if SAMPLE_SERVICE_CONFIG['service']['legacy_mode']:
             sample_config += TEMPLATE_RULE_NOTE + '\n'
     else:
         sample_config = yaml.safe_dump(

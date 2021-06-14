@@ -16,6 +16,9 @@ from container_service_extension.logging.logger import CLIENT_LOGGER
 def template_group(ctx):
     """Manage native kubernetes runtime templates.
 
+Templates that are no longer compliant with CSE template cookbook
+specification will be ignored.
+
 \b
 Examples
     vcd cse template list

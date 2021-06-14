@@ -37,6 +37,10 @@ class ControlPlane:
     sizing_class: Optional[str] = None
     storage_profile: Optional[str] = None
     count: int = 1
+    # cpu in Ghz
+    cpu: Optional[int] = None
+    # memory in Mb
+    memory: Optional[int] = None
 
 
 @dataclass_json(letter_case=LetterCase.CAMEL)
@@ -45,6 +49,10 @@ class Workers:
     sizing_class: Optional[str] = None
     storage_profile: Optional[str] = None
     count: int = 0
+    # cpu in Ghz
+    cpu: Optional[int] = None
+    # memory in Mb
+    memory: Optional[int] = None
 
 
 @dataclass_json(letter_case=LetterCase.CAMEL)
@@ -104,6 +112,10 @@ class Node:
     ip: str
     sizing_class: Optional[str] = None
     storage_profile: Optional[str] = None
+    # cpu in Ghz
+    cpu: Optional[int] = None
+    # memory in Mb
+    memory: Optional[int] = None
 
 
 @dataclass_json(letter_case=LetterCase.CAMEL)

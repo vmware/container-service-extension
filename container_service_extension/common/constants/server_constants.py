@@ -200,7 +200,7 @@ class ClusterScriptFile(str, Enum):
     """Types of script for vApp template customizations in CSE."""
 
     SCRIPTS_DIR = "cluster_scripts"
-    CONTROL_PLANE = 'mstr.sh'
+    CONTROL_PLANE = 'control_plane.sh'
     NODE = 'node.sh'
 
     # Note that we need _ in the version instead of dots to allow

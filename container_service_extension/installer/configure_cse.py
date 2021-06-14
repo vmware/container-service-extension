@@ -2520,7 +2520,7 @@ def _print_users_in_need_of_def_rights(
 
     msg = "The following users own CSE k8s clusters and will require " \
           "`cse:nativeCluster Entitlement` right bundle " \
-          "to access them in CSE 3.0"
+          "to access them in CSE 3.1"
     org_users_msg = ""
     for org_name, user_list in org_user_dict.items():
         org_users_msg += f"\nOrg : {org_name} -> Users : {', '.join(set(user_list))}"  # noqa: E501
