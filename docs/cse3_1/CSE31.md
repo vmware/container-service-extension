@@ -8,23 +8,26 @@ For greenfield installations, please get started with [CSE introduction](INTRO.h
 
 <a name="overview"></a>
 ## 1. Overview
-* Starting CSE 3.1, life cycle management of native clusters can be performed 
-  using VCD's defined entity API [usage](TBD)
+* CSE 3.1, when configured with VCD 10.3, life cycle management of native clusters 
+  can be performed using VCD's defined entity API [usage](TBD). 
   
 * It is no longer needed to start the CSE server with a particular VCD API 
   version. CSE 3.1 is now capable of accepting incoming requests at any supported 
-  VCD API version.
+  VCD API version. Refer to changes in the [configuration file](#cse31-config).
   
 * A new version of the template recipe cookbook is introduced. Each template 
-  definition in the cookbook has new descriptors, letting CSE deterministically 
-  identify the valid templates it can support. 
+  definition in the cookbook has new descriptors, letting CSE server deterministically 
+  identify the valid templates it can support. Refer to changes in the [configuration file](#cse31-config)
   
-* Tenant UI supports cluster upgrade workflows for both native and vSphere with 
+* Kubernetes Cluster UI supports cluster upgrade workflows for both native and vSphere with 
   Tanzu clusters.
   
 * CSE-CLI supports below workflows for both native and vSphere with Tanzu clusters.
     - cluster upgrade workflow through `vcd cse cluster apply` command.
     - cluster share workflow through `vcd cse cluster share` command.
+    
+* Newer versions of native Kubernetes templates are available. Refer to 
+  [Template announcements](TEMPLATE_ANNOUNCEMENTS.html)
 
 **Terminology:**
 * TKG cluster ~ Tanzu Kubernetes  cluster ~ Tanzu Kubernetes Grid cluster ~ vSphere with Tanzu cluster
@@ -59,6 +62,28 @@ For greenfield installations, please get started with [CSE introduction](INTRO.h
 | 10.0        | 33.0                      |
 
 ### 2.2 CSE Server
+
+<a name="cse31-config"></a>
+#### 2.2.0 Changes in the configuration file
+Refer to the [sample config file](CSE_CONFIG.html)
+
+1. Removal of property `api_version`: Starting CSE 3.1, it is no longer needed to start CSE with a 
+   particular VCD API version. As a side effect, CSE 3.1 will not recognize `api_version` 
+   property under `vcd` section of the config file. This property can be safely deleted.
+   
+2. Addition of property `legacy_mode`: This property indicates whether CSE server 
+   needs to leverage the latest features like the RDE framework, placement policies of VCD or not.
+   * set the `legacy_mode` to true if CSE 3.1 is configured with VCD 10.1. End users 
+     will see native clusters as regular vApps with some Kubernetes specific metadata.
+   * set the `legacy_mode` to false if CSE 3.1 is configured with VCD >= 10.2. 
+     End users will see native clusters as VCD's first class objects in the form of RDEs.
+   * Note that CSE 3.1, when configured with VCD>=10.2, will not complain if 
+     `legacy_mode` is set to true, but this is not recommended as it prevents CSE 3.1 
+     to operate at its full potential.
+    
+3. Location of new template cookbook `remote_template_cookbook_url`: When 
+4. Interrelation between the values of `legacy_mode` and `remote_template_cookbook_url`:
+
 #### 2.2.1 Greenfield installation
 When CSE 3.0 is configured with vCD 10.2, CSE installation command
 `cse install -c config.yaml` does two additional steps over previous versions. 
