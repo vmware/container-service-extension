@@ -180,6 +180,12 @@ class Ovdc:
 
 
 @dataclass()
+class Tenant:
+    name: Optional[str] = None
+    id: Optional[str] = None
+
+
+@dataclass()
 class ClusterAclEntry:
     accessLevelId: Optional[str] = None
     memberId: Optional[str] = None
@@ -187,6 +193,7 @@ class ClusterAclEntry:
     grantType: Optional[str] = None
     objectId: Optional[str] = None
     username: Optional[str] = None
+    tenant: Optional[Tenant] = None
 
     def construct_filtered_dict(self, include=None):
         if include is None:

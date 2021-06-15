@@ -1182,10 +1182,11 @@ Examples:
 
         # Determine cluster type and retrieve cluster id if needed
         client = ctx.obj['client']
-        # TODO(CLI): Check regarding is sysadmin client check
-        if not org:
-            ctx_profiles = ctx.obj['profiles']
-            org = ctx_profiles.get('org')
+        # Users should be explicit in their intent about the org on which the
+        # command needs to be executed.
+        if not client.is_sysadmin() and org is None:
+            org = ctx.obj['profiles'].get('org_in_use')
+
         cluster = Cluster(client, k8_runtime)
         share_entries = cluster.list_share_entries(cluster_id, name, org, vdc)
         client_utils.print_paginated_result(share_entries, should_print_all)
