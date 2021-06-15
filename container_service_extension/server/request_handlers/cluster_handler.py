@@ -21,7 +21,6 @@ import container_service_extension.common.constants.server_constants as server_c
 from container_service_extension.common.constants.shared_constants import ClusterAclKey  # noqa: E501
 from container_service_extension.common.constants.shared_constants import CSE_PAGINATION_DEFAULT_PAGE_SIZE  # noqa: E501
 from container_service_extension.common.constants.shared_constants import CSE_PAGINATION_FIRST_PAGE_NUMBER  # noqa: E501
-from container_service_extension.common.constants.shared_constants import HttpResponseHeader  # noqa: E501
 from container_service_extension.common.constants.shared_constants import PaginationKey  # noqa: E501
 from container_service_extension.common.constants.shared_constants import RequestKey  # noqa: E501
 import container_service_extension.common.thread_local_data as thread_local_data  # noqa: E501
@@ -79,16 +78,12 @@ def cluster_create(data: dict, op_ctx: ctx.OperationContext):
         org_resource = pyvcloud_utils.get_org(op_ctx.client, org_name=converted_entity.metadata.org_name)  # noqa: E501
         org_context = org_resource.href.split('/')[-1]
 
-    _, headers = def_entity_service.create_entity(
+    _, task_href = def_entity_service.create_entity(
         entity_type_id=entity_type.id,
         entity=def_entity,
         tenant_org_context=org_context,
-        return_response_headers=True)
+        is_request_async=True)
 
-    # Get the created defined entity and update the task href
-    # TODO: Use the Htttp response status code to decide which header name to use for task_href  # noqa: E501
-    # 202 - location header, 200 - xvcloud-task-location needs to be used
-    task_href = headers[HttpResponseHeader.LOCATION.value]
     task_resource = op_ctx.sysadmin_client.get_resource(task_href)
     entity_id = task_resource.Owner.get('id')
     def_entity = def_entity_service.get_entity(entity_id)
@@ -210,12 +205,10 @@ def cluster_update(data: dict, op_ctx: ctx.OperationContext):
     converted_native_entity: AbstractNativeEntity = rde_utils.convert_input_rde_to_runtime_rde_format(input_entity)  # noqa: E501
     cluster_def_entity: common_models.DefEntity = def_entity_service.get_entity(cluster_id)  # noqa: E501
     cluster_def_entity.entity.spec = converted_native_entity.spec
-    updated_def_entity, headers = def_entity_service.update_entity(
+    updated_def_entity, task_href = def_entity_service.update_entity(
         entity_id=cluster_id, entity=cluster_def_entity,
-        invoke_hooks=True, return_response_headers=True)
-    # TODO: Use the Htttp response status code to decide which header name to use for task_href  # noqa: E501
-    # 202 - location header, 200 - xvcloud-task-location needs to be used
-    updated_def_entity.entity.status.task_href = headers.get(HttpResponseHeader.X_VMWARE_VCOULD_TASK_LOCATION.value)  # noqa: E501
+        invoke_hooks=True, is_request_async=True)
+    updated_def_entity.entity.status.task_href = task_href
     # TODO: Response RDE must be compatible with the request RDE.
     #  Conversions may be needed especially if there is a major version
     #  difference in the input RDE and runtime RDE.
@@ -248,10 +241,8 @@ def cluster_delete(data: dict, op_ctx: ctx.OperationContext):
     cluster_id = data[RequestKey.CLUSTER_ID]
     def_entity_service = entity_service.DefEntityService(op_ctx.cloudapi_client)  # noqa: E501
     def_entity: common_models.DefEntity = def_entity_service.get_entity(cluster_id)  # noqa: E501
-    _, headers = def_entity_service.delete_entity(cluster_id, invoke_hooks=True, return_response_headers=True)  # noqa: E501
-    # TODO: Use the Htttp response status code to decide which header name to use for task_href  # noqa: E501
-    # 202 - location header, 200 - xvcloud-task-location needs to be used
-    def_entity.entity.status.task_href = headers.get(HttpResponseHeader.LOCATION.value)  # noqa: E501
+    _, task_href = def_entity_service.delete_entity(cluster_id, invoke_hooks=True, is_request_async=True)  # noqa: E501
+    def_entity.entity.status.task_href = task_href
     return def_entity.to_dict()
 
 
