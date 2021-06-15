@@ -5,6 +5,40 @@ title: Release Notes
 
 # Release Notes
 
+## CSE 3.0.3 GA (3.0.3)
+Release Date: 2021-06-17
+
+**Supported (and Tested) VCD versions** : 10.2.2, 10.1.3, 10.0.0.3
+
+Note : Future update/patch releases of these vCD versions will be supported by CSE but
+they won't be tested individually. If a bug is found in their interoperability
+with CSE, please file a github [issue](https://github.com/vmware/container-service-extension/issues),
+the same will be fixed in a future CSE release.
+
+| CSE Server | CSE CLI | CSE UI  | Cloud Director | Cloud Director NSX-T | Ent-PKS with NSX-T | Features offered                                                                                    |
+|------------|---------|---------|----------------|----------------------|--------------------|-----------------------------------------------------------------------------------------------------|
+| 3.0.3      | 3.0.3   | 2.2.1** | 10.2.2         | 3.0.2, 3.1.2         | 1.7 with 2.5.1     | Native, TKG, and Ent-PKS Cluster management; Defined entity representation for both native and TKG. |
+| 3.0.3      | 3.0.3   | 1.0.3   | 10.1, 10.0     | NA                   | 1.7 with 2.5.1     | Native and Ent-PKS cluster management                                                               |
+| NA         | 3.0.2   | 2.2.1** | 10.2.2         | NA                   | NA                 | TKG cluster management only                                                                         |
+
+** Kubernetes clusters UI plug-in v2.2.1 needs to be downloaded separately from
+[here](insert link here) and uploaded to VCD. By default VCD 10.2.2 will have
+Container UI plug-in v2.2.0.
+
+**What's New**
+* Bug Fixes
+    * Storage profile not being honored by CSE when specified during cluster deployment 
+    * Exposed native clusters losing their exposed IP on cluster resize
+* Changes in flags for the following commands
+    * `vcd cse ovdc enable` - --tkg-plus/-t changed to --tkg-plus/-p
+    * `vcd cse ovdc disable` - --tkg-plus/-t changed to --tkg-plus/-p
+    * `vcd cse cluster apply` - --tkg/-t changed to --tkg/-k
+    * `vcd cse cluster apply` - --tkg-plus/-k changed to --tkg-plus/-p
+
+**Notes to System Administrator**
+If you are upgrading from an existing CSE 3.0.x installation please be aware of
+the issue related to runtime defined entities listed in [Known Issues](KNOWN_ISSUES.html).
+
 ## CSE 3.1.0 Beta (3.1.0.0b1)
 Release Date: 2021-04-14
 
