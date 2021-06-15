@@ -15,11 +15,13 @@ from pyvcloud.vcd.org import Org
 from pyvcloud.vcd.vdc import VDC
 from vcd_cli.vcd import vcd
 
-from container_service_extension.common.constants.server_constants import CSE_SERVICE_NAME  # noqa: E501
-from container_service_extension.common.constants.server_constants import CSE_SERVICE_NAMESPACE  # noqa: E501
-from container_service_extension.common.constants.shared_constants import SYSTEM_ORG_NAME  # noqa: E501
+import container_service_extension.common.constants.server_constants as server_constants
+from container_service_extension.common.constants.shared_constants import SUPPORTED_VCD_API_VERSIONS
+from container_service_extension.common.utils.core_utils import get_max_api_version  # noqa: E501
 import container_service_extension.common.utils.pyvcloud_utils as pyvcloud_utils  # noqa: E501
 from container_service_extension.installer.templates.remote_template_manager import RemoteTemplateManager  # noqa: E501
+from container_service_extension.mqi.mqtt_extension_manager import \
+    MQTTExtensionManager
 import container_service_extension.system_test_framework.utils as testutils
 
 
@@ -48,11 +50,22 @@ SCRIPTS_DIR = 'scripts'
 SSH_KEY_FILEPATH = str(Path.home() / '.ssh' / 'id_rsa.pub')
 CLI_RUNNER = CliRunner()
 SYS_ADMIN_TEST_CLUSTER_NAME = 'testclustersystem'
+CLUSTER_ADMIN_TEST_CLUSTER_NAME = 'testclusteradmin'
+CLUSTER_AUTHOR_TEST_CLUSTER_NAME = 'testclusterauthor'
+
+# TODO remove legacy test clusters after removing legacy mode
 ORG_ADMIN_TEST_CLUSTER_NAME = 'testclusteradmin'
 K8_AUTHOR_TEST_CLUSTER_NAME = 'testclusterk8'
 
 # required user info
 SYS_ADMIN_NAME = 'sys_admin'
+CLUSTER_ADMIN_NAME = 'cluster_admin'
+CLUSTER_ADMIN_PASSWORD = 'password'
+CLUSTER_ADMIN_ROLE_NAME = 'cluster_admin_role'
+CLUSTER_AUTHOR_NAME = 'cluster_author'
+CLUSTER_AUTHOR_PASSWORD = 'password'
+CLUSTER_AUTHOR_ROLE_NAME = 'cluster_author_role'
+# TODO remove legacy users after removing legacy mode
 ORG_ADMIN_NAME = 'org_admin'
 ORG_ADMIN_PASSWORD = 'password'  # nosec: test environment
 ORG_ADMIN_ROLE_NAME = 'Organization Administrator'
@@ -60,6 +73,8 @@ VAPP_AUTHOR_ROLE_NAME = 'vApp Author'
 K8_AUTHOR_NAME = 'k8_author'
 K8_AUTHOR_PASSWORD = 'password'  # nosec: test environment
 K8_AUTHOR_ROLE_NAME = 'k8 Author'
+
+VCD_API_VERSION_TO_USE = None
 
 # config file 'test' section flags
 TEARDOWN_INSTALLATION = None
@@ -73,6 +88,9 @@ TEST_VDC_HREF = None
 
 # Persona login cmd
 SYS_ADMIN_LOGIN_CMD = None
+CLUSTER_ADMIN_LOGIN_CMD = None
+CLUSTER_AUTHOR_LOGIN_CMD = None
+# TODO remove legacy login command after removing legacy mode
 ORG_ADMIN_LOGIN_CMD = None
 K8_AUTHOR_LOGIN_CMD = None
 USER_LOGOUT_CMD = "logout"
@@ -90,7 +108,94 @@ WAIT_INTERVAL = 30
 DUPLICATE_NAME = "DUPLICATE_NAME"
 VIEW_PUBLISHED_CATALOG_RIGHT = 'Catalog: View Published Catalogs'
 
+def init_rde_environment(config_filepath=BASE_CONFIG_FILEPATH):
+    """Set up module variables according to config dict.
 
+    :param str config_filepath:
+    """
+    global CLIENT, ORG_HREF, VDC_HREF, \
+        CATALOG_NAME, TEARDOWN_INSTALLATION, TEARDOWN_CLUSTERS, \
+        TEMPLATE_DEFINITIONS, TEST_ALL_TEMPLATES, SYS_ADMIN_LOGIN_CMD, \
+        CLUSTER_ADMIN_LOGIN_CMD, CLUSTER_AUTHOR_LOGIN_CMD, USERNAME_TO_LOGIN_CMD, \
+        USERNAME_TO_CLUSTER_NAME, TEST_ORG_HREF, TEST_VDC_HREF, \
+        VCD_API_VERSION_TO_USE
+
+    config = testutils.yaml_to_dict(config_filepath)
+
+    # download all remote template scripts
+    rtm = RemoteTemplateManager(
+        config['broker']['remote_template_cookbook_url'],
+        legacy_mode=config['service']['legacy_mode'])
+    template_cookbook = rtm.get_filtered_remote_template_cookbook()
+    TEMPLATE_DEFINITIONS = template_cookbook['templates']
+    rtm.download_all_template_scripts(force_overwrite=True)
+
+    # setup test variables
+    init_test_vars(config['test'])
+
+    sysadmin_client = Client(
+            config['vcd']['host'],
+            verify_ssl_certs=config['vcd']['verify'])
+    sysadmin_client.set_credentials(BasicLoginCredentials(
+        config['vcd']['username'],
+        server_constants.SYSTEM_ORG_NAME,
+        config['vcd']['password']))
+
+    vcd_supported_api_versions = \
+            set(sysadmin_client.get_supported_versions_list())
+    cse_supported_api_versions = set(SUPPORTED_VCD_API_VERSIONS)
+    common_supported_api_versions = \
+        list(cse_supported_api_versions.intersection(vcd_supported_api_versions))  # noqa: E501
+    common_supported_api_versions.sort()
+    max_api_version = get_max_api_version(common_supported_api_versions)
+    CLIENT = Client(config['vcd']['host'],
+                    api_version=max_api_version,
+                    verify_ssl_certs=config['vcd']['verify'])
+    credentials = BasicLoginCredentials(config['vcd']['username'],
+                                        server_constants.SYSTEM_ORG_NAME,
+                                        config['vcd']['password'])
+    CLIENT.set_credentials(credentials)
+    VCD_API_VERSION_TO_USE = max_api_version
+    CATALOG_NAME = config['broker']['catalog']
+
+    SYS_ADMIN_LOGIN_CMD = f"login {config['vcd']['host']} system " \
+                          f"{config['vcd']['username']} " \
+                          f"-iwp {config['vcd']['password']} " \
+                          f"-V {VCD_API_VERSION_TO_USE}"
+    CLUSTER_ADMIN_LOGIN_CMD = f"login {config['vcd']['host']} " \
+                          f"{TEST_ORG}" \
+                          f" {CLUSTER_ADMIN_NAME} -iwp {CLUSTER_ADMIN_PASSWORD} " \
+                          f"-V {VCD_API_VERSION_TO_USE}"
+
+    USERNAME_TO_LOGIN_CMD = {
+        'sys_admin': SYS_ADMIN_LOGIN_CMD,
+        'cluster_admin': CLUSTER_ADMIN_LOGIN_CMD,
+        'cluster_author': CLUSTER_AUTHOR_LOGIN_CMD
+    }
+
+    USERNAME_TO_CLUSTER_NAME = {
+        'sys_admin': SYS_ADMIN_TEST_CLUSTER_NAME,
+        'cluster_admin': CLUSTER_ADMIN_TEST_CLUSTER_NAME,
+        'cluster_author': CLUSTER_AUTHOR_TEST_CLUSTER_NAME
+    }
+
+    # hrefs for Org and VDC that hosts the catalog
+    org = pyvcloud_utils.get_org(CLIENT, org_name=config['broker']['org'])
+    vdc = pyvcloud_utils.get_vdc(CLIENT, vdc_name=config['broker']['vdc'],
+                                 org=org)
+    ORG_HREF = org.href
+    VDC_HREF = vdc.href
+
+    # hrefs for Org and VDC that tests cluster operations
+    test_org = pyvcloud_utils.get_org(CLIENT, org_name=TEST_ORG)
+    test_vdc = pyvcloud_utils.get_vdc(CLIENT, vdc_name=TEST_VDC, org=test_org)
+    TEST_ORG_HREF = test_org.href
+    TEST_VDC_HREF = test_vdc.href
+
+    create_cluster_admin_role(config['vcd'])
+    create_cluster_author_role(config['vcd'])
+
+# TODO remove after removing legacy mode
 def init_environment(config_filepath=BASE_CONFIG_FILEPATH):
     """Set up module variables according to config dict.
 
@@ -100,7 +205,8 @@ def init_environment(config_filepath=BASE_CONFIG_FILEPATH):
         CATALOG_NAME, TEARDOWN_INSTALLATION, TEARDOWN_CLUSTERS, \
         TEMPLATE_DEFINITIONS, TEST_ALL_TEMPLATES, SYS_ADMIN_LOGIN_CMD, \
         ORG_ADMIN_LOGIN_CMD, K8_AUTHOR_LOGIN_CMD, USERNAME_TO_LOGIN_CMD, \
-        USERNAME_TO_CLUSTER_NAME, TEST_ORG_HREF, TEST_VDC_HREF
+        USERNAME_TO_CLUSTER_NAME, TEST_ORG_HREF, TEST_VDC_HREF, \
+        VCD_API_VERSION_TO_USE
 
     config = testutils.yaml_to_dict(config_filepath)
 
@@ -117,10 +223,11 @@ def init_environment(config_filepath=BASE_CONFIG_FILEPATH):
                     api_version=config['vcd']['api_version'],
                     verify_ssl_certs=config['vcd']['verify'])
     credentials = BasicLoginCredentials(config['vcd']['username'],
-                                        SYSTEM_ORG_NAME,
+                                        server_constants.SYSTEM_ORG_NAME,
                                         config['vcd']['password'])
     CLIENT.set_credentials(credentials)
 
+    VCD_API_VERSION_TO_USE = config['vcd']['api_version']
     CATALOG_NAME = config['broker']['catalog']
     AMQP_USERNAME = config['amqp']['username']
     AMQP_PASSWORD = config['amqp']['password']
@@ -128,15 +235,15 @@ def init_environment(config_filepath=BASE_CONFIG_FILEPATH):
     SYS_ADMIN_LOGIN_CMD = f"login {config['vcd']['host']} system " \
                           f"{config['vcd']['username']} " \
                           f"-iwp {config['vcd']['password']} " \
-                          f"-V {config['vcd']['api_version']}"
+                          f"-V {VCD_API_VERSION_TO_USE}"
     ORG_ADMIN_LOGIN_CMD = f"login {config['vcd']['host']} " \
                           f"{TEST_ORG}" \
                           f" {ORG_ADMIN_NAME} -iwp {ORG_ADMIN_PASSWORD} " \
-                          f"-V {config['vcd']['api_version']}"
+                          f"-V {VCD_API_VERSION_TO_USE}"
     K8_AUTHOR_LOGIN_CMD = f"login {config['vcd']['host']} " \
         f"{TEST_ORG} " \
         f"{K8_AUTHOR_NAME} -iwp {K8_AUTHOR_PASSWORD}" \
-        f" -V {config['vcd']['api_version']}"
+        f" -V {VCD_API_VERSION_TO_USE}"
 
     USERNAME_TO_LOGIN_CMD = {
         'sys_admin': SYS_ADMIN_LOGIN_CMD,
@@ -226,11 +333,11 @@ def teardown_active_config():
     if os.path.exists(ACTIVE_CONFIG_FILEPATH):
         os.remove(ACTIVE_CONFIG_FILEPATH)
 
-
+# TODO remove after removing legacy mode
 def create_k8_author_role(vcd_config: dict):
-    cmd = f"login {vcd_config['host']} {SYSTEM_ORG_NAME} " \
+    cmd = f"login {vcd_config['host']} {server_constants.SYSTEM_ORG_NAME} " \
         f"{vcd_config['username']} -iwp {vcd_config['password']} " \
-        f"-V {vcd_config['api_version']}"
+        f"-V {VCD_API_VERSION_TO_USE}"
     result = CLI_RUNNER.invoke(vcd, cmd.split(), catch_exceptions=False)
     assert result.exit_code == 0
     cmd = f"org use {TEST_ORG}"
@@ -252,11 +359,61 @@ def create_k8_author_role(vcd_config: dict):
                                       result.output)
 
 
+def create_cluster_admin_role(vcd_config: dict):
+    cmd = f"login {vcd_config['host']} {server_constants.SYSTEM_ORG_NAME} " \
+        f"{vcd_config['username']} -iwp {vcd_config['password']} " \
+        f"-V {VCD_API_VERSION_TO_USE}"
+    result = CLI_RUNNER.invoke(vcd, cmd.split(), catch_exceptions=False)
+    assert result.exit_code == 0
+    cmd = f"org use {TEST_ORG}"
+    result = CLI_RUNNER.invoke(vcd, cmd.split(), catch_exceptions=False)
+    assert result.exit_code == 0
+    result = CLI_RUNNER.invoke(
+        vcd, ['role', 'clone', ORG_ADMIN_ROLE_NAME, CLUSTER_ADMIN_ROLE_NAME],
+        catch_exceptions=False)
+    assert DUPLICATE_NAME in result.stdout or result.exit_code == 0, \
+        testutils.format_command_info('vcd', cmd, result.exit_code,
+                                      result.output)
+    # Add View right for other published catalogs
+    result = CLI_RUNNER.invoke(
+        vcd, ['role', 'add-right', CLUSTER_ADMIN_ROLE_NAME,
+              VIEW_PUBLISHED_CATALOG_RIGHT],
+        catch_exceptions=False)
+    assert result.exit_code == 0, \
+        testutils.format_command_info('vcd', cmd, result.exit_code,
+                                      result.output)
+
+
+def create_cluster_author_role(vcd_config: dict):
+    cmd = f"login {vcd_config['host']} {server_constants.SYSTEM_ORG_NAME} " \
+        f"{vcd_config['username']} -iwp {vcd_config['password']} " \
+        f"-V {VCD_API_VERSION_TO_USE}"
+    result = CLI_RUNNER.invoke(vcd, cmd.split(), catch_exceptions=False)
+    assert result.exit_code == 0
+    cmd = f"org use {TEST_ORG}"
+    result = CLI_RUNNER.invoke(vcd, cmd.split(), catch_exceptions=False)
+    assert result.exit_code == 0
+    result = CLI_RUNNER.invoke(
+        vcd, ['role', 'clone', VAPP_AUTHOR_ROLE_NAME, CLUSTER_AUTHOR_ROLE_NAME],  # noqa: E501
+        catch_exceptions=False)
+    assert DUPLICATE_NAME in result.stdout or result.exit_code == 0, \
+        testutils.format_command_info('vcd', cmd, result.exit_code,
+                                      result.output)
+    # Add View right for other published catalogs
+    result = CLI_RUNNER.invoke(
+        vcd, ['role', 'add-right', CLUSTER_AUTHOR_ROLE_NAME,
+              VIEW_PUBLISHED_CATALOG_RIGHT],
+        catch_exceptions=False)
+    assert result.exit_code == 0, \
+        testutils.format_command_info('vcd', cmd, result.exit_code,
+                                      result.output)
+
+
 def create_user(username, password, role):
     config = testutils.yaml_to_dict(BASE_CONFIG_FILEPATH)
-    cmd = f"login {config['vcd']['host']} {SYSTEM_ORG_NAME} " \
+    cmd = f"login {config['vcd']['host']} {server_constants.SYSTEM_ORG_NAME} " \
           f"{config['vcd']['username']} -iwp {config['vcd']['password']} " \
-          f"-V {config['vcd']['api_version']}"
+          f"-V {VCD_API_VERSION_TO_USE}"
     result = CLI_RUNNER.invoke(vcd, cmd.split(), catch_exceptions=False)
     assert result.exit_code == 0
     cmd = f"org use {TEST_ORG}"
@@ -315,11 +472,29 @@ def delete_catalog(catalog_name=None):
         pass
 
 
+# TODO remove after removing legacy mode
 def unregister_cse():
     try:
-        APIExtension(CLIENT).delete_extension(CSE_SERVICE_NAME,
-                                              CSE_SERVICE_NAMESPACE)
+        APIExtension(CLIENT).delete_extension(server_constants.CSE_SERVICE_NAME,
+                                              server_constants.CSE_SERVICE_NAMESPACE)
     except MissingRecordException:
+        pass
+
+
+def unregister_cse_in_mqtt():
+    try:
+        mqtt_ext_manager = MQTTExtensionManager(CLIENT)
+        mqtt_ext_info = mqtt_ext_manager.get_extension_info(
+            ext_name=server_constants.server_constants.CSE_SERVICE_NAME,
+            ext_version=server_constants.MQTT_EXTENSION_VERSION,
+            ext_vendor=server_constants.MQTT_EXTENSION_VENDOR)
+        ext_urn_id = mqtt_ext_info[server_constants.MQTTExtKey.EXT_URN_ID]
+        mqtt_ext_manager.delete_extension(
+            ext_name=server_constants.server_constants.CSE_SERVICE_NAME,
+            ext_version=server_constants.MQTT_EXTENSION_VERSION,
+            ext_vendor=server_constants.MQTT_EXTENSION_VENDOR,
+            ext_urn_id=ext_urn_id)
+    except Exception:
         pass
 
 
@@ -349,8 +524,8 @@ def vapp_exists(vapp_name, vdc_href):
 
 def is_cse_registered():
     try:
-        APIExtension(CLIENT).get_extension(CSE_SERVICE_NAME,
-                                           namespace=CSE_SERVICE_NAMESPACE)
+        APIExtension(CLIENT).get_extension(server_constants.CSE_SERVICE_NAME,
+                                           namespace=server_constants.CSE_SERVICE_NAMESPACE)
         return True
     except MissingRecordException:
         return False
@@ -358,8 +533,8 @@ def is_cse_registered():
 
 def is_cse_registration_valid(routing_key, exchange):
     try:
-        ext = APIExtension(CLIENT).get_extension(CSE_SERVICE_NAME,
-                                                 namespace=CSE_SERVICE_NAMESPACE)  # noqa: E501
+        ext = APIExtension(CLIENT).get_extension(server_constants.CSE_SERVICE_NAME,
+                                                 namespace=server_constants.CSE_SERVICE_NAMESPACE)  # noqa: E501
     except MissingRecordException:
         return False
 
