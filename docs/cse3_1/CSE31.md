@@ -2,29 +2,29 @@
 layout: default
 title: Introduction
 ---
-# What's new in CSE 3.0?
+# What's new in CSE 3.1?
 
 For greenfield installations, please get started with [CSE introduction](INTRO.html).
 
 <a name="overview"></a>
 ## 1. Overview
-* Starting CSE 3.0, CLI for Container Service Extension and Kubernetes Clusters UI Plugin can be used to
-manage Cloud Director provisioned [Tanzu Kubernetes Clusters](https://docs.vmware.com/en/VMware-Cloud-Director/10.2/VMware-Cloud-Director-Service-Provider-Admin-Portal-Guide/GUID-E9839D4E-3024-445E-9D08-372113CF6FE0.html)
- alongside Native and TKGI (Ent-PKS) clusters.
-
-* CSE 3.0 has been redesigned to consume latest technology from Cloud Director 10.2, like [Defined entity framework](https://docs.vmware.com/en/VMware-Cloud-Director/10.2/VMware-Cloud-Director-Service-Provider-Admin-Portal-Guide/GUID-0749DEA0-08A2-4F32-BDD7-D16869578F96.html), 
-and placement policies. CSE native clusters are now represented as runtime
-defined entities to leverage VCD database for persistence. CSE 3.0 also uses
-placement policies for [restricting native clusters deployments](TEMPLATE_MANAGEMENT.html#restrict_templates)
-to specific organization VDCs. Users will not see any functional difference 
-between CSE 3.0 native clusters and previously deployed native clusters in the 
-context of Kubernetes. Additionally, users can now leverage VCD’s defined 
-entity APIs to query for CSE native clusters
-
-* CSE 3.0 also offers a new command group for TKGI (Ent-PKS).
-
-* Newer versions of native Kubernetes templates are available. 
-Refer to [Template announcements](TEMPLATE_ANNOUNCEMENTS.html).
+* Starting CSE 3.1, life cycle management of native clusters can be performed 
+  using VCD's defined entity API [usage](TBD)
+  
+* It is no longer needed to start the CSE server with a particular VCD API 
+  version. CSE 3.1 is now capable of accepting incoming requests at any supported 
+  VCD API version.
+  
+* A new version of the template recipe cookbook is introduced. Each template 
+  definition in the cookbook has new descriptors, letting CSE deterministically 
+  identify the valid templates it can support. 
+  
+* Tenant UI supports cluster upgrade workflows for both native and vSphere with 
+  Tanzu clusters.
+  
+* CSE-CLI supports below workflows for both native and vSphere with Tanzu clusters.
+    - cluster upgrade workflow through `vcd cse cluster apply` command.
+    - cluster share workflow through `vcd cse cluster share` command.
 
 **Terminology:**
 * TKG cluster ~ Tanzu Kubernetes  cluster ~ Tanzu Kubernetes Grid cluster ~ vSphere with Tanzu cluster
@@ -33,25 +33,27 @@ Refer to [Template announcements](TEMPLATE_ANNOUNCEMENTS.html).
 * Native entities: Native defined entities representing Native clusters.
 * Tkg entities: Tkg defined entities representing Tkg clusters
 
-![user-ctx](img/cse30-user-ctx.png)
-![system-ctx](img/cse30-system-ctx.png)
+![user-ctx](img/cse31-user-ctx.png)
 
 <a name="provider-workflows"></a>
 ## 2. Provider workflows
 
-<a name="cse30-compatibility-matrix"></a>
+<a name="cse31-compatibility-matrix"></a>
 ### 2.1 Compatibility matrix and relevant features
 
 | CSE Server | CSE CLI | CSE UI | Cloud Director | Ent-PKS with NSX-T | Features offered                                                                                    |
 |------------|---------|--------|----------------|--------------------|-----------------------------------------------------------------------------------------------------|
-| 3.0        | 3.0     | 2.0*   | 10.2           | 1.7 with 2.5.1     | Native, Tkg, and Ent-PKS Cluster management; Defined entity representation for both native and tkg. |
-| 3.0        | 3.0     | 1.0.3  | 10.1, 10.0     | 1.7 with 2.5.1     | Native and Ent-PKS cluster management                                                               |
-| NA         | 3.0     | 2.0*   | 10.2           | NA                 | Tkg cluster management only                                                                         |
+| 3.1        | 3.1     | 3.0*   | 10.3           | 1.7 with 2.5.1     | Native, Tkg, and Ent-PKS Cluster management; Life cycle management of both native and tkg through VCD defined entity API  |
+| 3.1        | 3.1     | 2.0*   | 10.2           | 1.7 with 2.5.1     | Native, Tkg, and Ent-PKS Cluster management; Defined entity representation for both native and tkg. |
+| 3.1        | 3.1     | 1.0.3  | 10.1, 10.0     | 1.7 with 2.5.1     | Native and Ent-PKS cluster management                                                               |
+| NA         | 3.1     | 3.0*   | 10.3           | NA                 | Tkg cluster management only                                                                         |
+| NA         | 3.1     | 2.0*   | 10.2           | NA                 | Tkg cluster management only                                                                         |
 
-2.0* -> Kubernetes Clusters UI Plugin 2.0 ships with VCD 10.2
+3.0*, 2.0* -> Kubernetes Clusters UI Plugins 3.0 and 2.0 ship with VCD 10.3 and VCD 10.2 respectively.
 
 | VCD version | Max supported API version |
 |-------------|---------------------------|
+| 10.3        | 36.0                      |
 | 10.2        | 35.0                      |
 | 10.1        | 34.0                      |
 | 10.0        | 33.0                      |
