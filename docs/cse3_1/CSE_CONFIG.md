@@ -14,11 +14,10 @@ generate a skeleton file as follows.
 cse sample -o config.yaml
 ```
 
-The output of the command varies slightly depending on the target VCD server api
-version that CSE will be using to talk to VCD (controlled by the flag -v).
-Only supported message bus type for api version 33.0 and 34.0 is AMQP. For api
-version 35.0, the default message bus type is MQTT, but AMQP is supported too.
-
+The output of the command varies slightly depending on the target VCD server maximum api
+version that CSE is configured with. Only supported message bus type for api version 
+33.0 and 34.0 is AMQP. For api version >= 35.0, the default message bus type is MQTT. 
+For api version >= 36.0, MQTT enablement is must and AMQP is not supported by CSE.
 
 Edit this file to add values from your vCloud Director installation. The
 following example shows a file with sample values filled out.
@@ -33,8 +32,6 @@ following example shows a file with sample values filled out.
 #  port: 5672
 #  prefix: vcd
 #  routing_key: cse
-#  ssl: false
-#  ssl_accept_all: false
 #  username: guest
 #  vhost: /
 
@@ -42,7 +39,6 @@ mqtt:
   verify_ssl: true
 
 vcd:
-  api_version: '35.0'
   host: vcd.vmware.com
   log: true
   password: my_secret_password
@@ -62,9 +58,9 @@ vcs:
 
 service:
   enforce_authorization: false
-  processors : 15
-  # listeners: 10
+  legacy_mode: false
   log_wire: false
+  processors: 15
   telemetry:
     enable: true
 
@@ -73,42 +69,11 @@ broker:
   default_template_name: my_template
   default_template_revision: 0
   ip_allocation_mode: pool
-  network: mynetwork
-  org: myorg
-  remote_template_cookbook_url: https://raw.githubusercontent.com/vmware/container-service-extension-templates/master/template.yaml
+  network: my_network
+  org: my_org
+  remote_template_cookbook_url: http://raw.githubusercontent.com/vmware/container-service-extension-templates/upgrades/template_v2.yaml
   storage_profile: '*'
-  vdc: myorgvdc
-
-# [Optional] Template rule section
-# Rules can be defined to override template definitions as defined by remote
-# template cookbook.
-# Any rule defined in this section can match exactly one template.
-# Template name and revision must be provided for the rule to be processed.
-# Templates will still have the default attributes that were defined during template creation.
-# These newly defined attributes only affect new cluster deployments from templates.
-# Template rules can override the following attributes:
-# * compute_policy
-# * cpu
-# * memory
-
-# Example 'template_rules' section:
-
-#template_rules:
-#- name: Rule1
-#  target:
-#    name: photon-v2_k8-1.12_weave-2.3.0
-#    revision: 1
-#  action:
-#    compute_policy: "sample policy"
-#    cpu: 4
-#    mem: 512
-#- name: Rule2
-#  target:
-#    name: my_template
-#    revision: 2
-#  action:
-#    cpu: 2
-#    mem: 1024
+  vdc: my_org_vdc
 ```
 
 The config file has 5 mandatory sections ( [`amqp` | `mqtt`], `vcd`, `vcs`,
@@ -177,9 +142,17 @@ The service section contains properties that define CSE server behavior.
 | enforce_authorization | If True, CSE server will use role-based access control, where users without the correct CSE right will not be able to deploy clusters (Added in CSE 1.2.6) |
 | log_wire              | If True, will log all REST calls initiated by CSE to VCD. (Added in CSE 2.5.0)                                                                             |
 | telemetry             | If enabled, will send back anonymized usage data back to VMware (Added in CSE 2.6.0)                                                                       |
+| legacy_mode           | Need to be True if CSE >= 3.1 is configured with VCD <= 10.1 (Added in CSE 3.1.0)                                                                          |
 
-Note:
-Starting CSE 3.0.1, the `listeners` field has been renamed to `processors`.
+Note: starting CSE 3.1, new property `legacy_mode` has been added. This property indicates whether CSE server 
+needs to leverage the latest features of VCD like RDE framework, placement policies or not.
+   * set the `legacy_mode` to true if CSE 3.1 is configured with VCD 10.1. End users 
+     will see native clusters as regular vApps with some Kubernetes specific metadata.
+   * set the `legacy_mode` to false if CSE 3.1 is configured with VCD >= 10.2. 
+     End users will see native clusters as VCD's first class objects in the form of RDEs.
+   * Note that CSE 3.1, when configured with VCD>=10.2, will not complain if 
+     `legacy_mode` is set to true, but this is not recommended as it prevents CSE 3.1 
+     to operate at its full potential.
 
 <a name="broker"></a>
 ### `broker` Section
@@ -199,6 +172,11 @@ The following table summarizes key parameters.
 | remote_template_cookbook_url | URL of the template repository where all template definitions and associated script files are hosted. (Added in CSE 2.5.0)                                                                                           |
 | storage_profile              | Name of the storage profile to use when creating the temporary vApp used to build the template                                                                                                                       |
 | vdc                          | Virtual data-center within `org` that will be used during the install process to build the template                                                                                                                  |
+
+Note: For `remote_template_cookbook_url`, CSE 3.1 config must refer
+to http://raw.githubusercontent.com/vmware/container-service-extension-templates/upgrades/template_v2.yaml. 
+CSE <= 3.0 will not work with the new template cookbook. When `legacy_mode` is set to true, 
+`remote_template_cookbook_url` must refer to old template cookbook https://raw.githubusercontent.com/vmware/container-service-extension-templates/master/template.yaml
 
 <a name="templte_rules"></a>
 ### `template_rules` Section

@@ -50,18 +50,19 @@ Please find more details on how to generate sample config file and populate it c
 The following diagram illustrates installation steps visually.
 
 ![cse-install](img/cse-server-installation.png)
-<a name="cse30-greenfield"></a>
-When CSE 3.0 is connected to Cloud Director 10.2, CSE installation command 
-`cse install -c config.yaml` does two additional steps than what has been mentioned in the above diagram.
+<a name="cse31-greenfield"></a>
+When CSE 3.1 is connected to Cloud Director 10.3, CSE installation command 
+`cse install -c config.yaml` performs below steps.
 
 1. Prepares the environment for Providers to be able to perform organization 
 virtual datacenter enablement for native clusters. Refer [how to enable ovdc(s) for native deployments](TEMPLATE_MANAGEMENT.html#cse30-restrict_templates) 
 for more details on how CSE3.0 leverages placement policies to restrict k8 
 deployments on organizational virtual datacenters (ovdcs).
-2. Registers defined entity schema for native clusters. As a side effect, 
+2. Registers defined entity schema 2.0.0 and relevant behaviors for native clusters. As a side effect, 
 `cse:native cluster entitlement` right bundle gets created in the Cloud Director 
 and all native cluster operations are guarded by these rights.
-Invoke below API to get a detailed view of native defined entity schema - `https://<vcd-ip>/cloudapi/1.0.0/entityTypes/urn:vcloud:type:cse:nativeCluster:1.0.0`
+Invoke below API to get a detailed view of native defined entity schema - `https://<vcd-ip>/cloudapi/2.0.0/entityTypes/urn:vcloud:type:cse:nativeCluster:2.0.0`
+3. Register the CSE as API extension to VCD.
 
 The `cse install` command supports the following options:
 
@@ -83,18 +84,12 @@ In the temporary vApp, the output of the customization script is captured in
 tail -f /tmp/FILENAME.out
 tail -f /tmp/FILENAME.err
 ```
-<a name="cse30-upgrade-cmd"></a>
-### CSE 3.0 Upgrade Command
-
-CSE 3.0 has been architecturally redesigned to leverage the latest features of 
-Cloud Director 10.2 like Defined entity framework and placement policies. The new 
-command `cse upgrade` has been introduced in CSE 3.0 to make the old 
-environment fully forward compatible with the latest technologies used in 
-CSE 3.0. Any previous version of CSE can be directly upgraded to CSE 3.0 using 
-`cse upgrade` command.
+<a name="cse31-upgrade-cmd"></a>
+### CSE 3.1 Upgrade Command
 
 The command `cse upgrade` must be run to ensure the environment is forward 
-compatible with CSE 3.0. The below steps will be performed during the upgrade. 
+compatible with CSE 3.0. Few or all of the below steps will be performed based 
+on the VCD version CSE 3.1 is configured with.
 
 * Delete old compute policies in the environment: untag old templates with 
 existing compute policies, unpublish existing compute policies from the 
@@ -106,6 +101,41 @@ enablement for native clusters.
 * Identify existing organization virtual datacenter(s) with existing clusters 
 and publish appropriate placement policies on the same.
 * Make pre-existing clusters forward compatible.
+* Register native RDE `urn:vcloud:type:cse:nativeCluster:X.0.0`
+* Register relevant RDE behaviors.
+* Convert legacy clusters to RDE based clusters.
+* Upgrade RDE 1.0 clusters to RDE 2.0 clusters.
+
+CSE 3.1 can only be upgraded from 3.0.X.
+Below are the few valid upgrade paths and the resultant changes in the environment.
+
+An example on reading below upgrade paths - 
+Environment with CSE 3.0.X, configured with VCD 10.2, running at the specified api_version=34.0 (config.yaml) 
+can be upgraded to environment CSE 3.1, configured with VCD 10.2, running with `legacy_mode` set to true.
+
+1. CSE 3.0.X, VCD 10.1 (api_version=34.0) -> CSE 3.1, VCD 10.1 (legacy_mode=true)
+   - Native clusters are nothing but regular vApps 
+   - Existing templates in the environment will continue to work.
+2. CSE 3.0.X, VCD 10.2 (api_version=34.0) -> CSE 3.1, VCD 10.2 (legacy_mode=false)
+   - Native clusters are represented as VCD's objects in the form of 
+     RDE `urn:vcloud:type:cse:nativeCluster:1.0.0` entities.
+   - Existing templates will no longer be recognized by CSE 3.1. 
+   - It is strongly recommended to force create the templates from the new template cookbook. 
+   - Existing clusters must be upgraded to newer templates in order to enable operations like resize.
+3. CSE 3.0.X, VCD 10.2 (api_version=34.0) -> CSE 3.1, VCD 10.3 (legacy_mode=false)
+   - Native clusters are represented as VCD's objects in the form of 
+     RDE `urn:vcloud:type:cse:nativeCluster:2.0.0` entities.
+   - Existing templates will no longer be recognized by CSE 3.1. 
+   - It is strongly recommended to force create the templates from the new template cookbook. 
+   - Existing clusters must be upgraded to newer templates in order to enable operations like resize.
+   - VCD's defined entity api can be used to initiate CRUD operations on the clusters.
+4. CSE 3.0.X, VCD 10.2 (api_version=35.0) -> CSE 3.1, VCD 10.3 (legacy_mode=false)
+   - Native clusters will be upgraded from `urn:vcloud:type:cse:nativeCluster:1.0.0`
+     to `urn:vcloud:type:cse:nativeCluster:2.0.0` entities.
+   - Existing templates will no longer be recognized by CSE 3.1. 
+   - It is strongly recommended to force create the templates from the new template cookbook. 
+   - Existing clusters must be upgraded to newer templates in order to enable operations like resize.
+   - VCD's defined entity api can be used to initiate CRUD operations on the clusters.
 
 ### Validate CSE Installation
 

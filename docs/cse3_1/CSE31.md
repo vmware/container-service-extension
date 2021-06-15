@@ -35,6 +35,7 @@ For greenfield installations, please get started with [CSE introduction](INTRO.h
 * Defined entities ~ Runtime defined entities ~ RDE ~ Defined Entity Framework
 * Native entities: Native defined entities representing Native clusters.
 * Tkg entities: Tkg defined entities representing Tkg clusters
+* Defined entity API: VCD's generic defined entity api to life cycle manage RDEs.
 
 ![user-ctx](img/cse31-user-ctx.png)
 
@@ -81,24 +82,52 @@ Refer to the [sample config file](CSE_CONFIG.html)
      `legacy_mode` is set to true, but this is not recommended as it prevents CSE 3.1 
      to operate at its full potential.
     
-3. New template cookbook `remote_template_cookbook_url`: CSE 3.1 must refer
+3. New template cookbook `remote_template_cookbook_url`: CSE 3.1 config must refer
    to http://raw.githubusercontent.com/vmware/container-service-extension-templates/upgrades/template_v2.yaml
    Note that CSE <= 3.0 will not work with the new template cookbook.
    - When `legacy_mode` is set to true, `remote_template_cookbook_url` must refer to old template cookbook 
      https://raw.githubusercontent.com/vmware/container-service-extension-templates/master/template.yaml
+     
+4. For CSE 3.1 to work with VCD 10.3, it is a must requirement for `mqtt` property 
+   to be enabled. AMQP configuration is not supported for the combination of CSE 3.1 and VCD 10.3.
 
-#### 2.2.1 Greenfield installation
-When CSE 3.0 is configured with vCD 10.2, CSE installation command
-`cse install -c config.yaml` does two additional steps over previous versions. 
-Refer to [CSE 3.0 installation](CSE_SERVER_MANAGEMENT.html#cse30-greenfield).
+#### 2.2.1 Greenfield installation 
+Refer to [CSE 3.1 installation](CSE_SERVER_MANAGEMENT.html#cse31-greenfield).
 
 #### 2.2.2 Brownfield upgrade
-CSE 3.0 has been architecturally redesigned to leverage the latest features of
-Cloud Director like Defined entity framework and placement policies. The new
-command `cse upgrade` has been introduced to make the old environment fully
-forward compatible with the latest technologies used in CSE 3.0. Any previous
-version of CSE can be directly upgraded to CSE 3.0 using `cse upgrade` command;
-Refer to [CSE 3.0 upgrade command](CSE_SERVER_MANAGEMENT.html#cse30-upgrade-cmd).
+
+CSE 3.1 can only be upgraded from 3.0.X.
+Below are the few valid upgrade paths and the resultant changes in the environment.
+
+An example on reading below upgrade paths - 
+Environment with CSE 3.0.X, configured with VCD 10.2, running at the specified api_version=34.0 (config.yaml) 
+can be upgraded to environment CSE 3.1, configured with VCD 10.2, running with `legacy_mode` set to true.
+
+1. CSE 3.0.X, VCD 10.1 (api_version=34.0) -> CSE 3.1, VCD 10.1 (legacy_mode=true)
+   - Native clusters are nothing but regular vApps 
+   - Existing templates in the environment will continue to work.
+2. CSE 3.0.X, VCD 10.2 (api_version=34.0) -> CSE 3.1, VCD 10.2 (legacy_mode=false)
+   - Native clusters are represented as VCD's objects in the form of 
+     RDE `urn:vcloud:type:cse:nativeCluster:1.0.0` entities.
+   - Existing templates will no longer be recognized by CSE 3.1. 
+   - It is strongly recommended to force create the templates from the new template cookbook. 
+   - Existing clusters must be upgraded to newer templates in order to enable operations like resize.
+3. CSE 3.0.X, VCD 10.2 (api_version=34.0) -> CSE 3.1, VCD 10.3 (legacy_mode=false)
+   - Native clusters are represented as VCD's objects in the form of 
+     RDE `urn:vcloud:type:cse:nativeCluster:2.0.0` entities.
+   - Existing templates will no longer be recognized by CSE 3.1. 
+   - It is strongly recommended to force create the templates from the new template cookbook. 
+   - Existing clusters must be upgraded to newer templates in order to enable operations like resize.
+   - VCD's defined entity api can be used to initiate CRUD operations on the clusters.
+4. CSE 3.0.X, VCD 10.2 (api_version=35.0) -> CSE 3.1, VCD 10.3 (legacy_mode=false)
+   - Native clusters will be upgraded from `urn:vcloud:type:cse:nativeCluster:1.0.0`
+     to `urn:vcloud:type:cse:nativeCluster:2.0.0` entities.
+   - Existing templates will no longer be recognized by CSE 3.1. 
+   - It is strongly recommended to force create the templates from the new template cookbook. 
+   - Existing clusters must be upgraded to newer templates in order to enable operations like resize.
+   - VCD's defined entity api can be used to initiate CRUD operations on the clusters.
+    
+Refer to [CSE 3.1 upgrade command](CSE_SERVER_MANAGEMENT.html#cse31-upgrade-cmd).
 
 #### 2.2.3 Tenant onboarding
 The provider needs to perform below operations to enable Kubernetes cluster
