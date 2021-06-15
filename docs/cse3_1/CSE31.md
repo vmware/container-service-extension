@@ -72,7 +72,7 @@ Refer to the [sample config file](CSE_CONFIG.html)
    property under `vcd` section of the config file. This property can be safely deleted.
    
 2. Addition of property `legacy_mode`: This property indicates whether CSE server 
-   needs to leverage the latest features like the RDE framework, placement policies of VCD or not.
+   needs to leverage the latest features of VCD like RDE framework, placement policies or not.
    * set the `legacy_mode` to true if CSE 3.1 is configured with VCD 10.1. End users 
      will see native clusters as regular vApps with some Kubernetes specific metadata.
    * set the `legacy_mode` to false if CSE 3.1 is configured with VCD >= 10.2. 
@@ -81,8 +81,11 @@ Refer to the [sample config file](CSE_CONFIG.html)
      `legacy_mode` is set to true, but this is not recommended as it prevents CSE 3.1 
      to operate at its full potential.
     
-3. Location of new template cookbook `remote_template_cookbook_url`: When 
-4. Interrelation between the values of `legacy_mode` and `remote_template_cookbook_url`:
+3. New template cookbook `remote_template_cookbook_url`: CSE 3.1 must refer
+   to http://raw.githubusercontent.com/vmware/container-service-extension-templates/upgrades/template_v2.yaml
+   Note that CSE <= 3.0 will not work with the new template cookbook.
+   - When `legacy_mode` is set to true, `remote_template_cookbook_url` must refer to old template cookbook 
+     https://raw.githubusercontent.com/vmware/container-service-extension-templates/master/template.yaml
 
 #### 2.2.1 Greenfield installation
 When CSE 3.0 is configured with vCD 10.2, CSE installation command
