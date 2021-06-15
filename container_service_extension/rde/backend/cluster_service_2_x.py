@@ -282,7 +282,7 @@ class ClusterService(abstract_broker.AbstractBroker):
                 distribution=k8_distribution,
                 org_name=org_name,
                 virtual_data_center_name=ovdc_name,
-                ovdc_network_name=input_native_entity.spec.settings.ovdc_network,
+                ovdc_network_name=input_native_entity.spec.settings.ovdc_network,  # noqa: E501
                 rollback_on_failure=input_native_entity.spec.settings.rollback_on_failure,  # noqa: E501
                 ssh_key=input_native_entity.spec.settings.ssh_key
             )
