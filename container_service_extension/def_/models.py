@@ -342,7 +342,7 @@ class GenericClusterEntity:
                  shared_constants.ClusterEntityKind.TKG_M.value]:
             self.entity = NativeEntity(**entity_dict) if isinstance(entity, dict) else entity  # noqa: E501
         elif entity_dict['kind'] == \
-                shared_constants.ClusterEntityKind.TKG.value:
+                shared_constants.ClusterEntityKind.TKG_S.value:
             self.entity = TKGEntity(**entity) if isinstance(entity, dict) else entity  # noqa: E501
         else:
             raise Exception("Invalid cluster kind")

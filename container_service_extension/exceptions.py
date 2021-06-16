@@ -49,7 +49,7 @@ class CseServerNotRunningError(CseServerError):
         return "Please contact administrator, CSE server seems to be" \
                " down. CSE- CLI can now only be used to manage TKG " \
                " clusters (but not native). Once CSE server is up, please" \
-               " re-login to manage both native and tkg clusters."
+               " re-login to manage both native and tkg-s clusters."
 
 
 class CseRequestError(CseServerError):

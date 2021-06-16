@@ -2180,6 +2180,8 @@ def _get_placement_policy_name_from_template_name(template_name):
     elif 'tkgm' in template_name:
         policy_name = \
             shared_constants.TKG_M_CLUSTER_RUNTIME_INTERNAL_NAME
+    # Some earlier TKG+ templates had just `tkg` in their name and
+    # not `tkgplus`
     elif 'tkg' in template_name or 'tkgplus' in template_name:
         policy_name = \
             shared_constants.TKG_PLUS_CLUSTER_RUNTIME_INTERNAL_NAME

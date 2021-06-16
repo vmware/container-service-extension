@@ -63,7 +63,7 @@ class DECluster:
         :rtype: list(dict)
         """
         clusters = []
-        if client_utils.is_cli_for_tkg_only():
+        if client_utils.is_cli_for_tkg_s_only():
             try:
                 for clusters, has_more_results in \
                         self._tkgCluster.list_tkg_clusters(vdc=vdc, org=org):
@@ -138,7 +138,7 @@ class DECluster:
         :param str cluster_name: Cluster name to search for
         :param str org: Org to filter by
         :param str vdc: VDC to filter by
-        :returns: tkg entity or native def entity with entity properties and
+        :returns: tkg-s entity or native def entity with entity properties and
             boolean indicating cluster type
         :rtype: (cluster, dict,  bool)
         """
