@@ -218,6 +218,7 @@ def init_rde_environment(config_filepath=BASE_CONFIG_FILEPATH, logger=NULL_LOGGE
     create_cluster_author_role(config['vcd'], logger=logger)
 
 
+
 # TODO remove after removing legacy mode
 def init_environment(config_filepath=BASE_CONFIG_FILEPATH):
     """Set up module variables according to config dict.
