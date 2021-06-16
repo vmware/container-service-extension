@@ -17,11 +17,11 @@ the same will be fixed in a future CSE release.
 
 | CSE Server | CSE CLI | CSE UI  | Cloud Director | Cloud Director NSX-T | Ent-PKS with NSX-T | Features offered                                                                                    |
 |------------|---------|---------|----------------|----------------------|--------------------|-----------------------------------------------------------------------------------------------------|
-| 3.0.3      | 3.0.3   | 2.2.1** | 10.2.2         | 3.0.2, 3.1.2         | 1.7 with 2.5.1     | Native, TKG, and Ent-PKS Cluster management; Defined entity representation for both native and TKG. |
+| 3.0.3      | 3.0.3   | 2.3.0** | 10.2.2         | 3.0.2, 3.1.2         | 1.7 with 2.5.1     | Native, TKG, and Ent-PKS Cluster management; Defined entity representation for both native and TKG. |
 | 3.0.3      | 3.0.3   | 1.0.3   | 10.1, 10.0     | NA                   | 1.7 with 2.5.1     | Native and Ent-PKS cluster management                                                               |
 | NA         | 3.0.2   | 2.2.1** | 10.2.2         | NA                   | NA                 | TKG cluster management only                                                                         |
 
-** Kubernetes clusters UI plug-in v2.2.1 needs to be downloaded separately from
+** Kubernetes clusters UI plug-in v2.3.0 needs to be downloaded separately from
 [here](insert link here) and uploaded to VCD. By default VCD 10.2.2 will have
 Container UI plug-in v2.2.0.
 
