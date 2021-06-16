@@ -12,6 +12,8 @@ from pyvcloud.vcd.exceptions import EntityNotFoundException
 from pyvcloud.vcd.vdc import VDC
 
 from container_service_extension.installer.config_validator import get_validated_config  # noqa: E501
+from container_service_extension.common.constants import server_constants
+from container_service_extension.common.utils import server_utils
 import container_service_extension.installer.templates.local_template_manager as ltm  # noqa: E501
 from container_service_extension.server.cli.server_cli import cli
 import container_service_extension.system_test_framework.environment as env
@@ -248,267 +250,273 @@ def test_0070_check_invalid_installation(config):
         pass
 
 
-# def test_0080_install_skip_template_creation(config,
-#                                              unregister_cse_before_test):
-#     """Test install.
+def test_0080_install_skip_template_creation(config,
+                                             unregister_cse_before_test):
+    """Test install.
 
-#     Installation options: '--ssh-key', '--skip-template-creation',
-#     '--skip-config-decryption'
+    Installation options: '--ssh-key', '--skip-template-creation',
+    '--skip-config-decryption'
 
-#     Tests that installation:
-#     - registers CSE, without installing the templates
+    Tests that installation:
+    - registers CSE, without installing the templates
 
-#     command: cse install --config cse_test_config.yaml
-#         --ssh-key ~/.ssh/id_rsa.pub --skip-config-decryption
-#         --skip-create-templates
-#     required files: ~/.ssh/id_rsa.pub, cse_test_config.yaml,
-#     expected: cse registered, catalog exists, source OVAs do not exist,
-#         temp vapps do not exist, k8s templates do not exist.
-#     """
-#     cmd = f"install --config {env.ACTIVE_CONFIG_FILEPATH} --ssh-key " \
-#           f"{env.SSH_KEY_FILEPATH} --skip-template-creation " \
-#           f"--skip-config-decryption"
-#     result = env.CLI_RUNNER.invoke(cli, cmd.split(), catch_exceptions=False)
-#     assert result.exit_code == 0,\
-#         testutils.format_command_info('cse', cmd, result.exit_code,
-#                                       result.output)
+    command: cse install --config cse_test_config.yaml
+        --ssh-key ~/.ssh/id_rsa.pub --skip-config-decryption
+        --skip-create-templates
+    required files: ~/.ssh/id_rsa.pub, cse_test_config.yaml,
+    expected: cse registered, catalog exists, source OVAs do not exist,
+        temp vapps do not exist, k8s templates do not exist.
+    """
+    cmd = f"install --config {env.ACTIVE_CONFIG_FILEPATH} --ssh-key " \
+          f"{env.SSH_KEY_FILEPATH} --skip-template-creation " \
+          f"--skip-config-decryption"
+    result = env.CLI_RUNNER.invoke(cli, cmd.split(), catch_exceptions=False)
+    assert result.exit_code == 0,\
+        testutils.format_command_info('cse', cmd, result.exit_code,
+                                      result.output)
 
-#     # check that cse was registered correctly
-#     env.check_cse_registration(config['amqp']['routing_key'],
-#                                config['amqp']['exchange'])
+    # check that cse was registered correctly
+    env.check_cse_registration_as_mqtt_extension()
+    remote_template_keys = server_utils.get_template_descriptor_keys(
+        env.TEMPLATE_COOKBOOK_VERSION)
 
-#     for template_config in env.TEMPLATE_DEFINITIONS:
-#         # check that source ova file does not exist in catalog
-#         assert not env.catalog_item_exists(
-#             template_config['source_ova_name']), \
-#             'Source ova file exists when it should not.'
+    for template_config in env.TEMPLATE_DEFINITIONS:
+        # check that source ova file does not exist in catalog
+        assert not env.catalog_item_exists(
+            template_config[remote_template_keys.SOURCE_OVA_NAME]), \
+            'Source ova file exists when it should not.'
 
-#         # check that k8s templates does not exist
-#         catalog_item_name = ltm.get_revisioned_template_name(
-#             template_config['name'], template_config['revision'])
-#         assert not env.catalog_item_exists(catalog_item_name), \
-#             'k8s templates exist when they should not.'
+        # check that k8s templates does not exist
+        catalog_item_name = ltm.get_revisioned_template_name(
+            template_config[remote_template_keys.NAME],
+            template_config[remote_template_keys.REVISION])
+        assert not env.catalog_item_exists(catalog_item_name), \
+            'k8s templates exist when they should not.'
 
-#         # check that temp vapp does not exists
-#         temp_vapp_name = testutils.get_temp_vapp_name(template_config['name'])
-#         assert not env.vapp_exists(temp_vapp_name, vdc_href=env.VDC_HREF), \
-#             'vApp exists when it should not.'
-
-
-# @pytest.mark.skipif(not env.TEST_ALL_TEMPLATES,
-#                     reason="Configuration specifies 'test_all_templates' as False")  # noqa: E501
-# def test_0090_install_all_templates(config, unregister_cse_before_test):
-#     """Test install.
-
-#     Installation options: '--ssh-key', '--retain-temp-vapp',
-#         '--skip-config-decryption'.
-
-#     Tests that installation:
-#     - downloads/uploads ova file,
-#     - creates photon temp vapp,
-#     - creates k8s templates
-#     - skips deleting the temp vapp
-#     - checks that proper packages are installed in the vm in temp vApp
-
-#     command: cse install --config cse_test_config.yaml --retain-temp-vapp
-#         --skip-config-decryption --ssh-key ~/.ssh/id_rsa.pub
-#     required files: ~/.ssh/id_rsa.pub, cse_test_config.yaml
-#     expected: cse registered, catalog exists, source OVAs exist,
-#         temp vapps exist, k8s templates exist.
-#     """
-#     cmd = f"install --config {env.ACTIVE_CONFIG_FILEPATH} --ssh-key " \
-#           f"{env.SSH_KEY_FILEPATH} --retain-temp-vapp --skip-config-decryption"
-#     result = env.CLI_RUNNER.invoke(cli, cmd.split(),
-#                                    catch_exceptions=False)
-#     assert result.exit_code == 0,\
-#         testutils.format_command_info('cse', cmd, result.exit_code,
-#                                       result.output)
-
-#     # check that cse was registered correctly
-#     env.check_cse_registration(config['amqp']['routing_key'],
-#                                config['amqp']['exchange'])
-
-#     vdc = VDC(env.CLIENT, href=env.VDC_HREF)
-#     for template_config in env.TEMPLATE_DEFINITIONS:
-#         # check that source ova file exists in catalog
-#         assert env.catalog_item_exists(
-#             template_config['source_ova_name']), \
-#             'Source ova file does not exist when it should.'
-
-#         # check that k8s templates exist
-#         catalog_item_name = ltm.get_revisioned_template_name(
-#             template_config['name'], template_config['revision'])
-#         assert env.catalog_item_exists(catalog_item_name), \
-#             'k8s template does not exist when it should.'
-
-#         # check that temp vapp exists
-#         temp_vapp_name = testutils.get_temp_vapp_name(
-#             template_config['name'])
-#         try:
-#             vdc.reload()
-#             vdc.get_vapp(temp_vapp_name)
-#         except EntityNotFoundException:
-#             assert False, 'vApp does not exist when it should.'
+        # check that temp vapp does not exists
+        temp_vapp_name = testutils.get_temp_vapp_name(
+            template_config[remote_template_keys.NAME])
+        assert not env.vapp_exists(temp_vapp_name, vdc_href=env.VDC_HREF), \
+            'vApp exists when it should not.'
 
 
-# @pytest.mark.skipif(env.TEST_ALL_TEMPLATES,
-#                     reason="Configuration specifies 'test_all_templates' as True")  # noqa: E501
-# def test_0100_install_select_templates(config, unregister_cse_before_test):
-#     """Tests template installation.
+@pytest.mark.skipif(not env.TEST_ALL_TEMPLATES,
+                    reason="Configuration specifies 'test_all_templates' as False")  # noqa: E501
+def test_0090_install_all_templates(config, unregister_cse_before_test):
+    """Test install.
 
-#     Tests that selected template installation is done correctly
+    Installation options: '--ssh-key', '--retain-temp-vapp',
+        '--skip-config-decryption'.
 
-#     command: cse template install template_name template_revision
-#         --config cse_test_config.yaml --ssh-key ~/.ssh/id_rsa.pub
-#         --skip-config-decryption --retain-temp-vapp
-#     required files: cse_test_config.yaml, ~/.ssh/id_rsa.pub,
-#         ubuntu/photon init/cust scripts
-#     expected: cse registered, source OVAs exist, k8s templates exist and
-#         temp vapps exist.
-#     """
-#     cmd = f"install --config {env.ACTIVE_CONFIG_FILEPATH} --ssh-key " \
-#           f"{env.SSH_KEY_FILEPATH} --skip-template-creation " \
-#           f"--skip-config-decryption"
-#     result = env.CLI_RUNNER.invoke(cli, cmd.split(), catch_exceptions=False)
-#     assert result.exit_code == 0,\
-#         testutils.format_command_info('cse', cmd, result.exit_code,
-#                                       result.output)
+    Tests that installation:
+    - downloads/uploads ova file,
+    - creates photon temp vapp,
+    - creates k8s templates
+    - skips deleting the temp vapp
+    - checks that proper packages are installed in the vm in temp vApp
 
-#     # check that cse was registered correctly
-#     env.check_cse_registration(config['amqp']['routing_key'],
-#                                config['amqp']['exchange'])
+    command: cse install --config cse_test_config.yaml --retain-temp-vapp
+        --skip-config-decryption --ssh-key ~/.ssh/id_rsa.pub
+    required files: ~/.ssh/id_rsa.pub, cse_test_config.yaml
+    expected: cse registered, catalog exists, source OVAs exist,
+        temp vapps exist, k8s templates exist.
+    """
+    cmd = f"install --config {env.ACTIVE_CONFIG_FILEPATH} --ssh-key " \
+          f"{env.SSH_KEY_FILEPATH} --retain-temp-vapp --skip-config-decryption"
+    result = env.CLI_RUNNER.invoke(cli, cmd.split(),
+                                   catch_exceptions=False)
+    assert result.exit_code == 0,\
+        testutils.format_command_info('cse', cmd, result.exit_code,
+                                      result.output)
 
-#     vdc = VDC(env.CLIENT, href=env.VDC_HREF)
-#     for template_config in env.TEMPLATE_DEFINITIONS:
-#         # install the template
-#         cmd = f"template install {template_config['name']} " \
-#               f"{template_config['revision']} " \
-#               f"--config {env.ACTIVE_CONFIG_FILEPATH} " \
-#               f"--ssh-key {env.SSH_KEY_FILEPATH} " \
-#               f"--skip-config-decryption --force --retain-temp-vapp"
-#         result = env.CLI_RUNNER.invoke(
-#             cli, cmd.split(), catch_exceptions=False)
-#         assert result.exit_code == 0,\
-#             testutils.format_command_info('cse', cmd, result.exit_code,
-#                                           result.output)
-#         # check that source ova file exists in catalog
-#         assert env.catalog_item_exists(
-#             template_config['source_ova_name']), \
-#             'Source ova file does not exists when it should.'
+    # check that cse was registered correctly
+    env.check_cse_registration_as_mqtt_extension()
+    remote_template_keys = server_utils.get_template_descriptor_keys(
+        env.TEMPLATE_COOKBOOK_VERSION)
 
-#         # check that k8s templates exist
-#         catalog_item_name = ltm.get_revisioned_template_name(
-#             template_config['name'], template_config['revision'])
-#         assert env.catalog_item_exists(catalog_item_name), \
-#             'k8s template does not exist when it should.'
+    vdc = VDC(env.CLIENT, href=env.VDC_HREF)
+    for template_config in env.TEMPLATE_DEFINITIONS:
+        # check that source ova file exists in catalog
+        assert env.catalog_item_exists(
+            template_config[remote_template_keys.SOURCE_OVA_NAME]), \
+            'Source ova file does not exist when it should.'
 
-#         # check that temp vapp exists
-#         temp_vapp_name = testutils.get_temp_vapp_name(
-#             template_config['name'])
-#         try:
-#             vdc.reload()
-#             vdc.get_vapp(temp_vapp_name)
-#         except EntityNotFoundException:
-#             assert False, 'vApp does not exist when it should.'
+        # check that k8s templates exist
+        catalog_item_name = ltm.get_revisioned_template_name(
+            template_config[remote_template_keys.NAME],
+            template_config[remote_template_keys.REVISION])
+        assert env.catalog_item_exists(catalog_item_name), \
+            'k8s template does not exist when it should.'
+
+        # check that temp vapp exists
+        temp_vapp_name = testutils.get_temp_vapp_name(
+            template_config[remote_template_keys.NAME])
+        try:
+            vdc.reload()
+            vdc.get_vapp(temp_vapp_name)
+        except EntityNotFoundException:
+            assert False, 'vApp does not exist when it should.'
 
 
-# def test_0110_cse_check_valid_installation(config):
-#     """Tests that `cse check` passes for a valid installation.
+@pytest.mark.skipif(env.TEST_ALL_TEMPLATES,
+                    reason="Configuration specifies 'test_all_templates' as True")  # noqa: E501
+def test_0100_install_select_templates(config, unregister_cse_before_test):
+    """Tests template installation.
 
-#     command: cse check cse_test_config.yaml -i -s
-#     expected: check passes
-#     """
-#     try:
-#         cmd = f"check {env.ACTIVE_CONFIG_FILEPATH} --skip-config-decryption --check-install"  # noqa: E501
-#         env.CLI_RUNNER.invoke(cli, cmd.split(), catch_exceptions=False)
-#     except EntityNotFoundException:
-#         assert False, "cse check failed when it should have passed."
+    Tests that selected template installation is done correctly
 
+    command: cse template install template_name template_revision
+        --config cse_test_config.yaml --ssh-key ~/.ssh/id_rsa.pub
+        --skip-config-decryption --retain-temp-vapp
+    required files: cse_test_config.yaml, ~/.ssh/id_rsa.pub,
+        ubuntu/photon init/cust scripts
+    expected: cse registered, source OVAs exist, k8s templates exist and
+        temp vapps exist.
+    """
+    cmd = f"install --config {env.ACTIVE_CONFIG_FILEPATH} --ssh-key " \
+          f"{env.SSH_KEY_FILEPATH} --skip-template-creation " \
+          f"--skip-config-decryption"
+    result = env.CLI_RUNNER.invoke(cli, cmd.split(), catch_exceptions=False)
+    assert result.exit_code == 0,\
+        testutils.format_command_info('cse', cmd, result.exit_code,
+                                      result.output)
 
-# def test_0120_cse_run(config):
-#     """Test `cse run` command.
+    # check that cse was registered correctly
+    env.check_cse_registration_as_mqtt_extension()
+    remote_template_keys = server_utils.get_template_descriptor_keys(
+        env.TEMPLATE_COOKBOOK_VERSION)
 
-#     Run cse server as a subprocess with a timeout. If we
-#     reach the timeout, then cse server was valid and running. Exiting the
-#     process before then means that server run failed somehow.
+    vdc = VDC(env.CLIENT, href=env.VDC_HREF)
+    for template_config in env.TEMPLATE_DEFINITIONS:
+        # install the template
+        cmd = f"template install {template_config[remote_template_keys.NAME]} " \
+              f"{template_config['revision']} " \
+              f"--config {env.ACTIVE_CONFIG_FILEPATH} " \
+              f"--ssh-key {env.SSH_KEY_FILEPATH} " \
+              f"--skip-config-decryption --force --retain-temp-vapp"  # noqa: E501
+        result = env.CLI_RUNNER.invoke(
+            cli, cmd.split(), catch_exceptions=False)
+        assert result.exit_code == 0,\
+            testutils.format_command_info('cse', cmd, result.exit_code,
+                                          result.output)
+        # check that source ova file exists in catalog
+        assert env.catalog_item_exists(
+            template_config[remote_template_keys.SOURCE_OVA_NAME]), \
+            'Source ova file does not exists when it should.'
 
-#     commands:
-#     $ cse run -c cse_test_config
-#     $ cse run -c cse_test_config --skip-check --skip-config-decryption
-#     """
-#     cmds = [
-#         f"cse run -c {env.ACTIVE_CONFIG_FILEPATH} --skip-config-decryption",
-#         f"cse run -c {env.ACTIVE_CONFIG_FILEPATH} --skip-check --skip-config-decryption"  # noqa: E501
-#     ]
+        # check that k8s templates exist
+        catalog_item_name = ltm.get_revisioned_template_name(
+            template_config[remote_template_keys.NAME], template_config[remote_template_keys.REVISION])
+        assert env.catalog_item_exists(catalog_item_name), \
+            'k8s template does not exist when it should.'
 
-#     for cmd in cmds:
-#         p = None
-#         try:
-#             if os.name == 'nt':
-#                 p = subprocess.Popen(cmd, shell=True)
-#             else:
-#                 p = subprocess.Popen(cmd.split())
-#             p.wait(timeout=env.WAIT_INTERVAL * 2)  # 1 minute
-#             assert False, f"`{cmd}` failed with return code {p.returncode}"
-#         except subprocess.TimeoutExpired:
-#             pass
-#         finally:
-#             try:
-#                 if p:
-#                     if os.name == 'nt':
-#                         subprocess.run(f"taskkill /f /pid {p.pid} /t")
-#                     else:
-#                         p.terminate()
-#             except OSError:
-#                 pass
-
-
-# def test_0130_cse_encrypt_decrypt_with_password_from_stdin(config):
-#     """Test `cse encrypt plain-config.yaml and cse decrypt encrypted-config`.
-
-#     Get the password for encrypt/decrypt from stdin.
-
-#     1. Execute `cse encrypt` on plain-config file and store the encrypted file.
-#     2. Execute `cse decrypt` on the encrypted config file get decrypted file.
-#     3. Compare plain-config file and decrypted config file and check result.
-#     """
-#     encrypted_file = tempfile.NamedTemporaryFile()
-#     cmd = f"encrypt {env.ACTIVE_CONFIG_FILEPATH} -o {encrypted_file.name}"  # noqa: E501
-#     env.CLI_RUNNER.invoke(cli, cmd.split(),
-#                           input=PASSWORD_FOR_CONFIG_ENCRYPTION,
-#                           catch_exceptions=False)
-
-#     # Run `cse decrypt` on the encrypted config file from previous step
-#     decrypted_file = tempfile.NamedTemporaryFile()
-#     cmd = f"decrypt {encrypted_file.name} -o {decrypted_file.name}"
-#     env.CLI_RUNNER.invoke(cli, cmd.split(),
-#                           input=PASSWORD_FOR_CONFIG_ENCRYPTION,
-#                           catch_exceptions=False)
-
-#     # File comparison also include content comparison
-#     assert filecmp.cmp(env.ACTIVE_CONFIG_FILEPATH, decrypted_file.name,
-#                        shallow=False)
+        # check that temp vapp exists
+        temp_vapp_name = testutils.get_temp_vapp_name(
+            template_config[remote_template_keys.NAME])
+        try:
+            vdc.reload()
+            vdc.get_vapp(temp_vapp_name)
+        except EntityNotFoundException:
+            assert False, 'vApp does not exist when it should.'
 
 
-# def test_0140_cse_encrypt_decrypt_with_password_from_environment_var(config):
-#     """Test `cse encrypt plain-config.yaml and cse decrypt encrypted-config`.
+def test_0110_cse_check_valid_installation(config):
+    """Tests that `cse check` passes for a valid installation.
 
-#     Get the password for encrypt/decrypt from environment variable.
+    command: cse check cse_test_config.yaml -i -s
+    expected: check passes
+    """
+    try:
+        cmd = f"check {env.ACTIVE_CONFIG_FILEPATH} --skip-config-decryption --check-install"  # noqa: E501
+        env.CLI_RUNNER.invoke(cli, cmd.split(), catch_exceptions=False)
+    except EntityNotFoundException:
+        assert False, "cse check failed when it should have passed."
 
-#     1. Execute `cse encrypt` on plain-config file and store the encrypted file.
-#     2. Execute `cse decrypt` on the encrypted config file get decrypted file.
-#     3. Compare plain-config file and decrypted config file and check result.
-#     """
-#     os.environ['CSE_CONFIG_PASSWORD'] = PASSWORD_FOR_CONFIG_ENCRYPTION
-#     encrypted_file = tempfile.NamedTemporaryFile()
-#     cmd = f"encrypt {env.ACTIVE_CONFIG_FILEPATH} -o {encrypted_file.name}"  # noqa: E501
-#     env.CLI_RUNNER.invoke(cli, cmd.split(), catch_exceptions=False)
 
-#     # Run `cse decrypt` on the encrypted config file from previous step
-#     decrypted_file = tempfile.NamedTemporaryFile()
-#     cmd = f"decrypt {encrypted_file.name} -o {decrypted_file.name}"
-#     env.CLI_RUNNER.invoke(cli, cmd.split(), catch_exceptions=False)
+def test_0120_cse_run(config):
+    """Test `cse run` command.
 
-#     # File comparison also include content comparison
-#     assert filecmp.cmp(env.ACTIVE_CONFIG_FILEPATH, decrypted_file.name,
-#                        shallow=False)
+    Run cse server as a subprocess with a timeout. If we
+    reach the timeout, then cse server was valid and running. Exiting the
+    process before then means that server run failed somehow.
+
+    commands:
+    $ cse run -c cse_test_config
+    $ cse run -c cse_test_config --skip-check --skip-config-decryption
+    """
+    cmds = [
+        f"cse run -c {env.ACTIVE_CONFIG_FILEPATH} --skip-config-decryption",
+        f"cse run -c {env.ACTIVE_CONFIG_FILEPATH} --skip-check --skip-config-decryption"  # noqa: E501
+    ]
+
+    for cmd in cmds:
+        p = None
+        try:
+            if os.name == 'nt':
+                p = subprocess.Popen(cmd, shell=True)
+            else:
+                p = subprocess.Popen(cmd.split())
+            p.wait(timeout=env.WAIT_INTERVAL * 2)  # 1 minute
+            assert False, f"`{cmd}` failed with return code {p.returncode}"
+        except subprocess.TimeoutExpired:
+            pass
+        finally:
+            try:
+                if p:
+                    if os.name == 'nt':
+                        subprocess.run(f"taskkill /f /pid {p.pid} /t")
+                    else:
+                        p.terminate()
+            except OSError:
+                pass
+
+
+def test_0130_cse_encrypt_decrypt_with_password_from_stdin(config):
+    """Test `cse encrypt plain-config.yaml and cse decrypt encrypted-config`.
+
+    Get the password for encrypt/decrypt from stdin.
+
+    1. Execute `cse encrypt` on plain-config file and store the encrypted file.
+    2. Execute `cse decrypt` on the encrypted config file get decrypted file.
+    3. Compare plain-config file and decrypted config file and check result.
+    """
+    encrypted_file = tempfile.NamedTemporaryFile()
+    cmd = f"encrypt {env.ACTIVE_CONFIG_FILEPATH} -o {encrypted_file.name}"  # noqa: E501
+    env.CLI_RUNNER.invoke(cli, cmd.split(),
+                          input=PASSWORD_FOR_CONFIG_ENCRYPTION,
+                          catch_exceptions=False)
+
+    # Run `cse decrypt` on the encrypted config file from previous step
+    decrypted_file = tempfile.NamedTemporaryFile()
+    cmd = f"decrypt {encrypted_file.name} -o {decrypted_file.name}"
+    env.CLI_RUNNER.invoke(cli, cmd.split(),
+                          input=PASSWORD_FOR_CONFIG_ENCRYPTION,
+                          catch_exceptions=False)
+
+    # File comparison also include content comparison
+    assert filecmp.cmp(env.ACTIVE_CONFIG_FILEPATH, decrypted_file.name,
+                       shallow=False)
+
+
+def test_0140_cse_encrypt_decrypt_with_password_from_environment_var(config):
+    """Test `cse encrypt plain-config.yaml and cse decrypt encrypted-config`.
+
+    Get the password for encrypt/decrypt from environment variable.
+
+    1. Execute `cse encrypt` on plain-config file and store the encrypted file.
+    2. Execute `cse decrypt` on the encrypted config file get decrypted file.
+    3. Compare plain-config file and decrypted config file and check result.
+    """
+    os.environ['CSE_CONFIG_PASSWORD'] = PASSWORD_FOR_CONFIG_ENCRYPTION
+    encrypted_file = tempfile.NamedTemporaryFile()
+    cmd = f"encrypt {env.ACTIVE_CONFIG_FILEPATH} -o {encrypted_file.name}"  # noqa: E501
+    env.CLI_RUNNER.invoke(cli, cmd.split(), catch_exceptions=False)
+
+    # Run `cse decrypt` on the encrypted config file from previous step
+    decrypted_file = tempfile.NamedTemporaryFile()
+    cmd = f"decrypt {encrypted_file.name} -o {decrypted_file.name}"
+    env.CLI_RUNNER.invoke(cli, cmd.split(), catch_exceptions=False)
+
+    # File comparison also include content comparison
+    assert filecmp.cmp(env.ACTIVE_CONFIG_FILEPATH, decrypted_file.name,
+                       shallow=False)

@@ -15,8 +15,8 @@ from pyvcloud.vcd.org import Org
 from pyvcloud.vcd.vdc import VDC
 from vcd_cli.vcd import vcd
 
-import container_service_extension.common.constants.server_constants as server_constants
-from container_service_extension.common.constants.shared_constants import SUPPORTED_VCD_API_VERSIONS
+import container_service_extension.common.constants.server_constants as server_constants  # noqa: E501
+from container_service_extension.common.constants.shared_constants import SUPPORTED_VCD_API_VERSIONS  # noqa: E501
 from container_service_extension.common.utils.core_utils import get_max_api_version  # noqa: E501
 import container_service_extension.common.utils.pyvcloud_utils as pyvcloud_utils  # noqa: E501
 from container_service_extension.installer.templates.remote_template_manager import RemoteTemplateManager  # noqa: E501
@@ -44,6 +44,7 @@ environment.CLIENT but will not change the CLIENT that was imported.
 BASE_CONFIG_FILEPATH = 'base_config.yaml'
 ACTIVE_CONFIG_FILEPATH = 'cse_test_config.yaml'
 TEMPLATE_DEFINITIONS = None
+TEMPLATE_COOKBOOK_VERSION = None
 
 SCRIPTS_DIR = 'scripts'
 
@@ -108,6 +109,7 @@ WAIT_INTERVAL = 30
 DUPLICATE_NAME = "DUPLICATE_NAME"
 VIEW_PUBLISHED_CATALOG_RIGHT = 'Catalog: View Published Catalogs'
 
+
 def init_rde_environment(config_filepath=BASE_CONFIG_FILEPATH):
     """Set up module variables according to config dict.
 
@@ -116,9 +118,9 @@ def init_rde_environment(config_filepath=BASE_CONFIG_FILEPATH):
     global CLIENT, ORG_HREF, VDC_HREF, \
         CATALOG_NAME, TEARDOWN_INSTALLATION, TEARDOWN_CLUSTERS, \
         TEMPLATE_DEFINITIONS, TEST_ALL_TEMPLATES, SYS_ADMIN_LOGIN_CMD, \
-        CLUSTER_ADMIN_LOGIN_CMD, CLUSTER_AUTHOR_LOGIN_CMD, USERNAME_TO_LOGIN_CMD, \
-        USERNAME_TO_CLUSTER_NAME, TEST_ORG_HREF, TEST_VDC_HREF, \
-        VCD_API_VERSION_TO_USE
+        CLUSTER_ADMIN_LOGIN_CMD, CLUSTER_AUTHOR_LOGIN_CMD, \
+        USERNAME_TO_LOGIN_CMD, USERNAME_TO_CLUSTER_NAME, TEST_ORG_HREF, \
+        TEST_VDC_HREF, VCD_API_VERSION_TO_USE
 
     config = testutils.yaml_to_dict(config_filepath)
 
@@ -134,15 +136,15 @@ def init_rde_environment(config_filepath=BASE_CONFIG_FILEPATH):
     init_test_vars(config['test'])
 
     sysadmin_client = Client(
-            config['vcd']['host'],
-            verify_ssl_certs=config['vcd']['verify'])
+        config['vcd']['host'],
+        verify_ssl_certs=config['vcd']['verify'])
     sysadmin_client.set_credentials(BasicLoginCredentials(
         config['vcd']['username'],
         server_constants.SYSTEM_ORG_NAME,
         config['vcd']['password']))
 
     vcd_supported_api_versions = \
-            set(sysadmin_client.get_supported_versions_list())
+        set(sysadmin_client.get_supported_versions_list())
     cse_supported_api_versions = set(SUPPORTED_VCD_API_VERSIONS)
     common_supported_api_versions = \
         list(cse_supported_api_versions.intersection(vcd_supported_api_versions))  # noqa: E501
@@ -163,9 +165,10 @@ def init_rde_environment(config_filepath=BASE_CONFIG_FILEPATH):
                           f"-iwp {config['vcd']['password']} " \
                           f"-V {VCD_API_VERSION_TO_USE}"
     CLUSTER_ADMIN_LOGIN_CMD = f"login {config['vcd']['host']} " \
-                          f"{TEST_ORG}" \
-                          f" {CLUSTER_ADMIN_NAME} -iwp {CLUSTER_ADMIN_PASSWORD} " \
-                          f"-V {VCD_API_VERSION_TO_USE}"
+                              f"{TEST_ORG}" \
+                              f" {CLUSTER_ADMIN_NAME} " \
+                              f"-iwp {CLUSTER_ADMIN_PASSWORD} " \
+                              f"-V {VCD_API_VERSION_TO_USE}"
 
     USERNAME_TO_LOGIN_CMD = {
         'sys_admin': SYS_ADMIN_LOGIN_CMD,
@@ -195,6 +198,7 @@ def init_rde_environment(config_filepath=BASE_CONFIG_FILEPATH):
     create_cluster_admin_role(config['vcd'])
     create_cluster_author_role(config['vcd'])
 
+
 # TODO remove after removing legacy mode
 def init_environment(config_filepath=BASE_CONFIG_FILEPATH):
     """Set up module variables according to config dict.
@@ -206,7 +210,7 @@ def init_environment(config_filepath=BASE_CONFIG_FILEPATH):
         TEMPLATE_DEFINITIONS, TEST_ALL_TEMPLATES, SYS_ADMIN_LOGIN_CMD, \
         ORG_ADMIN_LOGIN_CMD, K8_AUTHOR_LOGIN_CMD, USERNAME_TO_LOGIN_CMD, \
         USERNAME_TO_CLUSTER_NAME, TEST_ORG_HREF, TEST_VDC_HREF, \
-        VCD_API_VERSION_TO_USE
+        VCD_API_VERSION_TO_USE, TEMPLATE_COOKBOOK_VERSION
 
     config = testutils.yaml_to_dict(config_filepath)
 
@@ -214,6 +218,7 @@ def init_environment(config_filepath=BASE_CONFIG_FILEPATH):
         RemoteTemplateManager(config['broker']['remote_template_cookbook_url'],
                               legacy_mode=config['service']['legacy_mode'])
     template_cookbook = rtm.get_filtered_remote_template_cookbook()
+    TEMPLATE_COOKBOOK_VERSION = rtm.cookbook_version
     TEMPLATE_DEFINITIONS = template_cookbook['templates']
     rtm.download_all_template_scripts(force_overwrite=True)
 
@@ -333,6 +338,7 @@ def teardown_active_config():
     if os.path.exists(ACTIVE_CONFIG_FILEPATH):
         os.remove(ACTIVE_CONFIG_FILEPATH)
 
+
 # TODO remove after removing legacy mode
 def create_k8_author_role(vcd_config: dict):
     cmd = f"login {vcd_config['host']} {server_constants.SYSTEM_ORG_NAME} " \
@@ -411,7 +417,8 @@ def create_cluster_author_role(vcd_config: dict):
 
 def create_user(username, password, role):
     config = testutils.yaml_to_dict(BASE_CONFIG_FILEPATH)
-    cmd = f"login {config['vcd']['host']} {server_constants.SYSTEM_ORG_NAME} " \
+    cmd = f"login {config['vcd']['host']} " \
+          f"{server_constants.SYSTEM_ORG_NAME} " \
           f"{config['vcd']['username']} -iwp {config['vcd']['password']} " \
           f"-V {VCD_API_VERSION_TO_USE}"
     result = CLI_RUNNER.invoke(vcd, cmd.split(), catch_exceptions=False)
@@ -475,8 +482,9 @@ def delete_catalog(catalog_name=None):
 # TODO remove after removing legacy mode
 def unregister_cse():
     try:
-        APIExtension(CLIENT).delete_extension(server_constants.CSE_SERVICE_NAME,
-                                              server_constants.CSE_SERVICE_NAMESPACE)
+        APIExtension(CLIENT).delete_extension(
+            server_constants.CSE_SERVICE_NAME,
+            server_constants.CSE_SERVICE_NAMESPACE)
     except MissingRecordException:
         pass
 
@@ -485,12 +493,12 @@ def unregister_cse_in_mqtt():
     try:
         mqtt_ext_manager = MQTTExtensionManager(CLIENT)
         mqtt_ext_info = mqtt_ext_manager.get_extension_info(
-            ext_name=server_constants.server_constants.CSE_SERVICE_NAME,
+            ext_name=server_constants.CSE_SERVICE_NAME,
             ext_version=server_constants.MQTT_EXTENSION_VERSION,
             ext_vendor=server_constants.MQTT_EXTENSION_VENDOR)
         ext_urn_id = mqtt_ext_info[server_constants.MQTTExtKey.EXT_URN_ID]
         mqtt_ext_manager.delete_extension(
-            ext_name=server_constants.server_constants.CSE_SERVICE_NAME,
+            ext_name=server_constants.CSE_SERVICE_NAME,
             ext_version=server_constants.MQTT_EXTENSION_VERSION,
             ext_vendor=server_constants.MQTT_EXTENSION_VENDOR,
             ext_urn_id=ext_urn_id)
@@ -524,8 +532,9 @@ def vapp_exists(vapp_name, vdc_href):
 
 def is_cse_registered():
     try:
-        APIExtension(CLIENT).get_extension(server_constants.CSE_SERVICE_NAME,
-                                           namespace=server_constants.CSE_SERVICE_NAMESPACE)
+        APIExtension(CLIENT).get_extension(
+            server_constants.CSE_SERVICE_NAME,
+            namespace=server_constants.CSE_SERVICE_NAMESPACE)
         return True
     except MissingRecordException:
         return False
@@ -533,8 +542,9 @@ def is_cse_registered():
 
 def is_cse_registration_valid(routing_key, exchange):
     try:
-        ext = APIExtension(CLIENT).get_extension(server_constants.CSE_SERVICE_NAME,
-                                                 namespace=server_constants.CSE_SERVICE_NAMESPACE)  # noqa: E501
+        ext = APIExtension(CLIENT).get_extension(
+            server_constants.CSE_SERVICE_NAME,
+            namespace=server_constants.CSE_SERVICE_NAMESPACE)
     except MissingRecordException:
         return False
 
@@ -552,3 +562,15 @@ def check_cse_registration(routing_key, exchange):
         assert is_cse_registration_valid(routing_key, exchange), \
             'CSE is registered as an extension, but the extension settings ' \
             'on vCD are not the same as config settings.'
+
+
+def check_cse_registration_as_mqtt_extension():
+    mqtt_ext_manager = MQTTExtensionManager(CLIENT)
+    cse_is_registered = mqtt_ext_manager.check_extension_exists(
+        server_constants.MQTT_EXTENSION_URN)
+    assert cse_is_registered, \
+        'CSE is not registered as an extension when it should be.'
+    if cse_is_registered:
+        assert mqtt_ext_manager.is_extension_enabled(
+            server_constants.MQTT_EXTENSION_URN), "CSE is registered as an " \
+            "extension but the extension is not enabled"
