@@ -4,6 +4,7 @@
 
 import json
 
+from pyvcloud.vcd.client import ApiVersion
 import yaml
 
 import container_service_extension.client.constants as cli_constants
@@ -45,7 +46,17 @@ class DEClusterTKG:
             legacy_token = self._client.get_xvcloud_authorization_token()
             self._tkg_client.set_default_header(cli_constants.TKGRequestHeaderKey.X_VCLOUD_AUTHORIZATION,  # noqa: E501
                                                 legacy_token)
+        # set api version to be the highest supported API version
+        self._client.set_highest_supported_version()
+        from container_service_extension.common.utils.core_utils import ConsoleMessagePrinter
+        cb = ConsoleMessagePrinter()
         api_version = self._client.get_api_version()
+        cb.general(f"API version used: {api_version}")
+
+        # api_version = self._client.get_api_version()
+        # use api_version 37.0.0-alpha if VCD 10.3 or above is used.
+        if float(api_version) >= float(ApiVersion.VERSION_36.value):
+            api_version = '37.0.0-alpha'
         self._tkg_client.set_default_header(cli_constants.TKGRequestHeaderKey.ACCEPT,  # noqa: E501
                                             f"application/json;version={api_version}")  # noqa: E501
         self._tkg_client_api = TkgClusterApi(api_client=self._tkg_client)
@@ -233,7 +244,7 @@ class DEClusterTKG:
                     tkg_entities, tkg_def_entities = \
                         self.get_tkg_clusters_by_name(cluster_name, vdc=vdc_name)  # noqa: E501
                     tkg_entity = tkg_entities[0]
-                    tkg_def_entity = tkg_def_entities[0]
+                    tkg_def_entity = tkg_def_entities['entityDetails'][0]
                 cluster_id = tkg_def_entity.get('id')
                 cluster_config['metadata']['resourceVersion'] = tkg_entity.metadata.resource_version  # noqa: E501
                 response = \
@@ -290,7 +301,7 @@ class DEClusterTKG:
             if not cluster_id:
                 _, tkg_def_entities = \
                     self.get_tkg_clusters_by_name(cluster_name, org=org, vdc=vdc)  # noqa: E501
-                cluster_id = tkg_def_entities[0]['id']
+                cluster_id = tkg_def_entities['entityDetails'][0]['id']
             return self.delete_cluster_by_id(cluster_id)
         except tkg_rest.ApiException as e:
             server_message = json.loads(e.body).get('message') or e.reason
@@ -343,7 +354,7 @@ class DEClusterTKG:
             if not cluster_id:
                 _, tkg_def_entities = \
                     self.get_tkg_clusters_by_name(cluster_name, org=org, vdc=vdc)  # noqa: E501
-                cluster_id = tkg_def_entities[0]['id']
+                cluster_id = tkg_def_entities['entityDetails'][0]['id']
             return self.get_cluster_config_by_id(cluster_id,
                                                  org=org)
         except tkg_rest.ApiException as e:
@@ -374,7 +385,7 @@ class DEClusterTKG:
     def get_cluster_id_by_name(self, cluster_name, org=None, vdc=None):
         _, tkg_def_entities = \
             self.get_tkg_clusters_by_name(cluster_name, org=org, vdc=vdc)
-        return tkg_def_entities[0]['id']
+        return tkg_def_entities['entityDetails'][0]['id']
 
     def share_cluster(self, cluster_id, cluster_name, users: list,
                       access_level_id, org=None, vdc=None):
