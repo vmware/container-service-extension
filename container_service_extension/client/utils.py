@@ -16,22 +16,22 @@ from container_service_extension.logger import NULL_LOGGER
 from container_service_extension.shared_constants import CSE_SERVER_API_VERSION
 from container_service_extension.shared_constants import CSE_SERVER_BUSY_KEY
 
-_RESTRICT_CLI_TO_TKG_OPERATIONS = False
+_RESTRICT_CLI_TO_TKG_S_OPERATIONS = False
 
 
-def is_cli_for_tkg_only():
-    global _RESTRICT_CLI_TO_TKG_OPERATIONS
-    return _RESTRICT_CLI_TO_TKG_OPERATIONS
+def is_cli_for_tkg_s_only():
+    global _RESTRICT_CLI_TO_TKG_S_OPERATIONS
+    return _RESTRICT_CLI_TO_TKG_S_OPERATIONS
 
 
-def restrict_cli_to_tkg_operations():
-    global _RESTRICT_CLI_TO_TKG_OPERATIONS
-    _RESTRICT_CLI_TO_TKG_OPERATIONS = True
+def restrict_cli_to_tkg_s_operations():
+    global _RESTRICT_CLI_TO_TKG_S_OPERATIONS
+    _RESTRICT_CLI_TO_TKG_S_OPERATIONS = True
 
 
 def enable_cli_for_all_operations():
-    global _RESTRICT_CLI_TO_TKG_OPERATIONS
-    _RESTRICT_CLI_TO_TKG_OPERATIONS = False
+    global _RESTRICT_CLI_TO_TKG_S_OPERATIONS
+    _RESTRICT_CLI_TO_TKG_S_OPERATIONS = False
 
 
 def cse_restore_session(ctx, vdc_required=False) -> None:
@@ -72,8 +72,9 @@ def cse_restore_session(ctx, vdc_required=False) -> None:
         client.rehydrate_from_token(
             profiles.get('token'), profiles.get('is_jwt_token'))
 
-        ctx.obj = {}
-        ctx.obj['client'] = client
+        ctx.obj = {
+            'client': client
+        }
 
     _override_client(ctx)
 
@@ -97,7 +98,7 @@ def _override_client(ctx) -> None:
     is_cse_server_running = profiles.get(CSE_SERVER_RUNNING, default=True)
     cse_server_api_version = profiles.get(CSE_SERVER_API_VERSION)
     if not is_cse_server_running:
-        restrict_cli_to_tkg_operations()
+        restrict_cli_to_tkg_s_operations()
         ctx.obj['profiles'] = profiles
         return
 
@@ -114,7 +115,7 @@ def _override_client(ctx) -> None:
             # If request to CSE server times out
             profiles.set(CSE_SERVER_RUNNING, False)
             # restrict CLI for only TKG operations
-            restrict_cli_to_tkg_operations()
+            restrict_cli_to_tkg_s_operations()
             ctx.obj['profiles'] = profiles
             profiles.save()
             return
@@ -148,7 +149,7 @@ def construct_task_console_message(task_href: str) -> str:
 
 
 def swagger_object_to_dict(obj):
-    """Convert a swagger obejct to a dictionary without changing case type."""
+    """Convert a swagger object to a dictionary without changing case type."""
     # reference: https://github.com/swagger-api/swagger-codegen/issues/8948
     result = {}
     o_map = obj.attribute_map
@@ -211,7 +212,7 @@ def print_paginated_result(generator, should_print_all=False, logger=NULL_LOGGER
     :param Generator[(List[dict], int), None, None] generator: generator which
         yields a list of results and a boolean indicating if more results
         are present.
-    :param bool should_print_all: print all the results without promting the
+    :param bool should_print_all: print all the results without prompting the
         user.
     :param logger logger: logger to log the results or exceptions.
     """

@@ -22,7 +22,7 @@ CSE_SERVER_API_VERSION = 'cse_server_api_version'
 
 class ClusterEntityKind(Enum):
     NATIVE = 'native'
-    TKG = 'TanzuKubernetesCluster'
+    TKG_S = 'TanzuKubernetesCluster'
     TKG_PLUS = 'TKG+'
     TKG_M = 'TKGm'
 

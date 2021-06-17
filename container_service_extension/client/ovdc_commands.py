@@ -86,7 +86,7 @@ Example
     help="Enable OVDC for k8 runtime native"
 )
 @click.option(
-    '-t',
+    '-p',
     '--tkg-plus',
     'enable_tkg_plus',
     is_flag=True,
@@ -94,8 +94,8 @@ Example
     help="Enable OVDC for k8 runtime TKG plus"
 )
 @click.option(
-    '-m',
-    '--tkg-m',
+    '-t',
+    '--tkg',
     'enable_tkg_m',
     is_flag=True,
     hidden=not utils.is_environment_variable_enabled(cli_constants.ENV_CSE_TKG_M_ENABLED),  # noqa: E501
@@ -171,7 +171,7 @@ Example
     help="Disable OVDC for k8 runtime native cluster"
 )
 @click.option(
-    '-t',
+    '-p',
     '--tkg-plus',
     'disable_tkg_plus',
     is_flag=True,
@@ -179,8 +179,8 @@ Example
     help="Disable OVDC for k8 runtime TKG plus"
 )
 @click.option(
-    '-m',
-    '--tkg-m',
+    '-t',
+    '--tkg',
     'disable_tkg_m',
     is_flag=True,
     hidden=not utils.is_environment_variable_enabled(cli_constants.ENV_CSE_TKG_M_ENABLED),  # noqa: E501

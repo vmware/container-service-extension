@@ -124,7 +124,7 @@ class DEClusterTKG:
                     cli_constants.CLIOutputKey.CLUSTER_NAME.value: entity.metadata.name, # noqa: E501
                     cli_constants.CLIOutputKey.VDC.value: entity.metadata.virtual_data_center_name, # noqa: E501
                     cli_constants.CLIOutputKey.ORG.value: entity_properties['org']['name'], # noqa: E501
-                    cli_constants.CLIOutputKey.K8S_RUNTIME.value: shared_constants.ClusterEntityKind.TKG.value, # noqa: E501
+                    cli_constants.CLIOutputKey.K8S_RUNTIME.value: shared_constants.ClusterEntityKind.TKG_S.value, # noqa: E501
                     cli_constants.CLIOutputKey.K8S_VERSION.value: entity.spec.distribution.version, # noqa: E501
                     cli_constants.CLIOutputKey.STATUS.value: entity.status.phase if entity.status else 'N/A',  # noqa: E501
                     cli_constants.CLIOutputKey.OWNER.value: entity_properties['owner']['name'],  # noqa: E501

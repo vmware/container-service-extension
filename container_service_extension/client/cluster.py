@@ -36,7 +36,7 @@ class Cluster:
         elif float(api_version) >= float(vcd_client.ApiVersion.VERSION_35.value):  # noqa: E501
             if k8_runtime in CSE_SERVER_RUNTIMES:
                 return DEClusterNative(client)
-            elif k8_runtime == ClusterEntityKind.TKG.value:
+            elif k8_runtime == ClusterEntityKind.TKG_S.value:
                 return DEClusterTKG(client)
             else:
                 return DECluster(client)

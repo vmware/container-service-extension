@@ -155,11 +155,11 @@ Example
                             "Note that '--id' flag is applicable for API versions >= 35 only.")  # noqa: E501
 
         client = ctx.obj['client']
-        if client_utils.is_cli_for_tkg_only():
+        if client_utils.is_cli_for_tkg_s_only():
             if k8_runtime in shared_constants.CSE_SERVER_RUNTIMES:
                 # Cannot run the command as cse cli is enabled only for native
                 raise CseServerNotRunningError()
-            k8_runtime = shared_constants.ClusterEntityKind.TKG.value
+            k8_runtime = shared_constants.ClusterEntityKind.TKG_S.value
         cluster = Cluster(client, k8_runtime=k8_runtime)
         if not client.is_sysadmin() and org is None:
             org = ctx.obj['profiles'].get('org_in_use')
@@ -534,15 +534,15 @@ Examples
     help="should be used with --sample, this flag generates sample yaml for k8 runtime: native"  # noqa: E501
 )
 @click.option(
-    '-t',
-    '--tkg',
+    '-k',
+    '--tkg-s',
     'k8_runtime',
     is_flag=True,
-    flag_value=shared_constants.ClusterEntityKind.TKG.value,
-    help="should be used with --sample, this flag generates sample yaml for k8 runtime: TKG"  # noqa: E501
+    flag_value=shared_constants.ClusterEntityKind.TKG_S.value,
+    help="should be used with --sample, this flag generates sample yaml for k8 runtime: TKG service"  # noqa: E501
 )
 @click.option(
-    '-k',
+    '-p',
     '--tkg-plus',
     'k8_runtime',
     is_flag=True,
@@ -551,8 +551,8 @@ Examples
     help="should be used with --sample, this flag generates sample yaml for k8 runtime: TKG+"  # noqa: E501
 )
 @click.option(
-    '-m',
-    '--tkg-m',
+    '-t',
+    '--tkg',
     'k8_runtime',
     is_flag=True,
     hidden=not utils.is_environment_variable_enabled(cli_constants.ENV_CSE_TKG_M_ENABLED),  # noqa: E501
@@ -604,11 +604,11 @@ def apply(ctx, cluster_config_file_path, generate_sample_config, k8_runtime, out
             tkg_m_env_enabled = utils.is_environment_variable_enabled(cli_constants.ENV_CSE_TKG_M_ENABLED)  # noqa: E501
             if not k8_runtime:
                 console_message_printer.general_no_color(ctx.get_help())
-                msg = "with option --sample you must specify one of the options: --native or --tkg"  # noqa: E501
+                msg = "with option --sample you must specify one of the options: --native or --tkg-s"  # noqa: E501
                 if tkg_plus_env_enabled:
                     msg += " or --tkg-plus"
                 if tkg_m_env_enabled:
-                    msg += " or --tkg-m"
+                    msg += " or --tkg"
                 CLIENT_LOGGER.error(msg)
                 raise Exception(msg)
             if k8_runtime == shared_constants.ClusterEntityKind.TKG_PLUS.value \
@@ -629,13 +629,13 @@ def apply(ctx, cluster_config_file_path, generate_sample_config, k8_runtime, out
         k8_runtime = cluster_config.get('kind')
         if not k8_runtime:
             raise Exception("Cluster kind missing from the spec.")
-        if client_utils.is_cli_for_tkg_only():
+        if client_utils.is_cli_for_tkg_s_only():
             if k8_runtime in shared_constants.CSE_SERVER_RUNTIMES:
                 # Cannot run the command as cse cli is enabled only for native
                 raise CseServerNotRunningError()
-            k8_runtime = shared_constants.ClusterEntityKind.TKG.value
+            k8_runtime = shared_constants.ClusterEntityKind.TKG_S.value
         org_name = None
-        if k8_runtime == shared_constants.ClusterEntityKind.TKG.value:
+        if k8_runtime == shared_constants.ClusterEntityKind.TKG_S.value:
             org_name = org
             if not org:
                 org_name = ctx.obj['profiles'].get('org_in_use')
@@ -733,11 +733,11 @@ Examples
     CLIENT_LOGGER.debug(f'Executing command: {ctx.command_path}')
     try:
         client_utils.cse_restore_session(ctx)
-        if client_utils.is_cli_for_tkg_only():
+        if client_utils.is_cli_for_tkg_s_only():
             if k8_runtime in shared_constants.CSE_SERVER_RUNTIMES:
                 # Cannot run the command as cse cli is enabled only for native
                 raise CseServerNotRunningError()
-            k8_runtime = shared_constants.ClusterEntityKind.TKG.value
+            k8_runtime = shared_constants.ClusterEntityKind.TKG_S.value
         client = ctx.obj['client']
         cluster = Cluster(client, k8_runtime=k8_runtime)
         if not client.is_sysadmin() and org_name is None:
@@ -814,11 +814,11 @@ Example
     CLIENT_LOGGER.debug(f'Executing command: {ctx.command_path}')
     try:
         client_utils.cse_restore_session(ctx)
-        if client_utils.is_cli_for_tkg_only():
+        if client_utils.is_cli_for_tkg_s_only():
             if k8_runtime in shared_constants.CSE_SERVER_RUNTIMES:
                 # Cannot run the command as cse cli is enabled only for native
                 raise CseServerNotRunningError()
-            k8_runtime = shared_constants.ClusterEntityKind.TKG.value
+            k8_runtime = shared_constants.ClusterEntityKind.TKG_S.value
         client = ctx.obj['client']
         cluster = Cluster(client, k8_runtime=k8_runtime)
         if not client.is_sysadmin() and org_name is None:
@@ -895,11 +895,11 @@ Examples:
             raise Exception("Please specify cluster name (or) cluster Id. "
                             "Note that '--id' flag is applicable for API versions >= 35 only.")  # noqa: E501
         client_utils.cse_restore_session(ctx)
-        if client_utils.is_cli_for_tkg_only():
+        if client_utils.is_cli_for_tkg_s_only():
             if k8_runtime in shared_constants.CSE_SERVER_RUNTIMES:
                 # Cannot run the command as cse cli is enabled only for native
                 raise CseServerNotRunningError()
-            k8_runtime = shared_constants.ClusterEntityKind.TKG.value
+            k8_runtime = shared_constants.ClusterEntityKind.TKG_S.value
         client = ctx.obj['client']
         cluster = Cluster(client, k8_runtime=k8_runtime)
         if not client.is_sysadmin() and org is None:
@@ -977,11 +977,11 @@ Example
             raise Exception("Please specify cluster name (or) cluster Id. "
                             "Note that '--id' flag is applicable for API versions >= 35 only.")  # noqa: E501
         client_utils.cse_restore_session(ctx)
-        if client_utils.is_cli_for_tkg_only():
+        if client_utils.is_cli_for_tkg_s_only():
             if k8_runtime in shared_constants.CSE_SERVER_RUNTIMES:
                 # Cannot run the command as cse cli is enabled only for native
                 raise CseServerNotRunningError()
-            k8_runtime = shared_constants.ClusterEntityKind.TKG.value
+            k8_runtime = shared_constants.ClusterEntityKind.TKG_S.value
         client = ctx.obj['client']
         cluster = Cluster(client, k8_runtime=k8_runtime)
         if not client.is_sysadmin() and org is None:
