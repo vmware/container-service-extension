@@ -2,6 +2,7 @@
 # Copyright (c) 2019 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 
+from container_service_extension.installer.right_bundle_manager import RightBundleManager
 import os
 from pathlib import Path
 
@@ -23,6 +24,7 @@ import container_service_extension.common.utils.pyvcloud_utils as pyvcloud_utils
 from container_service_extension.installer.templates.remote_template_manager import RemoteTemplateManager  # noqa: E501
 from container_service_extension.mqi.mqtt_extension_manager import \
     MQTTExtensionManager
+import container_service_extension.rde.constants as rde_constants
 import container_service_extension.system_test_framework.utils as testutils
 
 
@@ -506,6 +508,18 @@ def unregister_cse_in_mqtt():
     except Exception:
         pass
 
+
+def publish_right_bundle_to_deployment_org():
+    try:
+        rbm = RightBundleManager(CLIENT, log_wire=True)  # noqa: E501
+        cse_right_bundle = rbm.get_right_bundle_by_name(
+            rde_constants.DEF_NATIVE_ENTITY_TYPE_RIGHT_BUNDLE)
+        rbm.publish_cse_right_bundle_to_tenants(
+            right_bundle_id=cse_right_bundle['id'],
+            org_ids=[pyvcloud_utils.extract_id(TEST_ORG_HREF)])
+    except Exception:
+        pass
+        
 
 def catalog_item_exists(catalog_item, catalog_name=None):
     if catalog_name is None:

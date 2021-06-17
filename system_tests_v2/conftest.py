@@ -77,3 +77,18 @@ def test_config():
     """Fixture to provide 'test' section of test config to individual tests."""
     config = testutils.yaml_to_dict(env.BASE_CONFIG_FILEPATH)
     yield config['test']
+
+
+@pytest.fixture
+def publish_native_right_bundle():
+    """Publish CSE native right bundle to deployment org.
+
+    Usage: add parameter 'publish_native_right_bundle' to the test function.
+        This fixture will be executed after the test function completes
+
+    Tasks done:
+    - publish cse native right bundle to deployment org (org specified in 
+        'test' section of base_config.yaml)
+    """
+    yield
+    env.publish_right_bundle_to_deployment_org()

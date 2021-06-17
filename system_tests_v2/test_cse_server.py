@@ -75,6 +75,7 @@ def _remove_cse_artifacts():
         env.delete_vapp(temp_vapp_name, vdc_href=env.VDC_HREF)
     env.delete_catalog()
     env.unregister_cse_in_mqtt()
+    env.unpublish_cse_right_bundle()
 
 
 @pytest.fixture(scope='module', autouse=True)
@@ -251,7 +252,8 @@ def test_0070_check_invalid_installation(config):
 
 
 def test_0080_install_skip_template_creation(config,
-                                             unregister_cse_before_test):
+                                             unregister_cse_before_test,
+                                             publish_native_right_bundle):
     """Test install.
 
     Installation options: '--ssh-key', '--skip-template-creation',
