@@ -79,7 +79,6 @@ def get_sample_cluster_configuration(output=None, k8_runtime=None, server_rde_in
     """
     if k8_runtime == shared_constants.ClusterEntityKind.TKG:
         sample_cluster_config = SAMPLE_TKG_CLUSTER_SPEC_HELP + _get_sample_tkg_cluster_configuration()  # noqa: E501
-
     else:
         if not server_rde_in_use:
             raise ValueError("CSE server API version required to generate sample config")  # noqa: E501
@@ -94,27 +93,7 @@ def get_sample_cluster_configuration(output=None, k8_runtime=None, server_rde_in
 
 def _get_sample_cluster_configuration_by_k8_runtime(k8_runtime, server_rde_in_use):  # noqa: E501
     NativeEntityClass = rde_factory.get_rde_model(server_rde_in_use)
-    sample_native_entity = NativeEntityClass.sample_native_entity(k8_runtime.value)  # noqa: E501
-    native_entity_dict = sample_native_entity.to_dict()
-
-    # remove status part of the entity dict
-    del native_entity_dict['status']
-
-    # Hiding the network spec section for Andromeda (CSE 3.1)
-    # spec.settings.network is targeted for CSE 3.1.1 to accommodate CNI=Antrea
-    # Below line can be deleted post Andromeda (CSE 3.1)
-    del native_entity_dict['spec']['settings']['network']
-    # Hiding the cpu and memory properties from controlPlane and workers for
-    # Andromeda (CSE 3.1). Below lines can be deleted once cpu and memory
-    # support is added in CSE 3.1.1
-    del native_entity_dict['spec']['topology']['controlPlane']['cpu']
-    del native_entity_dict['spec']['topology']['controlPlane']['memory']
-    del native_entity_dict['spec']['topology']['workers']['cpu']
-    del native_entity_dict['spec']['topology']['workers']['memory']
-
-    sample_apply_spec = yaml.dump(native_entity_dict)
-    CLIENT_LOGGER.info(sample_apply_spec)
-    return sample_apply_spec
+    return NativeEntityClass.get_sample_native_cluster_specification(k8_runtime)  # noqa: E501
 
 
 def _get_sample_tkg_cluster_configuration():
