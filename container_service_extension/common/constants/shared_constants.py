@@ -10,6 +10,7 @@ from enum import unique
 
 # vCD API versions supported by CSE
 SUPPORTED_VCD_API_VERSIONS = ['33.0', '34.0', '35.0', '36.0']
+API_VERSION_37_ALPHA = '37.0.0-alpha'
 
 CSE_URL_FRAGMENT = 'cse'
 PKS_URL_FRAGMENT = 'pks'
