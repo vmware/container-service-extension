@@ -109,18 +109,18 @@ and publish appropriate placement policies on the same.
 CSE 3.1 can only be upgraded from 3.0.X.
 Below are the few valid upgrade paths and the resultant changes in the environment.
 
-An example on reading below upgrade paths - 
+An example on reading below upgrade paths - `CSE 3.0.X, VCD 10.1 (api_version=34.0) -> CSE 3.1, VCD 10.1 (legacy_mode=true)`:
 Environment with CSE 3.0.X, configured with VCD 10.2, running at the specified api_version=34.0 (config.yaml) 
 can be upgraded to environment CSE 3.1, configured with VCD 10.2, running with `legacy_mode` set to true.
 
 1. CSE 3.0.X, VCD 10.1 (api_version=34.0) -> CSE 3.1, VCD 10.1 (legacy_mode=true)
-   - Native clusters remain regular vApps with Kubernetes specific metadata.
+   - Native clusters will remain regular vApps with Kubernetes specific metadata.
    - Existing templates in the environment will continue to work.
 2. CSE 3.0.X, VCD 10.2 (api_version=34.0) -> CSE 3.1, VCD 10.2 (legacy_mode=false)
    - Native clusters will have a new representation in the form of 
      RDE `urn:vcloud:type:cse:nativeCluster:1.0.0` entities.
    - Existing templates will no longer be recognized by CSE 3.1. 
-   - It is strongly recommended to force create the templates from the new template cookbook. 
+   - It is strongly recommended to force recreate the templates from the new template cookbook. 
    - Existing clusters must be upgraded to newer templates in order to enable operations like resize.
 3. CSE 3.0.X, VCD 10.2 (api_version=34.0) -> CSE 3.1, VCD 10.3 (legacy_mode=false)
    - Native clusters will have a new representation  in the form of 
@@ -133,7 +133,7 @@ can be upgraded to environment CSE 3.1, configured with VCD 10.2, running with `
    - Native clusters will be upgraded from `urn:vcloud:type:cse:nativeCluster:1.0.0`
      to `urn:vcloud:type:cse:nativeCluster:2.0.0` entities.
    - Existing templates will no longer be recognized by CSE 3.1. 
-   - It is strongly recommended to force create the templates from the new template cookbook. 
+   - It is strongly recommended to force recreate the templates from the new template cookbook. 
    - Existing clusters must be upgraded to newer templates in order to enable operations like resize.
    - VCD's defined entity api can be used to initiate CRUD operations on the clusters.
 

@@ -5,9 +5,9 @@ title: Role Based Access Control
 
 # Role Based Access Control (RBAC)
 <a name="DEF-RBAC"></a>
-## CSE 3.0 with VCD 10.2
+## CSE >= 3.0 with VCD >= 10.2
 
-CSE 3.0, when connected to VCD 10.2, leverages the RBAC that comes with VCD's feature
+CSE >= 3.0, when connected to VCD >= 10.2, leverages the RBAC that comes with VCD's feature
 [Defined Entity framework](https://docs.vmware.com/en/VMware-Cloud-Director/10.2/VMware-Cloud-Director-Service-Provider-Admin-Portal-Guide/GUID-0749DEA0-08A2-4F32-BDD7-D16869578F96.html) 
 for Native and Tkg clusters. [RBAC for Enterprise PKS clusters](#old RBAC) remain as-is.
 
@@ -21,7 +21,7 @@ Native cluster operations are no longer gated by CSE API extension-specific
 rights as used in CSE 2.6.x. With the introduction of defined entity 
 representation for native clusters, a new right bundle `cse:nativeCluster entitlement` 
 gets created in Cloud Director during CSE Server installation, which is what 
-guards the native cluster operations in CSE 3.0. The same is the case for Tkg clusters. 
+guards the native cluster operations in CSE >= 3.0. The same is the case for Tkg clusters. 
 
 The Provider needs to grant the Tkg cluster and Native cluster right bundles 
 to the desired organizations and then grant the admin-level defined entity type 
@@ -37,6 +37,10 @@ below-mentioned right bundles. Refer [How to manage runtime defined entities](ht
    of the pre-defined role of `vApp Author` in order to deploy native clusters.
 
 ### Sharing native clusters 
+CSE >= 3.1:
+New share command
+
+CSE 3.0:
 Tenant user need to perform below steps to share a native cluster to another 
 user of the same organization.
 1. Share the cluster vApp to the desired user with the desired ACL grant.
@@ -44,7 +48,7 @@ user of the same organization.
 level of ACL grant mentioned in step-1. Refer [Sharing runtime defined entities](https://docs.vmware.com/en/VMware-Cloud-Director/10.2/VMware-Cloud-Director-Service-Provider-Admin-Portal-Guide/GUID-DAFF4CE9-B276-4A0B-99D9-22B985153236.html) for more details.
 
 <a name="old RBAC"></a>
-## CSE 3.0 with VCD < 10.2
+## CSE >= 3.0 with VCD < 10.2
 Below content describes the role based access control
 (RBAC) mechanism through which administrators can administer restrictive
 usage of CSE connected to vCD versions < 10.2. It also explains the functioning of

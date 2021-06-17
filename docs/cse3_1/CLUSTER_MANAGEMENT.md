@@ -66,12 +66,15 @@ can choose to monitor the task progress manually.
 > vcd task list running
 ```
 <a name="cse30_cluster_apply"></a>
-### CSE 3.0 `Cluster apply` command
+### CSE >= 3.0 `Cluster apply` command
 
-1. `vcd cse cluster apply <create_cluster.yaml>` command - Takes a cluster specification file as an input and applies it to a cluster resource. The cluster resource will be created if it does not exist. 
+1. `vcd cse cluster apply <create_cluster.yaml>` command - Takes a cluster 
+   specification file as an input and applies it to a cluster resource. The 
+   cluster resource will be created if it does not exist. 
     * Command usage examples:
         ```sh
         vcd cse cluster apply <resize_cluster.yaml> (applies the specification on the resource specified; the cluster resource will be created if it does not exist). 
+        vcd cse cluster apply <upgrade_cluster.yaml> (upgrades the cluster to match the user specified template and revision)
         vcd cse cluster apply --sample --tkg (generates the sample specification file for tkg clusters).
         vcd cse cluster apply --sample --native (generates the sample specification file for native clusters).
         ```
@@ -101,7 +104,7 @@ can choose to monitor the task progress manually.
         # spec.nfs.storage_profile: The storage-profile with which nfs needs to be provisioned in a given "ovdc". The specified storage-profile is expected to be available on the given ovdc.
         #
         # spec.settings: This is a required sub-section
-        # spec.settings.network: This value is mandatory. Name of the Organization's virtual data center network
+        # spec.settings.ovdcNetwork: This value is mandatory. Name of the Organization's virtual data center network
         # spec.settings.rollback_on_failure: Optional value that is true by default. On any cluster operation failure, if the value is set to true, affected node VMs will be automatically deleted.
         # spec.settings.ssh_key: Optional ssh key that users can use to log into the node VMs without explicitly providing passwords.
         #
@@ -112,43 +115,48 @@ can choose to monitor the task progress manually.
         #
         # status: Current state of the cluster in the server. This is not a required section for any of the operations.
          
-        api_version: ''
+        apiVersion: cse.vmware.com/v2.0
         kind: native
         metadata:
-          cluster_name: cluster_name
-          org_name: organization_name
-          ovdc_name: org_virtual_datacenter_name
+          name: cluster_name
+          orgName: organization_name
+          site: VCD_site
+          virtualDataCenterName: org_virtual_data_center_name
         spec:
-          control_plane:
-            count: 1
-            sizing_class: Large_sizing_policy_name
-            storage_profile: Gold_storage_profile_name
+          distribution:
+            templateName: ubuntu-16.04_k8-1.17_weave-2.6.0
+            templateRevision: 2
           expose: false
-          k8_distribution:
-            template_name: ubuntu-16.04_k8-1.17_weave-2.6.0
-            template_revision: 2
-          nfs:
-            count: 1
-            sizing_class: Large_sizing_policy_name
-            storage_profile: Platinum_storage_profile_name
           settings:
-            network: ovdc_network_name
-            rollback_on_failure: true
-            ssh_key: null
-          workers:
-            count: 2
-            sizing_class: Medium_sizing_policy_name
-            storage_profile: Silver_storage_profile
-        status:
-          cni: null
-          exposed: False
-          docker_version: null
-          kubernetes: null
-          nodes: null
-          os: null
-          phase: null
-          task_href: null
+            ovdcNetwork: ovdc_network_name
+            rollbackOnFailure: true
+            sshKey: null
+          topology:
+            controlPlane:
+              count: 1
+              sizingClass: Large_sizing_policy_name
+              storageProfile: Gold_storage_profile_name
+            nfs:
+              count: 0
+              sizingClass: Large_sizing_policy_name
+              storageProfile: Platinum_storage_profile_name
+            workers:
+              count: 2
+              sizingClass: Medium_sizing_policy_name
+              storageProfile: Silver_storage_profile
         ```
+      
+<a name="cse31_cluster_share"></a>
+### CSE 3.1 `Cluster share` command
+1. `vcd cse cluster share` command shares the cluster with other users
+   ```sh
+      vcd cse cluster share --name mycluster --acl FullControl user1 user2
+          Share cluster 'mycluster' with FullControl access with 'user1' and 'user2'
+  
+      vcd cse cluster share --id urn:vcloud:entity:vmware:tkgcluster:1.0.0:71fa7b01-84dc-4a58-ae54-a1098219b057 --acl ReadOnly user1
+          Share TKG cluster with cluster ID 'urn:vcloud:entity:vmware:tkgcluster:1.0.0:71fa7b01-84dc-4a58-ae54-a1098219b057'
+          with ReadOnly access with 'user1'
+   ```
       
 <a name="k8s_upgrade"></a>
 ## Upgrading software installed on Kubernetes clusters

@@ -99,18 +99,18 @@ Refer to [CSE 3.1 installation](CSE_SERVER_MANAGEMENT.html#cse31-greenfield).
 CSE 3.1 can only be upgraded from 3.0.X.
 Below are the few valid upgrade paths and the resultant changes in the environment.
 
-An example on reading below upgrade paths - 
+An example on reading below upgrade paths - `CSE 3.0.X, VCD 10.1 (api_version=34.0) -> CSE 3.1, VCD 10.1 (legacy_mode=true)`:
 Environment with CSE 3.0.X, configured with VCD 10.2, running at the specified api_version=34.0 (config.yaml) 
 can be upgraded to environment CSE 3.1, configured with VCD 10.2, running with `legacy_mode` set to true.
 
 1. CSE 3.0.X, VCD 10.1 (api_version=34.0) -> CSE 3.1, VCD 10.1 (legacy_mode=true)
-   - Native clusters remain regular vApps with Kubernetes specific metadata.
+   - Native clusters will remain regular vApps with Kubernetes specific metadata.
    - Existing templates in the environment will continue to work.
 2. CSE 3.0.X, VCD 10.2 (api_version=34.0) -> CSE 3.1, VCD 10.2 (legacy_mode=false)
    - Native clusters will have a new representation in the form of 
      RDE `urn:vcloud:type:cse:nativeCluster:1.0.0` entities.
    - Existing templates will no longer be recognized by CSE 3.1. 
-   - It is strongly recommended to force create the templates from the new template cookbook. 
+   - It is strongly recommended to force recreate the templates from the new template cookbook. 
    - Existing clusters must be upgraded to newer templates in order to enable operations like resize.
 3. CSE 3.0.X, VCD 10.2 (api_version=34.0) -> CSE 3.1, VCD 10.3 (legacy_mode=false)
    - Native clusters will have a new representation  in the form of 
@@ -123,7 +123,7 @@ can be upgraded to environment CSE 3.1, configured with VCD 10.2, running with `
    - Native clusters will be upgraded from `urn:vcloud:type:cse:nativeCluster:1.0.0`
      to `urn:vcloud:type:cse:nativeCluster:2.0.0` entities.
    - Existing templates will no longer be recognized by CSE 3.1. 
-   - It is strongly recommended to force create the templates from the new template cookbook. 
+   - It is strongly recommended to force recreate the templates from the new template cookbook. 
    - Existing clusters must be upgraded to newer templates in order to enable operations like resize.
    - VCD's defined entity api can be used to initiate CRUD operations on the clusters.
     
@@ -132,7 +132,7 @@ Refer to [CSE 3.1 upgrade command](CSE_SERVER_MANAGEMENT.html#cse31-upgrade-cmd)
 #### 2.2.3 Tenant onboarding
 The provider needs to perform below operations to enable Kubernetes cluster
 deployments in tenant organizations and tenant virtual data centers.
-1. Grant rights to the tenant users. Refer to [CSE 3.0 RBAC](RBAC.html#DEF-RBAC)
+1. Grant rights to the tenant users. Refer to [CSE >= 3.0 RBAC](RBAC.html#DEF-RBAC)
 for more details.
 2. Enable the desired organization virtual datacenter(s) for either Native or
 Tkg cluster or Ent-PKS deployments.
@@ -143,11 +143,10 @@ Tkg cluster or Ent-PKS deployments.
 to the desired organizations.
 
 ### 2.3 Kubernetes Clusters UI Plugin
-Starting CSE 3.0 and VCD 10.2, Kubernetes Clusters UI Plugin 2.0 is available
-out of the box with VCD 10.2. Provider can publish it to the desired tenants
+Kubernetes Clusters UI Plugin 3.0 is available out of the box with VCD 10.3. Provider can publish it to the desired tenants
 to offer Kubernetes services. Refer to [publish Kubernetes Clusters UI Plugin](https://docs.vmware.com/en/VMware-Cloud-Director/10.2/VMware-Cloud-Director-Service-Provider-Admin-Portal-Guide/GUID-A1910FF9-B2CF-49DD-B031-D1245E8740AE.html)
 
-For VCD < 10.2 versions that inter-operate with CSE 3.0, Kubernetes Clusters UI Plugin 1.0.3 must be installed separately by a Provider and published to the desired tenants.
+For VCD < 10.2 versions that inter-operate with CSE 3.1, Kubernetes Clusters UI Plugin 1.0.3 must be installed separately by a Provider and published to the desired tenants.
 Refer to [Register CSE UI Plugin 1.0.3](CSE_UI_PLUGIN.html) for more details.
 
 <a name="tenant-workflows"></a>
@@ -156,22 +155,12 @@ Tenant users can manage the Kubernetes cluster deployments either through
 CSE CLI or Kubernetes Clusters UI Plugin
 
 ### 3.1 CLI for Container Extension
-CSE 3.0 introduces below changes in CLI
+CSE 3.1 introduces below changes in CLI
 
-1. CLI is smart enough to display the most relevant commands and their options 
-based on the API version with which the CSE server runs. This intelligence is 
-enabled when the user logs into the environment using `vcd login` command. 
-For example: `vcd cse cluster apply` is displayed only when CSE server runs at API version 35.0.
-2. New command `vcd cse cluster apply <create_cluster.yaml>` has been introduced
- in CSE 3.0. Refer to [cluster apply usage](CLUSTER_MANAGEMENT.html#cse30_cluster_apply) for more details.
-3. One can use CLI to deploy Tkg Clusters on VCD 10.2 without the installation 
-of CSE server. CLI directly communicates with VCD to manage Tanzu Kubernetes clusters.
-4. Node commands are deprecated in CSE 3.0 for VCD 10.2. All of the node 
-management (or) resize operations are done through `vcd cse cluster apply` 
-command in CSE 3.0 with VCD 10.2. Node commands continue to be operational for 
-CSE server with VCD < 10.2.
-5. New command is available for NFS deletion: `vcd cse cluster delete-nfs`
-6. Separate command group is dedicated for Ent-PKS: `vcd cse pks –help`
+1. Cluster upgrades (Native and vSphere with Tanzu) can now be performed using `vcd cse cluster apply <upgrade_cluster.yaml>`. 
+   Refer to [cluster apply usage](CLUSTER_MANAGEMENT.html#cse30_cluster_apply) for more details.
+2. Clusters can be shared to other users using new `vcd cse cluster share` command. 
+   Refer to [cluster share usage](CLUSTER_MANAGEMENT.html#cse31_cluster_share)
 
 ### 3.2 Kubernetes Clusters UI Plugin
 
