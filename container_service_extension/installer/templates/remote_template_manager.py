@@ -44,11 +44,16 @@ class RemoteTemplateManager():
     """
 
     def __init__(self, remote_template_cookbook_url, legacy_mode: bool = False,
-                 logger=NULL_LOGGER, msg_update_callback=NullPrinter()):
+                 cookbook_version=None, logger=NULL_LOGGER,
+                 msg_update_callback=NullPrinter()):
         """.
 
         :param str remote_template_cookbook_url:
         :param bool legacy_mode:
+        :param semantic_version.Version cookbook_version: Use this parameter
+            to optionally set the value for cookbook_version. This value is
+            automatically filled by get_filtered_cookbook() or
+            get_unfiltered_cookbook()
         :param logging.Logger logger: logger to log with.
         :param utils.ConsoleMessagePrinter msg_update_callback:
             Callback object.
@@ -59,7 +64,7 @@ class RemoteTemplateManager():
         self.msg_update_callback = msg_update_callback
         self.filtered_cookbook = None
         self.unfiltered_cookbook = None
-        self.cookbook_version: semantic_version.Version = None
+        self.cookbook_version: semantic_version.Version = cookbook_version
         self.scripts_directory_path: str = None
 
     def _get_base_url_from_remote_template_cookbook_url(self) -> str:
@@ -279,6 +284,8 @@ class RemoteTemplateManager():
         :param bool force_overwrite: if True, will download the script even if
             it already exists.
         """
+        if not self.cookbook_version:
+            raise ValueError('Invalid value for cookbook_version')
         # Multiple codepaths enter into this. Hence all scripts are downloaded.
         # When vcdbroker.py id deprecated, the scripts should loop through
         # TemplateScriptFile to download scripts.
@@ -294,7 +301,7 @@ class RemoteTemplateManager():
                     script_file)
 
             local_script_filepath = ltm.get_script_filepath(
-                template_name, revision, script_file)
+                self.cookbook_version, template_name, revision, script_file)
             download_file(url=remote_script_url,
                           filepath=local_script_filepath,
                           force_overwrite=force_overwrite,

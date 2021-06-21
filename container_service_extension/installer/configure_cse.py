@@ -1570,6 +1570,7 @@ def _update_metadata_for_existing_templates(client: Client, config: dict,
             # metadata keys barring the catalog_item_name.
             # Add catalog_item_name to the dict remote_template_descriptor
             remote_template_descriptor[server_constants.LocalTemplateKey.CATALOG_ITEM_NAME] = catalog_item_name  # noqa: E501
+            remote_template_descriptor[server_constants.LocalTemplateKey.COOKBOOK_VERSION] = str(rtm.cookbook_version)  # noqa: E501
 
             # New keys to be added (min_cse_version and max_cse_version)
             # will already be in remote_template_descriptor.
@@ -1667,6 +1668,7 @@ def _process_existing_templates(client: Client, config: dict,
             client,
             catalog_name=catalog_name,  # noqa: E501
             org_name=org_name,
+            ignore_metadata_keys=[server_constants.LegacyLocalTemplateKey.COMPUTE_POLICY],  # noqa: E501
             legacy_mode=True,
             logger_debug=INSTALL_LOGGER)
     # update metadata with min_cse_version and max_cse_version for all
@@ -1780,7 +1782,7 @@ def _install_single_template(
         f"{template[remote_template_keys.CNI_VERSION].replace('.', '')}-vm"
     )
     build_params = {
-        templateBuildKey.TEMPLATE_NAME: template[remote_template_keys.NAME],  # noqa: E501
+        templateBuildKey.TEMPLATE_NAME: template[remote_template_keys.NAME],
         templateBuildKey.TEMPLATE_REVISION: template[remote_template_keys.REVISION],  # noqa: E501
         templateBuildKey.SOURCE_OVA_NAME: template[remote_template_keys.SOURCE_OVA_NAME],  # noqa: E501
         templateBuildKey.SOURCE_OVA_HREF: template[remote_template_keys.SOURCE_OVA_HREF],  # noqa: E501
@@ -1793,10 +1795,11 @@ def _install_single_template(
         templateBuildKey.TEMP_VAPP_NAME: template[remote_template_keys.NAME] + '_temp',  # noqa: E501
         templateBuildKey.TEMP_VM_NAME: temp_vm_name,
         templateBuildKey.CPU: template[remote_template_keys.CPU],
-        templateBuildKey.MEMORY: template[remote_template_keys.MEMORY],  # noqa: E501
+        templateBuildKey.MEMORY: template[remote_template_keys.MEMORY],
         templateBuildKey.NETWORK_NAME: network_name,
-        templateBuildKey.IP_ALLOCATION_MODE: ip_allocation_mode,  # noqa: E501
-        templateBuildKey.STORAGE_PROFILE: storage_profile
+        templateBuildKey.IP_ALLOCATION_MODE: ip_allocation_mode,
+        templateBuildKey.STORAGE_PROFILE: storage_profile,
+        templateBuildKey.REMOTE_COOKBOOK_VERSION: remote_template_manager.cookbook_version  # noqa: E501
     }
     if not LEGACY_MODE:  # noqa: E501
         if template.get(

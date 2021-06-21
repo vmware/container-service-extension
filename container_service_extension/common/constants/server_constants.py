@@ -291,6 +291,7 @@ class LocalTemplateKey(str, Enum):
     NAME = 'name'
     OS = 'os'
     REVISION = 'revision'
+    COOKBOOK_VERSION = 'cookbook_version'
     UPGRADE_FROM = 'upgrade_from'
     MIN_CSE_VERSION = 'min_cse_version'
     MAX_CSE_VERSION = 'max_cse_version'
@@ -473,6 +474,7 @@ class TemplateBuildKey(str, Enum):
     IP_ALLOCATION_MODE = 'ip_allocation_mode'
     STORAGE_PROFILE = 'storage_profile'
     CSE_PLACEMENT_POLICY = 'cse_placement_policy'
+    REMOTE_COOKBOOK_VERSION = 'remote_template_cookbook_version'
 
 
 @unique

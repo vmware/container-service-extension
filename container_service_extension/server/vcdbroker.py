@@ -29,6 +29,7 @@ from container_service_extension.common.constants.server_constants import K8sPro
 from container_service_extension.common.constants.server_constants import KwargKey  # noqa: E501
 from container_service_extension.common.constants.server_constants import LocalTemplateKey  # noqa: E501
 from container_service_extension.common.constants.server_constants import NodeType  # noqa: E501
+from container_service_extension.common.constants.server_constants import RemoteTemplateCookbookVersion  # noqa: E501
 from container_service_extension.common.constants.server_constants import ScriptFile  # noqa: E501
 from container_service_extension.common.constants.server_constants import SYSTEM_ORG_NAME  # noqa: E501
 from container_service_extension.common.constants.server_constants import ThreadLocalData  # noqa: E501
@@ -1281,6 +1282,7 @@ class VcdBroker(abstract_broker.AbstractBroker):
                 LOGGER.debug(msg)
                 self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
                 filepath = ltm.get_script_filepath(
+                    RemoteTemplateCookbookVersion.Version1,
                     template_name,
                     template_revision,
                     ScriptFile.CONTROL_PLANE_K8S_UPGRADE)
@@ -1297,6 +1299,7 @@ class VcdBroker(abstract_broker.AbstractBroker):
                                 cluster_name=cluster_name)
 
                 filepath = ltm.get_script_filepath(
+                    RemoteTemplateCookbookVersion.Version1,
                     template_name,
                     template_revision,
                     ScriptFile.WORKER_K8S_UPGRADE)
@@ -1340,7 +1343,8 @@ class VcdBroker(abstract_broker.AbstractBroker):
                       f"in nodes {all_node_names}"
                 LOGGER.debug(msg)
                 self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
-                filepath = ltm.get_script_filepath(template_name,
+                filepath = ltm.get_script_filepath(RemoteTemplateCookbookVersion.Version1,  # noqa: E501
+                                                   template_name,
                                                    template_revision,
                                                    ScriptFile.DOCKER_UPGRADE)
                 script = utils.read_data_file(filepath, logger=LOGGER)
@@ -1352,7 +1356,8 @@ class VcdBroker(abstract_broker.AbstractBroker):
                       f"in control plane node {control_plane_node_names}"  # noqa: E501
                 LOGGER.debug(msg)
                 self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
-                filepath = ltm.get_script_filepath(template_name,
+                filepath = ltm.get_script_filepath(RemoteTemplateCookbookVersion.Version1,  # noqa: E501
+                                                   template_name,
                                                    template_revision,
                                                    ScriptFile.CONTROL_PLANE_CNI_APPLY)  # noqa: E501
                 script = utils.read_data_file(filepath, logger=LOGGER)
@@ -1903,6 +1908,7 @@ def _add_nodes(client, num_nodes, node_type, org, vdc, vapp,
                 if node_type == NodeType.NFS:
                     LOGGER.debug(f"Enabling NFS server on {vm_name}")
                     script_filepath = ltm.get_script_filepath(
+                        RemoteTemplateCookbookVersion.Version1,  # noqa: E501
                         template[LocalTemplateKey.NAME],
                         template[LocalTemplateKey.REVISION],
                         ScriptFile.NFSD)
@@ -1994,7 +2000,8 @@ def _init_cluster(sysadmin_client: vcd_client.Client, vapp, template_name,
     vcd_utils.raise_error_if_user_not_from_system_org(sysadmin_client)
 
     try:
-        script_filepath = ltm.get_script_filepath(template_name,
+        script_filepath = ltm.get_script_filepath(RemoteTemplateCookbookVersion.Version1,  # noqa: E501
+                                                  template_name,
                                                   template_revision,
                                                   ScriptFile.CONTROL_PLANE)
         script = utils.read_data_file(script_filepath, logger=LOGGER)
@@ -2036,7 +2043,8 @@ def _join_cluster(sysadmin_client: vcd_client.Client, vapp, template_name,
         node_names = _get_node_names(vapp, NodeType.WORKER)
         if target_nodes is not None:
             node_names = [name for name in node_names if name in target_nodes]
-        tmp_script_filepath = ltm.get_script_filepath(template_name,
+        tmp_script_filepath = ltm.get_script_filepath(RemoteTemplateCookbookVersion.Version1,  # noqa: E501
+                                                      template_name,
                                                       template_revision,
                                                       ScriptFile.NODE)
         tmp_script = utils.read_data_file(tmp_script_filepath, logger=LOGGER)

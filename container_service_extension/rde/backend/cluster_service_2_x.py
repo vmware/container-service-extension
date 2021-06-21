@@ -1425,6 +1425,7 @@ class ClusterService(abstract_broker.AbstractBroker):
 
             template_name = template[LocalTemplateKey.NAME]
             template_revision = template[LocalTemplateKey.REVISION]
+            template_cookbook_version = semver.Version(template[LocalTemplateKey.COOKBOOK_VERSION])  # noqa: E501
 
             # semantic version doesn't allow leading zeros
             # docker's version format YY.MM.patch allows us to directly use
@@ -1454,7 +1455,8 @@ class ClusterService(abstract_broker.AbstractBroker):
                 msg = f"Upgrading Kubernetes ({c_k8s} -> {t_k8s}) " \
                       f"in control plane node {control_plane_node_names}"
                 self._update_task(BehaviorTaskStatus.RUNNING, message=msg)
-                filepath = ltm.get_script_filepath(template_name,
+                filepath = ltm.get_script_filepath(template_cookbook_version,
+                                                   template_name,
                                                    template_revision,
                                                    TemplateScriptFile.CONTROL_PLANE_K8S_UPGRADE)  # noqa: E501
                 script = utils.read_data_file(filepath, logger=LOGGER)
@@ -1468,7 +1470,8 @@ class ClusterService(abstract_broker.AbstractBroker):
                                 control_plane_node_names,
                                 cluster_name=cluster_name)
 
-                filepath = ltm.get_script_filepath(template_name,
+                filepath = ltm.get_script_filepath(template_cookbook_version,
+                                                   template_name,
                                                    template_revision,
                                                    TemplateScriptFile.WORKER_K8S_UPGRADE)  # noqa: E501
                 script = utils.read_data_file(filepath, logger=LOGGER)
@@ -1507,6 +1510,7 @@ class ClusterService(abstract_broker.AbstractBroker):
                       f"in nodes {all_node_names}"
                 self._update_task(BehaviorTaskStatus.RUNNING, message=msg)
                 filepath = ltm.get_script_filepath(
+                    template_cookbook_version,
                     template_name,
                     template_revision,
                     TemplateScriptFile.DOCKER_UPGRADE)
@@ -1519,7 +1523,8 @@ class ClusterService(abstract_broker.AbstractBroker):
                       f"({curr_native_entity.status.cni} " \
                       f"-> {t_cni}) in control plane node {control_plane_node_names}"  # noqa: E501
                 self._update_task(BehaviorTaskStatus.RUNNING, message=msg)
-                filepath = ltm.get_script_filepath(template_name,
+                filepath = ltm.get_script_filepath(template_cookbook_version,
+                                                   template_name,
                                                    template_revision,
                                                    TemplateScriptFile.CONTROL_PLANE_CNI_APPLY)  # noqa: E501
                 script = utils.read_data_file(filepath, logger=LOGGER)
@@ -2216,6 +2221,7 @@ def _add_nodes(sysadmin_client, num_nodes, node_type, org, vdc, vapp,
                 if node_type == NodeType.NFS:
                     LOGGER.debug(f"Enabling NFS server on {vm_name}")
                     script_filepath = ltm.get_script_filepath(
+                        semver.Version(template[LocalTemplateKey.COOKBOOK_VERSION]),  # noqa: E501
                         template[LocalTemplateKey.NAME],
                         template[LocalTemplateKey.REVISION],
                         TemplateScriptFile.NFSD)

@@ -134,6 +134,7 @@ class TemplateBuilder():
         self.ip_allocation_mode = build_params.get(TemplateBuildKey.IP_ALLOCATION_MODE) # noqa: E501
         self.storage_profile = build_params.get(TemplateBuildKey.STORAGE_PROFILE) # noqa: E501
         self.cse_placement_policy = build_params.get(TemplateBuildKey.CSE_PLACEMENT_POLICY) # noqa: E501
+        self.remote_cookbook_version = build_params.get(TemplateBuildKey.REMOTE_COOKBOOK_VERSION)  # noqa: E501
         self.log_wire = log_wire
 
         if self.template_name and self.template_revision and \
@@ -222,6 +223,7 @@ class TemplateBuilder():
         :rtype: str
         """
         init_script_filepath = ltm.get_script_filepath(
+            self.remote_cookbook_version,
             self.template_name,
             self.template_revision,
             TemplateScriptFile.INIT)
@@ -290,7 +292,9 @@ class TemplateBuilder():
         self.logger.info(msg)
 
         cust_script_filepath = ltm.get_script_filepath(
-            self.template_name, self.template_revision,
+            self.remote_cookbook_version,
+            self.template_name,
+            self.template_revision,
             TemplateScriptFile.CUST)
         cust_script = read_data_file(
             cust_script_filepath, logger=self.logger,
