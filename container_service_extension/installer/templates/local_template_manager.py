@@ -25,8 +25,8 @@ import container_service_extension.logging.logger as logger
 
 LOCAL_SCRIPTS_DIR = '.cse_scripts'
 MAP_COOKBOOK_VERSION_TO_SCRIPTS_DIR = {
-    RemoteTemplateCookbookVersion.Version1: 'v1',
-    RemoteTemplateCookbookVersion.Version2: 'v2'
+    RemoteTemplateCookbookVersion.Version1.value: 'v1',
+    RemoteTemplateCookbookVersion.Version2.value: 'v2'
 }
 
 

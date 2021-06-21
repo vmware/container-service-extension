@@ -1765,9 +1765,13 @@ def _install_single_template(
         template[remote_template_keys.REVISION])
 
     # remote template data is a super set of local template data, barring
-    # the key 'catalog_item_name'
+    # the key 'catalog_item_name' and 'cookbook_version' (if CSE is running in
+    #  non-legacy mode)
     template_data = dict(template)
     template_data[localTemplateKey.CATALOG_ITEM_NAME] = catalog_item_name
+    if not LEGACY_MODE:
+        template_data[localTemplateKey.COOKBOOK_VERSION] = \
+            remote_template_manager.cookbook_version
     template_metadata_keys = [k for k in localTemplateKey]
 
     missing_keys = [k for k in template_metadata_keys
