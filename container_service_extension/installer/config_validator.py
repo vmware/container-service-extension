@@ -153,10 +153,6 @@ def get_validated_config(config_file_name,
     except requests.exceptions.ConnectionError as err:
         raise Exception(f"Cannot connect to {err.request.url}.")
 
-    _validate_broker_config(config['broker'],
-                            legacy_mode=config['service']['legacy_mode'],
-                            msg_update_callback=msg_update_callback,
-                            logger_debug=logger_debug)
     check_keys_and_value_types(config['service'],
                                SAMPLE_SERVICE_CONFIG['service'],
                                location="config file 'service' section",
@@ -167,6 +163,11 @@ def get_validated_config(config_file_name,
                                location="config file 'service->telemetry' "
                                         "section",
                                msg_update_callback=msg_update_callback)
+
+    _validate_broker_config(config['broker'],
+                            legacy_mode=config['service']['legacy_mode'],
+                            msg_update_callback=msg_update_callback,
+                            logger_debug=logger_debug)
 
     config = _add_additional_details_to_config(
         config=config, log_wire=log_wire, log_wire_file=log_wire_file)
