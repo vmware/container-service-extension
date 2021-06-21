@@ -592,6 +592,26 @@ def get_ovdcs_by_page(
     return vdc_results
 
 
+def get_org_user_names(client: vcd_client.Client, org_name):
+    """Get a set of user names in an org.
+
+    :param vcd_client.Client client: current client
+    :param str org_name: org name to search for users
+
+    :return: set of user names
+    :rtype: set
+    """
+    org_href = client.get_org_by_name(org_name).get('href')
+    org = vcd_org.Org(client, org_href)
+    str_elem_users: list = org.list_users()
+    user_names: set = set()
+    for user_str_elem in str_elem_users:
+        curr_user_dict = to_dict(user_str_elem, exclude=[])
+        user_name = curr_user_dict['name']
+        user_names.add(user_name)
+    return user_names
+
+
 def create_org_user_id_to_name_dict(client: vcd_client.Client, org_name):
     """Get a dictionary of users ids to user names.
 
@@ -603,9 +623,9 @@ def create_org_user_id_to_name_dict(client: vcd_client.Client, org_name):
     """
     org_href = client.get_org_by_name(org_name).get('href')
     org = vcd_org.Org(client, org_href)
-    users: list = org.list_users()
+    str_elem_users: list = org.list_users()
     user_id_to_name_dict = {}
-    for user_str_elem in users:
+    for user_str_elem in str_elem_users:
         curr_user_dict = to_dict(user_str_elem, exclude=[])
         user_name = curr_user_dict['name']
         user_urn = shared_constants.USER_URN_PREFIX + \

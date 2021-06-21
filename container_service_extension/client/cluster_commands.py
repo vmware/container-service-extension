@@ -1089,10 +1089,10 @@ Examples:
             k8_runtime = shared_constants.ClusterEntityKind.TKG.value
 
         client = ctx.obj['client']
-        # TODO(CLI): Check regarding is sysadmin client check
-        if not org:
-            ctx_profiles = ctx.obj['profiles']
-            org = ctx_profiles.get('org')
+        # Users should be explicit in their intent about the org on which the
+        # command needs to be executed.
+        if not client.is_sysadmin() and org is None:
+            org = ctx.obj['profiles'].get('org_in_use')
         users_list = list(users)
         cluster = Cluster(client, k8_runtime)
         cluster.share_cluster(cluster_id, name, users_list, access_level_id,
@@ -1265,10 +1265,10 @@ Examples:
             k8_runtime = shared_constants.ClusterEntityKind.TKG.value
 
         client = ctx.obj['client']
-        # TODO(CLI): Check regarding why sysadmin check is excluded here
-        if not org:
-            ctx_profiles = ctx.obj['profiles']
-            org = ctx_profiles.get('org')
+        # Users should be explicit in their intent about the org on which the
+        # command needs to be executed.
+        if not client.is_sysadmin() and org is None:
+            org = ctx.obj['profiles'].get('org_in_use')
         users_list = list(users)
         cluster = Cluster(client, k8_runtime)
         cluster.unshare_cluster(cluster_id, name, users_list, org, vdc)

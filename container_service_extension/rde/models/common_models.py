@@ -140,11 +140,13 @@ class DefEntity:
     state: Optional[str] = None
     owner: Optional[Owner] = None
     org: Optional[Org] = None
+    metadataSummary: Optional[list] = None
 
     def __init__(self, entity: AbstractNativeEntity, entityType: str,
                  name: str = None, id: str = None,
                  externalId: str = None, state: str = None,
-                 owner: Owner = None, org: Org = None):
+                 owner: Owner = None, org: Org = None,
+                 metadataSummary: list = None):
         self.id = id
         self.entityType = entityType
 
@@ -168,6 +170,7 @@ class DefEntity:
         self.state = state
         self.owner = Owner(**owner) if isinstance(owner, dict) else owner
         self.org = Org(**org) if isinstance(org, dict) else org
+        self.metadataSummary = metadataSummary
 
 
 @dataclass()

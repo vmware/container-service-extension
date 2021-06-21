@@ -285,6 +285,21 @@ class DefEntityService:
         return DefEntity(**response_body)
 
     @handle_entity_service_exception
+    def get_generic_entity(self, entity_id: str) -> DefEntity:
+        """Get the generic entity given entity id.
+
+        :param str entity_id: Id of the entity.
+        :return: Details of the entity.
+        :rtype: DefEntity
+        """
+        response_body = self._cloudapi_client.do_request(
+            method=RequestMethod.GET,
+            cloudapi_version=CloudApiVersion.VERSION_1_0_0,
+            resource_url_relative_path=f"{CloudApiResource.ENTITIES}/"
+                                       f"{entity_id}")
+        return GenericClusterEntity(**response_body)
+
+    @handle_entity_service_exception
     def create_acl_for_entity(self,
                               id: str,
                               grant_type: str,

@@ -282,7 +282,7 @@ class ClusterService(abstract_broker.AbstractBroker):
                 distribution=k8_distribution,
                 org_name=org_name,
                 virtual_data_center_name=ovdc_name,
-                ovdc_network_name=input_native_entity.spec.settings.ovdc_network,
+                ovdc_network_name=input_native_entity.spec.settings.ovdc_network,  # noqa: E501
                 rollback_on_failure=input_native_entity.spec.settings.rollback_on_failure,  # noqa: E501
                 ssh_key=input_native_entity.spec.settings.ssh_key
             )
@@ -693,6 +693,12 @@ class ClusterService(abstract_broker.AbstractBroker):
         user_id_names_dict = vcd_utils.create_org_user_id_to_name_dict(
             client=client_v36,
             org_name=curr_entity.org.name)
+        # If the user is from the system org, need to consider system users
+        if client_v36.is_sysadmin():
+            system_user_id_names_dict = vcd_utils.create_org_user_id_to_name_dict(  # noqa: E501
+                client=client_v36,
+                org_name=SYSTEM_ORG_NAME)
+            user_id_names_dict.update(system_user_id_names_dict)
 
         # Iterate all acl entries because not all results correspond to a user
         acl_values = []
