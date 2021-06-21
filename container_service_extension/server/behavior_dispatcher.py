@@ -5,6 +5,8 @@
 from dataclasses import asdict
 import json
 
+from pyvcloud.vcd.client import ApiVersion
+
 from container_service_extension.common.constants.shared_constants import \
     API_VERSION_37_ALPHA
 from container_service_extension.exception.exceptions import CseRequestError
@@ -44,7 +46,7 @@ def process_behavior_request(msg_json, mqtt_publisher: MQTTPublisher):
     # This is needed to enable unified API endpoint workflows. Unified API
     # endpoint is currently exposed at 37.0.0-alpha (VCD 10.3 Andromeda).
     if api_version == API_VERSION_37_ALPHA:
-        api_version = '36.0'
+        api_version = ApiVersion.VERSION_36.value
     auth_token: str = payload['_metadata']['actAsToken']
     request_id: str = payload['_metadata']['requestId']
     arguments: dict = payload['arguments']
