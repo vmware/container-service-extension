@@ -450,7 +450,7 @@ class NativeEntity(AbstractNativeEntity):
         :rtype: str
         """
         cluster_spec_field_descriptions = """# Short description of various properties used in this sample cluster configuration
-# apiVerson: Represents the payload version of the cluster specification. By default, \"cse.vmware.com/v2.0\" is used.
+# apiVersion: Represents the payload version of the cluster specification. By default, \"cse.vmware.com/v2.0\" is used.
 # kind: The kind of the Kubernetes cluster.
 #
 # metadata: This is a required section

@@ -350,7 +350,7 @@ class NativeEntity(AbstractNativeEntity):
     @classmethod
     def get_sample_native_cluster_specification(cls, k8_runtime: str = shared_constants.ClusterEntityKind.NATIVE.value):  # noqa: E501
         cluster_spec_field_descriptions = """# Short description of various properties used in this sample cluster configuration
-# api_verson: Represents the payload version of the cluster specification. By default, empty.
+# api_version: Represents the payload version of the cluster specification. By default, empty.
 # kind: The kind of the Kubernetes cluster.
 #
 # metadata: This is a required section
