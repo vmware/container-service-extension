@@ -148,7 +148,7 @@ class DEClusterTKG:
         tkg_def_entities = []
         if response:
             tkg_entities = response[0]
-            tkg_def_entities = response[3]
+            tkg_def_entities = response[3]['entityDetails']
         if len(tkg_entities) == 0:
             raise cse_exceptions.ClusterNotFoundError(
                 f"TKG cluster with name '{name}' not found.")
