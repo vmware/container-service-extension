@@ -6,7 +6,7 @@ title: Release Notes
 # Release Notes
 
 ## CSE 3.0.3 GA (3.0.3)
-Release Date: 2021-06-21
+Release Date: 2021-06-24
 
 **Supported (and Tested) VCD versions** : 10.2.2, 10.1.3, 10.0.0.3
 
@@ -22,25 +22,21 @@ and bring it to our attention.
 | NA         | 3.0.3   | 2.2.0**                         | 10.2.2         | NA           | NA                        | TKG-S cluster management only                                                                                               |
 
 ** Kubernetes Clusters UI plug-in v2.3.0 needs to be downloaded separately from
-[here](Link from Jaskaran Virk) and manually uploaded to VCD. By default VCD 10.2.2
+[here](Link from Jaskaran Virk) and manually uploaded to VCD. By default, VCD 10.2.2
 will have Kubernetes Clusters UI plug-in v2.2.0.
 
 **What's New**
-* CSE can now deploy VMware Tanzu Kubernetes Grid (TKG) distribution based Kubernetes clusters.
+* CSE can now deploy VMware Tanzu Kubernetes Grid (TKG) distribution based Kubernetes
+clusters on VCD 10.2.2 or prior update releases of VCD 10.2 GA.
     * Learn more about TKG [here](https://docs.vmware.com/en/VMware-Tanzu-Kubernetes-Grid/index.html).
     * Read about TKG and it's benefits [here](placeholder to VCPP marketing blog URL).
-    * Instructions to enable TKG for CSE 3.0.3 can be found at [here](https://github.com/vmware/container-service-extension-templates/blob/tkgm/TKGm_INSTRUCTIONS.MD).
+    * Instructions to enable TKG for CSE 3.0.3 can be found [here](https://github.com/vmware/container-service-extension-templates/blob/tkgm/TKGm_INSTRUCTIONS.MD).
 * Following fixes have been added
     * Correctly honor the specified storage profile during cluster creation (for both UI and CLI).
     * When resizing an exposed native cluster (connected to a NSX-T powered org VDC), the exposed IP address will be retained.
-* Changes in flags for the following commands
-    * `vcd cse ovdc enable`
-        * --tkg-plus/-t changed to --tkg-plus/-p
-    * `vcd cse ovdc disable`
-        * --tkg-plus/-t changed to --tkg-plus/-p
+* Change in flag for the following command
     * `vcd cse cluster apply`
         * --tkg/-t changed to --tkg-s/-k
-        * --tkg-plus/-k changed to --tkg-plus/-p
 
 **Notes to System Administrator**
 If you are upgrading from an existing CSE 3.0.x installation please be aware of
