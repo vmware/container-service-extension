@@ -18,7 +18,6 @@ import pyvcloud.vcd.vapp as vcd_vapp
 from pyvcloud.vcd.vdc import VDC
 import requests
 
-import container_service_extension.common.constants.server_constants as server_constants  # noqa: E501
 import container_service_extension.common.constants.shared_constants as shared_constants  # noqa: E501
 from container_service_extension.common.utils.core_utils import extract_id_from_href  # noqa: E501
 from container_service_extension.common.utils.core_utils import NullPrinter
@@ -92,7 +91,7 @@ def get_sys_admin_client(api_version: Optional[str]):
         log_bodies=log_wire)
     credentials = vcd_client.BasicLoginCredentials(
         server_config['vcd']['username'],
-        server_constants.SYSTEM_ORG_NAME,
+        shared_constants.SYSTEM_ORG_NAME,
         server_config['vcd']['password'])
     client.set_credentials(credentials)
     return client

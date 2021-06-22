@@ -33,11 +33,11 @@ from container_service_extension.common.constants.server_constants import IP_POR
 from container_service_extension.common.constants.server_constants import LocalTemplateKey  # noqa: E501
 from container_service_extension.common.constants.server_constants import NETWORK_URN_PREFIX  # noqa: E501
 from container_service_extension.common.constants.server_constants import NodeType  # noqa: E501
-from container_service_extension.common.constants.server_constants import SYSTEM_ORG_NAME  # noqa: E501
 from container_service_extension.common.constants.server_constants import ThreadLocalData  # noqa: E501
 from container_service_extension.common.constants.server_constants import VdcNetworkInfoKey  # noqa: E501
 import container_service_extension.common.constants.shared_constants as shared_constants  # noqa: E501
-from container_service_extension.common.constants.shared_constants import CSE_PAGINATION_DEFAULT_PAGE_SIZE  # noqa: E501
+from container_service_extension.common.constants.shared_constants import \
+    CSE_PAGINATION_DEFAULT_PAGE_SIZE, SYSTEM_ORG_NAME
 from container_service_extension.common.constants.shared_constants import CSE_PAGINATION_FIRST_PAGE_NUMBER  # noqa: E501
 from container_service_extension.common.constants.shared_constants import RequestMethod  # noqa: E501
 import container_service_extension.common.thread_local_data as thread_local_data  # noqa: E501

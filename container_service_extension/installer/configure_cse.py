@@ -111,7 +111,7 @@ def check_cse_installation(config, msg_update_callback=utils.NullPrinter()):
                         log_headers=log_wire,
                         log_bodies=log_wire)
         credentials = BasicLoginCredentials(config['vcd']['username'],
-                                            server_constants.SYSTEM_ORG_NAME,
+                                            shared_constants.SYSTEM_ORG_NAME,
                                             config['vcd']['password'])
         client.set_credentials(credentials)
 
@@ -281,7 +281,7 @@ def install_cse(config_file_name, config, skip_template_creation,
                         log_headers=log_wire,
                         log_bodies=log_wire)
         credentials = BasicLoginCredentials(config['vcd']['username'],
-                                            server_constants.SYSTEM_ORG_NAME,
+                                            shared_constants.SYSTEM_ORG_NAME,
                                             config['vcd']['password'])
         client.set_credentials(credentials)
         msg = f"Connected to vCD as system administrator: " \
@@ -468,7 +468,7 @@ def install_template(template_name, template_revision, config_file_name,
                         log_headers=log_wire,
                         log_bodies=log_wire)
         credentials = BasicLoginCredentials(config['vcd']['username'],
-                                            server_constants.SYSTEM_ORG_NAME,
+                                            shared_constants.SYSTEM_ORG_NAME,
                                             config['vcd']['password'])
         client.set_credentials(credentials)
         msg = f"Connected to vCD as system administrator: " \
@@ -637,7 +637,7 @@ def upgrade_cse(config_file_name, config, skip_template_creation,
                         log_headers=log_wire,
                         log_bodies=log_wire)
         credentials = BasicLoginCredentials(config['vcd']['username'],
-                                            server_constants.SYSTEM_ORG_NAME,
+                                            shared_constants.SYSTEM_ORG_NAME,
                                             config['vcd']['password'])
         client.set_credentials(credentials)
         msg = f"Connected to vCD as system administrator: " \
@@ -1241,7 +1241,7 @@ def _register_def_schema(client: Client,
             # recreated and newly added rights are effective for the user.
             client.logout()
             credentials = BasicLoginCredentials(config['vcd']['username'],
-                                                server_constants.SYSTEM_ORG_NAME,  # noqa: E501
+                                                shared_constants.SYSTEM_ORG_NAME,  # noqa: E501
                                                 config['vcd']['password'])
             client.set_credentials(credentials)
     except cse_exception.DefNotSupportedException:

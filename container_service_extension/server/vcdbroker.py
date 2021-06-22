@@ -30,9 +30,9 @@ from container_service_extension.common.constants.server_constants import KwargK
 from container_service_extension.common.constants.server_constants import LocalTemplateKey  # noqa: E501
 from container_service_extension.common.constants.server_constants import NodeType  # noqa: E501
 from container_service_extension.common.constants.server_constants import ScriptFile  # noqa: E501
-from container_service_extension.common.constants.server_constants import SYSTEM_ORG_NAME  # noqa: E501
 from container_service_extension.common.constants.server_constants import ThreadLocalData  # noqa: E501
-from container_service_extension.common.constants.shared_constants import ClusterDetailsKey  # noqa: E501
+from container_service_extension.common.constants.shared_constants import \
+    ClusterDetailsKey, SYSTEM_ORG_NAME
 from container_service_extension.common.constants.shared_constants import CSE_PAGINATION_DEFAULT_PAGE_SIZE  # noqa: E501
 from container_service_extension.common.constants.shared_constants import CSE_PAGINATION_FIRST_PAGE_NUMBER  # noqa: E501
 from container_service_extension.common.constants.shared_constants import PaginationKey  # noqa: E501

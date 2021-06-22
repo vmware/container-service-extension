@@ -18,12 +18,11 @@ import yaml
 
 from container_service_extension.common.constants.server_constants import \
     CONFIG_DECRYPTION_ERROR_MSG
-from container_service_extension.common.constants.server_constants import SYSTEM_ORG_NAME  # noqa: E501
 from container_service_extension.common.constants.server_constants import \
     VCENTER_LOGIN_ERROR_MSG
 from container_service_extension.common.constants.server_constants import VERSION_V1  # noqa: E501
 from container_service_extension.common.constants.shared_constants import \
-    SUPPORTED_VCD_API_VERSIONS
+    SUPPORTED_VCD_API_VERSIONS, SYSTEM_ORG_NAME
 from container_service_extension.common.utils.core_utils import check_file_permissions  # noqa: E501
 from container_service_extension.common.utils.core_utils import check_keys_and_value_types  # noqa: E501
 from container_service_extension.common.utils.core_utils import get_duplicate_items_in_list  # noqa: E501

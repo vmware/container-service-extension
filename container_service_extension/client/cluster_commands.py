@@ -1091,8 +1091,12 @@ Examples:
         client = ctx.obj['client']
         # Users should be explicit in their intent about the org on which the
         # command needs to be executed.
-        if not client.is_sysadmin() and org is None:
+        is_system_user = client.is_sysadmin()
+        if not is_system_user and org is None:
             org = ctx.obj['profiles'].get('org_in_use')
+        elif is_system_user and org is None:
+            raise Exception("Need to specify cluster org since user is in system org")  # noqa: E501
+
         users_list = list(users)
         cluster = Cluster(client, k8_runtime)
         cluster.share_cluster(cluster_id, name, users_list, access_level_id,
@@ -1184,8 +1188,11 @@ Examples:
         client = ctx.obj['client']
         # Users should be explicit in their intent about the org on which the
         # command needs to be executed.
-        if not client.is_sysadmin() and org is None:
+        is_system_user = client.is_sysadmin()
+        if not is_system_user and org is None:
             org = ctx.obj['profiles'].get('org_in_use')
+        elif is_system_user and org is None:
+            raise Exception("Need to specify cluster org since user is in system org")  # noqa: E501
 
         cluster = Cluster(client, k8_runtime)
         share_entries = cluster.list_share_entries(cluster_id, name, org, vdc)
@@ -1267,8 +1274,12 @@ Examples:
         client = ctx.obj['client']
         # Users should be explicit in their intent about the org on which the
         # command needs to be executed.
-        if not client.is_sysadmin() and org is None:
+        is_system_user = client.is_sysadmin()
+        if not is_system_user and org is None:
             org = ctx.obj['profiles'].get('org_in_use')
+        elif is_system_user and org is None:
+            raise Exception("Need to specify cluster org since user is in system org")  # noqa: E501
+
         users_list = list(users)
         cluster = Cluster(client, k8_runtime)
         cluster.unshare_cluster(cluster_id, name, users_list, org, vdc)

@@ -617,7 +617,7 @@ class Service(object, metaclass=Singleton):
                 log_headers=log_wire,
                 log_bodies=log_wire)
             credentials = BasicLoginCredentials(self.config['vcd']['username'],
-                                                server_constants.SYSTEM_ORG_NAME,  # noqa: E501
+                                                shared_constants.SYSTEM_ORG_NAME,  # noqa: E501
                                                 self.config['vcd']['password'])
             client.set_credentials(credentials)
 

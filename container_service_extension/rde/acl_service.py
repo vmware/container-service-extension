@@ -188,7 +188,7 @@ class ClusterACLService:
         api_uri = self._client.get_api_uri()
         system_user_names: set = vcd_utils.get_org_user_names(
             client=self._client,
-            org_name=server_constants.SYSTEM_ORG_NAME)
+            org_name=shared_constants.SYSTEM_ORG_NAME)
         for acl_entry in update_cluster_acl_entries:
             user_name = acl_entry.username
             # Skip system users since sharing can't be outside an org

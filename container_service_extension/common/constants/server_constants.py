@@ -24,7 +24,6 @@ UNKNOWN_VCD_API_VERSION = "0.0"
 CSE_SERVICE_NAME = 'cse'
 CSE_SERVICE_NAMESPACE = 'cse'
 EXCHANGE_TYPE = 'direct'
-SYSTEM_ORG_NAME = 'system'
 
 # DEPLOY RIGHTS; used by authorization framework to weed out unauthorized calls
 CSE_NATIVE_DEPLOY_RIGHT_NAME = 'CSE NATIVE DEPLOY RIGHT'

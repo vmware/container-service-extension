@@ -452,6 +452,11 @@ class DEClusterTKG:
 
         org_user_id_to_name_dict = vcd_utils.create_org_user_id_to_name_dict(
             self._client, org)
+        # Consider system users if client is from system org
+        if self._client.is_sysadmin():
+            sys_org_user_id_to_name_dict = vcd_utils.create_org_user_id_to_name_dict(  # noqa:E501
+                self._client, shared_constants.SYSTEM_ORG_NAME)
+            org_user_id_to_name_dict.update(sys_org_user_id_to_name_dict)
         acl_svc = cluster_acl_svc.ClusterACLService(cluster_id, self._client)
         page_num = result_count = 0
         while True:
