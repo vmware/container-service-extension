@@ -712,10 +712,11 @@ USED_IP_ADDRESS_PAGE_SIZE = 10
 @unique
 class PostCustomizationStatus(Enum):
     NONE = None
-    IN_PROGRESS = 'IN_PROGRESS'
-    SUCCESSFUL = 'SUCCESSFUL'
+    IN_PROGRESS = 'in_progress'
+    SUCCESSFUL = 'successful'
 
 
+POST_CUSTOMIZATION_SCRIPT_EXECUTION_STATUS = 'post_customization_script_execution_status'  # noqa: E501
 DEFAULT_POST_CUSTOMIZATION_STATUSES = [cust_status.value for cust_status in PostCustomizationStatus]  # noqa: E501
 DEFAULT_POST_CUSTOMIZATION_POLL_SEC = 5
 DEFAULT_POST_CUSTOMIZATION_TIMEOUT_SEC = 180

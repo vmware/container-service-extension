@@ -668,6 +668,7 @@ def wait_for_completion_of_post_customization_step(
     finished within given time
     :raises InvalidCustomizationStatus: If customization enters a status
     not in valid target status
+    :raises ScriptExecutionError: If script execution fails at any command
     """
     # Raise exception on empty status list
     if not expected_target_statuses:
@@ -689,8 +690,10 @@ def wait_for_completion_of_post_customization_step(
         if new_status == expected_target_statuses[-1]:
             return new_status
 
-        # TODO() Test any individual command failure with a new global extra
-        #  config element. That way fail-fast and exit the polling.
+        # Catch any intermediate command failure and raise early exception
+        script_execution_status = get_vm_extra_config_element(vm, server_constants.POST_CUSTOMIZATION_SCRIPT_EXECUTION_STATUS)  # noqa: E501
+        if script_execution_status and int(script_execution_status) != 0:
+            raise exceptions.ScriptExecutionError
 
         if datetime.now() - start_time > timedelta(seconds=timeout):
             break
