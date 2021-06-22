@@ -52,7 +52,7 @@ class DEClusterTKG:
         max_api_version = utils.get_max_api_version(supported_api_versions)
 
         # api_version = self._client.get_api_version()
-        # use api_version 37.0.0-alpha if VCD 10.3 or above is used.
+        # use api_version 37.0.0-alpha if VCD 10.3 is used.
         if float(max_api_version) >= float(ApiVersion.VERSION_36.value):
             api_version = '37.0.0-alpha'
         self._tkg_client.set_default_header(cli_constants.TKGRequestHeaderKey.ACCEPT,  # noqa: E501
