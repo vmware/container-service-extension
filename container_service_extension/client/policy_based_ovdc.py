@@ -49,11 +49,11 @@ class PolicyBasedOvdc:
         for k in k8s_runtime:
             if enable:
                 if k in runtimes:
-                    raise Exception(f"OVDC {ovdc_name} already enabled for {k8s_runtime}") # noqa: E501
+                    raise Exception(f"OVDC {ovdc_name} already enabled for {k}") # noqa: E501
                 runtimes.append(k)
             else:
                 if k not in runtimes:
-                    raise Exception(f"OVDC {ovdc_name} already disabled for {k8s_runtime}") # noqa: E501
+                    raise Exception(f"OVDC {ovdc_name} already disabled for {k}") # noqa: E501
                 runtimes.remove(k)
         updated_ovdc = common_models.Ovdc(
             k8s_runtime=runtimes,
