@@ -407,16 +407,13 @@ class DEClusterTKG:
                                     f'level: {curr_access_level}')
 
         # share TKG def entity
-        payload = {
-            shared_constants.AccessControlKey.GRANT_TYPE:
-                shared_constants.MEMBERSHIP_GRANT_TYPE,
-            shared_constants.AccessControlKey.ACCESS_LEVEL_ID:
-                access_level_id,
-            shared_constants.AccessControlKey.MEMBER_ID: None
-        }
+        acl_entry = common_models.ClusterAclEntry(
+            grantType=shared_constants.MEMBERSHIP_GRANT_TYPE,
+            accessLevelId=access_level_id,
+            memberId=None)
         for _, user_id in name_to_id.items():
-            payload[shared_constants.AccessControlKey.MEMBER_ID] = user_id
-            acl_svc.share_def_entity(payload)
+            acl_entry.memberId = user_id
+            acl_svc.share_def_entity(acl_entry)
 
     def unshare_cluster(self, cluster_id, cluster_name, users: list, org=None,
                         vdc=None):

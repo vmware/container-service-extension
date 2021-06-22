@@ -191,6 +191,11 @@ class AccessControlKey(str, Enum):
     USERNAME = 'username'
 
 
+DEF_ENTITY_ACCESS_CONTROL_KEYS = [AccessControlKey.GRANT_TYPE,
+                                  AccessControlKey.ACCESS_LEVEL_ID,
+                                  AccessControlKey.MEMBER_ID]
+
+
 @unique
 class ClusterAclKey(str, Enum):
     ACCESS_SETTING = 'accessSetting'

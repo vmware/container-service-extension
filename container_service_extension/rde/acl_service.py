@@ -34,7 +34,7 @@ class ClusterACLService:
     def def_entity(self):
         if self._def_entity is None:
             entity_svc = def_entity_svc.DefEntityService(self._cloudapi_client)
-            self._def_entity = entity_svc.get_generic_entity(self._cluster_id)
+            self._def_entity = entity_svc.get_tkg_or_def_entity(self._cluster_id)  # noqa: E501
         return self._def_entity
 
     @property
@@ -83,11 +83,13 @@ class ClusterACLService:
             user_id_to_acl_entry[acl_entry.memberId] = acl_entry
         return user_id_to_acl_entry
 
-    def share_def_entity(self, payload):
+    def share_def_entity(self, acl_entry: common_models.ClusterAclEntry):
         access_controls_path = \
             f'{cloudapi_constants.CloudApiResource.ENTITIES}/' \
             f'{self._cluster_id}/{cloudapi_constants.CloudApiResource.ACL}'
         org_id = self.def_entity.org.id
+        payload = acl_entry.construct_filtered_dict(
+            include=shared_constants.DEF_ENTITY_ACCESS_CONTROL_KEYS)
         self._cloudapi_client.do_request(
             method=shared_constants.RequestMethod.POST,
             cloudapi_version=cloudapi_constants.CloudApiVersion.VERSION_1_0_0,
@@ -118,19 +120,17 @@ class ClusterACLService:
 
         # Share defined entity
         user_acl_level_dict = {}
-        payload = {
-            shared_constants.AccessControlKey.GRANT_TYPE:
-                shared_constants.MEMBERSHIP_GRANT_TYPE,
-            shared_constants.AccessControlKey.MEMBER_ID: None,
-            shared_constants.AccessControlKey.ACCESS_LEVEL_ID: None
-        }
+        share_acl_entry = common_models.ClusterAclEntry(
+            grantType=shared_constants.MEMBERSHIP_GRANT_TYPE,
+            memberId=None,
+            accessLevelId=None)
         for acl_entry in update_acl_entries:
             user_id = acl_entry.memberId
             acl_level = acl_entry.accessLevelId
-            payload[shared_constants.AccessControlKey.MEMBER_ID] = user_id
-            payload[shared_constants.AccessControlKey.ACCESS_LEVEL_ID] = acl_level  # noqa: E501
+            share_acl_entry.memberId = user_id
+            share_acl_entry.accessLevelId = acl_level
             user_acl_level_dict[user_id] = acl_level
-            self.share_def_entity(payload)
+            self.share_def_entity(share_acl_entry)
 
             # Remove entry from previous user acl info
             if own_prev_user_id_to_acl_entry.get(user_id):
@@ -186,13 +186,15 @@ class ClusterACLService:
         vapp_access_settings: lxml.objectify.ObjectifiedElement = \
             self.vapp.get_access_settings()
         api_uri = self._client.get_api_uri()
-        system_user_names: set = vcd_utils.get_org_user_names(
-            client=self._client,
-            org_name=shared_constants.SYSTEM_ORG_NAME)
+        system_user_names: set = None
+        if self._client.is_sysadmin():
+            system_user_names = vcd_utils.get_org_user_names(
+                client=self._client,
+                org_name=shared_constants.SYSTEM_ORG_NAME)
         for acl_entry in update_cluster_acl_entries:
             user_name = acl_entry.username
             # Skip system users since sharing can't be outside an org
-            if user_name in system_user_names:
+            if system_user_names and user_name in system_user_names:
                 continue
             user_id = pyvcloud_utils.extract_id(acl_entry.memberId)
             access_level = pyvcloud_utils.extract_id(acl_entry.accessLevelId)

@@ -9,6 +9,7 @@ from typing import List, Tuple, Union
 from pyvcloud.vcd.client import ApiVersion
 from requests.exceptions import HTTPError
 
+import container_service_extension.common.constants.shared_constants as shared_constants  # noqa: E501
 from container_service_extension.common.constants.shared_constants import CSE_PAGINATION_DEFAULT_PAGE_SIZE, PaginationKey  # noqa: E501
 from container_service_extension.common.constants.shared_constants import CSE_PAGINATION_FIRST_PAGE_NUMBER  # noqa: E501
 from container_service_extension.common.constants.shared_constants import HttpResponseHeader  # noqa: E501
@@ -24,7 +25,8 @@ import container_service_extension.rde.constants as def_constants
 from container_service_extension.rde.models.abstractNativeEntity import AbstractNativeEntity  # noqa: E501
 from container_service_extension.rde.models.common_models import DefEntity
 from container_service_extension.rde.models.common_models import DefEntityType
-from container_service_extension.rde.models.common_models import GenericClusterEntity   # noqa: E501
+from container_service_extension.rde.models.common_models import GenericClusterEntity  # noqa: E501
+from container_service_extension.rde.models.common_models import TKGEntity
 import container_service_extension.rde.utils as def_utils
 
 
@@ -307,10 +309,11 @@ class DefEntityService:
         return DefEntity(**response_body)
 
     @handle_entity_service_exception
-    def get_generic_entity(self, entity_id: str) -> DefEntity:
-        """Get the generic entity given entity id.
+    def get_tkg_or_def_entity(self, entity_id: str) -> DefEntity:
+        """Get the tkg or def entity given entity id.
 
         :param str entity_id: Id of the entity.
+
         :return: Details of the entity.
         :rtype: DefEntity
         """
@@ -319,7 +322,14 @@ class DefEntityService:
             cloudapi_version=CloudApiVersion.VERSION_1_0_0,
             resource_url_relative_path=f"{CloudApiResource.ENTITIES}/"
                                        f"{entity_id}")
-        return GenericClusterEntity(**response_body)
+        entity: dict = response_body['entity']
+        entity_kind: dict = entity['kind']
+        if entity_kind in [shared_constants.ClusterEntityKind.NATIVE.value,
+                           shared_constants.ClusterEntityKind.TKG_PLUS.value]:
+            return DefEntity(**response_body)
+        elif entity_kind == shared_constants.ClusterEntityKind.TKG.value:
+            return TKGEntity(**entity)
+        raise Exception("Invalid cluster kind.")
 
     @handle_entity_service_exception
     def create_acl_for_entity(self,

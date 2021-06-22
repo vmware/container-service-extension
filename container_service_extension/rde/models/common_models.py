@@ -9,6 +9,7 @@ from typing import List, Optional
 from dataclasses_json import dataclass_json, Undefined
 
 from container_service_extension.common.constants import shared_constants as shared_constants  # noqa: E501
+import container_service_extension.common.constants.server_constants as server_constants  # noqa: E501
 from container_service_extension.rde import utils as def_utils
 from container_service_extension.rde.behaviors.behavior_model import BehaviorAcl, BehaviorOperation  # noqa: E501
 from container_service_extension.rde.constants import \
@@ -190,7 +191,7 @@ class Tenant:
 
 @dataclass()
 class ClusterAclEntry:
-    accessLevelId: Optional[str] = None
+    accessLevelId: Optional[server_constants.AclAccessLevelId] = None
     memberId: Optional[str] = None
     id: Optional[str] = None
     grantType: Optional[str] = None
