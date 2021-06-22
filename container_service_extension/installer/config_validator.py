@@ -153,6 +153,8 @@ def get_validated_config(config_file_name,
     except requests.exceptions.ConnectionError as err:
         raise Exception(f"Cannot connect to {err.request.url}.")
 
+    # Validation of service properties is done first as those properties are
+    # used in broker validation.
     check_keys_and_value_types(config['service'],
                                SAMPLE_SERVICE_CONFIG['service'],
                                location="config file 'service' section",
