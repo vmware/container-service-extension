@@ -793,6 +793,7 @@ class ClusterService(abstract_broker.AbstractBroker):
 
             _init_cluster(sysadmin_client_v35,
                           vapp,
+                          template[LocalTemplateKey.KIND],
                           template[LocalTemplateKey.KUBERNETES_VERSION],
                           template[LocalTemplateKey.CNI_VERSION],
                           expose_ip=expose_ip)
@@ -2274,14 +2275,15 @@ def _get_control_plane_ip(sysadmin_client: vcd_client.Client, vapp,
     return control_plane_ip
 
 
-def _init_cluster(sysadmin_client: vcd_client.Client, vapp, k8s_version,
-                  cni_version, expose_ip=None):
+def _init_cluster(sysadmin_client: vcd_client.Client, vapp, cluster_kind,
+                  k8s_version, cni_version, expose_ip=None):
     vcd_utils.raise_error_if_user_not_from_system_org(sysadmin_client)
 
     try:
         templated_script = get_cluster_script_file_contents(
             ClusterScriptFile.CONTROL_PLANE, ClusterScriptFile.VERSION_1_X)
         script = templated_script.format(
+            cluster_kind=cluster_kind,
             k8s_version=k8s_version,
             cni_version=cni_version)
 
