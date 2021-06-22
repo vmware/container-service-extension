@@ -4,6 +4,7 @@
 
 import json
 
+from pyvcloud.vcd.client import ApiVersion
 import yaml
 
 import container_service_extension.client.constants as cli_constants
@@ -45,7 +46,15 @@ class DEClusterTKG:
             legacy_token = self._client.get_xvcloud_authorization_token()
             self._tkg_client.set_default_header(cli_constants.TKGRequestHeaderKey.X_VCLOUD_AUTHORIZATION,  # noqa: E501
                                                 legacy_token)
+        # get highest supported api version
         api_version = self._client.get_api_version()
+        supported_api_versions = self._client.get_supported_versions_list()
+        max_api_version = utils.get_max_api_version(supported_api_versions)
+
+        # api_version = self._client.get_api_version()
+        # use api_version 37.0.0-alpha if VCD 10.3 is used.
+        if float(max_api_version) >= float(ApiVersion.VERSION_36.value):
+            api_version = '37.0.0-alpha'
         self._tkg_client.set_default_header(cli_constants.TKGRequestHeaderKey.ACCEPT,  # noqa: E501
                                             f"application/json;version={api_version}")  # noqa: E501
         self._tkg_client_api = TkgClusterApi(api_client=self._tkg_client)
@@ -148,7 +157,7 @@ class DEClusterTKG:
         tkg_def_entities = []
         if response:
             tkg_entities = response[0]
-            tkg_def_entities = response[3]
+            tkg_def_entities = response[3]['entityDetails']
         if len(tkg_entities) == 0:
             raise cse_exceptions.ClusterNotFoundError(
                 f"TKG cluster with name '{name}' not found.")
