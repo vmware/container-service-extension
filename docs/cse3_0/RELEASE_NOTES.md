@@ -15,15 +15,15 @@ by CSE 3.0.3, but they will not be tested individually. If a bug is found in the
 interoperability, please file a github [issue](https://github.com/vmware/container-service-extension/issues)
 and bring it to our attention.
 
-| CSE Server | CSE CLI | Kubernetes Clusters UI plug-in  | Cloud Director | NSX-T        | Enterprise PKS with NSX-T | Features offered                                                                                                            |
-|------------|---------|---------------------------------|----------------|--------------|---------------------------|-----------------------------------------------------------------------------------------------------------------------------|
-| 3.0.3      | 3.0.3   | 2.3.0**                         | 10.2.2         | 3.0.2, 3.1.2 | 1.7 with 2.5.1            | Native, TKG, TKG-S, and Enterprise PKS Cluster management; Runtime Defined entity representation for native, TKG and TKG-S. |
-| 3.0.3      | 3.0.3   | 1.0.3                           | 10.1, 10.0     | NA           | 1.7 with 2.5.1            | Native and Enterprise PKS cluster management                                                                                |
-| NA         | 3.0.3   | 2.2.0**                         | 10.2.2         | NA           | NA                        | TKG-S cluster management only                                                                                               |
+| CSE Server | CSE CLI | Kubernetes Container Clusters UI Plug-in | Cloud Director | NSX-T        | Enterprise PKS with NSX-T | Features offered                                                                                                            |
+|------------|---------|------------------------------------------|----------------|--------------|---------------------------|-----------------------------------------------------------------------------------------------------------------------------|
+| 3.0.3      | 3.0.3   | 2.3.0**                                  | 10.2.2         | 3.0.2, 3.1.2 | 1.7 with 2.5.1            | Native, TKG, TKG-S, and Enterprise PKS Cluster management; Runtime Defined entity representation for native, TKG and TKG-S. |
+| 3.0.3      | 3.0.3   | 1.0.3                                    | 10.1, 10.0     | NA           | 1.7 with 2.5.1            | Native and Enterprise PKS cluster management                                                                                |
+| NA         | 3.0.3   | 2.2.0**                                  | 10.2.2         | NA           | NA                        | TKG-S cluster management only                                                                                               |
 
-** Kubernetes Clusters UI plug-in v2.3.0 needs to be downloaded separately from
+** Kubernetes Container Clusters UI Plug-in v2.3.0 needs to be downloaded separately from
 [here](Link from Jaskaran Virk) and manually uploaded to VCD. By default, VCD 10.2.2
-will have Kubernetes Clusters UI plug-in v2.2.0.
+will have Kubernetes Container Clusters UI Plug-in v2.2.0.
 
 **What's New**
 * CSE can now deploy VMware Tanzu Kubernetes Grid (TKG) distribution based Kubernetes
