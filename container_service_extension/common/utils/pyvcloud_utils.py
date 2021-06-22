@@ -698,8 +698,11 @@ def wait_for_completion_of_post_customization_step(
         customization_phase: str,
         timeout=server_constants.DEFAULT_POST_CUSTOMIZATION_TIMEOUT_SEC,
         poll_frequency=server_constants.DEFAULT_POST_CUSTOMIZATION_POLL_SEC,
-        expected_target_statuses=server_constants.DEFAULT_POST_CUSTOMIZATION_STATUSES):  # noqa: E501
+        expected_target_statuses=server_constants.DEFAULT_POST_CUSTOMIZATION_STATUSES) -> str:  # noqa: E501
     """Wait for given post customization phase to reach final expected status.
+
+    The contract is customization phase starts with first element in the
+    expected_target_statuses.
 
     :param VM vm: vm res
     :param str customization_phase:
@@ -707,7 +710,9 @@ def wait_for_completion_of_post_customization_step(
     finish
     :param float poll_frequency: time in seconds for how often to poll the
     status of customization_phase
-    :param list expected_target_statuses: list of expected target statuses
+    :param list expected_target_statuses: list of expected target statuses. The
+    contract is to explicitly spell out all the valid states including None as
+    state to start with.
     :return: str name of last customization phase
     :rtype: str
     :raises PostCustomizationTimeoutError: if customization phase is not
@@ -715,9 +720,14 @@ def wait_for_completion_of_post_customization_step(
     :raises InvalidCustomizationStatus: If customization enters a status
     not in valid target status
     """
+    # Raise exception on empty status list
+    if not expected_target_statuses:
+        raise exceptions.InvalidCustomizationStatus
+
     start_time = datetime.now()
     current_status = expected_target_statuses[0]
     remaining_statuses = list(expected_target_statuses)
+
     while True:
         new_status = get_vm_extra_config_element(vm, customization_phase)
         if new_status not in remaining_statuses:
@@ -725,9 +735,14 @@ def wait_for_completion_of_post_customization_step(
         # update the remaining statuses on status change
         if new_status != current_status:
             remaining_statuses.remove(current_status)
-        # Check for successful customization: reached last status
+            current_status = new_status
+        # Check for successful customization: reaching last status between
         if new_status == expected_target_statuses[-1]:
             return new_status
+
+        # TODO() Test any individual command failure with a new global extra
+        #  config element. That way fail-fast and exit the polling.
+
         if datetime.now() - start_time > timedelta(seconds=timeout):
             break
         time.sleep(poll_frequency)
