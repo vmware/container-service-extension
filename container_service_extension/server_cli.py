@@ -604,7 +604,7 @@ def encrypt(ctx, input_file, output_file):
         sys.exit(1)
 
 
-@cli.command(short_help='Install CSE extension 3.0.0 on vCD')
+@cli.command(short_help='Install CSE extension 3.0.3 on vCD')
 @click.pass_context
 @click.option(
     '-c',
@@ -843,7 +843,7 @@ def run(ctx, config_file_path, pks_config_file_path, skip_check,
 
 
 @cli.command('upgrade',
-             short_help="Upgrade CSE extension to version 3.0.0 on vCD")
+             short_help="Upgrade CSE extension to version 3.0.3 on vCD")
 @click.pass_context
 @click.option(
     '-c',
