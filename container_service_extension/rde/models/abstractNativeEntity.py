@@ -19,5 +19,5 @@ class AbstractNativeEntity(abc.ABC):
 
     @classmethod
     @abc.abstractmethod
-    def sample_native_entity(cls, k8_runtime=''):
+    def get_sample_native_cluster_specification(cls, k8_runtime=''):
         pass

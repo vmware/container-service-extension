@@ -5,6 +5,10 @@
 from dataclasses import asdict
 import json
 
+from pyvcloud.vcd.client import ApiVersion
+
+from container_service_extension.common.constants.shared_constants import \
+    API_VERSION_37_ALPHA
 from container_service_extension.exception.exceptions import CseRequestError
 from container_service_extension.logging.logger import SERVER_LOGGER as LOGGER
 from container_service_extension.mqi.consumer.mqtt_publisher import \
@@ -38,6 +42,11 @@ def process_behavior_request(msg_json, mqtt_publisher: MQTTPublisher):
     entity: dict = payload['entity']
     entity_type_id: str = payload['typeId']
     api_version: str = payload['_metadata']['apiVersion']
+
+    # This is needed to enable unified API endpoint workflows. Unified API
+    # endpoint is currently exposed at 37.0.0-alpha (VCD 10.3 Andromeda).
+    if api_version == API_VERSION_37_ALPHA:
+        api_version = ApiVersion.VERSION_36.value
     auth_token: str = payload['_metadata']['actAsToken']
     request_id: str = payload['_metadata']['requestId']
     arguments: dict = payload['arguments']

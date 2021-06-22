@@ -120,6 +120,7 @@ Steps:
    - Update the CSE CLI supported API version set.
 5. Ensure the right cloudapi endpoint is used for cluster list and cluster info operations.
 6. Dynamically compute the RDE version to use based on the CSE server side configuration.
+7. Update the help strings of all the commands to reflect the release changes.
 
 # Template management
 1. Ensure all scripts for each of the template descriptor in template.yaml and template_v2.yaml are present in scripts and scripts_v2 directories respectively.

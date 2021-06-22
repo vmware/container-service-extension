@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from typing import List, Optional
 
 from dataclasses_json import dataclass_json, LetterCase
+import yaml
 
 import container_service_extension.common.constants.server_constants as server_constants  # noqa: E501
 import container_service_extension.common.constants.shared_constants as shared_constants  # noqa: E501
@@ -442,7 +443,49 @@ class NativeEntity(AbstractNativeEntity):
         return cluster_entity
 
     @classmethod
-    def sample_native_entity(cls, k8_runtime: str = shared_constants.ClusterEntityKind.NATIVE.value):  # noqa: E501
+    def get_sample_native_cluster_specification(cls, k8_runtime: str = shared_constants.ClusterEntityKind.NATIVE.value):  # noqa: E501
+        """Create apply command cluster specification description.
+
+        :returns: ClusterSpec field description
+        :rtype: str
+        """
+        cluster_spec_field_descriptions = """# Short description of various properties used in this sample cluster configuration
+# apiVersion: Represents the payload version of the cluster specification. By default, \"cse.vmware.com/v2.0\" is used.
+# kind: The kind of the Kubernetes cluster.
+#
+# metadata: This is a required section
+# metadata.name: Name of the cluster to be created or resized.
+# metadata.orgName: The name of the Organization in which cluster needs to be created or managed.
+# metadata.virtualDataCenterName: The name of the Organization Virtual data center in which the cluster need to be created or managed.
+# metadata.site: VCD site domain name where the cluster should be deployed.
+#
+# spec: User specification of the desired state of the cluster.
+# spec.topology.controlPlane: An optional sub-section for desired control-plane state of the cluster. The properties \"sizingClass\" and \"storageProfile\" can be specified only during the cluster creation phase. These properties will no longer be modifiable in further update operations like \"resize\" and \"upgrade\".
+# spec.topology.controlPlane.count: Number of control plane node(s). Only single control plane node is supported.
+# spec.topology.controlPlane.sizingClass: The compute sizing policy with which control-plane node needs to be provisioned in a given \"ovdc\". The specified sizing policy is expected to be pre-published to the given ovdc.
+# spec.topology.controlPlane.storageProfile: The storage-profile with which control-plane needs to be provisioned in a given \"ovdc\". The specified storage-profile is expected to be available on the given ovdc.
+#
+# spec.distribution: This is a required sub-section.
+# spec.distribution.templateName: Template name based on guest OS, Kubernetes version, and the Weave software version
+# spec.distribution.templateRevision: revision number
+#
+# spec.nfs: Optional sub-section for desired nfs state of the cluster. The properties \"sizingClass\" and \"storageProfile\" can be specified only during the cluster creation phase. These properties will no longer be modifiable in further update operations like \"resize\" and \"upgrade\".
+# spec.nfs.count: Nfs nodes can only be scaled-up; they cannot be scaled-down. Default value is 0.
+# spec.nfs.sizingClass: The compute sizing policy with which nfs node needs to be provisioned in a given \"ovdc\". The specified sizing policy is expected to be pre-published to the given ovdc.
+# spec.nfs.storageProfile: The storage-profile with which nfs needs to be provisioned in a given \"ovdc\". The specified storage-profile is expected to be available on the given ovdc.
+#
+# spec.settings: This is a required sub-section
+# spec.settings.ovdcNetwork: This value is mandatory. Name of the Organization's virtual data center network
+# spec.settings.rollbackOnFailure: Optional value that is true by default. On any cluster operation failure, if the value is set to true, affected node VMs will be automatically deleted.
+# spec.settings.sshKey: Optional ssh key that users can use to log into the node VMs without explicitly providing passwords.
+#
+# spec.workers: Optional sub-section for the desired worker state of the cluster. The properties \"sizingClass\" and \"storageProfile\" can be specified only during the cluster creation phase. These properties will no longer be modifiable in further update operations like \"resize\" and \"upgrade\". Non uniform worker nodes in the clusters is not yet supported.
+# spec.workers.count: number of worker nodes (default value:1) Worker nodes can be scaled up and down.
+# spec.workers.sizingClass: The compute sizing policy with which worker nodes need to be provisioned in a given \"ovdc\". The specified sizing policy is expected to be pre-published to the given ovdc.
+# spec.workers.storageProfile: The storage-profile with which worker nodes need to be provisioned in a given \"ovdc\". The specified storage-profile is expected to be available on the given ovdc.
+#
+# status: Current state of the cluster in the server. This is not a required section for any of the operations.\n
+"""  # noqa: E501
         metadata = Metadata('cluster_name', 'organization_name',
                             'org_virtual_data_center_name', 'VCD_site')
         status = Status()
@@ -480,8 +523,28 @@ class NativeEntity(AbstractNativeEntity):
             settings=settings,
         )
 
-        return NativeEntity(api_version=rde_constants.PAYLOAD_VERSION_2_0,
-                            metadata=metadata,
-                            spec=cluster_spec,
-                            status=status,
-                            kind=k8_runtime)
+        native_entity_dict = NativeEntity(
+            api_version=rde_constants.PAYLOAD_VERSION_2_0,
+            metadata=metadata,
+            spec=cluster_spec,
+            status=status,
+            kind=k8_runtime).to_dict()
+
+        # remove status part of the entity dict
+        del native_entity_dict['status']
+
+        # Hiding the network spec section for Andromeda (CSE 3.1)
+        # spec.settings.network is targeted for CSE 3.1.1 to accommodate
+        #  CNI=Antrea
+        # Below line can be deleted post Andromeda (CSE 3.1)
+        del native_entity_dict['spec']['settings']['network']
+        # Hiding the cpu and memory properties from controlPlane and workers
+        # for Andromeda (CSE 3.1). Below lines can be deleted once cpu and
+        # memory support is added in CSE 3.1.1
+        del native_entity_dict['spec']['topology']['controlPlane']['cpu']
+        del native_entity_dict['spec']['topology']['controlPlane']['memory']
+        del native_entity_dict['spec']['topology']['workers']['cpu']
+        del native_entity_dict['spec']['topology']['workers']['memory']
+
+        sample_apply_spec = yaml.dump(native_entity_dict)
+        return cluster_spec_field_descriptions + sample_apply_spec

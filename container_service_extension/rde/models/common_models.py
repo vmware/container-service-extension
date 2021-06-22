@@ -123,7 +123,7 @@ class Org:
     id: Optional[str] = None
 
 
-@dataclass_json
+@dataclass_json(undefined=Undefined.EXCLUDE)
 @dataclass
 class DefEntity:
     """Represents defined entity instance.
