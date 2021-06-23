@@ -160,7 +160,7 @@ def native_cluster_list(request_data, op_ctx: ctx.OperationContext):
     vcd_broker = VcdBroker(op_ctx)
 
     base_url = request_data['url']
-    query_params = request_data[RequestKey.QUERY_PARAMS]
+    query_params = request_data.get(RequestKey.QUERY_PARAMS, {})
     page_number = int(query_params.get(PaginationKey.PAGE_NUMBER, CSE_PAGINATION_FIRST_PAGE_NUMBER))  # noqa: E501
     page_size = int(query_params.get(PaginationKey.PAGE_SIZE, CSE_PAGINATION_DEFAULT_PAGE_SIZE))  # noqa: E501 =
     query_params_others = {}
