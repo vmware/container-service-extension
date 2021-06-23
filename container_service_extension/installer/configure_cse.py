@@ -2407,7 +2407,7 @@ def _create_cluster_rde(client, cluster, kind, runtime_rde_version,
     org_resource = vcd_utils.get_org(client, org_name=cluster['org_name'])
     org_id = org_resource.href.split('/')[-1]
     def_entity = common_models.DefEntity(entity=cluster_entity, entityType=target_entity_type.id)  # noqa: E501
-    entity_svc.create_entity(target_entity_type.id, entity=def_entity, tenant_org_context=org_id)  # noqa: E501
+    entity_svc.create_entity(target_entity_type.id, entity=def_entity, tenant_org_context=org_id, delete_status_from_payload=False)  # noqa: E501
 
     def_entity = entity_svc.get_native_rde_by_name_and_rde_version(cluster['name'], runtime_rde_version)  # noqa: E501
     def_entity_id = def_entity.id
