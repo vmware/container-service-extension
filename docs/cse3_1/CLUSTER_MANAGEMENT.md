@@ -65,6 +65,20 @@ can choose to monitor the task progress manually.
 # lists the current running tasks in the organization
 > vcd task list running
 ```
+### CSE 3.1 cluster management via API
+
+Starting CSE 3.1, there are two ways to life cycle manage the native clusters via API.
+1. Generic defined entity API
+2. Unified API endpoint for both Native and TKGs.
+
+Generic defined entity API:
+
+The CRUD operations on native clusters can be invoked by using generic defined entity API.
+   
+Examples:
+- POST https://{{vcd}}/cloudapi/1.0.0/entityTypes/urn:vcloud:type:cse:nativeCluster:2.0.0 with 
+
+
 <a name="cse30_cluster_apply"></a>
 ### CSE >= 3.0 `Cluster apply` command
 
