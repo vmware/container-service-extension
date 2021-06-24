@@ -2619,7 +2619,7 @@ def _run_script_in_nodes(sysadmin_client: vcd_client.Client, vapp_href,
     if results[0][0] != 0:
         raise exceptions.NodeOperationError(
             "Error during node operation:\n"
-            f"{results[0][2].content.decode()}")
+            f"{results[0][2].content.decode()[-65536:]}")
 
 
 def _get_script_execution_errors(results):
