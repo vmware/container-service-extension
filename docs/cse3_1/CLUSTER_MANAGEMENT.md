@@ -66,9 +66,11 @@ can choose to monitor the task progress manually.
 > vcd task list running
 ```
 <a name="cse30_cluster_apply"></a>
-### CSE 3.0 `Cluster apply` command
+### CSE 3.1 `Cluster apply` command
 
-1. `vcd cse cluster apply <create_cluster.yaml>` command - Takes a cluster specification file as an input and applies it to a cluster resource. The cluster resource will be created if it does not exist. 
+1. `vcd cse cluster apply <create_cluster.yaml>` command - Takes a cluster specification 
+   file as an input and applies it to a cluster resource. The cluster resource will 
+   be created if it does not exist. Note that sample file may differ from one version to another.
     * Command usage examples:
         ```sh
         vcd cse cluster apply <resize_cluster.yaml> (applies the specification on the resource specified; the cluster resource will be created if it does not exist). 
@@ -78,39 +80,41 @@ can choose to monitor the task progress manually.
     * Sample input specification file
         ```sh
         # Short description of various properties used in this sample cluster configuration
+        # apiVersion: Represents the payload version of the cluster specification. By default, \"cse.vmware.com/v2.0\" is used.
         # kind: The kind of the Kubernetes cluster.
         #
         # metadata: This is a required section
-        # metadata.cluster_name: Name of the cluster to be created or resized
-        # metadata.org_name: The name of the Organization in which cluster needs to be created or managed.
-        # metadata.ovdc_name: The name of the Organization Virtual data center in which the cluster need to be created or managed.
+        # metadata.name: Name of the cluster to be created or resized.
+        # metadata.orgName: The name of the Organization in which cluster needs to be created or managed.
+        # metadata.virtualDataCenterName: The name of the Organization Virtual data center in which the cluster need to be created or managed.
+        # metadata.site: VCD site domain name where the cluster should be deployed.
         #
         # spec: User specification of the desired state of the cluster.
-        # spec.control_plane: An optional sub-section for desired control-plane state of the cluster. The properties "sizing_class" and "storage_profile" can be specified only during the cluster creation phase. These properties will no longer be modifiable in further update operations like "resize" and "upgrade".
-        # spec.control_plane.count: Number of control plane node(s). Only single control plane node is supported.
-        # spec.control_plane.sizing_class: The compute sizing policy with which control-plane node needs to be provisioned in a given "ovdc". The specified sizing policy is expected to be pre-published to the given ovdc.
-        # spec.control_plane.storage_profile: The storage-profile with which control-plane needs to be provisioned in a given "ovdc". The specified storage-profile is expected to be available on the given ovdc.
+        # spec.topology.controlPlane: An optional sub-section for desired control-plane state of the cluster. The properties \"sizingClass\" and \"storageProfile\" can be specified only during the cluster creation phase. These properties will no longer be modifiable in further update operations like \"resize\" and \"upgrade\".
+        # spec.topology.controlPlane.count: Number of control plane node(s). Only single control plane node is supported.
+        # spec.topology.controlPlane.sizingClass: The compute sizing policy with which control-plane node needs to be provisioned in a given \"ovdc\". The specified sizing policy is expected to be pre-published to the given ovdc.
+        # spec.topology.controlPlane.storageProfile: The storage-profile with which control-plane needs to be provisioned in a given \"ovdc\". The specified storage-profile is expected to be available on the given ovdc.
         #
-        # spec.k8_distribution: This is a required sub-section.
-        # spec.k8_distribution.template_name: Template name based on guest OS, Kubernetes version, and the Weave software version
-        # spec.k8_distribution.template_revision: revision number
+        # spec.distribution: This is a required sub-section.
+        # spec.distribution.templateName: Template name based on guest OS, Kubernetes version, and the Weave software version
+        # spec.distribution.templateRevision: revision number
         #
-        # spec.nfs: Optional sub-section for desired nfs state of the cluster. The properties "sizing_class" and "storage_profile" can be specified only during the cluster creation phase. These properties will no longer be modifiable in further update operations like "resize" and "upgrade".
+        # spec.nfs: Optional sub-section for desired nfs state of the cluster. The properties \"sizingClass\" and \"storageProfile\" can be specified only during the cluster creation phase. These properties will no longer be modifiable in further update operations like \"resize\" and \"upgrade\".
         # spec.nfs.count: Nfs nodes can only be scaled-up; they cannot be scaled-down. Default value is 0.
-        # spec.nfs.sizing_class: The compute sizing policy with which nfs node needs to be provisioned in a given "ovdc". The specified sizing policy is expected to be pre-published to the given ovdc.
-        # spec.nfs.storage_profile: The storage-profile with which nfs needs to be provisioned in a given "ovdc". The specified storage-profile is expected to be available on the given ovdc.
+        # spec.nfs.sizingClass: The compute sizing policy with which nfs node needs to be provisioned in a given \"ovdc\". The specified sizing policy is expected to be pre-published to the given ovdc.
+        # spec.nfs.storageProfile: The storage-profile with which nfs needs to be provisioned in a given \"ovdc\". The specified storage-profile is expected to be available on the given ovdc.
         #
         # spec.settings: This is a required sub-section
-        # spec.settings.network: This value is mandatory. Name of the Organization's virtual data center network
-        # spec.settings.rollback_on_failure: Optional value that is true by default. On any cluster operation failure, if the value is set to true, affected node VMs will be automatically deleted.
-        # spec.settings.ssh_key: Optional ssh key that users can use to log into the node VMs without explicitly providing passwords.
+        # spec.settings.ovdcNetwork: This value is mandatory. Name of the Organization's virtual data center network
+        # spec.settings.rollbackOnFailure: Optional value that is true by default. On any cluster operation failure, if the value is set to true, affected node VMs will be automatically deleted.
+        # spec.settings.sshKey: Optional ssh key that users can use to log into the node VMs without explicitly providing passwords.
         #
-        # spec.workers: Optional sub-section for the desired worker state of the cluster. The properties "sizing_class" and "storage_profile" can be specified only during the cluster creation phase. These properties will no longer be modifiable in further update operations like "resize" and "upgrade". Non uniform worker nodes in the clusters is not yet supported.
+        # spec.workers: Optional sub-section for the desired worker state of the cluster. The properties \"sizingClass\" and \"storageProfile\" can be specified only during the cluster creation phase. These properties will no longer be modifiable in further update operations like \"resize\" and \"upgrade\". Non uniform worker nodes in the clusters is not yet supported.
         # spec.workers.count: number of worker nodes (default value:1) Worker nodes can be scaled up and down.
-        # spec.workers.sizing_class: The compute sizing policy with which worker nodes need to be provisioned in a given "ovdc". The specified sizing policy is expected to be pre-published to the given ovdc.
-        # spec.workers.storage_profile: The storage-profile with which worker nodes need to be provisioned in a given "ovdc". The specified storage-profile is expected to be available on the given ovdc.
+        # spec.workers.sizingClass: The compute sizing policy with which worker nodes need to be provisioned in a given \"ovdc\". The specified sizing policy is expected to be pre-published to the given ovdc.
+        # spec.workers.storageProfile: The storage-profile with which worker nodes need to be provisioned in a given \"ovdc\". The specified storage-profile is expected to be available on the given ovdc.
         #
-        # status: Current state of the cluster in the server. This is not a required section for any of the operations.
+        # status: Current state of the cluster in the server. This is not a required section for any of the operations.\n
          
         api_version: ''
         kind: native
@@ -123,7 +127,6 @@ can choose to monitor the task progress manually.
             count: 1
             sizing_class: Large_sizing_policy_name
             storage_profile: Gold_storage_profile_name
-          expose: false
           k8_distribution:
             template_name: ubuntu-16.04_k8-1.17_weave-2.6.0
             template_revision: 2
