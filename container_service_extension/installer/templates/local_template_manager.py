@@ -14,7 +14,6 @@ import semantic_version
 
 from container_service_extension.common.constants.server_constants import LegacyLocalTemplateKey  # noqa: E501
 from container_service_extension.common.constants.server_constants import LocalTemplateKey  # noqa: E501
-from container_service_extension.common.constants.server_constants import RemoteTemplateCookbookVersion  # noqa: E501
 import container_service_extension.common.constants.shared_constants as \
     shared_constants
 import container_service_extension.common.utils.core_utils as utils
@@ -24,10 +23,6 @@ import container_service_extension.logging.logger as logger
 
 
 LOCAL_SCRIPTS_DIR = '.cse_scripts'
-MAP_COOKBOOK_VERSION_TO_SCRIPTS_DIR = {
-    RemoteTemplateCookbookVersion.Version1.value: 'v1',
-    RemoteTemplateCookbookVersion.Version2.value: 'v2'
-}
 
 
 def get_revisioned_template_name(template_name, revision):
@@ -46,7 +41,7 @@ def get_script_filepath(cookbook_version, template_name, revision, script_file_n
 
     :rtype: str
     """
-    scripts_sub_dir = MAP_COOKBOOK_VERSION_TO_SCRIPTS_DIR[cookbook_version]
+    scripts_sub_dir = str(cookbook_version)
     template_dir = pathlib.Path.home() / LOCAL_SCRIPTS_DIR / \
         scripts_sub_dir / get_revisioned_template_name(template_name, revision)
     template_dir.mkdir(parents=True, exist_ok=True)
