@@ -9,7 +9,7 @@ For greenfield installations, please get started with [CSE introduction](INTRO.h
 <a name="overview"></a>
 ## 1. Overview
 * CSE 3.1, when configured with VCD 10.3, life cycle management of native clusters 
-  can be performed using VCD's defined entity API. Refer to the [API usage](CLUSTER_MANAGEMENT_RDE.html)
+  can be performed using VCD's defined entity API. Refer to the [API usage](CLUSTER_MANAGEMENT_RDE.html) for details.
   
 * It is no longer needed to start the CSE server with a particular VCD API 
   version. CSE 3.1 is now capable of accepting incoming requests at any supported 
