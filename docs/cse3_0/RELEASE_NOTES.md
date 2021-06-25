@@ -19,18 +19,19 @@ and bring it to our attention.
 |------------|---------|------------------------------------------|----------------|--------------|---------------------------|-----------------------------------------------------------------------------------------------------------------------------|
 | 3.0.3      | 3.0.3   | 2.3.0**                                  | 10.2.2         | 3.0.2, 3.1.2 | 1.7 with 2.5.1            | Native, TKG, TKG-S, and Enterprise PKS Cluster management; Runtime Defined entity representation for native, TKG and TKG-S. |
 | 3.0.3      | 3.0.3   | 1.0.3                                    | 10.1, 10.0     | NA           | 1.7 with 2.5.1            | Native and Enterprise PKS cluster management                                                                                |
-| NA         | 3.0.3   | 2.2.0**                                  | 10.2.2         | NA           | NA                        | TKG-S cluster management only                                                                                               |
+| NA         | 3.0.3   | 2.3.0**                                  | 10.2.2         | NA           | NA                        | TKG-S cluster management only                                                                                               |
 
-** Kubernetes Container Clusters UI Plug-in v2.3.0 needs to be downloaded separately from
-[here](Link from Jaskaran Virk) and manually uploaded to VCD. By default, VCD 10.2.2
-will have Kubernetes Container Clusters UI Plug-in v2.2.0.
+** Kubernetes Container Clusters UI Plug-in v2.3.0 should be downloaded separately from
+[here](https://my.vmware.com/en/web/vmware/downloads/details?downloadGroup=VCD-CSE-PLUGIN-303&productId=1079)
+and manually uploaded to VCD. By default, VCD 10.2.2 will have
+Kubernetes Container Clusters UI Plug-in v2.2.0.
 
 **What's New**
 * CSE can now deploy VMware Tanzu Kubernetes Grid (TKG) distribution based Kubernetes
 clusters on VCD 10.2.2 or prior update releases of VCD 10.2 GA.
     * Learn more about TKG [here](https://docs.vmware.com/en/VMware-Tanzu-Kubernetes-Grid/index.html).
-    * Read about TKG and it's benefits [here](placeholder to VCPP marketing blog URL).
-    * Instructions to enable TKG for CSE 3.0.3 can be found [here](https://github.com/vmware/container-service-extension-templates/blob/tkgm/TKGm_INSTRUCTIONS.MD).
+    * Read about TKG and it's benefits [here](https://blogs.vmware.com/cloudprovider/?p=17426).
+    * Instructions to enable TKG for CSE 3.0.3 can be found [here](https://github.com/vmware/container-service-extension-templates/blob/tkgm/TKG_INSTRUCTIONS.md).
 * Following fixes have been added
     * Correctly honor the specified storage profile during cluster creation (for both UI and CLI).
     * When resizing an exposed native cluster (connected to a NSX-T powered org VDC), the exposed IP address will be retained.
