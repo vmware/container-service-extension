@@ -1,6 +1,24 @@
 CHANGES
 =======
 
+* [VCDA-2623] Fix CLI help strings (#1080)
+* Fix OVDC enable/disable error messages (#1078)
+* Fix accessing entity details array using 'entityDetails' key (#1073)
+* [VCDA-2563] Update flags and constant names to account for the name change of TKG(WCP) to TKG Service, and TKGm to TKG. (#1071)
+* [VCDA-2560] Update RDE native schema while upgrading CSE from 3.0.0/1/2 to 3.0.3 (#1061)
+* [VCDA-2566] Storage profile check fix (#1062)
+* [VCDA-2559] Fix \`cse cluster apply -s -n/-t/-m\` (#1058)
+* preserving external ip during resize (#1056)
+* [VCDA-2371] Tkgm client (#1055)
+* [VCDA-2549] Added sleep for tkgm cluster creation workflow (#1054)
+* [VCDA-2369, VCDA-2370] Add support for TKGm runtime (#1053)
+* [VCDA-2367] Backend changes to support TKGm template (#1042)
+* [VCDA-2368 & VCDA-2372] tkgm logic for cse install/upgrade and TKGm constants (#1035)
+
+3.0.2
+-----
+
+* Update AUTHORTS and ChangeLog for CSE 3.0.2
 * [VCDA-2238] edited regex pattern to redact headers with double quote (updates) (#987)
 * update requirements (#980)
 * Update pyvcloud to 23.0.1dev11, vcd-cli to 24.0.1dev3
