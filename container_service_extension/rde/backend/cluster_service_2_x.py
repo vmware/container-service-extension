@@ -710,7 +710,10 @@ class ClusterService(abstract_broker.AbstractBroker):
                 # Check if entry is on desired page
                 if curr_page == page and page_entry < page_size:
                     # Add acl entry
-                    acl_entry.username = user_id_names_dict[acl_entry.memberId]
+                    # If there is no username found, the user must be a system
+                    # user, so a generic name is shown
+                    acl_entry.username = user_id_names_dict.get(
+                        acl_entry.memberId, shared_constants.SYSTEM_USER_GENERIC_NAME)  # noqa: E501
                     filter_acl_value: dict = acl_entry.construct_filtered_dict(
                         include=def_constants.CLUSTER_ACL_LIST_FIELDS)
                     acl_values.append(filter_acl_value)

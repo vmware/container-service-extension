@@ -661,6 +661,5 @@ def get_org_id_from_vdc_name(client: vcd_client.Client, vdc_name: str):
             client=client,
             resource=org_obj)
         if org.get_vdc(vdc_name) is not None:
-            org_href = org.href
-            return extract_id_from_href(org_href)
+            return extract_id_from_href(org.href)
     return None

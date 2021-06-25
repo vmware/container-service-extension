@@ -476,7 +476,9 @@ class DEClusterTKG:
             acl_values = []
             for entry in values:
                 acl_entry = common_models.ClusterAclEntry(**entry)
-                acl_entry.username = org_user_id_to_name_dict.get(acl_entry.memberId)  # noqa: E501
+                # If there is no username found, the user must be a system
+                # user, so a generic name is shown
+                acl_entry.username = org_user_id_to_name_dict.get(acl_entry.memberId, shared_constants.SYSTEM_USER_GENERIC_NAME)  # noqa: E501
                 acl_values.append(acl_entry.construct_filtered_dict(
                     include=CLUSTER_ACL_LIST_FIELDS))
             result_count += len(values)

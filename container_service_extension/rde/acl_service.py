@@ -87,11 +87,12 @@ class ClusterACLService:
         access_controls_path = \
             f'{cloudapi_constants.CloudApiResource.ENTITIES}/' \
             f'{self._cluster_id}/{cloudapi_constants.CloudApiResource.ACL}'
-        ent_kind = self.def_entity.kind
+        ent_kind = self.def_entity.entity.kind \
+            if hasattr(self.def_entity, 'entity') else self.def_entity.kind
         if ent_kind in \
                 [shared_constants.ClusterEntityKind.NATIVE.value,
                  shared_constants.ClusterEntityKind.TKG_PLUS.value]:
-            org_id = self.def_entity.org.id
+            org_id = vcd_utils.extract_id(self.def_entity.org.id)
         elif ent_kind == shared_constants.ClusterEntityKind.TKG.value:
             vdc_name = self.def_entity.metadata.virtualDataCenterName
             org_id = vcd_utils.get_org_id_from_vdc_name(
@@ -131,6 +132,9 @@ class ClusterACLService:
         own_prev_user_id_to_acl_entry = prev_user_id_to_acl_entry.copy()
 
         # Share defined entity
+        ent_org_user_id_names_dict = vcd_utils.create_org_user_id_to_name_dict(
+            client=self._client,
+            org_name=self.def_entity.org.name)
         user_acl_level_dict = {}
         share_acl_entry = common_models.ClusterAclEntry(
             grantType=shared_constants.MEMBERSHIP_GRANT_TYPE,
@@ -138,6 +142,12 @@ class ClusterACLService:
             accessLevelId=None)
         for acl_entry in update_acl_entries:
             user_id = acl_entry.memberId
+            if ent_org_user_id_names_dict.get(user_id) is None:
+                # This user must be from the system org and does not need
+                # to be reshared. Sharing can not happen from a tenant user
+                # to a system user.
+                del own_prev_user_id_to_acl_entry[user_id]
+                continue
             acl_level = acl_entry.accessLevelId
             share_acl_entry.memberId = user_id
             share_acl_entry.accessLevelId = acl_level
