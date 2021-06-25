@@ -1,4 +1,4 @@
-container-service-extension 3.1 Beta
+container-service-extension 3.1 GA
 
 Copyright (c) 2018-2021 VMware, Inc. All Rights Reserved.
 

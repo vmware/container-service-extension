@@ -8,7 +8,7 @@ from pathlib import Path
 
 from setuptools import setup
 
-osl = 'open_source_license_container-service-extension_3.1_Beta.txt'
+osl = 'open_source_license_container-service-extension_3.1_GA.txt'
 
 setup(
     setup_requires=['pbr>=1.9', 'setuptools>=17.1'],
