@@ -644,3 +644,23 @@ def get_user_role_name(client: vcd_client.Client):
     :rtype: str
     """
     return client.get_vcloud_session().get('roles')
+
+
+def get_org_id_from_vdc_name(client: vcd_client.Client, vdc_name: str):
+    """Returns org id given vdc name.
+
+    :param vcd_client.Client client: vcd client
+    :param str vdc_name: vdc name
+
+    :return: org id, with no prefix, e.g., '12345'
+    :rtype: str
+    """
+    org_list = client.get_org_list()
+    for org_obj in org_list:
+        org = vcd_org.Org(
+            client=client,
+            resource=org_obj)
+        if org.get_vdc(vdc_name) is not None:
+            org_href = org.href
+            return extract_id_from_href(org_href)
+    return None

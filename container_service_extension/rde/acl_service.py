@@ -87,7 +87,19 @@ class ClusterACLService:
         access_controls_path = \
             f'{cloudapi_constants.CloudApiResource.ENTITIES}/' \
             f'{self._cluster_id}/{cloudapi_constants.CloudApiResource.ACL}'
-        org_id = self.def_entity.org.id
+        ent_kind = self.def_entity.kind
+        if ent_kind in \
+                [shared_constants.ClusterEntityKind.NATIVE.value,
+                 shared_constants.ClusterEntityKind.TKG_PLUS.value]:
+            org_id = self.def_entity.org.id
+        elif ent_kind == shared_constants.ClusterEntityKind.TKG.value:
+            vdc_name = self.def_entity.metadata.virtualDataCenterName
+            org_id = vcd_utils.get_org_id_from_vdc_name(
+                client=self._client,
+                vdc_name=vdc_name)
+        else:
+            raise Exception(f"Invalid entity kind: {ent_kind}")
+
         payload = acl_entry.construct_filtered_dict(
             include=shared_constants.DEF_ENTITY_ACCESS_CONTROL_KEYS)
         self._cloudapi_client.do_request(
