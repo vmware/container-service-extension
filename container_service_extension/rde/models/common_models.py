@@ -1,7 +1,7 @@
 # container-service-extension
 # Copyright (c) 2021 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
-from dataclasses import asdict, dataclass
+from dataclasses import dataclass
 from enum import Enum
 from enum import unique
 from typing import List, Optional
@@ -186,7 +186,8 @@ class Tenant:
     id: Optional[str] = None
 
 
-@dataclass()
+@dataclass_json(undefined=Undefined.EXCLUDE)
+@dataclass(frozen=False)
 class ClusterAclEntry:
     accessLevelId: Optional[server_constants.AclAccessLevelId] = None
     memberId: Optional[str] = None
@@ -199,7 +200,7 @@ class ClusterAclEntry:
     def construct_filtered_dict(self, include=None):
         if include is None:
             include = []
-        orig_dict = asdict(self)
+        orig_dict = self.to_dict()
         include_set = set(include)
         filtered_dict = {}
         for key, value in orig_dict.items():
