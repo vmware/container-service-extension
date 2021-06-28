@@ -698,7 +698,8 @@ def wait_for_completion_of_post_customization_step(
         customization_phase: str,
         timeout=server_constants.DEFAULT_POST_CUSTOMIZATION_TIMEOUT_SEC,
         poll_frequency=server_constants.DEFAULT_POST_CUSTOMIZATION_POLL_SEC,
-        expected_target_statuses=server_constants.DEFAULT_POST_CUSTOMIZATION_STATUSES) -> str:  # noqa: E501
+        expected_target_status_list=server_constants.DEFAULT_POST_CUSTOMIZATION_STATUS_LIST,   # noqa: E501
+        logger=NULL_LOGGER) -> str:
     """Wait for given post customization phase to reach final expected status.
 
     The contract is customization phase starts with first element in the
@@ -710,9 +711,10 @@ def wait_for_completion_of_post_customization_step(
     finish
     :param float poll_frequency: time in seconds for how often to poll the
     status of customization_phase
-    :param list expected_target_statuses: list of expected target statuses. The
-    contract is to explicitly spell out all the valid states including None as
-    state to start with.
+    :param list expected_target_status_list: list of expected target status
+    values. The contract is to explicitly spell out all the valid status values
+    including None as a status to start with.
+    :param logging.Logger logger: logger to use for logging custom messages.
     :return: str name of last customization phase
     :rtype: str
     :raises PostCustomizationTimeoutError: if customization phase is not
@@ -722,31 +724,37 @@ def wait_for_completion_of_post_customization_step(
     :raises ScriptExecutionError: If script execution fails at any command
     """
     # Raise exception on empty status list
-    if not expected_target_statuses:
+    if not expected_target_status_list:
+        logger.error("VM Post guest customization error: empty target status list")  # noqa: E501
         raise exceptions.InvalidCustomizationStatus
 
     start_time = datetime.now()
-    current_status = expected_target_statuses[0]
-    remaining_statuses = list(expected_target_statuses)
+    current_status = expected_target_status_list[0]
+    remaining_statuses = list(expected_target_status_list)
 
     while True:
         new_status = get_vm_extra_config_element(vm, customization_phase)
         if new_status not in remaining_statuses:
+            logger.error(f"Invalid VM Post guest customization status:{new_status}")  # noqa: E501
             raise exceptions.InvalidCustomizationStatus
         # update the remaining statuses on status change
         if new_status != current_status:
             remaining_statuses.remove(current_status)
+            logger.info(f"Post guest customization phase {customization_phase } in {new_status}")  # noqa: E501
             current_status = new_status
         # Check for successful customization: reaching last status between
-        if new_status == expected_target_statuses[-1]:
+        if new_status == expected_target_status_list[-1]:
             return new_status
 
         # Catch any intermediate command failure and raise early exception
         script_execution_status = get_vm_extra_config_element(vm, server_constants.POST_CUSTOMIZATION_SCRIPT_EXECUTION_STATUS)  # noqa: E501
         if script_execution_status and int(script_execution_status) != 0:
+            script_execution_failure_reason = get_vm_extra_config_element(vm, server_constants.POST_CUSTOMIZATION_SCRIPT_EXECUTION_FAILURE_REASON)  # noqa: E501
+            logger.error(f"VM Post guest customization script failed with error:{script_execution_failure_reason}")  # noqa: E501
             raise exceptions.ScriptExecutionError
 
         if datetime.now() - start_time > timedelta(seconds=timeout):
             break
         time.sleep(poll_frequency)
+    logger.error("VM Post guest customization failed due to timeout")  # noqa: E501
     raise exceptions.PostCustomizationTimeoutError

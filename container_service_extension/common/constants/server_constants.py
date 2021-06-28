@@ -721,6 +721,7 @@ class PostCustomizationStatus(Enum):
 
 
 POST_CUSTOMIZATION_SCRIPT_EXECUTION_STATUS = 'post_customization_script_execution_status'  # noqa: E501
-DEFAULT_POST_CUSTOMIZATION_STATUSES = [cust_status.value for cust_status in PostCustomizationStatus]  # noqa: E501
+POST_CUSTOMIZATION_SCRIPT_EXECUTION_FAILURE_REASON = 'post_customization_script_execution_failure_reason'  # noqa: E501
+DEFAULT_POST_CUSTOMIZATION_STATUS_LIST = [cust_status.value for cust_status in PostCustomizationStatus]  # noqa: E501
 DEFAULT_POST_CUSTOMIZATION_POLL_SEC = 5
 DEFAULT_POST_CUSTOMIZATION_TIMEOUT_SEC = 180
