@@ -647,7 +647,7 @@ def get_user_role_name(client: vcd_client.Client):
 
 
 def get_org_id_from_vdc_name(client: vcd_client.Client, vdc_name: str):
-    """Returns org id given vdc name.
+    """Return org id given vdc name.
 
     :param vcd_client.Client client: vcd client
     :param str vdc_name: vdc name
@@ -655,11 +655,23 @@ def get_org_id_from_vdc_name(client: vcd_client.Client, vdc_name: str):
     :return: org id, with no prefix, e.g., '12345'
     :rtype: str
     """
-    org_list = client.get_org_list()
-    for org_obj in org_list:
-        org = vcd_org.Org(
-            client=client,
-            resource=org_obj)
-        if org.get_vdc(vdc_name) is not None:
-            return extract_id_from_href(org.href)
-    return None
+    if client.is_sysadmin():
+        resource_type = vcd_client.ResourceType.ADMIN_ORG_VDC.value
+    else:
+        resource_type = vcd_client.ResourceType.ORG_VDC.value
+    query = client.get_typed_query(
+        query_type_name=resource_type,
+        query_result_format=vcd_client.QueryResultFormat.ID_RECORDS,
+        equality_filter=('name', vdc_name))
+    records = list(query.execute())
+    if len(records) == 0:
+        return None
+
+    # Process org id
+    if client.is_sysadmin():
+        org_urn_id = records[0].attrib['org']
+    else:
+        org_name = records[0].attrib['orgName']
+        org_resource = client.get_org_by_name(org_name)
+        org_urn_id = org_resource.attrib['id']
+    return extract_id(org_urn_id)
