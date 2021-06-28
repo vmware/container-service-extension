@@ -13,8 +13,8 @@ from container_service_extension.common.constants.server_constants import \
 from container_service_extension.common.constants.server_constants import K8S_PROVIDER_KEY  # noqa: E501
 from container_service_extension.common.constants.server_constants import K8sProvider  # noqa: E501
 from container_service_extension.common.constants.server_constants import KwargKey  # noqa: E501
-from container_service_extension.common.constants.server_constants import SYSTEM_ORG_NAME  # noqa: E501
-from container_service_extension.common.constants.shared_constants import RequestKey # noqa: E501
+from container_service_extension.common.constants.shared_constants import \
+    RequestKey, SYSTEM_ORG_NAME
 import container_service_extension.common.utils.core_utils as utils
 from container_service_extension.common.utils.pyvcloud_utils import \
     get_org_name_from_ovdc_id

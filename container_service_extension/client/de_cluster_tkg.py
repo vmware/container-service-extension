@@ -416,16 +416,13 @@ class DEClusterTKG:
                                     f'level: {curr_access_level}')
 
         # share TKG def entity
-        payload = {
-            shared_constants.AccessControlKey.GRANT_TYPE:
-                shared_constants.MEMBERSHIP_GRANT_TYPE,
-            shared_constants.AccessControlKey.ACCESS_LEVEL_ID:
-                access_level_id,
-            shared_constants.AccessControlKey.MEMBER_ID: None
-        }
+        acl_entry = common_models.ClusterAclEntry(
+            grantType=shared_constants.MEMBERSHIP_GRANT_TYPE,
+            accessLevelId=access_level_id,
+            memberId=None)
         for _, user_id in name_to_id.items():
-            payload[shared_constants.AccessControlKey.MEMBER_ID] = user_id
-            acl_svc.share_def_entity(payload)
+            acl_entry.memberId = user_id
+            acl_svc.share_def_entity(acl_entry)
 
     def unshare_cluster(self, cluster_id, cluster_name, users: list, org=None,
                         vdc=None):
@@ -461,6 +458,11 @@ class DEClusterTKG:
 
         org_user_id_to_name_dict = vcd_utils.create_org_user_id_to_name_dict(
             self._client, org)
+        # Consider system users if client is from system org
+        if self._client.is_sysadmin():
+            sys_org_user_id_to_name_dict = vcd_utils.create_org_user_id_to_name_dict(  # noqa:E501
+                self._client, shared_constants.SYSTEM_ORG_NAME)
+            org_user_id_to_name_dict.update(sys_org_user_id_to_name_dict)
         acl_svc = cluster_acl_svc.ClusterACLService(cluster_id, self._client)
         page_num = result_count = 0
         while True:
@@ -474,7 +476,9 @@ class DEClusterTKG:
             acl_values = []
             for entry in values:
                 acl_entry = common_models.ClusterAclEntry(**entry)
-                acl_entry.username = org_user_id_to_name_dict.get(acl_entry.memberId)  # noqa: E501
+                # If there is no username found, the user must be a system
+                # user, so a generic name is shown
+                acl_entry.username = org_user_id_to_name_dict.get(acl_entry.memberId, shared_constants.SYSTEM_USER_GENERIC_NAME)  # noqa: E501
                 acl_values.append(acl_entry.construct_filtered_dict(
                     include=CLUSTER_ACL_LIST_FIELDS))
             result_count += len(values)

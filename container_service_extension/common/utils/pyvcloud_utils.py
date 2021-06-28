@@ -18,7 +18,6 @@ import pyvcloud.vcd.vapp as vcd_vapp
 from pyvcloud.vcd.vdc import VDC
 import requests
 
-import container_service_extension.common.constants.server_constants as server_constants  # noqa: E501
 import container_service_extension.common.constants.shared_constants as shared_constants  # noqa: E501
 from container_service_extension.common.utils.core_utils import extract_id_from_href  # noqa: E501
 from container_service_extension.common.utils.core_utils import NullPrinter
@@ -92,7 +91,7 @@ def get_sys_admin_client(api_version: Optional[str]):
         log_bodies=log_wire)
     credentials = vcd_client.BasicLoginCredentials(
         server_config['vcd']['username'],
-        server_constants.SYSTEM_ORG_NAME,
+        shared_constants.SYSTEM_ORG_NAME,
         server_config['vcd']['password'])
     client.set_credentials(credentials)
     return client
@@ -592,6 +591,26 @@ def get_ovdcs_by_page(
     return vdc_results
 
 
+def get_org_user_names(client: vcd_client.Client, org_name):
+    """Get a set of user names in an org.
+
+    :param vcd_client.Client client: current client
+    :param str org_name: org name to search for users
+
+    :return: set of user names
+    :rtype: set
+    """
+    org_href = client.get_org_by_name(org_name).get('href')
+    org = vcd_org.Org(client, org_href)
+    str_elem_users: list = org.list_users()
+    user_names: set = set()
+    for user_str_elem in str_elem_users:
+        curr_user_dict = to_dict(user_str_elem, exclude=[])
+        user_name = curr_user_dict['name']
+        user_names.add(user_name)
+    return user_names
+
+
 def create_org_user_id_to_name_dict(client: vcd_client.Client, org_name):
     """Get a dictionary of users ids to user names.
 
@@ -603,9 +622,9 @@ def create_org_user_id_to_name_dict(client: vcd_client.Client, org_name):
     """
     org_href = client.get_org_by_name(org_name).get('href')
     org = vcd_org.Org(client, org_href)
-    users: list = org.list_users()
+    str_elem_users: list = org.list_users()
     user_id_to_name_dict = {}
-    for user_str_elem in users:
+    for user_str_elem in str_elem_users:
         curr_user_dict = to_dict(user_str_elem, exclude=[])
         user_name = curr_user_dict['name']
         user_urn = shared_constants.USER_URN_PREFIX + \
@@ -625,3 +644,34 @@ def get_user_role_name(client: vcd_client.Client):
     :rtype: str
     """
     return client.get_vcloud_session().get('roles')
+
+
+def get_org_id_from_vdc_name(client: vcd_client.Client, vdc_name: str):
+    """Return org id given vdc name.
+
+    :param vcd_client.Client client: vcd client
+    :param str vdc_name: vdc name
+
+    :return: org id, with no prefix, e.g., '12345'
+    :rtype: str
+    """
+    if client.is_sysadmin():
+        resource_type = vcd_client.ResourceType.ADMIN_ORG_VDC.value
+    else:
+        resource_type = vcd_client.ResourceType.ORG_VDC.value
+    query = client.get_typed_query(
+        query_type_name=resource_type,
+        query_result_format=vcd_client.QueryResultFormat.ID_RECORDS,
+        equality_filter=('name', vdc_name))
+    records = list(query.execute())
+    if len(records) == 0:
+        return None
+
+    # Process org id
+    if client.is_sysadmin():
+        org_urn_id = records[0].attrib['org']
+    else:
+        org_name = records[0].attrib['orgName']
+        org_resource = client.get_org_by_name(org_name)
+        org_urn_id = org_resource.attrib['id']
+    return extract_id(org_urn_id)

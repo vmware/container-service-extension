@@ -13,7 +13,7 @@ from container_service_extension.common.constants.server_constants import CSE_SE
 from container_service_extension.common.constants.server_constants import MQTT_EXTENSION_VENDOR  # noqa: E501
 from container_service_extension.common.constants.server_constants import MQTT_EXTENSION_VERSION  # noqa: E501
 from container_service_extension.common.constants.server_constants import MQTTExtKey  # noqa: E501
-from container_service_extension.common.constants.server_constants import SYSTEM_ORG_NAME  # noqa: E501
+from container_service_extension.common.constants.shared_constants import SYSTEM_ORG_NAME  # noqa: E501
 from container_service_extension.common.utils.core_utils import NullPrinter
 from container_service_extension.common.utils.server_utils import should_use_mqtt_protocol  # noqa: E501
 from container_service_extension.lib.telemetry.constants import COLLECTOR_ID

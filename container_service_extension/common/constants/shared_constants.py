@@ -80,6 +80,10 @@ ACCESS_LEVEL_TYPE_TO_ID = {
 CSE_PAGINATION_FIRST_PAGE_NUMBER = 1
 CSE_PAGINATION_DEFAULT_PAGE_SIZE = 25
 
+# System org constants
+SYSTEM_ORG_NAME = 'system'
+SYSTEM_USER_GENERIC_NAME = 'system user'
+
 
 @unique
 class ServerAction(str, Enum):
@@ -187,6 +191,11 @@ class AccessControlKey(str, Enum):
     HREF = 'href'
     SUBJECT = 'subject'
     USERNAME = 'username'
+
+
+DEF_ENTITY_ACCESS_CONTROL_KEYS = [AccessControlKey.GRANT_TYPE,
+                                  AccessControlKey.ACCESS_LEVEL_ID,
+                                  AccessControlKey.MEMBER_ID]
 
 
 @unique

@@ -27,10 +27,10 @@ from container_service_extension.common.constants.server_constants import DefEnt
 from container_service_extension.common.constants.server_constants import DefEntityPhase  # noqa: E501
 from container_service_extension.common.constants.server_constants import LocalTemplateKey  # noqa: E501
 from container_service_extension.common.constants.server_constants import NodeType  # noqa: E501
-from container_service_extension.common.constants.server_constants import SYSTEM_ORG_NAME  # noqa: E501
 from container_service_extension.common.constants.server_constants import ThreadLocalData  # noqa: E501
 import container_service_extension.common.constants.shared_constants as shared_constants  # noqa: E501
-from container_service_extension.common.constants.shared_constants import CSE_PAGINATION_DEFAULT_PAGE_SIZE  # noqa: E501
+from container_service_extension.common.constants.shared_constants import \
+    CSE_PAGINATION_DEFAULT_PAGE_SIZE, SYSTEM_ORG_NAME
 from container_service_extension.common.constants.shared_constants import CSE_PAGINATION_FIRST_PAGE_NUMBER  # noqa: E501
 import container_service_extension.common.thread_local_data as thread_local_data  # noqa: E501
 import container_service_extension.common.utils.core_utils as utils
@@ -693,6 +693,12 @@ class ClusterService(abstract_broker.AbstractBroker):
         user_id_names_dict = vcd_utils.create_org_user_id_to_name_dict(
             client=client_v36,
             org_name=curr_entity.org.name)
+        # If the user is from the system org, need to consider system users
+        if client_v36.is_sysadmin():
+            system_user_id_names_dict = vcd_utils.create_org_user_id_to_name_dict(  # noqa: E501
+                client=client_v36,
+                org_name=SYSTEM_ORG_NAME)
+            user_id_names_dict.update(system_user_id_names_dict)
 
         # Iterate all acl entries because not all results correspond to a user
         acl_values = []
@@ -704,7 +710,10 @@ class ClusterService(abstract_broker.AbstractBroker):
                 # Check if entry is on desired page
                 if curr_page == page and page_entry < page_size:
                     # Add acl entry
-                    acl_entry.username = user_id_names_dict[acl_entry.memberId]
+                    # If there is no username found, the user must be a system
+                    # user, so a generic name is shown
+                    acl_entry.username = user_id_names_dict.get(
+                        acl_entry.memberId, shared_constants.SYSTEM_USER_GENERIC_NAME)  # noqa: E501
                     filter_acl_value: dict = acl_entry.construct_filtered_dict(
                         include=def_constants.CLUSTER_ACL_LIST_FIELDS)
                     acl_values.append(filter_acl_value)
