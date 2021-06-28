@@ -1095,7 +1095,7 @@ Examples:
         if not is_system_user and org is None:
             org = ctx.obj['profiles'].get('org_in_use')
         elif is_system_user and org is None:
-            raise Exception("Need to specify cluster org since user is in system org")  # noqa: E501
+            raise Exception("Need to specify cluster org since logged in user is in system org")  # noqa: E501
 
         users_list = list(users)
         cluster = Cluster(client, k8_runtime)
@@ -1192,7 +1192,7 @@ Examples:
         if not is_system_user and org is None:
             org = ctx.obj['profiles'].get('org_in_use')
         elif is_system_user and org is None:
-            raise Exception("Need to specify cluster org since user is in system org")  # noqa: E501
+            raise Exception("Need to specify cluster org since logged in user is in system org")  # noqa: E501
 
         cluster = Cluster(client, k8_runtime)
         share_entries = cluster.list_share_entries(cluster_id, name, org, vdc)
@@ -1278,7 +1278,7 @@ Examples:
         if not is_system_user and org is None:
             org = ctx.obj['profiles'].get('org_in_use')
         elif is_system_user and org is None:
-            raise Exception("Need to specify cluster org since user is in system org")  # noqa: E501
+            raise Exception("Need to specify cluster org since logged in user is in system org")  # noqa: E501
 
         users_list = list(users)
         cluster = Cluster(client, k8_runtime)
