@@ -79,7 +79,7 @@ def _get_available_ip_in_ip_ranges(ip_ranges: list, used_ips: set):
             if curr_ip_str not in used_ips:
                 return curr_ip_str
             curr_ip += 1
-    return ''
+    return None
 
 
 class NsxtBackedGatewayService:
@@ -137,12 +137,28 @@ class NsxtBackedGatewayService:
             NsxtNATRuleKey.DNAT_EXTERNAL_PORT: dnat_external_port
         }
 
-        self._cloudapi_client.do_request(
-            method=shared_constants.RequestMethod.POST,
-            cloudapi_version=cloudapi_constants.CloudApiVersion.VERSION_1_0_0,
-            resource_url_relative_path=self._nat_rules_relative_path,
-            payload=post_body,
-            content_type='application/json')
+        try:
+            self._cloudapi_client.do_request(
+                method=shared_constants.RequestMethod.POST,
+                cloudapi_version=cloudapi_constants.CloudApiVersion.VERSION_1_0_0,  # noqa: E501
+                resource_url_relative_path=self._nat_rules_relative_path,
+                payload=post_body,
+                content_type='application/json')
+            self._wait_for_last_cloudapi_task()
+        except Exception as err:
+            SERVER_LOGGER.info(f'Error when creating dnat rule: {err}')
+            raise
+
+    def _wait_for_last_cloudapi_task(self):
+        """Wait for last cloudapi task.
+
+        :raises VcdException if there is a failed task
+        """
+        last_cloudapi_response = self._cloudapi_client.get_last_response()
+        task_href = last_cloudapi_response.headers._store['location'][1]
+        task_monitor = self._client.get_task_monitor()
+        task = task_monitor._get_task_status(task_href)
+        task_monitor.wait_for_status(task)
 
     def _get_gateway(self):
         return self._cloudapi_client.do_request(
@@ -182,14 +198,9 @@ class NsxtBackedGatewayService:
                 method=shared_constants.RequestMethod.DELETE,
                 cloudapi_version=cloudapi_constants.CloudApiVersion.VERSION_1_0_0,  # noqa: E501
                 resource_url_relative_path=f"{self._nat_rules_relative_path}/{nat_rule_id}")  # noqa: E501
-            delete_response = self._cloudapi_client.get_last_response()
-            task_href = delete_response.headers._store['location'][1]
-            task_monitor = self._client.get_task_monitor()
-            task = task_monitor._get_task_status(task_href)
-            task_monitor.wait_for_status(task)
+            self._wait_for_last_cloudapi_task()
         except Exception as err:
             SERVER_LOGGER.info(f'Failed to delete dnat rule: {str(err)}')
-            return
 
     def _get_dnat_rule_id(self, rule_name):
         """Get dnat rule id.
@@ -202,12 +213,12 @@ class NsxtBackedGatewayService:
         try:
             nat_rules = self._list_nat_rules()
         except Exception:
-            return ''
+            return None
 
         for nat_rule in nat_rules:
             if nat_rule[NsxtNATRuleKey.NAME] == rule_name:
                 return nat_rule[NsxtNATRuleKey.ID]
-        return ''
+        return None
 
     def _get_nat_rules_response(self,
                                 cursor=None,
@@ -284,7 +295,7 @@ class NsxtBackedGatewayService:
     def get_available_ip(self) -> str:
         """Get an available ip.
 
-        :return: available ip. Empty string returned if no available ip.
+        :return: available ip.
         :rtype: str
         """
         # Get all used ips
@@ -298,4 +309,4 @@ class NsxtBackedGatewayService:
             available_ip = _get_available_ip_in_ip_ranges(ip_ranges, used_ips)
             if available_ip:
                 return available_ip
-        return ''
+        return None
