@@ -19,9 +19,8 @@ paho-mqtt >=1.5.0, < 1.6.0
 # pika 1.2.0
 pika >= 1.0.0, < 2.0.0
 
-# pyvcloud 23.0.2.dev1
-# pyvcloud >= 23.0.1, < 24.0.0
-pyvcloud == 23.0.2.dev1
+# pyvcloud 23.0.2
+pyvcloud >= 23.0.2, < 24.0.0
 
 # pyvmomi 6.7.3
 pyvmomi >= 6.7.0, < 7.0.0
