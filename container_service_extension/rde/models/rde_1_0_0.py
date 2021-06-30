@@ -245,7 +245,8 @@ class NativeEntity(AbstractNativeEntity):
                 nfs_node_1_x = NfsNode(
                     name=nfs_node.name,
                     ip=nfs_node.ip,
-                    sizing_class=nfs_node.sizing_class)
+                    sizing_class=nfs_node.sizing_class
+                )
                 nfs_nodes.append(nfs_node_1_x)
 
             nodes = Nodes(
@@ -288,17 +289,22 @@ class NativeEntity(AbstractNativeEntity):
         worker_nodes = []
         for item in cluster['nodes']:
             worker_nodes.append(
-                Node(name=item['name'], ip=item['ipAddress']))
+                Node(name=item['name'], ip=item['ipAddress'])
+            )
         nfs_nodes = []
         for item in cluster['nfs_nodes']:
-            nfs_nodes.append(NfsNode(
-                name=item['name'],
-                ip=item['ipAddress'],
-                exports=item['exports']))
+            nfs_nodes.append(
+                NfsNode(
+                    name=item['name'],
+                    ip=item['ipAddress'],
+                    exports=item['exports']
+                )
+            )
 
         k8_distribution = Distribution(
             template_name=cluster['template_name'],
-            template_revision=int(cluster['template_revision']))
+            template_revision=int(cluster['template_revision'])
+        )
 
         cluster_entity = cls(
             kind=kind,
@@ -333,7 +339,8 @@ class NativeEntity(AbstractNativeEntity):
                 nodes=Nodes(
                     control_plane=Node(
                         name=cluster['master_nodes'][0]['name'],
-                        ip=cluster['master_nodes'][0]['ipAddress']),
+                        ip=cluster['master_nodes'][0]['ipAddress']
+                    ),
                     workers=worker_nodes,
                     nfs=nfs_nodes
                 )

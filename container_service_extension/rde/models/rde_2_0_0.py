@@ -358,7 +358,7 @@ class NativeEntity(AbstractNativeEntity):
                 distribution=Distribution(
                     template_name=rde_1_x_entity.spec.k8_distribution.template_name,  # noqa: E501
                     template_revision=rde_1_x_entity.spec.k8_distribution.template_revision  # noqa: E501
-                ),
+                )
             )
             rde_2_entity = cls(
                 metadata=metadata,
