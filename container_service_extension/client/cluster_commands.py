@@ -597,7 +597,9 @@ def apply(ctx, cluster_config_file_path, generate_sample_config, k8_runtime, out
         if generate_sample_config:
             if not k8_runtime:
                 console_message_printer.general_no_color(ctx.get_help())
-                msg = "with option --sample you must specify either of options: --native or --tkg or --tkg-plus"  # noqa: E501
+                msg = "with option --sample you must specify either of options: --native or --tkg"  # noqa: E501
+                if utils.is_environment_variable_enabled(cli_constants.ENV_CSE_TKG_PLUS_ENABLED):  # noqa: E501
+                    msg += " or --tkg-plus"
                 CLIENT_LOGGER.error(msg)
                 raise Exception(msg)
             elif k8_runtime == shared_constants.ClusterEntityKind.TKG_PLUS \
@@ -644,7 +646,7 @@ def apply(ctx, cluster_config_file_path, generate_sample_config, k8_runtime, out
         CLIENT_LOGGER.debug(result)
     except Exception as e:
         stderr(e, ctx)
-        CLIENT_LOGGER.error(str(e))
+        CLIENT_LOGGER.error(str(e), exec_info=True)
 
 
 @cluster_group.command('delete-nfs',

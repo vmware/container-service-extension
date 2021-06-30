@@ -188,7 +188,7 @@ class NativeEntity(AbstractNativeEntity):
             )
 
             settings = Settings(
-                network=rde_2_x_entity.spec.settings.network,
+                network=rde_2_x_entity.spec.settings.ovdc_network,
                 ssh_key=rde_2_x_entity.spec.settings.ssh_key,
                 rollback_on_failure=rde_2_x_entity.spec.settings.rollback_on_failure  # noqa: E501
             )
@@ -242,10 +242,11 @@ class NativeEntity(AbstractNativeEntity):
 
             nfs_nodes = []
             for nfs_node in nfs_nodes:
-                nfs_node_1_x = Node(
+                nfs_node_1_x = NfsNode(
                     name=nfs_node.name,
                     ip=nfs_node.ip,
-                    sizing_class=nfs_node.sizing_class)
+                    sizing_class=nfs_node.sizing_class
+                )
                 nfs_nodes.append(nfs_node_1_x)
 
             nodes = Nodes(
@@ -288,17 +289,22 @@ class NativeEntity(AbstractNativeEntity):
         worker_nodes = []
         for item in cluster['nodes']:
             worker_nodes.append(
-                Node(name=item['name'], ip=item['ipAddress']))
+                Node(name=item['name'], ip=item['ipAddress'])
+            )
         nfs_nodes = []
         for item in cluster['nfs_nodes']:
-            nfs_nodes.append(NfsNode(
-                name=item['name'],
-                ip=item['ipAddress'],
-                exports=item['exports']))
+            nfs_nodes.append(
+                NfsNode(
+                    name=item['name'],
+                    ip=item['ipAddress'],
+                    exports=item['exports']
+                )
+            )
 
         k8_distribution = Distribution(
             template_name=cluster['template_name'],
-            template_revision=int(cluster['template_revision']))
+            template_revision=int(cluster['template_revision'])
+        )
 
         cluster_entity = cls(
             kind=kind,
@@ -326,14 +332,15 @@ class NativeEntity(AbstractNativeEntity):
                     server_constants.DefEntityOperation.CREATE,
                     server_constants.DefEntityOperationStatus.SUCCEEDED)
                 ),
-                kubernetes=f"{cluster['kubernetes']} {cluster['kubernetes_version']}", # noqa: E501
+                kubernetes=f"{cluster['kubernetes']} {cluster['kubernetes_version']}",  # noqa: E501
                 cni=f"{cluster['cni']} {cluster['cni_version']}",
                 os=cluster['os'],
                 docker_version=cluster['docker_version'],
                 nodes=Nodes(
                     control_plane=Node(
                         name=cluster['master_nodes'][0]['name'],
-                        ip=cluster['master_nodes'][0]['ipAddress']),
+                        ip=cluster['master_nodes'][0]['ipAddress']
+                    ),
                     workers=worker_nodes,
                     nfs=nfs_nodes
                 )
