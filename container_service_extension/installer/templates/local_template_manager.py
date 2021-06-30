@@ -21,6 +21,7 @@ from container_service_extension.common.utils.pyvcloud_utils import get_org
 import container_service_extension.common.utils.server_utils as server_utils
 import container_service_extension.logging.logger as logger
 
+
 LOCAL_SCRIPTS_DIR = '.cse_scripts'
 
 
@@ -29,17 +30,20 @@ def get_revisioned_template_name(template_name, revision):
     return f"{template_name}_rev{revision}"
 
 
-def get_script_filepath(template_name, revision, script_file_name):
+def get_script_filepath(cookbook_version, template_name, revision, script_file_name):  # noqa: E501
     """Construct the absolute path to a given script.
 
+    :param semantic_version.Version cookbook_version: Remote template cookbook
+        version
     :param str template_name:
     :param str revision:
     :param str script_file_name:
 
     :rtype: str
     """
+    scripts_sub_dir = str(cookbook_version)
     template_dir = pathlib.Path.home() / LOCAL_SCRIPTS_DIR / \
-        get_revisioned_template_name(template_name, revision)
+        scripts_sub_dir / get_revisioned_template_name(template_name, revision)
     template_dir.mkdir(parents=True, exist_ok=True)
 
     # pathlib '/' operator does not intuitively resolve Enums with str mixin
@@ -51,6 +55,7 @@ def get_script_filepath(template_name, revision, script_file_name):
 def get_all_k8s_local_template_definition(client, catalog_name, org=None,
                                           org_name=None,
                                           legacy_mode=False,
+                                          ignore_metadata_keys=None,
                                           logger_debug=logger.NULL_LOGGER,
                                           msg_update_callback=utils.NullPrinter()):  # noqa: E501
     """Fetch all CSE k8s templates in a catalog.
@@ -66,6 +71,7 @@ def get_all_k8s_local_template_definition(client, catalog_name, org=None,
     :param str org_name: Name of the org that is hosting the catalog. Can be
         provided in lieu of param org, however param org takes precedence.
     :param bool legacy_mode: True, if CSE is running in legacy mode
+    :param List ignore_keys: List of keys to ignore
     :param logging.Logger logger_debug:
     :param utils.NullPrinter msg_update_callback:
 
@@ -73,6 +79,8 @@ def get_all_k8s_local_template_definition(client, catalog_name, org=None,
 
     :rtype: list of dicts
     """
+    if not ignore_metadata_keys:
+        ignore_metadata_keys = []
     if not org:
         org = get_org(client, org_name=org_name)
     catalog_item_names = [
@@ -96,6 +104,8 @@ def get_all_k8s_local_template_definition(client, catalog_name, org=None,
         expected_metadata_keys = \
             set([entry.value for entry in localTemplateKey])
         missing_metadata_keys = expected_metadata_keys - metadata_dict.keys()
+        # ignore keys included in the call
+        missing_metadata_keys = missing_metadata_keys - set(ignore_metadata_keys)  # noqa: E501
         num_missing_metadata_keys = len(missing_metadata_keys)
         if num_missing_metadata_keys == len(expected_metadata_keys):
             # This catalog item has no CSE related metadata, so skip it.
