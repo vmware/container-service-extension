@@ -60,7 +60,7 @@ import container_service_extension.server.compute_policy_manager as compute_poli
 DEFAULT_API_VERSION = vcd_client.ApiVersion.VERSION_36.value
 
 
-CLUSTER_CREATE_OPERATION_MESSAGE = 'CLuster create operation.'
+CLUSTER_CREATE_OPERATION_MESSAGE = 'Cluster create operation.'
 CLUSTER_RESIZE_OPERATION_MESSAGE = 'Cluster resize operation.'
 CLUSTER_DELETE_OPERATION_MESSAGE = 'Cluster delete operation.'
 CLUSTER_UPGRADE_OPERATION_MESSAGE = 'Cluster upgrade operation.'
