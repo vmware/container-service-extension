@@ -224,6 +224,10 @@
                                             }
                                         }
                                     }
+                                },
+                                "expose": {
+                                    "type":"boolean",
+                                    "description":"Exposes a cluster beyond routed Organization VDC network scope."
                                 }
                             }
                         }
@@ -324,6 +328,10 @@
                         "site":{
                             "type":"string",
                             "description":"Fully Qualified Domain Name of the VCD site in which the cluster is deployed"
+                        },
+                        "exposed": {
+                            "type":"boolean",
+                            "description":"Set to True, if a cluster is exposed beyond routed Organization VDC network scope."
                         }
                     },
                     "additionalProperties":true

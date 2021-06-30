@@ -188,7 +188,7 @@ class NativeEntity(AbstractNativeEntity):
             )
 
             settings = Settings(
-                network=rde_2_x_entity.spec.settings.network,
+                network=rde_2_x_entity.spec.settings.ovdc_network,
                 ssh_key=rde_2_x_entity.spec.settings.ssh_key,
                 rollback_on_failure=rde_2_x_entity.spec.settings.rollback_on_failure  # noqa: E501
             )
@@ -242,7 +242,7 @@ class NativeEntity(AbstractNativeEntity):
 
             nfs_nodes = []
             for nfs_node in nfs_nodes:
-                nfs_node_1_x = Node(
+                nfs_node_1_x = NfsNode(
                     name=nfs_node.name,
                     ip=nfs_node.ip,
                     sizing_class=nfs_node.sizing_class)
@@ -326,7 +326,7 @@ class NativeEntity(AbstractNativeEntity):
                     server_constants.DefEntityOperation.CREATE,
                     server_constants.DefEntityOperationStatus.SUCCEEDED)
                 ),
-                kubernetes=f"{cluster['kubernetes']} {cluster['kubernetes_version']}", # noqa: E501
+                kubernetes=f"{cluster['kubernetes']} {cluster['kubernetes_version']}",  # noqa: E501
                 cni=f"{cluster['cni']} {cluster['cni_version']}",
                 os=cluster['os'],
                 docker_version=cluster['docker_version'],
