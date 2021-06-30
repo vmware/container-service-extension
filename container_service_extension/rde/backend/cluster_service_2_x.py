@@ -60,10 +60,10 @@ import container_service_extension.server.compute_policy_manager as compute_poli
 DEFAULT_API_VERSION = vcd_client.ApiVersion.VERSION_36.value
 
 
-CLUSTER_CREATE_IN_PROGRESS_MESSAGE = 'Create cluster in progress'
-CLUSTER_RESIZE_IN_PROGRESS_MESSAGE = 'Resize cluster in progress'
-CLUSTER_DELETE_IN_PROGRESS_MESSAGE = 'Delete cluster in progress'
-CLUSTER_UPGRADE_IN_PROGRESS_MESSAGE = 'Upgrade cluster in progress'
+CLUSTER_CREATE_OPERATION_MESSAGE = 'Cluster create operation.'
+CLUSTER_RESIZE_OPERATION_MESSAGE = 'Cluster resize operation.'
+CLUSTER_DELETE_OPERATION_MESSAGE = 'Cluster delete operation.'
+CLUSTER_UPGRADE_OPERATION_MESSAGE = 'Cluster upgrade operation.'
 
 
 class ClusterService(abstract_broker.AbstractBroker):
@@ -324,7 +324,7 @@ class ClusterService(abstract_broker.AbstractBroker):
             self.context.is_async = True
             self._create_cluster_async(entity_id, input_native_entity)
             return self.mqtt_publisher.construct_behavior_payload(
-                message=CLUSTER_CREATE_IN_PROGRESS_MESSAGE,
+                message=CLUSTER_CREATE_OPERATION_MESSAGE,
                 status=BehaviorTaskStatus.RUNNING.value,
                 progress='5')
         except Exception as err:
@@ -456,7 +456,7 @@ class ClusterService(abstract_broker.AbstractBroker):
         # TODO(test-resize): verify if multiple messages are not published
         #   in update_cluster()
         return self.mqtt_publisher.construct_behavior_payload(
-            message=CLUSTER_RESIZE_IN_PROGRESS_MESSAGE,
+            message=CLUSTER_RESIZE_OPERATION_MESSAGE,
             status=BehaviorTaskStatus.RUNNING.value, progress=5)
 
     def delete_cluster(self, cluster_id):
@@ -516,7 +516,7 @@ class ClusterService(abstract_broker.AbstractBroker):
                                    ovdc_name=ovdc_name,
                                    curr_rde=curr_entity)
         return self.mqtt_publisher.construct_behavior_payload(
-            message=CLUSTER_DELETE_IN_PROGRESS_MESSAGE,
+            message=CLUSTER_DELETE_OPERATION_MESSAGE,
             status=BehaviorTaskStatus.RUNNING.value, progress='5')
 
     def get_cluster_upgrade_plan(self, cluster_id: str):
@@ -636,7 +636,7 @@ class ClusterService(abstract_broker.AbstractBroker):
         # TODO(test-upgrade): Verify if multiple messages are not published
         #   in update_cluster()
         return self.mqtt_publisher.construct_behavior_payload(
-            message=CLUSTER_UPGRADE_IN_PROGRESS_MESSAGE,
+            message=CLUSTER_UPGRADE_OPERATION_MESSAGE,
             status=BehaviorTaskStatus.RUNNING.value, progress=5)
 
     def update_cluster(self, cluster_id: str, input_native_entity: rde_2_x.NativeEntity):  # noqa: E501
