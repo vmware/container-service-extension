@@ -1930,7 +1930,7 @@ class ClusterService(abstract_broker.AbstractBroker):
                          curr_rde: common_models.DefEntity = None,
                          vapp=None):
         """Sync the defined entity with the latest vApp status."""
-        # NOTE: This function should not be relied to update the defined entity
+        # NOTE: This function should not be used to update the defined entity
         # unless it is sure that the Vapp with the cluster-id exists
         if not curr_rde:
             curr_rde: common_models.DefEntity = \
