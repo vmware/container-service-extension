@@ -86,8 +86,8 @@ def _get_nsxt_backed_gateway_service(client: vcd_client.Client, org_name: str,
     return NsxtBackedGatewayService(gateway, client)
 
 
-def form_expose_ip_init_cluster_script(script: str, expose_ip: str):
-    """Form init cluster script with expose ip control plane endpoint option.
+def construct_init_cluster_script_with_exposed_ip(script: str, expose_ip: str):
+    """Construct init cluster script with expose ip control plane endpoint option.
 
     If the '--control-plane-endpoint' option is already present, this option
     will be replaced with this option specifying the exposed ip. If this option
@@ -120,8 +120,8 @@ def form_expose_ip_init_cluster_script(script: str, expose_ip: str):
     return script.replace(kubeadm_init_line, expose_kubeadm_init_line)
 
 
-def form_expose_dnat_rule_name(cluster_name: str, cluster_id: str):
-    """Form dnat rule name for expose cluster.
+def construct_expose_dnat_rule_name(cluster_name: str, cluster_id: str):
+    """Construct dnat rule name for exposed cluster.
 
     Dnat rule name includes cluster name to show users the cluster rule
     corresponds to. The cluster id is used to make the rule unique
@@ -129,8 +129,18 @@ def form_expose_dnat_rule_name(cluster_name: str, cluster_id: str):
     return f"{cluster_name}_{cluster_id}_{EXPOSE_CLUSTER_NAME_FRAGMENT}"
 
 
-def form_script_to_update_kubeconfig_with_internal_ip(
+def construct_script_to_update_kubeconfig_with_internal_ip(
         kubeconfig_with_exposed_ip: dict, internal_ip: str):
+    """Construct script to update kubeconfig file with internal ip.
+
+    :param dict kubeconfig_with_exposed_ip: the current kubeconfig
+    :param str internal_ip: the internal ip of the control plane node
+
+    :return: the script that will replace external ip in kubeconfig with
+        internal ip
+
+    :rtype: str
+    """
     kubeconfig_with_internal_ip = re.sub(
         pattern=IP_PORT_REGEX,
         repl=f'{internal_ip}:6443',
@@ -146,6 +156,25 @@ def form_script_to_update_kubeconfig_with_internal_ip(
 def expose_cluster(client: vcd_client.Client, org_name: str, ovdc_name: str,
                    network_name: str, cluster_name: str, cluster_id: str,
                    internal_ip: str):
+    """Create DNAT rule to expose a cluster.
+
+    Get a free static IP from the edge gateway powering the Org VDC network,
+        and create a DNAT rule to expose the @internal_ip
+
+    :param vcd_client.Client client:
+    :param str org_name:
+    :param str ovdc_name:
+    :param str network_name:
+    :param str cluster_name:
+    :param str cluster_id:
+    :param str internal_ip:
+
+    :raises Exception: If CSE is unable to get a free IP or add the DNAT rule.
+
+    :returns: The newly acquired exposed Ip of the cluster
+
+    :rtype: str
+    """
     # Auto reserve ip and add dnat rule
     nsxt_gateway_svc = _get_nsxt_backed_gateway_service(
         client, org_name, ovdc_name, network_name)
@@ -153,7 +182,9 @@ def expose_cluster(client: vcd_client.Client, org_name: str, ovdc_name: str,
     if not expose_ip:
         raise Exception(f'No available ips found for cluster {cluster_name} ({cluster_id})')  # noqa: E501
     try:
-        dnat_rule_name = form_expose_dnat_rule_name(cluster_name, cluster_id)
+        dnat_rule_name = construct_expose_dnat_rule_name(
+            cluster_name, cluster_id
+        )
         nsxt_gateway_svc.add_dnat_rule(
             name=dnat_rule_name,
             internal_address=internal_ip,
@@ -169,8 +200,21 @@ def handle_delete_expose_dnat_rule(client: vcd_client.Client,
                                    network_name: str,
                                    cluster_name: str,
                                    cluster_id: str):
+    """Delete DNAT rule that exposes a cluster.
+
+    :param vcd_client.Client client:
+    :param str org_name:
+    :param str ovdc_name:
+    :param str network_name:
+    :param str cluster_name:
+    :param str cluster_id:
+
+    :returns: Nothing
+    """
     nsxt_gateway_svc = _get_nsxt_backed_gateway_service(
-        client, org_name, ovdc_name, network_name)
-    expose_dnat_rule_name = form_expose_dnat_rule_name(cluster_name,
-                                                       cluster_id)
+        client, org_name, ovdc_name, network_name
+    )
+    expose_dnat_rule_name = construct_expose_dnat_rule_name(
+        cluster_name, cluster_id
+    )
     nsxt_gateway_svc.delete_dnat_rule(expose_dnat_rule_name)

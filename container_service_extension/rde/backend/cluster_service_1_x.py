@@ -1827,7 +1827,7 @@ class ClusterService(abstract_broker.AbstractBroker):
                                       vapp: vcd_vapp.VApp):
         kubeconfig_with_exposed_ip = self.get_cluster_config(cluster_id)
         script = \
-            nw_exp_helper.form_script_to_update_kubeconfig_with_internal_ip(
+            nw_exp_helper.construct_script_to_update_kubeconfig_with_internal_ip(  # noqa: E501
                 kubeconfig_with_exposed_ip=kubeconfig_with_exposed_ip,
                 internal_ip=internal_ip
             )
@@ -2286,8 +2286,10 @@ def _init_cluster(sysadmin_client: vcd_client.Client, vapp, cluster_kind,
 
         # Expose cluster if given external ip
         if expose_ip:
-            script = nw_exp_helper.form_expose_ip_init_cluster_script(
-                script, expose_ip)
+            script = \
+                nw_exp_helper.construct_init_cluster_script_with_exposed_ip(
+                    script, expose_ip
+                )
 
         node_names = _get_node_names(vapp, NodeType.CONTROL_PLANE)
         result = _execute_script_in_nodes(sysadmin_client, vapp=vapp,
