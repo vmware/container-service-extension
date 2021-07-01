@@ -60,7 +60,6 @@ import container_service_extension.server.compute_policy_manager as compute_poli
 
 DEFAULT_API_VERSION = vcd_client.ApiVersion.VERSION_36.value
 
-
 CLUSTER_CREATE_OPERATION_MESSAGE = 'Cluster create'
 CLUSTER_RESIZE_OPERATION_MESSAGE = 'Cluster resize'
 CLUSTER_DELETE_OPERATION_MESSAGE = 'Cluster delete'
@@ -68,7 +67,6 @@ CLUSTER_UPGRADE_OPERATION_MESSAGE = 'Cluster upgrade'
 DOWNLOAD_KUBECONFIG_OPERATION_MESSAGE = 'Download kubeconfig'
 
 
-# noinspection PyTypeChecker
 class ClusterService(abstract_broker.AbstractBroker):
     """Handles cluster operations for native DEF based clusters."""
 
@@ -173,10 +171,10 @@ class ClusterService(abstract_broker.AbstractBroker):
         :return: Dictionary containing cluster config.
         :rtype: dict
         """
-        curr_entity = self.entity_svc.get_entity(cluster_id)
-        curr_native_entity: rde_2_x.NativeEntity = curr_entity.entity
-        if curr_entity.state != def_constants.DEF_RESOLVED_STATE:
-            msg = f"Cluster {curr_entity.name} with id {cluster_id} is " \
+        curr_rde = self.entity_svc.get_entity(cluster_id)
+        curr_native_entity: rde_2_x.NativeEntity = curr_rde.entity
+        if curr_rde.state != def_constants.DEF_RESOLVED_STATE:
+            msg = f"Cluster {curr_rde.name} with id {cluster_id} is " \
                   "not in a valid state for this operation. " \
                   "Please contact the administrator"
             LOGGER.error(msg)
@@ -188,19 +186,19 @@ class ClusterService(abstract_broker.AbstractBroker):
         telemetry_handler.record_user_action_details(
             cse_operation=telemetry_constants.CseOperation.V36_CLUSTER_CONFIG,
             cse_params={
-                CLUSTER_ENTITY: curr_entity,
+                CLUSTER_ENTITY: curr_rde,
                 telemetry_constants.PayloadKey.SOURCE_DESCRIPTION: thread_local_data.get_thread_local_data(ThreadLocalData.USER_AGENT)  # noqa: E501
             }
         )
 
-        if curr_entity.externalId is None:
-            msg = f"Cannot find VApp href for cluster {curr_entity.name} " \
+        if curr_rde.externalId is None:
+            msg = f"Cannot find VApp href for cluster {curr_rde.name} " \
                   f"with id {cluster_id}"
             LOGGER.error(msg)
             raise exceptions.CseServerError(msg)
 
         client_v36 = self.context.get_client(api_version=DEFAULT_API_VERSION)
-        vapp = vcd_vapp.VApp(client_v36, href=curr_entity.externalId)
+        vapp = vcd_vapp.VApp(client_v36, href=curr_rde.externalId)
         control_plane_node_name = curr_native_entity.status.nodes.control_plane.name  # noqa: E501
 
         LOGGER.debug(f"getting file from node {control_plane_node_name}")
@@ -314,15 +312,15 @@ class ClusterService(abstract_broker.AbstractBroker):
             new_status.task_href = self.task_href
 
             try:
-                curr_entity = self._update_cluster_entity(entity_id, new_status)  # noqa: E501
-            except Exception as err:
+                curr_rde = self._update_cluster_entity(entity_id, new_status)  # noqa: E501
+            except Exception:
                 msg = f"Error updating the cluster '{cluster_name}' with the status"  # noqa: E501
-                LOGGER.error(f"{msg}: {err}")
+                LOGGER.error(msg, exc_info=True)
                 raise
             telemetry_handler.record_user_action_details(
                 cse_operation=telemetry_constants.CseOperation.V36_CLUSTER_APPLY,  # noqa: E501
                 cse_params={
-                    CLUSTER_ENTITY: curr_entity,
+                    CLUSTER_ENTITY: curr_rde,
                     telemetry_constants.PayloadKey.SOURCE_DESCRIPTION: thread_local_data.get_thread_local_data(ThreadLocalData.USER_AGENT)  # noqa: E501
                 }
             )
@@ -337,6 +335,7 @@ class ClusterService(abstract_broker.AbstractBroker):
             # NOTE: Should update the task first before attempting delete or
             #   else entity delete will fail.
             msg = f"Failed to create cluster {cluster_name} in org {org_name} and VDC {ovdc_name}"  # noqa: E501
+            LOGGER.error(msg, exc_info=True)
             self._update_task(BehaviorTaskStatus.ERROR,
                               message=msg, error_message=str(err))
             # Since defined entity is already created by defined entity
@@ -381,17 +380,17 @@ class ClusterService(abstract_broker.AbstractBroker):
         # NOTE: It is always better to do a get on the entity to make use of
         # existing entity status. This guarantees that operations performed
         # are relevant.
-        curr_entity: common_models.DefEntity = self.entity_svc.get_entity(cluster_id)  # noqa: E501
-        curr_native_entity: rde_2_x.NativeEntity = curr_entity.entity
+        curr_rde: common_models.DefEntity = self.entity_svc.get_entity(cluster_id)  # noqa: E501
+        curr_native_entity: rde_2_x.NativeEntity = curr_rde.entity
+        state: str = curr_rde.state
 
-        cluster_name: str = curr_entity.name
+        cluster_name: str = curr_rde.name
         current_spec: rde_2_x.ClusterSpec = \
             def_utils.construct_cluster_spec_from_entity_status(
                 curr_native_entity.status,
                 server_utils.get_rde_version_in_use())
         curr_worker_count: int = current_spec.topology.workers.count
         curr_nfs_count: int = current_spec.topology.nfs.count
-        state: str = curr_entity.state
         phase: DefEntityPhase = DefEntityPhase.from_phase(
             curr_native_entity.status.phase)
 
@@ -413,7 +412,7 @@ class ClusterService(abstract_broker.AbstractBroker):
         # Check for unexposing the cluster
         desired_expose_state: bool = \
             input_native_entity.spec.settings.network.expose
-        is_exposed: bool = curr_native_entity.status.cloud_properties.exposed
+        is_exposed: bool = current_spec.settings.network.expose
         unexpose: bool = is_exposed and not desired_expose_state
 
         # Check if the desired worker and nfs count is valid and raise
@@ -463,12 +462,14 @@ class ClusterService(abstract_broker.AbstractBroker):
             self._update_task(BehaviorTaskStatus.ERROR,
                               message=msg,
                               error_message=str(err))
-            LOGGER.error(str(err))
+            LOGGER.error(str(err), exc_info=True)
             raise
         # trigger async operation
         self.context.is_async = True
-        self._monitor_resize(cluster_id=cluster_id,
-                             input_native_entity=input_native_entity)
+        self._monitor_resize(
+            cluster_id=cluster_id,
+            input_native_entity=input_native_entity
+        )
         # TODO(test-resize): verify if multiple messages are not published
         #   in update_cluster()
         return self.mqtt_publisher.construct_behavior_payload(
@@ -480,10 +481,10 @@ class ClusterService(abstract_broker.AbstractBroker):
         # TODO: Make use of current entity in the behavior payload
         # Get entity required here to get the org and vdc in which the cluster
         # is present
-        curr_entity: common_models.DefEntity = self.entity_svc.get_entity(
+        curr_rde: common_models.DefEntity = self.entity_svc.get_entity(
             cluster_id)
-        curr_native_entity: rde_2_x.NativeEntity = curr_entity.entity
-        cluster_name: str = curr_entity.name
+        curr_native_entity: rde_2_x.NativeEntity = curr_rde.entity
+        cluster_name: str = curr_rde.name
         org_name: str = curr_native_entity.metadata.org_name
         ovdc_name: str = curr_native_entity.metadata.virtual_data_center_name
         phase: DefEntityPhase = DefEntityPhase.from_phase(
@@ -492,7 +493,7 @@ class ClusterService(abstract_broker.AbstractBroker):
         # TODO: Cannot delete the defined entity if not in RESOLVED state.
         #   Add check for resolved state before deleting the Vapp
         # Check if cluster is busy
-        if curr_entity.state != def_constants.DEF_RESOLVED_STATE or phase.is_entity_busy():  # noqa: E501
+        if curr_rde.state != def_constants.DEF_RESOLVED_STATE or phase.is_entity_busy():  # noqa: E501
             raise exceptions.CseServerError(
                 f"Cluster {cluster_name} with id {cluster_id} is not in a "
                 f"valid state to be deleted. Please contact administrator.")
@@ -500,7 +501,7 @@ class ClusterService(abstract_broker.AbstractBroker):
         telemetry_handler.record_user_action_details(
             cse_operation=telemetry_constants.CseOperation.V36_CLUSTER_DELETE,
             cse_params={
-                CLUSTER_ENTITY: curr_entity,
+                CLUSTER_ENTITY: curr_rde,
                 telemetry_constants.PayloadKey.SOURCE_DESCRIPTION: thread_local_data.get_thread_local_data(ThreadLocalData.USER_AGENT)  # noqa: E501
             }
         )
@@ -519,9 +520,9 @@ class ClusterService(abstract_broker.AbstractBroker):
         # Update defined entity of the cluster to delete in-progress state
         try:
             self._update_cluster_entity(cluster_id, new_status)
-        except Exception as err:
+        except Exception:
             msg = f"Error updating the cluster '{cluster_name}' with the status"  # noqa: E501
-            LOGGER.error(f"{msg}: {err}")
+            LOGGER.error(msg, exc_info=True)
             raise
 
         self.context.is_async = True
@@ -530,7 +531,7 @@ class ClusterService(abstract_broker.AbstractBroker):
         self._delete_cluster_async(cluster_name=cluster_name,
                                    org_name=org_name,
                                    ovdc_name=ovdc_name,
-                                   curr_rde=curr_entity)
+                                   curr_rde=curr_rde)
         return self.mqtt_publisher.construct_behavior_payload(
             message=f"{CLUSTER_DELETE_OPERATION_MESSAGE} ({cluster_id})",
             status=BehaviorTaskStatus.RUNNING.value, progress=5)
@@ -545,12 +546,12 @@ class ClusterService(abstract_broker.AbstractBroker):
         """
         # TODO: Make use of current entity in the behavior payload
         # Get entity required here to retrieve the cluster upgrade plan
-        curr_entity = self.entity_svc.get_entity(cluster_id)
-        curr_native_entity: rde_2_x.NativeEntity = curr_entity.entity
+        curr_rde = self.entity_svc.get_entity(cluster_id)
+        curr_native_entity: rde_2_x.NativeEntity = curr_rde.entity
         telemetry_handler.record_user_action_details(
             cse_operation=telemetry_constants.CseOperation.V36_CLUSTER_UPGRADE_PLAN,  # noqa: E501
             cse_params={
-                CLUSTER_ENTITY: curr_entity,
+                CLUSTER_ENTITY: curr_rde,
                 telemetry_constants.PayloadKey.SOURCE_DESCRIPTION: thread_local_data.get_thread_local_data(ThreadLocalData.USER_AGENT)  # noqa: E501
             }
         )
@@ -573,8 +574,8 @@ class ClusterService(abstract_broker.AbstractBroker):
         :rtype: dict
         """
         # TODO: Make use of current entity in the behavior payload
-        curr_entity = self.entity_svc.get_entity(cluster_id)
-        curr_native_entity: rde_2_x.NativeEntity = curr_entity.entity
+        curr_rde = self.entity_svc.get_entity(cluster_id)
+        curr_native_entity: rde_2_x.NativeEntity = curr_rde.entity
         cluster_name = curr_native_entity.metadata.name
         new_template_name = input_native_entity.spec.distribution.template_name
         new_template_revision = input_native_entity.spec.distribution.template_revision  # noqa: E501
@@ -583,7 +584,7 @@ class ClusterService(abstract_broker.AbstractBroker):
         phase: DefEntityPhase = DefEntityPhase.from_phase(
             curr_native_entity.status.phase)
 
-        state = curr_entity.state
+        state = curr_rde.state
         if state != def_constants.DEF_RESOLVED_STATE or phase.is_entity_busy():
             raise exceptions.CseServerError(
                 f"Cluster {cluster_name} with id {cluster_id} is not in a "
@@ -604,7 +605,7 @@ class ClusterService(abstract_broker.AbstractBroker):
                 self._fail_operation(cluster_id, DefEntityOperation.UPGRADE)
             except Exception:
                 msg = f"Failed to update defined entity status for cluster {cluster_id}"  # noqa: E501
-                LOGGER.error(f"{msg}", exc_info=True)
+                LOGGER.error(msg, exc_info=True)
             # TODO all of these e.CseServerError instances related to request
             # should be changed to BadRequestError (400)
             raise exceptions.CseServerError(
@@ -615,7 +616,7 @@ class ClusterService(abstract_broker.AbstractBroker):
         telemetry_handler.record_user_action_details(
             telemetry_constants.CseOperation.V36_CLUSTER_UPGRADE,
             cse_params={
-                CLUSTER_ENTITY: curr_entity,
+                CLUSTER_ENTITY: curr_rde,
                 telemetry_constants.PayloadKey.SOURCE_DESCRIPTION: thread_local_data.get_thread_local_data(ThreadLocalData.USER_AGENT)  # noqa: E501
             }
         )
@@ -630,7 +631,7 @@ class ClusterService(abstract_broker.AbstractBroker):
               f"{input_native_entity.status.cni} -> " \
               f"{template[LocalTemplateKey.CNI_VERSION]}"
         self._update_task(BehaviorTaskStatus.RUNNING, message=msg)
-        LOGGER.info(f"{msg} ({curr_entity.externalId})")
+        LOGGER.info(f"{msg} ({curr_rde.externalId})")
 
         new_status: rde_2_x.Status = input_native_entity.status
         new_status.phase = str(
@@ -643,7 +644,7 @@ class ClusterService(abstract_broker.AbstractBroker):
             self._update_task(BehaviorTaskStatus.ERROR,
                               message=msg,
                               error_message=str(err))
-            LOGGER.error(str(err))
+            LOGGER.error(str(err), exc_info=True)
             raise
 
         self.context.is_async = True
@@ -669,8 +670,8 @@ class ClusterService(abstract_broker.AbstractBroker):
         :rtype: dict
         """
         # TODO: Make use of current entity in the behavior payload
-        curr_entity = self.entity_svc.get_entity(cluster_id)
-        curr_native_entity: rde_2_x.NativeEntity = curr_entity.entity
+        curr_rde = self.entity_svc.get_entity(cluster_id)
+        curr_native_entity: rde_2_x.NativeEntity = curr_rde.entity
         current_spec: rde_2_x.ClusterSpec = \
             def_utils.construct_cluster_spec_from_entity_status(
                 curr_native_entity.status,
@@ -705,10 +706,10 @@ class ClusterService(abstract_broker.AbstractBroker):
 
         client_v36 = self.context.get_client(api_version=DEFAULT_API_VERSION)
         acl_svc = acl_service.ClusterACLService(cluster_id, client_v36)
-        curr_entity: common_models.DefEntity = acl_svc.get_cluster_entity()
+        curr_rde: common_models.DefEntity = acl_svc.get_cluster_entity()
         user_id_names_dict = vcd_utils.create_org_user_id_to_name_dict(
             client=client_v36,
-            org_name=curr_entity.org.name)
+            org_name=curr_rde.org.name)
         # If the user is from the system org, need to consider system users
         if client_v36.is_sysadmin():
             system_user_id_names_dict = vcd_utils.create_org_user_id_to_name_dict(  # noqa: E501
@@ -768,6 +769,7 @@ class ClusterService(abstract_broker.AbstractBroker):
             acl_svc.native_update_vapp_access_settings(
                 prev_user_id_to_acl_entry_dict, update_acl_entries)
         except Exception as err:
+            LOGGER.error(str(err), exc_info=True)
             # Rollback defined entity
             prev_acl_entries = [acl_entry for _, acl_entry in prev_user_id_to_acl_entry_dict.items()]  # noqa: E501
             curr_user_acl_info = acl_svc.create_user_id_to_acl_entry_dict()
@@ -782,13 +784,13 @@ class ClusterService(abstract_broker.AbstractBroker):
             nodes_to_del = []
         # TODO: Make use of current entity in the behavior payload
         # get_entity() call needed here to get the cluster details
-        curr_entity: common_models.DefEntity = self.entity_svc.get_entity(
+        curr_rde: common_models.DefEntity = self.entity_svc.get_entity(
             cluster_id)
-        curr_native_entity: rde_2_x.NativeEntity = curr_entity.entity
+        curr_native_entity: rde_2_x.NativeEntity = curr_rde.entity
 
         if len(nodes_to_del) == 0:
             LOGGER.debug("No nodes specified to delete")
-            return curr_entity
+            return curr_rde
 
         # must _update_task here or else self.task_resource is None
         # do not logout of sys admin, or else in pyvcloud's session.request()
@@ -807,19 +809,18 @@ class ClusterService(abstract_broker.AbstractBroker):
             DefEntityPhase(DefEntityOperation.UPDATE,
                            DefEntityOperationStatus.IN_PROGRESS))
         try:
-            curr_entity = self._update_cluster_entity(cluster_id,
-                                                      new_status)
+            curr_rde = self._update_cluster_entity(cluster_id, new_status)
         except Exception as err:
             self._update_task(BehaviorTaskStatus.ERROR,
                               message=msg,
                               error_message=str(err))
-            LOGGER.error(str(err))
+            LOGGER.error(str(err), exc_info=True)
             raise
 
         self.context.is_async = True
         self._monitor_delete_nodes(cluster_id=cluster_id,
                                    nodes_to_del=nodes_to_del)
-        msg = f"Deleting NFS nodes: {nodes_to_del} for cluster {curr_entity.name} ({cluster_id})"  # noqa: E501
+        msg = f"Deleting NFS nodes: {nodes_to_del} for cluster {curr_rde.name} ({cluster_id})"  # noqa: E501
         return self.mqtt_publisher.construct_behavior_payload(
             message=msg,
             status=BehaviorTaskStatus.RUNNING.value, progress=5)
@@ -869,7 +870,7 @@ class ClusterService(abstract_broker.AbstractBroker):
                     network=network_name,
                     fence_mode='bridged')
             except Exception as err:
-                LOGGER.error(err, exc_info=True)
+                LOGGER.error(str(err), exc_info=True)
                 raise exceptions.ClusterOperationError(
                     f"Error while creating vApp: {err}")
             client_v36.get_task_monitor().wait_for_status(vapp_resource.Tasks.Task[0])  # noqa: E501
@@ -943,7 +944,9 @@ class ClusterService(abstract_broker.AbstractBroker):
                     if expose_ip:
                         control_plane_ip = expose_ip
                 except Exception as err:
-                    LOGGER.error(f'Exposing cluster failed: {str(err)}')
+                    LOGGER.error(
+                        f"Exposing cluster failed: {str(err)}", exc_info=True
+                    )
                     expose_ip = ''
 
             _init_cluster(sysadmin_client_v36,
@@ -1030,13 +1033,13 @@ class ClusterService(abstract_broker.AbstractBroker):
             # Update status with exposed ip
             if expose_ip:
                 new_status.cloud_properties.exposed = True
-                if new_status.nodes and \
-                        new_status.nodes.control_plane:
+                if new_status.nodes and new_status.nodes.control_plane:
                     new_status.nodes.control_plane.ip = expose_ip
 
-            self._update_cluster_entity(cluster_id,
-                                        new_status,
-                                        external_id=vapp_resource.get('href'))
+            self._update_cluster_entity(
+                cluster_id, new_status,
+                external_id=vapp_resource.get('href')
+            )
 
             # cluster creation succeeded. Mark the task as success
             msg = f"Created cluster '{cluster_name}' ({cluster_id})"
@@ -1079,7 +1082,7 @@ class ClusterService(abstract_broker.AbstractBroker):
                     except Exception as err1:
                         LOGGER.error(f'Failed to delete dnat rule for '
                                      f'{cluster_name} ({cluster_id}) with '
-                                     f'error: {str(err1)}')
+                                     f'error: {str(err1)}', exc_info=True)
 
             else:
                 # TODO: Avoid many try-except block. Check if it is a good
@@ -1157,10 +1160,10 @@ class ClusterService(abstract_broker.AbstractBroker):
         """
         cluster_name = None
         try:
-            curr_entity: common_models.DefEntity = self.entity_svc.get_entity(
-                cluster_id)
-            curr_native_entity: rde_2_x.NativeEntity = curr_entity.entity
-            cluster_name = curr_entity.name
+            curr_rde: common_models.DefEntity = \
+                self.entity_svc.get_entity(cluster_id)
+            curr_native_entity: rde_2_x.NativeEntity = curr_rde.entity
+            cluster_name = curr_rde.name
             current_spec: rde_2_x.ClusterSpec = \
                 def_utils.construct_cluster_spec_from_entity_status(
                     curr_native_entity.status,
@@ -1214,7 +1217,7 @@ class ClusterService(abstract_broker.AbstractBroker):
                 network_name: str = current_spec.settings.ovdc_network
                 try:
                     # Get internal ip
-                    vapp_href = curr_entity.externalId
+                    vapp_href = curr_rde.externalId
                     vapp = vcd_vapp.VApp(self.context.client,
                                          href=vapp_href)
                     control_plane_internal_ip = _get_control_plane_ip(
@@ -1239,13 +1242,12 @@ class ClusterService(abstract_broker.AbstractBroker):
 
                     # Update RDE control plane ip to be internal ip
                     curr_native_entity.status.nodes.control_plane.ip = control_plane_internal_ip  # noqa: E501
-                    curr_entity.entity.status.cloud_properties.exposed = False
+                    curr_native_entity.status.cloud_properties.exposed = False
                     unexpose_success = True
                 except Exception as err:
                     LOGGER.error(
-                        "Failed to unexpose cluster with error: "
-                        f"{str(err)}",
-                        exec_info=True
+                        f"Failed to unexpose cluster with error: {str(err)}",
+                        exc_info=True
                     )
 
             # update the defined entity and the task status. Check if one of
@@ -1271,12 +1273,11 @@ class ClusterService(abstract_broker.AbstractBroker):
                     DefEntityPhase(DefEntityOperation.UPDATE,
                                    DefEntityOperationStatus.SUCCEEDED))
 
-            self._sync_def_entity(cluster_id, curr_entity)
+            self._sync_def_entity(cluster_id, curr_rde)
         except Exception as err:
             msg = f"Unexpected error while resizing nodes for {cluster_name}" \
                   f" ({cluster_id})"
-            LOGGER.error(f"{msg}",
-                         exc_info=True)
+            LOGGER.error(f"{msg}", exc_info=True)
             # TODO: Avoid many try-except block. Check if it is a good practice
             try:
                 self._fail_operation(
@@ -1331,9 +1332,9 @@ class ClusterService(abstract_broker.AbstractBroker):
             api_version=DEFAULT_API_VERSION)
         cluster_id = input_native_entity.status.uid
         try:
-            curr_entity: common_models.DefEntity = self.entity_svc.get_entity(cluster_id)  # noqa: E501
-            curr_native_entity: rde_2_x.NativeEntity = curr_entity.entity
-            vapp_href = curr_entity.externalId
+            curr_rde: common_models.DefEntity = self.entity_svc.get_entity(cluster_id)  # noqa: E501
+            curr_native_entity: rde_2_x.NativeEntity = curr_rde.entity
+            vapp_href = curr_rde.externalId
             cluster_name = curr_native_entity.metadata.name
             current_spec: rde_2_x.ClusterSpec = \
                 def_utils.construct_cluster_spec_from_entity_status(
@@ -1488,8 +1489,11 @@ class ClusterService(abstract_broker.AbstractBroker):
                               error_message=str(err))
 
     @thread_utils.run_async
-    def _delete_cluster_async(self, cluster_name: str, org_name: str,
-                              ovdc_name: str, curr_rde: common_models.DefEntity):  # noqa: E501
+    def _delete_cluster_async(self,
+                              cluster_name: str,
+                              org_name: str,
+                              ovdc_name: str,
+                              curr_rde: common_models.DefEntity):
         """Delete the cluster asynchronously.
 
         :param cluster_name: Name of the cluster to be deleted.
@@ -1501,16 +1505,25 @@ class ClusterService(abstract_broker.AbstractBroker):
             msg = f"Deleting cluster '{cluster_name}'"
             self._update_task(BehaviorTaskStatus.RUNNING, message=msg)
             client_v36 = self.context.get_client(
-                api_version=DEFAULT_API_VERSION)
+                api_version=DEFAULT_API_VERSION
+            )
+
             if curr_rde.externalId:
                 # Delete Vapp if RDE is linked with a VApp
                 _delete_vapp(client_v36, org_name, ovdc_name, cluster_name)
 
-                # Handle deleting dnat rule is cluster is exposed
-                exposed: bool = bool(curr_rde) and curr_rde.entity.status.exposed  # noqa: E501
+                curr_native_entity: rde_2_x.NativeEntity = curr_rde.entity
+                cluster_name = curr_rde.name
+                current_spec: rde_2_x.ClusterSpec = \
+                    def_utils.construct_cluster_spec_from_entity_status(
+                        curr_native_entity.status,
+                        server_utils.get_rde_version_in_use())
+
+                # Handle deleting dnat rule if cluster is exposed
+                exposed: bool = current_spec.settings.network.expose
                 dnat_delete_success: bool = False
                 if exposed:
-                    network_name: str = curr_rde.entity.spec.settings.network
+                    network_name: str = current_spec.settings.ovdc_network
                     try:
                         nw_exp_helper.handle_delete_expose_dnat_rule(
                             client=self.context.client,
@@ -1535,8 +1548,7 @@ class ClusterService(abstract_broker.AbstractBroker):
             self._update_task(BehaviorTaskStatus.SUCCESS, message=msg)
         except Exception as err:
             msg = f"Unexpected error while deleting cluster {cluster_name}"
-            LOGGER.error(f"{msg}",
-                         exc_info=True)
+            LOGGER.error(f"{msg}", exc_info=True)
             try:
                 self._fail_operation(cluster_id, DefEntityOperation.DELETE)
             except Exception:
@@ -1556,10 +1568,10 @@ class ClusterService(abstract_broker.AbstractBroker):
         cluster_name = None
         vapp = None
         try:
-            curr_entity: common_models.DefEntity = self.entity_svc.get_entity(cluster_id)  # noqa: E501
-            curr_native_entity: rde_2_x.NativeEntity = curr_entity.entity
+            curr_rde: common_models.DefEntity = self.entity_svc.get_entity(cluster_id)  # noqa: E501
+            curr_native_entity: rde_2_x.NativeEntity = curr_rde.entity
             cluster_name = curr_native_entity.metadata.name
-            vapp_href = curr_entity.externalId
+            vapp_href = curr_rde.externalId
 
             # TODO use cluster status field to get the control plane and worker nodes  # noqa: E501
             client_v36 = self.context.get_client(
@@ -1700,23 +1712,23 @@ class ClusterService(abstract_broker.AbstractBroker):
                 api_version=DEFAULT_API_VERSION)
             client_v36.get_task_monitor().wait_for_status(task)
 
-            curr_entity_status: rde_2_x.Status = curr_native_entity.status
+            curr_rde_status: rde_2_x.Status = curr_native_entity.status
             # update defined entity of the cluster
-            curr_entity_status.cloud_properties.distribution = \
+            curr_rde_status.cloud_properties.distribution = \
                 rde_2_x.Distribution(template_name=template[LocalTemplateKey.NAME],  # noqa: E501
                                      template_revision=int(template[LocalTemplateKey.REVISION]))  # noqa: E501
-            curr_entity_status.cni = \
+            curr_rde_status.cni = \
                 _create_k8s_software_string(template[LocalTemplateKey.CNI],
                                             template[LocalTemplateKey.CNI_VERSION])  # noqa: E501
-            curr_entity_status.kubernetes = \
+            curr_rde_status.kubernetes = \
                 _create_k8s_software_string(template[LocalTemplateKey.KUBERNETES],  # noqa: E501
                                             template[LocalTemplateKey.KUBERNETES_VERSION])  # noqa: E501
-            curr_entity_status.docker_version = template[LocalTemplateKey.DOCKER_VERSION]  # noqa: E501
-            curr_entity_status.os = template[LocalTemplateKey.OS]
-            curr_entity_status.phase = str(
+            curr_rde_status.docker_version = template[LocalTemplateKey.DOCKER_VERSION]  # noqa: E501
+            curr_rde_status.os = template[LocalTemplateKey.OS]
+            curr_rde_status.phase = str(
                 DefEntityPhase(DefEntityOperation.UPGRADE,
                                DefEntityOperationStatus.SUCCEEDED))
-            self._update_cluster_entity(cluster_id, curr_entity_status)
+            self._update_cluster_entity(cluster_id, curr_rde_status)
 
             msg = f"Successfully upgraded cluster '{cluster_name}' software " \
                   f"to match template {template_name} (revision " \
@@ -1765,9 +1777,9 @@ class ClusterService(abstract_broker.AbstractBroker):
         """
         cluster_name = None
         try:
-            curr_entity: common_models.DefEntity = self.entity_svc.get_entity(
+            curr_rde: common_models.DefEntity = self.entity_svc.get_entity(
                 cluster_id)
-            curr_native_entity: rde_2_x.NativeEntity = curr_entity.entity
+            curr_native_entity: rde_2_x.NativeEntity = curr_rde.entity
             self._delete_nodes_async(cluster_id=cluster_id,
                                      nodes_to_del=nodes_to_del)
 
@@ -1790,12 +1802,11 @@ class ClusterService(abstract_broker.AbstractBroker):
                 curr_native_entity.status.phase = str(
                     DefEntityPhase(DefEntityOperation.UPDATE,
                                    DefEntityOperationStatus.SUCCEEDED))
-            self._sync_def_entity(cluster_id, curr_entity)
+            self._sync_def_entity(cluster_id, curr_rde)
         except Exception as err:
             msg = f"Unexpected error while deleting nodes for " \
                   f"{cluster_name} ({cluster_id})"
-            LOGGER.error(f"{msg}",
-                         exc_info=True)
+            LOGGER.error(f"{msg}", exc_info=True)
             try:
                 self._fail_operation(
                     cluster_id,
@@ -1841,9 +1852,9 @@ class ClusterService(abstract_broker.AbstractBroker):
         # cluster_id = input_native_entity.status.uid
         if nodes_to_del is None:
             nodes_to_del = []
-        curr_entity: common_models.DefEntity = self.entity_svc.get_entity(cluster_id)  # noqa: E501
-        curr_native_entity: rde_2_x.NativeEntity = curr_entity.entity
-        vapp_href = curr_entity.externalId
+        curr_rde: common_models.DefEntity = self.entity_svc.get_entity(cluster_id)  # noqa: E501
+        curr_native_entity: rde_2_x.NativeEntity = curr_rde.entity
+        vapp_href = curr_rde.externalId
         cluster_name = curr_native_entity.metadata.name
 
         if not nodes_to_del:
@@ -1894,8 +1905,7 @@ class ClusterService(abstract_broker.AbstractBroker):
             self._update_task(BehaviorTaskStatus.RUNNING, message=msg)
         except Exception as err:
             msg = f"Unexpected error while deleting nodes {nodes_to_del}"
-            LOGGER.error(f"{msg}",
-                         exc_info=True)
+            LOGGER.error(f"{msg}", exc_info=True)
             try:
                 self._fail_operation(
                     cluster_id,
@@ -1917,32 +1927,32 @@ class ClusterService(abstract_broker.AbstractBroker):
                               error_message=str(err))
 
     def _sync_def_entity(self, cluster_id: str,
-                         curr_entity: common_models.DefEntity = None,
+                         curr_rde: common_models.DefEntity = None,
                          vapp=None):
         """Sync the defined entity with the latest vApp status."""
         # NOTE: This function should not be relied to update the defined entity
         # unless it is sure that the Vapp with the cluster-id exists
-        if not curr_entity:
-            curr_entity: common_models.DefEntity = \
+        if not curr_rde:
+            curr_rde: common_models.DefEntity = \
                 self.entity_svc.get_entity(cluster_id)
-        if not curr_entity.externalId and not vapp:
-            return curr_entity
+        if not curr_rde.externalId and not vapp:
+            return curr_rde
         if not vapp:
             client_v36 = self.context.get_client(
                 api_version=DEFAULT_API_VERSION)
-            vapp = vcd_vapp.VApp(client_v36, href=curr_entity.externalId)
+            vapp = vcd_vapp.VApp(client_v36, href=curr_rde.externalId)
 
         sysadmin_client_v36 = self.context.get_sysadmin_client(
             api_version=DEFAULT_API_VERSION)
         curr_nodes_status = _get_nodes_details(sysadmin_client_v36, vapp)
 
         # Overwrite the control plane ip, if the cluster is exposed
-        if curr_entity.entity.status.cloud_properties.exposed and \
-                curr_entity.entity.status.nodes and \
-                curr_entity.entity.status.nodes.control_plane:
-            curr_nodes_status.control_plane.ip = curr_entity.entity.status.nodes.control_plane.ip  # noqa: E501
+        if curr_rde.entity.status.cloud_properties.exposed and \
+                curr_rde.entity.status.nodes and \
+                curr_rde.entity.status.nodes.control_plane:
+            curr_nodes_status.control_plane.ip = curr_rde.entity.status.nodes.control_plane.ip  # noqa: E501
 
-        new_status: rde_2_x.Status = curr_entity.entity.status
+        new_status: rde_2_x.Status = curr_rde.entity.status
         if curr_nodes_status:
             new_status.nodes = curr_nodes_status
         return self._update_cluster_entity(cluster_id, new_status)
@@ -1975,16 +1985,16 @@ class ClusterService(abstract_broker.AbstractBroker):
         cluster_rde.entity.status = native_entity_status
 
         # Update cluster rde
-        return self.sysadmin_entity_svc.update_entity(cluster_id,
-                                                      cluster_rde,
-                                                      invoke_hooks=False)
+        return self.sysadmin_entity_svc.update_entity(
+            cluster_id, cluster_rde, invoke_hooks=False
+        )
 
     def _fail_operation(self, cluster_id: str, op: DefEntityOperation):
-        curr_entity: common_models.DefEntity = self.entity_svc.get_entity(cluster_id)  # noqa: E501
-        new_status: rde_2_x.Status = curr_entity.entity.status
+        curr_rde: common_models.DefEntity = self.entity_svc.get_entity(cluster_id)  # noqa: E501
+        new_status: rde_2_x.Status = curr_rde.entity.status
         new_status.phase = \
             str(DefEntityPhase(op, DefEntityOperationStatus.FAILED))
-        self._update_cluster_entity(curr_entity.id, new_status)
+        self._update_cluster_entity(curr_rde.id, new_status)
 
     def _update_task(self, status, message='', error_message='', progress=None):  # noqa: E501
         if status == BehaviorTaskStatus.ERROR:
@@ -2161,7 +2171,7 @@ def _drain_nodes(sysadmin_client: vcd_client.Client, vapp_href, node_names,
     except Exception as err:
         LOGGER.error(f"Failed to drain nodes {node_names} in cluster "
                      f"'{cluster_name}' (vapp: {vapp_href}) with "
-                     f"error: {err}")
+                     f"error: {err}", exc_info=True)
         raise
 
     LOGGER.debug(f"Successfully drained nodes {node_names} in cluster "
@@ -2188,7 +2198,7 @@ def _uncordon_nodes(sysadmin_client: vcd_client.Client, vapp_href, node_names,
     except Exception as err:
         LOGGER.error(f"Failed to uncordon nodes {node_names} in cluster "
                      f"'{cluster_name}' (vapp: {vapp_href}) "
-                     f"with error: {err}")
+                     f"with error: {err}", exc_info=True)
         raise
 
     LOGGER.debug(f"Successfully uncordoned nodes {node_names} in cluster "
@@ -2209,7 +2219,7 @@ def _delete_vapp(client, org_name, ovdc_name, vapp_name):
         client.get_task_monitor().wait_for_status(task)
     except Exception as err:
         LOGGER.error(f"Failed to delete vapp {vapp_name} "
-                     f"(vdc: {ovdc_name}) with error: {err}")
+                     f"(vdc: {ovdc_name}) with error: {err}", exc_info=True)
         raise
 
     LOGGER.debug(f"Deleted vapp {vapp_name} (vdc: {vdc_href})")
@@ -2632,7 +2642,9 @@ def _execute_script_in_nodes(sysadmin_client: vcd_client.Client,
             LOGGER.debug(result_stdout)
             all_results.append(result)
         except Exception as err:
-            raise exceptions.ScriptExecutionError(f"Error executing script in node {node_name}: {str(err)}")  # noqa: E501
+            msg = f"Error executing script in node {node_name}: {str(err)}"
+            LOGGER.error(msg, exc_infop=True)
+            raise exceptions.ScriptExecutionError(msg)  # noqa: E501
 
     return all_results
 

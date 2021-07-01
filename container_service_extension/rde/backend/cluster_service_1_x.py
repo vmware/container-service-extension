@@ -277,7 +277,7 @@ class ClusterService(abstract_broker.AbstractBroker):
                     native_entity_type.version)  # noqa: E501
         except Exception as err:
             msg = f"Error creating the cluster '{cluster_name}'"
-            LOGGER.error(f"{msg}: {err}")
+            LOGGER.error(msg, exc_info=True)
             self._update_task(vcd_client.TaskStatus.ERROR,
                               message=msg,
                               error_message=str(err))
@@ -382,7 +382,7 @@ class ClusterService(abstract_broker.AbstractBroker):
             self._update_task(vcd_client.TaskStatus.ERROR,
                               message=msg,
                               error_message=str(err))
-            LOGGER.error(str(err))
+            LOGGER.error(str(err), exc_info=True)
             raise
         # trigger async operation
         self.context.is_async = True
@@ -433,7 +433,7 @@ class ClusterService(abstract_broker.AbstractBroker):
             self._update_task(vcd_client.TaskStatus.ERROR,
                               message=msg,
                               error_message=str(err))
-            LOGGER.error(str(err))
+            LOGGER.error(str(err), exc_info=True)
             raise
         self.context.is_async = True
         self._delete_cluster_async(cluster_name=cluster_name,
@@ -538,7 +538,7 @@ class ClusterService(abstract_broker.AbstractBroker):
             self._update_task(vcd_client.TaskStatus.ERROR,
                               message=msg,
                               error_message=str(err))
-            LOGGER.error(str(err))
+            LOGGER.error(str(err), exc_info=True)
             raise
 
         self.context.is_async = True
@@ -614,14 +614,14 @@ class ClusterService(abstract_broker.AbstractBroker):
                 prev_user_id_to_acl_entry=prev_user_id_to_acl_entry_dict)
             acl_svc.native_update_vapp_access_settings(
                 prev_user_id_to_acl_entry_dict, update_acl_entries)
-        except Exception as err:
+        except Exception:
             # Rollback defined entity
             prev_acl_entries = [acl_entry for _, acl_entry in prev_user_id_to_acl_entry_dict.items()]  # noqa: E501
             curr_user_acl_info = acl_svc.create_user_id_to_acl_entry_dict()
             acl_svc.update_native_def_entity_acl(
                 update_acl_entries=prev_acl_entries,
                 prev_user_id_to_acl_entry=curr_user_acl_info)
-            raise err
+            raise
 
     def delete_nodes(self, cluster_id: str, nodes_to_del=None):
         """Start the delete nodes operation."""
@@ -655,7 +655,7 @@ class ClusterService(abstract_broker.AbstractBroker):
             self._update_task(vcd_client.TaskStatus.ERROR,
                               message=msg,
                               error_message=str(err))
-            LOGGER.error(str(err))
+            LOGGER.error(str(err), exc_info=True)
             raise
 
         self.context.is_async = True
@@ -782,7 +782,9 @@ class ClusterService(abstract_broker.AbstractBroker):
                     if expose_ip:
                         control_plane_ip = expose_ip
                 except Exception as err:
-                    LOGGER.error(f'Exposing cluster failed: {str(err)}')
+                    LOGGER.error(
+                        f"Exposing cluster failed: {str(err)}", exc_info=True
+                    )
                     expose_ip = ''
 
             _init_cluster(sysadmin_client_v35,
@@ -910,7 +912,7 @@ class ClusterService(abstract_broker.AbstractBroker):
                     except Exception as err1:
                         LOGGER.error(f'Failed to delete dnat rule for '
                                      f'{cluster_name} ({cluster_id}) with '
-                                     f'error: {str(err1)}')
+                                     f'error: {str(err1)}', exc_info=True)
 
                 try:
                     # Delete the corresponding defined entity
@@ -1078,7 +1080,9 @@ class ClusterService(abstract_broker.AbstractBroker):
                     unexpose_success = True
                 except Exception as err:
                     LOGGER.error(
-                        f'Failed to unexpose cluster with error: {str(err)}')  # noqa: E501
+                        f"Failed to unexpose cluster with error: {str(err)}",
+                        exc_info=True
+                    )
 
             # update the defined entity and the task status. Check if one of
             # the child threads had set the status to ERROR.
@@ -1107,8 +1111,7 @@ class ClusterService(abstract_broker.AbstractBroker):
         except Exception as err:
             msg = f"Unexpected error while resizing nodes for {cluster_name}" \
                   f" ({cluster_id})"
-            LOGGER.error(f"{msg}",
-                         exc_info=True)
+            LOGGER.error(f"{msg}", exc_info=True)
             # TODO: Avoid many try-except block. Check if it is a good practice
             try:
                 self._fail_operation(
@@ -1330,7 +1333,7 @@ class ClusterService(abstract_broker.AbstractBroker):
             client_v35 = self.context.get_client(api_version=DEFAULT_API_VERSION)  # noqa: E501
             _delete_vapp(client_v35, org_name, ovdc_name, cluster_name)
 
-            # Handle deleting dnat rule is cluster is exposed
+            # Handle deleting dnat rule if cluster is exposed
             exposed: bool = bool(def_entity) and def_entity.entity.status.exposed  # noqa: E501
             dnat_delete_success: bool = False
             if exposed:
@@ -1346,9 +1349,11 @@ class ClusterService(abstract_broker.AbstractBroker):
                         cluster_id=cluster_id)
                     dnat_delete_success = True
                 except Exception as err:
-                    LOGGER.error(f'Failed to delete dnat rule for '
-                                 f'{cluster_name} ({cluster_id}) with error: '
-                                 f'{str(err)}')
+                    LOGGER.error(
+                        f"Failed to delete dnat rule for {cluster_name}"
+                        f"({cluster_id}) with error: {str(err)}",
+                        exc_info=True
+                    )
 
             msg = f"Deleted cluster '{cluster_name}'"
             if exposed and not dnat_delete_success:
@@ -1356,8 +1361,7 @@ class ClusterService(abstract_broker.AbstractBroker):
             self._update_task(vcd_client.TaskStatus.SUCCESS, message=msg)
         except Exception as err:
             msg = f"Unexpected error while deleting cluster {cluster_name}"
-            LOGGER.error(f"{msg}",
-                         exc_info=True)
+            LOGGER.error(f"{msg}", exc_info=True)
             self._update_task(vcd_client.TaskStatus.ERROR,
                               message=msg,
                               error_message=str(err))
@@ -1606,8 +1610,7 @@ class ClusterService(abstract_broker.AbstractBroker):
         except Exception as err:
             msg = f"Unexpected error while deleting nodes for " \
                   f"{cluster_name} ({cluster_id})"
-            LOGGER.error(f"{msg}",
-                         exc_info=True)
+            LOGGER.error(f"{msg}", exc_info=True)
             try:
                 self._fail_operation(
                     cluster_id,
@@ -1706,8 +1709,7 @@ class ClusterService(abstract_broker.AbstractBroker):
             self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
         except Exception as err:
             msg = f"Unexpected error while deleting nodes {nodes_to_del}"
-            LOGGER.error(f"{msg}",
-                         exc_info=True)
+            LOGGER.error(f"{msg}", exc_info=True)
             try:
                 self._fail_operation(
                     cluster_id,
@@ -2446,7 +2448,9 @@ def _execute_script_in_nodes(sysadmin_client: vcd_client.Client,
             LOGGER.debug(result_stdout)
             all_results.append(result)
         except Exception as err:
-            raise exceptions.ScriptExecutionError(f"Error executing script in node {node_name}: {str(err)}")  # noqa: E501
+            msg = f"Error executing script in node {node_name}: {str(err)}"
+            LOGGER.error(msg, exc_info=True)
+            raise exceptions.ScriptExecutionError(msg)  # noqa: E501
 
     return all_results
 
