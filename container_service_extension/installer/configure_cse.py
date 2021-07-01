@@ -1578,15 +1578,15 @@ def _update_metadata_for_existing_templates(client: Client, config: dict,
             ltm.save_metadata(client, catalog_org_name,
                               catalog_name, catalog_item_name,
                               remote_template_descriptor, metadata_key_list=new_metadata_key_list)  # noqa: E501
-            msg = f"Successfully updated template metadata " \
+            msg = f"Successfully updated local template metadata " \
                   f"for {catalog_item_name}"
             INSTALL_LOGGER.debug(msg)
             msg_update_callback.general(msg)
         else:
             # Template not supported in the target CSE version.
             # Do not update template metadata
-            msg = f"Template {catalog_item_name} not supported, Skipping " \
-                  f"template metadata update."
+            msg = f"Local template {catalog_item_name} not supported, " \
+                  f"Skipping template metadata update."
             INSTALL_LOGGER.debug(msg)
             msg_update_callback.general(msg)
 

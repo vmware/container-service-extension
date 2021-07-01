@@ -46,6 +46,7 @@ import container_service_extension.lib.telemetry.telemetry_handler as telemetry_
 from container_service_extension.logging.logger import SERVER_LOGGER as LOGGER
 from container_service_extension.mqi.consumer.mqtt_publisher import MQTTPublisher  # noqa: E501
 import container_service_extension.rde.acl_service as acl_service
+import container_service_extension.rde.backend.common.network_expose_helper as nw_exp_helper  # noqa: E501
 from container_service_extension.rde.behaviors.behavior_model import BehaviorError, BehaviorTaskStatus  # noqa: E501
 import container_service_extension.rde.common.entity_service as def_entity_svc
 import container_service_extension.rde.constants as def_constants
@@ -67,6 +68,7 @@ CLUSTER_UPGRADE_OPERATION_MESSAGE = 'Cluster upgrade'
 DOWNLOAD_KUBECONFIG_OPERATION_MESSAGE = 'Download kubeconfig'
 
 
+# noinspection PyTypeChecker
 class ClusterService(abstract_broker.AbstractBroker):
     """Handles cluster operations for native DEF based clusters."""
 
@@ -310,7 +312,7 @@ class ClusterService(abstract_broker.AbstractBroker):
                   f"(revision {template_revision})"
             self._update_task(BehaviorTaskStatus.RUNNING, message=msg)
             new_status.task_href = self.task_href
-            curr_entity: common_models.DefEntity = None
+
             try:
                 curr_entity = self._update_cluster_entity(entity_id, new_status)  # noqa: E501
             except Exception as err:
@@ -330,7 +332,7 @@ class ClusterService(abstract_broker.AbstractBroker):
             return self.mqtt_publisher.construct_behavior_payload(
                 message=f"{CLUSTER_CREATE_OPERATION_MESSAGE} ({entity_id})",
                 status=BehaviorTaskStatus.RUNNING.value,
-                progress='5')
+                progress=5)
         except Exception as err:
             # NOTE: Should update the task first before attempting delete or
             #   else entity delete will fail.
@@ -353,6 +355,7 @@ class ClusterService(abstract_broker.AbstractBroker):
                 except Exception:
                     msg = f"Failed to delete defined entity for cluster " \
                           f"{cluster_name} ({entity_id})"
+                    LOGGER.error(msg, exc_info=True)
             else:
                 # update status to CREATE:FAILED
                 try:
@@ -380,7 +383,6 @@ class ClusterService(abstract_broker.AbstractBroker):
         # are relevant.
         curr_entity: common_models.DefEntity = self.entity_svc.get_entity(cluster_id)  # noqa: E501
         curr_native_entity: rde_2_x.NativeEntity = curr_entity.entity
-        state: str = curr_entity.state
 
         cluster_name: str = curr_entity.name
         current_spec: rde_2_x.ClusterSpec = \
@@ -401,18 +403,26 @@ class ClusterService(abstract_broker.AbstractBroker):
         num_workers_to_add: int = desired_worker_count - curr_worker_count
         num_nfs_to_add: int = desired_nfs_count - curr_nfs_count
 
-        # Check if the desired worker and nfs count is valid
-        if num_workers_to_add == 0 and num_nfs_to_add == 0:
-            raise exceptions.CseServerError(
-                f"Cluster '{cluster_name}' already has "
-                f"{desired_worker_count} workers and "
-                f"{desired_nfs_count} nfs nodes.")
-        elif desired_worker_count < 0:
+        if desired_worker_count < 0:
             raise exceptions.CseServerError(
                 f"Worker count must be >= 0 (received {desired_worker_count})")
-        elif num_nfs_to_add < 0:
+        if num_nfs_to_add < 0:
             raise exceptions.CseServerError(
                 "Scaling down nfs nodes is not supported")
+
+        # Check for unexposing the cluster
+        desired_expose_state: bool = \
+            input_native_entity.spec.settings.network.expose
+        is_exposed: bool = curr_native_entity.status.cloud_properties.exposed
+        unexpose: bool = is_exposed and not desired_expose_state
+
+        # Check if the desired worker and nfs count is valid and raise
+        # an exception if the cluster does not need to be unexposed
+        if not unexpose and num_workers_to_add == 0 and num_nfs_to_add == 0:
+            raise exceptions.CseServerError(
+                f"Cluster '{cluster_name}' already has {desired_worker_count} "
+                f"workers and {desired_nfs_count} nfs nodes and is "
+                f"already not exposed.")
 
         # check if cluster is in a valid state
         if state != def_constants.DEF_RESOLVED_STATE or phase.is_entity_busy():
@@ -438,6 +448,8 @@ class ClusterService(abstract_broker.AbstractBroker):
         msg = f"Resizing the cluster '{cluster_name}' ({cluster_id}) to the " \
               f"desired worker count {desired_worker_count} and " \
               f"nfs count {desired_nfs_count}"
+        if unexpose:
+            msg += " and unexposing the cluster"
         self._update_task(BehaviorTaskStatus.RUNNING, message=msg)
         # set entity status to busy
         new_status: rde_2_x.Status = curr_native_entity.status
@@ -521,7 +533,7 @@ class ClusterService(abstract_broker.AbstractBroker):
                                    curr_rde=curr_entity)
         return self.mqtt_publisher.construct_behavior_payload(
             message=f"{CLUSTER_DELETE_OPERATION_MESSAGE} ({cluster_id})",
-            status=BehaviorTaskStatus.RUNNING.value, progress='5')
+            status=BehaviorTaskStatus.RUNNING.value, progress=5)
 
     def get_cluster_upgrade_plan(self, cluster_id: str):
         """Get the template names/revisions that the cluster can upgrade to.
@@ -815,12 +827,13 @@ class ClusterService(abstract_broker.AbstractBroker):
     @thread_utils.run_async
     def _create_cluster_async(self, cluster_id: str,
                               input_native_entity: rde_2_x.NativeEntity):
-        cluster_name = None
-        org_name = None
-        ovdc_name = None
-        # Default value from rde_2_x model class
-        rollback = True
+        cluster_name = ''
+        rollback = False
+        org_name = ''
+        ovdc_name = ''
         vapp = None
+        expose_ip: str = ''
+        network_name = ''
         client_v36 = self.context.get_client(api_version=DEFAULT_API_VERSION)
         try:
             cluster_name = input_native_entity.metadata.name
@@ -839,7 +852,7 @@ class ClusterService(abstract_broker.AbstractBroker):
             template_revision = input_native_entity.spec.distribution.template_revision  # noqa: E501
             ssh_key = input_native_entity.spec.settings.ssh_key
             rollback = input_native_entity.spec.settings.rollback_on_failure
-            vapp = None
+            expose = input_native_entity.spec.settings.network.expose
 
             org = vcd_utils.get_org(client_v36, org_name=org_name)
             vdc = vcd_utils.get_vdc(client_v36, vdc_name=ovdc_name, org=org)
@@ -912,12 +925,33 @@ class ClusterService(abstract_broker.AbstractBroker):
             LOGGER.debug(msg)
             self._update_task(BehaviorTaskStatus.RUNNING, message=msg)
             vapp.reload()
+
+            control_plane_ip = _get_control_plane_ip(
+                sysadmin_client_v36, vapp, check_tools=True)
+
+            # Handle exposing cluster
+            if expose:
+                try:
+                    expose_ip = nw_exp_helper.expose_cluster(
+                        client=self.context.client,
+                        org_name=org_name,
+                        ovdc_name=ovdc_name,
+                        network_name=network_name,
+                        cluster_name=cluster_name,
+                        cluster_id=cluster_id,
+                        internal_ip=control_plane_ip)
+                    if expose_ip:
+                        control_plane_ip = expose_ip
+                except Exception as err:
+                    LOGGER.error(f'Exposing cluster failed: {str(err)}')
+                    expose_ip = ''
+
             _init_cluster(sysadmin_client_v36,
                           vapp,
                           template[LocalTemplateKey.KIND],
                           template[LocalTemplateKey.KUBERNETES_VERSION],
-                          template[LocalTemplateKey.CNI_VERSION])
-            control_plane_ip = _get_control_plane_ip(sysadmin_client_v36, vapp)  # noqa: E501
+                          template[LocalTemplateKey.CNI_VERSION],
+                          expose_ip=expose_ip)
             task = vapp.set_metadata('GENERAL', 'READWRITE', 'cse.master.ip',
                                      control_plane_ip)
             client_v36.get_task_monitor().wait_for_status(task)
@@ -949,8 +983,7 @@ class ClusterService(abstract_broker.AbstractBroker):
             LOGGER.debug(msg)
             self._update_task(BehaviorTaskStatus.RUNNING, message=msg)
             vapp.reload()
-            _join_cluster(sysadmin_client_v36,
-                          vapp)
+            _join_cluster(sysadmin_client_v36, vapp)
 
             if nfs_count > 0:
                 msg = f"Creating {nfs_count} NFS nodes for cluster " \
@@ -983,13 +1016,23 @@ class ClusterService(abstract_broker.AbstractBroker):
             self._update_task(BehaviorTaskStatus.RUNNING, message=msg)
             curr_rde: common_models.DefEntity = self.entity_svc.get_entity(cluster_id)  # noqa: E501
             curr_native_entity: rde_2_x.NativeEntity = curr_rde.entity
-            new_status: rde_2_x.Status = curr_native_entity. status
+            new_status: rde_2_x.Status = curr_native_entity.status
             new_status.uid = cluster_id
             new_status.phase = str(
-                DefEntityPhase(DefEntityOperation.CREATE,
-                               DefEntityOperationStatus.SUCCEEDED))
+                DefEntityPhase(
+                    DefEntityOperation.CREATE,
+                    DefEntityOperationStatus.SUCCEEDED
+                )
+            )
             new_status.nodes = _get_nodes_details(
                 sysadmin_client_v36, vapp)
+
+            # Update status with exposed ip
+            if expose_ip:
+                new_status.cloud_properties.exposed = True
+                if new_status.nodes and \
+                        new_status.nodes.control_plane:
+                    new_status.nodes.control_plane.ip = expose_ip
 
             self._update_cluster_entity(cluster_id,
                                         new_status,
@@ -1021,6 +1064,23 @@ class ClusterService(abstract_broker.AbstractBroker):
                 except Exception:
                     LOGGER.error(f"Failed to delete cluster '{cluster_name}'",
                                  exc_info=True)
+
+                if expose_ip:
+                    try:
+                        nw_exp_helper.handle_delete_expose_dnat_rule(
+                            client=self.context.client,
+                            org_name=org_name,
+                            ovdc_name=ovdc_name,
+                            network_name=network_name,
+                            cluster_name=cluster_name,
+                            cluster_id=cluster_id)
+                        LOGGER.info(f'Deleted dnat rule for cluster '
+                                    f'{cluster_name} ({cluster_id})')
+                    except Exception as err1:
+                        LOGGER.error(f'Failed to delete dnat rule for '
+                                     f'{cluster_name} ({cluster_id}) with '
+                                     f'error: {str(err1)}')
+
             else:
                 # TODO: Avoid many try-except block. Check if it is a good
                 # practice
@@ -1141,6 +1201,53 @@ class ClusterService(abstract_broker.AbstractBroker):
                 if t.getName().endswith(curr_thread_id):
                     t.join()
 
+            # Handle deleting the dnat rule if the cluster was exposed and
+            # the user's current desire is to un-expose the cluster
+            desired_expose_state: bool = \
+                input_native_entity.spec.settings.network.expose
+            is_exposed: bool = current_spec.settings.network.expose
+            unexpose: bool = is_exposed and not desired_expose_state
+            unexpose_success: bool = False
+            if unexpose:
+                org_name: str = curr_native_entity.metadata.org_name
+                ovdc_name: str = curr_native_entity.metadata.ovdc_name
+                network_name: str = current_spec.settings.ovdc_network
+                try:
+                    # Get internal ip
+                    vapp_href = curr_entity.externalId
+                    vapp = vcd_vapp.VApp(self.context.client,
+                                         href=vapp_href)
+                    control_plane_internal_ip = _get_control_plane_ip(
+                        sysadmin_client=self.context.sysadmin_client,
+                        vapp=vapp,
+                        check_tools=True)
+
+                    # update kubeconfig with internal ip
+                    self._replace_kubeconfig_expose_ip(
+                        internal_ip=control_plane_internal_ip,
+                        cluster_id=cluster_id,
+                        vapp=vapp)
+
+                    # Delete dnat rule
+                    nw_exp_helper.handle_delete_expose_dnat_rule(
+                        client=self.context.client,
+                        org_name=org_name,
+                        ovdc_name=ovdc_name,
+                        network_name=network_name,
+                        cluster_name=cluster_name,
+                        cluster_id=cluster_id)
+
+                    # Update RDE control plane ip to be internal ip
+                    curr_native_entity.status.nodes.control_plane.ip = control_plane_internal_ip  # noqa: E501
+                    curr_entity.entity.status.cloud_properties.exposed = False
+                    unexpose_success = True
+                except Exception as err:
+                    LOGGER.error(
+                        "Failed to unexpose cluster with error: "
+                        f"{str(err)}",
+                        exec_info=True
+                    )
+
             # update the defined entity and the task status. Check if one of
             # the child threads had set the status to ERROR.
             curr_task_status = self.task_status
@@ -1155,6 +1262,10 @@ class ClusterService(abstract_broker.AbstractBroker):
                 msg = f"Resized the cluster '{cluster_name}' ({cluster_id}) " \
                       f"to the desired worker count {desired_worker_count} " \
                       f"and nfs count {desired_nfs_count}"
+                if unexpose_success:
+                    msg += " and un-exposed the cluster"
+                elif unexpose and not unexpose_success:
+                    msg += " and failed to un-expose the cluster"
                 self._update_task(BehaviorTaskStatus.SUCCESS, message=msg)
                 curr_native_entity.status.phase = str(
                     DefEntityPhase(DefEntityOperation.UPDATE,
@@ -1384,8 +1495,6 @@ class ClusterService(abstract_broker.AbstractBroker):
         :param cluster_name: Name of the cluster to be deleted.
         :param org_name: Name of the org where the cluster resides.
         :param ovdc_name: Name of the ovdc where the cluster resides.
-        :param str cluster_id: ID of the cluster
-        needs to be recreated in the failure case of cluster vapp deletion.
         """
         cluster_id = curr_rde.id
         try:
@@ -1396,9 +1505,32 @@ class ClusterService(abstract_broker.AbstractBroker):
             if curr_rde.externalId:
                 # Delete Vapp if RDE is linked with a VApp
                 _delete_vapp(client_v36, org_name, ovdc_name, cluster_name)
+
+                # Handle deleting dnat rule is cluster is exposed
+                exposed: bool = bool(curr_rde) and curr_rde.entity.status.exposed  # noqa: E501
+                dnat_delete_success: bool = False
+                if exposed:
+                    network_name: str = curr_rde.entity.spec.settings.network
+                    try:
+                        nw_exp_helper.handle_delete_expose_dnat_rule(
+                            client=self.context.client,
+                            org_name=org_name,
+                            ovdc_name=ovdc_name,
+                            network_name=network_name,
+                            cluster_name=cluster_name,
+                            cluster_id=cluster_id)
+                        dnat_delete_success = True
+                    except Exception as err:
+                        LOGGER.error("Failed to delete dnat rule for "
+                                     f"{cluster_name} ({cluster_id}) "
+                                     f"with error: {str(err)}")
+
                 msg = f"Deleted cluster '{cluster_name}'"
+                if exposed and not dnat_delete_success:
+                    msg += ' with failed dnat rule deletion'
             else:
                 msg = f"VApp for cluster {cluster_name} ({cluster_id}) not present"  # noqa: E501
+
             LOGGER.info(msg)
             self._update_task(BehaviorTaskStatus.SUCCESS, message=msg)
         except Exception as err:
@@ -1791,17 +1923,25 @@ class ClusterService(abstract_broker.AbstractBroker):
         # NOTE: This function should not be relied to update the defined entity
         # unless it is sure that the Vapp with the cluster-id exists
         if not curr_entity:
-            curr_entity: common_models.DefEntity = self.entity_svc.get_entity(
-                cluster_id)
+            curr_entity: common_models.DefEntity = \
+                self.entity_svc.get_entity(cluster_id)
         if not curr_entity.externalId and not vapp:
             return curr_entity
         if not vapp:
             client_v36 = self.context.get_client(
                 api_version=DEFAULT_API_VERSION)
             vapp = vcd_vapp.VApp(client_v36, href=curr_entity.externalId)
+
         sysadmin_client_v36 = self.context.get_sysadmin_client(
             api_version=DEFAULT_API_VERSION)
         curr_nodes_status = _get_nodes_details(sysadmin_client_v36, vapp)
+
+        # Overwrite the control plane ip, if the cluster is exposed
+        if curr_entity.entity.status.cloud_properties.exposed and \
+                curr_entity.entity.status.nodes and \
+                curr_entity.entity.status.nodes.control_plane:
+            curr_nodes_status.control_plane.ip = curr_entity.entity.status.nodes.control_plane.ip  # noqa: E501
+
         new_status: rde_2_x.Status = curr_entity.entity.status
         if curr_nodes_status:
             new_status.nodes = curr_nodes_status
@@ -1823,7 +1963,7 @@ class ClusterService(abstract_broker.AbstractBroker):
         :returns: Updated defined entity
         :rtype: common_models.DefEntity
         """
-        # TODO update funciton to use optimistic locking feature by VCD
+        # TODO update function to use optimistic locking feature by VCD
 
         cluster_rde: common_models.DefEntity = \
             self.entity_svc.get_entity(cluster_id)
@@ -1860,6 +2000,32 @@ class ClusterService(abstract_broker.AbstractBroker):
             task_id=self.task_id, entity_id=self.entity_id, payload=payload)
         self.mqtt_publisher.send_response(response_json)
         self.task_status = status.value
+
+    def _replace_kubeconfig_expose_ip(self, internal_ip: str, cluster_id: str,
+                                      vapp: vcd_vapp.VApp):
+        # Form kubeconfig with internal ip
+        kubeconfig_with_exposed_ip = self.get_cluster_config(cluster_id)
+        script = \
+            nw_exp_helper.form_script_to_update_kubeconfig_with_internal_ip(
+                kubeconfig_with_exposed_ip=kubeconfig_with_exposed_ip,
+                internal_ip=internal_ip
+            )
+
+        node_names = _get_node_names(vapp, NodeType.CONTROL_PLANE)
+        result = _execute_script_in_nodes(
+            self.context.sysadmin_client,
+            vapp=vapp,
+            node_names=node_names,
+            script=script,
+            check_tools=True
+        )
+
+        errors = _get_script_execution_errors(result)
+        if errors:
+            raise exceptions.ScriptExecutionError(
+                f"Failed to overwrite kubeconfig with internal ip: "
+                f"{internal_ip}: {errors}"
+            )
 
 
 def _get_cluster_upgrade_target_templates(
@@ -2269,7 +2435,8 @@ def _get_node_names(vapp, node_type):
     return [vm.get('name') for vm in vapp.get_all_vms() if vm.get('name').startswith(node_type)]  # noqa: E501
 
 
-def _get_control_plane_ip(sysadmin_client: vcd_client.Client, vapp):
+def _get_control_plane_ip(sysadmin_client: vcd_client.Client, vapp,
+                          check_tools=False):
     vcd_utils.raise_error_if_user_not_from_system_org(sysadmin_client)
 
     LOGGER.debug(f"Getting control_plane IP for vapp: "
@@ -2280,7 +2447,7 @@ def _get_control_plane_ip(sysadmin_client: vcd_client.Client, vapp):
     node_names = _get_node_names(vapp, NodeType.CONTROL_PLANE)
     result = _execute_script_in_nodes(sysadmin_client, vapp=vapp,
                                       node_names=node_names, script=script,
-                                      check_tools=False)
+                                      check_tools=check_tools)
     errors = _get_script_execution_errors(result)
     if errors:
         raise exceptions.ScriptExecutionError(
@@ -2294,7 +2461,7 @@ def _get_control_plane_ip(sysadmin_client: vcd_client.Client, vapp):
 
 
 def _init_cluster(sysadmin_client: vcd_client.Client, vapp, cluster_kind,
-                  k8s_version, cni_version):
+                  k8s_version, cni_version, expose_ip=None):
     vcd_utils.raise_error_if_user_not_from_system_org(sysadmin_client)
 
     try:
@@ -2304,6 +2471,12 @@ def _init_cluster(sysadmin_client: vcd_client.Client, vapp, cluster_kind,
             cluster_kind=cluster_kind,
             k8s_version=k8s_version,
             cni_version=cni_version)
+
+        # Expose cluster if given external ip
+        if expose_ip:
+            script = nw_exp_helper.form_expose_ip_init_cluster_script(
+                script, expose_ip)
+
         node_names = _get_node_names(vapp, NodeType.CONTROL_PLANE)
         result = _execute_script_in_nodes(sysadmin_client, vapp=vapp,
                                           node_names=node_names, script=script)

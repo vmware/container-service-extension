@@ -216,9 +216,12 @@ class NativeEntity(AbstractNativeEntity):
                 },
             }
             "settings": {
-                "network": "net",
+                "ovdc_network": "net",
                 "sshKey": null,
                 "rollbackOnFailure": true
+                "network" : {
+                    "expose" : false
+                }
             },
             "distribution": {
                 "templateName": "k81.17",
