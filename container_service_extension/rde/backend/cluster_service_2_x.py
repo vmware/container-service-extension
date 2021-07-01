@@ -60,10 +60,11 @@ import container_service_extension.server.compute_policy_manager as compute_poli
 DEFAULT_API_VERSION = vcd_client.ApiVersion.VERSION_36.value
 
 
-CLUSTER_CREATE_OPERATION_MESSAGE = 'Cluster create operation.'
-CLUSTER_RESIZE_OPERATION_MESSAGE = 'Cluster resize operation.'
-CLUSTER_DELETE_OPERATION_MESSAGE = 'Cluster delete operation.'
-CLUSTER_UPGRADE_OPERATION_MESSAGE = 'Cluster upgrade operation.'
+CLUSTER_CREATE_OPERATION_MESSAGE = 'Cluster create'
+CLUSTER_RESIZE_OPERATION_MESSAGE = 'Cluster resize'
+CLUSTER_DELETE_OPERATION_MESSAGE = 'Cluster delete'
+CLUSTER_UPGRADE_OPERATION_MESSAGE = 'Cluster upgrade'
+DOWNLOAD_KUBECONFIG_OPERATION_MESSAGE = 'Download kubeconfig'
 
 
 class ClusterService(abstract_broker.AbstractBroker):
@@ -178,7 +179,8 @@ class ClusterService(abstract_broker.AbstractBroker):
                   "Please contact the administrator"
             LOGGER.error(msg)
             raise exceptions.CseServerError(msg)
-
+        msg = f"{DOWNLOAD_KUBECONFIG_OPERATION_MESSAGE} ({cluster_id})"
+        self._update_task(BehaviorTaskStatus.RUNNING, message=msg)
         telemetry_handler.record_user_action_details(
             cse_operation=telemetry_constants.CseOperation.V36_CLUSTER_CONFIG,
             cse_params={
@@ -324,7 +326,7 @@ class ClusterService(abstract_broker.AbstractBroker):
             self.context.is_async = True
             self._create_cluster_async(entity_id, input_native_entity)
             return self.mqtt_publisher.construct_behavior_payload(
-                message=CLUSTER_CREATE_OPERATION_MESSAGE,
+                message=f"{CLUSTER_CREATE_OPERATION_MESSAGE} ({entity_id})",
                 status=BehaviorTaskStatus.RUNNING.value,
                 progress='5')
         except Exception as err:
@@ -456,7 +458,7 @@ class ClusterService(abstract_broker.AbstractBroker):
         # TODO(test-resize): verify if multiple messages are not published
         #   in update_cluster()
         return self.mqtt_publisher.construct_behavior_payload(
-            message=CLUSTER_RESIZE_OPERATION_MESSAGE,
+            message=f"{CLUSTER_RESIZE_OPERATION_MESSAGE} ({cluster_id})",
             status=BehaviorTaskStatus.RUNNING.value, progress=5)
 
     def delete_cluster(self, cluster_id):
@@ -516,7 +518,7 @@ class ClusterService(abstract_broker.AbstractBroker):
                                    ovdc_name=ovdc_name,
                                    curr_rde=curr_entity)
         return self.mqtt_publisher.construct_behavior_payload(
-            message=CLUSTER_DELETE_OPERATION_MESSAGE,
+            message=f"{CLUSTER_DELETE_OPERATION_MESSAGE} ({cluster_id})",
             status=BehaviorTaskStatus.RUNNING.value, progress='5')
 
     def get_cluster_upgrade_plan(self, cluster_id: str):
@@ -636,7 +638,7 @@ class ClusterService(abstract_broker.AbstractBroker):
         # TODO(test-upgrade): Verify if multiple messages are not published
         #   in update_cluster()
         return self.mqtt_publisher.construct_behavior_payload(
-            message=CLUSTER_UPGRADE_OPERATION_MESSAGE,
+            message=f"{CLUSTER_UPGRADE_OPERATION_MESSAGE} ({cluster_id})",
             status=BehaviorTaskStatus.RUNNING.value, progress=5)
 
     def update_cluster(self, cluster_id: str, input_native_entity: rde_2_x.NativeEntity):  # noqa: E501
@@ -1435,7 +1437,6 @@ class ClusterService(abstract_broker.AbstractBroker):
 
             template_name = template[LocalTemplateKey.NAME]
             template_revision = template[LocalTemplateKey.REVISION]
-            template_cookbook_version = semver.Version(template[LocalTemplateKey.COOKBOOK_VERSION])  # noqa: E501
 
             # semantic version doesn't allow leading zeros
             # docker's version format YY.MM.patch allows us to directly use
@@ -1465,8 +1466,7 @@ class ClusterService(abstract_broker.AbstractBroker):
                 msg = f"Upgrading Kubernetes ({c_k8s} -> {t_k8s}) " \
                       f"in control plane node {control_plane_node_names}"
                 self._update_task(BehaviorTaskStatus.RUNNING, message=msg)
-                filepath = ltm.get_script_filepath(template_cookbook_version,
-                                                   template_name,
+                filepath = ltm.get_script_filepath(template_name,
                                                    template_revision,
                                                    TemplateScriptFile.CONTROL_PLANE_K8S_UPGRADE)  # noqa: E501
                 script = utils.read_data_file(filepath, logger=LOGGER)
@@ -1480,8 +1480,7 @@ class ClusterService(abstract_broker.AbstractBroker):
                                 control_plane_node_names,
                                 cluster_name=cluster_name)
 
-                filepath = ltm.get_script_filepath(template_cookbook_version,
-                                                   template_name,
+                filepath = ltm.get_script_filepath(template_name,
                                                    template_revision,
                                                    TemplateScriptFile.WORKER_K8S_UPGRADE)  # noqa: E501
                 script = utils.read_data_file(filepath, logger=LOGGER)
@@ -1520,7 +1519,6 @@ class ClusterService(abstract_broker.AbstractBroker):
                       f"in nodes {all_node_names}"
                 self._update_task(BehaviorTaskStatus.RUNNING, message=msg)
                 filepath = ltm.get_script_filepath(
-                    template_cookbook_version,
                     template_name,
                     template_revision,
                     TemplateScriptFile.DOCKER_UPGRADE)
@@ -1533,8 +1531,7 @@ class ClusterService(abstract_broker.AbstractBroker):
                       f"({curr_native_entity.status.cni} " \
                       f"-> {t_cni}) in control plane node {control_plane_node_names}"  # noqa: E501
                 self._update_task(BehaviorTaskStatus.RUNNING, message=msg)
-                filepath = ltm.get_script_filepath(template_cookbook_version,
-                                                   template_name,
+                filepath = ltm.get_script_filepath(template_name,
                                                    template_revision,
                                                    TemplateScriptFile.CONTROL_PLANE_CNI_APPLY)  # noqa: E501
                 script = utils.read_data_file(filepath, logger=LOGGER)
@@ -2231,7 +2228,6 @@ def _add_nodes(sysadmin_client, num_nodes, node_type, org, vdc, vapp,
                 if node_type == NodeType.NFS:
                     LOGGER.debug(f"Enabling NFS server on {vm_name}")
                     script_filepath = ltm.get_script_filepath(
-                        semver.Version(template[LocalTemplateKey.COOKBOOK_VERSION]),  # noqa: E501
                         template[LocalTemplateKey.NAME],
                         template[LocalTemplateKey.REVISION],
                         TemplateScriptFile.NFSD)
