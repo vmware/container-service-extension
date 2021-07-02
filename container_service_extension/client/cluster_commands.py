@@ -646,7 +646,7 @@ def apply(ctx, cluster_config_file_path, generate_sample_config, k8_runtime, out
         CLIENT_LOGGER.debug(result)
     except Exception as e:
         stderr(e, ctx)
-        CLIENT_LOGGER.error(str(e), exec_info=True)
+        CLIENT_LOGGER.error(str(e), exc_info=True)
 
 
 @cluster_group.command('delete-nfs',

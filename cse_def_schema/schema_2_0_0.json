@@ -264,6 +264,10 @@
                 "dockerVersion":{
                     "type":"string"
                 },
+                "external_ip": {
+                    "type": "string",
+                    "description": "External IP of the cluster if it is exposed."
+                },
                 "nodes":{
                     "type":"object",
                     "required":[

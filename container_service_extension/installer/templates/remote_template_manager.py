@@ -138,7 +138,7 @@ class RemoteTemplateManager():
             template_supported_cse_versions = semantic_version.SimpleSpec(
                 f">={template_description[remote_template_key.MIN_CSE_VERSION]},"  # noqa: E501
                 f"<={template_description[remote_template_key.MAX_CSE_VERSION]}")  # noqa: E501
-            msg = f"Template {template_description['name']}"
+            msg = f"Template {template_description['name']} revision {template_description['revision']}"  # noqa: E501
             if template_supported_cse_versions.match(current_cse_version):
                 msg += " is supported"
                 supported_templates.append(template_description)
