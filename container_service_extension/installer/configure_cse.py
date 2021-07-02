@@ -2503,10 +2503,24 @@ def _upgrade_cluster_rde(client, cluster, rde_to_upgrade,
         native_entity_2_x.status.cloud_properties.site = site
         native_entity_2_x.metadata.site = site
 
+        # This heavily relies on the fact that the source RDE is v1.0.0
+        try:
+            vapp_href = rde_to_upgrade.externalId
+            vapp = VApp(client, href=vapp_href)
+            control_plane_ip = vapp.get_primary_ip(
+                vm_name=rde_to_upgrade.entity.status.nodes.control_plane.name)
+            if rde_to_upgrade.entity.status.exposed:
+                native_entity_2_x.status.nodes.control_plane.ip = \
+                    control_plane_ip
+        except Exception as err:
+            INSTALL_LOGGER.error(str(err), exc_info=True)
+
     upgraded_rde: common_models.DefEntity = \
-        entity_svc.upgrade_entity(rde_to_upgrade.id,
-                                  new_native_entity,
-                                  target_entity_type.id)
+        entity_svc.upgrade_entity(
+            rde_to_upgrade.id,
+            new_native_entity,
+            target_entity_type.id
+        )
 
     # Update cluster metadata with new cluster id. This step is still needed
     # because the format of the entity ID has changed to omit version string.

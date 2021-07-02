@@ -258,9 +258,15 @@ class NativeEntity(AbstractNativeEntity):
                 expose=rde_2_x_entity.spec.settings.network.expose
             )
 
+            if rde_2_x_entity.status.cloud_properties.exposed:
+                control_plane_ip = rde_2_x_entity.status.external_ip
+            else:
+                control_plane_ip = \
+                    rde_2_x_entity.status.nodes.control_plane.ip
+
             control_plane = Node(
                 name=rde_2_x_entity.status.nodes.control_plane.name,
-                ip=rde_2_x_entity.status.nodes.control_plane.ip,
+                ip=control_plane_ip,
                 sizing_class=rde_2_x_entity.status.nodes.control_plane.sizing_class  # noqa: E501
             )
 
