@@ -4,7 +4,7 @@ title: Template Announcements
 ---
 # Template Announcements
 
-## Jun 30, 2021
+## Jul 2, 2021
 
 All templates currently available:
 * New templates are highlighted
