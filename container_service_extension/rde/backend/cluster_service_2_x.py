@@ -1244,11 +1244,12 @@ class ClusterService(abstract_broker.AbstractBroker):
                         cluster_name=cluster_name,
                         cluster_id=cluster_id)
 
-                    # For pure RDE2.0 based clusters this step won't be necessary
-                    # But we might have exposed clusters that were converted from
-                    # RDE 1.0 to RDE 2.0, since those clusters would have their
-                    # control plane ip overwritten to the external ip, we need to
-                    # set it back to the true internal ip.
+                    # For pure RDE2.0 based clusters this step won't be
+                    # necessary, but we might have exposed clusters that were
+                    # converted from RDE 1.0 to RDE 2.0, since those clusters
+                    # would have their control plane ip overwritten to the
+                    # external ip, we need to set it back to the true
+                    # internal ip.
                     curr_native_entity.status.nodes.control_plane.ip = control_plane_internal_ip  # noqa: E501
 
                     curr_native_entity.status.cloud_properties.exposed = False

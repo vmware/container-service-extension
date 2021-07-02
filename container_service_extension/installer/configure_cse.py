@@ -2309,10 +2309,15 @@ def _upgrade_non_legacy_clusters(
                 INSTALL_LOGGER.info(msg)
                 msg_update_callback.info(msg)
                 _upgrade_cluster_rde(
-                    client, cluster,
-                    def_entity, runtime_rde_version,
-                    target_entity_type, entity_svc,
-                    site, msg_update_callback=msg_update_callback)
+                    client=client,
+                    cluster=cluster,
+                    rde_to_upgrade=def_entity,
+                    runtime_rde_version=runtime_rde_version,
+                    target_entity_type=target_entity_type,
+                    entity_svc=entity_svc,
+                    site=site,
+                    msg_update_callback=msg_update_callback
+                )
             else:
                 msg = f"Skipping cluster '{cluster['name']}' " \
                     f"since it has already been processed."
@@ -2489,7 +2494,7 @@ def _upgrade_cluster_rde(client, cluster, rde_to_upgrade,
 
     # Adding missing fields in RDE 2.0
     # TODO: Need to find a better approach to avoid conditional logic for
-    #   filling missing properties.
+    # filling missing properties.
     if semantic_version.Version(runtime_rde_version).major == \
             semantic_version.Version(def_constants.RDEVersion.RDE_2_0_0).major:
         # RDE upgrade possible only from RDE 1.0 or RDE 2.x
@@ -2504,7 +2509,7 @@ def _upgrade_cluster_rde(client, cluster, rde_to_upgrade,
                                   target_entity_type.id)
 
     # Update cluster metadata with new cluster id. This step is still needed
-    # because the format of the entity ID has changed to ommit version string.
+    # because the format of the entity ID has changed to omit version string.
     tags = {
         server_constants.ClusterMetadataKey.CLUSTER_ID: upgraded_rde.id,
         server_constants.ClusterMetadataKey.CSE_VERSION: server_utils.get_installed_cse_version()  # noqa: E501
