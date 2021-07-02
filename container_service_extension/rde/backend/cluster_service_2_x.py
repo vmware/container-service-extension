@@ -332,12 +332,8 @@ class ClusterService(abstract_broker.AbstractBroker):
                 status=BehaviorTaskStatus.RUNNING.value,
                 progress=5)
         except Exception as err:
-            # NOTE: Should update the task first before attempting delete or
-            #   else entity delete will fail.
-            msg = f"Failed to create cluster {cluster_name} in org {org_name} and VDC {ovdc_name}"  # noqa: E501
-            LOGGER.error(msg, exc_info=True)
-            self._update_task(BehaviorTaskStatus.ERROR,
-                              message=msg, error_message=str(err))
+            create_failed_msg = f"Failed to create cluster {cluster_name} in org {org_name} and VDC {ovdc_name}"  # noqa: E501
+            LOGGER.error(create_failed_msg, exc_info=True)
             # Since defined entity is already created by defined entity
             # framework, we need to delete the defined entity if rollback
             # is set to true
@@ -347,6 +343,9 @@ class ClusterService(abstract_broker.AbstractBroker):
                 try:
                     # TODO can reduce try - catch by raising more specific
                     # exceptions
+                    # Resolve entity state manually (PRE_CREATED --> RESOLVED)
+                    # to allow delete operation
+                    self.sysadmin_entity_svc.resolve_entity(entity_id=entity_id)  # noqa: E501
                     # delete defined entity
                     self.sysadmin_entity_svc.delete_entity(
                         entity_id,
@@ -363,6 +362,10 @@ class ClusterService(abstract_broker.AbstractBroker):
                     msg = f"Failed to update defined entity status for" \
                           f" cluster {cluster_name}({entity_id})"
                     LOGGER.error(f"{msg}", exc_info=True)
+
+            self._update_task(BehaviorTaskStatus.ERROR,
+                              message=create_failed_msg,
+                              error_message=str(err))
             raise
 
     def resize_cluster(self, cluster_id: str,
@@ -1101,18 +1104,22 @@ class ClusterService(abstract_broker.AbstractBroker):
                     msg = f"Failed to sync defined entity for cluster {cluster_id}"  # noqa: E501
                     LOGGER.error(f"{msg}", exc_info=True)
 
-            self._update_task(BehaviorTaskStatus.ERROR,
-                              message=msg,
-                              error_message=str(err))
-            # Should attempt deleting the defined entity after updating the
+            # Should attempt deleting the defined entity before updating the
             # task to ERROR
             if rollback:
                 try:
+                    # Resolve entity state manually (PRE_CREATED --> RESOLVED)
+                    # to allow delete operation
+                    self.sysadmin_entity_svc.resolve_entity(entity_id=cluster_id)  # noqa: E501
                     self.sysadmin_entity_svc.delete_entity(cluster_id,
                                                            invoke_hooks=False)
                 except Exception:
                     LOGGER.error("Failed to delete the defined entity for "
                                  f"cluster '{cluster_name}'", exc_info=True)
+
+            self._update_task(BehaviorTaskStatus.ERROR,
+                              message=msg,
+                              error_message=str(err))
         except Exception as err:
             msg = f"Unknown error creating cluster '{cluster_name}: {str(err)}'"   # noqa: E501
             LOGGER.error(msg, exc_info=True)
@@ -1262,6 +1269,7 @@ class ClusterService(abstract_broker.AbstractBroker):
             # update the defined entity and the task status. Check if one of
             # the child threads had set the status to ERROR.
             curr_task_status = self.task_status
+            msg = ''
             if curr_task_status == BehaviorTaskStatus.ERROR.value:
                 # NOTE: Possible repetition of operation.
                 # _create_node_async() and _delete_node_async() also
@@ -1277,12 +1285,13 @@ class ClusterService(abstract_broker.AbstractBroker):
                     msg += " and un-exposed the cluster"
                 elif unexpose and not unexpose_success:
                     msg += " and failed to un-expose the cluster"
-                self._update_task(BehaviorTaskStatus.SUCCESS, message=msg)
                 curr_native_entity.status.phase = str(
                     DefEntityPhase(DefEntityOperation.UPDATE,
                                    DefEntityOperationStatus.SUCCEEDED))
 
             self._sync_def_entity(cluster_id, curr_rde)
+            if curr_task_status != BehaviorTaskStatus.ERROR.value:
+                self._update_task(BehaviorTaskStatus.SUCCESS, message=msg)
         except Exception as err:
             msg = f"Unexpected error while resizing nodes for {cluster_name}" \
                   f" ({cluster_id})"
@@ -1800,6 +1809,7 @@ class ClusterService(abstract_broker.AbstractBroker):
 
             # update the defined entity and task status.
             curr_task_status = self.task_status
+            msg = ''
             if curr_task_status == BehaviorTaskStatus.ERROR.value:
                 curr_native_entity.status.phase = str(
                     DefEntityPhase(DefEntityOperation.UPDATE,
@@ -1807,11 +1817,13 @@ class ClusterService(abstract_broker.AbstractBroker):
             else:
                 msg = f"Deleted the {nodes_to_del} nodes  from cluster " \
                       f"'{cluster_name}' ({cluster_id}) "
-                self._update_task(BehaviorTaskStatus.SUCCESS, message=msg)
                 curr_native_entity.status.phase = str(
                     DefEntityPhase(DefEntityOperation.UPDATE,
                                    DefEntityOperationStatus.SUCCEEDED))
             self._sync_def_entity(cluster_id, curr_rde)
+            if curr_task_status != BehaviorTaskStatus.ERROR.value:
+                self._update_task(BehaviorTaskStatus.SUCCESS, message=msg)
+
         except Exception as err:
             msg = f"Unexpected error while deleting nodes for " \
                   f"{cluster_name} ({cluster_id})"
