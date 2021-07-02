@@ -268,7 +268,10 @@ class DefEntityService:
         resource_url_relative_path = f"{CloudApiResource.ENTITIES}/{entity_id}"
         vcd_api_version = self._cloudapi_client.get_api_version()
         # TODO Float conversions must be changed to Semantic versioning.
-        if float(vcd_api_version) >= float(ApiVersion.VERSION_36.value):
+        # TODO: Also include any persona having Administrator:FullControl
+        #  on CSE:nativeCluster
+        if float(vcd_api_version) >= float(ApiVersion.VERSION_36.value) and \
+                self._cloudapi_client.is_sys_admin:
             resource_url_relative_path += f"?invokeHooks={str(invoke_hooks).lower()}"  # noqa: E501
 
         if is_request_async:
@@ -399,11 +402,19 @@ class DefEntityService:
         """
         # response will be a tuple (response_body, response_header) if
         # is_request_async is true. Else, it will be just response_body
+        vcd_api_version = self._cloudapi_client.get_api_version()
+        resource_url_relative_path = f"{CloudApiResource.ENTITIES}/{entity_id}"
+
+        # TODO: Also include any persona having Administrator:FullControl
+        #  on CSE:nativeCluster
+        if float(vcd_api_version) >= float(ApiVersion.VERSION_36.value) and \
+                self._cloudapi_client.is_sys_admin:
+            resource_url_relative_path += f"?invokeHooks={str(invoke_hooks).lower()}"  # noqa: E501
+
         response = self._cloudapi_client.do_request(
             method=RequestMethod.DELETE,
             cloudapi_version=CloudApiVersion.VERSION_1_0_0,
-            resource_url_relative_path=f"{CloudApiResource.ENTITIES}/"
-                                       f"{entity_id}?invokeHooks={str(invoke_hooks).lower()}",  # noqa: E501
+            resource_url_relative_path=resource_url_relative_path,  # noqa: E501
             return_response_headers=is_request_async)
         if is_request_async:
             # if request is async, return the location header as well
