@@ -167,6 +167,7 @@ class Status:
     kubernetes: Optional[str] = None
     docker_version: Optional[str] = None
     os: Optional[str] = None
+    external_ip: Optional[str] = None
     nodes: Optional[Nodes] = None
     uid: Optional[str] = None
     cloud_properties: CloudProperties = CloudProperties()
@@ -298,10 +299,20 @@ class NativeEntity(AbstractNativeEntity):
                 workers.append(worker_node_2_x)
             nfs_nodes = []
             for nfs_node in rde_1_x_entity.status.nodes.nfs:
+                # The nfs_node.export field is a string
+                # however when it was created by cluster_service_1_x.py
+                # it just took a list and string-ified it. The piece of
+                # code below reverses the string representation of the list
+                # back into a list of strings.
+                export_list_string = nfs_node.exports
+                export_list_string.replace('[', '').replace(']', '').replace('\'', '')  # noqa: E501
+                export_list = export_list_string.split(", ")
+
                 nfs_node_2_x = NfsNode(
                     name=nfs_node.name,
                     ip=nfs_node.ip,
-                    sizing_class=nfs_node.sizing_class
+                    sizing_class=nfs_node.sizing_class,
+                    exports=export_list
                 )
                 nfs_nodes.append(nfs_node_2_x)
             nodes = Nodes(
@@ -309,6 +320,11 @@ class NativeEntity(AbstractNativeEntity):
                 workers=workers,
                 nfs=nfs_nodes
             )
+
+            external_ip = None
+            if rde_1_x_entity.status.exposed:
+                external_ip = rde_1_x_entity.status.nodes.control_plane.ip
+
             # NOTE: since details for the field `uid` is not present in
             # RDE 1.0, it is left empty.
             # Proper value for `uid` should be populated after RDE is converted
@@ -319,13 +335,14 @@ class NativeEntity(AbstractNativeEntity):
                             kubernetes=rde_1_x_entity.status.kubernetes,
                             docker_version=rde_1_x_entity.status.docker_version,  # noqa: E501
                             os=rde_1_x_entity.status.os,
+                            external_ip=external_ip,
                             nodes=nodes,
                             uid=None,
                             cloud_properties=cloud_properties)
             # NOTE: since details for the field `site` is not present in
             # RDE 1.0, it is left empty.
             # Proper value for `site` should be populated after RDE is
-            # converted as `site` is a required property in Metadata
+            # converted. Since, `site` is a required property in Metadata
             # for RDE 2.0
             metadata = Metadata(name=rde_1_x_entity.metadata.cluster_name,
                                 org_name=rde_1_x_entity.metadata.org_name,
@@ -388,10 +405,22 @@ class NativeEntity(AbstractNativeEntity):
                 Node(name=item['name'], ip=item['ipAddress']))
         nfs_nodes = []
         for item in cluster['nfs_nodes']:
-            nfs_nodes.append(NfsNode(
-                name=item['name'],
-                ip=item['ipAddress'],
-                exports=item['exports']))
+            # The item['exports'] field is a string
+            # however when it was created by vcd_broker.py
+            # it just took a list and string-ified it. The piece of
+            # code below reverses the string representation of the list
+            # back into a list of strings.
+            exports_list_string = item['exports']
+            exports_list_string.replace('[', '').replace(']', '').replace('\'', '')  # noqa: E501
+            exports_list = exports_list_string.split(", ")
+
+            nfs_nodes.append(
+                NfsNode(
+                    name=item['name'],
+                    ip=item['ipAddress'],
+                    exports=exports_list
+                )
+            )
 
         k8_distribution = Distribution(
             template_name=cluster['template_name'],

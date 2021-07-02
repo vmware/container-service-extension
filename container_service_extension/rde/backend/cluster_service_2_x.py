@@ -1033,11 +1033,11 @@ class ClusterService(abstract_broker.AbstractBroker):
             # Update status with exposed ip
             if expose_ip:
                 new_status.cloud_properties.exposed = True
-                if new_status.nodes and new_status.nodes.control_plane:
-                    new_status.nodes.control_plane.ip = expose_ip
+                new_status.external_ip = expose_ip
 
             self._update_cluster_entity(
-                cluster_id, new_status,
+                cluster_id,
+                new_status,
                 external_id=vapp_resource.get('href')
             )
 
@@ -1216,7 +1216,11 @@ class ClusterService(abstract_broker.AbstractBroker):
                 ovdc_name: str = curr_native_entity.metadata.ovdc_name
                 network_name: str = current_spec.settings.ovdc_network
                 try:
-                    # Get internal ip
+                    # We need to get the internal IP via script and not rely
+                    # on the value in status.nodes.control_plane.ip because
+                    # the exposed cluster might have been converted from
+                    # RDE 1.0 to RDE 2.0, and those clusters would have their
+                    # control plane ip overwritten to the external ip.
                     vapp_href = curr_rde.externalId
                     vapp = vcd_vapp.VApp(self.context.client,
                                          href=vapp_href)
@@ -1240,9 +1244,15 @@ class ClusterService(abstract_broker.AbstractBroker):
                         cluster_name=cluster_name,
                         cluster_id=cluster_id)
 
-                    # Update RDE control plane ip to be internal ip
+                    # For pure RDE2.0 based clusters this step won't be necessary
+                    # But we might have exposed clusters that were converted from
+                    # RDE 1.0 to RDE 2.0, since those clusters would have their
+                    # control plane ip overwritten to the external ip, we need to
+                    # set it back to the true internal ip.
                     curr_native_entity.status.nodes.control_plane.ip = control_plane_internal_ip  # noqa: E501
+
                     curr_native_entity.status.cloud_properties.exposed = False
+                    curr_native_entity.status.external_ip = None
                     unexpose_success = True
                 except Exception as err:
                     LOGGER.error(
@@ -1945,12 +1955,6 @@ class ClusterService(abstract_broker.AbstractBroker):
         sysadmin_client_v36 = self.context.get_sysadmin_client(
             api_version=DEFAULT_API_VERSION)
         curr_nodes_status = _get_nodes_details(sysadmin_client_v36, vapp)
-
-        # Overwrite the control plane ip, if the cluster is exposed
-        if curr_rde.entity.status.cloud_properties.exposed and \
-                curr_rde.entity.status.nodes and \
-                curr_rde.entity.status.nodes.control_plane:
-            curr_nodes_status.control_plane.ip = curr_rde.entity.status.nodes.control_plane.ip  # noqa: E501
 
         new_status: rde_2_x.Status = curr_rde.entity.status
         if curr_nodes_status:
