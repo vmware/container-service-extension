@@ -1054,6 +1054,12 @@ class ClusterService(abstract_broker.AbstractBroker):
                 exceptions.ClusterOperationError) as err:
             msg = f"Error creating cluster '{cluster_name}'"
             LOGGER.error(msg, exc_info=True)
+            try:
+                self._fail_operation(
+                    cluster_id, DefEntityOperation.CREATE)
+            except Exception:
+                msg = f"Failed to update defined entity status for cluster {cluster_id}"  # noqa: E501
+                LOGGER.error(f"{msg}", exc_info=True)
             if rollback:
                 msg = f"Error creating cluster '{cluster_name}'. " \
                       f"Deleting cluster (rollback=True)"
@@ -1085,15 +1091,7 @@ class ClusterService(abstract_broker.AbstractBroker):
                                      f'error: {str(err1)}', exc_info=True)
 
             else:
-                # TODO: Avoid many try-except block. Check if it is a good
-                # practice
-                try:
-                    self._fail_operation(
-                        cluster_id, DefEntityOperation.CREATE)
-                except Exception:
-                    msg = f"Failed to update defined entity status for cluster {cluster_id}"  # noqa: E501
-                    LOGGER.error(f"{msg}", exc_info=True)
-
+                # TODO: Avoid many try-except block. Check if it is a good practice  # noqa: E501
                 # NOTE: sync of the defined entity should happen before call to
                 # resolving the defined entity to prevent possible missing
                 # values in the defined entity
