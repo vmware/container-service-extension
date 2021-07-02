@@ -49,7 +49,7 @@ class CseServerNotRunningError(CseServerError):
         return "Please contact administrator, CSE server seems to be" \
                " down. CSE- CLI can now only be used to manage TKG " \
                " clusters (but not native). Once CSE server is up, please" \
-               " re-login to manage both native and tkg clusters."
+               " re-login to manage both native and TKG-S clusters."
 
 
 class CseRequestError(CseServerError):
@@ -95,7 +95,7 @@ class BadRequestError(CseRequestError):
 
 
 class InternalServerRequestError(CseRequestError):
-    """Raised when an internal server error occurs while processing a REST request.""" # noqa: E501
+    """Raised when an internal server error occurs while processing a REST request."""  # noqa: E501
 
     def __init__(self, error_message=None, minor_error_code=None):
         super().__init__(requests.codes.internal_server_error, error_message,
@@ -119,7 +119,7 @@ class CseDuplicateClusterError(InternalServerRequestError):
 
 
 class MethodNotAllowedRequestError(CseRequestError):
-    """Raised when an invalid HTTP method is attempted on a CSE REST endpoint.""" # noqa: E501
+    """Raised when an invalid HTTP method is attempted on a CSE REST endpoint."""  # noqa: E501
 
     def __init__(self, error_message="Method not allowed",
                  minor_error_code=None):
@@ -128,7 +128,7 @@ class MethodNotAllowedRequestError(CseRequestError):
 
 
 class NotAcceptableRequestError(CseRequestError):
-    """Raised when CSE can't serve the provided the response as per the accept header in the request.""" # noqa: E501
+    """Raised when CSE can't serve the provided the response as per the accept header in the request."""  # noqa: E501
 
     def __init__(self, error_message="Not acceptable",
                  minor_error_code=None):
@@ -230,7 +230,7 @@ class DefEntityResolutionError(CseServerError):
                f" id:{self.id} failed with error message: {self.msg}"
 
 
-class GlobalPvdcComputePolicyNotSupported(vcd_exceptions.OperationNotSupportedException): # noqa: E501
+class GlobalPvdcComputePolicyNotSupported(vcd_exceptions.OperationNotSupportedException):  # noqa: E501
     """Raised when global pvdc compute policies are not supported."""
 
 

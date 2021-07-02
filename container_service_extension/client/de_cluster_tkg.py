@@ -95,11 +95,11 @@ class DEClusterTKG:
             raise
 
     def list_tkg_clusters(self, vdc=None, org=None):
-        """List all the TKG clusters.
+        """List all the TKG-S clusters.
 
         :param str vdc: name of vdc to filter by
         :param str org: name of the org to filter by
-        :return: list of TKG cluster information.
+        :return: list of TKG-S cluster information.
         :rtype: List[dict]
         """
         self.set_tenant_org_context(org_name=org)
@@ -128,14 +128,14 @@ class DEClusterTKG:
                 # entity details
                 entity: TkgCluster = entities[i]
                 entity_properties = tkg_def_entities[i]
-                logger.CLIENT_LOGGER.debug(f"TKG Defined entity list from server: {entity}")  # noqa: E501
+                logger.CLIENT_LOGGER.debug(f"TKG-S Defined entity list from server: {entity}")  # noqa: E501
                 cluster = {
-                    cli_constants.CLIOutputKey.CLUSTER_NAME.value: entity.metadata.name, # noqa: E501
-                    cli_constants.CLIOutputKey.VDC.value: entity.metadata.virtual_data_center_name, # noqa: E501
-                    cli_constants.CLIOutputKey.ORG.value: entity_properties['org']['name'], # noqa: E501
-                    cli_constants.CLIOutputKey.K8S_RUNTIME.value: shared_constants.ClusterEntityKind.TKG.value, # noqa: E501
-                    cli_constants.CLIOutputKey.K8S_VERSION.value: entity.spec.distribution.version, # noqa: E501
-                    cli_constants.CLIOutputKey.STATUS.value: entity.status.phase if entity.status else 'N/A',  # noqa: E501
+                    cli_constants.CLIOutputKey.CLUSTER_NAME.value: entity.metadata.name,  # noqa: E501
+                    cli_constants.CLIOutputKey.VDC.value: entity.metadata.virtual_data_center_name,  # noqa: E501
+                    cli_constants.CLIOutputKey.ORG.value: entity_properties['org']['name'],  # noqa: E501
+                    cli_constants.CLIOutputKey.K8S_RUNTIME.value: shared_constants.ClusterEntityKind.TKG_S.value,  # noqa: E501
+                    cli_constants.CLIOutputKey.K8S_VERSION.value: entity.spec.distribution.version,  # noqa: E501
+                    cli_constants.CLIOutputKey.STATUS.value: entity.status.phase if entity.status else 'N/A',   # noqa: E501
                     cli_constants.CLIOutputKey.OWNER.value: entity_properties['owner']['name'],  # noqa: E501
                 }
                 clusters.append(cluster)
@@ -160,7 +160,7 @@ class DEClusterTKG:
             tkg_def_entities = response[3]['entityDetails']
         if len(tkg_entities) == 0:
             raise cse_exceptions.ClusterNotFoundError(
-                f"TKG cluster with name '{name}' not found.")
+                f"TKG-S cluster with name '{name}' not found.")
         if len(tkg_entities) > 1:
             if not org:
                 raise cse_exceptions.CseDuplicateClusterError(
@@ -173,9 +173,10 @@ class DEClusterTKG:
 
     def get_cluster_info(self, cluster_name, cluster_id=None,
                          org=None, vdc=None, **kwargs):
-        """Get cluster information of a TKG cluster API.
+        """Get cluster information of a TKG-S cluster API.
 
         :param str cluster_name: name of the cluster
+        :param str cluster_id: id of the cluster (optional)
         :param str vdc: name of vdc
         :param str org: name of org
 
@@ -201,7 +202,7 @@ class DEClusterTKG:
             raise
 
     def get_cluster_info_by_id(self, cluster_id, org=None, **kwargs):
-        """Get TKG cluster information using cluster ID.
+        """Get TKG-S cluster information using cluster ID.
 
         :param str cluster_id:
         :param str org:
@@ -212,7 +213,7 @@ class DEClusterTKG:
             self.set_tenant_org_context(org_name=org)
             tkg_entity, _ = self.get_tkg_cluster(cluster_id)
             cluster_info = client_utils.swagger_object_to_dict(tkg_entity)
-            logger.CLIENT_LOGGER.debug(f"Retrieved TKG entitty for ID {cluster_id}: {cluster_info}")  # noqa: E501
+            logger.CLIENT_LOGGER.debug(f"Retrieved TKG-S entity for ID {cluster_id}: {cluster_info}")  # noqa: E501
             return yaml.dump(cluster_info)
         except tkg_rest.ApiException as e:
             logger.CLIENT_LOGGER.debug(e)
@@ -220,13 +221,16 @@ class DEClusterTKG:
             logger.CLIENT_LOGGER.error(msg)
             raise Exception(msg)
         except Exception as e:
-            logger.CLIENT_LOGGER.error(f"Error getting TKG cluster information: {e}")  # noqa: E501
+            logger.CLIENT_LOGGER.error(f"Error getting TKG-S cluster information: {e}")  # noqa: E501
             raise
 
     def apply(self, cluster_config: dict, cluster_id=None, org=None, **kwargs):
         """Apply the configuration either to create or update the cluster.
 
         :param dict cluster_config: cluster configuration information
+        :param str cluster_id:
+        :param str org:
+
         :return: string containing the task href for the operation
         :rtype: str
         """
@@ -234,7 +238,6 @@ class DEClusterTKG:
             self.set_tenant_org_context(org_name=org)
             cluster_name = cluster_config.get('metadata', {}).get('name')
             vdc_name = cluster_config.get('metadata', {}).get('virtualDataCenterName')  # noqa: E501
-            response = None
             try:
                 if cluster_id:
                     tkg_entity, tkg_def_entity = self.get_tkg_cluster(cluster_id)  # noqa: E501
@@ -268,6 +271,8 @@ class DEClusterTKG:
         """Delete a cluster using the cluster id.
 
         :param str cluster_id:
+        :param str org:
+
         :return: string containing the task href of delete cluster operation
         """
         try:
@@ -286,9 +291,10 @@ class DEClusterTKG:
 
     def delete_cluster(self, cluster_name, cluster_id=None,
                        org=None, vdc=None):
-        """Delete TKG cluster by name.
+        """Delete TKG-S cluster by name.
 
-        :param str cluster_name: TKG cluster name
+        :param str cluster_name: TKG-S cluster name
+        :param str cluster_id: id of the cluster (optional)
         :param str org: name of the org
         :param str vdc: name of the vdc
         :return: string containing delete cluster task href
@@ -311,11 +317,11 @@ class DEClusterTKG:
             raise
 
     def get_cluster_config_by_id(self, cluster_id, org=None, **kwargs):
-        """Get TKG cluster config by cluster id.
+        """Get TKG-S cluster config by cluster id.
 
         :param str cluster_id: ID of the cluster
-        :param str org_urn: URN of the org
-        :return the cluster config of the TKG cluster
+        :param str org: URN of the org
+        :return the cluster config of the TKG-S cluster
         :rtype: str
         """
         try:
@@ -325,7 +331,7 @@ class DEClusterTKG:
             headers = response[2]
             config_task_href = headers.get('Location')
             if not config_task_href:
-                raise Exception(f"Failed to fetch kube-config for TKG cluster {cluster_id}")  # noqa: E501
+                raise Exception(f"Failed to fetch kube-config for TKG-S cluster {cluster_id}")  # noqa: E501
             config_task = self._client.get_resource(config_task_href)
             self._client.get_task_monitor().wait_for_success(config_task)
             config_task = self._client.get_resource(config_task_href)
@@ -341,7 +347,7 @@ class DEClusterTKG:
 
     def get_cluster_config(self, cluster_name, cluster_id=None,
                            org=None, vdc=None):
-        """Get TKG cluster config by cluster name.
+        """Get TKG-S cluster config by cluster name.
 
         :param str cluster_name: name of the cluster
         :param str cluster_id: ID of the cluster
@@ -365,20 +371,20 @@ class DEClusterTKG:
             raise
 
     def get_upgrade_plan(self, cluster_name, vdc=None, org=None):
-        """List of clusters the TKG cluster can upgrade to.
+        """List of clusters the TKG-S cluster can upgrade to.
 
         :param str cluster_name: name of the cluster
         :param str org: name of the org
         :param str vdc: name of the vdc
         """
         raise NotImplementedError(
-            "Get Cluster upgrade-plan not supported for TKG clusters")
+            "Get Cluster upgrade-plan not supported for TKG-S clusters")
 
     def upgrade_cluster(self, cluster_name, template_name,
                         template_revision, **kwargs):
-        """Upgrade TKG cluster to the given distribution."""
+        """Upgrade TKG-S cluster to the given distribution."""
         raise NotImplementedError(
-            "Cluster upgrade not supported for TKG clusters")
+            "Cluster upgrade not supported for TKG-S clusters")
 
     def get_cluster_id_by_name(self, cluster_name, org=None, vdc=None):
         _, tkg_def_entities = \
@@ -402,7 +408,7 @@ class DEClusterTKG:
         # Ensure current cluster user access level is not reduced
         org_href = self._client.get_org_by_name(org).get('href')
         name_to_id: dict = client_utils.create_user_name_to_id_dict(
-            self._client, users, org_href)
+            self._client, set(users), org_href)
         org_user_id_to_name_dict = vcd_utils.create_org_user_id_to_name_dict(
             self._client, org)
         acl_svc = cluster_acl_svc.ClusterACLService(cluster_id, self._client)
@@ -415,7 +421,7 @@ class DEClusterTKG:
                     raise Exception(f'{username} currently has higher access '
                                     f'level: {curr_access_level}')
 
-        # share TKG def entity
+        # share TKG-S def entity
         acl_entry = common_models.ClusterAclEntry(
             grantType=shared_constants.MEMBERSHIP_GRANT_TYPE,
             accessLevelId=access_level_id,
@@ -432,7 +438,7 @@ class DEClusterTKG:
         # Get acl entry ids for users
         org_href = self._client.get_org_by_name(org).get('href')
         name_to_id: dict = client_utils.create_user_name_to_id_dict(
-            self._client, users, org_href)
+            self._client, set(users), org_href)
         users_ids: set = {user_id for _, user_id in name_to_id.items()}
         acl_svc = cluster_acl_svc.ClusterACLService(cluster_id, self._client)
         delete_acl_ids = []
@@ -444,9 +450,9 @@ class DEClusterTKG:
         if len(users_ids) > 0:
             org_user_id_to_name_dict = \
                 vcd_utils.create_org_user_id_to_name_dict(self._client, org)
-            unfound_users = [org_user_id_to_name_dict[user_id] for user_id in users_ids]  # noqa: E501
+            missing_users = [org_user_id_to_name_dict[user_id] for user_id in users_ids]  # noqa: E501
             raise Exception(f'Cluster {cluster_name or cluster_id} is not '
-                            f'currently shared with: {unfound_users}')
+                            f'currently shared with: {missing_users}')
 
         # Delete cluster acl entries
         for acl_id in delete_acl_ids:

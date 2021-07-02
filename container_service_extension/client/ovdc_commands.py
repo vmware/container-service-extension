@@ -86,7 +86,7 @@ Example
     help="Enable OVDC for k8 runtime native"
 )
 @click.option(
-    '-t',
+    '-p',
     '--tkg-plus',
     'enable_tkg_plus',
     is_flag=True,
@@ -160,7 +160,7 @@ Example
     help="Disable OVDC for k8 runtime native cluster"
 )
 @click.option(
-    '-t',
+    '-p',
     '--tkg-plus',
     'disable_tkg_plus',
     is_flag=True,

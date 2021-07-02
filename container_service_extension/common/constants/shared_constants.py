@@ -31,7 +31,7 @@ CSE_SERVER_LEGACY_MODE = "cse_server_running_in_legacy_mode"
 
 class ClusterEntityKind(Enum):
     NATIVE = 'native'
-    TKG = 'TanzuKubernetesCluster'
+    TKG_S = 'TanzuKubernetesCluster'
     TKG_PLUS = 'TKG+'
     TKG_M = 'TKGm'
 
@@ -238,4 +238,4 @@ class ClusterDetailsKey(str, Enum):
 @unique
 class HttpResponseHeader(str, Enum):
     LOCATION = 'Location'
-    X_VMWARE_VCOULD_TASK_LOCATION = 'X-VMWARE-VCOULD-TASK-LOCATION'
+    X_VMWARE_VCLOUD_TASK_LOCATION = 'X-VMWARE-VCOULD-TASK-LOCATION'

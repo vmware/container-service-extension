@@ -29,13 +29,13 @@ DUPLICATE_CLUSTER_ERROR_MSG = "Duplicate clusters found. Please use --k8-runtime
 
 
 class DECluster:
-    """Handle operations common to DefNative and TKG kubernetes clusters.
+    """Handle operations common to DefNative and TKG-S kubernetes clusters.
 
     Also any operation where cluster kind is not supplied should be handled here.  # noqa: E501
 
     Example(s):
         cluster list is a collection which may have mix of DefNative and
-        TKG clusters.
+        TKG-S clusters.
 
         cluster info for a given cluster name needs lookup using DEF API.
     """
@@ -65,8 +65,7 @@ class DECluster:
         :return: cluster list information
         :rtype: list(dict)
         """
-        clusters = []
-        if client_utils.is_cli_for_tkg_only():
+        if client_utils.is_cli_for_tkg_s_only():
             try:
                 for clusters, has_more_results in \
                         self._tkgCluster.list_tkg_clusters(vdc=vdc, org=org):
@@ -77,7 +76,7 @@ class DECluster:
                     msg = cli_constants.TKG_RESPONSE_MESSAGES_BY_STATUS_CODE.get(e.status, f"{server_message}")  # noqa: E501
                     logger.CLIENT_LOGGER.error(msg)
                     raise Exception(msg)
-                msg = f"User not authorized to fetch TKG clusters: {e}"
+                msg = f"User not authorized to fetch TKG-S clusters: {e}"
                 logger.CLIENT_LOGGER.debug(msg)
                 raise e
         else:
@@ -105,7 +104,7 @@ class DECluster:
                         logger.CLIENT_LOGGER.debug(f"Native Defined entity list from server: {entity}")  # noqa: E501
                         cluster = {
                             cli_constants.CLIOutputKey.CLUSTER_NAME.value: de.name,  # noqa: E501
-                            cli_constants.CLIOutputKey.ORG.value: de.org.name, # noqa: E501
+                            cli_constants.CLIOutputKey.ORG.value: de.org.name,  # noqa: E501
                             cli_constants.CLIOutputKey.OWNER.value: de.owner.name  # noqa: E501
                         }
                         if isinstance(entity, AbstractNativeEntity):
@@ -137,16 +136,16 @@ class DECluster:
 
     def _get_tkg_native_clusters_by_name(self, cluster_name: str,
                                          org=None, vdc=None):
-        """Get native and TKG clusters by name.
+        """Get native and TKG-S clusters by name.
 
         Assumption: Native clusters cannot have name collision among them.
-        But there can be multiple TKG clusters with the same name and 2 or
-        more TKG clusters can also have the same name.
+        But there can be multiple TKG-S clusters with the same name and 2 or
+        more TKG-S clusters can also have the same name.
 
         :param str cluster_name: Cluster name to search for
         :param str org: Org to filter by
         :param str vdc: VDC to filter by
-        :returns: tkg entity or native def entity with entity properties and
+        :returns: TKG-S entity or native def entity with entity properties and
             boolean indicating cluster type
         :rtype: (cluster, dict,  bool)
         """
@@ -182,7 +181,7 @@ class DECluster:
                 raise
             has_tkg_rights = False
         except cse_exceptions.ClusterNotFoundError:
-            logger.CLIENT_LOGGER.debug(f"No TKG cluster with name {cluster_name}")  # noqa: E501
+            logger.CLIENT_LOGGER.debug(f"No TKG-S cluster with name {cluster_name}")  # noqa: E501
         if not (has_native_rights or has_tkg_rights):
             raise Exception("User cannot access native or TKG clusters."
                             " Please contact administrator")
@@ -191,11 +190,11 @@ class DECluster:
             # If org filter is not provided, ask the user to provide org
             # filter
             if not org:
-                # handles the case where there is are TKG clusters and native
+                # handles the case where there is are TKG-S clusters and native
                 # clusters with the same name in different organizations
                 raise Exception(f"{msg} Please specify the org to use "
                                 "using --org flag.")
-            # handles the case where there is a TKG cluster and a native
+            # handles the case where there is a TKG-S cluster and a native
             # native cluster with the same name in the same organization
             raise Exception(f"{msg} Please specify the k8-runtime to use using"
                             " --k8-runtime flag.")
@@ -219,8 +218,9 @@ class DECluster:
         """Get cluster information using DEF API.
 
         :param str cluster_name: name of the cluster
-        :param str vdc: name of vdc
+        :param str cluster_id:
         :param str org: name of org
+        :param str vdc: name of vdc
         :param kwargs: *filter (dict): keys,values for DEF API query filter
 
         :return: cluster information
@@ -237,7 +237,7 @@ class DECluster:
         if is_native_cluster:
             cluster_info = cluster.entity.to_dict()
         else:
-            # TKG cluster represents the defined_entity.entity
+            # TKG-S cluster represents the defined_entity.entity
             cluster_info = client_utils.swagger_object_to_dict(cluster)
         logger.CLIENT_LOGGER.debug(
             f"Received defined entity of cluster {cluster_name} : {cluster_info}")  # noqa: E501
@@ -246,7 +246,9 @@ class DECluster:
     def get_cluster_info_by_id(self, cluster_id, org=None):
         """Obtain cluster information using cluster ID.
 
-        :param str cluster_id
+        :param str cluster_id:
+        :param str org:
+
         :return: yaml representation of the cluster information
         :rtype: str
         """
@@ -260,8 +262,10 @@ class DECluster:
         """Get cluster config.
 
         :param str cluster_name: name of the cluster
-        :param str vdc: name of vdc
+        :param str cluster_id:
         :param str org: name of org
+        :param str vdc: name of vdc
+
 
         :return: cluster information
         :rtype: str
@@ -292,8 +296,10 @@ class DECluster:
         """Delete DEF cluster by name.
 
         :param str cluster_name: name of the cluster
+        :param str cluster_id:
         :param str org: name of the org
         :param str vdc: name of the vdc
+
         :return: deleted cluster info
         :rtype: str
         :raises ClusterNotFoundError, CseDuplicateClusterError
@@ -311,8 +317,11 @@ class DECluster:
         """Delete cluster using cluster id.
 
         :param str cluster_id: id of the cluster to be deleted
+        :param str org:
+
         :return: deleted cluster information
         :rtype: str
+
         :raises: ClusterNotFoundError
         """
         entity_svc = def_entity_svc.DefEntityService(self._cloudapi_client)

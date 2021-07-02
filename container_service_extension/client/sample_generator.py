@@ -74,10 +74,12 @@ def get_sample_cluster_configuration(output=None, k8_runtime=None, server_rde_in
 
     :param str output: full path of output file
     :param shared_constants.ClusterEntityKind k8_runtime: cluster kind
+    :param str server_rde_in_use:
+
     :return: sample cluster configuration
     :rtype: str
     """
-    if k8_runtime == shared_constants.ClusterEntityKind.TKG:
+    if k8_runtime == shared_constants.ClusterEntityKind.TKG_S:
         sample_cluster_config = SAMPLE_TKG_CLUSTER_SPEC_HELP + _get_sample_tkg_cluster_configuration()  # noqa: E501
     else:
         if not server_rde_in_use:

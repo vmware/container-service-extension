@@ -92,10 +92,6 @@ class LegacyClusterNative:
             created
         :param rollback: (bool): Flag to control weather rollback
             should be performed or not in case of errors.
-        :param pks_ext_host: (str): Address from which to access the Kubernetes
-        API for PKS.
-        :param pks_plan: (str): Preconfigured PKS plan to use for deploying the
-        cluster.
         :param org: (str): name of the organization in which the vdc to be
         used for cluster creation.
 
@@ -213,10 +209,11 @@ class LegacyClusterNative:
     def delete_nodes(self, cluster_name, nodes, org=None, vdc=None):
         """Delete nodes from a Kubernetes cluster.
 
-        :param org: (str): Name of the organization that contains the cluster
-        :param vdc: (str): The name of the vdc that contains the cluster
-        :param name: (str): The name of the cluster
-        :param nodes: (list(str)): The list of nodes to delete
+        :param str org: Name of the organization that contains the cluster
+        :param str vdc: The name of the vdc that contains the cluster
+        :param str cluster_name: The name of the cluster
+        :param list nodes: The list of nodes to delete
+
         :return: (json) A parsed json object describing the requested cluster
             operation.
         """
