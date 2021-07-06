@@ -4,6 +4,7 @@
 
 import json
 
+from pyvcloud.vcd.client import ApiVersion
 import yaml
 
 import container_service_extension.client.constants as cli_constants
@@ -45,7 +46,15 @@ class DEClusterTKG:
             legacy_token = self._client.get_xvcloud_authorization_token()
             self._tkg_client.set_default_header(cli_constants.TKGRequestHeaderKey.X_VCLOUD_AUTHORIZATION,  # noqa: E501
                                                 legacy_token)
+        # get highest supported api version
         api_version = self._client.get_api_version()
+        supported_api_versions = self._client.get_supported_versions_list()
+        max_api_version = utils.get_max_api_version(supported_api_versions)
+
+        # api_version = self._client.get_api_version()
+        # use api_version 37.0.0-alpha if VCD 10.3 is used.
+        if float(max_api_version) >= float(ApiVersion.VERSION_36.value):
+            api_version = '37.0.0-alpha'
         self._tkg_client.set_default_header(cli_constants.TKGRequestHeaderKey.ACCEPT,  # noqa: E501
                                             f"application/json;version={api_version}")  # noqa: E501
         self._tkg_client_api = TkgClusterApi(api_client=self._tkg_client)
@@ -148,7 +157,7 @@ class DEClusterTKG:
         tkg_def_entities = []
         if response:
             tkg_entities = response[0]
-            tkg_def_entities = response[3]
+            tkg_def_entities = response[3]['entityDetails']
         if len(tkg_entities) == 0:
             raise cse_exceptions.ClusterNotFoundError(
                 f"TKG cluster with name '{name}' not found.")
@@ -407,16 +416,13 @@ class DEClusterTKG:
                                     f'level: {curr_access_level}')
 
         # share TKG def entity
-        payload = {
-            shared_constants.AccessControlKey.GRANT_TYPE:
-                shared_constants.MEMBERSHIP_GRANT_TYPE,
-            shared_constants.AccessControlKey.ACCESS_LEVEL_ID:
-                access_level_id,
-            shared_constants.AccessControlKey.MEMBER_ID: None
-        }
+        acl_entry = common_models.ClusterAclEntry(
+            grantType=shared_constants.MEMBERSHIP_GRANT_TYPE,
+            accessLevelId=access_level_id,
+            memberId=None)
         for _, user_id in name_to_id.items():
-            payload[shared_constants.AccessControlKey.MEMBER_ID] = user_id
-            acl_svc.share_def_entity(payload)
+            acl_entry.memberId = user_id
+            acl_svc.share_def_entity(acl_entry)
 
     def unshare_cluster(self, cluster_id, cluster_name, users: list, org=None,
                         vdc=None):
@@ -452,6 +458,11 @@ class DEClusterTKG:
 
         org_user_id_to_name_dict = vcd_utils.create_org_user_id_to_name_dict(
             self._client, org)
+        # Consider system users if client is from system org
+        if self._client.is_sysadmin():
+            sys_org_user_id_to_name_dict = vcd_utils.create_org_user_id_to_name_dict(  # noqa:E501
+                self._client, shared_constants.SYSTEM_ORG_NAME)
+            org_user_id_to_name_dict.update(sys_org_user_id_to_name_dict)
         acl_svc = cluster_acl_svc.ClusterACLService(cluster_id, self._client)
         page_num = result_count = 0
         while True:
@@ -465,7 +476,9 @@ class DEClusterTKG:
             acl_values = []
             for entry in values:
                 acl_entry = common_models.ClusterAclEntry(**entry)
-                acl_entry.username = org_user_id_to_name_dict.get(acl_entry.memberId)  # noqa: E501
+                # If there is no username found, the user must be a system
+                # user, so a generic name is shown
+                acl_entry.username = org_user_id_to_name_dict.get(acl_entry.memberId, shared_constants.SYSTEM_USER_GENERIC_NAME)  # noqa: E501
                 acl_values.append(acl_entry.construct_filtered_dict(
                     include=CLUSTER_ACL_LIST_FIELDS))
             result_count += len(values)

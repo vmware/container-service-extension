@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from typing import List, Optional
 
 from dataclasses_json import dataclass_json
+import yaml
 
 import container_service_extension.common.constants.server_constants as server_constants  # noqa: E501
 import container_service_extension.common.constants.shared_constants as shared_constants  # noqa: E501
@@ -135,6 +136,11 @@ class NativeEntity(AbstractNativeEntity):
                 "sizing_class": "Large",
                 "storage_profile": "Any"
             },
+            "nfs": {
+                "count": 1,
+                "sizing_class": "small",
+                "storage_profile": "Any"
+            },
             "settings": {
                 "network": "net",
                 "ssh_key": null,
@@ -143,13 +149,41 @@ class NativeEntity(AbstractNativeEntity):
             "k8_distribution": {
                 "template_name": "k81.17",
                 "template_revision": 1
-            }
+            },
+            "expose": False
         },
         "status": {
-            "id": null,
             "cni": null,
+            "docker_version": null,
+            "exposed": False,
+            "kubernetes": null,
+            "nodes": {
+                "workers": [
+                    {
+                        "name": "node-abcd",
+                        "ip": "10.0.0.2",
+                        "sizing_class": "small",
+                    }
+                ],
+                "control_plane": [
+                    {
+                        "name": "mstr-xyzv",
+                        "ip": "10.0.0.3",
+                        "sizing_class": "Large",
+                    }
+                ],
+                "nfs": [
+                    {
+                        "name": "nfsd-uvwx",
+                        "ip": "10.0.0.4",
+                        "sizing_class": "small",
+                        "exports": "/usr/share/abc, /usr/share/xyz"
+                    }
+                ]
+            },
+            "os": null,
             "phase": null,
-            "master_ip": "10.150.23.45"
+            "task_href" : null
         },
         "metadata": {
             "org_name": "org1",
@@ -187,7 +221,7 @@ class NativeEntity(AbstractNativeEntity):
             )
 
             settings = Settings(
-                network=rde_2_x_entity.spec.settings.network,
+                network=rde_2_x_entity.spec.settings.ovdc_network,
                 ssh_key=rde_2_x_entity.spec.settings.ssh_key,
                 rollback_on_failure=rde_2_x_entity.spec.settings.rollback_on_failure  # noqa: E501
             )
@@ -221,12 +255,18 @@ class NativeEntity(AbstractNativeEntity):
                 control_plane=control_plane,
                 workers=workers,
                 nfs=nfs,
-                expose=rde_2_x_entity.spec.expose
+                expose=rde_2_x_entity.spec.settings.network.expose
             )
+
+            if rde_2_x_entity.status.cloud_properties.exposed:
+                control_plane_ip = rde_2_x_entity.status.external_ip
+            else:
+                control_plane_ip = \
+                    rde_2_x_entity.status.nodes.control_plane.ip
 
             control_plane = Node(
                 name=rde_2_x_entity.status.nodes.control_plane.name,
-                ip=rde_2_x_entity.status.nodes.control_plane.ip,
+                ip=control_plane_ip,
                 sizing_class=rde_2_x_entity.status.nodes.control_plane.sizing_class  # noqa: E501
             )
 
@@ -240,11 +280,13 @@ class NativeEntity(AbstractNativeEntity):
                 workers.append(worker_node_1_x)
 
             nfs_nodes = []
-            for nfs_node in nfs_nodes:
-                nfs_node_1_x = Node(
+            for nfs_node in rde_2_x_entity.status.nodes.nfs:
+                nfs_node_1_x = NfsNode(
                     name=nfs_node.name,
                     ip=nfs_node.ip,
-                    sizing_class=nfs_node.sizing_class)
+                    sizing_class=nfs_node.sizing_class,
+                    exports=str(nfs_node.exports)
+                )
                 nfs_nodes.append(nfs_node_1_x)
 
             nodes = Nodes(
@@ -261,7 +303,7 @@ class NativeEntity(AbstractNativeEntity):
                 docker_version=rde_2_x_entity.status.docker_version,
                 os=rde_2_x_entity.status.os,
                 nodes=nodes,
-                exposed=rde_2_x_entity.status.exposed
+                exposed=rde_2_x_entity.status.cloud_properties.exposed
             )
 
             rde_1_entity = cls(
@@ -287,17 +329,22 @@ class NativeEntity(AbstractNativeEntity):
         worker_nodes = []
         for item in cluster['nodes']:
             worker_nodes.append(
-                Node(name=item['name'], ip=item['ipAddress']))
+                Node(name=item['name'], ip=item['ipAddress'])
+            )
         nfs_nodes = []
         for item in cluster['nfs_nodes']:
-            nfs_nodes.append(NfsNode(
-                name=item['name'],
-                ip=item['ipAddress'],
-                exports=item['exports']))
+            nfs_nodes.append(
+                NfsNode(
+                    name=item['name'],
+                    ip=item['ipAddress'],
+                    exports=item['exports']
+                )
+            )
 
         k8_distribution = Distribution(
             template_name=cluster['template_name'],
-            template_revision=int(cluster['template_revision']))
+            template_revision=int(cluster['template_revision'])
+        )
 
         cluster_entity = cls(
             kind=kind,
@@ -325,14 +372,15 @@ class NativeEntity(AbstractNativeEntity):
                     server_constants.DefEntityOperation.CREATE,
                     server_constants.DefEntityOperationStatus.SUCCEEDED)
                 ),
-                kubernetes=f"{cluster['kubernetes']} {cluster['kubernetes_version']}", # noqa: E501
+                kubernetes=f"{cluster['kubernetes']} {cluster['kubernetes_version']}",  # noqa: E501
                 cni=f"{cluster['cni']} {cluster['cni_version']}",
                 os=cluster['os'],
                 docker_version=cluster['docker_version'],
                 nodes=Nodes(
                     control_plane=Node(
                         name=cluster['master_nodes'][0]['name'],
-                        ip=cluster['master_nodes'][0]['ipAddress']),
+                        ip=cluster['master_nodes'][0]['ipAddress']
+                    ),
                     workers=worker_nodes,
                     nfs=nfs_nodes
                 )
@@ -347,7 +395,43 @@ class NativeEntity(AbstractNativeEntity):
         return cluster_entity
 
     @classmethod
-    def sample_native_entity(cls, k8_runtime: str = shared_constants.ClusterEntityKind.NATIVE.value):  # noqa: E501
+    def get_sample_native_cluster_specification(cls, k8_runtime: str = shared_constants.ClusterEntityKind.NATIVE.value):  # noqa: E501
+        cluster_spec_field_descriptions = """# Short description of various properties used in this sample cluster configuration
+# api_version: Represents the payload version of the cluster specification. By default, empty.
+# kind: The kind of the Kubernetes cluster.
+#
+# metadata: This is a required section
+# metadata.cluster_name: Name of the cluster to be created or resized.
+# metadata.org_name: The name of the Organization in which cluster needs to be created or managed.
+# metadata.ovdc_name: The name of the Organization Virtual data center in which the cluster need to be created or managed.
+#
+# spec: User specification of the desired state of the cluster.
+# spec.control_plane: An optional sub-section for desired control-plane state of the cluster. The properties \"sizing_class\" and \"storage_profile\" can be specified only during the cluster creation phase. These properties will no longer be modifiable in further update operations like \"resize\" and \"upgrade\".
+# spec.control_plane.count: Number of control plane node(s). Only single control plane node is supported.
+# spec.control_plane.sizing_class: The compute sizing policy with which control-plane node needs to be provisioned in a given \"ovdc\". The specified sizing policy is expected to be pre-published to the given ovdc.
+# spec.control_plane.storage_profile: The storage-profile with which control-plane needs to be provisioned in a given \"ovdc\". The specified storage-profile is expected to be available on the given ovdc.
+#
+# spec.k8_distribution: This is a required sub-section.
+# spec.k8_distribution.template_name: Template name based on guest OS, Kubernetes version, and the Weave software version
+# spec.k8_distribution.template_revision: revision number
+#
+# spec.nfs: Optional sub-section for desired nfs state of the cluster. The properties \"sizing_class\" and \"storage_profile\" can be specified only during the cluster creation phase. These properties will no longer be modifiable in further update operations like \"resize\" and \"upgrade\".
+# spec.nfs.count: Nfs nodes can only be scaled-up; they cannot be scaled-down. Default value is 0.
+# spec.nfs.sizingClass: The compute sizing policy with which nfs node needs to be provisioned in a given \"ovdc\". The specified sizing policy is expected to be pre-published to the given ovdc.
+# spec.nfs.storageProfile: The storage-profile with which nfs needs to be provisioned in a given \"ovdc\". The specified storage-profile is expected to be available on the given ovdc.
+#
+# spec.settings: This is a required sub-section
+# spec.settings.network: This value is mandatory. Name of the Organization's virtual data center network
+# spec.settings.rollback_on_failure: Optional value that is true by default. On any cluster operation failure, if the value is set to true, affected node VMs will be automatically deleted.
+# spec.settings.ssh_key: Optional ssh key that users can use to log into the node VMs without explicitly providing passwords.
+#
+# spec.workers: Optional sub-section for the desired worker state of the cluster. The properties \"sizing_class\" and \"storage_profile\" can be specified only during the cluster creation phase. These properties will no longer be modifiable in further update operations like \"resize\" and \"upgrade\". Non uniform worker nodes in the clusters is not yet supported.
+# spec.workers.count: number of worker nodes (default value:1) Worker nodes can be scaled up and down.
+# spec.workers.sizing_class: The compute sizing policy with which worker nodes need to be provisioned in a given \"ovdc\". The specified sizing policy is expected to be pre-published to the given ovdc.
+# spec.workers.storage_profile: The storage-profile with which worker nodes need to be provisioned in a given \"ovdc\". The specified storage-profile is expected to be available on the given ovdc.
+#
+# status: Current state of the cluster in the server. This is not a required section for any of the operations.\n
+"""  # noqa: E501
         metadata = Metadata('cluster_name', 'organization_name',
                             'org_virtual_data_center_name')
         status = Status()
@@ -381,7 +465,12 @@ class NativeEntity(AbstractNativeEntity):
             nfs=nfs
         )
 
-        return NativeEntity(metadata=metadata,
-                            spec=cluster_spec,
-                            status=status,
-                            kind=k8_runtime)
+        native_entity_dict = NativeEntity(metadata=metadata,
+                                          spec=cluster_spec,
+                                          status=status,
+                                          kind=k8_runtime).to_dict()
+        # remove status part of the entity dict
+        del native_entity_dict['status']
+
+        sample_apply_spec = yaml.dump(native_entity_dict)
+        return cluster_spec_field_descriptions + sample_apply_spec

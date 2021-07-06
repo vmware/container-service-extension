@@ -597,7 +597,9 @@ def apply(ctx, cluster_config_file_path, generate_sample_config, k8_runtime, out
         if generate_sample_config:
             if not k8_runtime:
                 console_message_printer.general_no_color(ctx.get_help())
-                msg = "with option --sample you must specify either of options: --native or --tkg or --tkg-plus"  # noqa: E501
+                msg = "with option --sample you must specify either of options: --native or --tkg"  # noqa: E501
+                if utils.is_environment_variable_enabled(cli_constants.ENV_CSE_TKG_PLUS_ENABLED):  # noqa: E501
+                    msg += " or --tkg-plus"
                 CLIENT_LOGGER.error(msg)
                 raise Exception(msg)
             elif k8_runtime == shared_constants.ClusterEntityKind.TKG_PLUS \
@@ -644,7 +646,7 @@ def apply(ctx, cluster_config_file_path, generate_sample_config, k8_runtime, out
         CLIENT_LOGGER.debug(result)
     except Exception as e:
         stderr(e, ctx)
-        CLIENT_LOGGER.error(str(e))
+        CLIENT_LOGGER.error(str(e), exc_info=True)
 
 
 @cluster_group.command('delete-nfs',
@@ -1089,10 +1091,14 @@ Examples:
             k8_runtime = shared_constants.ClusterEntityKind.TKG.value
 
         client = ctx.obj['client']
-        # TODO(CLI): Check regarding is sysadmin client check
-        if not org:
-            ctx_profiles = ctx.obj['profiles']
-            org = ctx_profiles.get('org')
+        # Users should be explicit in their intent about the org on which the
+        # command needs to be executed.
+        is_system_user = client.is_sysadmin()
+        if not is_system_user and org is None:
+            org = ctx.obj['profiles'].get('org_in_use')
+        elif is_system_user and org is None:
+            raise Exception("Need to specify cluster org since logged in user is in system org")  # noqa: E501
+
         users_list = list(users)
         cluster = Cluster(client, k8_runtime)
         cluster.share_cluster(cluster_id, name, users_list, access_level_id,
@@ -1182,10 +1188,14 @@ Examples:
 
         # Determine cluster type and retrieve cluster id if needed
         client = ctx.obj['client']
-        # TODO(CLI): Check regarding is sysadmin client check
-        if not org:
-            ctx_profiles = ctx.obj['profiles']
-            org = ctx_profiles.get('org')
+        # Users should be explicit in their intent about the org on which the
+        # command needs to be executed.
+        is_system_user = client.is_sysadmin()
+        if not is_system_user and org is None:
+            org = ctx.obj['profiles'].get('org_in_use')
+        elif is_system_user and org is None:
+            raise Exception("Need to specify cluster org since logged in user is in system org")  # noqa: E501
+
         cluster = Cluster(client, k8_runtime)
         share_entries = cluster.list_share_entries(cluster_id, name, org, vdc)
         client_utils.print_paginated_result(share_entries, should_print_all)
@@ -1264,10 +1274,14 @@ Examples:
             k8_runtime = shared_constants.ClusterEntityKind.TKG.value
 
         client = ctx.obj['client']
-        # TODO(CLI): Check regarding why sysadmin check is excluded here
-        if not org:
-            ctx_profiles = ctx.obj['profiles']
-            org = ctx_profiles.get('org')
+        # Users should be explicit in their intent about the org on which the
+        # command needs to be executed.
+        is_system_user = client.is_sysadmin()
+        if not is_system_user and org is None:
+            org = ctx.obj['profiles'].get('org_in_use')
+        elif is_system_user and org is None:
+            raise Exception("Need to specify cluster org since logged in user is in system org")  # noqa: E501
+
         users_list = list(users)
         cluster = Cluster(client, k8_runtime)
         cluster.unshare_cluster(cluster_id, name, users_list, org, vdc)

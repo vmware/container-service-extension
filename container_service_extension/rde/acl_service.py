@@ -34,7 +34,7 @@ class ClusterACLService:
     def def_entity(self):
         if self._def_entity is None:
             entity_svc = def_entity_svc.DefEntityService(self._cloudapi_client)
-            self._def_entity = entity_svc.get_entity(self._cluster_id)
+            self._def_entity = entity_svc.get_tkg_or_def_entity(self._cluster_id)  # noqa: E501
         return self._def_entity
 
     @property
@@ -83,14 +83,31 @@ class ClusterACLService:
             user_id_to_acl_entry[acl_entry.memberId] = acl_entry
         return user_id_to_acl_entry
 
-    def share_def_entity(self, payload):
+    def share_def_entity(self, acl_entry: common_models.ClusterAclEntry):
         access_controls_path = \
             f'{cloudapi_constants.CloudApiResource.ENTITIES}/' \
             f'{self._cluster_id}/{cloudapi_constants.CloudApiResource.ACL}'
+        ent_kind = self.def_entity.entity.kind \
+            if hasattr(self.def_entity, 'entity') else self.def_entity.kind
+        if ent_kind in \
+                [shared_constants.ClusterEntityKind.NATIVE.value,
+                 shared_constants.ClusterEntityKind.TKG_PLUS.value]:
+            org_id = vcd_utils.extract_id(self.def_entity.org.id)
+        elif ent_kind == shared_constants.ClusterEntityKind.TKG.value:
+            vdc_name = self.def_entity.metadata.virtualDataCenterName
+            org_id = vcd_utils.get_org_id_from_vdc_name(
+                client=self._client,
+                vdc_name=vdc_name)
+        else:
+            raise Exception(f"Invalid entity kind: {ent_kind}")
+
+        payload = acl_entry.construct_filtered_dict(
+            include=shared_constants.DEF_ENTITY_ACCESS_CONTROL_KEYS)
         self._cloudapi_client.do_request(
             method=shared_constants.RequestMethod.POST,
             cloudapi_version=cloudapi_constants.CloudApiVersion.VERSION_1_0_0,
             resource_url_relative_path=access_controls_path,
+            additional_request_headers={server_constants.TENANT_CONTEXT_HEADER: org_id},  # noqa: E501
             payload=payload)
 
     def unshare_def_entity(self, acl_id):
@@ -102,9 +119,8 @@ class ClusterACLService:
             cloudapi_version=cloudapi_constants.CloudApiVersion.VERSION_1_0_0,
             resource_url_relative_path=delete_path)
 
-    def update_native_def_entity_acl(self, update_acl_entries: List[
-        common_models.ClusterAclEntry], prev_user_id_to_acl_entry: Dict[str,
-                                                                        common_models.ClusterAclEntry]):  # noqa: E501
+    def update_native_def_entity_acl(self, update_acl_entries: List[common_models.ClusterAclEntry],  # noqa: E501
+                                     prev_user_id_to_acl_entry: Dict[str, common_models.ClusterAclEntry]):  # noqa: E501
         """Update native defined entity acl.
 
         :param list update_acl_entries: list of def_models.ClusterAclEntry
@@ -116,20 +132,27 @@ class ClusterACLService:
         own_prev_user_id_to_acl_entry = prev_user_id_to_acl_entry.copy()
 
         # Share defined entity
+        ent_org_user_id_names_dict = vcd_utils.create_org_user_id_to_name_dict(
+            client=self._client,
+            org_name=self.def_entity.org.name)
         user_acl_level_dict = {}
-        payload = {
-            shared_constants.AccessControlKey.GRANT_TYPE:
-                shared_constants.MEMBERSHIP_GRANT_TYPE,
-            shared_constants.AccessControlKey.MEMBER_ID: None,
-            shared_constants.AccessControlKey.ACCESS_LEVEL_ID: None
-        }
+        share_acl_entry = common_models.ClusterAclEntry(
+            grantType=shared_constants.MEMBERSHIP_GRANT_TYPE,
+            memberId=None,
+            accessLevelId=None)
         for acl_entry in update_acl_entries:
             user_id = acl_entry.memberId
+            if ent_org_user_id_names_dict.get(user_id) is None:
+                # This user must be from the system org and does not need
+                # to be reshared. Sharing can not happen from a tenant user
+                # to a system user.
+                del own_prev_user_id_to_acl_entry[user_id]
+                continue
             acl_level = acl_entry.accessLevelId
-            payload[shared_constants.AccessControlKey.MEMBER_ID] = user_id
-            payload[shared_constants.AccessControlKey.ACCESS_LEVEL_ID] = acl_level  # noqa: E501
+            share_acl_entry.memberId = user_id
+            share_acl_entry.accessLevelId = acl_level
             user_acl_level_dict[user_id] = acl_level
-            self.share_def_entity(payload)
+            self.share_def_entity(share_acl_entry)
 
             # Remove entry from previous user acl info
             if own_prev_user_id_to_acl_entry.get(user_id):
@@ -185,7 +208,16 @@ class ClusterACLService:
         vapp_access_settings: lxml.objectify.ObjectifiedElement = \
             self.vapp.get_access_settings()
         api_uri = self._client.get_api_uri()
+        system_user_names: set = None
+        if self._client.is_sysadmin():
+            system_user_names = vcd_utils.get_org_user_names(
+                client=self._client,
+                org_name=shared_constants.SYSTEM_ORG_NAME)
         for acl_entry in update_cluster_acl_entries:
+            user_name = acl_entry.username
+            # Skip system users since sharing can't be outside an org
+            if system_user_names and user_name in system_user_names:
+                continue
             user_id = pyvcloud_utils.extract_id(acl_entry.memberId)
             access_level = pyvcloud_utils.extract_id(acl_entry.accessLevelId)
 
@@ -194,7 +226,7 @@ class ClusterACLService:
                 access_level = server_constants.CHANGE_ACCESS
             user_setting = form_vapp_access_setting_entry(
                 access_level=access_level,
-                name=acl_entry.username,
+                name=user_name,
                 href=f'{api_uri}{server_constants.ADMIN_USER_PATH}{user_id}',
                 user_id=user_id)
             total_vapp_access_settings.append(user_setting)
@@ -206,10 +238,18 @@ class ClusterACLService:
                 {server_constants.VappAccessKey.ACCESS_SETTING: total_vapp_access_settings}  # noqa: E501
         }
 
+        org_id = pyvcloud_utils.extract_id(self.def_entity.org.id)
+        org_name = self.def_entity.org.name
+        extra_vapp_headers = {
+            server_constants.TENANT_CONTEXT_HEADER: org_id,
+            server_constants.AUTH_CONTEXT_HEADER: org_name,
+            server_constants.VCLOUD_AUTHORIZATION_HEADER: org_name
+        }
         self._client.post_resource(
             uri=f'{self.vapp.href}{def_constants.ACTION_CONTROL_ACCESS_PATH}',
             contents=vapp_share_contents,
-            media_type='application/*+json')
+            media_type='application/*+json',
+            extra_headers=extra_vapp_headers)
 
     def get_cluster_entity(self):
         return self.def_entity

@@ -111,7 +111,7 @@ def check_cse_installation(config, msg_update_callback=utils.NullPrinter()):
                         log_headers=log_wire,
                         log_bodies=log_wire)
         credentials = BasicLoginCredentials(config['vcd']['username'],
-                                            server_constants.SYSTEM_ORG_NAME,
+                                            shared_constants.SYSTEM_ORG_NAME,
                                             config['vcd']['password'])
         client.set_credentials(credentials)
 
@@ -281,7 +281,7 @@ def install_cse(config_file_name, config, skip_template_creation,
                         log_headers=log_wire,
                         log_bodies=log_wire)
         credentials = BasicLoginCredentials(config['vcd']['username'],
-                                            server_constants.SYSTEM_ORG_NAME,
+                                            shared_constants.SYSTEM_ORG_NAME,
                                             config['vcd']['password'])
         client.set_credentials(credentials)
         msg = f"Connected to vCD as system administrator: " \
@@ -468,7 +468,7 @@ def install_template(template_name, template_revision, config_file_name,
                         log_headers=log_wire,
                         log_bodies=log_wire)
         credentials = BasicLoginCredentials(config['vcd']['username'],
-                                            server_constants.SYSTEM_ORG_NAME,
+                                            shared_constants.SYSTEM_ORG_NAME,
                                             config['vcd']['password'])
         client.set_credentials(credentials)
         msg = f"Connected to vCD as system administrator: " \
@@ -637,7 +637,7 @@ def upgrade_cse(config_file_name, config, skip_template_creation,
                         log_headers=log_wire,
                         log_bodies=log_wire)
         credentials = BasicLoginCredentials(config['vcd']['username'],
-                                            server_constants.SYSTEM_ORG_NAME,
+                                            shared_constants.SYSTEM_ORG_NAME,
                                             config['vcd']['password'])
         client.set_credentials(credentials)
         msg = f"Connected to vCD as system administrator: " \
@@ -1241,7 +1241,7 @@ def _register_def_schema(client: Client,
             # recreated and newly added rights are effective for the user.
             client.logout()
             credentials = BasicLoginCredentials(config['vcd']['username'],
-                                                server_constants.SYSTEM_ORG_NAME,  # noqa: E501
+                                                shared_constants.SYSTEM_ORG_NAME,  # noqa: E501
                                                 config['vcd']['password'])
             client.set_credentials(credentials)
     except cse_exception.DefNotSupportedException:
@@ -1570,6 +1570,7 @@ def _update_metadata_for_existing_templates(client: Client, config: dict,
             # metadata keys barring the catalog_item_name.
             # Add catalog_item_name to the dict remote_template_descriptor
             remote_template_descriptor[server_constants.LocalTemplateKey.CATALOG_ITEM_NAME] = catalog_item_name  # noqa: E501
+            remote_template_descriptor[server_constants.LocalTemplateKey.COOKBOOK_VERSION] = str(rtm.cookbook_version)  # noqa: E501
 
             # New keys to be added (min_cse_version and max_cse_version)
             # will already be in remote_template_descriptor.
@@ -1577,15 +1578,15 @@ def _update_metadata_for_existing_templates(client: Client, config: dict,
             ltm.save_metadata(client, catalog_org_name,
                               catalog_name, catalog_item_name,
                               remote_template_descriptor, metadata_key_list=new_metadata_key_list)  # noqa: E501
-            msg = f"Successfully updated template metadata " \
+            msg = f"Successfully updated local template metadata " \
                   f"for {catalog_item_name}"
             INSTALL_LOGGER.debug(msg)
             msg_update_callback.general(msg)
         else:
             # Template not supported in the target CSE version.
             # Do not update template metadata
-            msg = f"Template {catalog_item_name} not supported, Skipping " \
-                  f"template metadata update."
+            msg = f"Local template {catalog_item_name} not supported, " \
+                  f"Skipping template metadata update."
             INSTALL_LOGGER.debug(msg)
             msg_update_callback.general(msg)
 
@@ -1667,6 +1668,7 @@ def _process_existing_templates(client: Client, config: dict,
             client,
             catalog_name=catalog_name,  # noqa: E501
             org_name=org_name,
+            ignore_metadata_keys=[server_constants.LegacyLocalTemplateKey.COMPUTE_POLICY],  # noqa: E501
             legacy_mode=True,
             logger_debug=INSTALL_LOGGER)
     # update metadata with min_cse_version and max_cse_version for all
@@ -1763,9 +1765,13 @@ def _install_single_template(
         template[remote_template_keys.REVISION])
 
     # remote template data is a super set of local template data, barring
-    # the key 'catalog_item_name'
+    # the key 'catalog_item_name' and 'cookbook_version' (if CSE is running in
+    #  non-legacy mode)
     template_data = dict(template)
     template_data[localTemplateKey.CATALOG_ITEM_NAME] = catalog_item_name
+    if not LEGACY_MODE:
+        template_data[localTemplateKey.COOKBOOK_VERSION] = \
+            remote_template_manager.cookbook_version
     template_metadata_keys = [k for k in localTemplateKey]
 
     missing_keys = [k for k in template_metadata_keys
@@ -1780,7 +1786,7 @@ def _install_single_template(
         f"{template[remote_template_keys.CNI_VERSION].replace('.', '')}-vm"
     )
     build_params = {
-        templateBuildKey.TEMPLATE_NAME: template[remote_template_keys.NAME],  # noqa: E501
+        templateBuildKey.TEMPLATE_NAME: template[remote_template_keys.NAME],
         templateBuildKey.TEMPLATE_REVISION: template[remote_template_keys.REVISION],  # noqa: E501
         templateBuildKey.SOURCE_OVA_NAME: template[remote_template_keys.SOURCE_OVA_NAME],  # noqa: E501
         templateBuildKey.SOURCE_OVA_HREF: template[remote_template_keys.SOURCE_OVA_HREF],  # noqa: E501
@@ -1793,10 +1799,11 @@ def _install_single_template(
         templateBuildKey.TEMP_VAPP_NAME: template[remote_template_keys.NAME] + '_temp',  # noqa: E501
         templateBuildKey.TEMP_VM_NAME: temp_vm_name,
         templateBuildKey.CPU: template[remote_template_keys.CPU],
-        templateBuildKey.MEMORY: template[remote_template_keys.MEMORY],  # noqa: E501
+        templateBuildKey.MEMORY: template[remote_template_keys.MEMORY],
         templateBuildKey.NETWORK_NAME: network_name,
-        templateBuildKey.IP_ALLOCATION_MODE: ip_allocation_mode,  # noqa: E501
-        templateBuildKey.STORAGE_PROFILE: storage_profile
+        templateBuildKey.IP_ALLOCATION_MODE: ip_allocation_mode,
+        templateBuildKey.STORAGE_PROFILE: storage_profile,
+        templateBuildKey.REMOTE_COOKBOOK_VERSION: remote_template_manager.cookbook_version  # noqa: E501
     }
     if not LEGACY_MODE:  # noqa: E501
         if template.get(
@@ -2302,10 +2309,15 @@ def _upgrade_non_legacy_clusters(
                 INSTALL_LOGGER.info(msg)
                 msg_update_callback.info(msg)
                 _upgrade_cluster_rde(
-                    client, cluster,
-                    def_entity, runtime_rde_version,
-                    target_entity_type, entity_svc,
-                    site, msg_update_callback=msg_update_callback)
+                    client=client,
+                    cluster=cluster,
+                    rde_to_upgrade=def_entity,
+                    runtime_rde_version=runtime_rde_version,
+                    target_entity_type=target_entity_type,
+                    entity_svc=entity_svc,
+                    site=site,
+                    msg_update_callback=msg_update_callback
+                )
             else:
                 msg = f"Skipping cluster '{cluster['name']}' " \
                     f"since it has already been processed."
@@ -2407,7 +2419,7 @@ def _create_cluster_rde(client, cluster, kind, runtime_rde_version,
     org_resource = vcd_utils.get_org(client, org_name=cluster['org_name'])
     org_id = org_resource.href.split('/')[-1]
     def_entity = common_models.DefEntity(entity=cluster_entity, entityType=target_entity_type.id)  # noqa: E501
-    entity_svc.create_entity(target_entity_type.id, entity=def_entity, tenant_org_context=org_id)  # noqa: E501
+    entity_svc.create_entity(target_entity_type.id, entity=def_entity, tenant_org_context=org_id, delete_status_from_payload=False)  # noqa: E501
 
     def_entity = entity_svc.get_native_rde_by_name_and_rde_version(cluster['name'], runtime_rde_version)  # noqa: E501
     def_entity_id = def_entity.id
@@ -2482,7 +2494,7 @@ def _upgrade_cluster_rde(client, cluster, rde_to_upgrade,
 
     # Adding missing fields in RDE 2.0
     # TODO: Need to find a better approach to avoid conditional logic for
-    #   filling missing properties.
+    # filling missing properties.
     if semantic_version.Version(runtime_rde_version).major == \
             semantic_version.Version(def_constants.RDEVersion.RDE_2_0_0).major:
         # RDE upgrade possible only from RDE 1.0 or RDE 2.x
@@ -2491,13 +2503,27 @@ def _upgrade_cluster_rde(client, cluster, rde_to_upgrade,
         native_entity_2_x.status.cloud_properties.site = site
         native_entity_2_x.metadata.site = site
 
+        # This heavily relies on the fact that the source RDE is v1.0.0
+        try:
+            vapp_href = rde_to_upgrade.externalId
+            vapp = VApp(client, href=vapp_href)
+            control_plane_ip = vapp.get_primary_ip(
+                vm_name=rde_to_upgrade.entity.status.nodes.control_plane.name)
+            if rde_to_upgrade.entity.status.exposed:
+                native_entity_2_x.status.nodes.control_plane.ip = \
+                    control_plane_ip
+        except Exception as err:
+            INSTALL_LOGGER.error(str(err), exc_info=True)
+
     upgraded_rde: common_models.DefEntity = \
-        entity_svc.upgrade_entity(rde_to_upgrade.id,
-                                  new_native_entity,
-                                  target_entity_type.id)
+        entity_svc.upgrade_entity(
+            rde_to_upgrade.id,
+            new_native_entity,
+            target_entity_type.id
+        )
 
     # Update cluster metadata with new cluster id. This step is still needed
-    # because the format of the entity ID has changed to ommit version string.
+    # because the format of the entity ID has changed to omit version string.
     tags = {
         server_constants.ClusterMetadataKey.CLUSTER_ID: upgraded_rde.id,
         server_constants.ClusterMetadataKey.CSE_VERSION: server_utils.get_installed_cse_version()  # noqa: E501

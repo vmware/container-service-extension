@@ -1,7 +1,7 @@
 # container-service-extension
 # Copyright (c) 2021 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
-from dataclasses import asdict, dataclass
+from dataclasses import dataclass
 from enum import Enum
 from enum import unique
 from typing import List, Optional
@@ -9,6 +9,7 @@ from typing import List, Optional
 from dataclasses_json import dataclass_json, Undefined
 
 from container_service_extension.common.constants import shared_constants as shared_constants  # noqa: E501
+import container_service_extension.common.constants.server_constants as server_constants  # noqa: E501
 from container_service_extension.rde import utils as def_utils
 from container_service_extension.rde.behaviors.behavior_model import BehaviorAcl, BehaviorOperation  # noqa: E501
 from container_service_extension.rde.constants import \
@@ -123,7 +124,7 @@ class Org:
     id: Optional[str] = None
 
 
-@dataclass_json
+@dataclass_json(undefined=Undefined.EXCLUDE)
 @dataclass
 class DefEntity:
     """Represents defined entity instance.
@@ -180,18 +181,26 @@ class Ovdc:
 
 
 @dataclass()
+class Tenant:
+    name: Optional[str] = None
+    id: Optional[str] = None
+
+
+@dataclass_json(undefined=Undefined.EXCLUDE)
+@dataclass(frozen=False)
 class ClusterAclEntry:
-    accessLevelId: Optional[str] = None
+    accessLevelId: Optional[server_constants.AclAccessLevelId] = None
     memberId: Optional[str] = None
     id: Optional[str] = None
     grantType: Optional[str] = None
     objectId: Optional[str] = None
     username: Optional[str] = None
+    tenant: Optional[Tenant] = None
 
     def construct_filtered_dict(self, include=None):
         if include is None:
             include = []
-        orig_dict = asdict(self)
+        orig_dict = self.to_dict()
         include_set = set(include)
         filtered_dict = {}
         for key, value in orig_dict.items():

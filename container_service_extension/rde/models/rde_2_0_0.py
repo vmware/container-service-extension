@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from typing import List, Optional
 
 from dataclasses_json import dataclass_json, LetterCase
+import yaml
 
 import container_service_extension.common.constants.server_constants as server_constants  # noqa: E501
 import container_service_extension.common.constants.shared_constants as shared_constants  # noqa: E501
@@ -94,6 +95,7 @@ class Network:
     cni: Optional[Cni] = None
     pods: Optional[Pods] = None
     services: Optional[Services] = None
+    expose: bool = False
 
 
 @dataclass_json(letter_case=LetterCase.CAMEL)
@@ -102,7 +104,7 @@ class Settings:
     ovdc_network: str
     ssh_key: Optional[str] = None
     rollback_on_failure: bool = True
-    network: Optional[Network] = None
+    network: Network = Network()
 
 
 @dataclass_json(letter_case=LetterCase.CAMEL)
@@ -145,6 +147,7 @@ class CloudProperties:
     ssh_key: Optional[str] = None
 
     rollback_on_failure: bool = True
+    exposed: bool = False
 
 
 @dataclass_json(letter_case=LetterCase.CAMEL)
@@ -164,10 +167,10 @@ class Status:
     kubernetes: Optional[str] = None
     docker_version: Optional[str] = None
     os: Optional[str] = None
+    external_ip: Optional[str] = None
     nodes: Optional[Nodes] = None
     uid: Optional[str] = None
     cloud_properties: CloudProperties = CloudProperties()
-    exposed: bool = False
     persistent_volumes: Optional[List[str]] = None
     virtual_IPs: Optional[List[str]] = None
     private: Optional[Private] = None
@@ -185,7 +188,6 @@ class ClusterSpec:
     settings: Settings
     topology: Topology = Topology()
     distribution: Distribution = Distribution()
-    expose: bool = False
 
 
 @dataclass_json(letter_case=LetterCase.CAMEL)
@@ -215,9 +217,12 @@ class NativeEntity(AbstractNativeEntity):
                 },
             }
             "settings": {
-                "network": "net",
+                "ovdc_network": "net",
                 "sshKey": null,
                 "rollbackOnFailure": true
+                "network" : {
+                    "expose" : false
+                }
             },
             "distribution": {
                 "templateName": "k81.17",
@@ -269,13 +274,15 @@ class NativeEntity(AbstractNativeEntity):
             )
             # NOTE: since details for the field `site` is not present in
             # RDE 1.0, it is left empty
-            cloud_properties = CloudProperties(site=None,
-                                               org_name=rde_1_x_entity.metadata.org_name,  # noqa: E501
-                                               virtual_data_center_name=rde_1_x_entity.metadata.ovdc_name,  # noqa: E501
-                                               ovdc_network_name=rde_1_x_entity.spec.settings.network,  # noqa: E501
-                                               distribution=distribution,
-                                               ssh_key=rde_1_x_entity.spec.settings.ssh_key,  # noqa: E501
-                                               rollback_on_failure=rde_1_x_entity.spec.settings.rollback_on_failure)  # noqa: E501
+            cloud_properties = CloudProperties(
+                site=None,
+                org_name=rde_1_x_entity.metadata.org_name,
+                virtual_data_center_name=rde_1_x_entity.metadata.ovdc_name,
+                ovdc_network_name=rde_1_x_entity.spec.settings.network,
+                distribution=distribution,
+                ssh_key=rde_1_x_entity.spec.settings.ssh_key,
+                rollback_on_failure=rde_1_x_entity.spec.settings.rollback_on_failure,  # noqa: E501
+                exposed=rde_1_x_entity.status.exposed)
             # RDE 1.0 don't have storage_profile in Node definition
             control_plane = Node(
                 name=rde_1_x_entity.status.nodes.control_plane.name,
@@ -292,10 +299,20 @@ class NativeEntity(AbstractNativeEntity):
                 workers.append(worker_node_2_x)
             nfs_nodes = []
             for nfs_node in rde_1_x_entity.status.nodes.nfs:
-                nfs_node_2_x = Node(
+                # The nfs_node.export field is a string
+                # however when it was created by cluster_service_1_x.py
+                # it just took a list and string-ified it. The piece of
+                # code below reverses the string representation of the list
+                # back into a list of strings.
+                export_list_string = nfs_node.exports
+                export_list_string.replace('[', '').replace(']', '').replace('\'', '')  # noqa: E501
+                export_list = export_list_string.split(", ")
+
+                nfs_node_2_x = NfsNode(
                     name=nfs_node.name,
                     ip=nfs_node.ip,
-                    sizing_class=nfs_node.sizing_class
+                    sizing_class=nfs_node.sizing_class,
+                    exports=export_list
                 )
                 nfs_nodes.append(nfs_node_2_x)
             nodes = Nodes(
@@ -303,6 +320,11 @@ class NativeEntity(AbstractNativeEntity):
                 workers=workers,
                 nfs=nfs_nodes
             )
+
+            external_ip = None
+            if rde_1_x_entity.status.exposed:
+                external_ip = rde_1_x_entity.status.nodes.control_plane.ip
+
             # NOTE: since details for the field `uid` is not present in
             # RDE 1.0, it is left empty.
             # Proper value for `uid` should be populated after RDE is converted
@@ -313,14 +335,14 @@ class NativeEntity(AbstractNativeEntity):
                             kubernetes=rde_1_x_entity.status.kubernetes,
                             docker_version=rde_1_x_entity.status.docker_version,  # noqa: E501
                             os=rde_1_x_entity.status.os,
+                            external_ip=external_ip,
                             nodes=nodes,
                             uid=None,
-                            cloud_properties=cloud_properties,
-                            exposed=rde_1_x_entity.status.exposed)
+                            cloud_properties=cloud_properties)
             # NOTE: since details for the field `site` is not present in
             # RDE 1.0, it is left empty.
             # Proper value for `site` should be populated after RDE is
-            # converted as `site` is a required property in Metadata
+            # converted. Since, `site` is a required property in Metadata
             # for RDE 2.0
             metadata = Metadata(name=rde_1_x_entity.metadata.cluster_name,
                                 org_name=rde_1_x_entity.metadata.org_name,
@@ -330,31 +352,41 @@ class NativeEntity(AbstractNativeEntity):
                 control_plane=ControlPlane(
                     sizing_class=rde_1_x_entity.spec.control_plane.sizing_class,  # noqa: E501
                     storage_profile=rde_1_x_entity.spec.control_plane.storage_profile,  # noqa: E501
-                    count=rde_1_x_entity.spec.control_plane.count),
+                    count=rde_1_x_entity.spec.control_plane.count
+                ),
                 workers=Workers(
                     sizing_class=rde_1_x_entity.spec.workers.sizing_class,
                     storage_profile=rde_1_x_entity.spec.workers.storage_profile,  # noqa: E501
-                    count=rde_1_x_entity.spec.workers.count),
+                    count=rde_1_x_entity.spec.workers.count
+                ),
                 nfs=Nfs(
                     sizing_class=rde_1_x_entity.spec.nfs.sizing_class,
                     storage_profile=rde_1_x_entity.spec.nfs.storage_profile,
-                    count=rde_1_x_entity.spec.nfs.count),
+                    count=rde_1_x_entity.spec.nfs.count
+                ),
             )
             spec = ClusterSpec(
                 settings=Settings(
                     ovdc_network=rde_1_x_entity.spec.settings.network,
                     ssh_key=rde_1_x_entity.spec.settings.ssh_key,
-                    rollback_on_failure=rde_1_x_entity.spec.settings.rollback_on_failure),  # noqa: E501,
+                    rollback_on_failure=rde_1_x_entity.spec.settings.rollback_on_failure,  # noqa: E501
+                    network=Network(
+                        expose=rde_1_x_entity.spec.expose
+                    )
+                ),
                 topology=topology,
                 distribution=Distribution(
                     template_name=rde_1_x_entity.spec.k8_distribution.template_name,  # noqa: E501
-                    template_revision=rde_1_x_entity.spec.k8_distribution.template_revision),  # noqa: E501
-                expose=rde_1_x_entity.spec.expose)
-            rde_2_entity = cls(metadata=metadata,
-                               spec=spec,
-                               status=status,
-                               kind=rde_1_x_entity.kind,
-                               api_version=rde_constants.PAYLOAD_VERSION_2_0)
+                    template_revision=rde_1_x_entity.spec.k8_distribution.template_revision  # noqa: E501
+                )
+            )
+            rde_2_entity = cls(
+                metadata=metadata,
+                spec=spec,
+                status=status,
+                kind=rde_1_x_entity.kind,
+                api_version=rde_constants.PAYLOAD_VERSION_2_0
+            )
             return rde_2_entity
 
     @classmethod
@@ -373,21 +405,34 @@ class NativeEntity(AbstractNativeEntity):
                 Node(name=item['name'], ip=item['ipAddress']))
         nfs_nodes = []
         for item in cluster['nfs_nodes']:
-            nfs_nodes.append(NfsNode(
-                name=item['name'],
-                ip=item['ipAddress'],
-                exports=item['exports']))
+            # The item['exports'] field is a string
+            # however when it was created by vcd_broker.py
+            # it just took a list and string-ified it. The piece of
+            # code below reverses the string representation of the list
+            # back into a list of strings.
+            exports_list_string = item['exports']
+            exports_list_string.replace('[', '').replace(']', '').replace('\'', '')  # noqa: E501
+            exports_list = exports_list_string.split(", ")
+
+            nfs_nodes.append(
+                NfsNode(
+                    name=item['name'],
+                    ip=item['ipAddress'],
+                    exports=exports_list
+                )
+            )
 
         k8_distribution = Distribution(
             template_name=cluster['template_name'],
             template_revision=int(cluster['template_revision']))
 
-        cloud_properties = CloudProperties(site=site,
-                                           org_name=cluster['org_name'],
-                                           virtual_data_center_name=cluster['vdc_name'],  # noqa: E501
-                                           ovdc_network_name=cluster['network_name'],  # noqa: E501
-                                           distribution=k8_distribution,
-                                           ssh_key='')
+        cloud_properties = CloudProperties(
+            site=site,
+            org_name=cluster['org_name'],
+            virtual_data_center_name=cluster['vdc_name'],
+            ovdc_network_name=cluster['network_name'],
+            distribution=k8_distribution,
+            ssh_key='')
         topology = Topology(
             workers=Workers(
                 count=len(cluster['nodes']),
@@ -407,7 +452,7 @@ class NativeEntity(AbstractNativeEntity):
             spec=ClusterSpec(
                 topology=topology,
                 settings=Settings(
-                    network=cluster['network_name'],
+                    ovdc_network=cluster['network_name'],
                     ssh_key=""
                 ),
                 distribution=k8_distribution
@@ -417,7 +462,7 @@ class NativeEntity(AbstractNativeEntity):
                     server_constants.DefEntityOperation.CREATE,
                     server_constants.DefEntityOperationStatus.SUCCEEDED)
                 ),
-                kubernetes=f"{cluster['kubernetes']} {cluster['kubernetes_version']}", # noqa: E501
+                kubernetes=f"{cluster['kubernetes']} {cluster['kubernetes_version']}",  # noqa: E501
                 cni=f"{cluster['cni']} {cluster['cni_version']}",
                 os=cluster['os'],
                 docker_version=cluster['docker_version'],
@@ -442,7 +487,49 @@ class NativeEntity(AbstractNativeEntity):
         return cluster_entity
 
     @classmethod
-    def sample_native_entity(cls, k8_runtime: str = shared_constants.ClusterEntityKind.NATIVE.value):  # noqa: E501
+    def get_sample_native_cluster_specification(cls, k8_runtime: str = shared_constants.ClusterEntityKind.NATIVE.value):  # noqa: E501
+        """Create apply command cluster specification description.
+
+        :returns: ClusterSpec field description
+        :rtype: str
+        """
+        cluster_spec_field_descriptions = """# Short description of various properties used in this sample cluster configuration
+# apiVersion: Represents the payload version of the cluster specification. By default, \"cse.vmware.com/v2.0\" is used.
+# kind: The kind of the Kubernetes cluster.
+#
+# metadata: This is a required section
+# metadata.name: Name of the cluster to be created or resized.
+# metadata.orgName: The name of the Organization in which cluster needs to be created or managed.
+# metadata.virtualDataCenterName: The name of the Organization Virtual data center in which the cluster need to be created or managed.
+# metadata.site: VCD site domain name where the cluster should be deployed.
+#
+# spec: User specification of the desired state of the cluster.
+# spec.topology.controlPlane: An optional sub-section for desired control-plane state of the cluster. The properties \"sizingClass\" and \"storageProfile\" can be specified only during the cluster creation phase. These properties will no longer be modifiable in further update operations like \"resize\" and \"upgrade\".
+# spec.topology.controlPlane.count: Number of control plane node(s). Only single control plane node is supported.
+# spec.topology.controlPlane.sizingClass: The compute sizing policy with which control-plane node needs to be provisioned in a given \"ovdc\". The specified sizing policy is expected to be pre-published to the given ovdc.
+# spec.topology.controlPlane.storageProfile: The storage-profile with which control-plane needs to be provisioned in a given \"ovdc\". The specified storage-profile is expected to be available on the given ovdc.
+#
+# spec.distribution: This is a required sub-section.
+# spec.distribution.templateName: Template name based on guest OS, Kubernetes version, and the Weave software version
+# spec.distribution.templateRevision: revision number
+#
+# spec.nfs: Optional sub-section for desired nfs state of the cluster. The properties \"sizingClass\" and \"storageProfile\" can be specified only during the cluster creation phase. These properties will no longer be modifiable in further update operations like \"resize\" and \"upgrade\".
+# spec.nfs.count: Nfs nodes can only be scaled-up; they cannot be scaled-down. Default value is 0.
+# spec.nfs.sizingClass: The compute sizing policy with which nfs node needs to be provisioned in a given \"ovdc\". The specified sizing policy is expected to be pre-published to the given ovdc.
+# spec.nfs.storageProfile: The storage-profile with which nfs needs to be provisioned in a given \"ovdc\". The specified storage-profile is expected to be available on the given ovdc.
+#
+# spec.settings: This is a required sub-section
+# spec.settings.ovdcNetwork: This value is mandatory. Name of the Organization's virtual data center network
+# spec.settings.rollbackOnFailure: Optional value that is true by default. On any cluster operation failure, if the value is set to true, affected node VMs will be automatically deleted.
+# spec.settings.sshKey: Optional ssh key that users can use to log into the node VMs without explicitly providing passwords.
+#
+# spec.workers: Optional sub-section for the desired worker state of the cluster. The properties \"sizingClass\" and \"storageProfile\" can be specified only during the cluster creation phase. These properties will no longer be modifiable in further update operations like \"resize\" and \"upgrade\". Non uniform worker nodes in the clusters is not yet supported.
+# spec.workers.count: number of worker nodes (default value:1) Worker nodes can be scaled up and down.
+# spec.workers.sizingClass: The compute sizing policy with which worker nodes need to be provisioned in a given \"ovdc\". The specified sizing policy is expected to be pre-published to the given ovdc.
+# spec.workers.storageProfile: The storage-profile with which worker nodes need to be provisioned in a given \"ovdc\". The specified storage-profile is expected to be available on the given ovdc.
+#
+# status: Current state of the cluster in the server. This is not a required section for any of the operations.\n
+"""  # noqa: E501
         metadata = Metadata('cluster_name', 'organization_name',
                             'org_virtual_data_center_name', 'VCD_site')
         status = Status()
@@ -480,8 +567,30 @@ class NativeEntity(AbstractNativeEntity):
             settings=settings,
         )
 
-        return NativeEntity(api_version=rde_constants.PAYLOAD_VERSION_2_0,
-                            metadata=metadata,
-                            spec=cluster_spec,
-                            status=status,
-                            kind=k8_runtime)
+        native_entity_dict = NativeEntity(
+            api_version=rde_constants.PAYLOAD_VERSION_2_0,
+            metadata=metadata,
+            spec=cluster_spec,
+            status=status,
+            kind=k8_runtime).to_dict()
+
+        # remove status part of the entity dict
+        del native_entity_dict['status']
+
+        # Hiding certain portion of the network spec section for
+        # Andromeda (CSE 3.1) spec.settings.network is targeted
+        # for CSE 3.1.1 to accommodate Antrea as CNI
+        # Below line can be deleted post Andromeda (CSE 3.1)
+        del native_entity_dict['spec']['settings']['network']['cni']
+        del native_entity_dict['spec']['settings']['network']['pods']
+        del native_entity_dict['spec']['settings']['network']['services']
+        # Hiding the cpu and memory properties from controlPlane and workers
+        # for Andromeda (CSE 3.1). Below lines can be deleted once cpu and
+        # memory support is added in CSE 3.1.1
+        del native_entity_dict['spec']['topology']['controlPlane']['cpu']
+        del native_entity_dict['spec']['topology']['controlPlane']['memory']
+        del native_entity_dict['spec']['topology']['workers']['cpu']
+        del native_entity_dict['spec']['topology']['workers']['memory']
+
+        sample_apply_spec = yaml.dump(native_entity_dict)
+        return cluster_spec_field_descriptions + sample_apply_spec

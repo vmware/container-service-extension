@@ -10,6 +10,7 @@ from enum import unique
 
 # vCD API versions supported by CSE
 SUPPORTED_VCD_API_VERSIONS = ['33.0', '34.0', '35.0', '36.0']
+API_VERSION_37_ALPHA = '37.0.0-alpha'
 
 CSE_URL_FRAGMENT = 'cse'
 PKS_URL_FRAGMENT = 'pks'
@@ -78,6 +79,10 @@ ACCESS_LEVEL_TYPE_TO_ID = {
 # CSE Pagination default values
 CSE_PAGINATION_FIRST_PAGE_NUMBER = 1
 CSE_PAGINATION_DEFAULT_PAGE_SIZE = 25
+
+# System org constants
+SYSTEM_ORG_NAME = 'system'
+SYSTEM_USER_GENERIC_NAME = 'system user'
 
 
 @unique
@@ -186,6 +191,11 @@ class AccessControlKey(str, Enum):
     HREF = 'href'
     SUBJECT = 'subject'
     USERNAME = 'username'
+
+
+DEF_ENTITY_ACCESS_CONTROL_KEYS = [AccessControlKey.GRANT_TYPE,
+                                  AccessControlKey.ACCESS_LEVEL_ID,
+                                  AccessControlKey.MEMBER_ID]
 
 
 @unique

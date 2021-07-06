@@ -49,12 +49,15 @@ DELETE_NFS_NODE_BEHAVIOR_ID = f"{BEHAVIOR_INTERFACE_ID_PREFIX}:" \
 class ExecutionProperties:
     serviceId: str = MQTT_EXTENSION_URN
     # TODO Remove this property once Extensibility team sets the default value.
-    invocation_timeout: int = 216000
+    invocation_timeout: int = 86400
+    actAsToken: bool = True
 
     def __init__(self, serviceId: str = MQTT_EXTENSION_URN,
-                 invocation_timeout: int = 86400, **kwargs):
+                 invocation_timeout: int = 86400, actAsToken: bool = True,
+                 **kwargs):
         self.serviceId = serviceId
         self.invocation_timeout = invocation_timeout
+        self.actAsToken = actAsToken
 
 
 @dataclass

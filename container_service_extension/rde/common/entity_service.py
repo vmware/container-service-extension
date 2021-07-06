@@ -9,8 +9,10 @@ from typing import List, Tuple, Union
 from pyvcloud.vcd.client import ApiVersion
 from requests.exceptions import HTTPError
 
+import container_service_extension.common.constants.shared_constants as shared_constants  # noqa: E501
 from container_service_extension.common.constants.shared_constants import CSE_PAGINATION_DEFAULT_PAGE_SIZE, PaginationKey  # noqa: E501
 from container_service_extension.common.constants.shared_constants import CSE_PAGINATION_FIRST_PAGE_NUMBER  # noqa: E501
+from container_service_extension.common.constants.shared_constants import HttpResponseHeader  # noqa: E501
 from container_service_extension.common.constants.shared_constants import RequestMethod  # noqa: E501
 import container_service_extension.common.utils.core_utils as utils
 import container_service_extension.exception.exceptions as cse_exception
@@ -23,7 +25,8 @@ import container_service_extension.rde.constants as def_constants
 from container_service_extension.rde.models.abstractNativeEntity import AbstractNativeEntity  # noqa: E501
 from container_service_extension.rde.models.common_models import DefEntity
 from container_service_extension.rde.models.common_models import DefEntityType
-from container_service_extension.rde.models.common_models import GenericClusterEntity   # noqa: E501
+from container_service_extension.rde.models.common_models import GenericClusterEntity  # noqa: E501
+from container_service_extension.rde.models.common_models import TKGEntity
 import container_service_extension.rde.utils as def_utils
 
 
@@ -73,13 +76,15 @@ class DefEntityService:
     def create_entity(self, entity_type_id: str, entity: DefEntity,
                       tenant_org_context: str = None,
                       delete_status_from_payload=True,
-                      return_response_headers=False) -> Union[dict, Tuple[dict, dict]]:  # noqa: E501
+                      is_request_async=False) -> Union[dict, Tuple[dict, dict]]:  # noqa: E501
         """Create defined entity instance of an entity type.
 
         :param str entity_type_id: ID of the DefEntityType
         :param DefEntity entity: Defined entity instance
         :param bool delete_status_from_payload: should delete status from payload?  # noqa: E501
-        :param bool return_response_headers: return response headers
+        :param bool is_request_async: The request is intended to be asyncronous
+            if this flag is set, href of the task is returned in addition to
+            the response body
         :return: created entity or created entity with response headers
         :rtype: Union[dict, Tuple[dict, dict]]
         """
@@ -91,14 +96,25 @@ class DefEntityService:
         if delete_status_from_payload:
             payload.get('entity', {}).pop('status', None)
 
-        return self._cloudapi_client.do_request(
+        # response will be a tuple (response_body, response_header) if
+        # is_request_async is true. Else, it will be just response_body
+        response = self._cloudapi_client.do_request(
             method=RequestMethod.POST,
             cloudapi_version=CloudApiVersion.VERSION_1_0_0,
             resource_url_relative_path=f"{CloudApiResource.ENTITY_TYPES}/"
                                        f"{entity_type_id}",
             payload=payload,
             additional_request_headers=additional_request_headers,
-            return_response_headers=return_response_headers)
+            return_response_headers=is_request_async)
+
+        if is_request_async:
+            # if request is async, return the location header as well
+            # TODO: Use the Htttp response status code to decide which
+            #   header name to use for task_href
+            #   202 - location header,
+            #   200 - xvcloud-task-location needs to be used
+            return response[0], response[1][HttpResponseHeader.LOCATION.value]
+        return response
 
     @handle_entity_service_exception
     def list_entities_by_entity_type(self, vendor: str, nss: str, version: str,
@@ -236,31 +252,42 @@ class DefEntityService:
     @handle_entity_service_exception
     def update_entity(self, entity_id: str, entity: DefEntity,
                       invoke_hooks=False,
-                      return_response_headers=False) -> Union[DefEntity, Tuple[DefEntity, dict]]:  # noqa: E501
+                      is_request_async=False) -> Union[DefEntity, Tuple[DefEntity, dict]]:  # noqa: E501
         """Update entity instance.
 
         :param str entity_id: Id of the entity to be updated.
         :param DefEntity entity: Modified entity to be updated.
         :param bool invoke_hooks: Value indicating whether hook-based-behaviors
         need to be triggered or not.
-        :param bool return_response_headers: return response headers
+        :param bool is_request_async: The request is intended to be asyncronous
+            if this flag is set, href of the task is returned in addition to
+            the response body
         :return: Updated entity or Updated entity and response headers
         :rtype: Union[DefEntity, Tuple[DefEntity, dict]]
         """
         resource_url_relative_path = f"{CloudApiResource.ENTITIES}/{entity_id}"
         vcd_api_version = self._cloudapi_client.get_api_version()
         # TODO Float conversions must be changed to Semantic versioning.
-        if float(vcd_api_version) >= float(ApiVersion.VERSION_36.value):
+        # TODO: Also include any persona having Administrator:FullControl
+        #  on CSE:nativeCluster
+        if float(vcd_api_version) >= float(ApiVersion.VERSION_36.value) and \
+                self._cloudapi_client.is_sys_admin:
             resource_url_relative_path += f"?invokeHooks={str(invoke_hooks).lower()}"  # noqa: E501
 
-        if return_response_headers:
+        if is_request_async:
+            # if request is async, return the task href in
+            # x_vmware_vcloud_task_location header
+            # TODO: Use the Htttp response status code to decide which
+            #   header name to use for task_href
+            #   202 - location header,
+            #   200 - xvcloud-task-location needs to be used
             response_body, headers = self._cloudapi_client.do_request(
                 method=RequestMethod.PUT,
                 cloudapi_version=CloudApiVersion.VERSION_1_0_0,
                 resource_url_relative_path=resource_url_relative_path,
                 payload=entity.to_dict(),
-                return_response_headers=return_response_headers)
-            return DefEntity(**response_body), headers
+                return_response_headers=is_request_async)
+            return DefEntity(**response_body), headers[HttpResponseHeader.X_VMWARE_VCOULD_TASK_LOCATION.value]  # noqa: E501
         else:
             response_body = self._cloudapi_client.do_request(
                 method=RequestMethod.PUT,
@@ -283,6 +310,29 @@ class DefEntityService:
             resource_url_relative_path=f"{CloudApiResource.ENTITIES}/"
                                        f"{entity_id}")
         return DefEntity(**response_body)
+
+    @handle_entity_service_exception
+    def get_tkg_or_def_entity(self, entity_id: str) -> DefEntity:
+        """Get the tkg or def entity given entity id.
+
+        :param str entity_id: Id of the entity.
+
+        :return: Details of the entity.
+        :rtype: DefEntity
+        """
+        response_body = self._cloudapi_client.do_request(
+            method=RequestMethod.GET,
+            cloudapi_version=CloudApiVersion.VERSION_1_0_0,
+            resource_url_relative_path=f"{CloudApiResource.ENTITIES}/"
+                                       f"{entity_id}")
+        entity: dict = response_body['entity']
+        entity_kind: dict = entity['kind']
+        if entity_kind in [shared_constants.ClusterEntityKind.NATIVE.value,
+                           shared_constants.ClusterEntityKind.TKG_PLUS.value]:
+            return DefEntity(**response_body)
+        elif entity_kind == shared_constants.ClusterEntityKind.TKG.value:
+            return TKGEntity(**entity)
+        raise Exception("Invalid cluster kind.")
 
     @handle_entity_service_exception
     def create_acl_for_entity(self,
@@ -339,21 +389,41 @@ class DefEntityService:
             return entity
 
     @handle_entity_service_exception
-    def delete_entity(self, entity_id: str, invoke_hooks: bool = False, return_response_headers=False) -> Union[dict, Tuple[dict, dict]]:  # noqa: E501
+    def delete_entity(self, entity_id: str, invoke_hooks: bool = False, is_request_async=False) -> Union[dict, Tuple[dict, dict]]:  # noqa: E501
         """Delete the defined entity.
 
         :param str entity_id: Id of the entity.
         :param bool invoke_hooks: set to true if hooks need to be invoked
-        :param bool return_response_headers: return response headers
+        :param bool is_request_async: The request is intended to be asyncronous
+            if this flag is set, href of the task is returned in addition to
+            the response body
         :return: response body or response body and response headers
         :rtype: Union[dict, Tuple[dict, dict]]
         """
-        return self._cloudapi_client.do_request(
+        # response will be a tuple (response_body, response_header) if
+        # is_request_async is true. Else, it will be just response_body
+        vcd_api_version = self._cloudapi_client.get_api_version()
+        resource_url_relative_path = f"{CloudApiResource.ENTITIES}/{entity_id}"
+
+        # TODO: Also include any persona having Administrator:FullControl
+        #  on CSE:nativeCluster
+        if float(vcd_api_version) >= float(ApiVersion.VERSION_36.value) and \
+                self._cloudapi_client.is_sys_admin:
+            resource_url_relative_path += f"?invokeHooks={str(invoke_hooks).lower()}"  # noqa: E501
+
+        response = self._cloudapi_client.do_request(
             method=RequestMethod.DELETE,
             cloudapi_version=CloudApiVersion.VERSION_1_0_0,
-            resource_url_relative_path=f"{CloudApiResource.ENTITIES}/"
-                                       f"{entity_id}?invokeHooks={str(invoke_hooks).lower()}",  # noqa: E501
-            return_response_headers=return_response_headers)
+            resource_url_relative_path=resource_url_relative_path,  # noqa: E501
+            return_response_headers=is_request_async)
+        if is_request_async:
+            # if request is async, return the location header as well
+            # TODO: Use the Htttp response status code to decide which
+            #   header name to use for task_href
+            #   202 - location header,
+            #   200 - xvcloud-task-location needs to be used
+            return response[0], response[1][HttpResponseHeader.LOCATION.value]
+        return response
 
     @handle_entity_service_exception
     def resolve_entity(self, entity_id: str, entity_type_id: str = None) -> DefEntity:  # noqa: E501

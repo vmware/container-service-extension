@@ -24,7 +24,6 @@ UNKNOWN_VCD_API_VERSION = "0.0"
 CSE_SERVICE_NAME = 'cse'
 CSE_SERVICE_NAMESPACE = 'cse'
 EXCHANGE_TYPE = 'direct'
-SYSTEM_ORG_NAME = 'system'
 
 # DEPLOY RIGHTS; used by authorization framework to weed out unauthorized calls
 CSE_NATIVE_DEPLOY_RIGHT_NAME = 'CSE NATIVE DEPLOY RIGHT'
@@ -291,6 +290,7 @@ class LocalTemplateKey(str, Enum):
     NAME = 'name'
     OS = 'os'
     REVISION = 'revision'
+    COOKBOOK_VERSION = 'cookbook_version'
     UPGRADE_FROM = 'upgrade_from'
     MIN_CSE_VERSION = 'min_cse_version'
     MAX_CSE_VERSION = 'max_cse_version'
@@ -473,6 +473,7 @@ class TemplateBuildKey(str, Enum):
     IP_ALLOCATION_MODE = 'ip_allocation_mode'
     STORAGE_PROFILE = 'storage_profile'
     CSE_PLACEMENT_POLICY = 'cse_placement_policy'
+    REMOTE_COOKBOOK_VERSION = 'remote_template_cookbook_version'
 
 
 @unique
@@ -707,3 +708,22 @@ NAT_DEFAULT_PAGE_SIZE = 25
 
 # Pagination constants for used IP addresses
 USED_IP_ADDRESS_PAGE_SIZE = 10
+
+# Context headers
+TENANT_CONTEXT_HEADER = 'X-VMWARE-VCLOUD-TENANT-CONTEXT'
+AUTH_CONTEXT_HEADER = 'X-VMWARE-VCLOUD-AUTH-CONTEXT'
+VCLOUD_AUTHORIZATION_HEADER = 'X-vCloud-Authorization'
+
+
+@unique
+class PostCustomizationStatus(Enum):
+    NONE = None
+    IN_PROGRESS = 'in_progress'
+    SUCCESSFUL = 'successful'
+
+
+POST_CUSTOMIZATION_SCRIPT_EXECUTION_STATUS = 'post_customization_script_execution_status'  # noqa: E501
+POST_CUSTOMIZATION_SCRIPT_EXECUTION_FAILURE_REASON = 'post_customization_script_execution_failure_reason'  # noqa: E501
+DEFAULT_POST_CUSTOMIZATION_STATUS_LIST = [cust_status.value for cust_status in PostCustomizationStatus]  # noqa: E501
+DEFAULT_POST_CUSTOMIZATION_POLL_SEC = 5
+DEFAULT_POST_CUSTOMIZATION_TIMEOUT_SEC = 180

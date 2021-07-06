@@ -256,3 +256,15 @@ class BehaviorServiceError(InternalServerRequestError):
 
 class MQTTExtensionError(CseServerError):
     """Raised on any error when setting up the MQTT extension."""
+
+
+class PostCustomizationError(CseServerError):
+    """Base class for post customization error."""
+
+
+class InvalidCustomizationStatus(PostCustomizationError):
+    """Raised on invalid customization state."""
+
+
+class PostCustomizationTimeoutError(PostCustomizationError):
+    """Raised on timeout on post customization."""

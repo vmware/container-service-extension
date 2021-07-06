@@ -37,7 +37,8 @@ UNSUPPORTED_SUBCOMMANDS_BY_VERSION = {
         cli_constants.GroupKey.OVDC: ['enable', 'disable', 'list', 'info']
     },
     vcd_client.ApiVersion.VERSION_35.value: {
-        cli_constants.GroupKey.CLUSTER: ['create', 'resize'],
+        cli_constants.GroupKey.CLUSTER: ['create', 'resize', 'share',
+                                         'share-list', 'unshare'],
         cli_constants.GroupKey.OVDC: ['compute-policy', 'info']
     },
     vcd_client.ApiVersion.VERSION_36.value: {

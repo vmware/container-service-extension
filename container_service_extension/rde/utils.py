@@ -136,10 +136,14 @@ def construct_2_0_0_cluster_spec_from_entity_status(entity_status: rde_2_0_0.Sta
         template_name=entity_status.cloud_properties.distribution.template_name,  # noqa: E501
         template_revision=entity_status.cloud_properties.distribution.template_revision)  # noqa: E501
 
+    network_settings = rde_2_0_0.Network(
+        expose=entity_status.cloud_properties.exposed)
+
     settings = rde_2_0_0.Settings(
         ovdc_network=entity_status.cloud_properties.ovdc_network_name,
         ssh_key=entity_status.cloud_properties.ssh_key,
-        rollback_on_failure=entity_status.cloud_properties.rollback_on_failure)  # noqa: E501
+        rollback_on_failure=entity_status.cloud_properties.rollback_on_failure,  # noqa: E501
+        network=network_settings)
 
     topology = rde_2_0_0.Topology(
         control_plane=control_plane,
@@ -148,8 +152,7 @@ def construct_2_0_0_cluster_spec_from_entity_status(entity_status: rde_2_0_0.Sta
 
     return rde_2_0_0.ClusterSpec(settings=settings,
                                  distribution=k8_distribution,
-                                 topology=topology,
-                                 expose=entity_status.exposed)
+                                 topology=topology)
 
 
 def load_rde_schema(schema_file: str) -> dict:
