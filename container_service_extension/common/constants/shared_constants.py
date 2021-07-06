@@ -238,4 +238,4 @@ class ClusterDetailsKey(str, Enum):
 @unique
 class HttpResponseHeader(str, Enum):
     LOCATION = 'Location'
-    X_VMWARE_VCOULD_TASK_LOCATION = 'X-VMWARE-VCOULD-TASK-LOCATION'
+    X_VMWARE_VCLOUD_TASK_LOCATION = 'X-VMWARE-VCLOUD-TASK-LOCATION'
