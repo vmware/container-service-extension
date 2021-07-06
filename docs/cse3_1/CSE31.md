@@ -70,7 +70,8 @@ Refer to the [sample config file](CSE_CONFIG.html)
 
 1. Removal of property `api_version`: Starting CSE 3.1, it is no longer needed to start CSE with a 
    particular VCD API version. As a side effect, CSE 3.1 will not recognize `api_version` 
-   property under `vcd` section of the config file. This property can be safely deleted.
+   property under `vcd` section of the config file. This property can be safely deleted 
+   from the existing configuration files.
    
 2. Addition of property `legacy_mode`: This property indicates whether CSE server 
    needs to leverage the latest features of VCD like RDE framework, placement policies or not.
@@ -83,13 +84,13 @@ Refer to the [sample config file](CSE_CONFIG.html)
      to operate at its full potential.
     
 3. New template cookbook `remote_template_cookbook_url`: CSE 3.1 config must refer
-   to http://raw.githubusercontent.com/vmware/container-service-extension-templates/upgrades/template_v2.yaml
+   to http://raw.githubusercontent.com/vmware/container-service-extension-templates/master/template_v2.yaml
    Note that CSE <= 3.0 will not work with the new template cookbook.
    - When `legacy_mode` is set to true, `remote_template_cookbook_url` must refer to old template cookbook 
      https://raw.githubusercontent.com/vmware/container-service-extension-templates/master/template.yaml
      
-4. For CSE 3.1 to work with VCD 10.3, it is a must requirement for `mqtt` property 
-   to be enabled. AMQP configuration is not supported for the combination of CSE 3.1 and VCD 10.3.
+4. For CSE 3.1 to work with VCD 10.3, it is a mandatory step to enable `mqtt` property. 
+   AMQP configuration is not supported for the combination of CSE 3.1 and VCD 10.3.
 
 #### 2.2.1 Greenfield installation 
 Refer to [CSE 3.1 installation](CSE_SERVER_MANAGEMENT.html#cse31-greenfield).
@@ -99,7 +100,7 @@ Refer to [CSE 3.1 installation](CSE_SERVER_MANAGEMENT.html#cse31-greenfield).
 CSE 3.1 can only be upgraded from 3.0.X.
 Below are the few valid upgrade paths and the resultant changes in the environment.
 
-An example on reading below upgrade paths - `CSE 3.0.X, VCD 10.1 (api_version=34.0) -> CSE 3.1, VCD 10.1 (legacy_mode=true)`:
+An example on reading below upgrade paths - `CSE 3.0.X, VCD 10.2 (api_version=34.0) -> CSE 3.1, VCD 10.2 (legacy_mode=true)`:
 Environment with CSE 3.0.X, configured with VCD 10.2, running at the specified api_version=34.0 (config.yaml) 
 can be upgraded to environment CSE 3.1, configured with VCD 10.2, running with `legacy_mode` set to true.
 
@@ -111,12 +112,14 @@ can be upgraded to environment CSE 3.1, configured with VCD 10.2, running with `
      RDE `urn:vcloud:type:cse:nativeCluster:1.0.0` entities.
    - Existing templates will no longer be recognized by CSE 3.1. 
    - It is strongly recommended to force recreate the templates from the new template cookbook. 
+     CSE server needs at least one valid template in order to start.
    - Existing clusters must be upgraded to newer templates in order to enable operations like resize.
 3. CSE 3.0.X, VCD 10.2 (api_version=34.0) -> CSE 3.1, VCD 10.3 (legacy_mode=false)
    - Native clusters will have a new representation  in the form of 
      RDE `urn:vcloud:type:cse:nativeCluster:2.0.0` entities.
    - Existing templates will no longer be recognized by CSE 3.1. 
    - It is strongly recommended to force create the templates from the new template cookbook. 
+     CSE server needs at least one valid template in order to start.
    - Existing clusters must be upgraded to newer templates in order to enable operations like resize.
    - VCD's defined entity api can be used to initiate CRUD operations on the clusters.
 4. CSE 3.0.X, VCD 10.2 (api_version=35.0) -> CSE 3.1, VCD 10.3 (legacy_mode=false)
@@ -124,6 +127,7 @@ can be upgraded to environment CSE 3.1, configured with VCD 10.2, running with `
      to `urn:vcloud:type:cse:nativeCluster:2.0.0` entities.
    - Existing templates will no longer be recognized by CSE 3.1. 
    - It is strongly recommended to force recreate the templates from the new template cookbook. 
+     CSE server needs at least one valid template in order to start.
    - Existing clusters must be upgraded to newer templates in order to enable operations like resize.
    - VCD's defined entity api can be used to initiate CRUD operations on the clusters.
     
