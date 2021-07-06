@@ -287,7 +287,7 @@ class DefEntityService:
                 resource_url_relative_path=resource_url_relative_path,
                 payload=entity.to_dict(),
                 return_response_headers=is_request_async)
-            return DefEntity(**response_body), headers[HttpResponseHeader.X_VMWARE_VCOULD_TASK_LOCATION.value]  # noqa: E501
+            return DefEntity(**response_body), headers[HttpResponseHeader.X_VMWARE_VCLOUD_TASK_LOCATION.value]  # noqa: E501
         else:
             response_body = self._cloudapi_client.do_request(
                 method=RequestMethod.PUT,
