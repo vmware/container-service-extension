@@ -11,7 +11,7 @@ VAC_URL = "https://vcsa.vmware.com/ph-stg/api/hyper/send/"
 
 # Value of collector id that is required as part of HTTP request
 # to post sample data to telemetry server
-COLLECTOR_ID = "CSE.3_0"
+COLLECTOR_ID = "CSE.3_1"
 
 
 @unique
