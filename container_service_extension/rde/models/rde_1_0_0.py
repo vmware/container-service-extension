@@ -136,6 +136,11 @@ class NativeEntity(AbstractNativeEntity):
                 "sizing_class": "Large",
                 "storage_profile": "Any"
             },
+            "nfs": {
+                "count": 1,
+                "sizing_class": "small",
+                "storage_profile": "Any"
+            },
             "settings": {
                 "network": "net",
                 "ssh_key": null,
@@ -144,13 +149,41 @@ class NativeEntity(AbstractNativeEntity):
             "k8_distribution": {
                 "template_name": "k81.17",
                 "template_revision": 1
-            }
+            },
+            "expose": False
         },
         "status": {
-            "id": null,
             "cni": null,
+            "docker_version": null,
+            "exposed": False,
+            "kubernetes": null,
+            "nodes": {
+                "workers": [
+                    {
+                        "name": "node-abcd",
+                        "ip": "10.0.0.2",
+                        "sizing_class": "small",
+                    }
+                ],
+                "control_plane": [
+                    {
+                        "name": "mstr-xyzv",
+                        "ip": "10.0.0.3",
+                        "sizing_class": "Large",
+                    }
+                ],
+                "nfs": [
+                    {
+                        "name": "nfsd-uvwx",
+                        "ip": "10.0.0.4",
+                        "sizing_class": "small",
+                        "exports": "/usr/share/abc, /usr/share/xyz"
+                    }
+                ]
+            },
+            "os": null,
             "phase": null,
-            "master_ip": "10.150.23.45"
+            "task_href" : null
         },
         "metadata": {
             "org_name": "org1",
@@ -222,12 +255,18 @@ class NativeEntity(AbstractNativeEntity):
                 control_plane=control_plane,
                 workers=workers,
                 nfs=nfs,
-                expose=rde_2_x_entity.spec.expose
+                expose=rde_2_x_entity.spec.settings.network.expose
             )
+
+            if rde_2_x_entity.status.cloud_properties.exposed:
+                control_plane_ip = rde_2_x_entity.status.external_ip
+            else:
+                control_plane_ip = \
+                    rde_2_x_entity.status.nodes.control_plane.ip
 
             control_plane = Node(
                 name=rde_2_x_entity.status.nodes.control_plane.name,
-                ip=rde_2_x_entity.status.nodes.control_plane.ip,
+                ip=control_plane_ip,
                 sizing_class=rde_2_x_entity.status.nodes.control_plane.sizing_class  # noqa: E501
             )
 
@@ -241,11 +280,12 @@ class NativeEntity(AbstractNativeEntity):
                 workers.append(worker_node_1_x)
 
             nfs_nodes = []
-            for nfs_node in nfs_nodes:
+            for nfs_node in rde_2_x_entity.status.nodes.nfs:
                 nfs_node_1_x = NfsNode(
                     name=nfs_node.name,
                     ip=nfs_node.ip,
-                    sizing_class=nfs_node.sizing_class
+                    sizing_class=nfs_node.sizing_class,
+                    exports=str(nfs_node.exports)
                 )
                 nfs_nodes.append(nfs_node_1_x)
 
@@ -263,7 +303,7 @@ class NativeEntity(AbstractNativeEntity):
                 docker_version=rde_2_x_entity.status.docker_version,
                 os=rde_2_x_entity.status.os,
                 nodes=nodes,
-                exposed=rde_2_x_entity.status.exposed
+                exposed=rde_2_x_entity.status.cloud_properties.exposed
             )
 
             rde_1_entity = cls(

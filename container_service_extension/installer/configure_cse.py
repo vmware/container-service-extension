@@ -1578,15 +1578,15 @@ def _update_metadata_for_existing_templates(client: Client, config: dict,
             ltm.save_metadata(client, catalog_org_name,
                               catalog_name, catalog_item_name,
                               remote_template_descriptor, metadata_key_list=new_metadata_key_list)  # noqa: E501
-            msg = f"Successfully updated template metadata " \
+            msg = f"Successfully updated local template metadata " \
                   f"for {catalog_item_name}"
             INSTALL_LOGGER.debug(msg)
             msg_update_callback.general(msg)
         else:
             # Template not supported in the target CSE version.
             # Do not update template metadata
-            msg = f"Template {catalog_item_name} not supported, Skipping " \
-                  f"template metadata update."
+            msg = f"Local template {catalog_item_name} not supported, " \
+                  f"Skipping template metadata update."
             INSTALL_LOGGER.debug(msg)
             msg_update_callback.general(msg)
 
@@ -2309,10 +2309,15 @@ def _upgrade_non_legacy_clusters(
                 INSTALL_LOGGER.info(msg)
                 msg_update_callback.info(msg)
                 _upgrade_cluster_rde(
-                    client, cluster,
-                    def_entity, runtime_rde_version,
-                    target_entity_type, entity_svc,
-                    site, msg_update_callback=msg_update_callback)
+                    client=client,
+                    cluster=cluster,
+                    rde_to_upgrade=def_entity,
+                    runtime_rde_version=runtime_rde_version,
+                    target_entity_type=target_entity_type,
+                    entity_svc=entity_svc,
+                    site=site,
+                    msg_update_callback=msg_update_callback
+                )
             else:
                 msg = f"Skipping cluster '{cluster['name']}' " \
                     f"since it has already been processed."
@@ -2489,7 +2494,7 @@ def _upgrade_cluster_rde(client, cluster, rde_to_upgrade,
 
     # Adding missing fields in RDE 2.0
     # TODO: Need to find a better approach to avoid conditional logic for
-    #   filling missing properties.
+    # filling missing properties.
     if semantic_version.Version(runtime_rde_version).major == \
             semantic_version.Version(def_constants.RDEVersion.RDE_2_0_0).major:
         # RDE upgrade possible only from RDE 1.0 or RDE 2.x
@@ -2498,13 +2503,27 @@ def _upgrade_cluster_rde(client, cluster, rde_to_upgrade,
         native_entity_2_x.status.cloud_properties.site = site
         native_entity_2_x.metadata.site = site
 
+        # This heavily relies on the fact that the source RDE is v1.0.0
+        try:
+            vapp_href = rde_to_upgrade.externalId
+            vapp = VApp(client, href=vapp_href)
+            control_plane_ip = vapp.get_primary_ip(
+                vm_name=rde_to_upgrade.entity.status.nodes.control_plane.name)
+            if rde_to_upgrade.entity.status.exposed:
+                native_entity_2_x.status.nodes.control_plane.ip = \
+                    control_plane_ip
+        except Exception as err:
+            INSTALL_LOGGER.error(str(err), exc_info=True)
+
     upgraded_rde: common_models.DefEntity = \
-        entity_svc.upgrade_entity(rde_to_upgrade.id,
-                                  new_native_entity,
-                                  target_entity_type.id)
+        entity_svc.upgrade_entity(
+            rde_to_upgrade.id,
+            new_native_entity,
+            target_entity_type.id
+        )
 
     # Update cluster metadata with new cluster id. This step is still needed
-    # because the format of the entity ID has changed to ommit version string.
+    # because the format of the entity ID has changed to omit version string.
     tags = {
         server_constants.ClusterMetadataKey.CLUSTER_ID: upgraded_rde.id,
         server_constants.ClusterMetadataKey.CSE_VERSION: server_utils.get_installed_cse_version()  # noqa: E501
