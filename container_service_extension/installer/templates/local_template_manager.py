@@ -71,7 +71,7 @@ def get_all_k8s_local_template_definition(client, catalog_name, org=None,
     :param str org_name: Name of the org that is hosting the catalog. Can be
         provided in lieu of param org, however param org takes precedence.
     :param bool legacy_mode: True, if CSE is running in legacy mode
-    :param List ignore_keys: List of keys to ignore
+    :param List ignore_metadata_keys: List of keys to ignore
     :param logging.Logger logger_debug:
     :param utils.NullPrinter msg_update_callback:
 
