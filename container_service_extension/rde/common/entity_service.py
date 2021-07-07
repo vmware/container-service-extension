@@ -278,6 +278,9 @@ class DefEntityService:
 
         # Prevent users with rights <= EDIT/VIEW on CSE:NATIVECLUSTER from
         # updating "private" property of RDE "status" section
+        # TODO: Replace sys admin check with FULL CONTROL rights check on
+        #  CSE:NATIVECLUSTER. Users with no FULL CONTROL rights cannot update
+        #  private property of entity->status.
         if not self._cloudapi_client.is_sys_admin:
             payload.get('entity', {}).get('status', {}).pop('private', None)
 
