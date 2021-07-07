@@ -343,7 +343,7 @@ class ClusterService(abstract_broker.AbstractBroker):
                 try:
                     # TODO can reduce try - catch by raising more specific
                     # exceptions
-                    # Resolve entity state manually (PRE_CREATED --> RESOLVED)
+                    # Resolve entity state manually (PRE_CREATED --> RESOLVED/RESOLUTION_ERROR)  # noqa: E501
                     # to allow delete operation
                     self.sysadmin_entity_svc.resolve_entity(entity_id=entity_id)  # noqa: E501
                     # delete defined entity
@@ -1108,7 +1108,7 @@ class ClusterService(abstract_broker.AbstractBroker):
             # task to ERROR
             if rollback:
                 try:
-                    # Resolve entity state manually (PRE_CREATED --> RESOLVED)
+                    # Resolve entity state manually (PRE_CREATED --> RESOLVED/RESOLUTION_ERROR)  # noqa: E501
                     # to allow delete operation
                     self.sysadmin_entity_svc.resolve_entity(entity_id=cluster_id)  # noqa: E501
                     self.sysadmin_entity_svc.delete_entity(cluster_id,
