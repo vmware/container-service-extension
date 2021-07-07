@@ -7,6 +7,8 @@ title: Known Issues
 <a name="general"></a>
 ## General Issues
 ---
+
+#### In CSE 3.1 
 ### In CSE 3.0 users of System organization are unable to create clusters
 If a user from System org who didn't install CSE 3.0 attempts to create clusters,
 the operation fails with an error message "Access denied". The reason behind the
