@@ -874,7 +874,7 @@ Example
     required=False,
     metavar='CLUSTER_ID',
     help="ID of the cluster whose cluster config has to be obtained;"
-         "Supported only for CSE api version >= 35."
+         "supported only for CSE api version >= 35."
          "ID gets precedence over cluster name.")
 def cluster_config(ctx, name, vdc, org, k8_runtime=None, cluster_id=None):
     """Display cluster configuration.
