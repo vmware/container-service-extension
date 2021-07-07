@@ -37,8 +37,15 @@ below-mentioned right bundles. Refer [How to manage runtime defined entities](ht
    of the pre-defined role of `vApp Author` in order to deploy native clusters.
 
 ### Sharing native clusters 
-CSE >= 3.1:
-New share command
+CSE 3.1:
+`vcd cse cluster share` command shares the cluster with other users
+   ```sh
+      # Share cluster 'mycluster' with FullControl access with 'user1' and 'user2'
+      vcd cse cluster share --name mycluster --acl FullControl user1 user2
+      
+      # Share TKG cluster with cluster ID 'urn:vcloud:entity:vmware:tkgcluster:1.0.0:uuid' with ReadOnly access with 'user1'
+      vcd cse cluster share --id urn:vcloud:entity:vmware:tkgcluster:1.0.0:uuid --acl ReadOnly user1  
+   ```
 
 CSE 3.0:
 Tenant user need to perform below steps to share a native cluster to another 

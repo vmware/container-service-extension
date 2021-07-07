@@ -513,20 +513,21 @@ class NativeEntity(AbstractNativeEntity):
 # spec.distribution.templateName: Template name based on guest OS, Kubernetes version, and the Weave software version
 # spec.distribution.templateRevision: revision number
 #
-# spec.nfs: Optional sub-section for desired nfs state of the cluster. The properties \"sizingClass\" and \"storageProfile\" can be specified only during the cluster creation phase. These properties will no longer be modifiable in further update operations like \"resize\" and \"upgrade\".
-# spec.nfs.count: Nfs nodes can only be scaled-up; they cannot be scaled-down. Default value is 0.
-# spec.nfs.sizingClass: The compute sizing policy with which nfs node needs to be provisioned in a given \"ovdc\". The specified sizing policy is expected to be pre-published to the given ovdc.
-# spec.nfs.storageProfile: The storage-profile with which nfs needs to be provisioned in a given \"ovdc\". The specified storage-profile is expected to be available on the given ovdc.
+# spec.topology.nfs: Optional sub-section for desired nfs state of the cluster. The properties \"sizingClass\" and \"storageProfile\" can be specified only during the cluster creation phase. These properties will no longer be modifiable in further update operations like \"resize\" and \"upgrade\".
+# spec.topology.nfs.count: Nfs nodes can only be scaled-up; they cannot be scaled-down. Default value is 0.
+# spec.topology.nfs.sizingClass: The compute sizing policy with which nfs node needs to be provisioned in a given \"ovdc\". The specified sizing policy is expected to be pre-published to the given ovdc.
+# spec.topology.nfs.storageProfile: The storage-profile with which nfs needs to be provisioned in a given \"ovdc\". The specified storage-profile is expected to be available on the given ovdc.
 #
 # spec.settings: This is a required sub-section
 # spec.settings.ovdcNetwork: This value is mandatory. Name of the Organization's virtual data center network
 # spec.settings.rollbackOnFailure: Optional value that is true by default. On any cluster operation failure, if the value is set to true, affected node VMs will be automatically deleted.
 # spec.settings.sshKey: Optional ssh key that users can use to log into the node VMs without explicitly providing passwords.
+# spec.settings.network.expose: Optional value that is false by default. Set to true to enable access to the cluster from the external world.
 #
-# spec.workers: Optional sub-section for the desired worker state of the cluster. The properties \"sizingClass\" and \"storageProfile\" can be specified only during the cluster creation phase. These properties will no longer be modifiable in further update operations like \"resize\" and \"upgrade\". Non uniform worker nodes in the clusters is not yet supported.
-# spec.workers.count: number of worker nodes (default value:1) Worker nodes can be scaled up and down.
-# spec.workers.sizingClass: The compute sizing policy with which worker nodes need to be provisioned in a given \"ovdc\". The specified sizing policy is expected to be pre-published to the given ovdc.
-# spec.workers.storageProfile: The storage-profile with which worker nodes need to be provisioned in a given \"ovdc\". The specified storage-profile is expected to be available on the given ovdc.
+# spec.topology.workers: Optional sub-section for the desired worker state of the cluster. The properties \"sizingClass\" and \"storageProfile\" can be specified only during the cluster creation phase. These properties will no longer be modifiable in further update operations like \"resize\" and \"upgrade\". Non uniform worker nodes in the clusters is not yet supported.
+# spec.topology.workers.count: number of worker nodes (default value:1) Worker nodes can be scaled up and down.
+# spec.topology.workers.sizingClass: The compute sizing policy with which worker nodes need to be provisioned in a given \"ovdc\". The specified sizing policy is expected to be pre-published to the given ovdc.
+# spec.topology.workers.storageProfile: The storage-profile with which worker nodes need to be provisioned in a given \"ovdc\". The specified storage-profile is expected to be available on the given ovdc.
 #
 # status: Current state of the cluster in the server. This is not a required section for any of the operations.\n
 """  # noqa: E501
