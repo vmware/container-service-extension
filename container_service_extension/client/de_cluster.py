@@ -11,7 +11,7 @@ import yaml
 
 import container_service_extension.client.constants as cli_constants
 from container_service_extension.client.de_cluster_native import DEClusterNative  # noqa: E501
-from container_service_extension.client.de_cluster_tkg import DEClusterTKG
+from container_service_extension.client.de_cluster_tkg_s import DEClusterTKGS
 import container_service_extension.client.tkgclient.rest as tkg_rest
 import container_service_extension.client.utils as client_utils
 from container_service_extension.common.constants.shared_constants import CSE_PAGINATION_DEFAULT_PAGE_SIZE, PaginationKey  # noqa: E501
@@ -50,7 +50,7 @@ class DECluster:
                 client=client, logger_debug=logger.CLIENT_LOGGER,
                 logger_wire=logger_wire)
         self._nativeCluster = DEClusterNative(client)
-        self._tkgCluster = DEClusterTKG(client)
+        self._tkgCluster = DEClusterTKGS(client)
         schema_svc = def_schema_svc.DefSchemaService(self._cloudapi_client)
         self._server_rde_version = \
             schema_svc.get_latest_registered_schema_version()
@@ -68,7 +68,7 @@ class DECluster:
         if client_utils.is_cli_for_tkg_s_only():
             try:
                 for clusters, has_more_results in \
-                        self._tkgCluster.list_tkg_clusters(vdc=vdc, org=org):
+                        self._tkgCluster.list_tkg_s_clusters(vdc=vdc, org=org):
                     yield clusters, has_more_results
             except tkg_rest.ApiException as e:
                 if e.status not in [requests.codes.FORBIDDEN, requests.codes.UNAUTHORIZED]:  # noqa: E501
@@ -134,8 +134,8 @@ class DECluster:
                 logger.CLIENT_LOGGER.debug(msg)
                 raise e
 
-    def _get_tkg_native_clusters_by_name(self, cluster_name: str,
-                                         org=None, vdc=None):
+    def _get_tkg_s_and_native_clusters_by_name(self, cluster_name: str,
+                                               org=None, vdc=None):
         """Get native and TKG-S clusters by name.
 
         Assumption: Native clusters cannot have name collision among them.
@@ -174,8 +174,8 @@ class DECluster:
         # doesn't have the necessary rights.
         try:
             tkg_entity, tkg_def_entity = \
-                self._tkgCluster.get_tkg_clusters_by_name(cluster_name,
-                                                          vdc=vdc, org=org)
+                self._tkgCluster.get_tkg_s_clusters_by_name(cluster_name,
+                                                            vdc=vdc, org=org)
         except tkg_rest.ApiException as e:
             if e.status not in [requests.codes.FORBIDDEN, requests.codes.UNAUTHORIZED]:  # noqa: E501
                 raise
@@ -190,7 +190,7 @@ class DECluster:
             # If org filter is not provided, ask the user to provide org
             # filter
             if not org:
-                # handles the case where there is are TKG-S clusters and native
+                # handles the case where there are TKG-S clusters and native
                 # clusters with the same name in different organizations
                 raise Exception(f"{msg} Please specify the org to use "
                                 "using --org flag.")
@@ -232,8 +232,8 @@ class DECluster:
         if cluster_id:
             return self.get_cluster_info_by_id(cluster_id, org=org)
         cluster, _, is_native_cluster = \
-            self._get_tkg_native_clusters_by_name(cluster_name,
-                                                  org=org, vdc=vdc)
+            self._get_tkg_s_and_native_clusters_by_name(cluster_name,
+                                                        org=org, vdc=vdc)
         if is_native_cluster:
             cluster_info = cluster.entity.to_dict()
         else:
@@ -274,8 +274,8 @@ class DECluster:
         if cluster_id:
             return self.get_cluster_config_by_id(cluster_id, org=org)
         cluster, entity_properties, is_native_cluster = \
-            self._get_tkg_native_clusters_by_name(cluster_name,
-                                                  org=org, vdc=vdc)
+            self._get_tkg_s_and_native_clusters_by_name(cluster_name,
+                                                        org=org, vdc=vdc)
         if is_native_cluster:
             return self._nativeCluster.get_cluster_config_by_id(cluster.id)
         return self._tkgCluster.get_cluster_config_by_id(cluster_id=entity_properties.get('id'))  # noqa: E501
@@ -307,8 +307,8 @@ class DECluster:
         if cluster_id:
             return self.delete_cluster_by_id(cluster_id)
         cluster, entity_properties, is_native_cluster = \
-            self._get_tkg_native_clusters_by_name(cluster_name,
-                                                  org=org, vdc=vdc)
+            self._get_tkg_s_and_native_clusters_by_name(cluster_name,
+                                                        org=org, vdc=vdc)
         if is_native_cluster:
             return self._nativeCluster.delete_cluster_by_id(cluster.id)
         return self._tkgCluster.delete_cluster_by_id(cluster_id=entity_properties.get('id'))  # noqa: E501
@@ -340,7 +340,7 @@ class DECluster:
         :raises ClusterNotFoundError, CseDuplicateClusterError
         """
         cluster, _, is_native_cluster = \
-            self._get_tkg_native_clusters_by_name(cluster_name, org=org, vdc=vdc)  # noqa: E501
+            self._get_tkg_s_and_native_clusters_by_name(cluster_name, org=org, vdc=vdc)  # noqa: E501
         if is_native_cluster:
             return self._nativeCluster.get_upgrade_plan_by_cluster_id(cluster.id)  # noqa: E501
         self._tkgCluster.get_upgrade_plan(cluster_name, vdc=vdc, org=org)
@@ -360,7 +360,7 @@ class DECluster:
         :rtype: str
         """
         cluster, _, is_native_cluster = \
-            self._get_tkg_native_clusters_by_name(cluster_name, org=org_name, vdc=ovdc_name)  # noqa: E501
+            self._get_tkg_s_and_native_clusters_by_name(cluster_name, org=org_name, vdc=ovdc_name)  # noqa: E501
         if is_native_cluster:
             cluster.entity.spec.k8_distribution.template_name = template_name
             cluster.entity.spec.k8_distribution.template_revision = template_revision  # noqa: E501
@@ -376,8 +376,8 @@ class DECluster:
             is_native_cluster = entity_svc.is_native_entity(cluster_id)
         else:
             _, _, is_native_cluster = \
-                self._get_tkg_native_clusters_by_name(cluster_name, org=org,
-                                                      vdc=vdc)
+                self._get_tkg_s_and_native_clusters_by_name(cluster_name, org=org,
+                                                            vdc=vdc)
 
         if is_native_cluster:
             self._nativeCluster.share_cluster(cluster_id, cluster_name, users,
@@ -393,8 +393,8 @@ class DECluster:
             is_native_cluster = entity_svc.is_native_entity(cluster_id)
         else:
             _, _, is_native_cluster = \
-                self._get_tkg_native_clusters_by_name(cluster_name, org=org,
-                                                      vdc=vdc)
+                self._get_tkg_s_and_native_clusters_by_name(cluster_name, org=org,
+                                                            vdc=vdc)
 
         if is_native_cluster:
             return self._nativeCluster.list_share_entries(
@@ -410,8 +410,8 @@ class DECluster:
             is_native_cluster = entity_svc.is_native_entity(cluster_id)
         else:
             _, _, is_native_cluster = \
-                self._get_tkg_native_clusters_by_name(cluster_name, org=org,
-                                                      vdc=vdc)
+                self._get_tkg_s_and_native_clusters_by_name(cluster_name, org=org,
+                                                            vdc=vdc)
 
         if is_native_cluster:
             self._nativeCluster.unshare_cluster(cluster_id, cluster_name,
