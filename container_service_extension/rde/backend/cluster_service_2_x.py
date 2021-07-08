@@ -2023,6 +2023,7 @@ class ClusterService(abstract_broker.AbstractBroker):
                 status=status.value, message=message, progress=progress)
         response_json = self.mqtt_publisher.construct_behavior_response_json(
             task_id=self.task_id, entity_id=self.entity_id, payload=payload)
+        LOGGER.debug(f"Sending behavior response:{response_json}")
         self.mqtt_publisher.send_response(response_json)
         self.task_status = status.value
 

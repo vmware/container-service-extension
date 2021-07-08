@@ -258,53 +258,57 @@ class NativeEntity(AbstractNativeEntity):
                 expose=rde_2_x_entity.spec.settings.network.expose
             )
 
-            if rde_2_x_entity.status.cloud_properties.exposed:
-                control_plane_ip = rde_2_x_entity.status.external_ip
-            else:
-                control_plane_ip = \
-                    rde_2_x_entity.status.nodes.control_plane.ip
+            # Convert "status" only for entities that are already created
+            # New cluster creation won't have "status" section in RDE
+            status = cls.status
+            if rde_2_x_entity.status.nodes:
 
-            control_plane = Node(
-                name=rde_2_x_entity.status.nodes.control_plane.name,
-                ip=control_plane_ip,
-                sizing_class=rde_2_x_entity.status.nodes.control_plane.sizing_class  # noqa: E501
-            )
+                if rde_2_x_entity.status.cloud_properties.exposed:
+                    control_plane_ip = rde_2_x_entity.status.external_ip
+                else:
+                    control_plane_ip = rde_2_x_entity.status.nodes.control_plane.ip  # noqa: E501
 
-            workers = []
-            for worker_node in rde_2_x_entity.status.nodes.workers:
-                worker_node_1_x = Node(
-                    name=worker_node.name,
-                    ip=worker_node.ip,
-                    sizing_class=worker_node.sizing_class
+                control_plane = Node(
+                    name=rde_2_x_entity.status.nodes.control_plane.name,
+                    ip=control_plane_ip,
+                    sizing_class=rde_2_x_entity.status.nodes.control_plane.sizing_class  # noqa: E501
                 )
-                workers.append(worker_node_1_x)
 
-            nfs_nodes = []
-            for nfs_node in rde_2_x_entity.status.nodes.nfs:
-                nfs_node_1_x = NfsNode(
-                    name=nfs_node.name,
-                    ip=nfs_node.ip,
-                    sizing_class=nfs_node.sizing_class,
-                    exports=str(nfs_node.exports)
+                workers = []
+                for worker_node in rde_2_x_entity.status.nodes.workers:
+                    worker_node_1_x = Node(
+                        name=worker_node.name,
+                        ip=worker_node.ip,
+                        sizing_class=worker_node.sizing_class
+                    )
+                    workers.append(worker_node_1_x)
+
+                nfs_nodes = []
+                for nfs_node in rde_2_x_entity.status.nodes.nfs:
+                    nfs_node_1_x = NfsNode(
+                        name=nfs_node.name,
+                        ip=nfs_node.ip,
+                        sizing_class=nfs_node.sizing_class,
+                        exports=str(nfs_node.exports)
+                    )
+                    nfs_nodes.append(nfs_node_1_x)
+
+                nodes = Nodes(
+                    control_plane=control_plane,
+                    workers=workers,
+                    nfs=nfs_nodes
                 )
-                nfs_nodes.append(nfs_node_1_x)
 
-            nodes = Nodes(
-                control_plane=control_plane,
-                workers=workers,
-                nfs=nfs_nodes
-            )
-
-            status = Status(
-                phase=rde_2_x_entity.status.phase,
-                cni=rde_2_x_entity.status.cni,
-                task_href=rde_2_x_entity.status.task_href,
-                kubernetes=rde_2_x_entity.status.kubernetes,
-                docker_version=rde_2_x_entity.status.docker_version,
-                os=rde_2_x_entity.status.os,
-                nodes=nodes,
-                exposed=rde_2_x_entity.status.cloud_properties.exposed
-            )
+                status = Status(
+                    phase=rde_2_x_entity.status.phase,
+                    cni=rde_2_x_entity.status.cni,
+                    task_href=rde_2_x_entity.status.task_href,
+                    kubernetes=rde_2_x_entity.status.kubernetes,
+                    docker_version=rde_2_x_entity.status.docker_version,
+                    os=rde_2_x_entity.status.os,
+                    nodes=nodes,
+                    exposed=rde_2_x_entity.status.cloud_properties.exposed
+                )
 
             rde_1_entity = cls(
                 metadata=metadata,
