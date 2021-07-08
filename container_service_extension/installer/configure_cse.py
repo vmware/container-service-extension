@@ -1595,7 +1595,7 @@ def _update_metadata_for_existing_templates(client: Client, config: dict,
         if catalog_item_name in catalog_item_to_template_description_map:
             # Supported template with the template name and revision found.
             remote_template_descriptor = \
-                catalog_item_to_template_description_map[catalog_item_name]
+                catalog_item_to_template_description_map[catalog_item_name].copy()  # noqa: E501
 
             # remote_template_descriptor will contain all the necessary
             # metadata keys barring the catalog_item_name.
@@ -1606,22 +1606,25 @@ def _update_metadata_for_existing_templates(client: Client, config: dict,
             # New keys to be added (min_cse_version and max_cse_version)
             # will already be in remote_template_descriptor.
             # Update template metadata.
-            ltm.save_metadata(client, catalog_org_name,
-                              catalog_name, catalog_item_name,
-                              remote_template_descriptor, metadata_key_list=new_metadata_key_list)  # noqa: E501
+            ltm.save_metadata(
+                client,
+                catalog_org_name,
+                catalog_name,
+                catalog_item_name,
+                remote_template_descriptor,
+                metadata_key_list=new_metadata_key_list
+            )
             msg = f"Successfully updated metadata " \
                   f"of local template : {template_name} revision " \
                   f"{template_revision}."
-            INSTALL_LOGGER.debug(msg)
-            msg_update_callback.general(msg)
         else:
             # Template not supported in the target CSE version.
             # Do not update template metadata
             msg = f"Local template {template_name} revision " \
                   f"{template_revision} not supported. Skipping template " \
                   "metadata update."
-            INSTALL_LOGGER.debug(msg)
-            msg_update_callback.general(msg)
+        INSTALL_LOGGER.debug(msg)
+        msg_update_callback.general(msg)
 
 
 def _assign_placement_policies_to_existing_templates(client: Client,
@@ -1633,26 +1636,29 @@ def _assign_placement_policies_to_existing_templates(client: Client,
     # NOTE: In CSE 3.0 if `enable_tkg_plus` flag in the config is set to false,
     # And there is an existing TKG+ template, throw an exception on the console
     # and fail the upgrade.
-    msg = 'Assigning placement policies to existing templates.'
+    msg = "Assigning placement policies to existing templates."
     INSTALL_LOGGER.debug(msg)
-    msg_update_callback.general(msg)
+    msg_update_callback.info(msg)
 
     catalog_name = config['broker']['catalog']
     org_name = config['broker']['org']
 
     for template in all_templates:
         kind = template.get(server_constants.LocalTemplateKey.KIND)
+        template_name = template[server_constants.LocalTemplateKey.NAME]
+        template_revision = template[server_constants.LocalTemplateKey.REVISION]  # noqa: E501
         catalog_item_name = ltm.get_revisioned_template_name(
-            template[server_constants.LocalTemplateKey.NAME],
-            template[server_constants.LocalTemplateKey.REVISION])
-        msg = f"Processing template {catalog_item_name}"
+            template_name,
+            template_revision
+        )
+        msg = f"Processing template {template_name} revision {template_revision}"  # noqa: E501
         INSTALL_LOGGER.debug(msg)
-        msg_update_callback.general(msg)
+        msg_update_callback.info(msg)
         if not kind:
             # skip processing the template if kind value is not present
-            msg = f"Skipping processing of template {catalog_item_name}. Template kind not found"  # noqa: E501
+            msg = f"Skipping processing of template {template_name} revision {template_revision}. Template kind not found"  # noqa: E501
             INSTALL_LOGGER.debug(msg)
-            msg_update_callback.general(msg)
+            msg_update_callback.info(msg)
             continue
         if kind == shared_constants.ClusterEntityKind.TKG_PLUS.value and \
                 not is_tkg_plus_enabled:
@@ -1704,6 +1710,10 @@ def _process_existing_templates(client: Client, config: dict,
             ignore_metadata_keys=[server_constants.LegacyLocalTemplateKey.COMPUTE_POLICY],  # noqa: E501
             legacy_mode=True,
             logger_debug=INSTALL_LOGGER)
+
+    msg = "Processing existing templates."
+    INSTALL_LOGGER.info(msg)
+    msg_update_callback.info(msg)
     # update metadata with min_cse_version and max_cse_version for all
     # legacy templates supported in the target CSE version
     _update_metadata_for_existing_templates(
@@ -1966,9 +1976,6 @@ def _upgrade_to_cse_3_1_non_legacy(client, config,
     """
     is_tkg_plus_enabled = server_utils.is_tkg_plus_enabled(config=config)
 
-    # This check should be done before registering def schema
-    def_entity_type_registered = _is_def_entity_type_registered(client=client)
-
     # Add global placement policies
     _setup_placement_policies(
         client=client,
@@ -1988,8 +1995,7 @@ def _upgrade_to_cse_3_1_non_legacy(client, config,
         msg = "Skipping creation of templates.\nPlease note, CSE server " \
               "startup needs at least one valid template.\nPlease " \
               "create CSE K8s template(s) using the command " \
-              "`cse template install`.\n" \
-              "Processing existing templates.\n"
+              "`cse template install`."
         msg_update_callback.info(msg)
         INSTALL_LOGGER.info(msg)
         _process_existing_templates(
@@ -2034,15 +2040,16 @@ def _upgrade_to_cse_3_1_non_legacy(client, config,
     # designed to gate cluster deployment and has no play once the cluster has
     # been deployed.
 
+    def_entity_type_registered = _is_def_entity_type_registered(client=client)
     if def_entity_type_registered:
-        _upgrade_non_legacy_clusters(
+        _process_non_legacy_clusters(
             client=client,
             config=config,
             cse_clusters=clusters,
             msg_update_callback=msg_update_callback,
             log_wire=log_wire)
     else:
-        _upgrade_legacy_clusters(
+        _process_legacy_clusters(
             client=client,
             config=config,
             cse_clusters=clusters,
@@ -2309,14 +2316,14 @@ def _remove_old_cse_sizing_compute_policies(
             INSTALL_LOGGER.error(msg)
 
 
-def _upgrade_non_legacy_clusters(
+def _process_non_legacy_clusters(
         client,
         config,
         cse_clusters,
         msg_update_callback=utils.NullPrinter(),
         log_wire=False):
 
-    msg = "Upgrading non legacy CSE k8s clusters compatible with CSE 3.1"
+    msg = "Processing existing CSE k8s clusters"
     msg_update_callback.info(msg)
     INSTALL_LOGGER.info(msg)
 
@@ -2346,7 +2353,7 @@ def _upgrade_non_legacy_clusters(
             def_entity = entity_svc.get_entity(cluster_id)
             source_rde_version = def_entity.entityType.split(":")[-1]
             if semantic_version.Version(source_rde_version) < semantic_version.Version(runtime_rde_version):  # noqa: E501
-                msg = f"Upgrading {def_entity.name} from {source_rde_version} to {runtime_rde_version}"  # noqa: E501
+                msg = f"Updating {def_entity.name} RDE from {source_rde_version} to {runtime_rde_version}"  # noqa: E501
                 INSTALL_LOGGER.info(msg)
                 msg_update_callback.info(msg)
                 _upgrade_cluster_rde(
@@ -2361,10 +2368,10 @@ def _upgrade_non_legacy_clusters(
                 )
             else:
                 msg = f"Skipping cluster '{cluster['name']}' " \
-                    f"since it has already been processed."
+                      f"since it has already been processed."
                 INSTALL_LOGGER.info(msg)
                 msg_update_callback.info(msg)
-            continue
+                continue
         except Exception as err:
             INSTALL_LOGGER.error(str(err), exc_info=True)
             msg_update_callback.error(f"Failed to upgrade cluster '{cluster['name']}'")  # noqa: E501
@@ -2390,14 +2397,14 @@ def _upgrade_non_legacy_clusters(
         msg_update_callback.error("Failed to delete old entity types")
 
 
-def _upgrade_legacy_clusters(
+def _process_legacy_clusters(
         client,
         config,
         cse_clusters,
         is_tkg_plus_enabled,
         msg_update_callback=utils.NullPrinter(),
         log_wire=False):
-    msg = "Upgrading legacy CSE k8s clusters compatible with CSE 3.1"
+    msg = "Processing CSE k8s clusters"
     msg_update_callback.info(msg)
     INSTALL_LOGGER.info(msg)
 
@@ -2418,6 +2425,10 @@ def _upgrade_legacy_clusters(
     target_entity_type = schema_svc.get_entity_type(entity_type_metadata.get_id())  # noqa: E501
 
     for cluster in cse_clusters:
+        msg = f"Processing cluster '{cluster['name']}'"
+        INSTALL_LOGGER.info(msg)
+        msg_update_callback.info(msg)
+
         try:
             policy_name = _get_placement_policy_name_from_template_name(
                 cluster['template_name'])
@@ -2445,7 +2456,12 @@ def _upgrade_legacy_clusters(
             client, cluster,
             kind, runtime_rde_version,
             target_entity_type, entity_svc,
-            site, msg_update_callback=msg_update_callback)  # noqa: E501
+            site, msg_update_callback=msg_update_callback
+        )
+
+        msg = f"Finished processing cluster '{cluster['name']}'"
+        INSTALL_LOGGER.info(msg)
+        msg_update_callback.general(msg)
 
     msg = "Finished processing all clusters."
     INSTALL_LOGGER.info(msg)
@@ -2519,10 +2535,6 @@ def _create_cluster_rde(client, cluster, kind, runtime_rde_version,
     client.get_task_monitor().wait_for_status(task)
 
     msg = f"Updated metadata of cluster '{cluster['name']}'"
-    INSTALL_LOGGER.info(msg)
-    msg_update_callback.general(msg)
-
-    msg = f"Finished processing cluster '{cluster['name']}'"
     INSTALL_LOGGER.info(msg)
     msg_update_callback.general(msg)
 

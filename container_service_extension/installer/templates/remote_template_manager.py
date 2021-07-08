@@ -4,6 +4,7 @@
 
 import os
 import stat
+from typing import Optional
 
 import requests
 import semantic_version
@@ -37,7 +38,7 @@ def download_file_into_memory(url):
     response.raise_for_status()
 
 
-class RemoteTemplateManager():
+class RemoteTemplateManager:
     """Manage interaction with remote template cookbook.
 
     Exposes methods to download template cookbook and associated scripts.
@@ -65,7 +66,7 @@ class RemoteTemplateManager():
         self.filtered_cookbook = None
         self.unfiltered_cookbook = None
         self.cookbook_version: semantic_version.Version = cookbook_version
-        self.scripts_directory_path: str = None
+        self.scripts_directory_path: Optional[str] = None
 
     def _get_base_url_from_remote_template_cookbook_url(self) -> str:
         """Get base URL of the cookbook.
@@ -90,9 +91,9 @@ class RemoteTemplateManager():
 
         e.g.
         templates.yaml is kept at <base_url>/templates.yaml
-        * Template X at revsion 2 will have it's scripts under
+        * Template X at revision 2 will have it's scripts under
         <base_url>/scripts/X_rev2/...
-        * Template Y at revsion 6 will have it's scripts under
+        * Template Y at revision 6 will have it's scripts under
         <base_url>/scripts/Y_rev6/...
 
         :param str template_name:
@@ -146,14 +147,12 @@ class RemoteTemplateManager():
                 msg += " is not supported"
             msg += f" by CSE {current_cse_version}"
             self.logger.debug(msg)
-            self.msg_update_callback.general(msg)
         self.filtered_cookbook = self.unfiltered_cookbook
         # update templates list with only supported templates
         self.filtered_cookbook['templates'] = supported_templates
 
         msg = "Successfully filtered unsupported templates."
         self.logger.debug(msg)
-        self.msg_update_callback.general(msg)
 
     def _validate_remote_template_cookbook(self):
         """Check if the remote template cookbook supplied is valid.
@@ -174,22 +173,21 @@ class RemoteTemplateManager():
             self.msg_update_callback.error(msg)
             raise ValueError(msg)
 
-        template_decriptor_keys = server_utils.get_template_descriptor_keys(self.cookbook_version)  # noqa: E501
-        key_set_expected = set([k.value for k in template_decriptor_keys])
+        template_descriptor_keys = server_utils.get_template_descriptor_keys(self.cookbook_version)  # noqa: E501
+        key_set_expected = set([k.value for k in template_descriptor_keys])
 
         # Validate template yaml contents
         for template_descriptor in self.unfiltered_cookbook.get('templates', []):  # noqa: E501
             existing_template_descriptor_keys = set(template_descriptor.keys())
-            key_differnce = key_set_expected - existing_template_descriptor_keys  # noqa: E501
-            if len(key_differnce) > 0:
-                msg = f'Remote template cookbook is missing the following keys: {list(key_differnce)}'  # noqa: E501
+            key_difference = key_set_expected - existing_template_descriptor_keys  # noqa: E501
+            if len(key_difference) > 0:
+                msg = f'Remote template cookbook is missing the following keys: {list(key_difference)}'  # noqa: E501
                 self.logger.error(msg)
                 self.msg_update_callback.error(msg)
                 raise ValueError(msg)
 
         msg = f"Template cookbook {self.url} is valid"
         self.logger.debug(msg)
-        self.msg_update_callback.general(msg)
 
     def _verify_cookbook_compatibility(self):
         """Verify if the template yaml is compatible with the server config."""
@@ -259,9 +257,8 @@ class RemoteTemplateManager():
             # 'version' is not present, set it to '1.0.0'
             self.cookbook_version = \
                 semantic_version.Version(self.unfiltered_cookbook.get('version', '1.0.0'))  # noqa: E501
-            msg = f"template cookbook version: {self.cookbook_version}"
+            msg = f"Template cookbook version: {self.cookbook_version}"
             self.logger.debug(msg)
-            self.msg_update_callback.general(msg)
 
             # set scripts directory path from the key 'scripts_directory' in
             # the template cookbook.
@@ -286,9 +283,9 @@ class RemoteTemplateManager():
         """
         if not self.cookbook_version:
             raise ValueError('Invalid value for cookbook_version')
-        # Multiple codepaths enter into this. Hence all scripts are downloaded.
-        # When vcdbroker.py id deprecated, the scripts should loop through
-        # TemplateScriptFile to download scripts.
+        # Multiple code paths enter into this. Hence all scripts are
+        # downloaded. When vcdbroker.py id deprecated, the scripts should
+        # loop through TemplateScriptFile to download scripts.
         scripts_to_download = TemplateScriptFile
         if self.legacy_mode:
             # if server configuration is indicating legacy_mode,
@@ -317,8 +314,6 @@ class RemoteTemplateManager():
 
         :param bool force_overwrite: if True, will download the script even if
             it already exists.
-        :param bool legacy_mode: If true, only template scripts will be
-            downloaded.
         """
         self.get_filtered_remote_template_cookbook()
         for template in self.filtered_cookbook['templates']:
