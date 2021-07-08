@@ -274,6 +274,16 @@ class DefEntityService:
                 self._cloudapi_client.is_sys_admin:
             resource_url_relative_path += f"?invokeHooks={str(invoke_hooks).lower()}"  # noqa: E501
 
+        payload: dict = entity.to_dict()
+
+        # Prevent users with rights <= EDIT/VIEW on CSE:NATIVECLUSTER from
+        # updating "private" property of RDE "status" section
+        # TODO: Replace sys admin check with FULL CONTROL rights check on
+        #  CSE:NATIVECLUSTER. Users with no FULL CONTROL rights cannot update
+        #  private property of entity->status.
+        if not self._cloudapi_client.is_sys_admin:
+            payload.get('entity', {}).get('status', {}).pop('private', None)
+
         if is_request_async:
             # if request is async, return the task href in
             # x_vmware_vcloud_task_location header
@@ -285,7 +295,7 @@ class DefEntityService:
                 method=RequestMethod.PUT,
                 cloudapi_version=CloudApiVersion.VERSION_1_0_0,
                 resource_url_relative_path=resource_url_relative_path,
-                payload=entity.to_dict(),
+                payload=payload,
                 return_response_headers=is_request_async)
             return DefEntity(**response_body), headers[HttpResponseHeader.X_VMWARE_VCLOUD_TASK_LOCATION.value]  # noqa: E501
         else:
@@ -293,7 +303,7 @@ class DefEntityService:
                 method=RequestMethod.PUT,
                 cloudapi_version=CloudApiVersion.VERSION_1_0_0,
                 resource_url_relative_path=resource_url_relative_path,
-                payload=entity.to_dict())
+                payload=payload)
             return DefEntity(**response_body)
 
     @handle_entity_service_exception
