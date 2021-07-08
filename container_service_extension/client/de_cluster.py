@@ -376,8 +376,9 @@ class DECluster:
             is_native_cluster = entity_svc.is_native_entity(cluster_id)
         else:
             _, _, is_native_cluster = \
-                self._get_tkg_s_and_native_clusters_by_name(cluster_name, org=org,
-                                                            vdc=vdc)
+                self._get_tkg_s_and_native_clusters_by_name(
+                    cluster_name, org=org, vdc=vdc
+                )
 
         if is_native_cluster:
             self._nativeCluster.share_cluster(cluster_id, cluster_name, users,
@@ -393,8 +394,9 @@ class DECluster:
             is_native_cluster = entity_svc.is_native_entity(cluster_id)
         else:
             _, _, is_native_cluster = \
-                self._get_tkg_s_and_native_clusters_by_name(cluster_name, org=org,
-                                                            vdc=vdc)
+                self._get_tkg_s_and_native_clusters_by_name(
+                    cluster_name, org=org, vdc=vdc
+                )
 
         if is_native_cluster:
             return self._nativeCluster.list_share_entries(
@@ -410,8 +412,9 @@ class DECluster:
             is_native_cluster = entity_svc.is_native_entity(cluster_id)
         else:
             _, _, is_native_cluster = \
-                self._get_tkg_s_and_native_clusters_by_name(cluster_name, org=org,
-                                                            vdc=vdc)
+                self._get_tkg_s_and_native_clusters_by_name(
+                    cluster_name, org=org, vdc=vdc
+                )
 
         if is_native_cluster:
             self._nativeCluster.unshare_cluster(cluster_id, cluster_name,

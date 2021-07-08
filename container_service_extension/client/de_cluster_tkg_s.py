@@ -40,8 +40,10 @@ class DEClusterTKGS:
         self._tkg_s_client = ApiClient(configuration=tkg_s_config)
         jwt_token = self._client.get_access_token()
         if jwt_token:
-            self._tkg_s_client.set_default_header(cli_constants.TKGRequestHeaderKey.AUTHORIZATION,  # noqa: E501
-                                                f"Bearer {jwt_token}")
+            self._tkg_s_client.set_default_header(
+                cli_constants.TKGRequestHeaderKey.AUTHORIZATION,
+                f"Bearer {jwt_token}"
+            )
         else:
             legacy_token = self._client.get_xvcloud_authorization_token()
             self._tkg_s_client.set_default_header(cli_constants.TKGRequestHeaderKey.X_VCLOUD_AUTHORIZATION,  # noqa: E501
