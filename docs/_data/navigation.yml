@@ -1,161 +1,3 @@
-- name: Work_in_progress
-  subdir: cse3_1
-  link: CSE31.html
-  default: false
-  subtoc:
-  - name: "What's new in CSE 3.1?"
-    link: CSE31.html
-    subtoc:
-    - name: Overview
-      sublink: overview
-    - name: Provider workflows
-      sublink: provider-workflows
-    - name: Tenant workflows
-      sublink: tenant-workflows
-    - name: FAQ
-      sublink: faq
-  - name: "Introduction"
-    link: INTRO.html
-    subtoc:
-    - name: Overview
-      sublink: overview
-    - name: How CSE Works
-      sublink: cseworkflow
-    - name: CSE User Types
-      sublink: cseusers
-  - name: "Software Installation"
-    link: INSTALLATION.html
-    subtoc:
-    - name: Overview
-      sublink: overview
-    - name: Install Kubectl
-      sublink: kubectl
-    - name: Install CSE Software
-      sublink: getting_cse
-    - name: Enable CSE Client
-      sublink: enable_cse_vcd_cli
-  - name: "CSE Server Installation Prerequisites"
-    link: CSE_INSTALL_PREREQUISITES.html
-  - name: "CSE Server Configuration File"
-    link: CSE_CONFIG.html
-    subtoc:
-      - name: "CSE Server Configuration File"
-        sublink: cse_config
-      - name: "Enterprise PKS Configuration File for CSE"
-        sublink: ent_pks_config
-      - name: "Encryption and Decryption of the Configuration Files"
-        sublink: encrypt_decrypt
-  - name: "CSE Server Management"
-    link: CSE_SERVER_MANAGEMENT.html
-    subtoc:
-    - name: Overview
-      sublink: overview
-    - name: Server Setup
-      sublink: server_setup
-    - name: Server Operation
-      sublink: server_operation
-    - name: Server Upgrade and Removal
-      sublink: server_upgrade
-    - name: Useful Commands
-      sublink: commands_sys_admin
-  - name: "Kubernetes Template Management"
-    link: TEMPLATE_MANAGEMENT.html
-    subtoc:
-    - name: Overview
-      sublink: overview
-    - name: Kubernetes Templates
-      sublink: kubernetes_templates
-    - name: Restricting Kubernetes Templates for Tenants
-      sublink: restrict_templates
-    - name: Source .ova Files for Kubernetes Templates
-      sublink: template_os_source
-  - name: "Role Based Access Control"
-    link: RBAC.html
-    subtoc:
-    - name: CSE 3.0 with vCD 10.2
-      sublink: DEF-RBAC
-    - name: CSE 3.0 with vCD < 10.2
-      sublink: old-RBAC
-  - name: "Kubernetes Cluster Management"
-    link: CLUSTER_MANAGEMENT.html
-    subtoc:
-    - name: Overview
-      sublink: overview
-    - name: Useful Commands
-      sublink: useful_commands
-    - name: Upgrading software installed on Kubernetes clusters
-      sublink: k8s_upgrade
-    - name: Automation
-      sublink: automation
-    - name: Example Use Case
-      sublink: example
-  - name: "Kubernetes Clusters UI Plugin"
-    link: CSE_UI_PLUGIN.html
-  - name: "Enterprise PKS enablement"
-    link: ENT_PKS.html
-    subtoc:
-    - name: Overview
-      sublink: overview
-    - name: Architecture
-      sublink: architecture
-    - name: Infrastructure set-up and configuration
-      sublink: infra-view
-    - name: CSE, vCD, Enterprise PKS Component Illustration
-      sublink: communication-view
-    - name: Tenant workflow of create-cluster operation
-      sublink: tenant-workflow
-    - name: CSE commands
-      sublink: cse-commands
-    - name: FAQ
-      sublink: faq
-    - name: Compatibility matrix
-      sublink: compatibility-matrix
-  - name: "NFS Node Management"
-    link: NFS_STATIC_PV.html
-    subtoc:
-    - name: Overview
-      sublink: overview
-    - name: Persistent Volume Types
-      sublink: volumes
-    - name: NFS Volume Architecture
-      sublink: architecture
-    - name: Storage Tutorial
-      sublink: tutorial
-    - name: FAQ
-      sublink: faq
-  - name: "Troubleshooting"
-    link: TROUBLESHOOTING.html
-    subtoc:
-    - name: Log bundles
-      sublink: log-bundles
-  - name: "Known Issues"
-    link: KNOWN_ISSUES.html
-    subtoc:
-    - name: General Problems
-      sublink: general
-    - name: NFS Limitations
-      sublink: nfs
-    - name: Enterprise PKS Limitations
-      sublink: ent-pks
-  - name: "Release Notes"
-    link: RELEASE_NOTES.html
-  - name: "Template Announcements"
-    link: TEMPLATE_ANNOUNCEMENTS.html
-  - name: "Contributing"
-    link: CONTRIBUTING.html
-    subtoc:
-    - name: Overview
-      sublink: overview
-    - name: Python
-      sublink: python
-    - name: Virtual Environments
-      sublink: virtualenvs
-    - name: Project Setup
-      sublink: projectsetup
-    - name: CSE Usage and Testing
-      sublink: usage
-    - name: Standard Git Workflow
-      sublink: git
 - name: CSE 3.0
   subdir: cse3_0
   link: CSE30.html
@@ -436,6 +278,169 @@
       sublink: faq
   - name: "Troubleshooting"
     link: TROUBLESHOOTING.html
+  - name: "Known Issues"
+    link: KNOWN_ISSUES.html
+    subtoc:
+    - name: General Problems
+      sublink: general
+    - name: NFS Limitations
+      sublink: nfs
+    - name: Enterprise PKS Limitations
+      sublink: ent-pks
+  - name: "Release Notes"
+    link: RELEASE_NOTES.html
+  - name: "Template Announcements"
+    link: TEMPLATE_ANNOUNCEMENTS.html
+  - name: "Contributing"
+    link: CONTRIBUTING.html
+    subtoc:
+    - name: Overview
+      sublink: overview
+    - name: Python
+      sublink: python
+    - name: Virtual Environments
+      sublink: virtualenvs
+    - name: Project Setup
+      sublink: projectsetup
+    - name: CSE Usage and Testing
+      sublink: usage
+    - name: Standard Git Workflow
+      sublink: git
+- name: Work_in_progress
+  subdir: cse3_1
+  link: CSE31.html
+  default: false
+  subtoc:
+  - name: "What's new in CSE 3.1?"
+    link: CSE31.html
+    subtoc:
+    - name: Overview
+      sublink: overview
+    - name: Provider workflows
+      sublink: provider-workflows
+    - name: Tenant workflows
+      sublink: tenant-workflows
+    - name: FAQ
+      sublink: faq
+  - name: "Introduction"
+    link: INTRO.html
+    subtoc:
+    - name: Overview
+      sublink: overview
+    - name: How CSE Works
+      sublink: cseworkflow
+    - name: CSE User Types
+      sublink: cseusers
+  - name: "Software Installation"
+    link: INSTALLATION.html
+    subtoc:
+    - name: Overview
+      sublink: overview
+    - name: Install Kubectl
+      sublink: kubectl
+    - name: Install CSE Software
+      sublink: getting_cse
+    - name: Enable CSE Client
+      sublink: enable_cse_vcd_cli
+  - name: "CSE Server Installation Prerequisites"
+    link: CSE_INSTALL_PREREQUISITES.html
+  - name: "CSE Server Configuration File"
+    link: CSE_CONFIG.html
+    subtoc:
+      - name: "CSE Server Configuration File"
+        sublink: cse_config
+      - name: "Enterprise PKS Configuration File for CSE"
+        sublink: ent_pks_config
+      - name: "Encryption and Decryption of the Configuration Files"
+        sublink: encrypt_decrypt
+  - name: "CSE Server Management"
+    link: CSE_SERVER_MANAGEMENT.html
+    subtoc:
+    - name: Overview
+      sublink: overview
+    - name: Server Setup
+      sublink: server_setup
+    - name: Server Operation
+      sublink: server_operation
+    - name: Server Upgrade and Removal
+      sublink: server_upgrade
+    - name: Useful Commands
+      sublink: commands_sys_admin
+  - name: "Kubernetes Template Management"
+    link: TEMPLATE_MANAGEMENT.html
+    subtoc:
+    - name: Overview
+      sublink: overview
+    - name: Kubernetes Templates
+      sublink: kubernetes_templates
+    - name: Restricting Kubernetes Templates for Tenants
+      sublink: restrict_templates
+    - name: Source .ova Files for Kubernetes Templates
+      sublink: template_os_source
+  - name: "Role Based Access Control"
+    link: RBAC.html
+    subtoc:
+    - name: CSE 3.0 with vCD 10.2
+      sublink: DEF-RBAC
+    - name: CSE 3.0 with vCD < 10.2
+      sublink: old-RBAC
+  - name: "Kubernetes Cluster Management"
+    link: CLUSTER_MANAGEMENT.html
+    subtoc:
+    - name: Overview
+      sublink: overview
+    - name: Useful Commands
+      sublink: useful_commands
+    - name: Upgrading software installed on Kubernetes clusters
+      sublink: k8s_upgrade
+    - name: Automation
+      sublink: automation
+    - name: Example Use Case
+      sublink: example
+  - name: "Kubernetes Cluster Management via API"
+    link: CLUSTER_MANAGEMENT.html
+    subtoc:
+    - name: Kubernetes Cluster Management via API
+      sublink: cluster_management_api
+  - name: "Kubernetes Clusters UI Plugin"
+    link: CSE_UI_PLUGIN.html
+  - name: "Enterprise PKS enablement"
+    link: ENT_PKS.html
+    subtoc:
+    - name: Overview
+      sublink: overview
+    - name: Architecture
+      sublink: architecture
+    - name: Infrastructure set-up and configuration
+      sublink: infra-view
+    - name: CSE, vCD, Enterprise PKS Component Illustration
+      sublink: communication-view
+    - name: Tenant workflow of create-cluster operation
+      sublink: tenant-workflow
+    - name: CSE commands
+      sublink: cse-commands
+    - name: FAQ
+      sublink: faq
+    - name: Compatibility matrix
+      sublink: compatibility-matrix
+  - name: "NFS Node Management"
+    link: NFS_STATIC_PV.html
+    subtoc:
+    - name: Overview
+      sublink: overview
+    - name: Persistent Volume Types
+      sublink: volumes
+    - name: NFS Volume Architecture
+      sublink: architecture
+    - name: Storage Tutorial
+      sublink: tutorial
+    - name: FAQ
+      sublink: faq
+  - name: "Troubleshooting"
+    link: TROUBLESHOOTING.html
+    subtoc:
+    - name: Log bundles
+      sublink: log-bundles
   - name: "Known Issues"
     link: KNOWN_ISSUES.html
     subtoc:

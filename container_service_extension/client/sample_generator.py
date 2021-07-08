@@ -82,7 +82,7 @@ def get_sample_cluster_configuration(output=None, k8_runtime=None, server_rde_in
     else:
         if not server_rde_in_use:
             raise ValueError("CSE server API version required to generate sample config")  # noqa: E501
-        sample_cluster_config = SAMPLE_K8_CLUSTER_SPEC_HELP + _get_sample_cluster_configuration_by_k8_runtime(k8_runtime, server_rde_in_use)  # noqa: E501
+        sample_cluster_config = _get_sample_cluster_configuration_by_k8_runtime(k8_runtime, server_rde_in_use)  # noqa: E501
 
     if output:
         with open(output, 'w') as f:

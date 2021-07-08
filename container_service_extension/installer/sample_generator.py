@@ -126,7 +126,7 @@ SAMPLE_BROKER_CONFIG = {
         'storage_profile': '*',
         'default_template_name': 'my_template',
         'default_template_revision': 0,
-        'remote_template_cookbook_url': 'http://raw.githubusercontent.com/vmware/container-service-extension-templates/upgrades/template_v2.yaml',  # noqa: E501
+        'remote_template_cookbook_url': 'https://raw.githubusercontent.com/vmware/container-service-extension-templates/master/template_v2.yaml',  # noqa: E501
     }
 }
 
@@ -331,7 +331,7 @@ def generate_sample_config(
                                         default_flow_style=False) + '\n'
 
         if legacy_mode:
-            SAMPLE_BROKER_CONFIG['broker']['remote_template_cookbook_url'] = 'http://raw.githubusercontent.com/vmware/container-service-extension-templates/upgrades/template.yaml' # noqa: E501
+            SAMPLE_BROKER_CONFIG['broker']['remote_template_cookbook_url'] = 'https://raw.githubusercontent.com/vmware/container-service-extension-templates/master/template.yaml'  # noqa: E501
 
         sample_config += yaml.safe_dump(SAMPLE_BROKER_CONFIG,
                                         default_flow_style=False) + '\n'

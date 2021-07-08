@@ -39,6 +39,7 @@ class ClusterEntityKind(Enum):
 # Cluster runtimes and placement policies
 NATIVE_CLUSTER_RUNTIME_INTERNAL_NAME = 'native'
 TKG_PLUS_CLUSTER_RUNTIME_INTERNAL_NAME = 'tkgplus'
+TKG_M_CLUSTER_RUNTIME_INTERNAL_NAME = 'tkgm'
 CLUSTER_RUNTIME_PLACEMENT_POLICIES = [NATIVE_CLUSTER_RUNTIME_INTERNAL_NAME,
                                       TKG_PLUS_CLUSTER_RUNTIME_INTERNAL_NAME]
 
@@ -238,4 +239,4 @@ class ClusterDetailsKey(str, Enum):
 @unique
 class HttpResponseHeader(str, Enum):
     LOCATION = 'Location'
-    X_VMWARE_VCOULD_TASK_LOCATION = 'X-VMWARE-VCOULD-TASK-LOCATION'
+    X_VMWARE_VCLOUD_TASK_LOCATION = 'X-VMWARE-VCLOUD-TASK-LOCATION'

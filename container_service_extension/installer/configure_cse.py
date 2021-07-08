@@ -733,6 +733,29 @@ def upgrade_cse(config_file_name, config, skip_template_creation,
         if source_cse_running_in_legacy_mode != target_cse_running_in_legacy_mode and target_cse_running_in_legacy_mode:  # noqa: E501
             raise Exception(upgrade_path_not_valid_msg)
 
+        # Upgrading from CSE 3.0.3 (non legacy) to CSE 3.1.0 should be
+        # blocked, if TKGm compute policy is found in the system.
+        cse_installation_with_tkgm_support = \
+            semantic_version.SimpleSpec('>=3.0.3,<3.1.0')
+        if cse_installation_with_tkgm_support.match(ext_cse_version) and \
+                not source_cse_running_in_legacy_mode:
+            cpm = compute_policy_manager.ComputePolicyManager(
+                client, log_wire=log_wire
+            )
+            try:
+                compute_policy_manager.get_cse_vdc_compute_policy(
+                    cpm,
+                    shared_constants.TKG_M_CLUSTER_RUNTIME_INTERNAL_NAME,
+                    is_placement_policy=True
+                )
+                found_tkgm_policy = True
+            except EntityNotFoundException:
+                found_tkgm_policy = False
+
+            if found_tkgm_policy:
+                upgrade_path_not_valid_msg += " TKGm runtime detected."
+                raise Exception(upgrade_path_not_valid_msg)
+
         if source_cse_running_in_legacy_mode and target_cse_running_in_legacy_mode:  # noqa: E501
             _upgrade_to_cse_3_1_legacy(
                 client=client,
