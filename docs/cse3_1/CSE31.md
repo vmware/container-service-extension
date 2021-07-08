@@ -23,14 +23,14 @@ For greenfield installations, please get started with [CSE introduction](INTRO.h
   Tanzu clusters.
   
 * CSE-CLI supports below workflows for both native and vSphere with Tanzu clusters.
-    - cluster upgrade workflow through `vcd cse cluster apply` command.
-    - cluster share workflow through `vcd cse cluster share` command.
+    - cluster upgrades are available using `vcd cse cluster apply` command.
+    - cluster sharing with other users is available using `vcd cse cluster share` command.
     
 * Newer versions of native Kubernetes templates are available. Refer to 
   [Template announcements](TEMPLATE_ANNOUNCEMENTS.html)
 
 **Terminology:**
-* TKG cluster ~ Tanzu Kubernetes  cluster ~ Tanzu Kubernetes Grid cluster ~ vSphere with Tanzu cluster
+* TKG-S cluster ~ Tanzu Kubernetes cluster ~ Tanzu Kubernetes Grid cluster ~ vSphere with Tanzu cluster
 * TKGI cluster ~ Ent-PKS cluster ~ Tanzu Kubernetes Grid Integrated Edition cluster
 * Defined entities ~ Runtime defined entities ~ RDE ~ Defined Entity Framework
 * Native entities: Native defined entities representing Native clusters.
@@ -47,11 +47,11 @@ For greenfield installations, please get started with [CSE introduction](INTRO.h
 
 | CSE Server | CSE CLI | CSE UI | Cloud Director | Ent-PKS with NSX-T | Features offered                                                                                    |
 |------------|---------|--------|----------------|--------------------|-----------------------------------------------------------------------------------------------------|
-| 3.1        | 3.1     | 3.0*   | 10.3           | 1.7 with 2.5.1     | Native, Tkg, and Ent-PKS Cluster management; Life cycle management of both native and tkg through VCD defined entity API  |
-| 3.1        | 3.1     | 2.0*   | 10.2           | 1.7 with 2.5.1     | Native, Tkg, and Ent-PKS Cluster management; Defined entity representation for both native and tkg. |
-| 3.1        | 3.1     | 1.0.3  | 10.1, 10.0     | 1.7 with 2.5.1     | Native and Ent-PKS cluster management                                                               |
-| NA         | 3.1     | 3.0*   | 10.3           | NA                 | Tkg cluster management only                                                                         |
-| NA         | 3.1     | 2.0*   | 10.2           | NA                 | Tkg cluster management only                                                                         |
+| 3.1        | 3.1     | 3.0*   | 10.3           | 1.7 with 2.5.1     | Native, TKG-S, and Ent-PKS Cluster management; Life cycle management of both native through VCD defined entity API  |
+| 3.1        | 3.1     | 2.0*   | 10.2           | 1.7 with 2.5.1     | Native, TKG-S, and Ent-PKS Cluster management; Defined entity representation for both native and tkg. |
+| 3.1        | 3.1     | 1.0.3  | 10.1           | 1.7 with 2.5.1     | Native and Ent-PKS cluster management                                                               |
+| NA         | 3.1     | 3.0*   | 10.3           | NA                 | TKG-S cluster management only                                                                         |
+| NA         | 3.1     | 2.0*   | 10.2           | NA                 | TKG-S cluster management only                                                                         |
 
 3.0*, 2.0* -> Kubernetes Clusters UI Plugins 3.0 and 2.0 ship with VCD 10.3 and VCD 10.2 respectively.
 
@@ -60,7 +60,6 @@ For greenfield installations, please get started with [CSE introduction](INTRO.h
 | 10.3        | 36.0                      |
 | 10.2        | 35.0                      |
 | 10.1        | 34.0                      |
-| 10.0        | 33.0                      |
 
 ### 2.2 CSE Server
 
@@ -149,7 +148,7 @@ to the desired organizations.
 ### 2.3 Kubernetes Clusters UI Plugin
 Kubernetes Clusters UI Plugin 3.0 is available out of the box with VCD 10.3. Provider can publish it to the desired tenants
 to offer Kubernetes services. Refer to [publish Kubernetes Clusters UI Plugin](https://docs.vmware.com/en/VMware-Cloud-Director/10.2/VMware-Cloud-Director-Service-Provider-Admin-Portal-Guide/GUID-A1910FF9-B2CF-49DD-B031-D1245E8740AE.html)
-
+For VCD 10.2 that inter-operates with CSE 3.1, Provider must use the Kubernetes Clusters UI Plugin 2.0 that comes with VCD to offer Kubernetes Services.
 For VCD < 10.2 versions that inter-operate with CSE 3.1, Kubernetes Clusters UI Plugin 1.0.3 must be installed separately by a Provider and published to the desired tenants.
 Refer to [Register CSE UI Plugin 1.0.3](CSE_UI_PLUGIN.html) for more details.
 
@@ -168,6 +167,8 @@ CSE 3.1 introduces below changes in CLI
 
 ### 3.2 Kubernetes Clusters UI Plugin
 
+For VCD 10.3, you must use the [Kubernetes Clusters UI Plugin 3.0](https://docs.vmware.com/en/VMware-Cloud-Director/10.2/VMware-Cloud-Director-Service-Provider-Admin-Portal-Guide/GUID-A1910FF9-B2CF-49DD-B031-D1245E8740AE.html
+) that comes with VCD to manage the cluster deployments.
 For VCD 10.2, you must use the [Kubernetes Clusters UI Plugin 2.0](https://docs.vmware.com/en/VMware-Cloud-Director/10.2/VMware-Cloud-Director-Service-Provider-Admin-Portal-Guide/GUID-A1910FF9-B2CF-49DD-B031-D1245E8740AE.html
 ) that comes with VCD to manage the cluster deployments.
 
