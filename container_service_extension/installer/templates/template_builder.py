@@ -56,7 +56,7 @@ def assign_placement_policy_to_template(client, cse_placement_policy,
         else:
             msg = f"{catalog_item_name} already tagged with" \
                   f" placement policy {cse_placement_policy}."
-        msg_update_callback.info(msg)
+        msg_update_callback.general(msg)
         logger.info(msg)
     except Exception as err:
         msg = f"Failed to tag template {catalog_item_name} with " \
