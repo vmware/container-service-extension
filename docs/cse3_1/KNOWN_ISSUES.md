@@ -8,7 +8,27 @@ title: Known Issues
 ## General Issues
 ---
 
-#### In CSE 3.1 
+### CSE 3.1 silently ignores the `api_version` property in the config.yaml
+It is no longer needed to start the CSE server with a particular VCD API 
+version. CSE 3.1 is now capable of accepting incoming requests at any supported 
+VCD API version. However, CSE 3.1 would not complain about the presence of `api_version`
+property, but it would silently ignore it. Refer to changes in the [configuration file](CSE31.html#cse31-config)
+
+### CSE 3.1 upgrade may fail to upgrade the clusters owned by System users correctly.
+During the `cse upgrade`, the RDE representation of the existing clusters is 
+transformed to become forward compatible. The newly created RDEs are supposed 
+to be owned by the corresponding original cluster owners in the process. 
+However, the ownership assignment may fail if the original owners are from the System org.
+
+**Workaround**
+Edit the RDE by updating the `owner.name` and `owner.id` in the payload
+PUT `https://<vcd-fqdn>/cloudapi/1.0.0/entities/id?invokeHooks=false`
+
+#### In CSE 3.1 user needs to have EDIT rights on the edge-gateway to expose the cluster.
+The property `expose` in the input YAML spec of the cluster creation exposes the 
+cluster to the external world by assigning a routable VIP. CSE server will 
+require the user to have EDIT rights on the edge-gateway to expose the cluster.
+
 ### In CSE 3.0 users of System organization are unable to create clusters
 If a user from System org who didn't install CSE 3.0 attempts to create clusters,
 the operation fails with an error message "Access denied". The reason behind the

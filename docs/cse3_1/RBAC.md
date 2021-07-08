@@ -45,6 +45,10 @@ CSE 3.1:
       
       # Share TKG cluster with cluster ID 'urn:vcloud:entity:vmware:tkgcluster:1.0.0:uuid' with ReadOnly access with 'user1'
       vcd cse cluster share --id urn:vcloud:entity:vmware:tkgcluster:1.0.0:uuid --acl ReadOnly user1  
+      
+      # View the acl info for a cluster; for each user the cluster is shared with, 
+      # the user's access level, member id, and user name are listed.
+      vcd cse cluster share-list --name cluster1
    ```
 
 CSE 3.0:
