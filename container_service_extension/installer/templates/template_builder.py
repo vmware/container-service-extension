@@ -23,7 +23,7 @@ from container_service_extension.common.utils.vsphere_utils import vgr_callback
 from container_service_extension.common.utils.vsphere_utils import wait_until_tools_ready  # noqa: E501
 import container_service_extension.installer.templates.local_template_manager as ltm  # noqa: E501
 from container_service_extension.logging.logger import NULL_LOGGER
-import container_service_extension.server.compute_policy_manager as compute_policy_manager # noqa: E501
+import container_service_extension.server.compute_policy_manager as compute_policy_manager  # noqa: E501
 
 
 # used for creating temp vapp
@@ -34,9 +34,8 @@ TEMP_VAPP_FENCE_MODE = FenceMode.BRIDGED.value
 def assign_placement_policy_to_template(client, cse_placement_policy,
                                         catalog_name, catalog_item_name,
                                         org_name, logger=NULL_LOGGER,
-                                        log_wire=False, msg_update_callback=NullPrinter()): # noqa: E501
+                                        log_wire=False, msg_update_callback=NullPrinter()):  # noqa: E501
 
-    policy = None
     cpm = compute_policy_manager.ComputePolicyManager(client,
                                                       log_wire=log_wire)
     try:
@@ -67,7 +66,7 @@ def assign_placement_policy_to_template(client, cse_placement_policy,
         raise
 
 
-class TemplateBuilder():
+class TemplateBuilder:
     """Builder calls for K8 templates."""
 
     def __init__(self, client, sys_admin_client, build_params, org=None,
@@ -101,39 +100,39 @@ class TemplateBuilder():
             return
 
         # validate and populate required fields
-        self.template_name = build_params.get(TemplateBuildKey.TEMPLATE_NAME) # noqa: E501
-        self.template_revision = build_params.get(TemplateBuildKey.TEMPLATE_REVISION) # noqa: E501
-        self.ova_name = build_params.get(TemplateBuildKey.SOURCE_OVA_NAME) # noqa: E501
-        self.ova_href = build_params.get(TemplateBuildKey.SOURCE_OVA_HREF) # noqa: E501
-        self.ova_sha256 = build_params.get(TemplateBuildKey.SOURCE_OVA_SHA256) # noqa: E501
+        self.template_name = build_params.get(TemplateBuildKey.TEMPLATE_NAME)  # noqa: E501
+        self.template_revision = build_params.get(TemplateBuildKey.TEMPLATE_REVISION)  # noqa: E501
+        self.ova_name = build_params.get(TemplateBuildKey.SOURCE_OVA_NAME)  # noqa: E501
+        self.ova_href = build_params.get(TemplateBuildKey.SOURCE_OVA_HREF)  # noqa: E501
+        self.ova_sha256 = build_params.get(TemplateBuildKey.SOURCE_OVA_SHA256)  # noqa: E501
 
         if org:
             self.org = org
             self.org_name = org.get_name()
         else:
-            self.org_name = build_params.get(TemplateBuildKey.ORG_NAME) # noqa: E501
+            self.org_name = build_params.get(TemplateBuildKey.ORG_NAME)  # noqa: E501
             self.org = get_org(self.client, org_name=self.org_name)
         if vdc:
             self.vdc = vdc
             self.vdc.get_resource()  # to make sure vdc.resource is populated
             self.vdc_name = vdc.name
         else:
-            self.vdc_name = build_params.get(TemplateBuildKey.VDC_NAME) # noqa: E501
+            self.vdc_name = build_params.get(TemplateBuildKey.VDC_NAME)  # noqa: E501
             self.vdc = get_vdc(self.client, vdc_name=self.vdc_name,
                                org=self.org)
-        self.catalog_name = build_params.get(TemplateBuildKey.CATALOG_NAME) # noqa: E501
-        self.catalog_item_name = build_params.get(TemplateBuildKey.CATALOG_ITEM_NAME) # noqa: E501
+        self.catalog_name = build_params.get(TemplateBuildKey.CATALOG_NAME)  # noqa: E501
+        self.catalog_item_name = build_params.get(TemplateBuildKey.CATALOG_ITEM_NAME)  # noqa: E501
         self.catalog_item_description = \
-            build_params.get(TemplateBuildKey.CATALOG_ITEM_DESCRIPTION) # noqa: E501
+            build_params.get(TemplateBuildKey.CATALOG_ITEM_DESCRIPTION)  # noqa: E501
 
-        self.temp_vapp_name = build_params.get(TemplateBuildKey.TEMP_VAPP_NAME) # noqa: E501
-        self.temp_vm_name = build_params.get(TemplateBuildKey.TEMP_VM_NAME) # noqa: E501
+        self.temp_vapp_name = build_params.get(TemplateBuildKey.TEMP_VAPP_NAME)  # noqa: E501
+        self.temp_vm_name = build_params.get(TemplateBuildKey.TEMP_VM_NAME)  # noqa: E501
         self.cpu = build_params.get(TemplateBuildKey.CPU)
         self.memory = build_params.get(TemplateBuildKey.MEMORY)
-        self.network_name = build_params.get(TemplateBuildKey.NETWORK_NAME) # noqa: E501
-        self.ip_allocation_mode = build_params.get(TemplateBuildKey.IP_ALLOCATION_MODE) # noqa: E501
-        self.storage_profile = build_params.get(TemplateBuildKey.STORAGE_PROFILE) # noqa: E501
-        self.cse_placement_policy = build_params.get(TemplateBuildKey.CSE_PLACEMENT_POLICY) # noqa: E501
+        self.network_name = build_params.get(TemplateBuildKey.NETWORK_NAME)  # noqa: E501
+        self.ip_allocation_mode = build_params.get(TemplateBuildKey.IP_ALLOCATION_MODE)  # noqa: E501
+        self.storage_profile = build_params.get(TemplateBuildKey.STORAGE_PROFILE)  # noqa: E501
+        self.cse_placement_policy = build_params.get(TemplateBuildKey.CSE_PLACEMENT_POLICY)  # noqa: E501
         self.remote_cookbook_version = build_params.get(TemplateBuildKey.REMOTE_COOKBOOK_VERSION)  # noqa: E501
         self.log_wire = log_wire
 
@@ -165,7 +164,6 @@ class TemplateBuilder():
         build_params.
 
         :param str item_name: name of the item to delete.
-        :param str item_type
         """
         try:
             self.org.delete_catalog_item(name=self.catalog_name,
