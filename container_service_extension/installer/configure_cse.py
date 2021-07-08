@@ -317,7 +317,10 @@ def install_cse(config_file_name, config, skip_template_creation,
             logger=INSTALL_LOGGER, msg_update_callback=msg_update_callback)
 
         if skip_template_creation:
-            msg = "Skipping creation of templates."
+            msg = "Skipping creation of templates.\nPlease note, CSE server " \
+                  "startup needs at least one valid template.\nPlease " \
+                  "create CSE K8s template(s) using the command " \
+                  "`cse template install`."
             msg_update_callback.info(msg)
             INSTALL_LOGGER.info(msg)
         else:
@@ -1584,6 +1587,11 @@ def _update_metadata_for_existing_templates(client: Client, config: dict,
         # that all the templates have catalog_item_name in their metadata
         catalog_item_name = \
             template[server_constants.LegacyLocalTemplateKey.CATALOG_ITEM_NAME]
+        template_name = \
+            template[server_constants.LegacyLocalTemplateKey.NAME]
+        template_revision = \
+            template[server_constants.LegacyLocalTemplateKey.REVISION]
+
         if catalog_item_name in catalog_item_to_template_description_map:
             # Supported template with the template name and revision found.
             remote_template_descriptor = \
@@ -1601,15 +1609,17 @@ def _update_metadata_for_existing_templates(client: Client, config: dict,
             ltm.save_metadata(client, catalog_org_name,
                               catalog_name, catalog_item_name,
                               remote_template_descriptor, metadata_key_list=new_metadata_key_list)  # noqa: E501
-            msg = f"Successfully updated local template metadata " \
-                  f"for {catalog_item_name}"
+            msg = f"Successfully updated metadata " \
+                  f"of local template : {template_name} revision " \
+                  f"{template_revision}."
             INSTALL_LOGGER.debug(msg)
             msg_update_callback.general(msg)
         else:
             # Template not supported in the target CSE version.
             # Do not update template metadata
-            msg = f"Local template {catalog_item_name} not supported, " \
-                  f"Skipping template metadata update."
+            msg = f"Local template {template_name} revision " \
+                  f"{template_revision} not supported. Skipping template " \
+                  "metadata update."
             INSTALL_LOGGER.debug(msg)
             msg_update_callback.general(msg)
 
@@ -1975,7 +1985,11 @@ def _upgrade_to_cse_3_1_non_legacy(client, config,
         log_wire=log_wire)
 
     if skip_template_creation:
-        msg = "Skipping creation of templates."
+        msg = "Skipping creation of templates.\nPlease note, CSE server " \
+              "startup needs at least one valid template.\nPlease " \
+              "create CSE K8s template(s) using the command " \
+              "`cse template install`.\n" \
+              "Processing existing templates.\n"
         msg_update_callback.info(msg)
         INSTALL_LOGGER.info(msg)
         _process_existing_templates(
@@ -2054,7 +2068,11 @@ def _upgrade_to_cse_3_1_legacy(
         could not be created.
     """
     if skip_template_creation:
-        msg = "Skipping creation of new templates and special processing of existing templates"  # noqa: E501
+        msg = "Skipping creation of new templates and special processing " \
+              "of existing templates.\nPlease note, CSE server " \
+              "startup needs at least one valid template.\nPlease create " \
+              "CSE K8s template(s) using the command " \
+              "`cse template install`."
         msg_update_callback.info(msg)
         INSTALL_LOGGER.info(msg)
     else:
