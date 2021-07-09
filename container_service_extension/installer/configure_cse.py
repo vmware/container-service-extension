@@ -1542,24 +1542,28 @@ def _construct_catalog_item_name_to_template_description_map(cookbook: dict) -> 
     return catalog_item_name_to_template_description
 
 
-def _update_metadata_for_existing_templates(client: Client, config: dict,
-                                            all_legacy_templates: list,
-                                            msg_update_callback=utils.NullPrinter()):  # noqa: E501
+def _update_metadata_of_templates(
+        client: Client,
+        templates_to_process: list,
+        catalog_org_name: str,
+        catalog_name: str,
+        cookbook_version: semantic_version.Version,
+        msg_update_callback=utils.NullPrinter()):
     """Update template metadata to include new metadata keys.
 
     Metadata update will happen when CSE is configured in non-legacy mode only
     for supported templates.
+
     :param vcdClient.Client client:
-    :param dict config: server configuration
-    :param list all_legacy_templates: list of all legacy templates
+    :param list templates_to_process: list of dict, each dict represents the
+        template definition as per the remote template repo.
+    :param str catalog_org_name:
+    :param str catalog_name:
+    :param semantic_version.Version cookbook_version:
     :param core_utils.ConsoleMessagePrinter msg_update_callback:
     """
     # load global LEGACY_MODE value
     global LEGACY_MODE
-
-    cookbook_url = config['broker']['remote_template_cookbook_url']
-    catalog_org_name = config['broker']['org']
-    catalog_name = config['broker']['catalog']
 
     # Skip updating metadata if CSE is configured in legacy mode.
     if LEGACY_MODE:
@@ -1568,61 +1572,39 @@ def _update_metadata_for_existing_templates(client: Client, config: dict,
         INSTALL_LOGGER.debug(msg)
         msg_update_callback.general(msg)
         return
-    rtm = RemoteTemplateManager(
-        remote_template_cookbook_url=cookbook_url,
-        legacy_mode=LEGACY_MODE,
-        logger=INSTALL_LOGGER,
-        msg_update_callback=msg_update_callback)
-    # NOTE: get_remote_template_cookbook() will load only
-    # the template descriptors supported by the target CSE version.
-    rtm.get_filtered_remote_template_cookbook()
-    catalog_item_to_template_description_map = \
-        _construct_catalog_item_name_to_template_description_map(
-            rtm.filtered_cookbook)
+
     # List of keys for the new template metadata. This includes
     # min_cse_version and max_cse_version
     new_metadata_key_list = [k for k in server_constants.LocalTemplateKey]
-    for template in all_legacy_templates:
+    for template in templates_to_process:
         # Since CSE 3.1 can only be upgraded from CSE 3.0, we can safely assume
         # that all the templates have catalog_item_name in their metadata
         catalog_item_name = \
-            template[server_constants.LegacyLocalTemplateKey.CATALOG_ITEM_NAME]
+            template[server_constants.RemoteTemplateKeyV2.CATALOG_ITEM_NAME]
         template_name = \
-            template[server_constants.LegacyLocalTemplateKey.NAME]
+            template[server_constants.RemoteTemplateKeyV2.NAME]
         template_revision = \
-            template[server_constants.LegacyLocalTemplateKey.REVISION]
+            template[server_constants.RemoteTemplateKeyV2.REVISION]
 
-        if catalog_item_name in catalog_item_to_template_description_map:
-            # Supported template with the template name and revision found.
-            remote_template_descriptor = \
-                catalog_item_to_template_description_map[catalog_item_name].copy()  # noqa: E501
+        # remote template definition will contain all the necessary
+        # metadata keys barring the catalog_item_name and cookbook_version.
+        template[server_constants.LocalTemplateKey.CATALOG_ITEM_NAME] = catalog_item_name  # noqa: E501
+        template[server_constants.LocalTemplateKey.COOKBOOK_VERSION] = str(cookbook_version)  # noqa: E501
 
-            # remote_template_descriptor will contain all the necessary
-            # metadata keys barring the catalog_item_name.
-            # Add catalog_item_name to the dict remote_template_descriptor
-            remote_template_descriptor[server_constants.LocalTemplateKey.CATALOG_ITEM_NAME] = catalog_item_name  # noqa: E501
-            remote_template_descriptor[server_constants.LocalTemplateKey.COOKBOOK_VERSION] = str(rtm.cookbook_version)  # noqa: E501
-
-            # New keys to be added (min_cse_version and max_cse_version)
-            # will already be in remote_template_descriptor.
-            # Update template metadata.
-            ltm.save_metadata(
-                client,
-                catalog_org_name,
-                catalog_name,
-                catalog_item_name,
-                remote_template_descriptor,
-                metadata_key_list=new_metadata_key_list
-            )
-            msg = f"Successfully updated metadata " \
-                  f"of local template : {template_name} revision " \
-                  f"{template_revision}."
-        else:
-            # Template not supported in the target CSE version.
-            # Do not update template metadata
-            msg = f"Local template {template_name} revision " \
-                  f"{template_revision} not supported. Skipping template " \
-                  "metadata update."
+        # New keys to be added (min_cse_version and max_cse_version)
+        # will already be in template representation.
+        # Update template metadata.
+        ltm.save_metadata(
+            client,
+            catalog_org_name,
+            catalog_name,
+            catalog_item_name,
+            template,
+            metadata_key_list=new_metadata_key_list
+        )
+        msg = f"Successfully updated metadata " \
+              f"of local template : {template_name} revision " \
+              f"{template_revision}."
         INSTALL_LOGGER.debug(msg)
         msg_update_callback.general(msg)
 
@@ -1681,11 +1663,16 @@ def _assign_placement_policies_to_existing_templates(client: Client,
             msg_update_callback=msg_update_callback)
 
 
-def _process_existing_templates(client: Client, config: dict,
-                                is_tkg_plus_enabled: bool,
-                                log_wire: bool = False,
-                                msg_update_callback=utils.NullPrinter()):  # noqa: E501
-    """Read existing templates and assign respective placement policies.
+def _process_existing_templates(
+        client: Client, config: dict,
+        is_tkg_plus_enabled: bool,
+        log_wire: bool = False,
+        msg_update_callback=utils.NullPrinter()):
+    """Process existing templates and make them compatible with CSE 3.1.0.
+
+    Read existing templates in catalog, compare them with what is available
+    in remote template repo, if a match is found update the metadata on
+    the template and re-download the script files.
 
     Read metadata of existing templates, get the value for the 'kind' metadata,
     assign the respective placement policy to the template.
@@ -1699,37 +1686,102 @@ def _process_existing_templates(client: Client, config: dict,
     # Load global LEGACY_MODE variable
     global LEGACY_MODE
 
-    catalog_name = config['broker']['catalog']
-    org_name = config['broker']['org']
+    if LEGACY_MODE:
+        msg = "Template won't be processed as " \
+              "CSE is configured in legacy mode."
+        INSTALL_LOGGER.info(msg)
+        msg_update_callback.info(msg)
+        return
+    else:
+        msg = "Processing existing templates."
+        INSTALL_LOGGER.info(msg)
+        msg_update_callback.info(msg)
 
-    all_legacy_templates = \
+    catalog_org_name = config['broker']['org']
+    catalog_name = config['broker']['catalog']
+    # Here we are trying to load all existing templates
+    # The templates might be created by CSE 3.0 or CSE 3.1
+    # To be on safe side, we are reading them as v1.0.0 template
+    # hence legacy_mode is set to True, this will ignore the keys
+    # max_cse_version and min_cse_version
+    # Also we are ignoring the "compute_policy" key since the key
+    # won't be present on templates created by CSE 3.1
+    all_local_templates = \
         ltm.get_all_k8s_local_template_definition(
             client,
-            catalog_name=catalog_name,  # noqa: E501
-            org_name=org_name,
+            catalog_name=catalog_name,
+            org_name=catalog_org_name,
             ignore_metadata_keys=[server_constants.LegacyLocalTemplateKey.COMPUTE_POLICY],  # noqa: E501
             legacy_mode=True,
-            logger_debug=INSTALL_LOGGER)
+            logger_debug=INSTALL_LOGGER
+        )
 
-    msg = "Processing existing templates."
-    INSTALL_LOGGER.info(msg)
-    msg_update_callback.info(msg)
-    # update metadata with min_cse_version and max_cse_version for all
-    # legacy templates supported in the target CSE version
-    _update_metadata_for_existing_templates(
-        client,
-        config,
-        all_legacy_templates,
-        msg_update_callback=msg_update_callback)
+    cookbook_url = config['broker']['remote_template_cookbook_url']
+    rtm = RemoteTemplateManager(
+        remote_template_cookbook_url=cookbook_url,
+        legacy_mode=False,
+        logger=INSTALL_LOGGER,
+        msg_update_callback=msg_update_callback
+    )
+    # NOTE: get_remote_template_cookbook() will load only
+    # the template descriptors supported by the target CSE version.
+    rtm.get_filtered_remote_template_cookbook()
 
-    # Get only the templates which are supported.
+    catalog_item_to_template_description_map = \
+        _construct_catalog_item_name_to_template_description_map(
+            rtm.filtered_cookbook)
+
+    templates_to_process = []
+    for template in all_local_templates:
+        # Since CSE 3.1 can only be upgraded from CSE 3.0, we can safely assume
+        # that all the templates have catalog_item_name in their metadata
+        catalog_item_name = \
+            template[server_constants.LegacyLocalTemplateKey.CATALOG_ITEM_NAME]
+        template_name = \
+            template[server_constants.LegacyLocalTemplateKey.NAME]
+        template_revision = \
+            template[server_constants.LegacyLocalTemplateKey.REVISION]
+
+        if catalog_item_name in catalog_item_to_template_description_map:
+            templates_to_process.append(catalog_item_to_template_description_map[catalog_item_name].copy())  # noqa: E501
+            msg = f"Template {template_name} revision {template_revision} " \
+                  "will be processed."
+        else:
+            # Template not supported in the target CSE version.
+            # Do not update template metadata
+            msg = f"Template {template_name} revision {template_revision} " \
+                  "will not be processed."
+        INSTALL_LOGGER.debug(msg)
+        msg_update_callback.general(msg)
+
+    # Update metadata with min_cse_version and max_cse_version for all
+    # templates supported in the target CSE version
+    _update_metadata_of_templates(
+        client=client,
+        templates_to_process=templates_to_process,
+        catalog_org_name=catalog_org_name,
+        catalog_name=catalog_name,
+        cookbook_version=rtm.cookbook_version,
+        msg_update_callback=msg_update_callback
+    )
+
+    # Download scripts of processed templates
+    for template in templates_to_process:
+        rtm.download_template_scripts(
+            template_name=template[server_constants.RemoteTemplateKeyV2.NAME],
+            revision=template[server_constants.RemoteTemplateKeyV2.REVISION],
+            force_overwrite=True
+        )
+
+    # Once the templates are fixed, load them normally.
     all_templates = \
         ltm.get_all_k8s_local_template_definition(
             client,
-            catalog_name=catalog_name,  # noqa: E501
-            org_name=org_name,
-            legacy_mode=LEGACY_MODE,
-            logger_debug=INSTALL_LOGGER)
+            catalog_name=catalog_name,
+            org_name=catalog_org_name,
+            legacy_mode=False,
+            logger_debug=INSTALL_LOGGER
+        )
 
     _assign_placement_policies_to_existing_templates(
         client,
