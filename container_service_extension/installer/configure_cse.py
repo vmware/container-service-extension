@@ -317,10 +317,9 @@ def install_cse(config_file_name, config, skip_template_creation,
             logger=INSTALL_LOGGER, msg_update_callback=msg_update_callback)
 
         if skip_template_creation:
-            msg = "Skipping creation of templates.\nPlease note, CSE server " \
-                  "startup needs at least one valid template.\nPlease " \
-                  "create CSE K8s template(s) using the command " \
-                  "`cse template install`."
+            msg = """Skipping creation of templates.
+Please note, CSE server startup needs at least one valid template.
+Please create CSE K8s template(s) using the command `cse template install`."""
             msg_update_callback.info(msg)
             INSTALL_LOGGER.info(msg)
         else:
@@ -1337,7 +1336,7 @@ def _register_behaviors(cloudapi_client,
             try:
                 behavior_svc.get_behavior_on_interface_by_id(behavior.id, interface_id)  # noqa: E501
                 msg = f"Skipping creation of behavior '{behavior.id}' on " \
-                      f"interface '{interface_id}'.Behavior already found.\n"
+                      f"interface '{interface_id}'.Behavior already found."
                 msg_update_callback.general(msg.rstrip())
                 INSTALL_LOGGER.info(msg)
             except cse_exception.BehaviorServiceError:
@@ -2038,10 +2037,9 @@ def _upgrade_to_cse_3_1_non_legacy(client, config,
         log_wire=log_wire)
 
     if skip_template_creation:
-        msg = "Skipping creation of templates.\nPlease note, CSE server " \
-              "startup needs at least one valid template.\nPlease " \
-              "create CSE K8s template(s) using the command " \
-              "`cse template install`."
+        msg = """Skipping creation of templates.
+Please note, CSE server startup needs at least one valid template.
+Please create CSE K8s template(s) using the command `cse template install`."""
         msg_update_callback.info(msg)
         INSTALL_LOGGER.info(msg)
         _process_existing_templates(
@@ -2121,11 +2119,9 @@ def _upgrade_to_cse_3_1_legacy(
         could not be created.
     """
     if skip_template_creation:
-        msg = "Skipping creation of new templates and special processing " \
-              "of existing templates.\nPlease note, CSE server " \
-              "startup needs at least one valid template.\nPlease create " \
-              "CSE K8s template(s) using the command " \
-              "`cse template install`."
+        msg = """Skipping creation of new templates and special processing of existing templates.
+Please note, CSE server startup needs at least one valid template.
+Please create CSE K8s template(s) using the command `cse template install`."""  # noqa: E501
         msg_update_callback.info(msg)
         INSTALL_LOGGER.info(msg)
     else:
