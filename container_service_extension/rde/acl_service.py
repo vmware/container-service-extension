@@ -1,7 +1,7 @@
 # container-service-extension
 # Copyright (c) 2020 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 import lxml
 import pyvcloud.vcd.client as vcd_client
@@ -27,8 +27,8 @@ class ClusterACLService:
         self._cloudapi_client = \
             vcd_utils.get_cloudapi_client_from_vcd_client(client)
         self._cluster_id = cluster_id
-        self._def_entity: common_models.DefEntity = None
-        self._vapp: vcd_vapp.VApp = None
+        self._def_entity: Optional[common_models.DefEntity] = None
+        self._vapp: Optional[vcd_vapp.VApp] = None
 
     @property
     def def_entity(self):
@@ -93,7 +93,7 @@ class ClusterACLService:
                 [shared_constants.ClusterEntityKind.NATIVE.value,
                  shared_constants.ClusterEntityKind.TKG_PLUS.value]:
             org_id = vcd_utils.extract_id(self.def_entity.org.id)
-        elif ent_kind == shared_constants.ClusterEntityKind.TKG.value:
+        elif ent_kind == shared_constants.ClusterEntityKind.TKG_S.value:
             vdc_name = self.def_entity.metadata.virtualDataCenterName
             org_id = vcd_utils.get_org_id_from_vdc_name(
                 client=self._client,
@@ -144,7 +144,7 @@ class ClusterACLService:
             user_id = acl_entry.memberId
             if ent_org_user_id_names_dict.get(user_id) is None:
                 # This user must be from the system org and does not need
-                # to be reshared. Sharing can not happen from a tenant user
+                # to be re-shared. Sharing can not happen from a tenant user
                 # to a system user.
                 del own_prev_user_id_to_acl_entry[user_id]
                 continue
@@ -208,7 +208,7 @@ class ClusterACLService:
         vapp_access_settings: lxml.objectify.ObjectifiedElement = \
             self.vapp.get_access_settings()
         api_uri = self._client.get_api_uri()
-        system_user_names: set = None
+        system_user_names: Optional[set] = None
         if self._client.is_sysadmin():
             system_user_names = vcd_utils.get_org_user_names(
                 client=self._client,

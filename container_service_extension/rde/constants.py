@@ -188,7 +188,7 @@ class ClusterEntityFilterKey2X(Enum):
     # TODO(DEF) CLI can leverage this enum for the filter implementation.
     CLUSTER_NAME = 'name'
     ORG_NAME = 'entity.metadata.orgName'
-    OVDC_NAME = 'entity.metadata.virturalDataCenterName'
+    OVDC_NAME = 'entity.metadata.virtualDataCenterName'
     KIND = 'entity.kind'
     K8_DISTRIBUTION = 'entity.spec.distribution.templateName'
     STATE = 'state'

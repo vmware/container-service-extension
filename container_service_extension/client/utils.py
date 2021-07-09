@@ -27,22 +27,22 @@ from container_service_extension.logging.logger import CLIENT_LOGGER
 from container_service_extension.logging.logger import NULL_LOGGER
 import container_service_extension.rde.constants as def_constants
 
-_RESTRICT_CLI_TO_TKG_OPERATIONS = False
+_RESTRICT_CLI_TO_TKG_S_OPERATIONS = False
 
 
-def is_cli_for_tkg_only():
-    global _RESTRICT_CLI_TO_TKG_OPERATIONS
-    return _RESTRICT_CLI_TO_TKG_OPERATIONS
+def is_cli_for_tkg_s_only():
+    global _RESTRICT_CLI_TO_TKG_S_OPERATIONS
+    return _RESTRICT_CLI_TO_TKG_S_OPERATIONS
 
 
-def restrict_cli_to_tkg_operations():
-    global _RESTRICT_CLI_TO_TKG_OPERATIONS
-    _RESTRICT_CLI_TO_TKG_OPERATIONS = True
+def restrict_cli_to_tkg_s_operations():
+    global _RESTRICT_CLI_TO_TKG_S_OPERATIONS
+    _RESTRICT_CLI_TO_TKG_S_OPERATIONS = True
 
 
 def enable_cli_for_all_operations():
-    global _RESTRICT_CLI_TO_TKG_OPERATIONS
-    _RESTRICT_CLI_TO_TKG_OPERATIONS = False
+    global _RESTRICT_CLI_TO_TKG_S_OPERATIONS
+    _RESTRICT_CLI_TO_TKG_S_OPERATIONS = False
 
 
 def cse_restore_session(ctx) -> None:
@@ -108,7 +108,7 @@ def _override_client(ctx) -> None:
     cse_server_api_version = profiles.get(CSE_SERVER_API_VERSION)
     if not is_cse_server_running:
         CLIENT_LOGGER.debug("CSE server not running as per profile, restricting CLI to only TKG operations.")  # noqa: E501
-        restrict_cli_to_tkg_operations()
+        restrict_cli_to_tkg_s_operations()
         ctx.obj['profiles'] = profiles
         return
 
@@ -168,7 +168,7 @@ def _override_client(ctx) -> None:
             CLIENT_LOGGER.debug("Request to CSE server timed out. Restricting CLI to only TKG operations.")  # noqa: E501
 
             profiles.set(CSE_SERVER_RUNNING, False)
-            restrict_cli_to_tkg_operations()
+            restrict_cli_to_tkg_s_operations()
             ctx.obj['profiles'] = profiles
             profiles.save()
             return
@@ -207,7 +207,7 @@ def construct_task_console_message(task_href: str) -> str:
 
 
 def swagger_object_to_dict(obj):
-    """Convert a swagger obejct to a dictionary without changing case type."""
+    """Convert a swagger object to a dictionary without changing case type."""
     # reference: https://github.com/swagger-api/swagger-codegen/issues/8948
     result = {}
     o_map = obj.attribute_map

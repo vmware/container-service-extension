@@ -31,7 +31,7 @@ CSE_SERVER_LEGACY_MODE = "cse_server_running_in_legacy_mode"
 
 class ClusterEntityKind(Enum):
     NATIVE = 'native'
-    TKG = 'TanzuKubernetesCluster'
+    TKG_S = 'TanzuKubernetesCluster'
     TKG_PLUS = 'TKG+'
     TKG_M = 'TKGm'
 
