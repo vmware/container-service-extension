@@ -493,10 +493,8 @@ class ClusterService(abstract_broker.AbstractBroker):
         phase: DefEntityPhase = DefEntityPhase.from_phase(
             curr_native_entity.status.phase)
 
-        # TODO: Cannot delete the defined entity if not in RESOLVED state.
-        #   Add check for resolved state before deleting the Vapp
         # Check if cluster is busy
-        if curr_rde.state != def_constants.DEF_RESOLVED_STATE or phase.is_entity_busy():  # noqa: E501
+        if phase.is_entity_busy():
             raise exceptions.CseServerError(
                 f"Cluster {cluster_name} with id {cluster_id} is not in a "
                 f"valid state to be deleted. Please contact administrator.")
