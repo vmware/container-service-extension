@@ -1520,7 +1520,7 @@ def _setup_placement_policies(client,
         INSTALL_LOGGER.info(msg)
 
 
-def _construct_catalog_item_name_to_template_description_map(cookbook: dict) -> dict:  # noqa: E501
+def _construct_catalog_item_name_to_template_definition_map(cookbook: dict) -> dict:  # noqa: E501
     """Get a dictionary which maps catalog item name to template description.
 
     :param dict cookbook: template cookbook
@@ -1547,7 +1547,6 @@ def _update_metadata_of_templates(
         templates_to_process: list,
         catalog_org_name: str,
         catalog_name: str,
-        cookbook_version: semantic_version.Version,
         msg_update_callback=utils.NullPrinter()):
     """Update template metadata to include new metadata keys.
 
@@ -1559,7 +1558,6 @@ def _update_metadata_of_templates(
         template definition as per the remote template repo.
     :param str catalog_org_name:
     :param str catalog_name:
-    :param semantic_version.Version cookbook_version:
     :param core_utils.ConsoleMessagePrinter msg_update_callback:
     """
     # load global LEGACY_MODE value
@@ -1577,19 +1575,12 @@ def _update_metadata_of_templates(
     # min_cse_version and max_cse_version
     new_metadata_key_list = [k for k in server_constants.LocalTemplateKey]
     for template in templates_to_process:
-        # Since CSE 3.1 can only be upgraded from CSE 3.0, we can safely assume
-        # that all the templates have catalog_item_name in their metadata
         catalog_item_name = \
-            template[server_constants.RemoteTemplateKeyV2.CATALOG_ITEM_NAME]
+            template[server_constants.LocalTemplateKey.CATALOG_ITEM_NAME]
         template_name = \
             template[server_constants.RemoteTemplateKeyV2.NAME]
         template_revision = \
             template[server_constants.RemoteTemplateKeyV2.REVISION]
-
-        # remote template definition will contain all the necessary
-        # metadata keys barring the catalog_item_name and cookbook_version.
-        template[server_constants.LocalTemplateKey.CATALOG_ITEM_NAME] = catalog_item_name  # noqa: E501
-        template[server_constants.LocalTemplateKey.COOKBOOK_VERSION] = str(cookbook_version)  # noqa: E501
 
         # New keys to be added (min_cse_version and max_cse_version)
         # will already be in template representation.
@@ -1727,8 +1718,8 @@ def _process_existing_templates(
     # the template descriptors supported by the target CSE version.
     rtm.get_filtered_remote_template_cookbook()
 
-    catalog_item_to_template_description_map = \
-        _construct_catalog_item_name_to_template_description_map(
+    catalog_item_to_template_definition_map = \
+        _construct_catalog_item_name_to_template_definition_map(
             rtm.filtered_cookbook)
 
     templates_to_process = []
@@ -1742,8 +1733,12 @@ def _process_existing_templates(
         template_revision = \
             template[server_constants.LegacyLocalTemplateKey.REVISION]
 
-        if catalog_item_name in catalog_item_to_template_description_map:
-            templates_to_process.append(catalog_item_to_template_description_map[catalog_item_name].copy())  # noqa: E501
+        if catalog_item_name in catalog_item_to_template_definition_map:
+            template_definition = catalog_item_to_template_definition_map[catalog_item_name].copy()  # noqa: E501
+            # Add extra info that should be stamped on template
+            template_definition[server_constants.LocalTemplateKey.CATALOG_ITEM_NAME] = catalog_item_name  # noqa: E501
+            template_definition[server_constants.LocalTemplateKey.COOKBOOK_VERSION] = str(rtm.cookbook_version)  # noqa: E501
+            templates_to_process.append(template_definition)
             msg = f"Template {template_name} revision {template_revision} " \
                   "will be processed."
         else:
@@ -1761,7 +1756,6 @@ def _process_existing_templates(
         templates_to_process=templates_to_process,
         catalog_org_name=catalog_org_name,
         catalog_name=catalog_name,
-        cookbook_version=rtm.cookbook_version,
         msg_update_callback=msg_update_callback
     )
 
@@ -2638,7 +2632,7 @@ def _upgrade_cluster_rde(client, cluster, rde_to_upgrade,
     vapp = VApp(client, href=cluster['vapp_href'])
     task = vapp.set_multiple_metadata(tags)
     client.get_task_monitor().wait_for_status(task)
-    msg = f"Updated cluster id of cluster '{cluster['name']}'"
+    msg = f"Updated vApp metadata with cluster id of cluster '{cluster['name']}'."  # noqa : E501
     INSTALL_LOGGER.info(msg)
     msg_update_callback.general(msg)
 
