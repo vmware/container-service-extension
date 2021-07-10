@@ -278,7 +278,7 @@ class DefEntityService:
         # TODO: Also include any persona having Administrator:FullControl
         #  on CSE:nativeCluster
         if float(vcd_api_version) >= float(ApiVersion.VERSION_36.value) and \
-                self._cloudapi_client.is_sys_admin:
+                self._cloudapi_client.is_sys_admin and not invoke_hooks:
             resource_url_relative_path += f"?invokeHooks={str(invoke_hooks).lower()}"  # noqa: E501
 
         payload: dict = entity.to_dict()
@@ -427,7 +427,7 @@ class DefEntityService:
         # TODO: Also include any persona having Administrator:FullControl
         #  on CSE:nativeCluster
         if float(vcd_api_version) >= float(ApiVersion.VERSION_36.value) and \
-                self._cloudapi_client.is_sys_admin:
+                self._cloudapi_client.is_sys_admin and not invoke_hooks:
             resource_url_relative_path += f"?invokeHooks={str(invoke_hooks).lower()}"  # noqa: E501
 
         response = self._cloudapi_client.do_request(
