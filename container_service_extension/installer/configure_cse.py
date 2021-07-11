@@ -2029,6 +2029,9 @@ def _upgrade_to_cse_3_1_non_legacy(client, config,
         msg_update_callback=msg_update_callback,
         log_wire=log_wire)
 
+    # This check should be done before registering def schema
+    def_entity_type_registered = _is_def_entity_type_registered(client=client)
+
     # Register def schema
     _register_def_schema(
         client=client,
@@ -2084,7 +2087,6 @@ Please create CSE K8s template(s) using the command `cse template install`."""
     # designed to gate cluster deployment and has no play once the cluster has
     # been deployed.
 
-    def_entity_type_registered = _is_def_entity_type_registered(client=client)
     if def_entity_type_registered:
         _process_non_legacy_clusters(
             client=client,
