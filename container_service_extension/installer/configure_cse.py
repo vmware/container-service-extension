@@ -2029,7 +2029,9 @@ def _upgrade_to_cse_3_1_non_legacy(client, config,
         msg_update_callback=msg_update_callback,
         log_wire=log_wire)
 
-    # This check should be done before registering def schema
+    # IMPORTANT: This statement decides if the upgrade is for legacy or non
+    # legacy cluster. This check should be done always before registering def
+    # schema. This statement should not be moved around otherwise.
     def_entity_type_registered = _is_def_entity_type_registered(client=client)
 
     # Register def schema
