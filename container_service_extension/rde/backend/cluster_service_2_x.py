@@ -1607,10 +1607,10 @@ class ClusterService(abstract_broker.AbstractBroker):
             c_docker = curr_native_entity.status.docker_version
             t_docker = template[LocalTemplateKey.DOCKER_VERSION]
             k8s_details = curr_native_entity.status.kubernetes.split(' ')
-            c_k8s = semver.Version(k8s_details[1])
+            c_k8s = semver.Version(k8s_details[-1])
             t_k8s = semver.Version(template[LocalTemplateKey.KUBERNETES_VERSION])  # noqa: E501
             cni_details = curr_native_entity.status.cni.split(' ')
-            c_cni = semver.Version(cni_details[1])
+            c_cni = semver.Version(cni_details[-1])
             t_cni = semver.Version(template[LocalTemplateKey.CNI_VERSION])
 
             upgrade_docker = t_docker > c_docker
