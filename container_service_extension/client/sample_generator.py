@@ -95,7 +95,7 @@ def get_sample_cluster_configuration(output=None, k8_runtime=None, server_rde_in
 
 def _get_sample_cluster_configuration_by_k8_runtime(k8_runtime, server_rde_in_use):  # noqa: E501
     NativeEntityClass = rde_factory.get_rde_model(server_rde_in_use)
-    return NativeEntityClass.get_sample_native_cluster_specification(k8_runtime.value)  # noqa: E501
+    return NativeEntityClass.get_sample_native_cluster_specification(k8_runtime)  # noqa: E501
 
 
 def _get_sample_tkg_cluster_configuration():

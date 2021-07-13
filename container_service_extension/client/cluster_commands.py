@@ -533,7 +533,7 @@ Examples
     '--native',
     'k8_runtime',
     is_flag=True,
-    flag_value=shared_constants.ClusterEntityKind.NATIVE,
+    flag_value=shared_constants.ClusterEntityKind.NATIVE.value,
     help="should be used with --sample, this flag generates sample yaml for k8 runtime: native"  # noqa: E501
 )
 @click.option(
