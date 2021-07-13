@@ -70,7 +70,8 @@ can choose to monitor the task progress manually.
 
 1. `vcd cse cluster apply <create_cluster.yaml>` command - Takes a cluster 
    specification file as an input and applies it to a cluster resource. The 
-   cluster resource will be created if it does not exist. 
+   cluster resource will be created if it does not exist. It can be used to create 
+   the cluster, scale up/down workers, scale up NFS nodes, upgrade the cluster to a new K8s version.
     * Note that a new property `spec.settings.network.expose` can be used to 
       expose the cluster to the external world. This would require user to have 
       EDIT rights on edge gateway. Refer to [expose cluster](#expose_cluster) for more details.
@@ -81,6 +82,21 @@ can choose to monitor the task progress manually.
         vcd cse cluster apply --sample --tkg (generates the sample specification file for tkg clusters).
         vcd cse cluster apply --sample --native (generates the sample specification file for native clusters).
         ```
+    * For the create operation, get a sample native cluster specification from 
+     ` vcd cse cluster apply -s -n`. Populate the required properties. Note that the sample file 
+     has detailed comments to identify the required and optional properties.
+  
+    * For the update operation, 
+      - save the result of `vcd cse cluster info` to a `cluster_info.yaml` file. 
+        Note that the `status` section of the output is what actually represents the true current 
+        state of the cluster and `spec`portion of the result just represents the latest desired 
+        state expressed by the user. For example, the current count of `status.nodes.workers` could 
+        be different from the `spec.topology.workers.count` because of the potential failure in the previous resize operation.
+      - Rename the `cluster_info.yaml` to `update_cluster.yaml`
+      - update the `spec` section of the `cluster.yaml` to the accurate values provided in `status` section.
+      - update the `spec` with the new desired state of the cluster. Note that you can only update few properties: worker count, nfs scale up, and template distribution.
+      - Save the file `update_cluster.yaml` and issue the command `vcd cse cluster apply update_cluster.yaml`
+      
     * Sample input specification file
         ```sh
         # Short description of various properties used in this sample cluster configuration
