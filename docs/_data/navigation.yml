@@ -322,6 +322,10 @@
       sublink: tenant-workflows
     - name: FAQ
       sublink: faq
+  - name: "Release Notes"
+    link: RELEASE_NOTES.html
+  - name: "Template Announcements"
+    link: TEMPLATE_ANNOUNCEMENTS.html
   - name: "Introduction"
     link: INTRO.html
     subtoc:
@@ -450,10 +454,6 @@
       sublink: nfs
     - name: Enterprise PKS Limitations
       sublink: ent-pks
-  - name: "Release Notes"
-    link: RELEASE_NOTES.html
-  - name: "Template Announcements"
-    link: TEMPLATE_ANNOUNCEMENTS.html
   - name: "Contributing"
     link: CONTRIBUTING.html
     subtoc:
