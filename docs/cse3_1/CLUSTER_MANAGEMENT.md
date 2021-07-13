@@ -31,25 +31,25 @@ Procedures for creating and managing NFS nodes can be found at
 
 Here is a summary of commands available to view templates and manage clusters and nodes:
 
-| Command                                                              | API version 35.0 | API version <= 34.0 | Description                                                                |
-|----------------------------------------------------------------------|------------------|---------------------|----------------------------------------------------------------------------|
-| `vcd cse template list`                                              | Yes              | Yes                 | List templates that a Kubernetes cluster can be deployed from.            |
-| `vcd cse cluster apply CLUSTER_CONFIG.YAML`                          | Yes              | No                  | Create or update a Kubernetes cluster.                                     |
-| `vcd cse cluster create CLUSTER_NAME`                                | No               | Yes                 | Create a new Kubernetes cluster.                                           |
-| `vcd cse cluster create CLUSTER_NAME --enable-nfs`                   | No               | Yes                 | Create a new Kubernetes cluster with NFS Persistent Volume support.        |
-| `vcd cse cluster list`                                               | Yes              | Yes                 | List available Kubernetes clusters.                                        |
-| `vcd cse cluster info CLUSTER_NAME`                                  | Yes              | Yes                 | Retrieve detailed information of a Kubernetes cluster.                     |
-| `vcd cse cluster resize CLUSTER_NAME`                                | No               | Yes                 | Grow a Kubernetes cluster by adding new nodes.                             |
-| `vcd cse cluster config CLUSTER_NAME`                                | Yes              | Yes                 | Retrieve the kubectl configuration file of the Kubernetes cluster.         |
-| `vcd cse cluster upgrade-plan CLUSTER_NAME`                          | Yes              | Yes                 | Retrieve the allowed path for upgrading Kubernetes software on the custer. |
-| `vcd cse cluster upgrade CLUSTER_NAME TEMPLATE_NAME TEMPLATE_REVISION`| Yes              | Yes                 | Upgrade cluster software to specified template's software versions.        |
-| `vcd cse cluster delete CLUSTER_NAME`                                | Yes              | Yes                 | Delete a Kubernetes cluster.                                               |
-| `vcd cse cluster delete-nfs CLUSTER_NAME NFS_NODE_NAME`              | Yes              | No                  | Delete NFS node of a given Kubernetes cluster                              |
-| `vcd cse node create CLUSTER_NAME --nodes n`                         | No               | Yes                 | Add `n` nodes to a Kubernetes cluster.                                     |
-| `vcd cse node create CLUSTER_NAME --nodes n --enable-nfs`            | No               | Yes                 | Add an NFS node to a Kubernetes cluster.                                   |
-| `vcd cse node list CLUSTER_NAME`                                     | No               | Yes                 | List nodes of a cluster.                                                   |
-| `vcd cse node info CLUSTER_NAME NODE_NAME`                           | No               | Yes                 | Retrieve detailed information of a node in a Kubernetes cluster.           |
-| `vcd cse node delete CLUSTER_NAME NODE_NAME`                         | No               | Yes                 | Delete nodes from a cluster.                                               |
+| Command                                                              |API version 36.0| API version 35.0 | API version <= 34.0 | Description                                                                |
+|----------------------------------------------------------------------|----------------|------------------|---------------------|----------------------------------------------------------------------------|
+| `vcd cse template list`                                              |Yes             | Yes              | Yes                 | List templates that a Kubernetes cluster can be deployed from.            |
+| `vcd cse cluster apply CLUSTER_CONFIG.YAML`                          |Yes             | Yes              | No                  | Create or update a Kubernetes cluster.                                     |
+| `vcd cse cluster create CLUSTER_NAME`                                |No              | No               | Yes                 | Create a new Kubernetes cluster.                                           |
+| `vcd cse cluster create CLUSTER_NAME --enable-nfs`                   |No              | No               | Yes                 | Create a new Kubernetes cluster with NFS Persistent Volume support.        |
+| `vcd cse cluster list`                                               |Yes             | Yes              | Yes                 | List available Kubernetes clusters.                                        |
+| `vcd cse cluster info CLUSTER_NAME`                                  |Yes             | Yes              | Yes                 | Retrieve detailed information of a Kubernetes cluster.                     |
+| `vcd cse cluster resize CLUSTER_NAME`                                |No              | No               | Yes                 | Grow a Kubernetes cluster by adding new nodes.                             |
+| `vcd cse cluster config CLUSTER_NAME`                                |Yes             | Yes              | Yes                 | Retrieve the kubectl configuration file of the Kubernetes cluster.         |
+| `vcd cse cluster upgrade-plan CLUSTER_NAME`                          |Yes             | Yes              | Yes                 | Retrieve the allowed path for upgrading Kubernetes software on the custer. |
+| `vcd cse cluster upgrade CLUSTER_NAME TEMPLATE_NAME TEMPLATE_REVISION`|No             | Yes              | Yes                 | Upgrade cluster software to specified template's software versions.        |
+| `vcd cse cluster delete CLUSTER_NAME`                                |Yes             | Yes              | Yes                 | Delete a Kubernetes cluster.                                               |
+| `vcd cse cluster delete-nfs CLUSTER_NAME NFS_NODE_NAME`              |Yes             | Yes              | No                  | Delete NFS node of a given Kubernetes cluster                              |
+| `vcd cse node create CLUSTER_NAME --nodes n`                         |No              | No               | Yes                 | Add `n` nodes to a Kubernetes cluster.                                     |
+| `vcd cse node create CLUSTER_NAME --nodes n --enable-nfs`            |No              | No               | Yes                 | Add an NFS node to a Kubernetes cluster.                                   |
+| `vcd cse node list CLUSTER_NAME`                                     |No              | No               | Yes                 | List nodes of a cluster.                                                   |
+| `vcd cse node info CLUSTER_NAME NODE_NAME`                           |No              | No               | Yes                 | Retrieve detailed information of a node in a Kubernetes cluster.           |
+| `vcd cse node delete CLUSTER_NAME NODE_NAME`                         |No              | No               | Yes                 | Delete nodes from a cluster.                                               |
 
 For CSE versions < 3.0, by default, CSE Client will display the task progress until the
 task finishes or fails. The `--no-wait` flag can be used to skip waiting on the
@@ -65,7 +65,7 @@ can choose to monitor the task progress manually.
 # lists the current running tasks in the organization
 > vcd task list running
 ```
-<a name="cse30_cluster_apply"></a>
+<a name="cse31_cluster_apply"></a>
 ### CSE 3.1 `Cluster apply` command
 
 1. `vcd cse cluster apply <create_cluster.yaml>` command - Takes a cluster 

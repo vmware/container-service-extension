@@ -15,27 +15,29 @@ For greenfield installations, please get started with [CSE introduction](INTRO.h
   version. CSE 3.1 is now capable of accepting incoming requests at any supported 
   VCD API version. Refer to changes in the [configuration file](#cse31-config).
   
-* A new version of the template recipe cookbook is introduced. Each template 
-  definition in the cookbook has new descriptors, letting CSE server deterministically 
-  identify the valid templates it can support. Refer to changes in the [configuration file](#cse31-config)
+* A new version of the template recipe cookbook 2.0.0 is introduced. Each template has 
+  a new descriptor that lets CSE 3.1 determine the templates it can support." 
+  Refer to changes in the [configuration file](#cse31-config)
   
-* Kubernetes Cluster UI supports cluster upgrade workflows for both native and vSphere with 
-  Tanzu clusters.
-  
-* CSE-CLI supports below workflows for both native and vSphere with Tanzu clusters.
-    - cluster upgrades are available using `vcd cse cluster apply` command.
-    - cluster sharing with other users is available using `vcd cse cluster share` command.
+* CSE CLI offers new capabilities to upgrade and share clusters. 
+    - [cluster upgrades](CLUSTER_MANAGEMENT.html#cse31_cluster_apply) are available using `vcd cse cluster apply` command.
+    - [cluster sharing](CLUSTER_MANAGEMENT.html#cse31_cluster_share) with other users is available using `vcd cse cluster share` command.
     
+* Kubernetes Clusters UI Plugin 3.0 offers a new capability to upgrade clusters. 
+  It also enables one to view clusters that are deployed across multisite VCD instances.
+  
 * Newer versions of native Kubernetes templates are available. Refer to 
   [Template announcements](TEMPLATE_ANNOUNCEMENTS.html)
+  
+* CSE 3.1 drops the support with VCD 10.0.
 
 **Terminology:**
-* TKG-S cluster ~ Tanzu Kubernetes cluster ~ Tanzu Kubernetes Grid cluster ~ vSphere with Tanzu cluster
+* TKGS cluster ~ Tanzu Kubernetes Grid Service cluster ~ vSphere with Tanzu cluster
 * TKGI cluster ~ Ent-PKS cluster ~ Tanzu Kubernetes Grid Integrated Edition cluster
 * Defined entities ~ Runtime defined entities ~ RDE ~ Defined Entity Framework
 * Native entities: Native defined entities representing Native clusters.
-* Tkg entities: Tkg defined entities representing Tkg clusters
-* Defined entity API: VCD's generic defined entity api to life cycle manage RDEs.
+* Tkg entities: Tkg defined entities representing TKGS clusters
+* Defined entity API: VCD's generic defined entity api to manage lifecycle of RDEs.
 
 ![user-ctx](img/cse31-user-ctx.png)
 
@@ -135,7 +137,7 @@ Refer to [CSE 3.1 upgrade command](CSE_SERVER_MANAGEMENT.html#cse31-upgrade-cmd)
 #### 2.2.3 Tenant onboarding
 The provider needs to perform below operations to enable Kubernetes cluster
 deployments in tenant organizations and tenant virtual data centers.
-1. Grant rights to the tenant users. Refer to [CSE >= 3.0 RBAC](RBAC.html#DEF-RBAC)
+1. Grant rights to the tenant users. Refer to [CSE 3.1 RBAC](RBAC.html#DEF-RBAC)
 for more details.
 2. Enable the desired organization virtual datacenter(s) for either Native or
 Tkg cluster or Ent-PKS deployments.
