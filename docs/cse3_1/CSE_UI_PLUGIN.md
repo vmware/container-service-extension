@@ -5,9 +5,9 @@ title: Kubernetes Clusters UI Plugin for VCD
 
 # Kubernetes Clusters UI Plugin for VCD
 
-Starting CSE 3.0 and VCD 10.2, Kubernetes Clusters UI Plugin 2.0 is available out of the box with VCD 10.2
+VCD 10.3 comes with a Kubernetes Clusters UI Plugin 3.0 out of the box. Refer to ...
 
-*Refer to [Compatibility Matrix](CSE30.html#cse30-compatibility-matrix) and
+*Refer to [Compatibility Matrix](CSE31.html#cse31-compatibility-matrix) and
 [Kubernetes Clusters UI Plugin 2.0.0](https://docs.vmware.com/en/VMware-Cloud-Director/10.2/VMware-Cloud-Director-Service-Provider-Admin-Portal-Guide/GUID-A1910FF9-B2CF-49DD-B031-D1245E8740AE.html) documentation*
 
 ## Overview

@@ -5,15 +5,15 @@ title: Role Based Access Control
 
 # Role Based Access Control (RBAC)
 <a name="DEF-RBAC"></a>
-## CSE >= 3.0 with VCD >= 10.2
+## CSE 3.1 with VCD 10.3, 10.2
 
-CSE >= 3.0, when connected to VCD >= 10.2, leverages the RBAC that comes with VCD's feature
+CSE 3.1, when connected to either VCD 10.3 (or) VCD 10.2, leverages the RBAC that comes with VCD's feature
 [Defined Entity framework](https://docs.vmware.com/en/VMware-Cloud-Director/10.2/VMware-Cloud-Director-Service-Provider-Admin-Portal-Guide/GUID-0749DEA0-08A2-4F32-BDD7-D16869578F96.html) 
 for Native and Tkg clusters. [RBAC for Enterprise PKS clusters](#old RBAC) remain as-is.
 
 _Note: The RBAC in this section refers to the roles and rights required for the tenants
  to perform the life cycle management of kubernetes clusters. It does not have 
- anything to do with the RBAC inside the kubernetes cluster itself._
+ anything to do with the RBAC inside the kubernetes cluster itself.
 
 <a name="grant-rights"></a>
 ### Grant rights to the tenant users
@@ -36,30 +36,8 @@ below-mentioned right bundles. Refer [How to manage runtime defined entities](ht
    roles created with these rights need to at least have privileges 
    of the pre-defined role of `vApp Author` in order to deploy native clusters.
 
-### Sharing native clusters 
-CSE 3.1:
-`vcd cse cluster share` command shares the cluster with other users
-   ```sh
-      # Share cluster 'mycluster' with FullControl access with 'user1' and 'user2'
-      vcd cse cluster share --name mycluster --acl FullControl user1 user2
-      
-      # Share TKG cluster with cluster ID 'urn:vcloud:entity:vmware:tkgcluster:1.0.0:uuid' with ReadOnly access with 'user1'
-      vcd cse cluster share --id urn:vcloud:entity:vmware:tkgcluster:1.0.0:uuid --acl ReadOnly user1  
-      
-      # View the acl info for a cluster; for each user the cluster is shared with, 
-      # the user's access level, member id, and user name are listed.
-      vcd cse cluster share-list --name cluster1
-   ```
-
-CSE 3.0:
-Tenant user need to perform below steps to share a native cluster to another 
-user of the same organization.
-1. Share the cluster vApp to the desired user with the desired ACL grant.
-2. Share the corresponding defined entity to the desired user with the same 
-level of ACL grant mentioned in step-1. Refer [Sharing runtime defined entities](https://docs.vmware.com/en/VMware-Cloud-Director/10.2/VMware-Cloud-Director-Service-Provider-Admin-Portal-Guide/GUID-DAFF4CE9-B276-4A0B-99D9-22B985153236.html) for more details.
-
 <a name="old RBAC"></a>
-## CSE >= 3.0 with VCD < 10.2
+## CSE 3.1 with VCD 10.1
 Below content describes the role based access control
 (RBAC) mechanism through which administrators can administer restrictive
 usage of CSE connected to vCD versions < 10.2. It also explains the functioning of
