@@ -21,11 +21,15 @@ Login as System administrator (or) user with ADMIN_FC right on `cse:nativeCluste
       vApp Id, which is same as the `externalID` property in the corresponding RDE. Invoke Delete vApp API.
     - UI: Identify the vApp with the same name as the cluster in the same Organization virtual datacenter and delete it.
     
-### UI may show stale tasks right after cse upgrade
+### CSE 3.1: Pending tasks in the VCD UI right after `cse upgrade`
+After upgrading to CSE 3.1 using `cse upgrade` command, you may notice pending 
+tasks on RDE based Kubernetes clusters. This is merely a cosmetic issue, and it 
+should not have any negative impact on the functionality. The pending tasks should 
+disappear after 24 hours of timeout.
 
 ### CSE 3.1 silently ignores the `api_version` property in the config.yaml
 CSE 3.1 need not be started with a particular VCD API version. It is now capable of 
-accepting incoming requests at any supported VCD API version. Refer to changes in the [configuration file](CSE31.html#cse31-config)
+accepting incoming requests at any supported VCD API version. Refer to changes in the [configuration file](CSE_CONFIG.html#api_version)
 
 ### CSE 3.1 upgrade may fail to upgrade the clusters owned by System users correctly.
 During the `cse upgrade`, the RDE representation of the existing clusters is 

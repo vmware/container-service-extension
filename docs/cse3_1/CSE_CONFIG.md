@@ -81,6 +81,15 @@ The config file has 5 mandatory sections ( [`amqp` | `mqtt`], `vcd`, `vcs`,
 following sub-sections explain the configuration properties for each section
 as well as how they are used.
 
+### `vcd` Section
+
+<a name="api_version"></a>
+**CSE 3.1 - Removal of property `api_version`:**
+Starting CSE 3.1, it is no longer needed to start CSE with a 
+particular VCD API version. As a side effect, CSE 3.1 will not recognize `api_version` 
+property under `vcd` section of the config file. This property can be safely deleted 
+from the existing configuration files.
+
 ### `amqp` Section
 
 During CSE Server installation, CSE will set up AMQP to ensure
@@ -99,6 +108,8 @@ Other properties may be left as is or edited to match site conventions.
 
 For more information on AMQP settings, see the [VCD API documentation on AMQP](https://code.vmware.com/apis/442/vcloud#/doc/doc/types/AmqpSettingsType.html).
 
+**When CSE 3.1 is configured with VCD 10.3, AMQP is not supported. MQTT must be used.**
+
 <a name="mqtt_section"></a>
 ### `mqtt` Section
 
@@ -110,6 +121,10 @@ AMQP to MQTT, however the reverse is not permitted.
 | Property   | Value                                                              |
 |------------|--------------------------------------------------------------------|
 | verify_ssl | verify ssl certificates while communicating with the MQTT exchange |
+
+<a name="mqtt"></a>
+**For CSE 3.1 to work with VCD 10.3, it is a mandatory step to enable `mqtt` property. 
+AMQP configuration is not supported for the combination of CSE 3.1 and VCD 10.3**
 
 ### `vcs` Section
 
@@ -144,15 +159,14 @@ The service section contains properties that define CSE server behavior.
 | telemetry             | If enabled, will send back anonymized usage data back to VMware (Added in CSE 2.6.0)                                                                       |
 | legacy_mode           | Need to be True if CSE >= 3.1 is configured with VCD <= 10.1 (Added in CSE 3.1.0)                                                                          |
 
-Note: starting CSE 3.1, new property `legacy_mode` has been added. This property indicates whether CSE server 
+<a name="legacy_mode"></a>
+**CSE 3.1 - new property `legacy_mode`:**
+Starting CSE 3.1, new property `legacy_mode` has been added. This property indicates whether CSE server 
 needs to leverage the latest features of VCD like RDE framework, placement policies or not.
-   * set the `legacy_mode` to true if CSE 3.1 is configured with VCD 10.1. End users 
-     will see native clusters as regular vApps with some Kubernetes specific metadata.
+   * set the `legacy_mode` to true if CSE 3.1 is configured with VCD 10.1. 
+     Native clusters are nothing but regular vApps with some Kubernetes specific metadata.
    * set the `legacy_mode` to false if CSE 3.1 is configured with VCD >= 10.2. 
-     End users will see native clusters as VCD's first class objects in the form of RDEs.
-   * Note that CSE 3.1, when configured with VCD>=10.2, will not complain if 
-     `legacy_mode` is set to true, but this is not recommended as it prevents CSE 3.1 
-     to operate at its full potential.
+     Native clusters are represented in the form of RDEs powered by vApps.
 
 <a name="broker"></a>
 ### `broker` Section
@@ -173,8 +187,10 @@ The following table summarizes key parameters.
 | storage_profile              | Name of the storage profile to use when creating the temporary vApp used to build the template                                                                                                                       |
 | vdc                          | Virtual data-center within `org` that will be used during the install process to build the template                                                                                                                  |
 
-Note: For `remote_template_cookbook_url`, CSE 3.1 config must refer
-to http://raw.githubusercontent.com/vmware/container-service-extension-templates/upgrades/template_v2.yaml. 
+<a name="template_cookbook_20"></a>
+**CSE 3.1 - New template cookbook 2.0:**
+For `remote_template_cookbook_url`, CSE 3.1 config must refer
+to http://raw.githubusercontent.com/vmware/container-service-extension-templates/master/template_v2.yaml. 
 CSE <= 3.0 will not work with the new template cookbook. When `legacy_mode` is set to true, 
 `remote_template_cookbook_url` must refer to old template cookbook https://raw.githubusercontent.com/vmware/container-service-extension-templates/master/template.yaml
 
