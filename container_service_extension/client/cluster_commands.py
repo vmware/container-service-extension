@@ -513,10 +513,12 @@ Examples
 @cluster_group.command('apply',
                        short_help='apply a configuration to a cluster resource'
                                   ' by filename. The resource will be created '
-                                  'if it does not exist. This cannot be used '
-                                  'for deleting an NFS node; for api version '
-                                  '< 36.0, this cannot be used for cluster '
-                                  'upgrade.')
+                                  'if it does not exist. (The command can be '
+                                  'used to create the cluster, scale-up/down '
+                                  'worker count, scale-up NFS nodes, upgrade '
+                                  'the cluster to a new K8s version. Note '
+                                  'that for api_version <36.0, upgrades are '
+                                  'not supported with this command.)')
 @click.pass_context
 @click.argument(
     'cluster_config_file_path',
