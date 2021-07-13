@@ -2,6 +2,7 @@
 # Copyright (c) 2019 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 
+from container_service_extension.logging.logger import SERVER_CLOUDAPI_WIRE_LOGGER
 import os
 from pathlib import Path
 from typing import List
