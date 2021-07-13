@@ -68,7 +68,7 @@ Refer to the [sample config file](CSE_CONFIG.html)
 
 1. Removal of property [api_version](CSE_CONFIG.html#api_version)
 2. Addition of property [legacy_mode](CSE_CONFIG.html#legacy_mode)
-3. [New template cookbook 2.0](CSE_CONFIG.md#template_cookbook) is introduced; 
+3. [New template cookbook 2.0](CSE_CONFIG.md#template_cookbook_20) is introduced; 
    refer to the  `remote_template_cookbook_url` for the location
 4. [mqtt](CSE_CONFIG.html#mqtt) property must be enabled when CSE 3.1 is configured with VCD 10.3.
 
@@ -132,7 +132,7 @@ CSE CLI or Kubernetes Clusters UI Plugin
 CSE 3.1 introduces below changes in CLI
 
 1. Cluster upgrades (Native and vSphere with Tanzu) can now be performed using `vcd cse cluster apply <upgrade_cluster.yaml>`. 
-   Refer to [cluster apply usage](CLUSTER_MANAGEMENT.html#cse30_cluster_apply) for more details.
+   Refer to [cluster apply usage](CLUSTER_MANAGEMENT.html#cse31_cluster_apply) for more details.
 2. Clusters can be shared to other users using new `vcd cse cluster share` command. 
    Refer to [cluster share usage](CLUSTER_MANAGEMENT.html#cse31_cluster_share)
 

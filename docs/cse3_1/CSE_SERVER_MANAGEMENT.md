@@ -119,26 +119,16 @@ can be upgraded to environment CSE 3.1, configured with VCD 10.2, running with `
 2. CSE 3.0.X, VCD 10.2 (api_version=34.0) -> CSE 3.1, VCD 10.2 (legacy_mode=false)
    - Native clusters will have a new representation in the form of 
      RDE `urn:vcloud:type:cse:nativeCluster:1.0.0` entities.
-   - Existing templates will no longer be recognized by CSE 3.1. 
-   - It is strongly recommended to force recreate the templates from the new template cookbook. 
-     CSE server needs at least one valid template in order to start.
-   - Existing clusters must be upgraded to newer templates in order to enable operations like resize.
 3. CSE 3.0.X, VCD 10.2 (api_version=34.0) -> CSE 3.1, VCD 10.3 (legacy_mode=false)
    - Native clusters will have a new representation  in the form of 
      RDE `urn:vcloud:type:cse:nativeCluster:2.0.0` entities.
-   - Existing templates will no longer be recognized by CSE 3.1. 
-   - It is strongly recommended to force create the templates from the new template cookbook. 
-     CSE server needs at least one valid template in order to start.
-   - Existing clusters must be upgraded to newer templates in order to enable operations like resize.
-   - VCD's defined entity api can be used to initiate CRUD operations on the clusters.
 4. CSE 3.0.X, VCD 10.2 (api_version=35.0) -> CSE 3.1, VCD 10.3 (legacy_mode=false)
    - Native clusters will be upgraded from `urn:vcloud:type:cse:nativeCluster:1.0.0`
      to `urn:vcloud:type:cse:nativeCluster:2.0.0` entities.
-   - Existing templates will no longer be recognized by CSE 3.1. 
-   - It is strongly recommended to force recreate the templates from the new template cookbook. 
-     CSE server needs at least one valid template in order to start.
-   - Existing clusters must be upgraded to newer templates in order to enable operations like resize.
-   - VCD's defined entity api can be used to initiate CRUD operations on the clusters.
+    
+Note the below recommendation when the target combination is CSE 3.1 (legacy_mode=false):
+- CSE 3.1 will do its best effort to make the existing templates forward compatible. 
+  It is recommended to recreate the templates from the new template cookbook 2.0 to avoid any errors.
 
 ### Validate CSE Installation
 
