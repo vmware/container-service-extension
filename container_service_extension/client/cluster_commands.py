@@ -513,7 +513,10 @@ Examples
 @cluster_group.command('apply',
                        short_help='apply a configuration to a cluster resource'
                                   ' by filename. The resource will be created '
-                                  'if it does not exist.')
+                                  'if it does not exist. This cannot be used '
+                                  'for deleting an NFS node; for api version '
+                                  '< 36.0, this cannot be used for cluster '
+                                  'upgrade.')
 @click.pass_context
 @click.argument(
     'cluster_config_file_path',
