@@ -11,9 +11,8 @@ import pytest
 from pyvcloud.vcd.exceptions import EntityNotFoundException
 from pyvcloud.vcd.vdc import VDC
 
-from container_service_extension.installer.config_validator import get_validated_config  # noqa: E501
-from container_service_extension.common.constants import server_constants
 from container_service_extension.common.utils import server_utils
+from container_service_extension.installer.config_validator import get_validated_config  # noqa: E501
 import container_service_extension.installer.templates.local_template_manager as ltm  # noqa: E501
 from container_service_extension.server.cli.server_cli import cli
 import container_service_extension.system_test_framework.environment as env
@@ -75,6 +74,7 @@ def _remove_cse_artifacts():
         env.delete_vapp(temp_vapp_name, vdc_href=env.VDC_HREF)
     env.delete_catalog()
     env.unregister_cse_in_mqtt()
+    env.cleanup_rde_artifacts()
 
 
 @pytest.fixture(scope='module', autouse=True)
@@ -251,7 +251,8 @@ def test_0070_check_invalid_installation(config):
 
 
 def test_0080_install_skip_template_creation(config,
-                                             unregister_cse_before_test):
+                                             unregister_cse_before_test,
+                                             publish_native_right_bundle):
     """Test install.
 
     Installation options: '--ssh-key', '--skip-template-creation',
@@ -406,7 +407,8 @@ def test_0100_install_select_templates(config, unregister_cse_before_test):
 
         # check that k8s templates exist
         catalog_item_name = ltm.get_revisioned_template_name(
-            template_config[remote_template_keys.NAME], template_config[remote_template_keys.REVISION])
+            template_config[remote_template_keys.NAME],
+            template_config[remote_template_keys.REVISION])
         assert env.catalog_item_exists(catalog_item_name), \
             'k8s template does not exist when it should.'
 

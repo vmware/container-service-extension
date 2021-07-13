@@ -4,6 +4,7 @@
 
 import os
 from pathlib import Path
+from typing import List
 
 from click.testing import CliRunner
 from pyvcloud.vcd.api_extension import APIExtension
@@ -12,16 +13,22 @@ from pyvcloud.vcd.client import Client
 from pyvcloud.vcd.exceptions import EntityNotFoundException
 from pyvcloud.vcd.exceptions import MissingRecordException
 from pyvcloud.vcd.org import Org
+from pyvcloud.vcd.role import Role
 from pyvcloud.vcd.vdc import VDC
 from vcd_cli.vcd import vcd
 
 import container_service_extension.common.constants.server_constants as server_constants  # noqa: E501
-from container_service_extension.common.constants.shared_constants import SUPPORTED_VCD_API_VERSIONS  # noqa: E501
+import container_service_extension.common.constants.shared_constants as shared_constants  # noqa: E501
 from container_service_extension.common.utils.core_utils import get_max_api_version  # noqa: E501
 import container_service_extension.common.utils.pyvcloud_utils as pyvcloud_utils  # noqa: E501
+from container_service_extension.installer.right_bundle_manager import RightBundleManager  # noqa: E501
 from container_service_extension.installer.templates.remote_template_manager import RemoteTemplateManager  # noqa: E501
 from container_service_extension.mqi.mqtt_extension_manager import \
     MQTTExtensionManager
+import container_service_extension.rde.constants as rde_constants
+from container_service_extension.rde.models import common_models
+import container_service_extension.rde.schema_service as def_schema_svc
+import container_service_extension.rde.utils as rde_utils
 import container_service_extension.system_test_framework.utils as testutils
 
 
@@ -140,12 +147,12 @@ def init_rde_environment(config_filepath=BASE_CONFIG_FILEPATH):
         verify_ssl_certs=config['vcd']['verify'])
     sysadmin_client.set_credentials(BasicLoginCredentials(
         config['vcd']['username'],
-        server_constants.SYSTEM_ORG_NAME,
+        shared_constants.SYSTEM_ORG_NAME,
         config['vcd']['password']))
 
     vcd_supported_api_versions = \
         set(sysadmin_client.get_supported_versions_list())
-    cse_supported_api_versions = set(SUPPORTED_VCD_API_VERSIONS)
+    cse_supported_api_versions = set(shared_constants.SUPPORTED_VCD_API_VERSIONS)  # noqa: E501
     common_supported_api_versions = \
         list(cse_supported_api_versions.intersection(vcd_supported_api_versions))  # noqa: E501
     common_supported_api_versions.sort()
@@ -154,7 +161,7 @@ def init_rde_environment(config_filepath=BASE_CONFIG_FILEPATH):
                     api_version=max_api_version,
                     verify_ssl_certs=config['vcd']['verify'])
     credentials = BasicLoginCredentials(config['vcd']['username'],
-                                        server_constants.SYSTEM_ORG_NAME,
+                                        shared_constants.SYSTEM_ORG_NAME,
                                         config['vcd']['password'])
     CLIENT.set_credentials(credentials)
     VCD_API_VERSION_TO_USE = max_api_version
@@ -228,7 +235,7 @@ def init_environment(config_filepath=BASE_CONFIG_FILEPATH):
                     api_version=config['vcd']['api_version'],
                     verify_ssl_certs=config['vcd']['verify'])
     credentials = BasicLoginCredentials(config['vcd']['username'],
-                                        server_constants.SYSTEM_ORG_NAME,
+                                        shared_constants.SYSTEM_ORG_NAME,
                                         config['vcd']['password'])
     CLIENT.set_credentials(credentials)
 
@@ -341,7 +348,7 @@ def teardown_active_config():
 
 # TODO remove after removing legacy mode
 def create_k8_author_role(vcd_config: dict):
-    cmd = f"login {vcd_config['host']} {server_constants.SYSTEM_ORG_NAME} " \
+    cmd = f"login {vcd_config['host']} {shared_constants.SYSTEM_ORG_NAME} " \
         f"{vcd_config['username']} -iwp {vcd_config['password']} " \
         f"-V {VCD_API_VERSION_TO_USE}"
     result = CLI_RUNNER.invoke(vcd, cmd.split(), catch_exceptions=False)
@@ -366,7 +373,7 @@ def create_k8_author_role(vcd_config: dict):
 
 
 def create_cluster_admin_role(vcd_config: dict):
-    cmd = f"login {vcd_config['host']} {server_constants.SYSTEM_ORG_NAME} " \
+    cmd = f"login {vcd_config['host']} {shared_constants.SYSTEM_ORG_NAME} " \
         f"{vcd_config['username']} -iwp {vcd_config['password']} " \
         f"-V {VCD_API_VERSION_TO_USE}"
     result = CLI_RUNNER.invoke(vcd, cmd.split(), catch_exceptions=False)
@@ -391,7 +398,7 @@ def create_cluster_admin_role(vcd_config: dict):
 
 
 def create_cluster_author_role(vcd_config: dict):
-    cmd = f"login {vcd_config['host']} {server_constants.SYSTEM_ORG_NAME} " \
+    cmd = f"login {vcd_config['host']} {shared_constants.SYSTEM_ORG_NAME} " \
         f"{vcd_config['username']} -iwp {vcd_config['password']} " \
         f"-V {VCD_API_VERSION_TO_USE}"
     result = CLI_RUNNER.invoke(vcd, cmd.split(), catch_exceptions=False)
@@ -418,7 +425,7 @@ def create_cluster_author_role(vcd_config: dict):
 def create_user(username, password, role):
     config = testutils.yaml_to_dict(BASE_CONFIG_FILEPATH)
     cmd = f"login {config['vcd']['host']} " \
-          f"{server_constants.SYSTEM_ORG_NAME} " \
+          f"{shared_constants.SYSTEM_ORG_NAME} " \
           f"{config['vcd']['username']} -iwp {config['vcd']['password']} " \
           f"-V {VCD_API_VERSION_TO_USE}"
     result = CLI_RUNNER.invoke(vcd, cmd.split(), catch_exceptions=False)
@@ -503,6 +510,65 @@ def unregister_cse_in_mqtt():
             ext_vendor=server_constants.MQTT_EXTENSION_VENDOR,
             ext_urn_id=ext_urn_id)
     except Exception:
+        pass
+
+
+def publish_right_bundle_to_deployment_org():
+    try:
+        rbm = RightBundleManager(CLIENT, log_wire=True)
+        cse_right_bundle = rbm.get_right_bundle_by_name(
+            rde_constants.DEF_NATIVE_ENTITY_TYPE_RIGHT_BUNDLE)
+        test_org_id = TEST_ORG_HREF.split('/')[-1]
+        rbm.publish_cse_right_bundle_to_tenants(
+            right_bundle_id=cse_right_bundle['id'],
+            org_ids=[test_org_id])
+    except Exception:
+        pass
+
+
+def assign_native_rights(role_name, right_list=None):
+    if not right_list:
+        return
+    try:
+        test_org = Org(CLIENT, href=TEST_ORG_HREF)
+        role_resource = test_org.get_role_resource(role_name)
+        role = Role(CLIENT, resource=role_resource)
+        initial_right_set = set([r['name'] for r in role.list_rights()])
+        right_set = set(right_list)
+        initial_right_set.update(right_set)
+        role.add_rights(list(initial_right_set), test_org)
+    except Exception:
+        pass
+
+
+def cleanup_rde_artifacts():
+    """Cleanup all defined entity related artifacts.
+
+    Deletes the following -
+    - CSE interface
+    - Native entity type
+    """
+    try:
+        rde_version_in_use = rde_utils.get_runtime_rde_version_by_vcd_api_version(CLIENT.get_api_version())  # noqa: E501
+        rde_metadata = rde_utils.get_rde_metadata(rde_version_in_use)
+        cloudapi_client = pyvcloud_utils.get_cloudapi_client_from_vcd_client(
+            client=CLIENT)
+        schema_svc = def_schema_svc.DefSchemaService(cloudapi_client=cloudapi_client)  # noqa: E501
+        if rde_constants.RDEMetadataKey.ENTITY_TYPE in rde_metadata:
+            # delete entitytype
+            entity_type: common_models.DefEntityType = \
+                rde_metadata[rde_constants.RDEMetadataKey.ENTITY_TYPE]
+            schema_svc.delete_entity_type(entity_type.get_id())
+        if rde_constants.RDEMetadataKey.INTERFACES in rde_metadata:
+            # delete interface
+            interfaces: List[common_models.DefInterface] = \
+                rde_metadata[rde_constants.RDEMetadataKey.INTERFACES]
+            for i in interfaces:
+                interface_id = i.get_id()
+                if interface_id != common_models.K8Interface.VCD_INTERFACE.value.get_id():  # noqa: E501
+                    schema_svc.delete_interface(interface_id)
+    except Exception as e:
+        print(f'Exception occured: {e}')
         pass
 
 

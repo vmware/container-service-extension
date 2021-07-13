@@ -77,3 +77,26 @@ def test_config():
     """Fixture to provide 'test' section of test config to individual tests."""
     config = testutils.yaml_to_dict(env.BASE_CONFIG_FILEPATH)
     yield config['test']
+
+
+@pytest.fixture
+def publish_native_right_bundle():
+    """Publish CSE native right bundle to deployment org.
+
+    Usage: add parameter 'publish_native_right_bundle' to the test function.
+        This fixture will be executed after the test function completes
+
+    Tasks done:
+    - publish cse native right bundle to deployment org (org specified in
+        'test' section of base_config.yaml)
+    - assign appropriate rights to roles in test org
+    """
+    yield
+    env.publish_right_bundle_to_deployment_org()
+    env.assign_native_rights(env.CLUSTER_ADMIN_ROLE_NAME,
+                             ["cse:nativeCluster: Full Access",
+                              "cse:nativeCluster: Modify",
+                              "cse:nativeCluster: View"])
+    env.assign_native_rights(env.CLUSTER_AUTHOR_ROLE_NAME,
+                             ["cse:nativeCluster: Modify",
+                              "cse:nativeCluster: View"])
