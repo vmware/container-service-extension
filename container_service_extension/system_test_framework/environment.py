@@ -2,6 +2,7 @@
 # Copyright (c) 2019 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 
+from container_service_extension.logging.logger import SERVER_CLOUDAPI_WIRE_LOGGER
 import os
 from pathlib import Path
 from typing import List
@@ -552,7 +553,8 @@ def cleanup_rde_artifacts():
         rde_version_in_use = rde_utils.get_runtime_rde_version_by_vcd_api_version(CLIENT.get_api_version())  # noqa: E501
         rde_metadata = rde_utils.get_rde_metadata(rde_version_in_use)
         cloudapi_client = pyvcloud_utils.get_cloudapi_client_from_vcd_client(
-            client=CLIENT)
+            client=CLIENT,
+            logger_wire=SERVER_CLOUDAPI_WIRE_LOGGER)
         schema_svc = def_schema_svc.DefSchemaService(cloudapi_client=cloudapi_client)  # noqa: E501
         if rde_constants.RDEMetadataKey.ENTITY_TYPE in rde_metadata:
             # delete entitytype
@@ -568,7 +570,6 @@ def cleanup_rde_artifacts():
                 if interface_id != common_models.K8Interface.VCD_INTERFACE.value.get_id():  # noqa: E501
                     schema_svc.delete_interface(interface_id)
     except Exception as e:
-        print(f'Exception occured: {e}')
         pass
 
 
