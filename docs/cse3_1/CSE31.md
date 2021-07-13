@@ -8,9 +8,7 @@ For greenfield installations, please get started with [CSE introduction](INTRO.h
 
 <a name="overview"></a>
 ## 1. Overview
-* CSE 3.1, when configured with VCD 10.3, life cycle management of native clusters 
-  can be performed using VCD's defined entity API. Refer to the [API usage](CLUSTER_MANAGEMENT_RDE.html) for details.
-  
+
 * CSE 3.1 need not be started with a particular VCD API version. It is now capable of 
   accepting incoming requests at any supported VCD API version. Refer to changes in the [configuration file](#cse31-config).
   
@@ -68,29 +66,11 @@ For greenfield installations, please get started with [CSE introduction](INTRO.h
 #### 2.2.0 Changes in the configuration file
 Refer to the [sample config file](CSE_CONFIG.html)
 
-1. Removal of property `api_version`: Starting CSE 3.1, it is no longer needed to start CSE with a 
-   particular VCD API version. As a side effect, CSE 3.1 will not recognize `api_version` 
-   property under `vcd` section of the config file. This property can be safely deleted 
-   from the existing configuration files.
-   
-2. Addition of property `legacy_mode`: This property indicates whether CSE server 
-   needs to leverage the latest features of VCD like RDE framework, placement policies or not.
-   * set the `legacy_mode` to true if CSE 3.1 is configured with VCD 10.1. End users 
-     will see native clusters as regular vApps with some Kubernetes specific metadata.
-   * set the `legacy_mode` to false if CSE 3.1 is configured with VCD >= 10.2. 
-     End users will see native clusters as VCD's first class objects in the form of RDEs.
-   * Note that CSE 3.1, when configured with VCD>=10.2, will not complain if 
-     `legacy_mode` is set to true, but this is not recommended as it prevents CSE 3.1 
-     to operate at its full potential.
-    
-3. New template cookbook `remote_template_cookbook_url`: CSE 3.1 config must refer
-   to http://raw.githubusercontent.com/vmware/container-service-extension-templates/master/template_v2.yaml
-   Note that CSE <= 3.0 will not work with the new template cookbook.
-   - When `legacy_mode` is set to true, `remote_template_cookbook_url` must refer to old template cookbook 
-     https://raw.githubusercontent.com/vmware/container-service-extension-templates/master/template.yaml
-     
-4. For CSE 3.1 to work with VCD 10.3, it is a mandatory step to enable `mqtt` property. 
-   AMQP configuration is not supported for the combination of CSE 3.1 and VCD 10.3.
+1. Removal of property [api_version](CSE_CONFIG.html#api_version)
+2. Addition of property [legacy_mode](CSE_CONFIG.html#legacy_mode)
+3. [New template cookbook 2.0](CSE_CONFIG.md#template_cookbook) is introduced; 
+   refer to the  `remote_template_cookbook_url` for the location
+4. [mqtt](CSE_CONFIG.html#mqtt) property must be enabled when CSE 3.1 is configured with VCD 10.3.
 
 #### 2.2.1 Greenfield installation 
 Refer to [CSE 3.1 installation](CSE_SERVER_MANAGEMENT.html#cse31-greenfield).
@@ -110,26 +90,16 @@ can be upgraded to environment CSE 3.1, configured with VCD 10.2, running with `
 2. CSE 3.0.X, VCD 10.2 (api_version=34.0) -> CSE 3.1, VCD 10.2 (legacy_mode=false)
    - Native clusters will have a new representation in the form of 
      RDE `urn:vcloud:type:cse:nativeCluster:1.0.0` entities.
-   - Existing templates will no longer be recognized by CSE 3.1. 
-   - It is strongly recommended to force recreate the templates from the new template cookbook. 
-     CSE server needs at least one valid template in order to start.
-   - Existing clusters must be upgraded to newer templates in order to enable operations like resize.
 3. CSE 3.0.X, VCD 10.2 (api_version=34.0) -> CSE 3.1, VCD 10.3 (legacy_mode=false)
    - Native clusters will have a new representation  in the form of 
      RDE `urn:vcloud:type:cse:nativeCluster:2.0.0` entities.
-   - Existing templates will no longer be recognized by CSE 3.1. 
-   - It is strongly recommended to force create the templates from the new template cookbook. 
-     CSE server needs at least one valid template in order to start.
-   - Existing clusters must be upgraded to newer templates in order to enable operations like resize.
-   - VCD's defined entity api can be used to initiate CRUD operations on the clusters.
 4. CSE 3.0.X, VCD 10.2 (api_version=35.0) -> CSE 3.1, VCD 10.3 (legacy_mode=false)
    - Native clusters will be upgraded from `urn:vcloud:type:cse:nativeCluster:1.0.0`
      to `urn:vcloud:type:cse:nativeCluster:2.0.0` entities.
-   - Existing templates will no longer be recognized by CSE 3.1. 
-   - It is strongly recommended to force recreate the templates from the new template cookbook. 
-     CSE server needs at least one valid template in order to start.
-   - Existing clusters must be upgraded to newer templates in order to enable operations like resize.
-   - VCD's defined entity api can be used to initiate CRUD operations on the clusters.
+    
+Note the below recommendation when the target combination is CSE 3.1 (legacy_mode=false):
+- CSE 3.1 will do its best effort to make the existing templates forward compatible. 
+  It is recommended to recreate the templates from the new template cookbook 2.0 to avoid any errors.
     
 Refer to [CSE 3.1 upgrade command](CSE_SERVER_MANAGEMENT.html#cse31-upgrade-cmd).
 

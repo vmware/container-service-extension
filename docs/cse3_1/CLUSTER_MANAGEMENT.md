@@ -87,15 +87,19 @@ can choose to monitor the task progress manually.
      has detailed comments to identify the required and optional properties.
   
     * For the update operation, 
-      - save the result of `vcd cse cluster info` to a `cluster_info.yaml` file. 
-        Note that the `status` section of the output is what actually represents the true current 
-        state of the cluster and `spec`portion of the result just represents the latest desired 
-        state expressed by the user. For example, the current count of `status.nodes.workers` could 
-        be different from the `spec.topology.workers.count` because of the potential failure in the previous resize operation.
-      - Rename the `cluster_info.yaml` to `update_cluster.yaml`
-      - update the `spec` section of the `cluster.yaml` to the accurate values provided in `status` section.
-      - update the `spec` with the new desired state of the cluster. Note that you can only update few properties: worker count, nfs scale up, and template distribution.
-      - Save the file `update_cluster.yaml` and issue the command `vcd cse cluster apply update_cluster.yaml`
+      - Retrieve the current status of the cluster: Save the result of `vcd cse cluster info` for further editing.
+      - Update the saved specification with the current status of the cluster:
+        - update the `spec` section with the accurate values provided in `status` section. 
+          Note that the `status` section of the output is what actually represents 
+          the true current state of the cluster and `spec`portion of the result 
+          just represents the latest desired state expressed by the user. For example, 
+          the current count of `status.nodes.workers` could be different from the 
+          `spec.topology.workers.count` because of the potential failure in the previous resize operation.
+      - Update the new specification with the desired status of the cluster:
+        - update the `spec` with the new desired state of the cluster. Note that 
+          you can only update few properties: scale-up/down (`spec.topology.workers.count`), 
+          scale-up nfs (`spec.topology.nfs.count`), and upgrade (`spec.distribution.templateName` and `spec.distribution.templateRevision`).
+      - Save the file as `update_cluster.yaml` and issue the command `vcd cse cluster apply update_cluster.yaml`
       
     * Sample input specification file
         ```sh
