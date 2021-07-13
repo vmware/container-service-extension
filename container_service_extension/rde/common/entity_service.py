@@ -81,10 +81,12 @@ class DefEntityService:
 
         :param str entity_type_id: ID of the DefEntityType
         :param DefEntity entity: Defined entity instance
+        :param str tenant_org_context:
         :param bool delete_status_from_payload: should delete status from payload?  # noqa: E501
-        :param bool is_request_async: The request is intended to be asyncronous
+        :param bool is_request_async: The request is intended to be asynchronous
             if this flag is set, href of the task is returned in addition to
             the response body
+
         :return: created entity or created entity with response headers
         :rtype: Union[dict, Tuple[dict, dict]]
         """
@@ -109,7 +111,7 @@ class DefEntityService:
 
         if is_request_async:
             # if request is async, return the location header as well
-            # TODO: Use the Htttp response status code to decide which
+            # TODO: Use the Http response status code to decide which
             #   header name to use for task_href
             #   202 - location header,
             #   200 - xvcloud-task-location needs to be used
@@ -177,7 +179,7 @@ class DefEntityService:
                                        f"{CloudApiResource.ENTITY_TYPES_TOKEN}/"  # noqa: E501
                                        f"{vendor}/{nss}/{version}?{query_string}")  # noqa: E501
         result = {}
-        entity_list: list[DefEntity] = []
+        entity_list: List[DefEntity] = []
         for v in response_body['values']:
             entity_list.append(DefEntity(**v))
         result[PaginationKey.RESULT_TOTAL] = int(response_body['resultTotal'])
@@ -225,6 +227,10 @@ class DefEntityService:
         :param str vendor: Vendor of the interface
         :param str nss: nss of the interface
         :param str version: version of the interface
+        :param dict filters:
+        :param int page_number:
+        :param int page_size:
+
         :return: Generator of entities of that interface type
         :rtype: Generator[List, None, None]
         """
@@ -257,11 +263,12 @@ class DefEntityService:
 
         :param str entity_id: Id of the entity to be updated.
         :param DefEntity entity: Modified entity to be updated.
-        :param bool invoke_hooks: Value indicating whether hook-based-behaviors
-        need to be triggered or not.
-        :param bool is_request_async: The request is intended to be asyncronous
-            if this flag is set, href of the task is returned in addition to
-            the response body
+        :param bool invoke_hooks: Value indicating whether
+             hook-based-behaviors need to be triggered or not.
+        :param bool is_request_async: The request is intended to be
+            asynchronous if this flag is set, href of the task is returned
+            in addition to the response body
+
         :return: Updated entity or Updated entity and response headers
         :rtype: Union[DefEntity, Tuple[DefEntity, dict]]
         """
@@ -271,7 +278,7 @@ class DefEntityService:
         # TODO: Also include any persona having Administrator:FullControl
         #  on CSE:nativeCluster
         if float(vcd_api_version) >= float(ApiVersion.VERSION_36.value) and \
-                self._cloudapi_client.is_sys_admin:
+                self._cloudapi_client.is_sys_admin and not invoke_hooks:
             resource_url_relative_path += f"?invokeHooks={str(invoke_hooks).lower()}"  # noqa: E501
 
         payload: dict = entity.to_dict()
@@ -287,7 +294,7 @@ class DefEntityService:
         if is_request_async:
             # if request is async, return the task href in
             # x_vmware_vcloud_task_location header
-            # TODO: Use the Htttp response status code to decide which
+            # TODO: Use the Http response status code to decide which
             #   header name to use for task_href
             #   202 - location header,
             #   200 - xvcloud-task-location needs to be used
@@ -340,7 +347,7 @@ class DefEntityService:
         if entity_kind in [shared_constants.ClusterEntityKind.NATIVE.value,
                            shared_constants.ClusterEntityKind.TKG_PLUS.value]:
             return DefEntity(**response_body)
-        elif entity_kind == shared_constants.ClusterEntityKind.TKG.value:
+        elif entity_kind == shared_constants.ClusterEntityKind.TKG_S.value:
             return TKGEntity(**entity)
         raise Exception("Invalid cluster kind.")
 
@@ -354,15 +361,16 @@ class DefEntityService:
 
         :param str id: Id of the Entity
         :param str grant_type: if acl grant is based on memberships or
-        entitlements
+            entitlements
         :param str access_level_id: level of access which the
-        subject will be granted.
-        param str member_id: member id, this access control grant applies to
+            subject will be granted.
+        :param str member_id: member id, this access control grant applies to
         """
-        acl_details = {}
-        acl_details['grantType'] = grant_type
-        acl_details['accessLevelId'] = access_level_id
-        acl_details['memberId'] = member_id
+        acl_details = {
+            'grantType': grant_type,
+            'accessLevelId': access_level_id,
+            'memberId': member_id
+        }
 
         self._cloudapi_client.do_request(
             method=RequestMethod.POST,
@@ -404,9 +412,10 @@ class DefEntityService:
 
         :param str entity_id: Id of the entity.
         :param bool invoke_hooks: set to true if hooks need to be invoked
-        :param bool is_request_async: The request is intended to be asyncronous
-            if this flag is set, href of the task is returned in addition to
-            the response body
+        :param bool is_request_async: The request is intended to be
+            asynchronous if this flag is set, href of the task is returned
+            in addition to the response body
+
         :return: response body or response body and response headers
         :rtype: Union[dict, Tuple[dict, dict]]
         """
@@ -418,7 +427,7 @@ class DefEntityService:
         # TODO: Also include any persona having Administrator:FullControl
         #  on CSE:nativeCluster
         if float(vcd_api_version) >= float(ApiVersion.VERSION_36.value) and \
-                self._cloudapi_client.is_sys_admin:
+                self._cloudapi_client.is_sys_admin and not invoke_hooks:
             resource_url_relative_path += f"?invokeHooks={str(invoke_hooks).lower()}"  # noqa: E501
 
         response = self._cloudapi_client.do_request(
@@ -428,7 +437,7 @@ class DefEntityService:
             return_response_headers=is_request_async)
         if is_request_async:
             # if request is async, return the location header as well
-            # TODO: Use the Htttp response status code to decide which
+            # TODO: Use the Http response status code to decide which
             #   header name to use for task_href
             #   202 - location header,
             #   200 - xvcloud-task-location needs to be used

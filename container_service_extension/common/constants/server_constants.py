@@ -143,7 +143,7 @@ class FlattenedClusterSpecKey2X(Enum):
     NFS_STORAGE_PROFILE = 'topology.nfs.storageProfile'
     TEMPLATE_NAME = 'distribution.templateName'
     TEMPLATE_REVISION = 'distribution.templateRevision'
-    EXPOSE = 'expose'
+    EXPOSE = 'settings.network.expose'
 
 
 VALID_UPDATE_FIELDS_2X = \

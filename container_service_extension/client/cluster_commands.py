@@ -131,7 +131,7 @@ Examples
     default=None,
     required=False,
     metavar='CLUSTER_ID',
-    help="ID of the cluster whose cluster config has to be obtained;"
+    help="ID of the cluster which needs to be deleted;"
          "Supported only for CSE api version >= 35."
          "ID gets precedence over cluster name.")
 def cluster_delete(ctx, name, vdc, org, k8_runtime=None, cluster_id=None):
@@ -145,7 +145,7 @@ Example
 \b
     vcd cse cluster delete --id urn:vcloud:entity:cse:nativeCluster:1.0.0:0632c7c7-a613-427c-b4fc-9f1247da5561
         Delete cluster with cluster ID 'urn:vcloud:entity:cse:nativeCluster:1.0.0:0632c7c7-a613-427c-b4fc-9f1247da5561'.
-        (--id option is suported only applicable for api version >= 35)
+        (--id option is supported only applicable for api version >= 35)
     """  # noqa: E501
     CLIENT_LOGGER.debug(f'Executing command: {ctx.command_path}')
     try:
@@ -156,12 +156,12 @@ Example
                             "Note that '--id' flag is applicable for API versions >= 35 only.")  # noqa: E501
 
         client = ctx.obj['client']
-        if client_utils.is_cli_for_tkg_only():
+        if client_utils.is_cli_for_tkg_s_only():
             if k8_runtime in [shared_constants.ClusterEntityKind.NATIVE.value,
                               shared_constants.ClusterEntityKind.TKG_PLUS.value]:  # noqa: E501
                 # Cannot run the command as cse cli is enabled only for native
                 raise CseServerNotRunningError()
-            k8_runtime = shared_constants.ClusterEntityKind.TKG.value
+            k8_runtime = shared_constants.ClusterEntityKind.TKG_S.value
         cluster = Cluster(client, k8_runtime=k8_runtime)
         if not client.is_sysadmin() and org is None:
             org = ctx.obj['profiles'].get('org_in_use')
@@ -343,8 +343,8 @@ Examples
         CLIENT_LOGGER.debug(result)
     except CseResponseError as e:
         minor_error_code_to_error_message = {
-            MinorErrorCode.REQUEST_KEY_NETWORK_NAME_MISSING: 'Missing option "-n" / "--network".', # noqa: E501
-            MinorErrorCode.REQUEST_KEY_NETWORK_NAME_INVALID: 'Invalid or missing value for option "-n" / "--network".' # noqa: E501
+            MinorErrorCode.REQUEST_KEY_NETWORK_NAME_MISSING: 'Missing option "-n" / "--network".',  # noqa: E501
+            MinorErrorCode.REQUEST_KEY_NETWORK_NAME_INVALID: 'Invalid or missing value for option "-n" / "--network".'  # noqa: E501
         }
         e.error_message = \
             minor_error_code_to_error_message.get(
@@ -497,8 +497,8 @@ Examples
         CLIENT_LOGGER.debug(result)
     except CseResponseError as e:
         minor_error_code_to_error_message = {
-            MinorErrorCode.REQUEST_KEY_NETWORK_NAME_MISSING: 'Missing option "-n" / "--network".', # noqa: E501
-            MinorErrorCode.REQUEST_KEY_NETWORK_NAME_INVALID: 'Invalid or missing value for option "-n" / "--network".' # noqa: E501
+            MinorErrorCode.REQUEST_KEY_NETWORK_NAME_MISSING: 'Missing option "-n" / "--network".',  # noqa: E501
+            MinorErrorCode.REQUEST_KEY_NETWORK_NAME_INVALID: 'Invalid or missing value for option "-n" / "--network".'  # noqa: E501
         }
         e.error_message = \
             minor_error_code_to_error_message.get(
@@ -537,20 +537,20 @@ Examples
     help="should be used with --sample, this flag generates sample yaml for k8 runtime: native"  # noqa: E501
 )
 @click.option(
-    '-t',
-    '--tkg',
+    '-k',
+    '--tkg-s',
     'k8_runtime',
     is_flag=True,
-    flag_value=shared_constants.ClusterEntityKind.TKG,
+    flag_value=shared_constants.ClusterEntityKind.TKG_S.value,
     help="should be used with --sample, this flag generates sample yaml for k8 runtime: TKG"  # noqa: E501
 )
 @click.option(
-    '-k',
+    '-p',
     '--tkg-plus',
     'k8_runtime',
     is_flag=True,
     hidden=not utils.is_environment_variable_enabled(cli_constants.ENV_CSE_TKG_PLUS_ENABLED),  # noqa: E501
-    flag_value=shared_constants.ClusterEntityKind.TKG_PLUS,
+    flag_value=shared_constants.ClusterEntityKind.TKG_PLUS.value,
     help="should be used with --sample, this flag generates sample yaml for k8 runtime: TKG+"  # noqa: E501
 )
 @click.option(
@@ -597,12 +597,12 @@ def apply(ctx, cluster_config_file_path, generate_sample_config, k8_runtime, out
         if generate_sample_config:
             if not k8_runtime:
                 console_message_printer.general_no_color(ctx.get_help())
-                msg = "with option --sample you must specify either of options: --native or --tkg"  # noqa: E501
+                msg = "with option --sample you must specify either of options: --native or --tkg-s"  # noqa: E501
                 if utils.is_environment_variable_enabled(cli_constants.ENV_CSE_TKG_PLUS_ENABLED):  # noqa: E501
                     msg += " or --tkg-plus"
                 CLIENT_LOGGER.error(msg)
                 raise Exception(msg)
-            elif k8_runtime == shared_constants.ClusterEntityKind.TKG_PLUS \
+            elif k8_runtime == shared_constants.ClusterEntityKind.TKG_PLUS.value \
                     and not utils.is_environment_variable_enabled(cli_constants.ENV_CSE_TKG_PLUS_ENABLED):  # noqa: E501
                 raise Exception(f"{shared_constants.ClusterEntityKind.TKG_PLUS.value} not enabled")  # noqa: E501
             else:
@@ -622,25 +622,25 @@ def apply(ctx, cluster_config_file_path, generate_sample_config, k8_runtime, out
                 return
 
         with open(cluster_config_file_path) as f:
-            cluster_config = yaml.safe_load(f) or {}
+            cluster_config_map = yaml.safe_load(f) or {}
 
-        k8_runtime = cluster_config.get('kind')
+        k8_runtime = cluster_config_map.get('kind')
         if not k8_runtime:
             raise Exception("Cluster kind missing from the spec.")
-        if client_utils.is_cli_for_tkg_only():
+        if client_utils.is_cli_for_tkg_s_only():
             if k8_runtime in [shared_constants.ClusterEntityKind.NATIVE.value,
                               shared_constants.ClusterEntityKind.TKG_PLUS.value]:  # noqa: E501
                 # Cannot run the command as cse cli is enabled only for native
                 raise CseServerNotRunningError()
-            k8_runtime = shared_constants.ClusterEntityKind.TKG.value
+            k8_runtime = shared_constants.ClusterEntityKind.TKG_S.value
         org_name = None
-        if k8_runtime == shared_constants.ClusterEntityKind.TKG.value:
+        if k8_runtime == shared_constants.ClusterEntityKind.TKG_S.value:
             org_name = org
             if not org:
                 org_name = ctx.obj['profiles'].get('org_in_use')
 
-        cluster = Cluster(client, k8_runtime=cluster_config.get('kind'))
-        result = cluster.apply(cluster_config, cluster_id=cluster_id,
+        cluster = Cluster(client, k8_runtime=cluster_config_map.get('kind'))
+        result = cluster.apply(cluster_config_map, cluster_id=cluster_id,
                                org=org_name)
         stdout(result, ctx)
         CLIENT_LOGGER.debug(result)
@@ -734,12 +734,12 @@ Examples
     # NOTE: Command is exposed only if CLI is enabled for native clusters
     try:
         client_utils.cse_restore_session(ctx)
-        if client_utils.is_cli_for_tkg_only():
+        if client_utils.is_cli_for_tkg_s_only():
             if k8_runtime in [shared_constants.ClusterEntityKind.NATIVE.value,
                               shared_constants.ClusterEntityKind.TKG_PLUS.value]:  # noqa: E501
                 # Cannot run the command as cse cli is enabled only for native
                 raise CseServerNotRunningError()
-            k8_runtime = shared_constants.ClusterEntityKind.TKG.value
+            k8_runtime = shared_constants.ClusterEntityKind.TKG_S.value
         client = ctx.obj['client']
         cluster = Cluster(client, k8_runtime=k8_runtime)
         if not client.is_sysadmin() and org_name is None:
@@ -754,7 +754,7 @@ Examples
                 'Template Revision': template[LocalTemplateKey.REVISION],
                 'Kubernetes': template[LocalTemplateKey.KUBERNETES_VERSION],
                 'Docker-CE': template[LocalTemplateKey.DOCKER_VERSION],
-                'CNI': f"{template[LocalTemplateKey.CNI]} {template[LocalTemplateKey.CNI_VERSION]}" # noqa: E501
+                'CNI': f"{template[LocalTemplateKey.CNI]} {template[LocalTemplateKey.CNI_VERSION]}"  # noqa: E501
             })
 
         if not templates:
@@ -817,12 +817,12 @@ Example
     # NOTE: Command is exposed only if CLI is enabled for native
     try:
         client_utils.cse_restore_session(ctx)
-        if client_utils.is_cli_for_tkg_only():
+        if client_utils.is_cli_for_tkg_s_only():
             if k8_runtime in [shared_constants.ClusterEntityKind.NATIVE.value,
                               shared_constants.ClusterEntityKind.TKG_PLUS.value]:  # noqa: E501
                 # Cannot run the command as cse cli is enabled only for native
                 raise CseServerNotRunningError()
-            k8_runtime = shared_constants.ClusterEntityKind.TKG.value
+            k8_runtime = shared_constants.ClusterEntityKind.TKG_S.value
         client = ctx.obj['client']
         cluster = Cluster(client, k8_runtime=k8_runtime)
         if not client.is_sysadmin() and org_name is None:
@@ -873,8 +873,8 @@ Example
     default=None,
     required=False,
     metavar='CLUSTER_ID',
-    help="ID of the cluster whose cluster config has to be obtained."
-         "Supported only for CSE api version >= 35."
+    help="ID of the cluster whose cluster config has to be obtained;"
+         "supported only for CSE api version >= 35."
          "ID gets precedence over cluster name.")
 def cluster_config(ctx, name, vdc, org, k8_runtime=None, cluster_id=None):
     """Display cluster configuration.
@@ -899,25 +899,27 @@ Examples:
             raise Exception("Please specify cluster name (or) cluster Id. "
                             "Note that '--id' flag is applicable for API versions >= 35 only.")  # noqa: E501
         client_utils.cse_restore_session(ctx)
-        if client_utils.is_cli_for_tkg_only():
+        if client_utils.is_cli_for_tkg_s_only():
             if k8_runtime in [shared_constants.ClusterEntityKind.NATIVE.value,
                               shared_constants.ClusterEntityKind.TKG_PLUS.value]:  # noqa: E501
                 # Cannot run the command as cse cli is enabled only for native
                 raise CseServerNotRunningError()
-            k8_runtime = shared_constants.ClusterEntityKind.TKG.value
+            k8_runtime = shared_constants.ClusterEntityKind.TKG_S.value
         client = ctx.obj['client']
         cluster = Cluster(client, k8_runtime=k8_runtime)
         if not client.is_sysadmin() and org is None:
             org = ctx.obj['profiles'].get('org_in_use')
-        cluster_config = \
-            cluster.get_cluster_config(name, cluster_id=cluster_id,
-                                       vdc=vdc, org=org) \
-            .get(shared_constants.RESPONSE_MESSAGE_KEY)  # noqa: E501
+        ret_val = cluster.get_cluster_config(
+            name,
+            cluster_id=cluster_id,
+            vdc=vdc,
+            org=org
+        ).get(shared_constants.RESPONSE_MESSAGE_KEY)
         if os.name == 'nt':
-            cluster_config = str.replace(cluster_config, '\n', '\r\n')
+            ret_val = str.replace(ret_val, '\n', '\r\n')
 
-        click.secho(cluster_config)
-        CLIENT_LOGGER.debug(cluster_config)
+        click.secho(ret_val)
+        CLIENT_LOGGER.debug(ret_val)
     except Exception as e:
         stderr(e, ctx)
         CLIENT_LOGGER.error(str(e))
@@ -958,7 +960,7 @@ Examples:
     default=None,
     required=False,
     metavar='CLUSTER_ID',
-    help="ID of the cluster whose cluster config has to be obtained;"
+    help="ID of the cluster whose info has to be obtained;"
          "Supported only for CSE api version >=35. "
          "ID gets precedence over cluster name.")
 def cluster_info(ctx, name, org, vdc, k8_runtime=None, cluster_id=None):
@@ -982,12 +984,12 @@ Example
             raise Exception("Please specify cluster name (or) cluster Id. "
                             "Note that '--id' flag is applicable for API versions >= 35 only.")  # noqa: E501
         client_utils.cse_restore_session(ctx)
-        if client_utils.is_cli_for_tkg_only():
+        if client_utils.is_cli_for_tkg_s_only():
             if k8_runtime in [shared_constants.ClusterEntityKind.NATIVE.value,
                               shared_constants.ClusterEntityKind.TKG_PLUS.value]:  # noqa: E501
                 # Cannot run the command as cse cli is enabled only for native
                 raise CseServerNotRunningError()
-            k8_runtime = shared_constants.ClusterEntityKind.TKG.value
+            k8_runtime = shared_constants.ClusterEntityKind.TKG_S.value
         client = ctx.obj['client']
         cluster = Cluster(client, k8_runtime=k8_runtime)
         # Users should be explicit in their intent about the org on which the
@@ -1069,7 +1071,7 @@ Examples:
         Share cluster 'mycluster' with FullControl access with 'user1' and 'user2'
 \b
     vcd cse cluster share --id urn:vcloud:entity:vmware:tkgcluster:1.0.0:71fa7b01-84dc-4a58-ae54-a1098219b057 --acl ReadOnly user1
-        Share TKG cluster with cluster ID 'urn:vcloud:entity:vmware:tkgcluster:1.0.0:71fa7b01-84dc-4a58-ae54-a1098219b057'
+        Share TKG-S cluster with cluster ID 'urn:vcloud:entity:vmware:tkgcluster:1.0.0:71fa7b01-84dc-4a58-ae54-a1098219b057'
         with ReadOnly access with 'user1'
     """  # noqa: E501
     try:
@@ -1083,12 +1085,12 @@ Examples:
         if not (cluster_id or name):
             raise Exception("Please specify cluster name or cluster id.")
         client_utils.cse_restore_session(ctx)
-        if client_utils.is_cli_for_tkg_only():
+        if client_utils.is_cli_for_tkg_s_only():
             if k8_runtime in [shared_constants.ClusterEntityKind.NATIVE.value,
                               shared_constants.ClusterEntityKind.TKG_PLUS.value]:  # noqa: E501
-                # Cannot run the command as cse cli is enabled only for tkg
+                # Cannot run the command as cse cli is enabled only for TKG-S
                 raise CseServerNotRunningError()
-            k8_runtime = shared_constants.ClusterEntityKind.TKG.value
+            k8_runtime = shared_constants.ClusterEntityKind.TKG_S.value
 
         client = ctx.obj['client']
         # Users should be explicit in their intent about the org on which the
@@ -1160,7 +1162,7 @@ Examples:
     default=None,
     required=False,
     metavar='CLUSTER_ID',
-    help="ID of the cluster to share; "
+    help="ID of the cluster whose share lists we want to retrieve; "
          "ID gets precedence over cluster name.")
 def cluster_share_list(ctx, should_print_all, name, vdc, org, k8_runtime,
                        cluster_id):
@@ -1179,12 +1181,12 @@ Examples:
         if not (cluster_id or name):
             raise Exception("Please specify cluster name or cluster id.")
         client_utils.cse_restore_session(ctx)
-        if client_utils.is_cli_for_tkg_only():
+        if client_utils.is_cli_for_tkg_s_only():
             if k8_runtime in [shared_constants.ClusterEntityKind.NATIVE.value,
                               shared_constants.ClusterEntityKind.TKG_PLUS.value]:  # noqa: E501
-                # Cannot run the command as cse cli is enabled only for tkg
+                # Cannot run the command as cse cli is enabled only for TKG-S
                 raise CseServerNotRunningError()
-            k8_runtime = shared_constants.ClusterEntityKind.TKG.value
+            k8_runtime = shared_constants.ClusterEntityKind.TKG_S.value
 
         # Determine cluster type and retrieve cluster id if needed
         client = ctx.obj['client']
@@ -1246,7 +1248,7 @@ Examples:
     default=None,
     required=False,
     metavar='CLUSTER_ID',
-    help="ID of the cluster to share; "
+    help="ID of the cluster to unshare; "
          "ID gets precedence over cluster name.")
 def cluster_unshare(ctx, name, users, vdc, org, k8_runtime, cluster_id):
     """Remove access from current shared cluster users.
@@ -1260,18 +1262,18 @@ Examples:
         Unshare cluster 'mycluster' with FullControl access with 'user1' and 'user2'
 \b
     vcd cse cluster unshare --id urn:vcloud:entity:vmware:tkgcluster:1.0.0:71fa7b01-84dc-4a58-ae54-a1098219b057 user1
-        Unshare TKG cluster with cluster ID 'urn:vcloud:entity:vmware:tkgcluster:1.0.0:71fa7b01-84dc-4a58-ae54-a1098219b057' with 'user1'
+        Unshare TKG-S cluster with cluster ID 'urn:vcloud:entity:vmware:tkgcluster:1.0.0:71fa7b01-84dc-4a58-ae54-a1098219b057' with 'user1'
     """  # noqa: E501
     try:
         if not (cluster_id or name):
             raise Exception("Please specify cluster name or cluster id.")
         client_utils.cse_restore_session(ctx)
-        if client_utils.is_cli_for_tkg_only():
+        if client_utils.is_cli_for_tkg_s_only():
             if k8_runtime in [shared_constants.ClusterEntityKind.NATIVE.value,
                               shared_constants.ClusterEntityKind.TKG_PLUS.value]:  # noqa: E501
                 # Cannot run the command as cse cli is enabled only for tkg
                 raise CseServerNotRunningError()
-            k8_runtime = shared_constants.ClusterEntityKind.TKG.value
+            k8_runtime = shared_constants.ClusterEntityKind.TKG_S.value
 
         client = ctx.obj['client']
         # Users should be explicit in their intent about the org on which the

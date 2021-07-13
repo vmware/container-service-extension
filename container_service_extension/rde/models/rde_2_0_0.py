@@ -284,61 +284,65 @@ class NativeEntity(AbstractNativeEntity):
                 rollback_on_failure=rde_1_x_entity.spec.settings.rollback_on_failure,  # noqa: E501
                 exposed=rde_1_x_entity.status.exposed)
             # RDE 1.0 don't have storage_profile in Node definition
-            control_plane = Node(
-                name=rde_1_x_entity.status.nodes.control_plane.name,
-                ip=rde_1_x_entity.status.nodes.control_plane.ip,
-                sizing_class=rde_1_x_entity.status.nodes.control_plane.sizing_class  # noqa: E501
-            )
-            workers = []
-            for worker in rde_1_x_entity.status.nodes.workers:
-                worker_node_2_x = Node(
-                    name=worker.name,
-                    ip=worker.ip,
-                    sizing_class=worker.sizing_class
+            # Convert "status" only for entities that are already created
+            # New cluster creation won't have "status" section in RDE
+            status = cls.status
+            if rde_1_x_entity.status.nodes:
+                control_plane = Node(
+                    name=rde_1_x_entity.status.nodes.control_plane.name,
+                    ip=rde_1_x_entity.status.nodes.control_plane.ip,
+                    sizing_class=rde_1_x_entity.status.nodes.control_plane.sizing_class  # noqa: E501
                 )
-                workers.append(worker_node_2_x)
-            nfs_nodes = []
-            for nfs_node in rde_1_x_entity.status.nodes.nfs:
-                # The nfs_node.export field is a string
-                # however when it was created by cluster_service_1_x.py
-                # it just took a list and string-ified it. The piece of
-                # code below reverses the string representation of the list
-                # back into a list of strings.
-                export_list_string = nfs_node.exports
-                export_list_string.replace('[', '').replace(']', '').replace('\'', '')  # noqa: E501
-                export_list = export_list_string.split(", ")
+                workers = []
+                for worker in rde_1_x_entity.status.nodes.workers:
+                    worker_node_2_x = Node(
+                        name=worker.name,
+                        ip=worker.ip,
+                        sizing_class=worker.sizing_class
+                    )
+                    workers.append(worker_node_2_x)
+                nfs_nodes = []
+                for nfs_node in rde_1_x_entity.status.nodes.nfs:
+                    # The nfs_node.export field is a string
+                    # however when it was created by cluster_service_1_x.py
+                    # it just took a list and string-ified it. The piece of
+                    # code below reverses the string representation of the list
+                    # back into a list of strings.
+                    export_list_string = nfs_node.exports
+                    export_list_string.replace('[', '').replace(']', '').replace('\'', '')  # noqa: E501
+                    export_list = export_list_string.split(", ")
 
-                nfs_node_2_x = NfsNode(
-                    name=nfs_node.name,
-                    ip=nfs_node.ip,
-                    sizing_class=nfs_node.sizing_class,
-                    exports=export_list
+                    nfs_node_2_x = NfsNode(
+                        name=nfs_node.name,
+                        ip=nfs_node.ip,
+                        sizing_class=nfs_node.sizing_class,
+                        exports=export_list
+                    )
+                    nfs_nodes.append(nfs_node_2_x)
+                nodes = Nodes(
+                    control_plane=control_plane,
+                    workers=workers,
+                    nfs=nfs_nodes
                 )
-                nfs_nodes.append(nfs_node_2_x)
-            nodes = Nodes(
-                control_plane=control_plane,
-                workers=workers,
-                nfs=nfs_nodes
-            )
 
-            external_ip = None
-            if rde_1_x_entity.status.exposed:
-                external_ip = rde_1_x_entity.status.nodes.control_plane.ip
+                external_ip = None
+                if rde_1_x_entity.status.exposed:
+                    external_ip = rde_1_x_entity.status.nodes.control_plane.ip
 
-            # NOTE: since details for the field `uid` is not present in
-            # RDE 1.0, it is left empty.
-            # Proper value for `uid` should be populated after RDE is converted
-            # as `uid` is a required property in Status for RDE 2.0
-            status = Status(phase=rde_1_x_entity.status.phase,
-                            cni=rde_1_x_entity.status.cni,
-                            task_href=rde_1_x_entity.status.task_href,
-                            kubernetes=rde_1_x_entity.status.kubernetes,
-                            docker_version=rde_1_x_entity.status.docker_version,  # noqa: E501
-                            os=rde_1_x_entity.status.os,
-                            external_ip=external_ip,
-                            nodes=nodes,
-                            uid=None,
-                            cloud_properties=cloud_properties)
+                # NOTE: since details for the field `uid` is not present in
+                # RDE 1.0, it is left empty.
+                # Proper value for `uid` should be populated after RDE is converted  # noqa: E501
+                # as `uid` is a required property in Status for RDE 2.0
+                status = Status(phase=rde_1_x_entity.status.phase,
+                                cni=rde_1_x_entity.status.cni,
+                                task_href=rde_1_x_entity.status.task_href,
+                                kubernetes=rde_1_x_entity.status.kubernetes,
+                                docker_version=rde_1_x_entity.status.docker_version,  # noqa: E501
+                                os=rde_1_x_entity.status.os,
+                                external_ip=external_ip,
+                                nodes=nodes,
+                                uid=None,
+                                cloud_properties=cloud_properties)
             # NOTE: since details for the field `site` is not present in
             # RDE 1.0, it is left empty.
             # Proper value for `site` should be populated after RDE is

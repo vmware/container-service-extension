@@ -493,10 +493,8 @@ class ClusterService(abstract_broker.AbstractBroker):
         phase: DefEntityPhase = DefEntityPhase.from_phase(
             curr_native_entity.status.phase)
 
-        # TODO: Cannot delete the defined entity if not in RESOLVED state.
-        #   Add check for resolved state before deleting the Vapp
         # Check if cluster is busy
-        if curr_rde.state != def_constants.DEF_RESOLVED_STATE or phase.is_entity_busy():  # noqa: E501
+        if phase.is_entity_busy():
             raise exceptions.CseServerError(
                 f"Cluster {cluster_name} with id {cluster_id} is not in a "
                 f"valid state to be deleted. Please contact administrator.")
@@ -2023,6 +2021,7 @@ class ClusterService(abstract_broker.AbstractBroker):
                 status=status.value, message=message, progress=progress)
         response_json = self.mqtt_publisher.construct_behavior_response_json(
             task_id=self.task_id, entity_id=self.entity_id, payload=payload)
+        LOGGER.debug(f"Sending behavior response:{response_json}")
         self.mqtt_publisher.send_response(response_json)
         self.task_status = status.value
 
@@ -2658,7 +2657,7 @@ def _execute_script_in_nodes(sysadmin_client: vcd_client.Client,
             all_results.append(result)
         except Exception as err:
             msg = f"Error executing script in node {node_name}: {str(err)}"
-            LOGGER.error(msg, exc_infop=True)
+            LOGGER.error(msg, exc_info=True)
             raise exceptions.ScriptExecutionError(msg)  # noqa: E501
 
     return all_results
