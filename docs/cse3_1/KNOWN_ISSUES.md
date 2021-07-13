@@ -8,11 +8,24 @@ title: Known Issues
 ## General Issues
 ---
 
+### In CSE 3.1, deleting the cluster in an error state may fail from CLI/UI
+Delete operation on a cluster that is in an error state (`RDE.state = RESOLUTION_ERROR` (or) `status.phase = <Operation>:FAILED`), 
+may fail with Bad request (400).
+
+**Workaround**
+Login as System administrator (or) user with ADMIN_FC right on `cse:nativeCluster` entitlement
+
+1. RDE deletion: Perform `DELETE https://<vcd-fqdn>/cloudapi/1.0.0/entities/id?invokeHooks=false`
+2. vApp deletion: Delete the corresponding vApp from UI (or) via API call.
+    - API call: Perform `GET https://<vcd-fqdn>/cloudapi/1.0.0/entities/<cluster-id>` to retrieve the
+      vApp Id, which is same as the `externalID` property in the corresponding RDE. Invoke Delete vApp API.
+    - UI: Identify the vApp with the same name as the cluster in the same Organization virtual datacenter and delete it.
+    
+### UI may show stale tasks right after cse upgrade
+
 ### CSE 3.1 silently ignores the `api_version` property in the config.yaml
-It is no longer needed to start the CSE server with a particular VCD API 
-version. CSE 3.1 is now capable of accepting incoming requests at any supported 
-VCD API version. However, CSE 3.1 would not complain about the presence of `api_version`
-property, but it would silently ignore it. Refer to changes in the [configuration file](CSE31.html#cse31-config)
+CSE 3.1 need not be started with a particular VCD API version. It is now capable of 
+accepting incoming requests at any supported VCD API version. Refer to changes in the [configuration file](CSE31.html#cse31-config)
 
 ### CSE 3.1 upgrade may fail to upgrade the clusters owned by System users correctly.
 During the `cse upgrade`, the RDE representation of the existing clusters is 
@@ -23,11 +36,6 @@ However, the ownership assignment may fail if the original owners are from the S
 **Workaround**
 Edit the RDE by updating the `owner.name` and `owner.id` in the payload
 PUT `https://<vcd-fqdn>/cloudapi/1.0.0/entities/id?invokeHooks=false`
-
-#### In CSE 3.1 user needs to have EDIT rights on the edge-gateway to expose the cluster.
-The property `expose` in the input YAML spec of the cluster creation exposes the 
-cluster to the external world by assigning a routable VIP. CSE server will 
-require the user to have EDIT rights on the edge-gateway to expose the cluster.
 
 ### In CSE 3.0 users of System organization are unable to create clusters
 If a user from System org who didn't install CSE 3.0 attempts to create clusters,
