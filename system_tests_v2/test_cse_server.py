@@ -14,8 +14,8 @@ from pyvcloud.vcd.vdc import VDC
 
 from container_service_extension.common.utils import server_utils
 from container_service_extension.installer.config_validator import get_validated_config  # noqa: E501
-from container_service_extension.common.constants import server_constants
 from container_service_extension.common.utils import server_utils
+from container_service_extension.installer.config_validator import get_validated_config  # noqa: E501
 import container_service_extension.installer.templates.local_template_manager as ltm  # noqa: E501
 from container_service_extension.server.cli.server_cli import cli
 import container_service_extension.system_test_framework.environment as env
@@ -267,7 +267,7 @@ def test_0070_check_invalid_installation(config):
     """Test cse check against config that hasn't been used for installation."""
     try:
         cmd = f"check {env.ACTIVE_CONFIG_FILEPATH} --skip-config-decryption --check-install"  # noqa: E501
-        env.CLI_RUNNER.invoke(cli, cmd.split(), catch_exceptions=False)
+        result = env.CLI_RUNNER.invoke(cli, cmd.split(), catch_exceptions=False)
         PYTEST_LOGGER.debug(f"Executing command: {cmd}")
         PYTEST_LOGGER.debug(f"Exit code: {result.exit_code}")
         PYTEST_LOGGER.debug(f"Output: {result.output}")
