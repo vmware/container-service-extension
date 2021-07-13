@@ -113,28 +113,38 @@ def validate_cluster_update_request_and_check_cluster_upgrade(input_spec: rde_2_
 
     input_spec_dict = input_spec.to_dict()
     reference_spec_dict = reference_spec.to_dict()
-    diff_fields = \
-        rde_utils.find_diff_fields(input_spec_dict, reference_spec_dict, exclude_fields=exclude_fields)  # noqa: E501
+    diff_fields = rde_utils.find_diff_fields(
+        input_spec_dict,
+        reference_spec_dict,
+        exclude_fields=exclude_fields)
 
     # Raise exception if empty diff
     if not diff_fields:
         raise BadRequestError("No change in cluster specification")  # noqa: E501
 
+    keys_with_invalid_value = {}
+    for k, v in diff_fields.items():
+        if k not in VALID_UPDATE_FIELDS_2X:
+            keys_with_invalid_value[k] = v
+
     # Raise exception if fields which cannot be changed are updated
-    keys_with_invalid_value = \
-        [k for k in diff_fields if k not in VALID_UPDATE_FIELDS_2X]
-    if len(keys_with_invalid_value) > 0:
-        err_msg = f"Invalid input values found in {sorted(keys_with_invalid_value)}"  # noqa: E501
+    if len(keys_with_invalid_value.keys()) > 0:
+        err_msg = "Invalid input values found in fields ["
+        for k in sorted(keys_with_invalid_value.keys()):
+            err_msg += \
+                f"{k} found : {keys_with_invalid_value[k]['actual']} " \
+                f"expected : {keys_with_invalid_value[k]['expected']}, "
+        err_msg += "]."
         raise BadRequestError(err_msg)
 
     is_resize_operation = False
-    if FlattenedClusterSpecKey2X.WORKERS_COUNT.value in diff_fields or \
-            FlattenedClusterSpecKey2X.NFS_COUNT.value in diff_fields:
+    if FlattenedClusterSpecKey2X.WORKERS_COUNT.value in diff_fields.keys() or \
+            FlattenedClusterSpecKey2X.NFS_COUNT.value in diff_fields.keys():  # noqa: E501
         is_resize_operation = True
     is_upgrade_operation = False
 
-    if FlattenedClusterSpecKey2X.TEMPLATE_NAME.value in diff_fields or \
-            FlattenedClusterSpecKey2X.TEMPLATE_REVISION.value in diff_fields:
+    if FlattenedClusterSpecKey2X.TEMPLATE_NAME.value in diff_fields.keys() or \
+            FlattenedClusterSpecKey2X.TEMPLATE_REVISION.value in diff_fields.keys():  # noqa: E501
         is_upgrade_operation = True
 
     # Raise exception if resize and upgrade are performed at the same time

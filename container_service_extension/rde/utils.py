@@ -169,15 +169,23 @@ def load_rde_schema(schema_file: str) -> dict:
             pass
 
 
-def find_diff_fields(input_spec: dict, reference_spec: dict, exclude_fields: list = None) -> list:  # noqa: E501
+def find_diff_fields(input_spec: dict, reference_spec: dict, exclude_fields: list = None) -> dict:  # noqa: E501
     if exclude_fields is None:
         exclude_fields = []
     input_dict = core_utils.flatten_dictionary(input_spec)
     reference_dict = core_utils.flatten_dictionary(reference_spec)
     exclude_key_set = set(exclude_fields)
     key_set_for_validation = set(input_dict.keys()) - exclude_key_set
-    return [key for key in key_set_for_validation
-            if input_dict.get(key) is not None and input_dict.get(key) != reference_dict.get(key)]  # noqa: E501
+    result = {}
+    for key in key_set_for_validation:
+        expected = reference_dict.get(key)
+        actual = input_dict.get(key)
+        if actual is not None and actual != expected:
+            result[key] = {
+                "expected": expected,
+                "actual": actual
+            }
+    return result
 
 
 def raise_error_if_unsupported_payload_version(payload_version: str):

@@ -13,17 +13,17 @@ import container_service_extension.rde.utils as rde_utils
 
 MISSING_KEY_TO_MINOR_ERROR_CODE_MAPPING = {
     RequestKey.CLUSTER_NAME: MinorErrorCode.REQUEST_KEY_CLUSTER_NAME_MISSING,
-    RequestKey.COMPUTE_POLICY_ACTION: MinorErrorCode.REQUEST_KEY_COMPUTE_POLICY_ACTION_MISSING, # noqa: E501
-    RequestKey.COMPUTE_POLICY_NAME: MinorErrorCode.REQUEST_KEY_COMPUTE_POLICY_NAME_MISSING, # noqa: E501
+    RequestKey.COMPUTE_POLICY_ACTION: MinorErrorCode.REQUEST_KEY_COMPUTE_POLICY_ACTION_MISSING,  # noqa: E501
+    RequestKey.COMPUTE_POLICY_NAME: MinorErrorCode.REQUEST_KEY_COMPUTE_POLICY_NAME_MISSING,  # noqa: E501
     RequestKey.K8S_PROVIDER: MinorErrorCode.REQUEST_KEY_K8S_PROVIDER_MISSING,
     RequestKey.NETWORK_NAME: MinorErrorCode.REQUEST_KEY_NETWORK_NAME_MISSING,
     RequestKey.NODE_NAME: MinorErrorCode.REQUEST_KEY_NODE_NAME_MISSING,
-    RequestKey.NODE_NAMES_LIST: MinorErrorCode.REQUEST_KEY_NODE_NAMES_LIST_MISSING, # noqa: E501
+    RequestKey.NODE_NAMES_LIST: MinorErrorCode.REQUEST_KEY_NODE_NAMES_LIST_MISSING,  # noqa: E501
     RequestKey.NUM_WORKERS: MinorErrorCode.REQUEST_KEY_NUM_WORKERS_MISSING,
     RequestKey.ORG_NAME: MinorErrorCode.REQUEST_KEY_ORG_NAME_MISSING,
     RequestKey.OVDC_ID: MinorErrorCode.REQUEST_KEY_OVDC_ID_MISSING,
     RequestKey.OVDC_NAME: MinorErrorCode.REQUEST_KEY_OVDC_NAME_MISSING,
-    RequestKey.PKS_CLUSTER_DOMAIN: MinorErrorCode.REQUEST_KEY_PKS_CLUSTER_DOMAIN_MISSING, # noqa: E501
+    RequestKey.PKS_CLUSTER_DOMAIN: MinorErrorCode.REQUEST_KEY_PKS_CLUSTER_DOMAIN_MISSING,  # noqa: E501
     RequestKey.PKS_EXT_HOST: MinorErrorCode.REQUEST_KEY_PKS_EXT_HOST_MISSING,
     RequestKey.PKS_PLAN_NAME: MinorErrorCode.REQUEST_KEY_PKS_PLAN_NAME_MISSING,
     RequestKey.SERVER_ACTION: MinorErrorCode.REQUEST_KEY_SERVER_ACTION_MISSING
@@ -31,17 +31,17 @@ MISSING_KEY_TO_MINOR_ERROR_CODE_MAPPING = {
 
 INVALID_VALUE_TO_MINOR_ERROR_CODE_MAPPING = {
     RequestKey.CLUSTER_NAME: MinorErrorCode.REQUEST_KEY_CLUSTER_NAME_INVALID,
-    RequestKey.COMPUTE_POLICY_ACTION: MinorErrorCode.REQUEST_KEY_COMPUTE_POLICY_ACTION_INVALID, # noqa: E501
-    RequestKey.COMPUTE_POLICY_NAME: MinorErrorCode.REQUEST_KEY_COMPUTE_POLICY_NAME_INVALID, # noqa: E501
+    RequestKey.COMPUTE_POLICY_ACTION: MinorErrorCode.REQUEST_KEY_COMPUTE_POLICY_ACTION_INVALID,  # noqa: E501
+    RequestKey.COMPUTE_POLICY_NAME: MinorErrorCode.REQUEST_KEY_COMPUTE_POLICY_NAME_INVALID,  # noqa: E501
     RequestKey.K8S_PROVIDER: MinorErrorCode.REQUEST_KEY_K8S_PROVIDER_INVALID,
     RequestKey.NETWORK_NAME: MinorErrorCode.REQUEST_KEY_NETWORK_NAME_INVALID,
     RequestKey.NODE_NAME: MinorErrorCode.REQUEST_KEY_NODE_NAME_INVALID,
-    RequestKey.NODE_NAMES_LIST: MinorErrorCode.REQUEST_KEY_NODE_NAMES_LIST_INVALID, # noqa: E501
+    RequestKey.NODE_NAMES_LIST: MinorErrorCode.REQUEST_KEY_NODE_NAMES_LIST_INVALID,  # noqa: E501
     RequestKey.NUM_WORKERS: MinorErrorCode.REQUEST_KEY_NUM_WORKERS_INVALID,
     RequestKey.ORG_NAME: MinorErrorCode.REQUEST_KEY_ORG_NAME_INVALID,
     RequestKey.OVDC_ID: MinorErrorCode.REQUEST_KEY_OVDC_ID_INVALID,
     RequestKey.OVDC_NAME: MinorErrorCode.REQUEST_KEY_OVDC_NAME_INVALID,
-    RequestKey.PKS_CLUSTER_DOMAIN: MinorErrorCode.REQUEST_KEY_PKS_CLUSTER_DOMAIN_INVALID, # noqa: E501
+    RequestKey.PKS_CLUSTER_DOMAIN: MinorErrorCode.REQUEST_KEY_PKS_CLUSTER_DOMAIN_INVALID,  # noqa: E501
     RequestKey.PKS_EXT_HOST: MinorErrorCode.REQUEST_KEY_PKS_EXT_HOST_INVALID,
     RequestKey.PKS_PLAN_NAME: MinorErrorCode.REQUEST_KEY_PKS_PLAN_NAME_INVALID,
     RequestKey.SERVER_ACTION: MinorErrorCode.REQUEST_KEY_SERVER_ACTION_INVALID
@@ -70,9 +70,12 @@ def flatten_request_data(request_data, keys_to_flatten):
         processed_data[key] = request_data[key]
 
     # remove None values
+    keys_to_remove = []
     for k in processed_data.keys():
-        if processed_data[key] is None:
-            del processed_data[key]
+        if processed_data[k] is None:
+            keys_to_remove.append(k)
+    for k in keys_to_remove:
+        del processed_data[k]
 
     return processed_data
 
@@ -91,6 +94,7 @@ def validate_payload(payload, required_keys):
     """
     valid = True
     minor_error_code = None
+    error_message = ""
 
     required = set(required_keys)
     if not required.issubset(payload.keys()):
@@ -102,13 +106,13 @@ def validate_payload(payload, required_keys):
         if key in MISSING_KEY_TO_MINOR_ERROR_CODE_MAPPING:
             minor_error_code = MISSING_KEY_TO_MINOR_ERROR_CODE_MAPPING[key]
     else:
-        keys_with_none_value = [k for k, v in payload.items() if k in required and v is None] # noqa: E501
+        keys_with_none_value = [k for k, v in payload.items() if k in required and v is None]  # noqa: E501
         if len(keys_with_none_value) > 0:
-            error_message = f"Following keys in request payloads have None as value: {keys_with_none_value}" # noqa: E501
+            error_message = f"Following keys in request payloads have None as value: {keys_with_none_value}"  # noqa: E501
             valid = False
             key = RequestKey(keys_with_none_value[0])
             if key in INVALID_VALUE_TO_MINOR_ERROR_CODE_MAPPING:
-                minor_error_code = INVALID_VALUE_TO_MINOR_ERROR_CODE_MAPPING[key] # noqa: E501
+                minor_error_code = INVALID_VALUE_TO_MINOR_ERROR_CODE_MAPPING[key]  # noqa: E501
 
     if not valid:
         raise BadRequestError(error_message, minor_error_code)
@@ -123,15 +127,19 @@ def validate_request_payload(input_spec: dict, reference_spec: dict,
     :param dict input_spec: input spec
     :param dict reference_spec: reference spec to validate the desired spec
     :param list exclude_fields: exclude the list of given flattened-keys from validation  # noqa: E501
-    :return: true on successful validation
-    :rtype: bool
+
     :raises: BadRequestError on encountering invalid payload value
     """
     keys_with_invalid_value = rde_utils.find_diff_fields(
         input_spec, reference_spec, exclude_fields=exclude_fields)
-    if len(keys_with_invalid_value) > 0:
-        error_msg = f"Invalid input values found in {sorted(keys_with_invalid_value)}"  # noqa: E501
-        raise BadRequestError(error_msg)
+    if len(keys_with_invalid_value.keys()) > 0:
+        err_msg = "Invalid input values found in fields ["
+        for k in sorted(keys_with_invalid_value.keys()):
+            err_msg += \
+                f"`{k}` found : {keys_with_invalid_value[k]['actual']} " \
+                f"expected : {keys_with_invalid_value[k]['expected']}, "
+        err_msg += "]."
+        raise BadRequestError(err_msg)
 
 
 def cluster_api_exception_handler(func):

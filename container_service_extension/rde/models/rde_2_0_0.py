@@ -291,14 +291,16 @@ class NativeEntity(AbstractNativeEntity):
                 control_plane = Node(
                     name=rde_1_x_entity.status.nodes.control_plane.name,
                     ip=rde_1_x_entity.status.nodes.control_plane.ip,
-                    sizing_class=rde_1_x_entity.status.nodes.control_plane.sizing_class  # noqa: E501
+                    sizing_class=rde_1_x_entity.status.nodes.control_plane.sizing_class,  # noqa: E501
+                    storage_profile=rde_1_x_entity.spec.control_plane.storage_profile  # noqa: E501
                 )
                 workers = []
                 for worker in rde_1_x_entity.status.nodes.workers:
                     worker_node_2_x = Node(
                         name=worker.name,
                         ip=worker.ip,
-                        sizing_class=worker.sizing_class
+                        sizing_class=worker.sizing_class,
+                        storage_profile=rde_1_x_entity.spec.workers.storage_profile  # noqa: E501
                     )
                     workers.append(worker_node_2_x)
                 nfs_nodes = []
@@ -316,6 +318,7 @@ class NativeEntity(AbstractNativeEntity):
                         name=nfs_node.name,
                         ip=nfs_node.ip,
                         sizing_class=nfs_node.sizing_class,
+                        storage_profile=rde_1_x_entity.spec.nfs.storage_profile,  # noqa: E501
                         exports=export_list
                     )
                     nfs_nodes.append(nfs_node_2_x)
@@ -406,7 +409,12 @@ class NativeEntity(AbstractNativeEntity):
         worker_nodes = []
         for item in cluster['nodes']:
             worker_nodes.append(
-                Node(name=item['name'], ip=item['ipAddress']))
+                Node(
+                    name=item['name'],
+                    ip=item['ipAddress'],
+                    storage_profile=cluster['storage_profile_name']
+                )
+            )
         nfs_nodes = []
         for item in cluster['nfs_nodes']:
             # The item['exports'] field is a string
@@ -422,6 +430,7 @@ class NativeEntity(AbstractNativeEntity):
                 NfsNode(
                     name=item['name'],
                     ip=item['ipAddress'],
+                    storage_profile=cluster['storage_profile_name'],
                     exports=exports_list
                 )
             )
