@@ -73,7 +73,7 @@ can choose to monitor the task progress manually.
    cluster resource will be created if it does not exist. 
     * Note that a new property `spec.settings.network.expose` can be used to 
       expose the cluster to the external world. This would require user to have 
-      EDIT rights on edge gateway.
+      EDIT rights on edge gateway. Refer to [expose cluster](#expose_cluster) for more details.
     * Command usage examples:
         ```sh
         vcd cse cluster apply <resize_cluster.yaml> (applies the specification on the resource specified; the cluster resource will be created if it does not exist). 

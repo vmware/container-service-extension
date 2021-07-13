@@ -4,9 +4,25 @@ title: Known Issues
 ---
 # Known Issues
 
+<a name="best-practices"></a>
+## Best practices
+
+### In CSE 3.1, how to construct K8 specification file for `vcd cse cluster apply` command?
+`vcd cse cluster apply` can be used to create the cluster, 
+scale up/down workers, scale up NFS nodes, upgrade the cluster to a new K8s version. 
+
+* For create operation, get a sample native cluster specification from 
+  ` vcd cse cluster apply -s -n`. Populate the required properties. The sample file
+  has full details to identify the required and optional properties.
+* For 
+
 <a name="general"></a>
 ## General Issues
 ---
+### UI may show stale tasks right after cse upgrade
+
+### In CSE 3.1, deleting cluster in an error state may fail.
+https://bugzilla.eng.vmware.com/show_bug.cgi?id=2799837
 
 ### CSE 3.1 silently ignores the `api_version` property in the config.yaml
 It is no longer needed to start the CSE server with a particular VCD API 
@@ -23,11 +39,6 @@ However, the ownership assignment may fail if the original owners are from the S
 **Workaround**
 Edit the RDE by updating the `owner.name` and `owner.id` in the payload
 PUT `https://<vcd-fqdn>/cloudapi/1.0.0/entities/id?invokeHooks=false`
-
-#### In CSE 3.1 user needs to have EDIT rights on the edge-gateway to expose the cluster.
-The property `expose` in the input YAML spec of the cluster creation exposes the 
-cluster to the external world by assigning a routable VIP. CSE server will 
-require the user to have EDIT rights on the edge-gateway to expose the cluster.
 
 ### In CSE 3.0 users of System organization are unable to create clusters
 If a user from System org who didn't install CSE 3.0 attempts to create clusters,

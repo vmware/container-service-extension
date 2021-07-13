@@ -5,6 +5,25 @@ title: Release Notes
 
 # Release Notes
 
+## CSE 3.1.0
+Release Date: 2021-07-15
+
+Supported VCD version: 10.3, 10.2, 10.1
+
+| CSE Server | CSE CLI | CSE UI | Cloud Director | Ent-PKS with NSX-T | NSX-V  | Features offered                                                                                    |
+|------------|---------|--------|----------------|--------------------|--------|-----------------------------------------------------------------------------------------------------|
+| 3.1        | 3.1     | 3.0*   | 10.3           | 1.7 with 2.5.1     | 6.4.10 | Native, TKG-S, and Ent-PKS Cluster management; Life cycle management of both native through VCD defined entity API  |
+| 3.1        | 3.1     | 2.0*   | 10.2           | 1.7 with 2.5.1     | 6.4.10 | Native, TKG-S, and Ent-PKS Cluster management; Defined entity representation for both native and tkg. |
+| 3.1        | 3.1     | 1.0.3  | 10.1           | 1.7 with 2.5.1     | 6.4.8  | Native and Ent-PKS cluster management                                                               |
+| NA         | 3.1     | 3.0*   | 10.3           | NA                 | NA     | TKG-S cluster management only                                                                         |
+| NA         | 3.1     | 2.0*   | 10.2           | NA                 | NA     | TKG-S cluster management only                                                                         |
+
+3.0*, 2.0* -> Kubernetes Clusters UI Plugins 3.0 and 2.0 ship with VCD 10.3 and VCD 10.2 respectively.
+
+1. Refer to [What's new in CSE 3.1?](CSE31.html) for more details.
+2. Newer versions of native kubernetes templates are available. Refer to
+[Template Announcements](TEMPLATE_ANNOUNCEMENTS.html)
+
 ## CSE 3.1.0 Beta (3.1.0.0b1)
 Release Date: 2021-04-14
 
