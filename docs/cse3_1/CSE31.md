@@ -11,12 +11,11 @@ For greenfield installations, please get started with [CSE introduction](INTRO.h
 * CSE 3.1, when configured with VCD 10.3, life cycle management of native clusters 
   can be performed using VCD's defined entity API. Refer to the [API usage](CLUSTER_MANAGEMENT_RDE.html) for details.
   
-* It is no longer needed to start the CSE server with a particular VCD API 
-  version. CSE 3.1 is now capable of accepting incoming requests at any supported 
-  VCD API version. Refer to changes in the [configuration file](#cse31-config).
+* CSE 3.1 need not be started with a particular VCD API version. It is now capable of 
+  accepting incoming requests at any supported VCD API version. Refer to changes in the [configuration file](#cse31-config).
   
 * A new version of the template recipe cookbook 2.0.0 is introduced. Each template has 
-  a new descriptor that lets CSE 3.1 determine the templates it can support." 
+  a new descriptor that lets CSE 3.1 determine the templates it can support. 
   Refer to changes in the [configuration file](#cse31-config)
   
 * CSE CLI offers new capabilities to upgrade and share clusters. 
@@ -47,13 +46,13 @@ For greenfield installations, please get started with [CSE introduction](INTRO.h
 <a name="cse31-compatibility-matrix"></a>
 ### 2.1 Compatibility matrix and relevant features
 
-| CSE Server | CSE CLI | CSE UI | Cloud Director | Ent-PKS with NSX-T | Features offered                                                                                    |
-|------------|---------|--------|----------------|--------------------|-----------------------------------------------------------------------------------------------------|
-| 3.1        | 3.1     | 3.0*   | 10.3           | 1.7 with 2.5.1     | Native, TKG-S, and Ent-PKS Cluster management; Life cycle management of both native through VCD defined entity API  |
-| 3.1        | 3.1     | 2.0*   | 10.2           | 1.7 with 2.5.1     | Native, TKG-S, and Ent-PKS Cluster management; Defined entity representation for both native and tkg. |
-| 3.1        | 3.1     | 1.0.3  | 10.1           | 1.7 with 2.5.1     | Native and Ent-PKS cluster management                                                               |
-| NA         | 3.1     | 3.0*   | 10.3           | NA                 | TKG-S cluster management only                                                                         |
-| NA         | 3.1     | 2.0*   | 10.2           | NA                 | TKG-S cluster management only                                                                         |
+| CSE Server | CSE CLI | CSE UI | Cloud Director | Ent-PKS with NSX-T | NSX-V  | Features offered                                                                                    |
+|------------|---------|--------|----------------|--------------------|--------|-----------------------------------------------------------------------------------------------------|
+| 3.1        | 3.1     | 3.0*   | 10.3           | 1.7 with 2.5.1     | 6.4.10 | Native, TKG-S, and Ent-PKS Cluster management; Life cycle management of both native through VCD defined entity API  |
+| 3.1        | 3.1     | 2.0*   | 10.2           | 1.7 with 2.5.1     | 6.4.10 | Native, TKG-S, and Ent-PKS Cluster management; Defined entity representation for both native and tkg. |
+| 3.1        | 3.1     | 1.0.3  | 10.1           | 1.7 with 2.5.1     | 6.4.8  | Native and Ent-PKS cluster management                                                               |
+| NA         | 3.1     | 3.0*   | 10.3           | NA                 | NA     | TKG-S cluster management only                                                                         |
+| NA         | 3.1     | 2.0*   | 10.2           | NA                 | NA     | TKG-S cluster management only                                                                         |
 
 3.0*, 2.0* -> Kubernetes Clusters UI Plugins 3.0 and 2.0 ship with VCD 10.3 and VCD 10.2 respectively.
 
