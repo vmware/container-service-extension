@@ -310,9 +310,14 @@ class NativeEntity(AbstractNativeEntity):
                     # it just took a list and string-ified it. The piece of
                     # code below reverses the string representation of the list
                     # back into a list of strings.
-                    export_list_string = nfs_node.exports
-                    export_list_string.replace('[', '').replace(']', '').replace('\'', '')  # noqa: E501
-                    export_list = export_list_string.split(", ")
+                    if isinstance(nfs_node.exports, str):
+                        export_list_string = nfs_node.exports
+                        export_list_string.replace('[', '').replace(']', '').replace('\'', '')  # noqa: E501
+                        export_list = export_list_string.split(", ")
+                    elif isinstance(nfs_node.exports, list):
+                        export_list = nfs_node.exports
+                    else:
+                        export_list = [str(nfs_node.exports)]
 
                     nfs_node_2_x = NfsNode(
                         name=nfs_node.name,
@@ -482,7 +487,9 @@ class NativeEntity(AbstractNativeEntity):
                 nodes=Nodes(
                     control_plane=Node(
                         name=cluster['master_nodes'][0]['name'],
-                        ip=cluster['master_nodes'][0]['ipAddress']),
+                        ip=cluster['master_nodes'][0]['ipAddress'],
+                        storage_profile=cluster['storage_profile_name']
+                    ),
                     workers=worker_nodes,
                     nfs=nfs_nodes
                 ),

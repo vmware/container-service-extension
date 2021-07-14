@@ -128,9 +128,9 @@ def validate_cluster_update_request_and_check_cluster_upgrade(input_spec: rde_2_
             keys_with_invalid_value[k] = v
 
     # Raise exception if fields which cannot be changed are updated
-    if len(keys_with_invalid_value.keys()) > 0:
+    if len(keys_with_invalid_value) > 0:
         err_msg = "Invalid input values found in fields ["
-        for k in sorted(keys_with_invalid_value.keys()):
+        for k in sorted(keys_with_invalid_value):
             err_msg += \
                 f"{k} found : {keys_with_invalid_value[k]['actual']} " \
                 f"expected : {keys_with_invalid_value[k]['expected']}, "
@@ -138,13 +138,13 @@ def validate_cluster_update_request_and_check_cluster_upgrade(input_spec: rde_2_
         raise BadRequestError(err_msg)
 
     is_resize_operation = False
-    if FlattenedClusterSpecKey2X.WORKERS_COUNT.value in diff_fields.keys() or \
-            FlattenedClusterSpecKey2X.NFS_COUNT.value in diff_fields.keys():  # noqa: E501
+    if FlattenedClusterSpecKey2X.WORKERS_COUNT.value in diff_fields or \
+            FlattenedClusterSpecKey2X.NFS_COUNT.value in diff_fields:
         is_resize_operation = True
     is_upgrade_operation = False
 
-    if FlattenedClusterSpecKey2X.TEMPLATE_NAME.value in diff_fields.keys() or \
-            FlattenedClusterSpecKey2X.TEMPLATE_REVISION.value in diff_fields.keys():  # noqa: E501
+    if FlattenedClusterSpecKey2X.TEMPLATE_NAME.value in diff_fields or \
+            FlattenedClusterSpecKey2X.TEMPLATE_REVISION.value in diff_fields:
         is_upgrade_operation = True
 
     # Raise exception if resize and upgrade are performed at the same time
