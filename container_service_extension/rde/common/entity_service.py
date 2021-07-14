@@ -76,7 +76,6 @@ class DefEntityService:
     def create_entity(self, entity_type_id: str, entity: DefEntity,
                       tenant_org_context: str = None,
                       delete_status_from_payload=True,
-                      invoke_hooks=True,
                       is_request_async=False) -> Union[dict, Tuple[dict, dict]]:  # noqa: E501
         """Create defined entity instance of an entity type.
 
@@ -84,7 +83,6 @@ class DefEntityService:
         :param DefEntity entity: Defined entity instance
         :param str tenant_org_context:
         :param bool delete_status_from_payload: should delete status from payload?  # noqa: E501
-        :param bool invoke_hooks:
         :param bool is_request_async: The request is intended to be asynchronous
             if this flag is set, href of the task is returned in addition to
             the response body
@@ -101,14 +99,6 @@ class DefEntityService:
             payload.get('entity', {}).pop('status', None)
 
         resource_url_relative_path = f"{CloudApiResource.ENTITY_TYPES}/{entity_type_id}"  # noqa: E501
-        vcd_api_version = self._cloudapi_client.get_api_version()
-        # TODO Float conversions must be changed to Semantic versioning.
-        # TODO: Also include any persona having Administrator:FullControl
-        #  on CSE:nativeCluster
-        if float(vcd_api_version) >= float(ApiVersion.VERSION_36.value) and \
-                self._cloudapi_client.is_sys_admin and not invoke_hooks:
-            resource_url_relative_path += "?invokeHooks=false"
-
         # response will be a tuple (response_body, response_header) if
         # is_request_async is true. Else, it will be just response_body
         response = self._cloudapi_client.do_request(
