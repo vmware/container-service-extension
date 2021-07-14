@@ -71,7 +71,7 @@ def flatten_request_data(request_data, keys_to_flatten):
 
     # remove None values
     keys_to_remove = []
-    for k in processed_data.keys():
+    for k in processed_data:
         if processed_data[k] is None:
             keys_to_remove.append(k)
     for k in keys_to_remove:
@@ -132,9 +132,9 @@ def validate_request_payload(input_spec: dict, reference_spec: dict,
     """
     keys_with_invalid_value = rde_utils.find_diff_fields(
         input_spec, reference_spec, exclude_fields=exclude_fields)
-    if len(keys_with_invalid_value.keys()) > 0:
+    if len(keys_with_invalid_value) > 0:
         err_msg = "Invalid input values found in fields ["
-        for k in sorted(keys_with_invalid_value.keys()):
+        for k in sorted(keys_with_invalid_value):
             err_msg += \
                 f"`{k}` found : {keys_with_invalid_value[k]['actual']} " \
                 f"expected : {keys_with_invalid_value[k]['expected']}, "
