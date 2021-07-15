@@ -7,6 +7,17 @@ title: Known Issues
 <a name="general"></a>
 ## General Issues
 ---
+<a name="templates-upgrade"></a>
+### CSE 3.1: Pre-existing templates will not work after upgrading to CSE 3.1 (legacy_mode=true)
+After upgrade to CSE 3.1 running in legacy_mode, existing templates will not work, 
+unless their corresponding scripts files are moved to the right location.
+CSE 3.0.x, keeps the template script files under the folder `~/.cse_scripts`, 
+CSE 3.1.0 keeps them under `~./cse_scripts/<template cookbook version>`.
+
+**Workaround(s)**:
+1. Please create a folder named `~/.cse_scripts/1.0.0` and move all contents of `~/.cse_scripts` into it.
+   (or)
+2. Another recommended workaround is to recreate the templates.
 
 ### In CSE 3.1, deleting the cluster in an error state may fail from CLI/UI
 Delete operation on a cluster that is in an error state (`RDE.state = RESOLUTION_ERROR` (or) `status.phase = <Operation>:FAILED`), 
