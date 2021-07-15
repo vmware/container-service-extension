@@ -72,33 +72,13 @@ Refer to the [sample config file](CSE_CONFIG.html)
 4. [mqtt](CSE_CONFIG.html#mqtt) property must be enabled when CSE 3.1 is configured with VCD 10.3.
 
 #### 2.2.1 Greenfield installation 
+
 Refer to [CSE 3.1 installation](CSE_SERVER_MANAGEMENT.html#cse31-greenfield).
 
 #### 2.2.2 Brownfield upgrade
 
-CSE 3.1 can only be upgraded from 3.0.X.
-Below are the few valid upgrade paths and the resultant changes in the environment.
-
-An example on reading below upgrade paths - `CSE 3.0.X, VCD 10.2 (api_version=34.0) -> CSE 3.1, VCD 10.2 (legacy_mode=true)`:
-Environment with CSE 3.0.X, configured with VCD 10.2, running at the specified api_version=34.0 (config.yaml) 
-can be upgraded to environment CSE 3.1, configured with VCD 10.2, running with `legacy_mode` set to true.
-
-1. CSE 3.0.X, VCD 10.1 (api_version=34.0) -> CSE 3.1, VCD 10.1 (legacy_mode=true)
-   - Native clusters will remain regular vApps with Kubernetes specific metadata.
-   - Existing templates in the environment will continue to work.
-2. CSE 3.0.X, VCD 10.2 (api_version=34.0) -> CSE 3.1, VCD 10.2 (legacy_mode=false)
-   - Native clusters will have a new representation in the form of 
-     RDE `urn:vcloud:type:cse:nativeCluster:1.0.0` entities.
-3. CSE 3.0.X, VCD 10.2 (api_version=34.0) -> CSE 3.1, VCD 10.3 (legacy_mode=false)
-   - Native clusters will have a new representation  in the form of 
-     RDE `urn:vcloud:type:cse:nativeCluster:2.0.0` entities.
-4. CSE 3.0.X, VCD 10.2 (api_version=35.0) -> CSE 3.1, VCD 10.3 (legacy_mode=false)
-   - Native clusters will be upgraded from `urn:vcloud:type:cse:nativeCluster:1.0.0`
-     to `urn:vcloud:type:cse:nativeCluster:2.0.0` entities.
-    
-Note the below recommendation when the target combination is CSE 3.1 (legacy_mode=false):
-- CSE 3.1 will do its best effort to make the existing templates forward compatible. 
-  It is recommended to recreate the templates from the new template cookbook 2.0 to avoid any errors.
+CSE 3.1 can only be upgraded from 3.0.X. 
+Note that CSE >= 3.0.3 cannot be upgraded to CSE 3.1 if the TKG runtime is enabled.
     
 Refer to [CSE 3.1 upgrade command](CSE_SERVER_MANAGEMENT.html#cse31-upgrade-cmd).
 

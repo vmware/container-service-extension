@@ -16,7 +16,7 @@ cse sample -o config.yaml
 
 The output of the command varies slightly depending on the target VCD server maximum api
 version that CSE is configured with. Only supported message bus type for api version 
-33.0 and 34.0 is AMQP. For api version >= 35.0, the default message bus type is MQTT. 
+34.0 is AMQP. For api version >= 35.0, the default message bus type is MQTT. 
 For api version >= 36.0, MQTT enablement is must and AMQP is not supported by CSE.
 
 Edit this file to add values from your vCloud Director installation. The
@@ -189,10 +189,11 @@ The following table summarizes key parameters.
 
 <a name="template_cookbook_20"></a>
 **CSE 3.1 - new template cookbook 2.0:**
-For `remote_template_cookbook_url`, CSE 3.1 config must refer
-to http://raw.githubusercontent.com/vmware/container-service-extension-templates/master/template_v2.yaml. 
-CSE <= 3.0 will not work with the new template cookbook. When `legacy_mode` is set to true, 
-`remote_template_cookbook_url` must refer to old template cookbook https://raw.githubusercontent.com/vmware/container-service-extension-templates/master/template.yaml
+For the `remote_template_cookbook_url` property, CSE 3.1 `config.yaml` must refer
+to `http://raw.githubusercontent.com/vmware/container-service-extension-templates/master/template_v2.yaml`. 
+CSE <= 3.0 will not work with the new template cookbook 2.0. When `legacy_mode` is set to true, 
+`remote_template_cookbook_url` of CSE 3.1 `config.yaml` must refer to old template cookbook 
+`https://raw.githubusercontent.com/vmware/container-service-extension-templates/master/template.yaml`.
 
 <a name="templte_rules"></a>
 ### `template_rules` Section
