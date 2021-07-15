@@ -350,9 +350,13 @@ Please create CSE K8s template(s) using the command `cse template install`."""
 
         # Setup extension based on message bus protocol
         if server_utils.should_use_mqtt_protocol(config):
+            description = \
+                _construct_cse_extension_description(
+                    config['service']['rde_version_in_use']
+                )
             _register_cse_as_mqtt_extension(
                 client,
-                rde_version_in_use=config['service']['rde_version_in_use'],
+                description=description,
                 msg_update_callback=msg_update_callback)  # noqa: E501
         else:
             # create amqp exchange if it doesn't exist
@@ -781,7 +785,6 @@ def upgrade_cse(config_file_name, config, skip_template_creation,
             _register_cse_as_mqtt_extension(
                 client,
                 description=ext_description,
-                rde_version_in_use=config['service']['rde_version_in_use'],
                 msg_update_callback=msg_update_callback)
 
         if source_cse_running_in_legacy_mode and target_cse_running_in_legacy_mode:  # noqa: E501
@@ -1020,20 +1023,18 @@ def _get_existing_extension_type(client):
 
 
 def _register_cse_as_mqtt_extension(client,
-                                    description=None,
-                                    rde_version_in_use=None,
+                                    description,
                                     msg_update_callback=utils.NullPrinter()):
     """Install the MQTT extension and api filter.
 
     :param Client client: client used to install cse server components
+    :param str description:
     :param core_utils.ConsoleMessagePrinter msg_update_callback: Callback object.  # noqa: E501
 
     :raises requests.exceptions.HTTPError: if the MQTT extension and api filter
         were not set up correctly
     """
     mqtt_ext_manager = MQTTExtensionManager(client)
-    if not description:
-        description = _construct_cse_extension_description(rde_version_in_use)
     ext_info = mqtt_ext_manager.setup_extension(
         ext_name=server_constants.CSE_SERVICE_NAME,
         ext_version=server_constants.MQTT_EXTENSION_VERSION,
