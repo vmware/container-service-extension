@@ -98,13 +98,13 @@ class DefEntityService:
         if delete_status_from_payload:
             payload.get('entity', {}).pop('status', None)
 
+        resource_url_relative_path = f"{CloudApiResource.ENTITY_TYPES}/{entity_type_id}"  # noqa: E501
         # response will be a tuple (response_body, response_header) if
         # is_request_async is true. Else, it will be just response_body
         response = self._cloudapi_client.do_request(
             method=RequestMethod.POST,
             cloudapi_version=CloudApiVersion.VERSION_1_0_0,
-            resource_url_relative_path=f"{CloudApiResource.ENTITY_TYPES}/"
-                                       f"{entity_type_id}",
+            resource_url_relative_path=resource_url_relative_path,
             payload=payload,
             additional_request_headers=additional_request_headers,
             return_response_headers=is_request_async)
