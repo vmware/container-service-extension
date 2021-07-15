@@ -2,7 +2,7 @@
 # Copyright (c) 2021 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 
-"""Support CSE 3.1 custer requests.
+"""Support CSE 3.1 cluster requests.
 
 Starting CSE 3.1, this module handles all the cluster requests coming in at
 any RDE version (>= 2.0) and at any request api_version (>=36).

@@ -1127,26 +1127,26 @@ def _deregister_cse_amqp_extension(client,
     INSTALL_LOGGER.info(msg)
 
 
-def _update_user_role_with_right_bundle(right_bundle_name,
-                                        client: Client,
-                                        msg_update_callback=utils.NullPrinter(),  # noqa: E501
-                                        logger_debug=NULL_LOGGER,
-                                        log_wire=False):
+def _update_user_role_with_right_bundle(
+        right_bundle_name,
+        client: Client,
+        msg_update_callback=utils.NullPrinter(),
+        logger_debug=NULL_LOGGER,
+        log_wire=False):
     """Add defined entity rights to user's role.
 
     This method should only be called on valid configurations.
-    In order to call this function, caller has to make sure that the contextual
-    defined entity is already created inside VCD and corresponding right-bundle
-    exists in VCD.
+        In order to call this function, caller has to make sure that the
+        contextual defined entity is already created inside VCD and
+        corresponding right-bundle exists in VCD.
     The defined entity right bundle is created by VCD at the time of defined
-    entity creation, dynamically. Hence, it doesn't exist before-hand
-    (when user initiated the operation).
-    :param str right_bundle_name : right_bundle_name
+        entity creation, dynamically. Hence, it doesn't exist before-hand
+        (when user initiated the operation).
+
+    :param str right_bundle_name:
     :param pyvcloud.vcd.client.Client client:
-    :param core_utils.ConsoleMessagePrinter msg_update_callback: Callback object.  # noqa: E501
-    :param bool log_wire: wire logging enabled
-    :rtype bool: result of operation. If the rights were added to user's role
-    or not
+    :param core_utils.ConsoleMessagePrinter msg_update_callback:
+    :param bool log_wire:
     """
     # Only a user from System Org can execute this function
     vcd_utils.raise_error_if_user_not_from_system_org(client)
@@ -1165,7 +1165,7 @@ def _update_user_role_with_right_bundle(right_bundle_name,
     if role_record_read_only:
         msg = "User has predefined non editable role. Not adding native entitlement rights."  # noqa: E501
         msg_update_callback.general(msg)
-        return False
+        return
 
     # Determine the rights necessary from rights bundle
     # It is assumed that user already has "View Rights Bundle" Right
@@ -1192,8 +1192,6 @@ def _update_user_role_with_right_bundle(right_bundle_name,
         str(right_bundle_name)
     msg_update_callback.general(msg)
     logger_debug.info(msg)
-
-    return True
 
 
 def _register_def_schema(client: Client,
@@ -1254,21 +1252,24 @@ def _register_def_schema(client: Client,
 
         # Update user's role with right bundle associated with native defined
         # entity
-        if(_update_user_role_with_right_bundle(
-                def_constants.DEF_NATIVE_ENTITY_TYPE_RIGHT_BUNDLE,
-                client=client,
-                msg_update_callback=msg_update_callback,
-                logger_debug=INSTALL_LOGGER,
-                log_wire=log_wire)):
-            # Given that Rights for the current user have been updated, CSE
-            # should logout the user and login again.
-            # This will make sure that SecurityContext object in VCD is
-            # recreated and newly added rights are effective for the user.
-            client.logout()
-            credentials = BasicLoginCredentials(config['vcd']['username'],
-                                                shared_constants.SYSTEM_ORG_NAME,  # noqa: E501
-                                                config['vcd']['password'])
-            client.set_credentials(credentials)
+        _update_user_role_with_right_bundle(
+            def_constants.DEF_NATIVE_ENTITY_TYPE_RIGHT_BUNDLE,
+            client=client,
+            msg_update_callback=msg_update_callback,
+            logger_debug=INSTALL_LOGGER,
+            log_wire=log_wire
+        )
+        # Given that Rights for the current user have been updated, CSE
+        # should logout the user and login again.
+        # This will make sure that SecurityContext object in VCD is
+        # recreated and newly added rights are effective for the user.
+        client.logout()
+        credentials = BasicLoginCredentials(
+            config['vcd']['username'],
+            shared_constants.SYSTEM_ORG_NAME,
+            config['vcd']['password']
+        )
+        client.set_credentials(credentials)
     except cse_exception.DefNotSupportedException:
         msg = "Skipping defined entity type and defined entity interface" \
               " registration"
@@ -2524,7 +2525,12 @@ def _create_cluster_rde(client, cluster, kind, runtime_rde_version,
     org_resource = vcd_utils.get_org(client, org_name=cluster['org_name'])
     org_id = org_resource.href.split('/')[-1]
     def_entity = common_models.DefEntity(entity=cluster_entity, entityType=target_entity_type.id)  # noqa: E501
-    entity_svc.create_entity(target_entity_type.id, entity=def_entity, tenant_org_context=org_id, delete_status_from_payload=False)  # noqa: E501
+    entity_svc.create_entity(
+        target_entity_type.id,
+        entity=def_entity,
+        tenant_org_context=org_id,
+        delete_status_from_payload=False
+    )
 
     def_entity = entity_svc.get_native_rde_by_name_and_rde_version(cluster['name'], runtime_rde_version)  # noqa: E501
     def_entity_id = def_entity.id
