@@ -104,8 +104,11 @@ def verify_version_compatibility(
         sysadmin_client: Client,
         should_cse_run_in_legacy_mode: bool,
         is_mqtt_extension: bool):
-    dikt = configure_cse.parse_cse_extension_description(
-        sysadmin_client, is_mqtt_extension)
+    ext_description = configure_cse.get_extension_description(
+        sysadmin_client,
+        is_mqtt_extension
+    )
+    dikt = configure_cse.parse_cse_extension_description(ext_description)
     ext_cse_version = dikt[server_constants.CSE_VERSION_KEY]
     ext_in_legacy_mode = dikt[server_constants.LEGACY_MODE_KEY]
     ext_rde_in_use = dikt[server_constants.RDE_VERSION_IN_USE_KEY]
