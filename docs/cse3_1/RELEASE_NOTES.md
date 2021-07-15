@@ -8,7 +8,7 @@ title: Release Notes
 ## CSE 3.1.0
 Release Date: 2021-07-15
 
-Supported VCD version: 10.3, 10.2, 10.1
+Supported VCD versions: 10.3, 10.2, 10.1
 
 | CSE Server | CSE CLI | CSE UI | Cloud Director | Ent-PKS with NSX-T | NSX-V  | Features offered                                                                                    |
 |------------|---------|--------|----------------|--------------------|--------|-----------------------------------------------------------------------------------------------------|
@@ -23,6 +23,44 @@ Supported VCD version: 10.3, 10.2, 10.1
 1. Refer to [What's new in CSE 3.1?](CSE31.html) for more details.
 2. Newer versions of native kubernetes templates are available. Refer to
 [Template Announcements](TEMPLATE_ANNOUNCEMENTS.html)
+   
+## CSE 3.0.3 GA (3.0.3)
+Release Date: 2021-06-24
+
+**Supported (and Tested) VCD versions** : 10.2.2, 10.1.3, 10.0.0.3
+
+Note : Future update or patch releases of these VCD versions will be supported
+by CSE 3.0.3, but they will not be tested individually. If a bug is found in the
+interoperability, please file a github [issue](https://github.com/vmware/container-service-extension/issues)
+and bring it to our attention.
+
+| CSE Server | CSE CLI | Kubernetes Container Clusters UI Plug-in | Cloud Director | NSX-T        | Enterprise PKS with NSX-T | Features offered                                                                                                            |
+|------------|---------|------------------------------------------|----------------|--------------|---------------------------|-----------------------------------------------------------------------------------------------------------------------------|
+| 3.0.3      | 3.0.3   | 2.3.0**                                  | 10.2.2         | 3.0.2, 3.1.2 | 1.7 with 2.5.1            | Native, TKG, TKG-S, and Enterprise PKS Cluster management; Runtime Defined entity representation for native, TKG and TKG-S. |
+| 3.0.3      | 3.0.3   | 1.0.3                                    | 10.1, 10.0     | NA           | 1.7 with 2.5.1            | Native and Enterprise PKS cluster management                                                                                |
+| NA         | 3.0.3   | 2.3.0**                                  | 10.2.2         | NA           | NA                        | TKG-S cluster management only                                                                                               |
+
+** Kubernetes Container Clusters UI Plug-in v2.3.0 should be downloaded separately from
+[here](https://my.vmware.com/en/web/vmware/downloads/details?downloadGroup=VCD-CSE-PLUGIN-303&productId=1079)
+and manually uploaded to VCD. By default, VCD 10.2.2 will have
+Kubernetes Container Clusters UI Plug-in v2.2.0.
+
+**What's New**
+* CSE can now deploy VMware Tanzu Kubernetes Grid (TKG) distribution based Kubernetes
+clusters on VCD 10.2.2 or prior update releases of VCD 10.2 GA.
+    * Learn more about TKG [here](https://docs.vmware.com/en/VMware-Tanzu-Kubernetes-Grid/index.html).
+    * Read about TKG and it's benefits [here](https://blogs.vmware.com/cloudprovider/?p=17426).
+    * Instructions to enable TKG for CSE 3.0.3 can be found [here](https://github.com/vmware/container-service-extension-templates/blob/tkgm/TKG_INSTRUCTIONS.md).
+* Following fixes have been added
+    * Correctly honor the specified storage profile during cluster creation (for both UI and CLI).
+    * When resizing an exposed native cluster (connected to a NSX-T powered org VDC), the exposed IP address will be retained.
+* Change in flag for the following command
+    * `vcd cse cluster apply`
+        * --tkg/-t changed to --tkg-s/-k
+
+**Notes to System Administrator**
+If you are upgrading from an existing CSE 3.0.x installation please be aware of
+the issue related to runtime defined entities listed in [Known Issues](KNOWN_ISSUES.html).
 
 ## CSE 3.1.0 Beta (3.1.0.0b1)
 Release Date: 2021-04-14

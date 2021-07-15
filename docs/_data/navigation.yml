@@ -384,9 +384,9 @@
   - name: "Role Based Access Control"
     link: RBAC.html
     subtoc:
-    - name: CSE 3.0 with vCD 10.2
+    - name: CSE 3.1 with vCD 10.2 and higher
       sublink: DEF-RBAC
-    - name: CSE 3.0 with vCD < 10.2
+    - name: CSE 3.1 with vCD 10.1
       sublink: old-RBAC
   - name: "Kubernetes Cluster Management"
     link: CLUSTER_MANAGEMENT.html
@@ -401,11 +401,6 @@
       sublink: automation
     - name: Example Use Case
       sublink: example
-  - name: "Kubernetes Cluster Management via API"
-    link: CLUSTER_MANAGEMENT.html
-    subtoc:
-    - name: Kubernetes Cluster Management via API
-      sublink: cluster_management_api
   - name: "Kubernetes Clusters UI Plugin"
     link: CSE_UI_PLUGIN.html
   - name: "Enterprise PKS enablement"
