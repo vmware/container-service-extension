@@ -664,12 +664,12 @@ def upgrade_cse(config_file_name, config, skip_template_creation,
 
         # Handle missing extension and upgrading from MQTT -> AMQP extension
         existing_ext_type = _get_existing_extension_type(client)
-        is_mqtt_extension = existing_ext_type == server_constants.ExtensionType.MQTT  # noqa: E501
+        is_source_extension_mqtt = existing_ext_type == server_constants.ExtensionType.MQTT  # noqa: E501
         if existing_ext_type == server_constants.ExtensionType.NONE:
             msg = "No existing extension.  Please use `cse install' instead " \
                 "of 'cse upgrade'."
             raise Exception(msg)
-        elif is_mqtt_extension and not server_utils.should_use_mqtt_protocol(config):  # noqa: E501
+        elif is_source_extension_mqtt and not server_utils.should_use_mqtt_protocol(config):  # noqa: E501
             # Upgrading from MQTT to AMQP extension
             msg = "Upgrading from MQTT extension to AMQP extension is not " \
                   "supported"
@@ -677,7 +677,7 @@ def upgrade_cse(config_file_name, config, skip_template_creation,
 
         ext_description = get_extension_description(
             client,
-            is_mqtt_extension=is_mqtt_extension
+            is_mqtt_extension=is_source_extension_mqtt
         )
         dikt = parse_cse_extension_description(ext_description)
         ext_cse_version = dikt[server_constants.CSE_VERSION_KEY]
@@ -780,7 +780,8 @@ def upgrade_cse(config_file_name, config, skip_template_creation,
         # upgrading to non legacy mode. This will ensure that when
         # the existing legacy clusters are being processed, RDE creation
         # won't fail due to missing CSE exchange/channel.
-        if not is_mqtt_extension and not target_cse_running_in_legacy_mode:
+        if not is_source_extension_mqtt and \
+                not target_cse_running_in_legacy_mode:
             _deregister_cse_amqp_extension(client=client)
             _register_cse_as_mqtt_extension(
                 client,
@@ -1119,6 +1120,24 @@ def _create_amqp_exchange(exchange_name, host, port, vhost,
         if connection is not None:
             connection.close()
     msg = f"AMQP exchange '{exchange_name}' is ready"
+    msg_update_callback.general(msg)
+    INSTALL_LOGGER.info(msg)
+
+
+def _deregister_cse_mqtt_extension(client,
+                                   msg_update_callback=utils.NullPrinter()):
+    mqtt_ext_manager = MQTTExtensionManager(client)
+    mqtt_ext_info = mqtt_ext_manager.get_extension_info(
+        ext_name=server_constants.CSE_SERVICE_NAME,
+        ext_version=server_constants.MQTT_EXTENSION_VERSION,
+        ext_vendor=server_constants.MQTT_EXTENSION_VENDOR)
+    ext_urn_id = mqtt_ext_info[server_constants.MQTTExtKey.EXT_URN_ID]
+    mqtt_ext_manager.delete_extension(
+        ext_name=server_constants.CSE_SERVICE_NAME,
+        ext_version=server_constants.MQTT_EXTENSION_VERSION,
+        ext_vendor=server_constants.MQTT_EXTENSION_VENDOR,
+        ext_urn_id=ext_urn_id)
+    msg = f"Deleted MQTT extension '{ server_constants.CSE_SERVICE_NAME}'"
     msg_update_callback.general(msg)
     INSTALL_LOGGER.info(msg)
 
