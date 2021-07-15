@@ -8,7 +8,12 @@ title: Release Notes
 ## CSE 3.1.0
 Release Date: 2021-07-15
 
-Supported VCD versions: 10.3, 10.2, 10.1
+**Supported (and tested) VCD versions**: 10.3, 10.2, 10.1
+
+Note: Future update/patch releases of these vCD versions will be supported by CSE but
+they won't be tested individually. If a bug is found in their interoperability
+with CSE, please file a github [issue](https://github.com/vmware/container-service-extension/issues),
+the same will be fixed in a future CSE release.
 
 | CSE Server | CSE CLI | CSE UI | Cloud Director | Ent-PKS with NSX-T | NSX-V  | Features offered                                                                                    |
 |------------|---------|--------|----------------|--------------------|--------|-----------------------------------------------------------------------------------------------------|

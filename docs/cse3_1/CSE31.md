@@ -77,10 +77,11 @@ Refer to [CSE 3.1 installation](CSE_SERVER_MANAGEMENT.html#cse31-greenfield).
 
 #### 2.2.2 Brownfield upgrade
 
-CSE 3.1 can only be upgraded from 3.0.X. 
-Note that CSE >= 3.0.3 cannot be upgraded to CSE 3.1 if the TKG runtime is enabled.
+CSE 3.1 can only be upgraded from CSE 3.0.z product line. Any CSE release older than CSE 3.0 first needs to be upgraded to CSE 3.0 product line before it can be upgraded to CSE 3.1.
+
+Note: If Tanzu Kubernetes Grid (TKG) distribution is enabled in CSE 3.0.3 (link), then CSE 3.0.3 will not be upgraded to CSE 3.1. 
     
-Refer to [CSE 3.1 upgrade command](CSE_SERVER_MANAGEMENT.html#cse31-upgrade-cmd).
+Refer to [CSE 3.1 upgrade command](CSE_SERVER_MANAGEMENT.html#cse31-upgrade-cmd) for details.
 
 #### 2.2.3 Tenant onboarding
 The provider needs to perform below operations to enable Kubernetes cluster
