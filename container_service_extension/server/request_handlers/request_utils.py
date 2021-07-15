@@ -133,7 +133,7 @@ def validate_request_payload(input_spec: dict, reference_spec: dict,
     keys_with_invalid_value = rde_utils.find_diff_fields(
         input_spec, reference_spec, exclude_fields=exclude_fields)
     if len(keys_with_invalid_value) > 0:
-        err_msg = "Invalid input values found in fields ["
+        err_msg = "Change detected in immutable field(s) ["
         for k in sorted(keys_with_invalid_value):
             err_msg += \
                 f"`{k}` found : {keys_with_invalid_value[k]['actual']} " \

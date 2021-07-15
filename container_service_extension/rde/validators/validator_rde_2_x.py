@@ -129,7 +129,7 @@ def validate_cluster_update_request_and_check_cluster_upgrade(input_spec: rde_2_
 
     # Raise exception if fields which cannot be changed are updated
     if len(keys_with_invalid_value) > 0:
-        err_msg = "Invalid input values found in fields ["
+        err_msg = "Change detected in immutable field(s) ["
         for k in sorted(keys_with_invalid_value):
             err_msg += \
                 f"{k} found : {keys_with_invalid_value[k]['actual']} " \
