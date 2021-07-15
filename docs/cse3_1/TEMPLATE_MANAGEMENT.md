@@ -68,7 +68,7 @@ environment.
 <a name="cse30-restrict_templates"></a>
 ### CSE 3.1 with VCD 10.3, VCD 10.2
 
-Starting CSE 3.0 with VCD 10.2, Kubernetes templates are restricted for use.
+Starting CSE 3.0 with VCD 10.2, Kubernetes templates are restricted for use by default.
 
 When CSE 3.1 is connected to vCD >= 10.2, `cse install` (or) `cse upgrade` command 
 execution restricts native template usage by default. The provider has 

@@ -71,7 +71,7 @@ broker:
   ip_allocation_mode: pool
   network: my_network
   org: my_org
-  remote_template_cookbook_url: http://raw.githubusercontent.com/vmware/container-service-extension-templates/upgrades/template_v2.yaml
+  remote_template_cookbook_url: https://raw.githubusercontent.com/vmware/container-service-extension-templates/master/template_v2.yaml
   storage_profile: '*'
   vdc: my_org_vdc
 ```
