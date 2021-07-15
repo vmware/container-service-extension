@@ -84,7 +84,7 @@ as well as how they are used.
 ### `vcd` Section
 
 <a name="api_version"></a>
-**CSE 3.1 - Removal of property `api_version`:**
+**CSE 3.1 - removal of property - `api_version`:**
 Starting CSE 3.1, it is no longer needed to start CSE with a 
 particular VCD API version. As a side effect, CSE 3.1 will not recognize `api_version` 
 property under `vcd` section of the config file. This property can be safely deleted 
@@ -160,7 +160,7 @@ The service section contains properties that define CSE server behavior.
 | legacy_mode           | Need to be True if CSE >= 3.1 is configured with VCD <= 10.1 (Added in CSE 3.1.0)                                                                          |
 
 <a name="legacy_mode"></a>
-**CSE 3.1 - new property `legacy_mode`:**
+**CSE 3.1 - new property - `legacy_mode`:**
 Starting CSE 3.1, new property `legacy_mode` has been added. This property indicates whether CSE server 
 needs to leverage the latest features of VCD like RDE framework, placement policies or not.
    * set the `legacy_mode` to true if CSE 3.1 is configured with VCD 10.1. 
@@ -188,7 +188,7 @@ The following table summarizes key parameters.
 | vdc                          | Virtual data-center within `org` that will be used during the install process to build the template                                                                                                                  |
 
 <a name="template_cookbook_20"></a>
-**CSE 3.1 - New template cookbook 2.0:**
+**CSE 3.1 - new template cookbook 2.0:**
 For `remote_template_cookbook_url`, CSE 3.1 config must refer
 to http://raw.githubusercontent.com/vmware/container-service-extension-templates/master/template_v2.yaml. 
 CSE <= 3.0 will not work with the new template cookbook. When `legacy_mode` is set to true, 

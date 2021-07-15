@@ -66,16 +66,16 @@ environment.
 ## Restricting Kubernetes Templates for Tenants
     
 <a name="cse30-restrict_templates"></a>
-### CSE 3.0 with VCD 10.2
+### CSE 3.1 with VCD 10.3, VCD 10.2
 
 Starting CSE 3.0 with VCD 10.2, Kubernetes templates are restricted for use.
 
-When CSE 3.0 is connected to vCD 10.2, `cse install` (or) `cse upgrade` command 
+When CSE 3.1 is connected to vCD >= 10.2, `cse install` (or) `cse upgrade` command 
 execution restricts native template usage by default. The provider has 
 to explicitly enable organizational virtual datacenter(s) to host native 
 deployments, by running the command: `vcd cse ovdc enable`. 
 
-CSE 3.0 leverages VCD's feature of placement policies to restrict native K8 
+CSE 3.1 leverages VCD's feature of placement policies to restrict native K8 
 deployments to specific organization virtual datacenters (ovdcs).
 During CSE install or upgrade, it creates a provider Vdc level placement 
 policy **cse----native** and tags the native templates with the same. In 
@@ -85,8 +85,8 @@ only onto org VDC(s) that have the corresponding placement policy published.
 1. (provider command) `cse install` or `cse upgrade` creates native 
 placement policy **cse----native** and tags the relevant templates with
 the same placement policy. On running `cse upgrade` on older environments with 
-template rules, CSE 3.0 would automatically adopt the new template restriction 
-mechanism. Refer [CSE 3.0 upgrade command](CSE_SERVER_MANAGEMENT.html#cse30-upgrade-cmd) 
+template rules, CSE 3.1 would automatically adopt the new template restriction 
+mechanism. Refer [CSE 3.1 upgrade command](CSE_SERVER_MANAGEMENT.html#cse31-upgrade-cmd) 
 for more details.
 
 2. (provider command) `vcd cse ovdc enable` publishes the native 
@@ -97,7 +97,7 @@ vCD internally validates the ovdc eligibility to host the cluster VMs
 instantiated from the native templates, by checking if the template's 
 placement policy is published onto the ovdc or not.
  
-### CSE 3.0 with VCD < 10.2
+### CSE 3.1 with VCD < 10.2
 
 Out of the box, Kubernetes templates are not restricted for use. All tenants
 have access to all the Kubernetes templates to deploy Kubernetes clusters, as

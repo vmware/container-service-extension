@@ -31,11 +31,12 @@ disappear after 24 hours of timeout.
 CSE 3.1 need not be started with a particular VCD API version. It is now capable of 
 accepting incoming requests at any supported VCD API version. Refer to changes in the [configuration file](CSE_CONFIG.html#api_version)
 
-### CSE 3.1 upgrade may fail to upgrade the clusters owned by System users correctly.
+### CSE 3.1 upgrade may fail to update the clusters owned by System users correctly.
 During the `cse upgrade`, the RDE representation of the existing clusters is 
 transformed to become forward compatible. The newly created RDEs are supposed 
 to be owned by the corresponding original cluster owners in the process. 
 However, the ownership assignment may fail if the original owners are from the System org.
+This is a bug from VCD.
 
 **Workaround**
 Edit the RDE by updating the `owner.name` and `owner.id` in the payload
