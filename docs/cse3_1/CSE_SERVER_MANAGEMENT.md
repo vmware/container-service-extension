@@ -115,7 +115,9 @@ can be upgraded to environment CSE 3.1, configured with VCD 10.2, running with `
 
 1. CSE 3.0.X, VCD 10.1 (api_version=34.0) -> CSE 3.1, VCD 10.1 (legacy_mode=true)
    - Native clusters will remain regular vApps with Kubernetes specific metadata.
-   - Existing templates in the environment will continue to work.
+   - Force recreation of the templates is recommended. Existing templates in the 
+     environment may not work straightaway; refer to the [workaround](KNOWN_ISSUES.html#templates-upgrade) 
+     here for making existing templates work.
 2. CSE 3.0.X, VCD 10.2 (api_version=34.0) -> CSE 3.1, VCD 10.2 (legacy_mode=false)
    - Native clusters will have a new representation in the form of 
      RDE `urn:vcloud:type:cse:nativeCluster:1.0.0` entities.

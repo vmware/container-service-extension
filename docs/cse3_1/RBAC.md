@@ -11,7 +11,7 @@ CSE 3.1, when connected to either VCD 10.3 (or) VCD 10.2, leverages the RBAC tha
 [Defined Entity framework](https://docs.vmware.com/en/VMware-Cloud-Director/10.2/VMware-Cloud-Director-Service-Provider-Admin-Portal-Guide/GUID-0749DEA0-08A2-4F32-BDD7-D16869578F96.html) 
 for Native and Tkg clusters. [RBAC for Enterprise PKS clusters](#old RBAC) remain as-is.
 
-_Note: The RBAC in this section refers to the roles and rights required for the tenants
+Note: The RBAC in this section refers to the roles and rights required for the tenants
  to perform the life cycle management of kubernetes clusters. It does not have 
  anything to do with the RBAC inside the kubernetes cluster itself.
 
