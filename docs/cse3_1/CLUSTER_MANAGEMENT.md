@@ -45,8 +45,14 @@ Here is a summary of commands available to view templates and manage clusters an
 | `vcd cse cluster upgrade CLUSTER_NAME TEMPLATE_NAME TEMPLATE_REVISION`|No             | Yes              | Yes                 | Upgrade cluster software to specified template's software versions.        |
 | `vcd cse cluster delete CLUSTER_NAME`                                |Yes             | Yes              | Yes                 | Delete a Kubernetes cluster.                                               |
 | `vcd cse cluster delete-nfs CLUSTER_NAME NFS_NODE_NAME`              |Yes             | Yes              | No                  | Delete NFS node of a given Kubernetes cluster                              |
+| `vcd cse cluster share --name CLUSTER_NAME --acl FullControl USER1`  |Yes             | No               | No                  | Share cluster 'mycluster' with FullControl access with 'user1'             |
+| `vcd cse cluster share-list --name CLUSTER_NAME`                     |Yes             | No               | No                  | View the acl info for a cluster.                                           |
+| `vcd cse cluster unshare --name CLUSTER_NAME USER1`                  |Yes             | No               | No                  | Unshare the cluster with the user1.                                        |
 | `vcd cse node create CLUSTER_NAME --nodes n`                         |No              | No               | Yes                 | Add `n` nodes to a Kubernetes cluster.                                     |
 | `vcd cse node create CLUSTER_NAME --nodes n --enable-nfs`            |No              | No               | Yes                 | Add an NFS node to a Kubernetes cluster.                                   |
+| `vcd cse node list CLUSTER_NAME`                                     |No              | No               | Yes                 | List nodes of a cluster.                                                   |
+| `vcd cse node info CLUSTER_NAME NODE_NAME`                           |No              | No               | Yes                 | Retrieve detailed information of a node in a Kubernetes cluster.           |
+| `vcd cse node delete CLUSTER_NAME NODE_NAME`                         |No              | No               | Yes                 | Delete nodes from a cluster.                                               |
 | `vcd cse node list CLUSTER_NAME`                                     |No              | No               | Yes                 | List nodes of a cluster.                                                   |
 | `vcd cse node info CLUSTER_NAME NODE_NAME`                           |No              | No               | Yes                 | Retrieve detailed information of a node in a Kubernetes cluster.           |
 | `vcd cse node delete CLUSTER_NAME NODE_NAME`                         |No              | No               | Yes                 | Delete nodes from a cluster.                                               |
@@ -188,6 +194,9 @@ can choose to monitor the task progress manually.
       # View the acl info for a cluster; for each user the cluster is shared with, 
       # the user's access level, member id, and user name are listed.
       vcd cse cluster share-list --name cluster1
+   
+      # Unshare the cluster with a given user.
+      vcd cse cluster unshare --name CLUSTER_NAME USER1
    ```
       
 <a name="k8s_upgrade"></a>

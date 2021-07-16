@@ -79,7 +79,7 @@ Refer to [CSE 3.1 installation](CSE_SERVER_MANAGEMENT.html#cse31-greenfield).
 
 CSE 3.1 can only be upgraded from CSE 3.0.z product line. Any CSE release older than CSE 3.0 first needs to be upgraded to CSE 3.0 product line before it can be upgraded to CSE 3.1.
 
-Note: If Tanzu Kubernetes Grid (TKG) distribution is enabled in CSE 3.0.3 (link), then CSE 3.0.3 will not be upgraded to CSE 3.1. 
+Note: If Tanzu Kubernetes Grid (TKG) distribution is enabled in [CSE 3.0.3](https://github.com/vmware/container-service-extension-templates/blob/tkgm/TKG_INSTRUCTIONS.md), then CSE 3.0.3 will not be upgraded to CSE 3.1. 
     
 Refer to [CSE 3.1 upgrade command](CSE_SERVER_MANAGEMENT.html#cse31-upgrade-cmd) for details.
 

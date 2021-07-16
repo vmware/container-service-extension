@@ -28,7 +28,8 @@ the same will be fixed in a future CSE release.
 1. Refer to [What's new in CSE 3.1?](CSE31.html) for more details.
 2. Newer versions of native kubernetes templates are available. Refer to
 [Template Announcements](TEMPLATE_ANNOUNCEMENTS.html)
-   
+
+<a name="cse303"></a>   
 ## CSE 3.0.3 GA (3.0.3)
 Release Date: 2021-06-24
 
