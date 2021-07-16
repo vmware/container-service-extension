@@ -32,7 +32,7 @@ Login as System administrator (or) user with ADMIN_FC right on `cse:nativeCluste
       vApp Id, which is same as the `externalID` property in the corresponding RDE. Invoke Delete vApp API.
     - UI: Identify the vApp with the same name as the cluster in the same Organization virtual datacenter and delete it.
     
-### In CSE 3.1, Pending tasks are visible in the VCD UI right after `cse upgrade`
+### In CSE 3.1, pending tasks are visible in the VCD UI right after `cse upgrade`
 After upgrading to CSE 3.1 using `cse upgrade` command, you may notice pending 
 tasks on RDE based Kubernetes clusters. This is merely a cosmetic issue, and it 
 should not have any negative impact on the functionality. The pending tasks should 
@@ -162,4 +162,3 @@ to
 
 Kubernetes version has to be specified within the configuration file itself,
 since `--kubernetes-version` and `--config` are incompatible.
-
