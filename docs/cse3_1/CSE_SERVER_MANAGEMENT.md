@@ -88,7 +88,7 @@ tail -f /tmp/FILENAME.err
 ### CSE 3.1 Upgrade Command
 
 The command `cse upgrade` must be run to ensure the environment is forward 
-compatible with CSE 3.0. Few or all of the below steps will be performed based 
+compatible with CSE 3.1. Few or all of the below steps will be performed based 
 on the VCD version CSE 3.1 is configured with.
 
 * Delete old compute policies in the environment: untag old templates with 
@@ -104,7 +104,7 @@ and publish appropriate placement policies on the same.
 * Register native RDE `urn:vcloud:type:cse:nativeCluster:X.0.0`
 * Register relevant RDE behaviors.
 * Convert legacy clusters to RDE based clusters.
-* Upgrade RDE 1.0 clusters to RDE 2.0 clusters.
+* Update RDE 1.0 clusters to RDE 2.0 clusters.
 
 CSE 3.1 can only be upgraded from 3.0.X.
 Below are the few valid upgrade paths and the resultant changes in the environment.
@@ -115,9 +115,9 @@ can be upgraded to environment CSE 3.1, configured with VCD 10.2, running with `
 
 1. CSE 3.0.X, VCD 10.1 (api_version=34.0) -> CSE 3.1, VCD 10.1 (legacy_mode=true)
    - Native clusters will remain regular vApps with Kubernetes specific metadata.
-   - Force recreation of the templates is recommended. Existing templates in the 
-     environment may not work straightaway; refer to the [workaround](KNOWN_ISSUES.html#templates-upgrade) 
-     here for making existing templates work.
+   - Existing Kubernetes templates will not work as-is. Either templates should be 
+     recreated, or the [workaround](KNOWN_ISSUES.html#templates-upgrade) 
+     should be applied.
 2. CSE 3.0.X, VCD 10.2 (api_version=34.0) -> CSE 3.1, VCD 10.2 (legacy_mode=false)
    - Native clusters will have a new representation in the form of 
      RDE `urn:vcloud:type:cse:nativeCluster:1.0.0` entities.
@@ -125,7 +125,7 @@ can be upgraded to environment CSE 3.1, configured with VCD 10.2, running with `
    - Native clusters will have a new representation  in the form of 
      RDE `urn:vcloud:type:cse:nativeCluster:2.0.0` entities.
 4. CSE 3.0.X, VCD 10.2 (api_version=35.0) -> CSE 3.1, VCD 10.3 (legacy_mode=false)
-   - Native clusters will be upgraded from `urn:vcloud:type:cse:nativeCluster:1.0.0`
+   - Native clusters will be updated from `urn:vcloud:type:cse:nativeCluster:1.0.0`
      to `urn:vcloud:type:cse:nativeCluster:2.0.0` entities.
     
 Note the below recommendation when the target combination is CSE 3.1 (legacy_mode=false):

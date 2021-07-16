@@ -194,6 +194,9 @@ can choose to monitor the task progress manually.
       # View the acl info for a cluster; for each user the cluster is shared with, 
       # the user's access level, member id, and user name are listed.
       vcd cse cluster share-list --name cluster1
+   
+      # Unshare the cluster with a given user.
+      vcd cse cluster unshare --name CLUSTER_NAME USER1
    ```
       
 <a name="k8s_upgrade"></a>

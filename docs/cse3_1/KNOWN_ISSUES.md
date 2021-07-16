@@ -8,10 +8,10 @@ title: Known Issues
 ## General Issues
 ---
 <a name="templates-upgrade"></a>
-### CSE 3.1: Pre-existing templates will not work after upgrading to CSE 3.1 (legacy_mode=true)
+### In CSE 3.1, pre-existing templates will not work after upgrading to CSE 3.1 (legacy_mode=true)
 After upgrade to CSE 3.1 running in legacy_mode, existing templates will not work, 
 unless their corresponding scripts files are moved to the right location.
-CSE 3.0.x, keeps the template script files under the folder `~/.cse_scripts`, 
+CSE 3.0.x keeps the template script files under the folder `~/.cse_scripts`, 
 CSE 3.1.0 keeps them under `~./cse_scripts/<template cookbook version>`.
 
 **Workaround(s)**:
@@ -32,7 +32,7 @@ Login as System administrator (or) user with ADMIN_FC right on `cse:nativeCluste
       vApp Id, which is same as the `externalID` property in the corresponding RDE. Invoke Delete vApp API.
     - UI: Identify the vApp with the same name as the cluster in the same Organization virtual datacenter and delete it.
     
-### CSE 3.1: Pending tasks in the VCD UI right after `cse upgrade`
+### In CSE 3.1, Pending tasks are visible in the VCD UI right after `cse upgrade`
 After upgrading to CSE 3.1 using `cse upgrade` command, you may notice pending 
 tasks on RDE based Kubernetes clusters. This is merely a cosmetic issue, and it 
 should not have any negative impact on the functionality. The pending tasks should 
