@@ -628,7 +628,7 @@ def _get_legacy_url_data(method: str, url: str, api_version: str):
 
     if operation_type == shared_constants.OperationType.NATIVE_CLUSTER:
         if api_version not in (VcdApiVersion.VERSION_33.value,
-                               VcdApiVersion.VERSION_35.value):
+                               VcdApiVersion.VERSION_34.value):
             raise cse_exception.NotFoundRequestError()
         if num_tokens == 4:
             if method == shared_constants.RequestMethod.GET:
