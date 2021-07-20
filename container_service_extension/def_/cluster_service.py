@@ -1020,7 +1020,7 @@ class ClusterService(abstract_broker.AbstractBroker):
         Do's:
         - Update the defined entity in except blocks.
         - Can set the self.task status either to Running or Error
-        Dont's:
+        Don't:
         - Do not set the self.task status to SUCCESS. This will prevent other
         parallel threads if any to update the status. vCD interprets SUCCESS
         as a terminal state.
@@ -1337,7 +1337,7 @@ class ClusterService(abstract_broker.AbstractBroker):
                 _run_script_in_nodes(self.context.sysadmin_client, vapp_href,
                                      control_plane_node_names, script)
 
-                msg = f"Uncordoning control plane node {control_plane_node_names}"  # noqa: E501
+                msg = f"Un-cordoning control plane node {control_plane_node_names}"  # noqa: E501
                 self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
                 _uncordon_nodes(self.context.sysadmin_client,
                                 vapp_href,
@@ -1364,7 +1364,7 @@ class ClusterService(abstract_broker.AbstractBroker):
                     _run_script_in_nodes(self.context.sysadmin_client,
                                          vapp_href, [node], script)
 
-                    msg = f"Uncordoning node {node}"
+                    msg = f"Un-cordoning node {node}"
                     self._update_task(vcd_client.TaskStatus.RUNNING,
                                       message=msg)
                     _uncordon_nodes(self.context.sysadmin_client,
@@ -1402,7 +1402,7 @@ class ClusterService(abstract_broker.AbstractBroker):
                                      control_plane_node_names, script)
 
             # uncordon all nodes (sometimes redundant)
-            msg = f"Uncordoning all nodes {all_node_names}"
+            msg = f"Un-cordoning all nodes {all_node_names}"
             self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
             _uncordon_nodes(self.context.sysadmin_client, vapp_href,
                             all_node_names, cluster_name=cluster_name)
@@ -1552,7 +1552,7 @@ class ClusterService(abstract_broker.AbstractBroker):
         Do's:
         - Update the defined entity in except blocks.
         - Set the self.task status either to Running or Error
-        Dont's:
+        Don't:
         - Do not set the self.task status to SUCCESS. This will prevent other
         parallel threads if any to update the status. vCD interprets SUCCESS
         as a terminal state.
@@ -1863,8 +1863,8 @@ def _uncordon_nodes(sysadmin_client: vcd_client.Client, vapp_href, node_names,
                     cluster_name=''):
     vcd_utils.raise_error_if_user_not_from_system_org(sysadmin_client)
 
-    LOGGER.debug(f"Uncordoning nodes {node_names} in cluster '{cluster_name}' "
-                 f"(vapp: {vapp_href})")
+    LOGGER.debug(f"Un-cordoning nodes {node_names} in cluster "
+                 f"'{cluster_name}' (vapp: {vapp_href})")
     script = "#!/usr/bin/env bash\n"
     for node_name in node_names:
         script += f"kubectl uncordon {node_name}\n"
@@ -1882,7 +1882,7 @@ def _uncordon_nodes(sysadmin_client: vcd_client.Client, vapp_href, node_names,
                      f"with error: {err}")
         raise
 
-    LOGGER.debug(f"Successfully uncordoned nodes {node_names} in cluster "
+    LOGGER.debug(f"Successfully un-cordoned nodes {node_names} in cluster "
                  f"'{cluster_name}' (vapp: {vapp_href})")
 
 
@@ -2161,11 +2161,15 @@ def _init_cluster(sysadmin_client: vcd_client.Client, vapp, template_name,
                 f"Initialize cluster script execution failed on node "
                 f"{node_names}:{errors}")
         if result[0][0] != 0:
-            raise E.ClusterInitializationError(f"Couldn't initialize cluster:\n{result[0][2].content.decode()}")  # noqa: E501
+            raise E.ClusterInitializationError(
+                "Could not initialize cluster:\n"
+                f"{result[0][2].content.decode()}"
+            )
     except Exception as err:
         LOGGER.error(err, exc_info=True)
         raise E.ClusterInitializationError(
-            f"Couldn't initialize cluster: {str(err)}")
+            f"Could not initialize cluster: {str(err)}"
+        )
 
 
 def _form_expose_ip_init_cluster_script(script: str, expose_ip: str):
@@ -2252,11 +2256,12 @@ def _join_cluster(sysadmin_client: vcd_client.Client, vapp, template_name,
                 f"on worker node  {node_names}:{errors}")
         for result in worker_results:
             if result[0] != 0:
-                raise E.ClusterJoiningError(f"Couldn't join cluster:"
-                                            f"\n{result[2].content.decode()}")
+                raise E.ClusterJoiningError(
+                    f"Could not join cluster:\n{result[2].content.decode()}"
+                )
     except Exception as err:
         LOGGER.error(err, exc_info=True)
-        raise E.ClusterJoiningError(f"Couldn't join cluster: {str(err)}")
+        raise E.ClusterJoiningError(f"Could not join cluster: {str(err)}")
 
 
 def _enable_nfs(
@@ -2280,7 +2285,7 @@ def _enable_nfs(
         script = utils.read_data_file(script_filepath, logger=LOGGER)  # noqa: E501
         exec_results = _execute_script_in_nodes(
             sysadmin_client, vapp=vapp, node_names=node_names,
-            script=script,use_ubuntu_20_sleep=True)
+            script=script, use_ubuntu_20_sleep=True)
 
         errors = _get_script_execution_errors(exec_results)
         if errors:
@@ -2289,7 +2294,7 @@ def _enable_nfs(
                 f"on one or more nodes {target_nodes}:{errors}")
     except Exception as err:
         LOGGER.error(err, exc_info=True)
-        raise E.NFSNodeCreationError(f"Couldn't create NFS node: {str(err)}")
+        raise E.NFSNodeCreationError(f"Could not create NFS node: {str(err)}")
 
 
 def _wait_for_tools_ready_callback(message, exception=None):
