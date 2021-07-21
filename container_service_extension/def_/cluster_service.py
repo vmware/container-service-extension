@@ -611,18 +611,20 @@ class ClusterService(abstract_broker.AbstractBroker):
             server_config = utils.get_server_runtime_config()
             catalog_name = server_config['broker']['catalog']
             try:
-                _add_nodes(self.context.sysadmin_client,
-                           num_nodes=1,
-                           node_type=NodeType.CONTROL_PLANE,
-                           org=org,
-                           vdc=vdc,
-                           vapp=vapp,
-                           catalog_name=catalog_name,
-                           template=template,
-                           network_name=network_name,
-                           storage_profile=control_plane_storage_profile,
-                           ssh_key=ssh_key,
-                           sizing_class_name=control_plane_sizing_class)
+                _add_nodes(
+                    self.context.sysadmin_client,
+                    num_nodes=1,
+                    node_type=NodeType.CONTROL_PLANE,
+                    org=org,
+                    vdc=vdc,
+                    vapp=vapp,
+                    catalog_name=catalog_name,
+                    template=template,
+                    network_name=network_name,
+                    storage_profile=control_plane_storage_profile,
+                    ssh_key=ssh_key,
+                    sizing_class_name=control_plane_sizing_class
+                )
             except Exception as err:
                 LOGGER.error(err, exc_info=True)
                 raise E.ControlPlaneNodeCreationError(
@@ -634,8 +636,11 @@ class ClusterService(abstract_broker.AbstractBroker):
             vapp.reload()
             is_ubuntu_20 = UBUNTU_20_TEMPLATE_NAME_FRAGMENT in template_name
             control_plane_ip = _get_control_plane_ip(
-                self.context.sysadmin_client, vapp, check_tools=True,
-                use_ubuntu_20_sleep=is_ubuntu_20)
+                self.context.sysadmin_client,
+                vapp,
+                check_tools=True,
+                use_ubuntu_20_sleep=is_ubuntu_20
+            )
 
             # Handle exposing cluster
             if expose:
@@ -647,18 +652,21 @@ class ClusterService(abstract_broker.AbstractBroker):
                         network_name=cluster_spec.spec.settings.network,
                         cluster_name=cluster_name,
                         cluster_id=cluster_id,
-                        internal_ip=control_plane_ip)
+                        internal_ip=control_plane_ip
+                    )
                     if expose_ip:
                         control_plane_ip = expose_ip
                 except Exception as err:
                     LOGGER.error(f'Exposing cluster failed: {str(err)}')
                     expose_ip = ''
 
-            _init_cluster(self.context.sysadmin_client,
-                          vapp,
-                          template[LocalTemplateKey.NAME],
-                          template[LocalTemplateKey.REVISION],
-                          expose_ip=expose_ip)
+            _init_cluster(
+                self.context.sysadmin_client,
+                vapp,
+                template[LocalTemplateKey.NAME],
+                template[LocalTemplateKey.REVISION],
+                expose_ip=expose_ip
+            )
 
             task = vapp.set_metadata('GENERAL', 'READWRITE', 'cse.master.ip',
                                      control_plane_ip)
@@ -669,18 +677,20 @@ class ClusterService(abstract_broker.AbstractBroker):
             LOGGER.debug(msg)
             self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
             try:
-                _add_nodes(self.context.sysadmin_client,
-                           num_nodes=num_workers,
-                           node_type=NodeType.WORKER,
-                           org=org,
-                           vdc=vdc,
-                           vapp=vapp,
-                           catalog_name=catalog_name,
-                           template=template,
-                           network_name=network_name,
-                           storage_profile=worker_storage_profile,
-                           ssh_key=ssh_key,
-                           sizing_class_name=worker_sizing_class)
+                _add_nodes(
+                    self.context.sysadmin_client,
+                    num_nodes=num_workers,
+                    node_type=NodeType.WORKER,
+                    org=org,
+                    vdc=vdc,
+                    vapp=vapp,
+                    catalog_name=catalog_name,
+                    template=template,
+                    network_name=network_name,
+                    storage_profile=worker_storage_profile,
+                    ssh_key=ssh_key,
+                    sizing_class_name=worker_sizing_class
+                )
             except Exception as err:
                 LOGGER.error(err, exc_info=True)
                 raise E.WorkerNodeCreationError(
@@ -702,22 +712,25 @@ class ClusterService(abstract_broker.AbstractBroker):
                 LOGGER.debug(msg)
                 self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
                 try:
-                    _add_nodes(self.context.sysadmin_client,
-                               num_nodes=nfs_count,
-                               node_type=NodeType.NFS,
-                               org=org,
-                               vdc=vdc,
-                               vapp=vapp,
-                               catalog_name=catalog_name,
-                               template=template,
-                               network_name=network_name,
-                               storage_profile=nfs_storage_profile,
-                               ssh_key=ssh_key,
-                               sizing_class_name=nfs_sizing_class)
+                    nfs_nodes = _add_nodes(
+                        self.context.sysadmin_client,
+                        num_nodes=nfs_count,
+                        node_type=NodeType.NFS,
+                        org=org,
+                        vdc=vdc,
+                        vapp=vapp,
+                        catalog_name=catalog_name,
+                        template=template,
+                        network_name=network_name,
+                        storage_profile=nfs_storage_profile,
+                        ssh_key=ssh_key,
+                        sizing_class_name=nfs_sizing_class
+                    )
                 except Exception as err:
                     LOGGER.error(err, exc_info=True)
                     raise E.NFSNodeCreationError(
-                        f"Error creating NFS node: {err}")
+                        f"Error creating NFS node: {err}"
+                    )
 
                 msg = f"Enabling {nfs_count} NFS node(s) in cluster " \
                       f"'{cluster_name}' ({cluster_id})"
@@ -725,10 +738,14 @@ class ClusterService(abstract_broker.AbstractBroker):
                 self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
                 vapp.reload()
 
+                target_nodes = []
+                for spec in nfs_nodes['specs']:
+                    target_nodes.append(spec['target_vm_name'])
                 _enable_nfs(
-                    self.context.sysadmin_client,
-                    vapp,
-                    template
+                    sysadmin_client=self.context.sysadmin_client,
+                    vapp=vapp,
+                    template=template,
+                    target_nodes=target_nodes
                 )
 
             # Update defined entity instance with new properties like vapp_id,
@@ -1137,15 +1154,16 @@ class ClusterService(abstract_broker.AbstractBroker):
                       f"{cluster_name}({cluster_id})"
                 LOGGER.debug(msg)
                 self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
+                vapp.reload()
 
                 target_nodes = []
                 for spec in nfs_nodes['specs']:
                     target_nodes.append(spec['target_vm_name'])
-                vapp.reload()
-
                 _enable_nfs(
-                    self.context.sysadmin_client, vapp,
-                    template, target_nodes
+                    sysadmin_client=self.context.sysadmin_client,
+                    vapp=vapp,
+                    template=template,
+                    target_nodes=target_nodes
                 )
 
                 msg = f"Created {num_nfs_to_add} nfs_node(s) for cluster " \
@@ -2268,30 +2286,39 @@ def _enable_nfs(
         sysadmin_client: vcd_client.Client,
         vapp,
         template,
-        target_nodes=None):
+        target_nodes):
+    """Run nfsd.sh on certain vms in @vapp.
+
+    :param vcd_client.Client sysadmin_client:
+    :param vcd_vapp.VApp vapp:
+    :param dict template:
+    :param list[str] target_nodes:
+
+    """
     vcd_utils.raise_error_if_user_not_from_system_org(sysadmin_client)
 
     try:
         LOGGER.debug(f"Enabling NFS server on {target_nodes}")
 
-        node_names = _get_node_names(vapp, NodeType.NFS)
-        if target_nodes is not None:
-            node_names = [name for name in node_names if name in target_nodes]
-
         script_filepath = ltm.get_script_filepath(
             template[LocalTemplateKey.NAME],
             template[LocalTemplateKey.REVISION],
             ScriptFile.NFSD)
-        script = utils.read_data_file(script_filepath, logger=LOGGER)  # noqa: E501
+        script = utils.read_data_file(script_filepath, logger=LOGGER)
         exec_results = _execute_script_in_nodes(
-            sysadmin_client, vapp=vapp, node_names=node_names,
-            script=script, use_ubuntu_20_sleep=True)
+            sysadmin_client,
+            vapp=vapp,
+            node_names=target_nodes,
+            script=script,
+            use_ubuntu_20_sleep=True
+        )
 
         errors = _get_script_execution_errors(exec_results)
         if errors:
             raise E.ScriptExecutionError(
                 f"NFS enablement script execution failed "
-                f"on one or more nodes {target_nodes}:{errors}")
+                f"on one or more nodes {target_nodes}:{errors}"
+            )
     except Exception as err:
         LOGGER.error(err, exc_info=True)
         raise E.NFSNodeCreationError(f"Could not create NFS node: {str(err)}")
