@@ -352,7 +352,8 @@ class ClusterService(abstract_broker.AbstractBroker):
                         invoke_hooks=False)
                 except Exception:
                     msg = f"Failed to delete defined entity for cluster " \
-                          f"{cluster_name} ({entity_id})"
+                          f"{cluster_name} ({entity_id} with state " \
+                          f"({curr_rde.state})"
                     LOGGER.error(msg, exc_info=True)
             else:
                 # update status to CREATE:FAILED
@@ -1113,7 +1114,8 @@ class ClusterService(abstract_broker.AbstractBroker):
                                                            invoke_hooks=False)
                 except Exception:
                     LOGGER.error("Failed to delete the defined entity for "
-                                 f"cluster '{cluster_name}'", exc_info=True)
+                                 f"cluster '{cluster_name}' with state "
+                                 f"'{curr_rde.state}'", exc_info=True)
 
             self._update_task(BehaviorTaskStatus.ERROR,
                               message=msg,
@@ -1908,7 +1910,8 @@ class ClusterService(abstract_broker.AbstractBroker):
             except (exceptions.NodeOperationError, exceptions.ScriptExecutionError) as err:  # noqa: E501
                 LOGGER.warning(f"Failed to drain nodes: {nodes_to_del}"
                                f" in cluster '{cluster_name}'."
-                               f" Continuing node delete...\nError: {err}")
+                               f" Continuing node delete...\nError: {err}",
+                               exc_info=True)
 
             msg = f"Deleting {len(nodes_to_del)} node(s) from " \
                   f"cluster '{cluster_name}': {nodes_to_del}"
