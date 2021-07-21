@@ -633,7 +633,7 @@ class ClusterService(abstract_broker.AbstractBroker):
             vapp.reload()
             control_plane_ip = _get_control_plane_ip(
                 self.context.sysadmin_client, vapp, check_tools=True,
-                use_ubuntu_20_sleep=True)
+                use_authentication_sleep=True)
 
             # Handle exposing cluster
             if expose:
@@ -2067,7 +2067,7 @@ def _add_nodes(sysadmin_client, num_nodes, node_type, org, vdc, vapp,
                     exec_results = _execute_script_in_nodes(
                         sysadmin_client, vapp=vapp, node_names=[vm_name],
                         script=script,
-                        use_ubuntu_20_sleep=True)
+                        use_authentication_sleep=True)
                     errors = _get_script_execution_errors(exec_results)
                     if errors:
                         raise E.ScriptExecutionError(
@@ -2094,7 +2094,7 @@ def _get_node_names(vapp, node_type):
 
 
 def _get_control_plane_ip(sysadmin_client: vcd_client.Client, vapp,
-                          check_tools=False, use_ubuntu_20_sleep=False):
+                          check_tools=False, use_authentication_sleep=False):
     vcd_utils.raise_error_if_user_not_from_system_org(sysadmin_client)
 
     LOGGER.debug(f"Getting control_plane IP for vapp: "
@@ -2103,10 +2103,13 @@ def _get_control_plane_ip(sysadmin_client: vcd_client.Client, vapp,
              "ip route get 1 | awk '{print $NF;exit}'\n" \
 
     node_names = _get_node_names(vapp, NodeType.CONTROL_PLANE)
-    result = _execute_script_in_nodes(sysadmin_client, vapp=vapp,
-                                      node_names=node_names, script=script,
-                                      check_tools=check_tools,
-                                      use_ubuntu_20_sleep=use_ubuntu_20_sleep)
+    result = _execute_script_in_nodes(
+        sysadmin_client,
+        vapp=vapp,
+        node_names=node_names,
+        script=script,
+        check_tools=check_tools,
+        use_authentication_sleep=use_authentication_sleep)
     errors = _get_script_execution_errors(result)
     if errors:
         raise E.ScriptExecutionError(f"Get control plane IP script execution "
@@ -2141,7 +2144,7 @@ def _init_cluster(sysadmin_client: vcd_client.Client, vapp, template_name,
                                           vapp=vapp,
                                           node_names=node_names,
                                           script=script,
-                                          use_ubuntu_20_sleep=True)
+                                          use_authentication_sleep=True)
         errors = _get_script_execution_errors(result)
         if errors:
             raise E.ScriptExecutionError(
@@ -2230,10 +2233,12 @@ def _join_cluster(sysadmin_client: vcd_client.Client, vapp, template_name,
                 discovery_token_ca_cert_hash=join_info[6])
         else:
             script = tmp_script.format(token=join_info[0], ip=join_info[1])
-        worker_results = _execute_script_in_nodes(sysadmin_client, vapp=vapp,
-                                                  node_names=node_names,
-                                                  script=script,
-                                                  use_ubuntu_20_sleep=True)
+        worker_results = _execute_script_in_nodes(
+            sysadmin_client,
+            vapp=vapp,
+            node_names=node_names,
+            script=script,
+            use_authentication_sleep=True)
         errors = _get_script_execution_errors(worker_results)
         if errors:
             raise E.ClusterJoiningError(
@@ -2287,11 +2292,12 @@ def _wait_until_ready_to_exec(vs, vm, password, tries=30):
 def _execute_script_in_nodes(sysadmin_client: vcd_client.Client,
                              vapp, node_names, script,
                              check_tools=True, wait=True,
-                             use_ubuntu_20_sleep=False):
+                             use_authentication_sleep=False):
     vcd_utils.raise_error_if_user_not_from_system_org(sysadmin_client)
     all_results = []
-    if use_ubuntu_20_sleep:
-        time.sleep(150)  # hack for ubuntu 20 cluster creation
+    if use_authentication_sleep:
+        # hack for authentication failure issue
+        time.sleep(150)
     for node_name in node_names:
         try:
             LOGGER.debug(f"will try to execute script on {node_name}:\n"
