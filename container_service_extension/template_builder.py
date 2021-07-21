@@ -18,8 +18,8 @@ from container_service_extension.pyvcloud_utils import get_vdc
 from container_service_extension.pyvcloud_utils import upload_ova_to_catalog
 from container_service_extension.pyvcloud_utils import \
     wait_for_catalog_item_to_resolve
-from container_service_extension.server_constants import ScriptFile, \
-    TemplateBuildKey, UBUNTU_20_TEMPLATE_NAME_FRAGMENT
+from container_service_extension.server_constants import ScriptFile
+from container_service_extension.server_constants import TemplateBuildKey
 from container_service_extension.utils import download_file
 from container_service_extension.utils import NullPrinter
 from container_service_extension.utils import read_data_file
@@ -114,8 +114,8 @@ class TemplateBuilder:
         else:
             self.org_name = build_params.get(TemplateBuildKey.ORG_NAME) # noqa: E501
             self.org = get_org(self.client, org_name=self.org_name)
-        if UBUNTU_20_TEMPLATE_NAME_FRAGMENT in self.template_name:
-            time.sleep(10)  # hack for ubuntu 20
+        # hack for authentication failure issue
+        time.sleep(10)
         if vdc:
             self.vdc = vdc
             self.vdc.get_resource()  # to make sure vdc.resource is populated
@@ -294,9 +294,8 @@ class TemplateBuilder:
         cust_script = read_data_file(
             cust_script_filepath, logger=self.logger,
             msg_update_callback=self.msg_update_callback)
-        is_ubuntu_20 = UBUNTU_20_TEMPLATE_NAME_FRAGMENT in self.template_name
-        if is_ubuntu_20:
-            time.sleep(60)  # hack for ubuntu 20
+        # hack for authentication failure issue
+        time.sleep(60)
         vs = get_vsphere(self.sys_admin_client, vapp, vm_name,
                          logger=self.logger)
         callback = vgr_callback(
@@ -305,8 +304,8 @@ class TemplateBuilder:
             msg_update_callback=self.msg_update_callback)
         wait_until_tools_ready(vapp, vm_name, vs, callback=callback)
         password_auto = vapp.get_admin_password(vm_name)
-        if is_ubuntu_20:
-            time.sleep(120)  # hack for ubuntu 20
+        # hack for authentication failure issue
+        time.sleep(120)
 
         try:
             result = vs.execute_script_in_guest(
@@ -467,15 +466,14 @@ class TemplateBuilder:
 
         self._upload_source_ova()
         vapp = self._create_temp_vapp()
-        is_ubuntu_20 = UBUNTU_20_TEMPLATE_NAME_FRAGMENT in self.template_name
-        if is_ubuntu_20:
-            time.sleep(60)  # hack for ubuntu 20
+        # hack for authentication failure issue
+        time.sleep(60)
         self._customize_vm(vapp, self.temp_vm_name)
-        if is_ubuntu_20:
-            time.sleep(60)  # hack for ubuntu 20
+        # hack for authentication failure issue
+        time.sleep(60)
         self._capture_temp_vapp(vapp)
-        if is_ubuntu_20:
-            time.sleep(60)  # hack for ubuntu 20
+        # hack for authentication failure issue
+        time.sleep(60)
         self._tag_with_cse_placement_policy()
         if not retain_temp_vapp:
             self._delete_temp_vapp()

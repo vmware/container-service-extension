@@ -45,7 +45,6 @@ from container_service_extension.server_constants import SYSTEM_ORG_NAME
 from container_service_extension.server_constants import TKGM_DEFAULT_POD_NETWORK_CIDR  # noqa: E501
 from container_service_extension.server_constants import TKGM_DEFAULT_SERVICE_CIDR  # noqa: E501
 from container_service_extension.server_constants import TKGM_TEMPLATE_NAME_FRAGMENT  # noqa: E501
-from container_service_extension.server_constants import UBUNTU_20_TEMPLATE_NAME_FRAGMENT  # noqa: E501
 from container_service_extension.server_constants import VdcNetworkInfoKey
 from container_service_extension.shared_constants import CSE_PAGINATION_DEFAULT_PAGE_SIZE  # noqa: E501
 from container_service_extension.shared_constants import CSE_PAGINATION_FIRST_PAGE_NUMBER  # noqa: E501
@@ -632,10 +631,9 @@ class ClusterService(abstract_broker.AbstractBroker):
             LOGGER.debug(msg)
             self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
             vapp.reload()
-            is_ubuntu_20 = UBUNTU_20_TEMPLATE_NAME_FRAGMENT in template_name
             control_plane_ip = _get_control_plane_ip(
                 self.context.sysadmin_client, vapp, check_tools=True,
-                use_ubuntu_20_sleep=is_ubuntu_20)
+                use_ubuntu_20_sleep=True)
 
             # Handle exposing cluster
             if expose:
@@ -914,6 +912,8 @@ class ClusterService(abstract_broker.AbstractBroker):
                     vapp_href = curr_entity.externalId
                     vapp = vcd_vapp.VApp(self.context.client,
                                          href=vapp_href)
+                    # Since the VM is already running at this point in the
+                    # code, there is no need to add the additional sleep
                     control_plane_internal_ip = _get_control_plane_ip(
                         sysadmin_client=self.context.sysadmin_client,
                         vapp=vapp,
@@ -1696,6 +1696,8 @@ class ClusterService(abstract_broker.AbstractBroker):
                  f"echo \'{internal_ip_kubeconfig}\' > " \
                  f"{CSE_CLUSTER_KUBECONFIG_PATH}\n"
         node_names = _get_node_names(vapp, NodeType.CONTROL_PLANE)
+        # Since the VMs are already running, there is no need to add
+        # additional sleep
         result = _execute_script_in_nodes(self.context.sysadmin_client,
                                           vapp=vapp,
                                           node_names=node_names,
@@ -1784,6 +1786,8 @@ def _get_nfs_exports(sysadmin_client: vcd_client.Client, ip, vapp, vm_name):
     :return: (List): List of exports
     """
     script = f"#!/usr/bin/env bash\nshowmount -e {ip}"
+    # since the vapp is already running at this point in the code, there
+    # is no need to add additional sleep.
     result = _execute_script_in_nodes(sysadmin_client, vapp=vapp,
                                       node_names=[vm_name], script=script,
                                       check_tools=False)
@@ -1983,8 +1987,9 @@ def _add_nodes(sysadmin_client, num_nodes, node_type, org, vdc, vapp,
                 storage_profile = vdc.get_storage_profile(storage_profile)
 
             config = utils.get_server_runtime_config()
-            cpm = compute_policy_manager.ComputePolicyManager(sysadmin_client,
-                                                              log_wire=utils.str_to_bool(config['service']['log_wire']))  # noqa: E501
+            cpm = compute_policy_manager.ComputePolicyManager(
+                sysadmin_client,
+                log_wire=utils.str_to_bool(config['service']['log_wire']))
             sizing_class_href = None
             if sizing_class_name:
                 vdc_resource = vdc.get_resource()
@@ -2061,7 +2066,8 @@ def _add_nodes(sysadmin_client, num_nodes, node_type, org, vdc, vapp,
                     script = utils.read_data_file(script_filepath, logger=LOGGER)  # noqa: E501
                     exec_results = _execute_script_in_nodes(
                         sysadmin_client, vapp=vapp, node_names=[vm_name],
-                        script=script)
+                        script=script,
+                        use_ubuntu_20_sleep=True)
                     errors = _get_script_execution_errors(exec_results)
                     if errors:
                         raise E.ScriptExecutionError(
@@ -2131,8 +2137,11 @@ def _init_cluster(sysadmin_client: vcd_client.Client, vapp, template_name,
                 service_cidr=TKGM_DEFAULT_SERVICE_CIDR)
 
         node_names = _get_node_names(vapp, NodeType.CONTROL_PLANE)
-        result = _execute_script_in_nodes(sysadmin_client, vapp=vapp,
-                                          node_names=node_names, script=script)
+        result = _execute_script_in_nodes(sysadmin_client,
+                                          vapp=vapp,
+                                          node_names=node_names,
+                                          script=script,
+                                          use_ubuntu_20_sleep=True)
         errors = _get_script_execution_errors(result)
         if errors:
             raise E.ScriptExecutionError(
@@ -2195,6 +2204,7 @@ def _join_cluster(sysadmin_client: vcd_client.Client, vapp, template_name,
                      "kubeadm token create\n" \
                      "ip route get 1 | awk '{print $NF;exit}'\n"
         node_names = _get_node_names(vapp, NodeType.CONTROL_PLANE)
+        # Control plane node is already running. No need for additional sleep.
         control_plane_result = _execute_script_in_nodes(sysadmin_client,
                                                         vapp=vapp,
                                                         node_names=node_names,
@@ -2222,7 +2232,8 @@ def _join_cluster(sysadmin_client: vcd_client.Client, vapp, template_name,
             script = tmp_script.format(token=join_info[0], ip=join_info[1])
         worker_results = _execute_script_in_nodes(sysadmin_client, vapp=vapp,
                                                   node_names=node_names,
-                                                  script=script)
+                                                  script=script,
+                                                  use_ubuntu_20_sleep=True)
         errors = _get_script_execution_errors(worker_results)
         if errors:
             raise E.ClusterJoiningError(
