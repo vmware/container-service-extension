@@ -113,7 +113,7 @@ class RemoteTemplateManager():
                 self.logger.error(msg, exc_info=True)
                 raise Exception(msg)
             except requests.exceptions.RequestException as e:
-                msg = f"Error occured when connecting to url {self.url}: {e}"
+                msg = f"Error occurred when connecting to url {self.url}: {e}"
                 self.logger.error(msg, exc_info=True)
                 raise Exception(msg)
             self.cookbook = yaml.safe_load(template_cookbook_as_str)
