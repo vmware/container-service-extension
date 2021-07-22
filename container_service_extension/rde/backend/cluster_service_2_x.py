@@ -28,6 +28,8 @@ from container_service_extension.common.constants.server_constants import DefEnt
 from container_service_extension.common.constants.server_constants import LocalTemplateKey  # noqa: E501
 from container_service_extension.common.constants.server_constants import NodeType  # noqa: E501
 from container_service_extension.common.constants.server_constants import ThreadLocalData  # noqa: E501
+from container_service_extension.common.constants.server_constants import TKGM_TEMPLATE_FRAGMENT  # noqa: E501
+from container_service_extension.common.constants.server_constants import UBUNTU_20_TEMPLATE_NAME_FRAGMENT  # noqa: E501
 import container_service_extension.common.constants.shared_constants as shared_constants  # noqa: E501
 from container_service_extension.common.constants.shared_constants import \
     CSE_PAGINATION_DEFAULT_PAGE_SIZE, SYSTEM_ORG_NAME
@@ -928,8 +930,11 @@ class ClusterService(abstract_broker.AbstractBroker):
             self._update_task(BehaviorTaskStatus.RUNNING, message=msg)
             vapp.reload()
 
+            is_ubuntu_20 = UBUNTU_20_TEMPLATE_NAME_FRAGMENT in template_name
             control_plane_ip = _get_control_plane_ip(
-                sysadmin_client_v36, vapp, check_tools=True)
+                sysadmin_client_v36, vapp, check_tools=True,
+                use_ubuntu_20_sleep=is_ubuntu_20
+            )
 
             # Handle exposing cluster
             if expose:
@@ -950,12 +955,14 @@ class ClusterService(abstract_broker.AbstractBroker):
                     )
                     expose_ip = ''
 
+            is_tkgm = TKGM_TEMPLATE_FRAGMENT in template[LocalTemplateKey.NAME]
             _init_cluster(sysadmin_client_v36,
                           vapp,
                           template[LocalTemplateKey.KIND],
                           template[LocalTemplateKey.KUBERNETES_VERSION],
                           template[LocalTemplateKey.CNI_VERSION],
-                          expose_ip=expose_ip)
+                          expose_ip=expose_ip,
+                          is_tkgm=is_tkgm)
             task = vapp.set_metadata('GENERAL', 'READWRITE', 'cse.master.ip',
                                      control_plane_ip)
             client_v36.get_task_monitor().wait_for_status(task)
@@ -2460,7 +2467,7 @@ def _get_node_names(vapp, node_type):
 
 
 def _get_control_plane_ip(sysadmin_client: vcd_client.Client, vapp,
-                          check_tools=False):
+                          check_tools=False, use_ubuntu_20_sleep=False):
     vcd_utils.raise_error_if_user_not_from_system_org(sysadmin_client)
 
     LOGGER.debug(f"Getting control_plane IP for vapp: "
@@ -2471,7 +2478,8 @@ def _get_control_plane_ip(sysadmin_client: vcd_client.Client, vapp,
     node_names = _get_node_names(vapp, NodeType.CONTROL_PLANE)
     result = _execute_script_in_nodes(sysadmin_client, vapp=vapp,
                                       node_names=node_names, script=script,
-                                      check_tools=check_tools)
+                                      check_tools=check_tools,
+                                      use_ubuntu_20_sleep=use_ubuntu_20_sleep)
     errors = _get_script_execution_errors(result)
     if errors:
         raise exceptions.ScriptExecutionError(
@@ -2485,7 +2493,7 @@ def _get_control_plane_ip(sysadmin_client: vcd_client.Client, vapp,
 
 
 def _init_cluster(sysadmin_client: vcd_client.Client, vapp, cluster_kind,
-                  k8s_version, cni_version, expose_ip=None):
+                  k8s_version, cni_version, expose_ip=None, is_tkgm=False):
     vcd_utils.raise_error_if_user_not_from_system_org(sysadmin_client)
 
     try:
@@ -2494,7 +2502,8 @@ def _init_cluster(sysadmin_client: vcd_client.Client, vapp, cluster_kind,
         script = templated_script.format(
             cluster_kind=cluster_kind,
             k8s_version=k8s_version,
-            cni_version=cni_version)
+            cni_version=cni_version,
+            is_tkgm=is_tkgm)
 
         # Expose cluster if given external ip
         if expose_ip:
@@ -2521,6 +2530,7 @@ def _init_cluster(sysadmin_client: vcd_client.Client, vapp, cluster_kind,
 
 def _join_cluster(sysadmin_client: vcd_client.Client, vapp, target_nodes=None):
     vcd_utils.raise_error_if_user_not_from_system_org(sysadmin_client)
+    time.sleep(40)  # hack for waiting for joining cluster
     try:
 
         script = """
@@ -2609,9 +2619,12 @@ def _wait_until_ready_to_exec(vs, vm, password, tries=30):
 
 def _execute_script_in_nodes(sysadmin_client: vcd_client.Client,
                              vapp, node_names, script,
-                             check_tools=True, wait=True):
+                             check_tools=True, wait=True,
+                             use_ubuntu_20_sleep=False):
     vcd_utils.raise_error_if_user_not_from_system_org(sysadmin_client)
     all_results = []
+    if use_ubuntu_20_sleep:
+        time.sleep(150)  # hack for ubuntu 20 cluster creation
     for node_name in node_names:
         try:
             LOGGER.debug(f"will try to execute script on {node_name}:\n"

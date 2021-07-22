@@ -13,6 +13,7 @@ import yaml
 from container_service_extension.common.constants.server_constants import RemoteTemplateCookbookVersion  # noqa: E501
 from container_service_extension.common.constants.server_constants import ScriptFile  # noqa: E501
 from container_service_extension.common.constants.server_constants import TemplateScriptFile  # noqa: E501
+from container_service_extension.common.constants.server_constants import TKGM_TEMPLATE_FRAGMENT  # noqa: E501
 from container_service_extension.common.utils.core_utils import download_file
 from container_service_extension.common.utils.core_utils import NullPrinter
 import container_service_extension.common.utils.server_utils as server_utils
@@ -291,7 +292,10 @@ class RemoteTemplateManager:
             # if server configuration is indicating legacy_mode,
             # download cluster-scripts from template repository.
             scripts_to_download = ScriptFile
+        is_tkgm_template = TKGM_TEMPLATE_FRAGMENT in template_name
         for script_file in scripts_to_download:
+            if 'upgrade' in script_file and is_tkgm_template:
+                continue
             remote_script_url = \
                 self._get_remote_script_url(
                     template_name, revision,

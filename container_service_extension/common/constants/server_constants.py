@@ -89,6 +89,10 @@ VCENTER_LOGIN_ERROR_MSG = "vCenter login failed (check config file for "\
 # Request Id format for logging
 REQUEST_ID_FORMAT = 'Request Id: %(requestId)s | '
 
+# template fragments for checking template type
+TKGM_TEMPLATE_FRAGMENT = 'tkgm'
+UBUNTU_20_TEMPLATE_NAME_FRAGMENT = 'ubuntu-20.04'
+
 
 @unique
 class OperationType(str, Enum):
