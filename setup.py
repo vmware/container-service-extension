@@ -16,5 +16,6 @@ setup(
     data_files=[
         (str(Path('/')), ['LICENSE.txt', 'NOTICE.txt', osl]),
     ],
+    long_description_content_type="text/markdown",
     pbr=True,
 )
