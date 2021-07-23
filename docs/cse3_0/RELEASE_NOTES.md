@@ -29,9 +29,9 @@ Kubernetes Container Clusters UI Plug-in v2.2.0.
 **What's New**
 * Following fixes have been added
     * CSE CLI properly lists all the clusters when CSE server is configured with api version 34.0.
-    * Force draining the cluster nodes during cluster upgrade to prevent failures when OLM pods are present.
-    * Fix for reducing guest OS authentication failures during installing template and creating cluster nodes.
-    * More descriptive error messages when failing to connect to the remote template cookbook.
+    * When OLM Pods are present on the Kubernetes clusters, the cluster nodes are forcefully drained to prevent failures during cluster upgrades.
+    * Guest OS authentication failures are addressed during template installations, Kubernetes cluster workflows, NFS node workflows.
+    * More descriptive error messages are shown during failure to connect to the remote template repository
 
 
 ## CSE 3.0.3 GA (3.0.3)
