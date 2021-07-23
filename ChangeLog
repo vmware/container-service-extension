@@ -1,6 +1,21 @@
 CHANGES
 =======
 
+* Add sleeps in vcdbroker to prevent authentication failures (#1142)
+* Remove hyphenated variables in setup.cfg (#1140)
+* Fix README.md rendering in pypi (#1139)
+* Open self upgrade path in 3.0.4 (#1138)
+* [VCDA-2701] Prevent authentication failures by adding sleeps (#1136)
+* Port fix K8s version parsing from RDE to cse\_3\_0\_updates (#1131)
+* [VCDA-2723] Handle exceptions when connecting to remote template cookbook (#1137)
+* [VCDA-2648] Fix NFS node addition to TKG cluster (#1132)
+* Fix upgrade failure when OLM pods are present (#1133)
+* Fix cluster list when cse server running in api-version 34.0 (#1134)
+
+3.0.3
+-----
+
+* Update AUTHORS and Changelog for CSE 3.0.3 release
 * [VCDA-2623] Fix CLI help strings (#1080)
 * Fix OVDC enable/disable error messages (#1078)
 * Fix accessing entity details array using 'entityDetails' key (#1073)
