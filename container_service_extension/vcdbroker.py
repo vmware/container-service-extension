@@ -1512,6 +1512,8 @@ def _get_nfs_exports(sysadmin_client: vcd_client.Client, ip, vapp, vm_name):
     :return: (List): List of exports
     """
     script = f"#!/usr/bin/env bash\nshowmount -e {ip}"
+    # since the vapp is already running at this point in the code, there
+    # is no need to add additional sleep.
     result = _execute_script_in_nodes(sysadmin_client, vapp=vapp,
                                       node_names=[vm_name], script=script,
                                       check_tools=False)
@@ -1864,7 +1866,7 @@ def _add_nodes(sysadmin_client, num_nodes, node_type, org, vdc, vapp,
                         script_filepath, logger=LOGGER)
                     exec_results = _execute_script_in_nodes(
                         sysadmin_client, vapp=vapp, node_names=[vm_name],
-                        script=script)
+                        script=script, use_authentication_sleep=True)
                     errors = _get_script_execution_errors(exec_results)
                     if errors:
                         raise e.ScriptExecutionError(
@@ -1929,6 +1931,8 @@ def _get_control_plane_ip(sysadmin_client: vcd_client.Client, vapp):
              "ip route get 1 | awk '{print $NF;exit}'\n" \
 
     node_names = _get_node_names(vapp, NodeType.CONTROL_PLANE)
+    # Since the VM is expected to be running at this point in the
+    # code, there is no need to add the additional sleep
     result = _execute_script_in_nodes(sysadmin_client, vapp=vapp,
                                       node_names=node_names, script=script,
                                       check_tools=False)
@@ -1954,7 +1958,8 @@ def _init_cluster(sysadmin_client: vcd_client.Client, vapp, template_name,
         script = utils.read_data_file(script_filepath, logger=LOGGER)
         node_names = _get_node_names(vapp, NodeType.CONTROL_PLANE)
         result = _execute_script_in_nodes(sysadmin_client, vapp=vapp,
-                                          node_names=node_names, script=script)
+                                          node_names=node_names, script=script,
+                                          use_authentication_sleep=True)
         errors = _get_script_execution_errors(result)
         if errors:
             raise e.ScriptExecutionError(
@@ -1976,6 +1981,8 @@ def _join_cluster(sysadmin_client: vcd_client.Client, vapp, template_name,
                  "kubeadm token create\n" \
                  "ip route get 1 | awk '{print $NF;exit}'\n"
         node_names = _get_node_names(vapp, NodeType.CONTROL_PLANE)
+        # Since the control-plane VM is already running at this point in the
+        # code, there is no need to add the additional sleep
         control_plane_result = _execute_script_in_nodes(sysadmin_client,
                                                         vapp=vapp,
                                                         node_names=node_names,
@@ -1995,9 +2002,11 @@ def _join_cluster(sysadmin_client: vcd_client.Client, vapp, template_name,
                                                       ScriptFile.NODE)
         tmp_script = utils.read_data_file(tmp_script_filepath, logger=LOGGER)
         script = tmp_script.format(token=init_info[0], ip=init_info[1])
-        worker_results = _execute_script_in_nodes(sysadmin_client, vapp=vapp,
+        worker_results = _execute_script_in_nodes(sysadmin_client,
+                                                  vapp=vapp,
                                                   node_names=node_names,
-                                                  script=script)
+                                                  script=script,
+                                                  use_authentication_sleep=True)  # noqa: E501
         errors = _get_script_execution_errors(worker_results)
         if errors:
             raise e.ScriptExecutionError("Join cluster script execution "
@@ -2038,9 +2047,13 @@ def _wait_until_ready_to_exec(vs, vm, password, tries=30):
 
 def _execute_script_in_nodes(sysadmin_client: vcd_client.Client,
                              vapp, node_names, script,
-                             check_tools=True, wait=True):
+                             check_tools=True, wait=True,
+                             use_authentication_sleep=False):
     vcd_utils.raise_error_if_user_not_from_system_org(sysadmin_client)
     all_results = []
+    if use_authentication_sleep:
+        # hack for authentication failure issue
+        time.sleep(150)
     for node_name in node_names:
         try:
             LOGGER.debug(f"will try to execute script on {node_name}:\n"
@@ -2105,6 +2118,8 @@ def _run_script_in_nodes(sysadmin_client: vcd_client.Client, vapp_href,
 
     # when is tools checking necessary?
     vapp = vcd_vapp.VApp(sysadmin_client, href=vapp_href)
+    # Since the VM is expected to be running at this point in the
+    # code, there is no need to add the additional sleep
     results = _execute_script_in_nodes(sysadmin_client,
                                        vapp=vapp,
                                        node_names=node_names,
