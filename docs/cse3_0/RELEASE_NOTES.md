@@ -6,7 +6,7 @@ title: Release Notes
 # Release Notes
 
 ## CSE 3.0.4 GA (3.0.4)
-Release Date: 2021-06-24
+Release Date: 2021-07-23
 
 **Supported (and Tested) VCD versions** : 10.2.2, 10.1.3, 10.0.0.3
 
