@@ -5,6 +5,35 @@ title: Release Notes
 
 # Release Notes
 
+## CSE 3.0.4 GA (3.0.4)
+Release Date: 2021-07-23
+
+**Supported (and Tested) VCD versions** : 10.2.2, 10.1.3, 10.0.0.3
+
+Note : Future update or patch releases of these VCD versions will be supported
+by CSE 3.0.4, but they will not be tested individually. If a bug is found in the
+interoperability, please file a github [issue](https://github.com/vmware/container-service-extension/issues)
+and bring it to our attention.
+
+| CSE Server | CSE CLI | Kubernetes Container Clusters UI Plug-in | Cloud Director | NSX-T        | Enterprise PKS with NSX-T | Features offered                                                                                                            |
+|------------|---------|------------------------------------------|----------------|--------------|---------------------------|-----------------------------------------------------------------------------------------------------------------------------|
+| 3.0.4      | 3.0.4   | 2.3.0**                                  | 10.2.2         | 3.0.2, 3.1.2 | 1.7 with 2.5.1            | Native, TKG, TKG-S, and Enterprise PKS Cluster management; Runtime Defined entity representation for native, TKG and TKG-S. |
+| 3.0.4      | 3.0.4   | 1.0.3                                    | 10.1, 10.0     | NA           | 1.7 with 2.5.1            | Native and Enterprise PKS cluster management                                                                                |
+| NA         | 3.0.4   | 2.3.0**                                  | 10.2.2         | NA           | NA                        | TKG-S cluster management only                                                                                               |
+
+** Kubernetes Container Clusters UI Plug-in v2.3.0 should be downloaded separately from
+[here](https://my.vmware.com/en/web/vmware/downloads/details?downloadGroup=VCD-CSE-PLUGIN-303&productId=1079)
+and manually uploaded to VCD. By default, VCD 10.2.2 will have
+Kubernetes Container Clusters UI Plug-in v2.2.0.
+
+**What's New**
+* Following fixes have been added
+    * CSE CLI properly lists all the clusters when CSE server is configured with api version 34.0.
+    * When OLM Pods are present on the Kubernetes clusters, the cluster nodes are forcefully drained to prevent failures during cluster upgrades.
+    * Guest OS authentication failures are addressed during template installations, Kubernetes cluster workflows, NFS node workflows.
+    * More descriptive error messages are shown during failure to connect to the remote template repository
+
+
 ## CSE 3.0.3 GA (3.0.3)
 Release Date: 2021-06-24
 
