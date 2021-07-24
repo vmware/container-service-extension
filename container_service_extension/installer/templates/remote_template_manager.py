@@ -245,7 +245,22 @@ class RemoteTemplateManager:
             self.logger.debug(msg)
             self.msg_update_callback(msg)
         else:
-            template_cookbook_as_str = download_file_into_memory(self.url)
+            template_cookbook_as_str = None
+            try:
+                template_cookbook_as_str = download_file_into_memory(self.url)
+            except requests.exceptions.ConnectionError as e:
+                msg = f"Error connecting to {self.url}: {e}"
+                self.logger.error(msg, exc_info=True)
+                raise Exception(msg)
+            except requests.exceptions.Timeout as e:
+                msg = f"Timeout when connecting to {self.url}: {e}"
+                self.logger.error(msg, exc_info=True)
+                raise Exception(msg)
+            except requests.exceptions.RequestException as e:
+                msg = f"Error occurred when connecting to url {self.url}: {e}"
+                self.logger.error(msg, exc_info=True)
+                raise Exception(msg)
+
             self.unfiltered_cookbook = yaml.safe_load(template_cookbook_as_str)
             msg = f"Downloaded remote template cookbook from {self.url}"
             self.logger.debug(msg)
