@@ -28,6 +28,8 @@ from container_service_extension.common.constants.server_constants import DefEnt
 from container_service_extension.common.constants.server_constants import LocalTemplateKey  # noqa: E501
 from container_service_extension.common.constants.server_constants import NodeType  # noqa: E501
 from container_service_extension.common.constants.server_constants import ThreadLocalData  # noqa: E501
+from container_service_extension.common.constants.server_constants import TKGM_DEFAULT_POD_NETWORK_CIDR  # noqa: E501
+from container_service_extension.common.constants.server_constants import TKGM_DEFAULT_SERVICE_CIDR  # noqa: E501
 from container_service_extension.common.constants.server_constants import TKGM_TEMPLATE_FRAGMENT  # noqa: E501
 from container_service_extension.common.constants.server_constants import UBUNTU_20_TEMPLATE_NAME_FRAGMENT  # noqa: E501
 import container_service_extension.common.constants.shared_constants as shared_constants  # noqa: E501
@@ -961,6 +963,7 @@ class ClusterService(abstract_broker.AbstractBroker):
                           template[LocalTemplateKey.KIND],
                           template[LocalTemplateKey.KUBERNETES_VERSION],
                           template[LocalTemplateKey.CNI_VERSION],
+                          native_entity=input_native_entity,
                           expose_ip=expose_ip,
                           is_tkgm=is_tkgm)
             task = vapp.set_metadata('GENERAL', 'READWRITE', 'cse.master.ip',
@@ -2493,17 +2496,38 @@ def _get_control_plane_ip(sysadmin_client: vcd_client.Client, vapp,
 
 
 def _init_cluster(sysadmin_client: vcd_client.Client, vapp, cluster_kind,
-                  k8s_version, cni_version, expose_ip=None, is_tkgm=False):
+                  k8s_version, cni_version,
+                  native_entity: rde_2_x.NativeEntity, expose_ip=None,
+                  is_tkgm=False):
     vcd_utils.raise_error_if_user_not_from_system_org(sysadmin_client)
 
     try:
         templated_script = get_cluster_script_file_contents(
             ClusterScriptFile.CONTROL_PLANE, ClusterScriptFile.VERSION_2_X)
+        pod_cidr, service_cidr, base64_username, base64_password = None, None, None, None  # noqa: E501
+        if is_tkgm:
+            pod_cidr = TKGM_DEFAULT_POD_NETWORK_CIDR
+            service_cidr = TKGM_DEFAULT_SERVICE_CIDR
+            base64_username = ""  # TODO: get username or replace with token
+            base64_password = ""  # TODO: get password or replace with token
+            # TODO: get configmap parameters
+            vip_subnet_cidr = ""
         script = templated_script.format(
             cluster_kind=cluster_kind,
             k8s_version=k8s_version,
             cni_version=cni_version,
-            is_tkgm=is_tkgm)
+            is_tkgm=is_tkgm,
+            service_cidr=service_cidr,
+            pod_cidr=pod_cidr,
+            base64_username=base64_username,
+            base64_password=base64_password,
+            vcd_host=native_entity.metadata.site,
+            org=native_entity.metadata.org_name,
+            ovdc=native_entity.metadata.virtual_data_center_name,
+            ovdc_network=native_entity.spec.settings.ovdc_network,
+            vip_subnet_cidr=vip_subnet_cidr,
+            cluster_id=native_entity.status.uid
+        )
 
         # Expose cluster if given external ip
         if expose_ip:

@@ -309,7 +309,7 @@ class TemplateBuilder:
         password_auto = vapp.get_admin_password(vm_name)
 
         try:
-            time.sleep(15)  # temporary hack for authentication
+            time.sleep(60)  # temporary hack for authentication
             result = vs.execute_script_in_guest(
                 vs.get_vm_by_moid(vapp.get_vm_moid(vm_name)),
                 'root',

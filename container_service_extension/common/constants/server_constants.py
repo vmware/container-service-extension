@@ -93,6 +93,10 @@ REQUEST_ID_FORMAT = 'Request Id: %(requestId)s | '
 TKGM_TEMPLATE_FRAGMENT = 'tkgm'
 UBUNTU_20_TEMPLATE_NAME_FRAGMENT = 'ubuntu-20.04'
 
+# TKGM init values
+TKGM_DEFAULT_POD_NETWORK_CIDR = '100.66.0.0/16'
+TKGM_DEFAULT_SERVICE_CIDR = '100.77.0.0/16'
+
 
 @unique
 class OperationType(str, Enum):
