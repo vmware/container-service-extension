@@ -10,14 +10,13 @@ from dataclasses_json import dataclass_json, Undefined
 
 from container_service_extension.common.constants import shared_constants as shared_constants  # noqa: E501
 import container_service_extension.common.constants.server_constants as server_constants  # noqa: E501
-from container_service_extension.rde import utils as def_utils
+import container_service_extension.rde.utils as rde_utils
 from container_service_extension.rde.behaviors.behavior_model import BehaviorAcl, BehaviorOperation  # noqa: E501
 from container_service_extension.rde.constants import \
     DEF_ENTITY_TYPE_ID_PREFIX, DEF_INTERFACE_ID_PREFIX, Nss, RDEMetadataKey, \
     RDEVersion, RuntimeRDEVersion, SchemaFile, Vendor
 from container_service_extension.rde.models.abstractNativeEntity import AbstractNativeEntity  # noqa: E501
 from container_service_extension.rde.models.rde_factory import get_rde_model
-from container_service_extension.rde.utils import load_rde_schema
 
 
 @dataclass_json(undefined=Undefined.EXCLUDE)
@@ -41,7 +40,7 @@ class DefInterface:
         interface registration with vCD.
         """
         if self.id is None:
-            return def_utils.\
+            return rde_utils.\
                 generate_interface_id(self.vendor, self.nss, self.version)
         else:
             return self.id
@@ -72,7 +71,7 @@ class DefEntityType:
         entity type registration with vCD.
         """
         if self.id is None:
-            return def_utils.\
+            return rde_utils.\
                 generate_entity_type_id(self.vendor, self.nss, self.version)
         else:
             return self.id
@@ -104,7 +103,7 @@ class DefEntityType2_0:
         entity type registration with vCD.
         """
         if self.id is None:
-            return def_utils.\
+            return rde_utils.\
                 generate_entity_type_id(self.vendor, self.nss, self.version)
         else:
             return self.id
@@ -323,7 +322,7 @@ class K8Interface(Enum):
 class EntityType(Enum):
     NATIVE_ENTITY_TYPE_1_0_0 = DefEntityType(name='nativeClusterEntityType',
                                              id=f"{DEF_ENTITY_TYPE_ID_PREFIX}:{Vendor.CSE.value}:{Nss.NATIVE_CLUSTER}:1.0.0",  # noqa: E501
-                                             schema=load_rde_schema(SchemaFile.SCHEMA_1_0_0),  # noqa: E501
+                                             schema=rde_utils.load_rde_schema(SchemaFile.SCHEMA_1_0_0),  # noqa: E501
                                              interfaces=[K8Interface.VCD_INTERFACE.value.id],  # noqa: E501
                                              version='1.0.0',
                                              vendor=Vendor.CSE.value,
@@ -331,7 +330,7 @@ class EntityType(Enum):
                                              description='')
     NATIVE_ENTITY_TYPE_2_0_0 = DefEntityType2_0(name='nativeClusterEntityType',
                                                 id=f"{DEF_ENTITY_TYPE_ID_PREFIX}:{Vendor.CSE.value}:{Nss.NATIVE_CLUSTER}:2.0.0",  # noqa: E501
-                                                schema=load_rde_schema(SchemaFile.SCHEMA_2_0_0),  # noqa: E501
+                                                schema=rde_utils.load_rde_schema(SchemaFile.SCHEMA_2_0_0),  # noqa: E501
                                                 interfaces=[
                                                     K8Interface.VCD_INTERFACE.value.id,  # noqa: E501
                                                     K8Interface.CSE_INTERFACE.value.id],  # noqa: E501

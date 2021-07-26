@@ -200,6 +200,7 @@ class RDEFilterKey(Enum):
 
     NAME = 'name'
     STATE = 'state'
+    ORG_NAME = 'org.name'
 
 
 class PayloadKey(str, Enum):

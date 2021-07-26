@@ -2,6 +2,7 @@
 # Copyright (c) 2019 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 
+from container_service_extension.lib.cloudapi.cloudapi_client import CloudApiClient
 from container_service_extension.logging.logger import SERVER_CLOUDAPI_WIRE_LOGGER
 import os
 from pathlib import Path
@@ -18,6 +19,7 @@ from pyvcloud.vcd.role import Role
 from pyvcloud.vcd.vdc import VDC
 from vcd_cli.vcd import vcd
 
+import container_service_extension.exception.exceptions as cse_exceptions
 import container_service_extension.common.constants.server_constants as server_constants  # noqa: E501
 import container_service_extension.common.constants.shared_constants as shared_constants  # noqa: E501
 from container_service_extension.common.utils.core_utils import get_max_api_version  # noqa: E501
@@ -28,7 +30,8 @@ from container_service_extension.logging.logger import NULL_LOGGER, SERVER_CLOUD
 from container_service_extension.mqi.mqtt_extension_manager import \
     MQTTExtensionManager
 import container_service_extension.rde.constants as rde_constants
-from container_service_extension.rde.models import common_models
+import container_service_extension.rde.models.common_models as common_models
+import container_service_extension.rde.models.rde_factory as rde_factory
 import container_service_extension.rde.schema_service as def_schema_svc
 import container_service_extension.rde.utils as rde_utils
 import container_service_extension.system_test_framework.utils as testutils
@@ -117,6 +120,8 @@ CATALOG_NAME = None
 WAIT_INTERVAL = 30
 DUPLICATE_NAME = "DUPLICATE_NAME"
 VIEW_PUBLISHED_CATALOG_RIGHT = 'Catalog: View Published Catalogs'
+
+APPLY_SPEC_PATH = 'cluster_apply_specification.yaml'
 
 
 def init_rde_environment(config_filepath=BASE_CONFIG_FILEPATH, logger=NULL_LOGGER):  # noqa: E501
@@ -513,6 +518,27 @@ def delete_vapp(vapp_name, vdc_href, logger=NULL_LOGGER):
         pass
 
 
+def delete_rde(cluster_name):
+    """Delete defined entity with the given name.
+
+    NOTE: RDE names are not unique. This function deletes all occurances
+    """
+    try:
+        cloudapi_client: CloudApiClient = \
+            pyvcloud_utils.get_cloudapi_client_from_vcd_client(
+                CLIENT, logger_wire=SERVER_CLOUDAPI_WIRE_LOGGER)
+        from container_service_extension.rde.common.entity_service import DefEntityService
+        entity_svc = DefEntityService(cloudapi_client)
+        for cluster_rde in \
+            entity_svc.list_all_native_rde_by_name_and_rde_version(
+                cluster_name,
+                rde_utils.get_runtime_rde_version_by_vcd_api_version(CLIENT.get_api_version())):  # noqa: E501
+            # if cluster_rde.
+            entity_svc.delete_entity(cluster_rde.id)
+    except cse_exceptions.DefEntityServiceError:
+        pass
+
+
 def delete_catalog(catalog_name=None, logger=NULL_LOGGER):
     if catalog_name is None:
         catalog_name = CATALOG_NAME
@@ -682,12 +708,22 @@ def vapp_exists(vapp_name, vdc_href, logger=NULL_LOGGER):
         return False
 
 
+# TODO remove after deprecating non-rde tests
 def is_cse_registered():
     try:
         APIExtension(CLIENT).get_extension(
             server_constants.CSE_SERVICE_NAME,
             namespace=server_constants.CSE_SERVICE_NAMESPACE)
         return True
+    except MissingRecordException:
+        return False
+
+
+def is_cse_registered_as_mqtt_ext():
+    try:
+        mqtt_ext_manager = MQTTExtensionManager(CLIENT)
+        return mqtt_ext_manager.check_extension_exists(
+            server_constants.MQTT_EXTENSION_URN)
     except MissingRecordException:
         return False
 
