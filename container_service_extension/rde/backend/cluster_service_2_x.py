@@ -22,10 +22,11 @@ from container_service_extension.common.constants.server_constants import CLUSTE
 from container_service_extension.common.constants.server_constants import ClusterMetadataKey  # noqa: E501
 from container_service_extension.common.constants.server_constants import ClusterScriptFile, TemplateScriptFile  # noqa: E501
 from container_service_extension.common.constants.server_constants import CSE_CLUSTER_KUBECONFIG_PATH  # noqa: E501
+from container_service_extension.common.constants.server_constants import DEFAULT_SUBNET_CIDR_IP  # noqa: E501
+from container_service_extension.common.constants.server_constants import DEFAULT_SUBNET_CIDR_SUFFIX  # noqa: E501
 from container_service_extension.common.constants.server_constants import DefEntityOperation  # noqa: E501
 from container_service_extension.common.constants.server_constants import DefEntityOperationStatus  # noqa: E501
 from container_service_extension.common.constants.server_constants import DefEntityPhase  # noqa: E501
-from container_service_extension.common.constants.server_constants import DEFAULT_SUBNET_CIDR  # noqa: E501
 from container_service_extension.common.constants.server_constants import LocalTemplateKey  # noqa: E501
 from container_service_extension.common.constants.server_constants import NodeType  # noqa: E501
 from container_service_extension.common.constants.server_constants import ThreadLocalData  # noqa: E501
@@ -2505,13 +2506,14 @@ def _init_cluster(sysadmin_client: vcd_client.Client, vapp, cluster_kind,
     try:
         templated_script = get_cluster_script_file_contents(
             ClusterScriptFile.CONTROL_PLANE, ClusterScriptFile.VERSION_2_X)
-        pod_cidr, service_cidr, base64_username, base64_password, vip_subnet_cidr = None, None, None, None, None  # noqa: E501
+        pod_cidr = service_cidr = base64_username = base64_password = vip_subnet_cidr_ip = vip_subnet_cidr_suffix = None  # noqa: E501
         if is_tkgm:
             pod_cidr = TKGM_DEFAULT_POD_NETWORK_CIDR
             service_cidr = TKGM_DEFAULT_SERVICE_CIDR
             base64_username = ""  # TODO: get username or replace with token
             base64_password = ""  # TODO: get password or replace with token
-            vip_subnet_cidr = DEFAULT_SUBNET_CIDR  # TODO: get subnet cidr
+            vip_subnet_cidr_ip = DEFAULT_SUBNET_CIDR_IP  # TODO: get subnet
+            vip_subnet_cidr_suffix = DEFAULT_SUBNET_CIDR_SUFFIX
         script = templated_script.format(
             cluster_kind=cluster_kind,
             k8s_version=k8s_version,
@@ -2525,8 +2527,9 @@ def _init_cluster(sysadmin_client: vcd_client.Client, vapp, cluster_kind,
             org=native_entity.metadata.org_name,
             ovdc=native_entity.metadata.virtual_data_center_name,
             ovdc_network=native_entity.spec.settings.ovdc_network,
-            vip_subnet_cidr=vip_subnet_cidr,
-            cluster_id=native_entity.status.uid
+            vip_subnet_cidr_ip=vip_subnet_cidr_ip,
+            vip_subnet_cidr_suffix=vip_subnet_cidr_suffix,
+            cluster_id=native_entity.status.uid,
         )
 
         # Expose cluster if given external ip
