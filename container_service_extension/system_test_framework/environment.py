@@ -2,7 +2,6 @@
 # Copyright (c) 2019 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 
-from container_service_extension.logging.logger import SERVER_CLOUDAPI_WIRE_LOGGER
 import os
 from pathlib import Path
 from typing import List
@@ -24,6 +23,7 @@ from container_service_extension.common.utils.core_utils import get_max_api_vers
 import container_service_extension.common.utils.pyvcloud_utils as pyvcloud_utils  # noqa: E501
 from container_service_extension.installer.right_bundle_manager import RightBundleManager  # noqa: E501
 from container_service_extension.installer.templates.remote_template_manager import RemoteTemplateManager  # noqa: E501
+from container_service_extension.logging.logger import SERVER_CLOUDAPI_WIRE_LOGGER  # noqa: E501
 from container_service_extension.mqi.mqtt_extension_manager import \
     MQTTExtensionManager
 import container_service_extension.rde.constants as rde_constants
@@ -374,6 +374,10 @@ def create_k8_author_role(vcd_config: dict):
 
 
 def create_cluster_admin_role(vcd_config: dict):
+    """Create cluster_admin role using pre-existing 'vapp author' role.
+
+    :param dict vcd_config: server config file
+    """
     cmd = f"login {vcd_config['host']} {shared_constants.SYSTEM_ORG_NAME} " \
         f"{vcd_config['username']} -iwp {vcd_config['password']} " \
         f"-V {VCD_API_VERSION_TO_USE}"
@@ -383,7 +387,7 @@ def create_cluster_admin_role(vcd_config: dict):
     result = CLI_RUNNER.invoke(vcd, cmd.split(), catch_exceptions=False)
     assert result.exit_code == 0
     result = CLI_RUNNER.invoke(
-        vcd, ['role', 'clone', ORG_ADMIN_ROLE_NAME, CLUSTER_ADMIN_ROLE_NAME],
+        vcd, ['role', 'clone', VAPP_AUTHOR_ROLE_NAME, CLUSTER_ADMIN_ROLE_NAME],
         catch_exceptions=False)
     assert DUPLICATE_NAME in result.stdout or result.exit_code == 0, \
         testutils.format_command_info('vcd', cmd, result.exit_code,
@@ -399,6 +403,10 @@ def create_cluster_admin_role(vcd_config: dict):
 
 
 def create_cluster_author_role(vcd_config: dict):
+    """Create cluster_author role using pre-existing 'org admin' role.
+
+    :param dict vcd_config: server config file
+    """
     cmd = f"login {vcd_config['host']} {shared_constants.SYSTEM_ORG_NAME} " \
         f"{vcd_config['username']} -iwp {vcd_config['password']} " \
         f"-V {VCD_API_VERSION_TO_USE}"
@@ -569,8 +577,30 @@ def cleanup_rde_artifacts():
                 interface_id = i.get_id()
                 if interface_id != common_models.K8Interface.VCD_INTERFACE.value.get_id():  # noqa: E501
                     schema_svc.delete_interface(interface_id)
-    except Exception as e:
+    except Exception:
         pass
+
+
+def cleanup_roles_and_users():
+    """Cleanup all the new roles and users created.
+
+    Deletes the following
+    - cluster_author User
+    - cluster_author_role Role
+    - cluster_admin User
+    - cluster_admin_role ROle
+    """
+    user_and_role_list = [
+        (CLUSTER_AUTHOR_NAME, CLUSTER_AUTHOR_ROLE_NAME),
+        (CLUSTER_ADMIN_NAME, CLUSTER_ADMIN_ROLE_NAME)
+    ]
+    org = Org(CLIENT, href=TEST_ORG_HREF)
+    for user_and_role in user_and_role_list:
+        try:
+            org.delete_user(user_and_role[0])
+            org.delete_role(user_and_role[1])
+        except Exception:
+            pass
 
 
 def catalog_item_exists(catalog_item, catalog_name=None):

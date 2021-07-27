@@ -59,6 +59,6 @@ broker:
                                         #   Should have outbound access to the public internet
                                         #   CSE appliance doesn't need to be connected to this network
   org: '???'                            # vCD org that contains the shared catalog where the master templates will be stored
-  remote_template_cookbook_url: http://raw.githubusercontent.com/vmware/container-service-extension-templates/master/template.yaml
+  remote_template_cookbook_url: http://raw.githubusercontent.com/vmware/container-service-extension-templates/master/template_v2.yaml
   storage_profile: '*'                  # name of the storage profile to use when creating the temporary vApp used to build the template
   vdc: '???'                            # VDC within @org that will be used during the install process to build the template

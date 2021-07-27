@@ -75,6 +75,7 @@ def _remove_cse_artifacts():
     env.delete_catalog()
     env.unregister_cse_in_mqtt()
     env.cleanup_rde_artifacts()
+    env.cleanup_roles_and_users()
 
 
 @pytest.fixture(scope='module', autouse=True)
