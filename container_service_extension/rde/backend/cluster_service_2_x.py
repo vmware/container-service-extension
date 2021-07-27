@@ -25,6 +25,7 @@ from container_service_extension.common.constants.server_constants import CSE_CL
 from container_service_extension.common.constants.server_constants import DefEntityOperation  # noqa: E501
 from container_service_extension.common.constants.server_constants import DefEntityOperationStatus  # noqa: E501
 from container_service_extension.common.constants.server_constants import DefEntityPhase  # noqa: E501
+from container_service_extension.common.constants.server_constants import DEFAULT_SUBNET_CIDR  # noqa: E501
 from container_service_extension.common.constants.server_constants import LocalTemplateKey  # noqa: E501
 from container_service_extension.common.constants.server_constants import NodeType  # noqa: E501
 from container_service_extension.common.constants.server_constants import ThreadLocalData  # noqa: E501
@@ -2504,14 +2505,13 @@ def _init_cluster(sysadmin_client: vcd_client.Client, vapp, cluster_kind,
     try:
         templated_script = get_cluster_script_file_contents(
             ClusterScriptFile.CONTROL_PLANE, ClusterScriptFile.VERSION_2_X)
-        pod_cidr, service_cidr, base64_username, base64_password = None, None, None, None  # noqa: E501
+        pod_cidr, service_cidr, base64_username, base64_password, vip_subnet_cidr = None, None, None, None, None  # noqa: E501
         if is_tkgm:
             pod_cidr = TKGM_DEFAULT_POD_NETWORK_CIDR
             service_cidr = TKGM_DEFAULT_SERVICE_CIDR
             base64_username = ""  # TODO: get username or replace with token
             base64_password = ""  # TODO: get password or replace with token
-            # TODO: get configmap parameters
-            vip_subnet_cidr = ""
+            vip_subnet_cidr = DEFAULT_SUBNET_CIDR  # TODO: get subnet cidr
         script = templated_script.format(
             cluster_kind=cluster_kind,
             k8s_version=k8s_version,
