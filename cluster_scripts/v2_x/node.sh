@@ -11,7 +11,7 @@ do
 done
 
 if [ "$is_tkgm" = true ]; then
-  sed -i 's/IP_PORT/{ip_port}/; s/DISCOVERY_TOKEN_CA_CERT_HASH/{discovery_token_ca_cert_hash}/' $kubeadm_config_path
+  sed -i 's/IP_PORT/{ip_port}/; s/TOKEN/{token}/; s/DISCOVERY_CA_CERT_HASH/{discovery_token_ca_cert_hash}/' $kubeadm_config_path
   kubeadm join --config=$kubeadm_config_path
 else
   kubeadm join {ip_port} --token {token} --discovery-token-ca-cert-hash {discovery_token_ca_cert_hash}

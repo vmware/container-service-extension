@@ -30,8 +30,10 @@ from container_service_extension.common.constants.server_constants import DefEnt
 from container_service_extension.common.constants.server_constants import LocalTemplateKey  # noqa: E501
 from container_service_extension.common.constants.server_constants import NodeType  # noqa: E501
 from container_service_extension.common.constants.server_constants import ThreadLocalData  # noqa: E501
-from container_service_extension.common.constants.server_constants import TKGM_DEFAULT_POD_NETWORK_CIDR  # noqa: E501
-from container_service_extension.common.constants.server_constants import TKGM_DEFAULT_SERVICE_CIDR  # noqa: E501
+from container_service_extension.common.constants.server_constants import TKGM_DEFAULT_POD_NETWORK_CIDR_IP  # noqa: E501
+from container_service_extension.common.constants.server_constants import TKGM_DEFAULT_POD_NETWORK_CIDR_SUFFIX  # noqa: E501
+from container_service_extension.common.constants.server_constants import TKGM_DEFAULT_SERVICE_CIDR_IP  # noqa: E501
+from container_service_extension.common.constants.server_constants import TKGM_DEFAULT_SERVICE_CIDR_SUFFIX  # noqa: E501
 from container_service_extension.common.constants.server_constants import TKGM_TEMPLATE_FRAGMENT  # noqa: E501
 from container_service_extension.common.constants.server_constants import UBUNTU_20_TEMPLATE_NAME_FRAGMENT  # noqa: E501
 import container_service_extension.common.constants.shared_constants as shared_constants  # noqa: E501
@@ -959,13 +961,14 @@ class ClusterService(abstract_broker.AbstractBroker):
                     )
                     expose_ip = ''
 
-            is_tkgm = TKGM_TEMPLATE_FRAGMENT in template[LocalTemplateKey.NAME]
+            is_tkgm = TKGM_TEMPLATE_FRAGMENT in template_name
             _init_cluster(sysadmin_client_v36,
                           vapp,
                           template[LocalTemplateKey.KIND],
                           template[LocalTemplateKey.KUBERNETES_VERSION],
                           template[LocalTemplateKey.CNI_VERSION],
                           native_entity=input_native_entity,
+                          cluster_id=cluster_id,
                           expose_ip=expose_ip,
                           is_tkgm=is_tkgm)
             task = vapp.set_metadata('GENERAL', 'READWRITE', 'cse.master.ip',
@@ -999,7 +1002,7 @@ class ClusterService(abstract_broker.AbstractBroker):
             LOGGER.debug(msg)
             self._update_task(BehaviorTaskStatus.RUNNING, message=msg)
             vapp.reload()
-            _join_cluster(sysadmin_client_v36, vapp)
+            _join_cluster(sysadmin_client_v36, vapp, is_tkgm=is_tkgm)
 
             if nfs_count > 0:
                 msg = f"Creating {nfs_count} NFS nodes for cluster " \
@@ -1426,9 +1429,11 @@ class ClusterService(abstract_broker.AbstractBroker):
                 for spec in worker_nodes['specs']:
                     target_nodes.append(spec['target_vm_name'])
                 vapp.reload()
+                is_tkgm = TKGM_TEMPLATE_FRAGMENT in template_name
                 _join_cluster(sysadmin_client_v36,
                               vapp,
-                              target_nodes=target_nodes)
+                              target_nodes=target_nodes,
+                              is_tkgm=is_tkgm)
                 msg = f"Added {num_workers_to_add} node(s) to cluster " \
                       f"{cluster_name}({cluster_id})"
                 self._update_task(BehaviorTaskStatus.RUNNING, message=msg)
@@ -2499,28 +2504,33 @@ def _get_control_plane_ip(sysadmin_client: vcd_client.Client, vapp,
 
 def _init_cluster(sysadmin_client: vcd_client.Client, vapp, cluster_kind,
                   k8s_version, cni_version,
-                  native_entity: rde_2_x.NativeEntity, expose_ip=None,
-                  is_tkgm=False):
+                  native_entity: rde_2_x.NativeEntity, cluster_id: str,
+                  expose_ip=None, is_tkgm=False):
     vcd_utils.raise_error_if_user_not_from_system_org(sysadmin_client)
 
     try:
         templated_script = get_cluster_script_file_contents(
             ClusterScriptFile.CONTROL_PLANE, ClusterScriptFile.VERSION_2_X)
-        pod_cidr = service_cidr = base64_username = base64_password = vip_subnet_cidr_ip = vip_subnet_cidr_suffix = None  # noqa: E501
+        pod_cidr_ip = pod_cidr_suffix = service_cidr_ip = service_cidr_suffix = base64_username = base64_password = vip_subnet_cidr_ip = vip_subnet_cidr_suffix = None  # noqa: E501
         if is_tkgm:
-            pod_cidr = TKGM_DEFAULT_POD_NETWORK_CIDR
-            service_cidr = TKGM_DEFAULT_SERVICE_CIDR
-            base64_username = ""  # TODO: get username or replace with token
-            base64_password = ""  # TODO: get password or replace with token
+            pod_cidr_ip = TKGM_DEFAULT_POD_NETWORK_CIDR_IP
+            pod_cidr_suffix = TKGM_DEFAULT_POD_NETWORK_CIDR_SUFFIX
+            service_cidr_ip = TKGM_DEFAULT_SERVICE_CIDR_IP
+            service_cidr_suffix = TKGM_DEFAULT_SERVICE_CIDR_SUFFIX
+            # TODO: get username/password or replace with token
+            base64_username = "username"
+            base64_password = "password"
             vip_subnet_cidr_ip = DEFAULT_SUBNET_CIDR_IP  # TODO: get subnet
             vip_subnet_cidr_suffix = DEFAULT_SUBNET_CIDR_SUFFIX
         script = templated_script.format(
             cluster_kind=cluster_kind,
             k8s_version=k8s_version,
             cni_version=cni_version,
-            is_tkgm=is_tkgm,
-            service_cidr=service_cidr,
-            pod_cidr=pod_cidr,
+            is_tkgm='true' if is_tkgm else 'false',
+            service_cidr_ip=service_cidr_ip,
+            service_cidr_suffix=service_cidr_suffix,
+            pod_cidr_ip=pod_cidr_ip,
+            pod_cidr_suffix=pod_cidr_suffix,
             base64_username=base64_username,
             base64_password=base64_password,
             vcd_host=native_entity.metadata.site,
@@ -2529,7 +2539,7 @@ def _init_cluster(sysadmin_client: vcd_client.Client, vapp, cluster_kind,
             ovdc_network=native_entity.spec.settings.ovdc_network,
             vip_subnet_cidr_ip=vip_subnet_cidr_ip,
             vip_subnet_cidr_suffix=vip_subnet_cidr_suffix,
-            cluster_id=native_entity.status.uid,
+            cluster_id=cluster_id,
         )
 
         # Expose cluster if given external ip
@@ -2555,7 +2565,8 @@ def _init_cluster(sysadmin_client: vcd_client.Client, vapp, cluster_kind,
             f"Couldn't initialize cluster: {str(err)}")
 
 
-def _join_cluster(sysadmin_client: vcd_client.Client, vapp, target_nodes=None):
+def _join_cluster(sysadmin_client: vcd_client.Client, vapp, target_nodes=None,
+                  is_tkgm=False):
     vcd_utils.raise_error_if_user_not_from_system_org(sysadmin_client)
     time.sleep(40)  # hack for waiting for joining cluster
     try:
@@ -2583,7 +2594,9 @@ def _join_cluster(sysadmin_client: vcd_client.Client, vapp, target_nodes=None):
         script = templated_script.format(
             ip_port=join_info[2],
             token=join_info[4],
-            discovery_token_ca_cert_hash=join_info[6])
+            discovery_token_ca_cert_hash=join_info[6],
+            is_tkgm='true' if is_tkgm else 'false'
+        )
 
         node_names = _get_node_names(vapp, NodeType.WORKER)
         if target_nodes is not None:
