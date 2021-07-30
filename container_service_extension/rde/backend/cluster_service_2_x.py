@@ -2176,7 +2176,7 @@ def _drain_nodes(sysadmin_client: vcd_client.Client, vapp_href, node_names,
     script = "#!/usr/bin/env bash\n"
     for node_name in node_names:
         script += f"kubectl drain {node_name} " \
-                  f"--ignore-daemonsets --timeout=60s --delete-local-data\n"
+                  f"--ignore-daemonsets --timeout=300s --delete-local-data\n"
 
     try:
         vapp = vcd_vapp.VApp(sysadmin_client, href=vapp_href)
