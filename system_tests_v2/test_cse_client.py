@@ -49,13 +49,13 @@ TODO() by priority
 - test accessing cluster via kubectl (may be unnecessary)
 """
 
-from container_service_extension.rde.constants import PAYLOAD_VERSION_2_0
-from build.lib.container_service_extension.rde.constants import PayloadKey
 import collections
+from io import IncrementalNewlineDecoder
 import os
 from pathlib import Path
 import re
 import subprocess
+from tempfile import template
 import time
 
 import pytest
@@ -255,6 +255,7 @@ def vcd_cluster_author():
     yield
 
     result = env.CLI_RUNNER.invoke(vcd, ['logout'])
+    
 
 def get_payload_version(sample_apply_spec):
     if 'apiVersion' in sample_apply_spec:
@@ -289,6 +290,11 @@ def update_cluster_apply_spec_for_1_0(apply_spec, properties):
 
 def update_cluster_apply_spec_for_2_0(apply_spec, properties):
     modified_spec = apply_spec.copy()
+    modified_spec['spec']['settings']['ovdcNetwork'] = env.TEST_NETWORK
+    modified_spec['metadata']['orgName'] = env.TEST_ORG
+    modified_spec['metadata']['virtualDataCenterName'] = env.TEST_VDC
+    modified_spec['spec']['distribution']['templateName'] = env.DEFAULT_TEMPLATE_NAME
+    modified_spec['spec']['distribution']['templateRevision'] = int(env.DEFAULT_TEMPLATE_REVISION)
     for key, value in properties.items():
         if key == 'worker_count':
             modified_spec['spec']['topology']['workers']['count'] = value
@@ -304,16 +310,14 @@ def update_cluster_apply_spec_for_2_0(apply_spec, properties):
             modified_spec['spec']['topology']['controlPlane']['storageProfile'] = value  # noqa: E501
             modified_spec['spec']['topology']['workers']['storageProfile'] = value  # noqa: E501
             modified_spec['spec']['topology']['nfs']['storageProfile'] = value
-        elif key == 'template_name':
+        elif key == 'template_name' and value:
             modified_spec['spec']['distribution']['templateName'] = value
-        elif key == 'template_revision':
+        elif key == 'template_revision' and value:
             modified_spec['spec']['distribution']['templateRevision'] = value
         elif key == 'cluster_name':
             modified_spec['metadata']['name'] = value
-    modified_spec['spec']['settings']['ovdcNetwork'] = env.TEST_NETWORK
-    modified_spec['metadata']['orgName'] = env.TEST_ORG
-    modified_spec['metadata']['virtualDataCenterName'] = env.TEST_VDC
-
+        elif key == 'network' and value:
+            modified_spec['spec']['settings']['ovdcNetwork'] = value
     return modified_spec
 
 
@@ -337,8 +341,7 @@ def modify_cluster_apply_spec(properties):
         f.write(yaml.dump(modified_spec))
 
 
-@pytest.fixture
-def create_apply_spec(request):
+def create_apply_spec(param):
     """Request shoulld contain the following
     dictionary containing the following
     - worker count
@@ -349,8 +352,7 @@ def create_apply_spec(request):
     - sizing class
     - storage profile
     """
-    print('creating apply spec')
-    worker_count, nfs_count, rollback, template_name, template_revision, network, sizing_policy, storage_profile, cluster_name = request.param  # noqa: E501
+    worker_count, nfs_count, rollback, template_name, template_revision, network, sizing_policy, storage_profile, cluster_name = param  # noqa: E501
     # run cse sample to generate apply sepecification
     cmd = f"cse cluster apply --sample --native -o {env.APPLY_SPEC_PATH}"
     result = env.CLI_RUNNER.invoke(vcd, cmd.split(), catch_exceptions=False)
@@ -360,7 +362,7 @@ def create_apply_spec(request):
     # TODO verify if the cluster config file has been created
     os.path.exists(env.APPLY_SPEC_PATH)
 
-    modify_cluster_apply_spec({
+    create_spec_params = {
         'worker_count': worker_count,
         'nfs_count': nfs_count,
         'rollback': rollback,
@@ -370,12 +372,20 @@ def create_apply_spec(request):
         'network': network,
         'sizing_class': sizing_policy,
         'storage_profile': storage_profile
-    })
+    }
 
-    yield
-    # remove file
-    Path(env.APPLY_SPEC_PATH).unlink(missing_ok=True)
+    print(f"{create_spec_params}")
+    modify_cluster_apply_spec(create_spec_params)
 
+    # yield
+    # # remove file
+    # try:
+    #     os.remove(env.APPLY_SPEC_PATH)
+    # except Exception:
+    #     pass
+
+
+def is_cluster_status()
 
 @pytest.fixture
 def delete_test_clusters():
@@ -398,6 +408,15 @@ def delete_test_clusters():
     env.delete_vapp(env.CLUSTER_AUTHOR_TEST_CLUSTER_NAME, vdc_href=env.TEST_VDC_HREF)  # noqa
     env.delete_rde(env.CLUSTER_AUTHOR_TEST_CLUSTER_NAME)
 
+    env.delete_vapp(env.INVALID_SYS_ADMIN_TEST_CLUSTER_NAME, vdc_href=env.TEST_VDC_HREF)  # noqa
+    env.delete_rde(env.INVALID_SYS_ADMIN_TEST_CLUSTER_NAME)
+
+    env.delete_vapp(env.INVALID_CLUSTER_ADMIN_TEST_CLUSTER_NAME, vdc_href=env.TEST_VDC_HREF)  # noqa
+    env.delete_rde(env.INVALID_CLUSTER_ADMIN_TEST_CLUSTER_NAME)
+
+    env.delete_vapp(env.INVALID_CLUSTER_AUTHOR_TEST_CLUSTER_NAME, vdc_href=env.TEST_VDC_HREF)  # noqa
+    env.delete_rde(env.INVALID_CLUSTER_AUTHOR_TEST_CLUSTER_NAME)
+
     yield
 
     if env.TEARDOWN_CLUSTERS:
@@ -409,6 +428,15 @@ def delete_test_clusters():
 
         env.delete_vapp(env.K8_AUTHOR_TEST_CLUSTER_NAME, vdc_href=env.TEST_VDC_HREF)  # noqa
         env.delete_rde(env.CLUSTER_AUTHOR_TEST_CLUSTER_NAME)
+        
+        env.delete_vapp(env.INVALID_SYS_ADMIN_TEST_CLUSTER_NAME, vdc_href=env.TEST_VDC_HREF)  # noqa
+        env.delete_rde(env.INVALID_SYS_ADMIN_TEST_CLUSTER_NAME)
+
+        env.delete_vapp(env.INVALID_CLUSTER_ADMIN_TEST_CLUSTER_NAME, vdc_href=env.TEST_VDC_HREF)  # noqa
+        env.delete_rde(env.INVALID_CLUSTER_ADMIN_TEST_CLUSTER_NAME)
+
+        env.delete_vapp(env.INVALID_CLUSTER_AUTHOR_TEST_CLUSTER_NAME, vdc_href=env.TEST_VDC_HREF)  # noqa
+        env.delete_rde(env.INVALID_CLUSTER_AUTHOR_TEST_CLUSTER_NAME)
 
 
 def test_0010_vcd_cse_version():
@@ -441,124 +469,179 @@ def test_0021_vcd_ovdc_enable(vcd_sys_admin):
         testutils.format_command_info('vcd', cmd, result.exit_code,
                                       result.output)
 
-INPUT_SPEC_PARAMS = [(0, 0, True, 'ubuntu-16.04_k8-1.20_weave-2.6.5', 2, 'mynet', None, None, env.SYS_ADMIN_TEST_CLUSTER_NAME)]
-@pytest.mark.parametrize('create_apply_spec', INPUT_SPEC_PARAMS, indirect=True)
-def test_0030_vcd_cse_cluster_create_rollback(config, vcd_cluster_admin,
-                                              delete_test_clusters, create_apply_spec):  # noqa: E501
-    """Test that rollback flag in the config works during cluster apply.
+
+def generate_cluster_apply_tests(test_users=None):
+    """Generates cluster apply test cases.
+
+    param list test_users: the list of users for which the test cases
+        should be generated. If not supplied, the tests will be generated for
+        all the users. (System admin, Cluster admin and Cluster author)
+
+    The functions which use this method to generate test cases should have
+    test_user_name and create_apply_spec as fixture parameters.
+
+    The following test cases will be generated-
+    1. Invalid name - cluster name starts with a number
+    2. Invalid sizing policy
+    3. Invalid storage profile
+    4. Invalid network
+    5. Valid value for all parameters
+
+    :return: list of test cases of the format (test_user, (...apply_spec_params))
     """
-    cmd = f"cse cluster apply {env.APPLY_SPEC_PATH}"
-    result = env.CLI_RUNNER.invoke(vcd, cmd.split(), catch_exceptions=False)
-    assert result.exit_code == 0, \
-        testutils.format_command_info('vcd', cmd, result.exit_code,
-                                      result.output)
-    task_wait_command = result.output.split('\n')[1]
-    task_wait_command_args = task_wait_command.split()[1:]
-    result = env.CLI_RUNNER.invoke(vcd, task_wait_command_args, catch_exceptions=False)
-    assert result.exit_code == 0, \
-        testutils.format_command_info('vcd',
-                                      ' '.join(task_wait_command_args),
-                                      result.exit_code,
-                                      result.output)
-    result.output
+    if not test_users:
+        # test for all the users
+        test_users = \
+            [
+                env.SYS_ADMIN_NAME,
+                env.CLUSTER_ADMIN_NAME,
+                env.CLUSTER_AUTHOR_NAME
+            ]
 
+    test_cases = []
+    for user in test_users:
+        # for template in [{'name': 'ubuntu-16.04_k8-1.21_weave-2.6.8', 'revision': 1}]:
+        test_cases.extend(
+            [
+                # Invalid cluster name
+                pytest.param(
+                    user,
+                    (0, 0, True, None, None, None, None, None, f"1-Invalid-name{env.USERNAME_TO_CLUSTER_NAME[user]}"),
+                    marks=[pytest.mark.xfail]
+                ),
+                # Invalid Sizing policy
+                pytest.param(
+                    user,
+                    (0, 0, True, None, None, None, "INVALID-VALUE", None, env.USERNAME_TO_CLUSTER_NAME[user]),
+                    marks=[pytest.mark.xfail]
+                ),
+                # Invalid Storage profile
+                pytest.param(
+                    user,
+                    (0, 0, True, None, None, None, None, "INVALID-VALUE", env.USERNAME_TO_CLUSTER_NAME[user]),
+                    marks=[pytest.mark.xfail]
+                ),
+                # Invalid Network
+                pytest.param(
+                    user,
+                    (0, 0, True, None, None, None, None, "INVALID-VALUE", env.USERNAME_TO_CLUSTER_NAME[user]),
+                    marks=[pytest.mark.xfail]
+                ),
+                # Valid case
+                pytest.param(
+                    user,
+                    (0, 0, False, None, None, None, None, None, env.USERNAME_TO_CLUSTER_NAME[user])
+                )
+            ]
+        )
+    return test_cases
+
+
+
+# INPUT_SPEC_PARAMS = [(0, 0, True, template['name'], template['revision'], "invalid-network", None, None, env.SYS_ADMIN_TEST_CLUSTER_NAME) for template in env.TEMPLATE_DEFINITIONS]
+# @pytest.mark.parametrize('create_apply_spec', INPUT_SPEC_PARAMS, indirect=True)
 # def test_0030_vcd_cse_cluster_create_rollback(config, vcd_cluster_admin,
-#                                               delete_test_clusters):
-#     """Test that --disable-rollback option works during cluster creation.
+#                                               delete_test_clusters, create_apply_spec):  # noqa: E501
+#     """Test that rollback flag in the config works during cluster apply.
 
-#     commands:
-#     $ vcd cse cluster apply
-#     $ vcd cse cluster create testcluster -n NETWORK -N 1 -c 1000
-#     $ vcd cse cluster create testcluster -n NETWORK -N 1 -c 1000
-#         --disable-rollback
+#     Create a cluster with invalid name and check if the created RDEs are
+#      rolled back.
 #     """
-#     # need to create a cluster specification.
-#     # parameters of interest - network, worker count, cpu, memory
-#     cmd = f"cse cluster create {env.SYS_ADMIN_TEST_CLUSTER_NAME} -n " \
-#           f"{env.TEST_NETWORK} -N 1 -c 1000"
+#     cmd = f"cse cluster apply {env.APPLY_SPEC_PATH}"
 #     result = env.CLI_RUNNER.invoke(vcd, cmd.split(), catch_exceptions=False)
 #     assert result.exit_code == 0, \
 #         testutils.format_command_info('vcd', cmd, result.exit_code,
 #                                       result.output)
+#     task_wait_command = result.output.split('\n')[1]
+#     task_wait_command_args = task_wait_command.split()[1:]
+#     result = env.CLI_RUNNER.invoke(vcd, task_wait_command_args, catch_exceptions=False)
+#     command_result = testutils.execute_commands([' '.join(task_wait_command_args)])
+
+#     # cluster creation should fail as invalid vdc network is supplied as a parameter
+#     # since creation should have rolled back, vApp should be deleted
 #     # TODO: Make cluster rollback delete call blocking
 #     time.sleep(env.WAIT_INTERVAL * 2)  # wait for vApp to be deleted
 #     assert not env.vapp_exists(
 #         env.SYS_ADMIN_TEST_CLUSTER_NAME, vdc_href=env.TEST_VDC_HREF), \
 #         "Cluster exists when it should not."
+#     assert not env.rde_exists(
+#         env.SYS_ADMIN_TEST_CLUSTER_NAME), \
+#             f"RDE with name {env.SYS_ADMIN_TEST_CLUSTER_NAME} exists when it should not."  # noqa: E501
 
-#     cmd += " --disable-rollback"
-#     result = env.CLI_RUNNER.invoke(vcd, cmd.split(), catch_exceptions=False)
-#     assert result.exit_code == 0,\
-#         testutils.format_command_info('vcd', cmd, result.exit_code,
-#                                       result.output)
+
+# @pytest.mark.parametrize(
+#     "test_runner_username,create_apply_spec,switch", [
+#        (env.SYS_ADMIN_NAME, (0, 0, False, 'ubuntu-16.04_k8-1.21_weave-2.6.8', 1, env.TEST_NETWORK, None, None, env.SYS_ADMIN_TEST_CLUSTER_NAME)),
+#        (env.CLUSTER_ADMIN_NAME, (0, 0, False, 'ubuntu-16.04_k8-1.21_weave-2.6.8', 1, env.TEST_NETWORK, None, None, env.CLUSTER_ADMIN_TEST_CLUSTER_NAME)),
+#        (env.CLUSTER_AUTHOR_NAME, (0, 0, False, 'ubuntu-16.04_k8-1.21_weave-2.6.8', 1, env.TEST_NETWORK, None, None, env.CLUSTER_AUTHOR_TEST_CLUSTER_NAME))
+#     ],
+#     indirect=["create_apply_spec"]
+# )
+# def test_0050_vcd_cse_system_toggle(config, delete_test_clusters, test_runner_username, create_apply_spec):
+#     """Test `vcd cse system ...` commands.
+
+#     Test that on disabling CSE, cluster deployments are no longer
+#     allowed, and on enabling CSE, cluster deployments are allowed again.
+
+#     These commands are combined into 1 test function because only sys admin
+#     can modify the state of CSE server, org admin/tenant can test cluster
+#     deployment to ensure that CSE is disabled/enabled. Also, this avoids
+#     cases such as running the system disable test, and then running the
+#     cluster operations test, which would fail due to CSE server being
+#     disabled).
+
+#     :param config: cse config file for vcd configuration
+#     :param test_runner_username: parameterized persona to run tests with
+#     different users
+#     """
+#     # Batch cse commands together in a list and then execute them one by one
+#     cmd_binder = collections.namedtuple('UserCmdBinder',
+#                                         'cmd exit_code validate_output_func'
+#                                         ' test_user')
+#     cmd_list = [
+#         cmd_binder(cmd=env.SYS_ADMIN_LOGIN_CMD, exit_code=0,
+#                    validate_output_func=None, test_user='sys_admin'),
+#         cmd_binder(cmd="cse system disable", exit_code=0,
+#                    validate_output_func=None, test_user='sys_admin'),
+#         cmd_binder(cmd=env.USERNAME_TO_LOGIN_CMD[test_runner_username],
+#                    exit_code=0, validate_output_func=None,
+#                    test_user=test_runner_username),
+#         cmd_binder(cmd=f"org use {env.TEST_ORG}", exit_code=0,
+#                    validate_output_func=None, test_user=test_runner_username),
+#         cmd_binder(cmd=f"cse cluster apply {env.APPLY_SPEC_PATH}", exit_code=2,
+#                    validate_output_func=None, test_user=test_runner_username),
+#         cmd_binder(cmd=env.USER_LOGOUT_CMD, exit_code=0,
+#                    validate_output_func=None, test_user=test_runner_username),
+#         cmd_binder(cmd=env.SYS_ADMIN_LOGIN_CMD, exit_code=0,
+#                    validate_output_func=None, test_user='sys_admin'),
+#         cmd_binder(cmd="cse system enable", exit_code=0,
+#                    validate_output_func=None, test_user='sys_admin'),
+#         # cmd_binder(cmd=f"cse cluster create {env.SYS_ADMIN_TEST_CLUSTER_NAME} "
+#         #                f"-n {env.TEST_NETWORK} -N 1 -c 1000 "
+#         #                f"--disable-rollback", exit_code=2,
+#         #            validate_output_func=None, test_user='sys_admin'),
+#         # cmd_binder(cmd=env.USER_LOGOUT_CMD, exit_code=0,
+#         #            validate_output_func=None, test_user='sys_admin')
+#     ]
+
+#     result_list = execute_commands(cmd_list).split('\n')[1]
+
+
+#     # wait on the task for 
+#     apply_command_output = result_list[-2].output
+#     task_wait_command_args = task_wait_command.split()[1:]
+#     result = env.CLI_RUNNER.invoke(vcd, task_wait_command_args, catch_exceptions=False)
+#     command_result = testutils.execute_commands([' '.join(task_wait_command_args)])
+
 #     assert env.vapp_exists(env.SYS_ADMIN_TEST_CLUSTER_NAME,
-#                            vdc_href=env.TEST_VDC_HREF), \
-#         "Cluster does not exist when it should."
+#                                vdc_href=env.TEST_VDC_HREF), \
+#         "Cluster doesn't exist when it should."
+#     assert env.rde_exists(env.Sys)
 
 
-@pytest.mark.parametrize('test_runner_username', [env.SYS_ADMIN_NAME,
-                                                  env.ORG_ADMIN_NAME,
-                                                  env.K8_AUTHOR_NAME])
-def test_0050_vcd_cse_system_toggle(config, test_runner_username,
-                                    delete_test_clusters):
-    """Test `vcd cse system ...` commands.
 
-    Test that on disabling CSE, cluster deployments are no longer
-    allowed, and on enabling CSE, cluster deployments are allowed again.
-
-    These commands are combined into 1 test function because only sys admin
-    can modify the state of CSE server, org admin/tenant can test cluster
-    deployment to ensure that CSE is disabled/enabled. Also, this avoids
-    cases such as running the system disable test, and then running the
-    cluster operations test, which would fail due to CSE server being
-    disabled).
-
-    :param config: cse config file for vcd configuration
-    :param test_runner_username: parameterized persona to run tests with
-    different users
-    """
-    # Batch cse commands together in a list and then execute them one by one
-    cmd_binder = collections.namedtuple('UserCmdBinder',
-                                        'cmd exit_code validate_output_func'
-                                        ' test_user')
-    cmd_list = [
-        cmd_binder(cmd=env.SYS_ADMIN_LOGIN_CMD, exit_code=0,
-                   validate_output_func=None, test_user='sys_admin'),
-        cmd_binder(cmd="cse system disable", exit_code=0,
-                   validate_output_func=None, test_user='sys_admin'),
-        cmd_binder(cmd=env.USERNAME_TO_LOGIN_CMD[test_runner_username],
-                   exit_code=0, validate_output_func=None,
-                   test_user=test_runner_username),
-        cmd_binder(cmd=f"org use {env.TEST_ORG}", exit_code=0,
-                   validate_output_func=None, test_user=test_runner_username),
-        cmd_binder(cmd=f"cse cluster create {env.SYS_ADMIN_TEST_CLUSTER_NAME} "
-                       f"-n {env.TEST_NETWORK} -N 1", exit_code=2,
-                   validate_output_func=None, test_user=test_runner_username),
-        cmd_binder(cmd=env.USER_LOGOUT_CMD, exit_code=0,
-                   validate_output_func=None, test_user=test_runner_username),
-        cmd_binder(cmd=env.SYS_ADMIN_LOGIN_CMD, exit_code=0,
-                   validate_output_func=None, test_user='sys_admin'),
-        cmd_binder(cmd="cse system enable", exit_code=0,
-                   validate_output_func=None, test_user='sys_admin'),
-        cmd_binder(cmd=f"cse cluster create {env.SYS_ADMIN_TEST_CLUSTER_NAME} "
-                       f"-n {env.TEST_NETWORK} -N 1 -c 1000 "
-                       f"--disable-rollback", exit_code=2,
-                   validate_output_func=None, test_user='sys_admin'),
-        cmd_binder(cmd=env.USER_LOGOUT_CMD, exit_code=0,
-                   validate_output_func=None, test_user='sys_admin')
-    ]
-
-    execute_commands(cmd_list)
-
-    assert not env.vapp_exists(env.SYS_ADMIN_TEST_CLUSTER_NAME,
-                               vdc_href=env.TEST_VDC_HREF), \
-        "Cluster exists when it should not."
-
-
-@pytest.mark.parametrize('test_runner_username', [env.SYS_ADMIN_NAME,
-                                                  env.ORG_ADMIN_NAME,
-                                                  env.K8_AUTHOR_NAME])
-def test_0070_vcd_cse_cluster_create(config, test_runner_username):
+@pytest.mark.parametrize('test_runner_username,spec_params', generate_cluster_apply_tests())
+def test_0070_vcd_cse_cluster_create(config, test_runner_username, spec_params, delete_test_clusters):  # noqa: E501
     """Test 'vcd cse cluster create ...' command for various cse users.
 
     Test cluster creation from different persona's- sys_admin, org_admin
@@ -569,6 +652,7 @@ def test_0070_vcd_cse_cluster_create(config, test_runner_username):
     :param test_runner_username: parameterized persona to run tests with
     different users
     """
+    create_apply_spec(spec_params)
     cmd_binder = collections.namedtuple('UserCmdBinder',
                                         'cmd exit_code validate_output_func '
                                         'test_user')
@@ -582,27 +666,55 @@ def test_0070_vcd_cse_cluster_create(config, test_runner_username):
                    validate_output_func=None, test_user=test_runner_username),
         cmd_binder(cmd=f"vdc use {env.TEST_VDC}", exit_code=0,
                    validate_output_func=None, test_user=test_runner_username),
-        cmd_binder(cmd=f"cse cluster create "
-                       f"{env.USERNAME_TO_CLUSTER_NAME[test_runner_username]}"
-                       f" -n {env.TEST_NETWORK} -N 0 ", exit_code=0,
+        cmd_binder(cmd=f"cse cluster apply {env.APPLY_SPEC_PATH} ",
+                   exit_code=0,
                    validate_output_func=None, test_user=test_runner_username),
-        cmd_binder(cmd=env.USER_LOGOUT_CMD, exit_code=0,
-                   validate_output_func=None, test_user=test_runner_username)
+        # cmd_binder(cmd=env.USER_LOGOUT_CMD, exit_code=0,
+        #            validate_output_func=None, test_user=test_runner_username)
     ]
-    execute_commands(cmd_list)
 
-    assert env.vapp_exists(
-        env.USERNAME_TO_CLUSTER_NAME[test_runner_username],
-        vdc_href=env.TEST_VDC_HREF), \
-        f"Cluster {env.USERNAME_TO_CLUSTER_NAME[test_runner_username]} " \
-        f"should exist"
+    rollback = spec_params[2]
+    results_list = execute_commands(cmd_list)
+    apply_command_result = results_list[-1]
+    task_wait_command = apply_command_result.output.split('\n')[1]
+    task_wait_command_args = task_wait_command.split()[1:]
+
+    result = env.CLI_RUNNER.invoke(vcd, task_wait_command_args, catch_exceptions=False)
+
+    assert result.exit_code == 0, \
+        testutils.format_command_info('vcd',
+                                      ' '.join(task_wait_command_args),
+                                      result.exit_code,
+                                      result.output)
+
+    created_cluster_name = env.USERNAME_TO_CLUSTER_NAME[test_runner_username]
+    if rollback:
+        assert not env.vapp_exists(
+            created_cluster_name,
+            vdc_href=env.TEST_VDC_HREF), \
+            f"Cluster {env.USERNAME_TO_CLUSTER_NAME[test_runner_username]} " \
+            f" exists when it should have been rolled-back"
+        # TODO need to check if RDE is also rolled back
+    else:
+        assert env.vapp_exists(
+            created_cluster_name,
+            vdc_href=env.TEST_VDC_HREF), \
+            f"Cluster {env.USERNAME_TO_CLUSTER_NAME[test_runner_username]} " \
+            f"should exist"
+        # TODO need to check if RDE is present
+
+    assert is_cluster_status(created_cluster_name, "CREATE:SUCCEEDED"), \
+        "Cluster does not have 'CREATE:SUCCEEDED status"
+    assert env.rde_exists(created_cluster_name), \
+        f"RDE for cluster {created_cluster_name} doesn't exist when it should"
     print(f"Successfully created cluster {env.USERNAME_TO_CLUSTER_NAME[test_runner_username]} "  # noqa
           f"for {test_runner_username}")
+    env.CLI_RUNNIER.invoke(vcd, env.USER_LOGOUT_CMD, catch_exceptions=False)
 
 
 @pytest.mark.parametrize('test_runner_username', [env.SYS_ADMIN_NAME,
-                                                  env.ORG_ADMIN_NAME,
-                                                  env.K8_AUTHOR_NAME])
+                                                  env.CLUSTER_AUTHOR_NAME,
+                                                  env.CLUSTER_AUTHOR_NAME])
 def test_0080_vcd_cse_cluster_list(test_runner_username):
     cmd_binder = collections.namedtuple('UserCmdBinder',
                                         'cmd exit_code validate_output_func '
@@ -624,8 +736,8 @@ def test_0080_vcd_cse_cluster_list(test_runner_username):
 
 
 @pytest.mark.parametrize('test_runner_username', [env.SYS_ADMIN_NAME,
-                                                  env.ORG_ADMIN_NAME,
-                                                  env.K8_AUTHOR_NAME])
+                                                  env.CLUSTER_AUTHOR_NAME,
+                                                  env.CLUSTER_ADMIN_NAME])
 def test_0090_vcd_cse_cluster_info(test_runner_username):
     cmd_binder = collections.namedtuple('UserCmdBinder',
                                         'cmd exit_code validate_output_func '
@@ -648,8 +760,8 @@ def test_0090_vcd_cse_cluster_info(test_runner_username):
 
 
 @pytest.mark.parametrize('test_runner_username', [env.SYS_ADMIN_NAME,
-                                                  env.ORG_ADMIN_NAME,
-                                                  env.K8_AUTHOR_NAME])
+                                                  env.CLUSTER_AUTHOR_NAME,
+                                                  env.CLUSTER_ADMIN_NAME])
 def test_0100_vcd_cse_cluster_config(test_runner_username):
     cmd_binder = collections.namedtuple('UserCmdBinder',
                                         'cmd exit_code validate_output_func '

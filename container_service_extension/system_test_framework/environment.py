@@ -65,6 +65,9 @@ CLI_RUNNER = CliRunner()
 SYS_ADMIN_TEST_CLUSTER_NAME = 'testclustersystem'
 CLUSTER_ADMIN_TEST_CLUSTER_NAME = 'testclusteradmin'
 CLUSTER_AUTHOR_TEST_CLUSTER_NAME = 'testclusterauthor'
+INVALID_SYS_ADMIN_TEST_CLUSTER_NAME = f"1{SYS_ADMIN_TEST_CLUSTER_NAME}"
+INVALID_CLUSTER_ADMIN_TEST_CLUSTER_NAME = f"1{CLUSTER_ADMIN_TEST_CLUSTER_NAME}"
+INVALID_CLUSTER_AUTHOR_TEST_CLUSTER_NAME = f"1{CLUSTER_AUTHOR_TEST_CLUSTER_NAME}"  # noqa: E501
 
 # TODO remove legacy test clusters after removing legacy mode
 ORG_ADMIN_TEST_CLUSTER_NAME = 'testclusteradmin'
@@ -123,6 +126,15 @@ VIEW_PUBLISHED_CATALOG_RIGHT = 'Catalog: View Published Catalogs'
 
 APPLY_SPEC_PATH = 'cluster_apply_specification.yaml'
 
+USERNAME_TO_CLUSTER_NAME = {
+    'sys_admin': SYS_ADMIN_TEST_CLUSTER_NAME,
+    'cluster_admin': CLUSTER_ADMIN_TEST_CLUSTER_NAME,
+    'cluster_author': CLUSTER_AUTHOR_TEST_CLUSTER_NAME
+}
+
+DEFAULT_TEMPLATE_NAME = None
+DEFAULT_TEMPLATE_REVISION = None
+
 
 def init_rde_environment(config_filepath=BASE_CONFIG_FILEPATH, logger=NULL_LOGGER):  # noqa: E501
     """Set up module variables according to config dict.
@@ -134,7 +146,8 @@ def init_rde_environment(config_filepath=BASE_CONFIG_FILEPATH, logger=NULL_LOGGE
         TEMPLATE_DEFINITIONS, TEST_ALL_TEMPLATES, SYS_ADMIN_LOGIN_CMD, \
         CLUSTER_ADMIN_LOGIN_CMD, CLUSTER_AUTHOR_LOGIN_CMD, \
         USERNAME_TO_LOGIN_CMD, USERNAME_TO_CLUSTER_NAME, TEST_ORG_HREF, \
-        TEST_VDC_HREF, VCD_API_VERSION_TO_USE
+        TEST_VDC_HREF, VCD_API_VERSION_TO_USE, DEFAULT_TEMPLATE_NAME, \
+        DEFAULT_TEMPLATE_REVISION
 
     logger.debug("Setting RDE environement")
     config = testutils.yaml_to_dict(config_filepath)
@@ -147,6 +160,8 @@ def init_rde_environment(config_filepath=BASE_CONFIG_FILEPATH, logger=NULL_LOGGE
     template_cookbook = rtm.get_filtered_remote_template_cookbook()
     TEMPLATE_DEFINITIONS = template_cookbook['templates']
     rtm.download_all_template_scripts(force_overwrite=True)
+    DEFAULT_TEMPLATE_NAME = config['broker']['default_template_name']
+    DEFAULT_TEMPLATE_REVISION = config['broker']['default_template_revision']
 
     # setup test variables
     init_test_vars(config['test'], logger=logger)
@@ -187,17 +202,16 @@ def init_rde_environment(config_filepath=BASE_CONFIG_FILEPATH, logger=NULL_LOGGE
                               f" {CLUSTER_ADMIN_NAME} " \
                               f"-iwp {CLUSTER_ADMIN_PASSWORD} " \
                               f"-V {VCD_API_VERSION_TO_USE}"
+    CLUSTER_AUTHOR_LOGIN_CMD = f"login {config['vcd']['host']} " \
+                               f"{TEST_ORG}" \
+                               f" {CLUSTER_AUTHOR_NAME} " \
+                               f"-iwp {CLUSTER_AUTHOR_PASSWORD} " \
+                               f"-V {VCD_API_VERSION_TO_USE}"
 
     USERNAME_TO_LOGIN_CMD = {
-        'sys_admin': SYS_ADMIN_LOGIN_CMD,
-        'cluster_admin': CLUSTER_ADMIN_LOGIN_CMD,
-        'cluster_author': CLUSTER_AUTHOR_LOGIN_CMD
-    }
-
-    USERNAME_TO_CLUSTER_NAME = {
-        'sys_admin': SYS_ADMIN_TEST_CLUSTER_NAME,
-        'cluster_admin': CLUSTER_ADMIN_TEST_CLUSTER_NAME,
-        'cluster_author': CLUSTER_AUTHOR_TEST_CLUSTER_NAME
+        SYS_ADMIN_NAME: SYS_ADMIN_LOGIN_CMD,
+        CLUSTER_ADMIN_NAME: CLUSTER_ADMIN_LOGIN_CMD,
+        CLUSTER_AUTHOR_NAME: CLUSTER_AUTHOR_LOGIN_CMD
     }
 
     # hrefs for Org and VDC that hosts the catalog
@@ -533,7 +547,7 @@ def delete_rde(cluster_name):
             entity_svc.list_all_native_rde_by_name_and_rde_version(
                 cluster_name,
                 rde_utils.get_runtime_rde_version_by_vcd_api_version(CLIENT.get_api_version())):  # noqa: E501
-            # if cluster_rde.
+            entity_svc.resolve_entity(cluster_rde.id, cluster_rde.entityType)
             entity_svc.delete_entity(cluster_rde.id)
     except cse_exceptions.DefEntityServiceError:
         pass
@@ -707,6 +721,22 @@ def vapp_exists(vapp_name, vdc_href, logger=NULL_LOGGER):
         logger.debug(f"Vapp {vapp_name} not found in vdc {vdc.name}")
         return False
 
+
+def rde_exists(rde_name):
+    try:
+        cloudapi_client: CloudApiClient = \
+                pyvcloud_utils.get_cloudapi_client_from_vcd_client(
+                    CLIENT, logger_wire=SERVER_CLOUDAPI_WIRE_LOGGER)
+        from container_service_extension.rde.common.entity_service import DefEntityService
+        entity_svc = DefEntityService(cloudapi_client)
+        entity = \
+            entity_svc.get_native_rde_by_name_and_rde_version(rde_name, CLIENT.get_api_version())
+        if entity:
+            return True
+        return False
+    except Exception:
+        return False
+    
 
 # TODO remove after deprecating non-rde tests
 def is_cse_registered():
