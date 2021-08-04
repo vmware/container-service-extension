@@ -2,8 +2,6 @@
 # Copyright (c) 2019 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 
-from container_service_extension.lib.cloudapi.cloudapi_client import CloudApiClient
-from container_service_extension.logging.logger import SERVER_CLOUDAPI_WIRE_LOGGER
 import os
 from pathlib import Path
 from typing import List
@@ -17,21 +15,22 @@ from pyvcloud.vcd.exceptions import MissingRecordException
 from pyvcloud.vcd.org import Org
 from pyvcloud.vcd.role import Role
 from pyvcloud.vcd.vdc import VDC
+from system_tests_v2.pytest_logger import PYTEST_LOGGER
 from vcd_cli.vcd import vcd
 
-import container_service_extension.exception.exceptions as cse_exceptions
 import container_service_extension.common.constants.server_constants as server_constants  # noqa: E501
 import container_service_extension.common.constants.shared_constants as shared_constants  # noqa: E501
 from container_service_extension.common.utils.core_utils import get_max_api_version  # noqa: E501
 import container_service_extension.common.utils.pyvcloud_utils as pyvcloud_utils  # noqa: E501
+import container_service_extension.exception.exceptions as cse_exceptions
 from container_service_extension.installer.right_bundle_manager import RightBundleManager  # noqa: E501
 from container_service_extension.installer.templates.remote_template_manager import RemoteTemplateManager  # noqa: E501
+from container_service_extension.lib.cloudapi.cloudapi_client import CloudApiClient  # noqa: E501
 from container_service_extension.logging.logger import NULL_LOGGER, SERVER_CLOUDAPI_WIRE_LOGGER  # noqa: E501
 from container_service_extension.mqi.mqtt_extension_manager import \
     MQTTExtensionManager
 import container_service_extension.rde.constants as rde_constants
 import container_service_extension.rde.models.common_models as common_models
-import container_service_extension.rde.models.rde_factory as rde_factory
 import container_service_extension.rde.schema_service as def_schema_svc
 import container_service_extension.rde.utils as rde_utils
 import container_service_extension.system_test_framework.utils as testutils
@@ -238,7 +237,6 @@ def init_rde_environment(config_filepath=BASE_CONFIG_FILEPATH, logger=NULL_LOGGE
     create_cluster_author_role(config['vcd'], logger=logger)
 
 
-
 # TODO remove after removing legacy mode
 def init_environment(config_filepath=BASE_CONFIG_FILEPATH):
     """Set up module variables according to config dict.
@@ -355,7 +353,7 @@ def cleanup_environment(logger=NULL_LOGGER):
         CLIENT.logout()
 
 
-def setup_active_config():
+def setup_active_config(logger=NULL_LOGGER):
     """Set up the active config file from BASE_CONFIG.
 
     'test' section is removed if it exists in base config, active config is
@@ -365,6 +363,7 @@ def setup_active_config():
 
     :rtype: dict
     """
+    logger.debug("Setting up active config")
     config = testutils.yaml_to_dict(BASE_CONFIG_FILEPATH)
     if 'test' in config:
         del config['test']
@@ -532,7 +531,7 @@ def delete_vapp(vapp_name, vdc_href, logger=NULL_LOGGER):
         pass
 
 
-def delete_rde(cluster_name):
+def delete_rde(cluster_name, logger=NULL_LOGGER):
     """Delete defined entity with the given name.
 
     NOTE: RDE names are not unique. This function deletes all occurances
@@ -540,8 +539,8 @@ def delete_rde(cluster_name):
     try:
         cloudapi_client: CloudApiClient = \
             pyvcloud_utils.get_cloudapi_client_from_vcd_client(
-                CLIENT, logger_wire=SERVER_CLOUDAPI_WIRE_LOGGER)
-        from container_service_extension.rde.common.entity_service import DefEntityService
+                CLIENT, logger_debug=logger, logger_wire=SERVER_CLOUDAPI_WIRE_LOGGER)  # noqa: E501
+        from container_service_extension.rde.common.entity_service import DefEntityService  # noqa: E501
         entity_svc = DefEntityService(cloudapi_client)
         for cluster_rde in \
             entity_svc.list_all_native_rde_by_name_and_rde_version(
@@ -549,7 +548,8 @@ def delete_rde(cluster_name):
                 rde_utils.get_runtime_rde_version_by_vcd_api_version(CLIENT.get_api_version())):  # noqa: E501
             entity_svc.resolve_entity(cluster_rde.id, cluster_rde.entityType)
             entity_svc.delete_entity(cluster_rde.id)
-    except cse_exceptions.DefEntityServiceError:
+    except cse_exceptions.DefEntityServiceError as e:
+        PYTEST_LOGGER.error(f"Failed to delete RDE: {e}")
         pass
 
 
@@ -722,21 +722,26 @@ def vapp_exists(vapp_name, vdc_href, logger=NULL_LOGGER):
         return False
 
 
-def rde_exists(rde_name):
+def rde_exists(rde_name, logger=NULL_LOGGER):
     try:
         cloudapi_client: CloudApiClient = \
-                pyvcloud_utils.get_cloudapi_client_from_vcd_client(
-                    CLIENT, logger_wire=SERVER_CLOUDAPI_WIRE_LOGGER)
-        from container_service_extension.rde.common.entity_service import DefEntityService
+            pyvcloud_utils.get_cloudapi_client_from_vcd_client(
+                CLIENT,
+                logger_debug=logger,
+                logger_wire=SERVER_CLOUDAPI_WIRE_LOGGER)
+        from container_service_extension.rde.common.entity_service import \
+            DefEntityService
         entity_svc = DefEntityService(cloudapi_client)
+        rde_version = rde_utils.get_runtime_rde_version_by_vcd_api_version(
+            CLIENT.get_api_version())
         entity = \
-            entity_svc.get_native_rde_by_name_and_rde_version(rde_name, CLIENT.get_api_version())
-        if entity:
-            return True
+            entity_svc.get_native_rde_by_name_and_rde_version(
+                rde_name, rde_version)
+        return bool(entity)
+    except Exception as e:
+        logger.debug(f"Exception occured when checking if rde exists: {e}")
         return False
-    except Exception:
-        return False
-    
+
 
 # TODO remove after deprecating non-rde tests
 def is_cse_registered():
@@ -749,12 +754,13 @@ def is_cse_registered():
         return False
 
 
-def is_cse_registered_as_mqtt_ext():
+def is_cse_registered_as_mqtt_ext(logger=NULL_LOGGER):
     try:
-        mqtt_ext_manager = MQTTExtensionManager(CLIENT)
+        mqtt_ext_manager = MQTTExtensionManager(CLIENT, debug_logger=logger)
         return mqtt_ext_manager.check_extension_exists(
             server_constants.MQTT_EXTENSION_URN)
-    except MissingRecordException:
+    except MissingRecordException as e:
+        logger.error(f"Error occured whne checking if CSE is registered: {e}")
         return False
 
 

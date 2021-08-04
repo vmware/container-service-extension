@@ -8,6 +8,7 @@ import re
 from vcd_cli.vcd import vcd
 import yaml
 
+import container_service_extension.logging.logger as logger
 import container_service_extension.system_test_framework.environment as env
 import container_service_extension.system_test_framework.utils as testutils
 
@@ -48,7 +49,7 @@ def format_command_info(cmd_root, cmd, exit_code, output):
            f"\nOutput Start===\n{output}===Output End"
 
 
-def execute_commands(cmd_list):
+def execute_commands(cmd_list, logger=logger.NULL_LOGGER):
     cmd_results = []
     for action in cmd_list:
         cmd = action.cmd
@@ -62,6 +63,10 @@ def execute_commands(cmd_list):
 
         if action.validate_output_func is not None:
             action.validate_output_func(result.output, action.test_user)
+
+        logger.debug(f"Executed command: {cmd}")
+        logger.debug(f"Output: {result.output}")
+        logger.debug(f"Exit code: {result.exit_code}")
 
         cmd_results.append(result)
 

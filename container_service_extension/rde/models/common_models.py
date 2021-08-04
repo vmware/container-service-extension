@@ -10,13 +10,13 @@ from dataclasses_json import dataclass_json, Undefined
 
 from container_service_extension.common.constants import shared_constants as shared_constants  # noqa: E501
 import container_service_extension.common.constants.server_constants as server_constants  # noqa: E501
-import container_service_extension.rde.utils as rde_utils
 from container_service_extension.rde.behaviors.behavior_model import BehaviorAcl, BehaviorOperation  # noqa: E501
 from container_service_extension.rde.constants import \
     DEF_ENTITY_TYPE_ID_PREFIX, DEF_INTERFACE_ID_PREFIX, Nss, RDEMetadataKey, \
     RDEVersion, RuntimeRDEVersion, SchemaFile, Vendor
 from container_service_extension.rde.models.abstractNativeEntity import AbstractNativeEntity  # noqa: E501
 from container_service_extension.rde.models.rde_factory import get_rde_model
+import container_service_extension.rde.utils as rde_utils
 
 
 @dataclass_json(undefined=Undefined.EXCLUDE)

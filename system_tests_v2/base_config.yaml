@@ -15,45 +15,45 @@ test:
                                                            #   if true, tests cluster deployment on all templates found.
                                                            #   if false, tests cluster deployment only for first template found.
                                                            #   if this key is omitted, defaults to false.
-  test_templates: "ubuntu-16.04_k8-1.21_weave-2.8.1:1"                                   # Tests will only create these templates if test_all_templates is set to false
+  test_templates: "???"                                    # Tests will only create these templates if test_all_templates is set to false
                                                            #   format -> "template_1_name:template_1_revision,template_2_name:template_2_revision"
   upgrade_template_repo_url: '???'                         #
-  network: mynet                                           # org network within @vdc that will be used during testing
+  network: '???'                                           # org network within @vdc that will be used during testing
                                                            #   Should have outbound access to the public internet
-  org: myorg                                               # vCD org where all the test will be run
-  storage_profile: '*'                                   # name of the storage profile to use while creating clusters on this org vdc
-  vdc: myorgvdc                                               # Org VDC powering the org
+  org: '???'                                               # vCD org where all the test will be run
+  storage_profile: '*'                                     # name of the storage profile to use while creating clusters on this org vdc
+  vdc: '???'                                               # Org VDC powering the org
 
 mqtt:
   verify_ssl: false
 
 vcd:
-  host: bos1-vcloud-static-172-108.eng.vmware.com
+  host: '???'
   log: true
-  password: ca$hc0w
+  password: '???'
   port: 443
-  username: administrator
+  username: '???'
   verify: false
 
 vcs:
-- name: vc1
-  password: Welcome@123
-  username: administrator@vsphere.local
+- name: '???'
+  password: '???'
+  username: '???'
   verify: false
 
 service:
   enforce_authorization: false
   legacy_mode: false
-  log_wire: false
-  processors: 15
+  log_wire: true
+  processors: 5
   telemetry:
     enable: false
 
 broker:
   catalog: cse                          # public shared catalog within org where the template will be published
-  default_template_name: ubuntu-16.04_k8-1.20_weave-2.6.5
+  default_template_name: ubuntu-16.04_k8-1.21_weave-2.8.1
                                         # name of the default template to use if none is specified
-  default_template_revision: 2          # revision of the default template to use if none is specified
+  default_template_revision: 1          # revision of the default template to use if none is specified
   ip_allocation_mode: pool              # dhcp or pool
   network: '???'                        # org network within @vdc that will be used during the install process to build the template
                                         #   Should have outbound access to the public internet
@@ -61,4 +61,4 @@ broker:
   org: '???'                            # vCD org that contains the shared catalog where the master templates will be stored
   remote_template_cookbook_url: http://raw.githubusercontent.com/vmware/container-service-extension-templates/dev/template_v2.yaml
   storage_profile: '*'                  # name of the storage profile to use when creating the temporary vApp used to build the template
-  vdc: cseorgvdc                            # VDC within @org that will be used during the install process to build the template
+  vdc: '???'                            # VDC within @org that will be used during the install process to build the template
