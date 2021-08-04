@@ -733,6 +733,7 @@ def wait_for_completion_of_post_customization_step(
     remaining_statuses = list(expected_target_status_list)
 
     while True:
+        vm.reload()
         new_status = get_vm_extra_config_element(vm, customization_phase)
         if new_status not in remaining_statuses:
             logger.error(f"Invalid VM Post guest customization status:{new_status}")  # noqa: E501
@@ -740,8 +741,8 @@ def wait_for_completion_of_post_customization_step(
         # update the remaining statuses on status change
         if new_status != current_status:
             remaining_statuses.remove(current_status)
-            logger.info(f"Post guest customization phase {customization_phase } in {new_status}")  # noqa: E501
             current_status = new_status
+        logger.info(f"Post guest customization phase {customization_phase } is {new_status}")  # noqa: E501
         # Check for successful customization: reaching last status between
         if new_status == expected_target_status_list[-1]:
             return new_status
@@ -756,5 +757,5 @@ def wait_for_completion_of_post_customization_step(
         if datetime.now() - start_time > timedelta(seconds=timeout):
             break
         time.sleep(poll_frequency)
-    logger.error("VM Post guest customization failed due to timeout")  # noqa: E501
+    logger.error(f"VM Post guest customization failed due to timeout({timeout} sec)")  # noqa: E501
     raise exceptions.PostCustomizationTimeoutError

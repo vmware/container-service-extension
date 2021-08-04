@@ -200,6 +200,7 @@ class ClusterScriptFile(str, Enum):
 
     SCRIPTS_DIR = "cluster_scripts"
     CONTROL_PLANE = 'control_plane.sh'
+    CONTROL_PLANE_NEW = 'control_plane_new.sh'
     NODE = 'node.sh'
 
     # Note that we need _ in the version instead of dots to allow
@@ -722,8 +723,16 @@ class PostCustomizationStatus(Enum):
     SUCCESSFUL = 'successful'
 
 
+@unique
+class PostCustomizationPhase(Enum):
+    STORE_SSH_KEY = 'guestinfo.postcustomization.store.sshkey.status'
+    KUBEADM_INIT = 'guestinfo.postcustomization.kubeinit.status'
+    KUBECTL_APPLY_WEAVE = 'guestinfo.postcustomization.kubectl.apply.weave.status'  # noqa: E501
+    KUBEADM_JOIN = 'guestinfo.postcustomization.kubeadm.join.status'
+
+
 POST_CUSTOMIZATION_SCRIPT_EXECUTION_STATUS = 'post_customization_script_execution_status'  # noqa: E501
 POST_CUSTOMIZATION_SCRIPT_EXECUTION_FAILURE_REASON = 'post_customization_script_execution_failure_reason'  # noqa: E501
 DEFAULT_POST_CUSTOMIZATION_STATUS_LIST = [cust_status.value for cust_status in PostCustomizationStatus]  # noqa: E501
 DEFAULT_POST_CUSTOMIZATION_POLL_SEC = 5
-DEFAULT_POST_CUSTOMIZATION_TIMEOUT_SEC = 180
+DEFAULT_POST_CUSTOMIZATION_TIMEOUT_SEC = 600
