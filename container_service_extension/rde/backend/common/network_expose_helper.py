@@ -194,33 +194,6 @@ def expose_cluster(client: vcd_client.Client, org_name: str, ovdc_name: str,
     return expose_ip
 
 
-def get_nsxt_external_ip(client: vcd_client.Client,
-                         org_name: str,
-                         ovdc_name: str,
-                         network_name: str):
-    """Get a free static IP.
-
-     Get a free static IP from the edge gateway powering the Org VDC network,
-        and create a DNAT rule to expose the @internal_ip
-
-    :param vcd_client.Client client:
-    :param str org_name:
-    :param str ovdc_name:
-    :param str network_name:
-
-    :raises Exception: If CSE is unable to get a free IP.
-
-    :returns: The newly acquired exposed Ip of the cluster
-
-    :rtype: str
-    """
-    # Auto reserve ip
-    nsxt_gateway_svc = _get_nsxt_backed_gateway_service(
-        client, org_name, ovdc_name, network_name)
-    expose_ip = nsxt_gateway_svc.get_available_ip()
-    return expose_ip if expose_ip is not None else ''
-
-
 def handle_delete_expose_dnat_rule(client: vcd_client.Client,
                                    org_name: str,
                                    ovdc_name: str,
