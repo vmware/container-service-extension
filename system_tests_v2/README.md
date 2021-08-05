@@ -44,7 +44,7 @@ Options for **'test'** section:
 
 ## Notes
 
-- Client tests (**test_cse_client.py**) require an org admin user with the same username and password specified in the config file **vcd** section
+- Client tests (**test_cse_client.py**) require an cluster admin and cluster author user with the same username and password specified in the config file **vcd** section
 - Server tests (**test_cse_server.py**) require you to have a public/private SSH key (RSA)
   - These keys should be at: `~/.ssh/id_rsa` and `~/.ssh/id_rsa.pub`
   - Keys must not be password protected (to remove key password, use `ssh-keygen -p`)
@@ -121,6 +121,16 @@ assert result.exit_code == 0, f"Command[{cmd}] failed."
 These small tests using Click's `CLIRunner` and `invoke` function only validate command structure.
 These assert statements will pass because the commands themselves are valid, even if an error is thrown during the command execution.
 
+## Pytest logging mechanism
+
+pytest-logger is a plugin used to log during test execution. The plugin makes use of hooks to configure logs.
+The `pytest_logger.py` file contains the logger which can be imported in different test files.
+
+The hooks `pytest_logger_config(logger_config)` and `pytest_logger_logdirlink(config)` are configured in conftest.py to create
+a symlink `pytest_log` to log directory created by pytest. A different log file will be created for each test executed.
+
+To log information, please import and use the logger PYTEST_LOGGER defined in `pytest_logger.py` module.
+
 ---
 
 ### Helpful links
@@ -128,3 +138,4 @@ These assert statements will pass because the commands themselves are valid, eve
 - Usage and Invocations: <https://docs.pytest.org/en/latest/usage.html>
 - Fixtures: <https://docs.pytest.org/en/latest/fixture.html>
 - Click Testing: <http://click.palletsprojects.com/en/7.x/testing/>
+- Logging: <https://pypi.org/project/pytest-logger/>

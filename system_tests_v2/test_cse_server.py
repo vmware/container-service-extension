@@ -3,6 +3,7 @@
 # SPDX-License-Identifier: BSD-2-Clause
 
 import filecmp
+import logging
 import os
 import subprocess
 import tempfile
@@ -17,6 +18,7 @@ import container_service_extension.installer.templates.local_template_manager as
 from container_service_extension.server.cli.server_cli import cli
 import container_service_extension.system_test_framework.environment as env
 import container_service_extension.system_test_framework.utils as testutils
+from system_tests_v2.pytest_logger import PYTEST_LOGGER
 
 PASSWORD_FOR_CONFIG_ENCRYPTION = "vmware"
 
@@ -66,16 +68,18 @@ rights when CSE is unregistered.
 
 def _remove_cse_artifacts():
     for template in env.TEMPLATE_DEFINITIONS:
-        env.delete_catalog_item(template['source_ova_name'])
+        env.delete_catalog_item(template['source_ova_name'],
+                                logger=PYTEST_LOGGER)
         catalog_item_name = ltm.get_revisioned_template_name(
             template['name'], template['revision'])
-        env.delete_catalog_item(catalog_item_name)
+        env.delete_catalog_item(catalog_item_name,
+                                logger=PYTEST_LOGGER)
         temp_vapp_name = testutils.get_temp_vapp_name(template['name'])
         env.delete_vapp(temp_vapp_name, vdc_href=env.VDC_HREF)
-    env.delete_catalog()
-    env.unregister_cse_in_mqtt()
-    env.cleanup_rde_artifacts()
-    env.cleanup_roles_and_users()
+    env.delete_catalog(logger=PYTEST_LOGGER)
+    env.unregister_cse_in_mqtt(logger=PYTEST_LOGGER)
+    env.cleanup_rde_artifacts(logger=PYTEST_LOGGER)
+    env.cleanup_roles_and_users(logger=PYTEST_LOGGER)
 
 
 @pytest.fixture(scope='module', autouse=True)
@@ -118,6 +122,9 @@ def test_0010_cse_sample():
     """
     cmd = "sample"
     result = env.CLI_RUNNER.invoke(cli, cmd.split(), catch_exceptions=False)
+    PYTEST_LOGGER.debug(f"Executing command: {cmd}")
+    PYTEST_LOGGER.debug(f"Exit code: {result.exit_code}")
+    PYTEST_LOGGER.debug(f"Output: {result.output}")
     assert result.exit_code == 0,\
         testutils.format_command_info('cse', cmd, result.exit_code,
                                       result.output)
@@ -125,11 +132,17 @@ def test_0010_cse_sample():
     output_filepath = 'dummy-output.yaml'
     cmd = f'sample --output {output_filepath}'
     result = env.CLI_RUNNER.invoke(cli, cmd.split(), catch_exceptions=False)
+    PYTEST_LOGGER.debug(f"Executing command: {cmd}")
+    PYTEST_LOGGER.debug(f"Exit code: {result.exit_code}")
+    PYTEST_LOGGER.debug(f"Output: {result.output}")
     assert result.exit_code == 0,\
         testutils.format_command_info('cse', cmd, result.exit_code,
                                       result.output)
 
     cmd = f'sample --pks-config --output {output_filepath}'
+    PYTEST_LOGGER.debug(f"Executing command: {cmd}")
+    PYTEST_LOGGER.debug(f"Exit code: {result.exit_code}")
+    PYTEST_LOGGER.debug(f"Output: {result.output}")
     result = env.CLI_RUNNER.invoke(cli, cmd.split(), catch_exceptions=False)
     assert result.exit_code == 0,\
         testutils.format_command_info('cse', cmd, result.exit_code,
@@ -143,6 +156,9 @@ def test_0020_cse_version():
     """Test that `cse version` is a valid command."""
     cmd = "version"
     result = env.CLI_RUNNER.invoke(cli, cmd.split(), catch_exceptions=False)
+    PYTEST_LOGGER.debug(f"Executing command: {cmd}")
+    PYTEST_LOGGER.debug(f"Exit code: {result.exit_code}")
+    PYTEST_LOGGER.debug(f"Output: {result.output}")
     assert result.exit_code == 0,\
         testutils.format_command_info('cse', cmd, result.exit_code,
                                       result.output)
@@ -156,19 +172,12 @@ def test_0030_cse_check(config):
     """
     cmd = f"check {env.ACTIVE_CONFIG_FILEPATH} --skip-config-decryption"
     result = env.CLI_RUNNER.invoke(cli, cmd.split(), catch_exceptions=False)
+    PYTEST_LOGGER.debug(f"Executing command: {cmd}")
+    PYTEST_LOGGER.debug(f"Exit code: {result.exit_code}")
+    PYTEST_LOGGER.debug(f"Output: {result.output}")
     assert result.exit_code == 0,\
         testutils.format_command_info('cse', cmd, result.exit_code,
                                       result.output)
-
-    # This test makes no sense here, we know for sure that CSE is not
-    # installed at this point in time. This needs more discussion, commenting
-    # out the test for time being
-
-    # cmd = f"check {env.ACTIVE_CONFIG_FILEPATH} -i --skip-config-decryption"
-    # result = env.CLI_RUNNER.invoke(cli, cmd.split(), catch_exceptions=False)
-    # assert result.exit_code == 0,\
-    #    testutils.format_command_info('cse', cmd, result.exit_code,
-    #                                  result.output)
 
 
 def test_0040_config_missing_keys(config):
@@ -186,12 +195,17 @@ def test_0040_config_missing_keys(config):
 
     for config in configs:
         testutils.dict_to_yaml_file(config, env.ACTIVE_CONFIG_FILEPATH)
+        PYTEST_LOGGER.debug(f"Validating config: {config}")
         try:
             get_validated_config(env.ACTIVE_CONFIG_FILEPATH,
                                  skip_config_decryption=True)
+            PYTEST_LOGGER.debug("Validation succeeded when it "
+                                "should not have")
             assert False, f"{env.ACTIVE_CONFIG_FILEPATH} passed validation " \
                           f"when it should not have"
-        except KeyError:
+        except KeyError as e:
+            PYTEST_LOGGER.debug("Validation failed as expected due " \
+                                f"to invalid keys: {e}") 
             pass
 
 
@@ -222,21 +236,27 @@ def test_0050_config_invalid_value_types(config):
 
     for config in configs:
         testutils.dict_to_yaml_file(config, env.ACTIVE_CONFIG_FILEPATH)
+        PYTEST_LOGGER.debug(f"Validating config: {config}")
         try:
             get_validated_config(env.ACTIVE_CONFIG_FILEPATH,
                                  skip_config_decryption=True)
             assert False, f"{env.ACTIVE_CONFIG_FILEPATH} passed validation " \
                           f"when it should not have"
-        except TypeError:
+        except TypeError as e:
+            PYTEST_LOGGER.debug("Validation failed as expected due " \
+                                f"to invalid value: {e}") 
             pass
 
 
 def test_0060_config_valid(config):
     """Test that configs with valid keys and value types pass validation."""
+    PYTEST_LOGGER.debug(f"Validating config: {config}")
     try:
         get_validated_config(env.ACTIVE_CONFIG_FILEPATH,
                              skip_config_decryption=True)
-    except (KeyError, TypeError, ValueError):
+        PYTEST_LOGGER.debug(f"Validation succeeded as expected.")
+    except (KeyError, TypeError, ValueError) as e:
+        PYTEST_LOGGER.debug(f"Failed to validate the config. Error: {e}")
         assert False, f"{env.ACTIVE_CONFIG_FILEPATH} did not pass validation" \
                       f" when it should have"
 
@@ -246,6 +266,9 @@ def test_0070_check_invalid_installation(config):
     try:
         cmd = f"check {env.ACTIVE_CONFIG_FILEPATH} --skip-config-decryption --check-install"  # noqa: E501
         env.CLI_RUNNER.invoke(cli, cmd.split(), catch_exceptions=False)
+        PYTEST_LOGGER.debug(f"Executing command: {cmd}")
+        PYTEST_LOGGER.debug(f"Exit code: {result.exit_code}")
+        PYTEST_LOGGER.debug(f"Output: {result.output}")
         assert False, "cse check passed when it should have failed."
     except Exception:
         pass
@@ -273,32 +296,38 @@ def test_0080_install_skip_template_creation(config,
           f"{env.SSH_KEY_FILEPATH} --skip-template-creation " \
           f"--skip-config-decryption"
     result = env.CLI_RUNNER.invoke(cli, cmd.split(), catch_exceptions=False)
+    PYTEST_LOGGER.debug(f"Executing command: {cmd}")
+    PYTEST_LOGGER.debug(f"Exit code: {result.exit_code}")
+    PYTEST_LOGGER.debug(f"Output: {result.output}")
     assert result.exit_code == 0,\
         testutils.format_command_info('cse', cmd, result.exit_code,
                                       result.output)
 
     # check that cse was registered correctly
-    env.check_cse_registration_as_mqtt_extension()
+    env.check_cse_registration_as_mqtt_extension(logger=PYTEST_LOGGER)
     remote_template_keys = server_utils.get_template_descriptor_keys(
         env.TEMPLATE_COOKBOOK_VERSION)
 
     for template_config in env.TEMPLATE_DEFINITIONS:
         # check that source ova file does not exist in catalog
         assert not env.catalog_item_exists(
-            template_config[remote_template_keys.SOURCE_OVA_NAME]), \
+            template_config[remote_template_keys.SOURCE_OVA_NAME],
+            logger=PYTEST_LOGGER), \
             'Source ova file exists when it should not.'
 
         # check that k8s templates does not exist
         catalog_item_name = ltm.get_revisioned_template_name(
             template_config[remote_template_keys.NAME],
             template_config[remote_template_keys.REVISION])
-        assert not env.catalog_item_exists(catalog_item_name), \
-            'k8s templates exist when they should not.'
+        assert not env.catalog_item_exists(
+            catalog_item_name,
+            logger=PYTEST_LOGGER), 'k8s templates exist when they should not.'
 
         # check that temp vapp does not exists
         temp_vapp_name = testutils.get_temp_vapp_name(
             template_config[remote_template_keys.NAME])
-        assert not env.vapp_exists(temp_vapp_name, vdc_href=env.VDC_HREF), \
+        assert not env.vapp_exists(
+            temp_vapp_name, vdc_href=env.VDC_HREF, logger=PYTEST_LOGGER), \
             'vApp exists when it should not.'
 
 
@@ -327,6 +356,9 @@ def test_0090_install_all_templates(config, unregister_cse_before_test):
           f"{env.SSH_KEY_FILEPATH} --retain-temp-vapp --skip-config-decryption"
     result = env.CLI_RUNNER.invoke(cli, cmd.split(),
                                    catch_exceptions=False)
+    PYTEST_LOGGER.debug(f"Executing command: {cmd}")
+    PYTEST_LOGGER.debug(f"Exit code: {result.exit_code}")
+    PYTEST_LOGGER.debug(f"Output: {result.output}")
     assert result.exit_code == 0,\
         testutils.format_command_info('cse', cmd, result.exit_code,
                                       result.output)
@@ -340,14 +372,16 @@ def test_0090_install_all_templates(config, unregister_cse_before_test):
     for template_config in env.TEMPLATE_DEFINITIONS:
         # check that source ova file exists in catalog
         assert env.catalog_item_exists(
-            template_config[remote_template_keys.SOURCE_OVA_NAME]), \
+            template_config[remote_template_keys.SOURCE_OVA_NAME],
+            logger=PYTEST_LOGGER), \
             'Source ova file does not exist when it should.'
 
         # check that k8s templates exist
         catalog_item_name = ltm.get_revisioned_template_name(
             template_config[remote_template_keys.NAME],
             template_config[remote_template_keys.REVISION])
-        assert env.catalog_item_exists(catalog_item_name), \
+        assert env.catalog_item_exists(
+            catalog_item_name, logger=PYTEST_LOGGER), \
             'k8s template does not exist when it should.'
 
         # check that temp vapp exists
@@ -379,6 +413,9 @@ def test_0100_install_select_templates(config, unregister_cse_before_test):
           f"{env.SSH_KEY_FILEPATH} --skip-template-creation " \
           f"--skip-config-decryption"
     result = env.CLI_RUNNER.invoke(cli, cmd.split(), catch_exceptions=False)
+    PYTEST_LOGGER.debug(f"Executing command: {cmd}")
+    PYTEST_LOGGER.debug(f"Exit code: {result.exit_code}")
+    PYTEST_LOGGER.debug(f"Output: {result.output}")
     assert result.exit_code == 0,\
         testutils.format_command_info('cse', cmd, result.exit_code,
                                       result.output)
@@ -398,19 +435,24 @@ def test_0100_install_select_templates(config, unregister_cse_before_test):
               f"--skip-config-decryption --force --retain-temp-vapp"  # noqa: E501
         result = env.CLI_RUNNER.invoke(
             cli, cmd.split(), catch_exceptions=False)
+        PYTEST_LOGGER.debug(f"Executing command: {cmd}")
+        PYTEST_LOGGER.debug(f"Exit code: {result.exit_code}")
+        PYTEST_LOGGER.debug(f"Output: {result.output}")
         assert result.exit_code == 0,\
             testutils.format_command_info('cse', cmd, result.exit_code,
                                           result.output)
         # check that source ova file exists in catalog
         assert env.catalog_item_exists(
-            template_config[remote_template_keys.SOURCE_OVA_NAME]), \
+            template_config[remote_template_keys.SOURCE_OVA_NAME],
+            logger=PYTEST_LOGGER), \
             'Source ova file does not exists when it should.'
 
         # check that k8s templates exist
         catalog_item_name = ltm.get_revisioned_template_name(
             template_config[remote_template_keys.NAME],
             template_config[remote_template_keys.REVISION])
-        assert env.catalog_item_exists(catalog_item_name), \
+        assert env.catalog_item_exists(
+            catalog_item_name, logger=PYTEST_LOGGER), \
             'k8s template does not exist when it should.'
 
         # check that temp vapp exists
@@ -431,9 +473,14 @@ def test_0110_cse_check_valid_installation(config):
     """
     try:
         cmd = f"check {env.ACTIVE_CONFIG_FILEPATH} --skip-config-decryption --check-install"  # noqa: E501
-        env.CLI_RUNNER.invoke(cli, cmd.split(), catch_exceptions=False)
+        result =env.CLI_RUNNER.invoke(cli, cmd.split(), catch_exceptions=False)
+        PYTEST_LOGGER.debug(f"Executing command: {cmd}")
+        PYTEST_LOGGER.debug(f"Exit code: {result.exit_code}")
+        PYTEST_LOGGER.debug(f"Output: {result.output}")
     except EntityNotFoundException:
-        assert False, "cse check failed when it should have passed."
+        msg = "cse check failed when it should have passed."
+        PYTEST_LOGGER.debug(msg)
+        assert False, msg
 
 
 def test_0120_cse_run(config):
@@ -460,7 +507,10 @@ def test_0120_cse_run(config):
             else:
                 p = subprocess.Popen(cmd.split())
             p.wait(timeout=env.WAIT_INTERVAL * 2)  # 1 minute
-            assert False, f"`{cmd}` failed with return code {p.returncode}"
+            msg = f"`{cmd}` failed with return code {p.returncode}"
+            PYTEST_LOGGER.debug(f"Executing command: {cmd}")
+            PYTEST_LOGGER.debug(msg)
+            assert False, msg
         except subprocess.TimeoutExpired:
             pass
         finally:
@@ -485,16 +535,23 @@ def test_0130_cse_encrypt_decrypt_with_password_from_stdin(config):
     """
     encrypted_file = tempfile.NamedTemporaryFile()
     cmd = f"encrypt {env.ACTIVE_CONFIG_FILEPATH} -o {encrypted_file.name}"  # noqa: E501
-    env.CLI_RUNNER.invoke(cli, cmd.split(),
+    result = env.CLI_RUNNER.invoke(cli, cmd.split(),
                           input=PASSWORD_FOR_CONFIG_ENCRYPTION,
                           catch_exceptions=False)
+    PYTEST_LOGGER.debug(f"Executing command: {cmd}")
+    PYTEST_LOGGER.debug(f"Exit code: {result.exit_code}")
+    PYTEST_LOGGER.debug(f"Output: {result.output}")
 
     # Run `cse decrypt` on the encrypted config file from previous step
     decrypted_file = tempfile.NamedTemporaryFile()
     cmd = f"decrypt {encrypted_file.name} -o {decrypted_file.name}"
-    env.CLI_RUNNER.invoke(cli, cmd.split(),
-                          input=PASSWORD_FOR_CONFIG_ENCRYPTION,
-                          catch_exceptions=False)
+    result = env.CLI_RUNNER.invoke(cli,
+                                   cmd.split(),
+                                   input=PASSWORD_FOR_CONFIG_ENCRYPTION,
+                                   catch_exceptions=False)
+    PYTEST_LOGGER.debug(f"Executing command: {cmd}")
+    PYTEST_LOGGER.debug(f"Exit code: {result.exit_code}")
+    PYTEST_LOGGER.debug(f"Output: {result.output}")
 
     # File comparison also include content comparison
     assert filecmp.cmp(env.ACTIVE_CONFIG_FILEPATH, decrypted_file.name,
@@ -513,12 +570,18 @@ def test_0140_cse_encrypt_decrypt_with_password_from_environment_var(config):
     os.environ['CSE_CONFIG_PASSWORD'] = PASSWORD_FOR_CONFIG_ENCRYPTION
     encrypted_file = tempfile.NamedTemporaryFile()
     cmd = f"encrypt {env.ACTIVE_CONFIG_FILEPATH} -o {encrypted_file.name}"  # noqa: E501
-    env.CLI_RUNNER.invoke(cli, cmd.split(), catch_exceptions=False)
+    result = env.CLI_RUNNER.invoke(cli, cmd.split(), catch_exceptions=False)
+    PYTEST_LOGGER.debug(f"Executing command: {cmd}")
+    PYTEST_LOGGER.debug(f"Exit code: {result.exit_code}")
+    PYTEST_LOGGER.debug(f"Output: {result.output}")
 
     # Run `cse decrypt` on the encrypted config file from previous step
     decrypted_file = tempfile.NamedTemporaryFile()
     cmd = f"decrypt {encrypted_file.name} -o {decrypted_file.name}"
-    env.CLI_RUNNER.invoke(cli, cmd.split(), catch_exceptions=False)
+    result = env.CLI_RUNNER.invoke(cli, cmd.split(), catch_exceptions=False)
+    PYTEST_LOGGER.debug(f"Executing command: {cmd}")
+    PYTEST_LOGGER.debug(f"Exit code: {result.exit_code}")
+    PYTEST_LOGGER.debug(f"Output: {result.output}")
 
     # File comparison also include content comparison
     assert filecmp.cmp(env.ACTIVE_CONFIG_FILEPATH, decrypted_file.name,
