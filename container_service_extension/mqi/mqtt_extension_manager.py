@@ -322,6 +322,22 @@ class MQTTExtensionManager:
             self._debug_logger.debug(last_response.text)
             return False
 
+    def is_extension_enabled(self, ext_urn_id):
+        """Check if the MQTT Extension is enabled.
+
+        :param str ext_urn_id: the extension urn id
+
+        :return: boolean indicating if extension is enabled
+        :rtype: bool
+        """
+        try:
+            mqtt_ext_obj = self.get_extension_response_body_by_urn(ext_urn_id)
+            return mqtt_ext_obj['enabled']
+        except requests.exceptions.HTTPError:
+            last_response = self._cloudapi_client.get_last_response()
+            self._debug_logger.debug(last_response.text)
+            return False
+
     def setup_extension_token(self, token_name, ext_name, ext_version,
                               ext_vendor, ext_urn_id):
         """Handle setting up a single extension token.

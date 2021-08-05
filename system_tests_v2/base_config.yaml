@@ -1,0 +1,64 @@
+# Valid config file
+# Fill in fields marked with '???'
+
+test:
+  teardown_installation: true                              # Affects test_cse_server.py.
+                                                           #   if true, delete all installation entities (even on test failure).
+                                                           #   if false, do not delete installation entities (even on test success).
+                                                           #   if this key is omitted, defaults to true.
+  teardown_clusters: true                                  # Affects test_cse_client.py.
+                                                           #   if true, delete test cluster (env.TEST_CLUSTER_NAME) on test failure.
+                                                           #   if false, do not delete test cluster on test failure.
+                                                           #   if this key is omitted, defaults to true.
+                                                           # Successful client tests will not leave clusters up.
+  test_all_templates: true                                 # Affects test_cse_client.py.
+                                                           #   if true, tests cluster deployment on all templates found.
+                                                           #   if false, tests cluster deployment only for first template found.
+                                                           #   if this key is omitted, defaults to false.
+  test_templates: "???"                                    # Tests will only create these templates if test_all_templates is set to false
+                                                           #   format -> "template_1_name:template_1_revision,template_2_name:template_2_revision"
+  upgrade_template_repo_url: '???'                         #
+  network: '???'                                           # org network within @vdc that will be used during testing
+                                                           #   Should have outbound access to the public internet
+  org: '???'                                               # vCD org where all the test will be run
+  storage_profile: '???'                                   # name of the storage profile to use while creating clusters on this org vdc
+  vdc: '???'                                               # Org VDC powering the org
+
+mqtt:
+  verify_ssl: false
+
+vcd:
+  host: '???'
+  log: true
+  password: '???'
+  port: 443
+  username: '???'
+  verify: false
+
+vcs:
+- name: '???'
+  password: '???'
+  username: '???'
+  verify: false
+
+service:
+  enforce_authorization: false
+  processors: 5
+  log_wire: false
+  telemetry:
+    enable: false
+  legacy_mode: false
+
+broker:
+  catalog: cse                          # public shared catalog within org where the template will be published
+  default_template_name: photon-v2_k8-1.14_weave-2.5.2
+                                        # name of the default template to use if none is specified
+  default_template_revision: 4          # revision of the default template to use if none is specified
+  ip_allocation_mode: pool              # dhcp or pool
+  network: '???'                        # org network within @vdc that will be used during the install process to build the template
+                                        #   Should have outbound access to the public internet
+                                        #   CSE appliance doesn't need to be connected to this network
+  org: '???'                            # vCD org that contains the shared catalog where the master templates will be stored
+  remote_template_cookbook_url: http://raw.githubusercontent.com/vmware/container-service-extension-templates/master/template_v2.yaml
+  storage_profile: '*'                  # name of the storage profile to use when creating the temporary vApp used to build the template
+  vdc: '???'                            # VDC within @org that will be used during the install process to build the template
