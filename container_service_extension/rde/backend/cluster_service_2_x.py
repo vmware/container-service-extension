@@ -908,17 +908,6 @@ class ClusterService(abstract_broker.AbstractBroker):
             sysadmin_client_v36 = self.context.get_sysadmin_client(
                 api_version=DEFAULT_API_VERSION)
 
-            expose_ip = ''
-            try:
-                expose_ip = nw_exp_helper.get_nsxt_external_ip(
-                    client=sysadmin_client_v36,
-                    org_name=org.get_name(),
-                    ovdc_name=vdc.name,
-                    network_name=network_name
-                )
-            except Exception as err:
-                LOGGER.debug(f"Error on getting nsxt external ip: {err}")
-
             msg = f"Adding control plane node for '{cluster_name}' ({cluster_id})"  # noqa: E501
             LOGGER.debug(msg)
             self._update_task(BehaviorTaskStatus.RUNNING, message=msg)
@@ -937,35 +926,14 @@ class ClusterService(abstract_broker.AbstractBroker):
                     storage_profile=control_plane_storage_profile,
                     ssh_key=ssh_key,
                     sizing_class_name=control_plane_sizing_class,
-                    expose_ip=expose_ip)
+                    expose=expose,
+                    cluster_name=cluster_name,
+                    cluster_id=cluster_id
+                )
             except Exception as err:
                 LOGGER.error(err, exc_info=True)
                 raise exceptions.ControlPlaneNodeCreationError(
                     f"Error adding control plane node: {err}")
-
-            control_plane_ip = _get_control_plane_ip(
-                sysadmin_client_v36, vapp)
-
-            # Handle exposing cluster
-            # TODO: create only DNAT with already generated
-            #  nsxt_external_ip
-            if expose:
-                try:
-                    expose_ip = nw_exp_helper.expose_cluster(
-                        client=self.context.client,
-                        org_name=org_name,
-                        ovdc_name=ovdc_name,
-                        network_name=network_name,
-                        cluster_name=cluster_name,
-                        cluster_id=cluster_id,
-                        internal_ip=control_plane_ip)
-                    if expose_ip:
-                        control_plane_ip = expose_ip
-                except Exception as err:
-                    LOGGER.error(
-                        f"Exposing cluster failed: {str(err)}", exc_info=True
-                    )
-                    expose_ip = ''
 
             msg = f"Creating {num_workers} node(s) for cluster " \
                   f"'{cluster_name}' ({cluster_id})"
@@ -2469,19 +2437,22 @@ def _add_nodes(sysadmin_client, num_nodes, node_type, org, vdc, vapp,
 def _add_control_plane_nodes(sysadmin_client, num_nodes, org, vdc, vapp,
                              catalog_name, template, network_name,
                              storage_profile=None, ssh_key=None,
-                             sizing_class_name=None, expose_ip=''):
+                             sizing_class_name=None, expose=False,
+                             cluster_name=None, cluster_id=None):
     vcd_utils.raise_error_if_user_not_from_system_org(sysadmin_client)
 
     if num_nodes > 0:
         templated_script = get_cluster_script_file_contents(
             ClusterScriptFile.CONTROL_PLANE_NEW, ClusterScriptFile.VERSION_2_X)
 
+        # Get template with no expose_ip; expose_ip will be computed
+        # later when control_plane internal ip is computed below.
         cust_script = templated_script.format(
             cluster_kind=template[LocalTemplateKey.KIND],
             k8s_version=template[LocalTemplateKey.KUBERNETES_VERSION],
             cni_version=template[LocalTemplateKey.CNI_VERSION],
             ssh_key=ssh_key if ssh_key else '',
-            expose_ip=expose_ip
+            expose_ip=''
         )
 
         specs = []
@@ -2544,7 +2515,7 @@ def _add_control_plane_nodes(sysadmin_client, num_nodes, org, vdc, vapp,
                     spec['storage_profile'] = storage_profile
                 specs.append(spec)
 
-            task = vapp.add_vms(specs, power_on=False)
+            task = vapp.add_vms(specs, power_on=False, deploy=False)
             sysadmin_client.get_task_monitor().wait_for_status(
                 task,
                 callback=wait_for_adding_control_plane_vm_to_vapp
@@ -2555,6 +2526,37 @@ def _add_control_plane_nodes(sysadmin_client, num_nodes, org, vdc, vapp,
                 vm_name = spec['target_vm_name']
                 vm_resource = vapp.get_vm(vm_name)
                 vm = vcd_vm.VM(sysadmin_client, resource=vm_resource)
+                # Handle exposing cluster
+                expose_ip = ''
+                if expose:
+                    try:
+                        expose_ip = nw_exp_helper.expose_cluster(
+                            client=sysadmin_client,
+                            org_name=org_name,
+                            ovdc_name=vdc.name,
+                            network_name=network_name,
+                            cluster_name=cluster_name,
+                            cluster_id=cluster_id,
+                            internal_ip=vapp.get_primary_ip(vm_name=vm_name))
+                    except Exception as err:
+                        LOGGER.error(f"Exposing cluster failed: {str(err)}", exc_info=True)  # noqa: E501
+                        expose_ip = ''
+
+                cust_script = templated_script.format(
+                    cluster_kind=template[LocalTemplateKey.KIND],
+                    k8s_version=template[LocalTemplateKey.KUBERNETES_VERSION],
+                    cni_version=template[LocalTemplateKey.CNI_VERSION],
+                    ssh_key=ssh_key if ssh_key else '',
+                    expose_ip=expose_ip
+                )
+                task = vm.update_guest_customization_section(
+                    enabled=True,
+                    customization_script=cust_script)
+
+                sysadmin_client.get_task_monitor().wait_for_status(
+                    task,
+                    callback=wait_for_update_customization
+                )
                 vm.reload()
                 vapp.reload()
                 task = vm.power_on()
@@ -2702,6 +2704,12 @@ def _join_cluster(sysadmin_client: vcd_client.Client, vapp, target_nodes=None):
         LOGGER.error(err, exc_info=True)
         raise exceptions.ClusterJoiningError(
             f"Couldn't join cluster: {str(err)}")
+
+
+def wait_for_update_customization(message, exception=None):
+    LOGGER.debug(f"waiting for control plane add vm to vapp, status: {message}")  # noqa: E501
+    if exception is not None:
+        LOGGER.error(f"exception: {str(exception)}")
 
 
 def wait_for_adding_control_plane_vm_to_vapp(message, exception=None):
