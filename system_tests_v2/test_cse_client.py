@@ -156,7 +156,6 @@ def cse_server():
         PYTEST_LOGGER.debug("Killed CSE server")
     except OSError as e:
         PYTEST_LOGGER.error(f"Failed to kill CSE server {e}")
-        pass
 
 
 @pytest.fixture
@@ -516,7 +515,7 @@ def test_0020_vcd_cse_system_info(vcd_cluster_admin):
                                       result.output)
 
 
-def test_0021_vcd_ovdc_enable(vcd_sys_admin):
+def test_0020_vcd_ovdc_enable(vcd_sys_admin):
     """Test ovdc enable operation.
 
     commands:
@@ -636,7 +635,7 @@ def generate_cluster_apply_tests(test_users=None):
         None, None, 'INVALID-NETWORK',
         None, None, env.SYS_ADMIN_TEST_CLUSTER_NAME))]
 )
-def test_0050_vcd_cse_system_toggle(config, delete_test_clusters, test_runner_username, test_case):
+def test_0030_vcd_cse_system_toggle(config, delete_test_clusters, test_runner_username, test_case):
     """Test `vcd cse system ...` commands.
 
     Test that on disabling CSE, cluster deployments are no longer
@@ -736,7 +735,7 @@ def construct_apply_param(test_case_parameters):
 
 
 @pytest.mark.parametrize('test_runner_username,test_case,expected_phase', generate_cluster_apply_tests())  # noqa: E501
-def test_0070_vcd_cse_cluster_apply(config, test_runner_username, test_case, expected_phase):  # noqa: E501
+def test_0040_vcd_cse_cluster_apply(config, test_runner_username, test_case, expected_phase):  # noqa: E501
     """Test 'vcd cse cluster create ...' command for various cse users.
 
     Test cluster creation from different persona's- sys_admin, org_admin
@@ -853,7 +852,7 @@ def validate_if_node_not_present(node_name):
 @pytest.mark.parametrize('test_runner_username', [env.SYS_ADMIN_NAME,
                                                   env.CLUSTER_AUTHOR_NAME,
                                                   env.CLUSTER_ADMIN_NAME])
-def test_0070_vcd_cse_delete_nfs(test_runner_username):
+def test_0050_vcd_cse_delete_nfs(test_runner_username):
     """vcd cse cluster delete-nfs <CLUSTER_NAME> <NFS_NODE_NAME>"""
 
     cluster_name = env.USERNAME_TO_CLUSTER_NAME[test_runner_username]
@@ -898,7 +897,7 @@ def test_0070_vcd_cse_delete_nfs(test_runner_username):
 @pytest.mark.parametrize('test_runner_username', [env.SYS_ADMIN_NAME,
                                                   env.CLUSTER_AUTHOR_NAME,
                                                   env.CLUSTER_AUTHOR_NAME])
-def test_0080_vcd_cse_cluster_list(test_runner_username):
+def test_0060_vcd_cse_cluster_list(test_runner_username):
     cmd_binder = collections.namedtuple('UserCmdBinder',
                                         'cmd exit_code validate_output_func '
                                         'test_user')
@@ -918,7 +917,7 @@ def test_0080_vcd_cse_cluster_list(test_runner_username):
 @pytest.mark.parametrize('test_runner_username', [env.SYS_ADMIN_NAME,
                                                   env.CLUSTER_AUTHOR_NAME,
                                                   env.CLUSTER_ADMIN_NAME])
-def test_0090_vcd_cse_cluster_info(test_runner_username):
+def test_0070_vcd_cse_cluster_info(test_runner_username):
     cmd_binder = collections.namedtuple('UserCmdBinder',
                                         'cmd exit_code validate_output_func '
                                         'test_user')
@@ -939,7 +938,7 @@ def test_0090_vcd_cse_cluster_info(test_runner_username):
 @pytest.mark.parametrize('test_runner_username', [env.SYS_ADMIN_NAME,
                                                   env.CLUSTER_AUTHOR_NAME,
                                                   env.CLUSTER_ADMIN_NAME])
-def test_0100_vcd_cse_cluster_config(test_runner_username):
+def test_0080_vcd_cse_cluster_config(test_runner_username):
     cmd_binder = collections.namedtuple('UserCmdBinder',
                                         'cmd exit_code validate_output_func '
                                         'test_user')
@@ -995,7 +994,7 @@ def generate_validate_node_count_func(expected_nodes):
     return validator
 
 
-def test_0130_vcd_cse_cluster_delete(config):
+def test_0090_vcd_cse_cluster_delete(config):
     """Test 'vcd cse cluster delete ...' command for various cse users.
 
     Cluster delete operation on the above create clusters operations-
@@ -1052,7 +1051,7 @@ def test_0130_vcd_cse_cluster_delete(config):
             f"Cluster {cluster_name} exists when it should not"
 
 
-def test_0021_vcd_ovdc_disable(vcd_sys_admin):
+def test_0100_vcd_ovdc_disable(vcd_sys_admin):
     """Test ovdc enable operation.
 
     commands:
