@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 
 catch() {{
-   vmtoolsd --cmd "info-set post_customization_script_execution_status $?"
+   vmtoolsd --cmd "info-set guestinfo.post_customization_script_execution_status $?"
    error_message="$(date) $(caller): $BASH_COMMAND"
    echo "$error_message" &>> /var/log/cse/customization/error.log
-   vmtoolsd --cmd "info-set post_customization_script_execution_failure_reason $error_message"
+   vmtoolsd --cmd "info-set guestinfo.post_customization_script_execution_failure_reason $error_message"
 }}
 
 mkdir -p /var/log/cse/customization

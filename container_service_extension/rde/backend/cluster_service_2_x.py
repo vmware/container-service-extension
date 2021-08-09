@@ -25,6 +25,7 @@ from container_service_extension.common.constants.server_constants import CSE_CL
 from container_service_extension.common.constants.server_constants import DefEntityOperation  # noqa: E501
 from container_service_extension.common.constants.server_constants import DefEntityOperationStatus  # noqa: E501
 from container_service_extension.common.constants.server_constants import DefEntityPhase  # noqa: E501
+from container_service_extension.common.constants.server_constants import KUBEADM_JOIN_INFO  # noqa: E501
 from container_service_extension.common.constants.server_constants import LocalTemplateKey  # noqa: E501
 from container_service_extension.common.constants.server_constants import NodeType  # noqa: E501
 from container_service_extension.common.constants.server_constants import PostCustomizationPhase  # noqa: E501
@@ -957,14 +958,11 @@ class ClusterService(abstract_broker.AbstractBroker):
                 raise exceptions.WorkerNodeCreationError(
                     f"Error creating worker node: {err}")
 
-            msg = f"Adding {num_workers} node(s) to cluster " \
+            msg = f"Added {num_workers} node(s) to cluster " \
                   f"'{cluster_name}' ({cluster_id})"
             LOGGER.debug(msg)
             self._update_task(BehaviorTaskStatus.RUNNING, message=msg)
             vapp.reload()
-            # TODO: Replace this line
-            #  Use the join info from control plane vm
-            _join_cluster(sysadmin_client_v36, vapp)
 
             if nfs_count > 0:
                 msg = f"Creating {nfs_count} NFS nodes for cluster " \
@@ -1372,7 +1370,12 @@ class ClusterService(abstract_broker.AbstractBroker):
                       f"adding to cluster '{cluster_name}' ({cluster_id})"
                 LOGGER.debug(msg)
                 self._update_task(BehaviorTaskStatus.RUNNING, message=msg)
-                worker_nodes = _add_nodes(
+
+                msg = f"Adding {num_workers_to_add} node(s) to cluster " \
+                    f"{cluster_name}({cluster_id})"
+                self._update_task(BehaviorTaskStatus.RUNNING, message=msg)
+
+                _add_nodes(
                     sysadmin_client_v36,
                     num_nodes=num_workers_to_add,
                     node_type=NodeType.WORKER,
@@ -1384,17 +1387,9 @@ class ClusterService(abstract_broker.AbstractBroker):
                     network_name=network_name,
                     storage_profile=worker_storage_profile,
                     ssh_key=ssh_key,
-                    sizing_class_name=worker_sizing_class)
-                msg = f"Adding {num_workers_to_add} node(s) to cluster " \
-                      f"{cluster_name}({cluster_id})"
-                self._update_task(BehaviorTaskStatus.RUNNING, message=msg)
-                target_nodes = []
-                for spec in worker_nodes['specs']:
-                    target_nodes.append(spec['target_vm_name'])
-                vapp.reload()
-                _join_cluster(sysadmin_client_v36,
-                              vapp,
-                              target_nodes=target_nodes)
+                    sizing_class_name=worker_sizing_class
+                )
+
                 msg = f"Added {num_workers_to_add} node(s) to cluster " \
                       f"{cluster_name}({cluster_id})"
                 self._update_task(BehaviorTaskStatus.RUNNING, message=msg)
@@ -2306,18 +2301,23 @@ def _add_nodes(sysadmin_client, num_nodes, node_type, org, vdc, vapp,
     vcd_utils.raise_error_if_user_not_from_system_org(sysadmin_client)
 
     if num_nodes > 0:
+
         specs = []
         try:
-            # DEV NOTE: With api v33.0 and onwards, get_catalog operation will fail  # noqa: E501
-            # for non admin users of an an org which is not hosting the catalog,  # noqa: E501
-            # even if the catalog is explicitly shared with the org in question.  # noqa: E501
-            # This happens because for api v 33.0 and onwards, the Org XML no
-            # longer returns the href to catalogs accessible to the org, and typed  # noqa: E501
-            # queries hide the catalog link from non admin users.
-            # As a workaround, we will use a sys admin client to get the href and  # noqa: E501
-            # pass it forward. Do note that the catalog itself can still be
-            # accessed by these non admin users, just that they can't find by the  # noqa: E501
-            # href on their own.
+
+            control_plane_join_cmd = _get_join_cmd(
+                sysadmin_client=sysadmin_client,
+                vapp=vapp
+            )
+
+            LOGGER.debug(f"control_plane_join_cmd={control_plane_join_cmd}")
+            templated_script = get_cluster_script_file_contents(
+                ClusterScriptFile.NODE, ClusterScriptFile.VERSION_2_X)
+
+            cust_script = templated_script.format(
+                ssh_key=ssh_key if ssh_key else '',
+                kubeadm_join_cmd=control_plane_join_cmd
+            )
 
             org_name = org.get_name()
             org_resource = sysadmin_client.get_org_by_name(org_name)
@@ -2351,17 +2351,6 @@ def _add_nodes(sysadmin_client, num_nodes, node_type, org, vdc, vapp,
                     raise Exception(msg)
                 LOGGER.debug(f"Found sizing policy with name {sizing_class_name} on the VDC {vdc_resource.get('name')}")  # noqa: E501
 
-            cust_script = None
-            if ssh_key is not None:
-                cust_script = \
-                    "#!/usr/bin/env bash\n" \
-                    "if [ x$1=x\"postcustomization\" ];\n" \
-                    "then\n" \
-                    "mkdir -p /root/.ssh\n" \
-                    f"echo '{ssh_key}' >> /root/.ssh/authorized_keys\n" \
-                    "chmod -R go-rwx /root/.ssh\n" \
-                    "fi"
-
             vapp.reload()
             for n in range(num_nodes):
                 while True:
@@ -2389,17 +2378,34 @@ def _add_nodes(sysadmin_client, num_nodes, node_type, org, vdc, vapp,
                 specs.append(spec)
 
             task = vapp.add_vms(specs, power_on=False)
-            sysadmin_client.get_task_monitor().wait_for_status(task)
+            sysadmin_client.get_task_monitor().wait_for_status(
+                task,
+                callback=wait_for_adding_worker_vm_to_vapp
+            )
             vapp.reload()
 
             for spec in specs:
                 vm_name = spec['target_vm_name']
                 vm_resource = vapp.get_vm(vm_name)
                 vm = vcd_vm.VM(sysadmin_client, resource=vm_resource)
-
                 task = vm.power_on()
-                sysadmin_client.get_task_monitor().wait_for_status(task)
+                sysadmin_client.get_task_monitor().wait_for_status(
+                    task,
+                    callback=wait_for_vapp_power_on
+                )
                 vapp.reload()
+
+                vcd_utils.wait_for_completion_of_post_customization_step(
+                    vm,
+                    customization_phase=PostCustomizationPhase.STORE_SSH_KEY.value,  # noqa: E501
+                    logger=LOGGER
+                )
+
+                vcd_utils.wait_for_completion_of_post_customization_step(
+                    vm,
+                    customization_phase=PostCustomizationPhase.KUBEADM_JOIN.value,  # noqa: E501
+                    logger=LOGGER
+                )
 
                 if node_type == NodeType.NFS:
                     LOGGER.debug(f"Enabling NFS server on {vm_name}")
@@ -2706,22 +2712,38 @@ def _join_cluster(sysadmin_client: vcd_client.Client, vapp, target_nodes=None):
             f"Couldn't join cluster: {str(err)}")
 
 
+def _get_join_cmd(sysadmin_client: vcd_client.Client, vapp):
+    vcd_utils.raise_error_if_user_not_from_system_org(sysadmin_client)
+    node_names = _get_node_names(vapp, NodeType.CONTROL_PLANE)
+    if not node_names:
+        raise exceptions.ClusterJoiningError("Join cluster failure: no control plane node found")   # noqa: E501
+
+    vm_resource = vapp.get_vm(node_names[0])
+    controle_plane_vm = vcd_vm.VM(sysadmin_client, resource=vm_resource)
+    control_plane_join_cmd: str = vcd_utils.get_vm_extra_config_element(controle_plane_vm, KUBEADM_JOIN_INFO)  # noqa: E501
+
+    if not control_plane_join_cmd:
+        raise exceptions.ClusterJoiningError("Join cluster failure: join info not found in control plane node")   # noqa: E501
+    print(f"join cmd={control_plane_join_cmd}")
+    return control_plane_join_cmd
+
+
 def wait_for_update_customization(message, exception=None):
     LOGGER.debug(f"waiting for control plane add vm to vapp, status: {message}")  # noqa: E501
     if exception is not None:
         LOGGER.error(f"exception: {str(exception)}")
 
 
-def wait_for_adding_control_plane_vm_to_vapp(message, exception=None):
-    LOGGER.debug(f"waiting for control plane add vm to vapp, status: {message}")  # noqa: E501
-    if exception is not None:
-        LOGGER.error(f"exception: {str(exception)}")
+def wait_for_adding_control_plane_vm_to_vapp(task):
+    LOGGER.debug(f"waiting for control plane add vm to vapp, status: {task.get('status').lower()}")  # noqa: E501
 
 
-def wait_for_vapp_power_on(message, exception=None):
-    LOGGER.debug(f"waiting for control plane vapp power on, status: {message}")
-    if exception is not None:
-        LOGGER.error(f"exception: {str(exception)}")
+def wait_for_adding_worker_vm_to_vapp(task):
+    LOGGER.debug(f"waiting for add worker vm to vapp, status: {task.get('status').lower()}")  # noqa: E501
+
+
+def wait_for_vapp_power_on(task):
+    LOGGER.debug(f"waiting for vapp power on, status: {task.get('status').lower()}")  # noqa: E501
 
 
 def _wait_for_tools_ready_callback(message, exception=None):
