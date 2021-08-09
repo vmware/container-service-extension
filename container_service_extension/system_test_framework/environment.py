@@ -495,7 +495,6 @@ def delete_catalog_item(item_name, logger=NULL_LOGGER):
         logger.debug(f"Successfully deleted the catalog item: {item_name}")
     except EntityNotFoundException as e:
         logger.debug(f"Failed to delete catalog item {item_name}: {e}")
-        pass
 
 
 def delete_vapp(vapp_name, vdc_href, logger=NULL_LOGGER):
@@ -508,7 +507,6 @@ def delete_vapp(vapp_name, vdc_href, logger=NULL_LOGGER):
         logger.debug(f"Successfully deleted the vapp {vapp_name}.")
     except EntityNotFoundException as e:
         logger.debug(f"Failed to vapp {vapp_name}: {e}")
-        pass
 
 
 def delete_catalog(catalog_name=None, logger=NULL_LOGGER):
@@ -526,7 +524,6 @@ def delete_catalog(catalog_name=None, logger=NULL_LOGGER):
         logger.debug(f"Successfully deleted the catalog {catalog_name}")
     except EntityNotFoundException:
         logger.debug(f"Failed to delete catalog {catalog_name}")
-        pass
 
 
 # TODO remove after removing legacy mode
@@ -556,7 +553,6 @@ def unregister_cse_in_mqtt(logger=NULL_LOGGER):
         logger.debug("Successfully unregistered CSE as MQTT extension")
     except Exception as e:
         logger.debug(f"Failed to unregister CSE from MQTT: {e}")
-        pass
 
 
 def publish_right_bundle_to_deployment_org(logger=NULL_LOGGER):
@@ -573,7 +569,6 @@ def publish_right_bundle_to_deployment_org(logger=NULL_LOGGER):
     except Exception as e:
         logger.debug(f"Failed to publish native right bundle "
                      f"to org {TEST_ORG}: {e}")
-        pass
 
 
 def assign_native_rights(role_name, right_list=None, logger=NULL_LOGGER):
@@ -592,7 +587,6 @@ def assign_native_rights(role_name, right_list=None, logger=NULL_LOGGER):
     except Exception as e:
         logger.debug(f"Failed to assign native rights "
                      f"{right_list} to role {role_name}: {e} ")
-        pass
 
 
 def cleanup_rde_artifacts(logger=NULL_LOGGER):
@@ -626,7 +620,6 @@ def cleanup_rde_artifacts(logger=NULL_LOGGER):
                     logger.debug(f"Deleted interface: {i.name}")
     except Exception as e:
         logger.error(f"Failed to clean up RDE artifacts: {e}")
-        pass
 
 
 def cleanup_roles_and_users(logger=NULL_LOGGER):
@@ -649,8 +642,9 @@ def cleanup_roles_and_users(logger=NULL_LOGGER):
                          f"role {user_and_role[1]}")
             org.delete_user(user_and_role[0])
             org.delete_role(user_and_role[1])
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug("Exception occurred when "
+                         f"cleaning up roles and users: {e}")
 
 
 def catalog_item_exists(catalog_item, catalog_name=None, logger=NULL_LOGGER):
