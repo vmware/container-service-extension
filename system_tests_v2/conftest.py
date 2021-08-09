@@ -69,7 +69,6 @@ def vcd_users():
                     env.CLUSTER_AUTHOR_PASSWORD,
                     env.CLUSTER_AUTHOR_ROLE_NAME,
                     logger=pytest_logger.PYTEST_LOGGER)
-    yield
 
 
 @pytest.fixture
@@ -96,7 +95,7 @@ def config():
 def test_config():
     """Fixture to provide 'test' section of test config to individual tests."""
     config = testutils.yaml_to_dict(env.BASE_CONFIG_FILEPATH)
-    yield config['test']
+    return config['test']
 
 
 @pytest.fixture
