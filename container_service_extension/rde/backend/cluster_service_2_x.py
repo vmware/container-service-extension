@@ -941,18 +941,18 @@ class ClusterService(abstract_broker.AbstractBroker):
             LOGGER.debug(msg)
             self._update_task(BehaviorTaskStatus.RUNNING, message=msg)
             try:
-                _add_nodes(sysadmin_client_v36,
-                           num_nodes=num_workers,
-                           node_type=NodeType.WORKER,
-                           org=org,
-                           vdc=vdc,
-                           vapp=vapp,
-                           catalog_name=catalog_name,
-                           template=template,
-                           network_name=network_name,
-                           storage_profile=worker_storage_profile,
-                           ssh_key=ssh_key,
-                           sizing_class_name=worker_sizing_class)
+                _add_worker_nodes(
+                    sysadmin_client_v36,
+                    num_nodes=num_workers,
+                    org=org,
+                    vdc=vdc,
+                    vapp=vapp,
+                    catalog_name=catalog_name,
+                    template=template,
+                    network_name=network_name,
+                    storage_profile=worker_storage_profile,
+                    ssh_key=ssh_key,
+                    sizing_class_name=worker_sizing_class)
             except Exception as err:
                 LOGGER.error(err, exc_info=True)
                 raise exceptions.WorkerNodeCreationError(
@@ -971,18 +971,18 @@ class ClusterService(abstract_broker.AbstractBroker):
                 # TODO should this task be commented out?
                 self._update_task(BehaviorTaskStatus.RUNNING, message=msg)
                 try:
-                    _add_nodes(sysadmin_client_v36,
-                               num_nodes=nfs_count,
-                               node_type=NodeType.NFS,
-                               org=org,
-                               vdc=vdc,
-                               vapp=vapp,
-                               catalog_name=catalog_name,
-                               template=template,
-                               network_name=network_name,
-                               storage_profile=nfs_storage_profile,
-                               ssh_key=ssh_key,
-                               sizing_class_name=nfs_sizing_class)
+                    _add_nfs_nodes(
+                        sysadmin_client_v36,
+                        num_nodes=nfs_count,
+                        org=org,
+                        vdc=vdc,
+                        vapp=vapp,
+                        catalog_name=catalog_name,
+                        template=template,
+                        network_name=network_name,
+                        storage_profile=nfs_storage_profile,
+                        ssh_key=ssh_key,
+                        sizing_class_name=nfs_sizing_class)
                 except Exception as err:
                     LOGGER.error(err, exc_info=True)
                     raise exceptions.NFSNodeCreationError(
@@ -1375,10 +1375,9 @@ class ClusterService(abstract_broker.AbstractBroker):
                     f"{cluster_name}({cluster_id})"
                 self._update_task(BehaviorTaskStatus.RUNNING, message=msg)
 
-                _add_nodes(
+                _add_worker_nodes(
                     sysadmin_client_v36,
                     num_nodes=num_workers_to_add,
-                    node_type=NodeType.WORKER,
                     org=org,
                     vdc=ovdc,
                     vapp=vapp,
@@ -1399,18 +1398,19 @@ class ClusterService(abstract_broker.AbstractBroker):
                       f"for cluster '{cluster_name}' ({cluster_id})"
                 LOGGER.debug(msg)
                 self._update_task(BehaviorTaskStatus.RUNNING, message=msg)
-                _add_nodes(sysadmin_client_v36,
-                           num_nodes=num_nfs_to_add,
-                           node_type=NodeType.NFS,
-                           org=org,
-                           vdc=ovdc,
-                           vapp=vapp,
-                           catalog_name=catalog_name,
-                           template=template,
-                           network_name=network_name,
-                           storage_profile=nfs_storage_profile,
-                           ssh_key=ssh_key,
-                           sizing_class_name=nfs_sizing_class)
+                _add_nfs_nodes(
+                    sysadmin_client_v36,
+                    num_nodes=num_nfs_to_add,
+                    org=org,
+                    vdc=ovdc,
+                    vapp=vapp,
+                    catalog_name=catalog_name,
+                    template=template,
+                    network_name=network_name,
+                    storage_profile=nfs_storage_profile,
+                    ssh_key=ssh_key,
+                    sizing_class_name=nfs_sizing_class
+                )
                 msg = f"Created {num_nfs_to_add} nfs_node(s) for cluster " \
                       f"'{cluster_name}' ({cluster_id})"
                 self._update_task(BehaviorTaskStatus.RUNNING, message=msg)
@@ -2295,151 +2295,6 @@ def _get_template(name=None, revision=None):
     raise Exception(f"Template '{name}' at revision {revision} not found.")
 
 
-def _add_nodes(sysadmin_client, num_nodes, node_type, org, vdc, vapp,
-               catalog_name, template, network_name, storage_profile=None,
-               ssh_key=None, sizing_class_name=None):
-    vcd_utils.raise_error_if_user_not_from_system_org(sysadmin_client)
-
-    if num_nodes > 0:
-
-        specs = []
-        try:
-
-            control_plane_join_cmd = _get_join_cmd(
-                sysadmin_client=sysadmin_client,
-                vapp=vapp
-            )
-
-            LOGGER.debug(f"control_plane_join_cmd={control_plane_join_cmd}")
-            templated_script = get_cluster_script_file_contents(
-                ClusterScriptFile.NODE, ClusterScriptFile.VERSION_2_X)
-
-            cust_script = templated_script.format(
-                ssh_key=ssh_key if ssh_key else '',
-                kubeadm_join_cmd=control_plane_join_cmd
-            )
-
-            org_name = org.get_name()
-            org_resource = sysadmin_client.get_org_by_name(org_name)
-            org_sa = vcd_org.Org(sysadmin_client, resource=org_resource)
-            catalog_item = org_sa.get_catalog_item(
-                catalog_name, template[LocalTemplateKey.CATALOG_ITEM_NAME])
-            catalog_item_href = catalog_item.Entity.get('href')
-
-            source_vapp = vcd_vapp.VApp(sysadmin_client, href=catalog_item_href)  # noqa: E501
-            source_vm = source_vapp.get_all_vms()[0].get('name')
-            if storage_profile is not None:
-                storage_profile = vdc.get_storage_profile(storage_profile)
-
-            config = server_utils.get_server_runtime_config()
-            cpm = compute_policy_manager.ComputePolicyManager(sysadmin_client,
-                                                              log_wire=utils.str_to_bool(config['service']['log_wire']))  # noqa: E501
-            sizing_class_href = None
-            if sizing_class_name:
-                vdc_resource = vdc.get_resource()
-                for policy in cpm.list_vdc_sizing_policies_on_vdc(vdc_resource.get('id')):  # noqa: E501
-                    if policy['name'] == sizing_class_name:
-                        if not sizing_class_href:
-                            sizing_class_href = policy['href']
-                        else:
-                            msg = f"Duplicate sizing policies with the name {sizing_class_name}"  # noqa: E501
-                            LOGGER.error(msg)
-                            raise Exception(msg)
-                if not sizing_class_href:
-                    msg = f"No sizing policy with the name {sizing_class_name} exists on the VDC"  # noqa: E501
-                    LOGGER.error(msg)
-                    raise Exception(msg)
-                LOGGER.debug(f"Found sizing policy with name {sizing_class_name} on the VDC {vdc_resource.get('name')}")  # noqa: E501
-
-            vapp.reload()
-            for n in range(num_nodes):
-                while True:
-                    name = f"{node_type}-{''.join(random.choices(string.ascii_lowercase + string.digits, k=4))}"  # noqa: E501
-                    try:
-                        vapp.get_vm(name)
-                    except Exception:
-                        break
-                spec = {
-                    'source_vm_name': source_vm,
-                    'vapp': source_vapp.resource,
-                    'target_vm_name': name,
-                    'hostname': name,
-                    'password_auto': True,
-                    'network': network_name,
-                    'ip_allocation_mode': 'pool'
-                }
-                if sizing_class_href:
-                    spec['sizing_policy_href'] = sizing_class_href
-                    spec['placement_policy_href'] = config['placement_policy_hrefs'][template[LocalTemplateKey.KIND]]  # noqa: E501
-                if cust_script is not None:
-                    spec['cust_script'] = cust_script
-                if storage_profile is not None:
-                    spec['storage_profile'] = storage_profile
-                specs.append(spec)
-
-            task = vapp.add_vms(specs, power_on=False)
-            sysadmin_client.get_task_monitor().wait_for_status(
-                task,
-                callback=wait_for_adding_worker_vm_to_vapp
-            )
-            vapp.reload()
-
-            for spec in specs:
-                vm_name = spec['target_vm_name']
-                vm_resource = vapp.get_vm(vm_name)
-                vm = vcd_vm.VM(sysadmin_client, resource=vm_resource)
-                task = vm.power_on()
-                sysadmin_client.get_task_monitor().wait_for_status(
-                    task,
-                    callback=wait_for_vapp_power_on
-                )
-                vapp.reload()
-
-                vcd_utils.wait_for_completion_of_post_customization_step(
-                    vm,
-                    customization_phase=PostCustomizationPhase.STORE_SSH_KEY.value,  # noqa: E501
-                    logger=LOGGER
-                )
-
-                vcd_utils.wait_for_completion_of_post_customization_step(
-                    vm,
-                    customization_phase=PostCustomizationPhase.KUBEADM_JOIN.value,  # noqa: E501
-                    logger=LOGGER
-                )
-
-                if node_type == NodeType.NFS:
-                    LOGGER.debug(f"Enabling NFS server on {vm_name}")
-                    script_filepath = ltm.get_script_filepath(
-                        semver.Version(template[LocalTemplateKey.COOKBOOK_VERSION]),  # noqa: E501
-                        template[LocalTemplateKey.NAME],
-                        template[LocalTemplateKey.REVISION],
-                        TemplateScriptFile.NFSD)
-                    script = utils.read_data_file(script_filepath, logger=LOGGER)  # noqa: E501
-                    exec_results = _execute_script_in_nodes(
-                        sysadmin_client, vapp=vapp, node_names=[vm_name],
-                        script=script)
-                    errors = _get_script_execution_errors(exec_results)
-                    if errors:
-                        raise exceptions.ScriptExecutionError(
-                            f"VM customization script execution failed "
-                            f"on node {vm_name}:{errors}")
-        except Exception as err:
-            LOGGER.error(err, exc_info=True)
-            # TODO: get details of the exception to determine cause of failure,
-            # e.g. not enough resources available.
-            node_list = [entry.get('target_vm_name') for entry in specs]
-            if hasattr(err, 'vcd_error') and err.vcd_error is not None and \
-                    "throwPolicyNotAvailableException" in err.vcd_error.get('stackTrace', ''):  # noqa: E501
-                raise exceptions.NodeCreationError(
-                    node_list,
-                    f"OVDC not enabled for {template[LocalTemplateKey.KIND]}")  # noqa: E501
-
-            raise exceptions.NodeCreationError(node_list, str(err))
-
-        vapp.reload()
-        return {'task': task, 'specs': specs}
-
-
 def _add_control_plane_nodes(sysadmin_client, num_nodes, org, vdc, vapp,
                              catalog_name, template, network_name,
                              storage_profile=None, ssh_key=None,
@@ -2461,74 +2316,30 @@ def _add_control_plane_nodes(sysadmin_client, num_nodes, org, vdc, vapp,
             expose_ip=''
         )
 
-        specs = []
         try:
-            org_name = org.get_name()
-            org_resource = sysadmin_client.get_org_by_name(org_name)
-            org_sa = vcd_org.Org(sysadmin_client, resource=org_resource)
-            catalog_item = org_sa.get_catalog_item(
-                catalog_name, template[LocalTemplateKey.CATALOG_ITEM_NAME])
-            catalog_item_href = catalog_item.Entity.get('href')
+            vm_specs = _get_vm_specifications(
+                client=sysadmin_client,
+                num_nodes=num_nodes,
+                node_type=NodeType.CONTROL_PLANE.value,
+                org=org,
+                vdc=vdc,
+                vapp=vapp,
+                catalog_name=catalog_name,
+                template=template,
+                network_name=network_name,
+                storage_profile=storage_profile,
+                sizing_class_name=sizing_class_name,
+                cust_script=cust_script
+            )
 
-            source_vapp = vcd_vapp.VApp(sysadmin_client, href=catalog_item_href)  # noqa: E501
-            source_vm = source_vapp.get_all_vms()[0].get('name')
-            if storage_profile is not None:
-                storage_profile = vdc.get_storage_profile(storage_profile)
-
-            config = server_utils.get_server_runtime_config()
-            cpm = compute_policy_manager.ComputePolicyManager(sysadmin_client,
-                                                              log_wire=utils.str_to_bool(config['service']['log_wire']))  # noqa: E501
-            sizing_class_href = None
-            if sizing_class_name:
-                vdc_resource = vdc.get_resource()
-                for policy in cpm.list_vdc_sizing_policies_on_vdc(vdc_resource.get('id')):  # noqa: E501
-                    if policy['name'] == sizing_class_name:
-                        if not sizing_class_href:
-                            sizing_class_href = policy['href']
-                        else:
-                            msg = f"Duplicate sizing policies with the name {sizing_class_name}"  # noqa: E501
-                            LOGGER.error(msg)
-                            raise Exception(msg)
-                if not sizing_class_href:
-                    msg = f"No sizing policy with the name {sizing_class_name} exists on the VDC"  # noqa: E501
-                    LOGGER.error(msg)
-                    raise Exception(msg)
-                LOGGER.debug(f"Found sizing policy with name {sizing_class_name} on the VDC {vdc_resource.get('name')}")  # noqa: E501
-
-            vapp.reload()
-            for n in range(num_nodes):
-                while True:
-                    name = f"{NodeType.CONTROL_PLANE}-{''.join(random.choices(string.ascii_lowercase + string.digits, k=4))}"  # noqa: E501
-                    try:
-                        vapp.get_vm(name)
-                    except Exception:
-                        break
-                spec = {
-                    'source_vm_name': source_vm,
-                    'vapp': source_vapp.resource,
-                    'target_vm_name': name,
-                    'hostname': name,
-                    'password_auto': True,
-                    'network': network_name,
-                    'ip_allocation_mode': 'pool'
-                }
-                if sizing_class_href:
-                    spec['sizing_policy_href'] = sizing_class_href
-                    spec['placement_policy_href'] = config['placement_policy_hrefs'][template[LocalTemplateKey.KIND]]  # noqa: E501
-                if cust_script is not None:
-                    spec['cust_script'] = cust_script
-                if storage_profile is not None:
-                    spec['storage_profile'] = storage_profile
-                specs.append(spec)
-
-            task = vapp.add_vms(specs, power_on=False, deploy=False)
+            task = vapp.add_vms(vm_specs, power_on=False, deploy=False)
             sysadmin_client.get_task_monitor().wait_for_status(
                 task,
                 callback=wait_for_adding_control_plane_vm_to_vapp
             )
             vapp.reload()
 
-            for spec in specs:
+            for spec in vm_specs:
                 vm_name = spec['target_vm_name']
                 vm_resource = vapp.get_vm(vm_name)
                 vm = vcd_vm.VM(sysadmin_client, resource=vm_resource)
@@ -2538,7 +2349,7 @@ def _add_control_plane_nodes(sysadmin_client, num_nodes, org, vdc, vapp,
                     try:
                         expose_ip = nw_exp_helper.expose_cluster(
                             client=sysadmin_client,
-                            org_name=org_name,
+                            org_name=org.get_name(),
                             ovdc_name=vdc.name,
                             network_name=network_name,
                             cluster_name=cluster_name,
@@ -2571,24 +2382,24 @@ def _add_control_plane_nodes(sysadmin_client, num_nodes, org, vdc, vapp,
                     callback=wait_for_vapp_power_on
                 )
                 vapp.reload()
-                vcd_utils.wait_for_completion_of_post_customization_step(
+                vcd_utils.wait_for_completion_of_post_customization_procedure(
                     vm,
                     customization_phase=PostCustomizationPhase.STORE_SSH_KEY.value,  # noqa: E501
                     logger=LOGGER
                 )
 
-                vcd_utils.wait_for_completion_of_post_customization_step(
+                vcd_utils.wait_for_completion_of_post_customization_procedure(
                     vm,
                     customization_phase=PostCustomizationPhase.KUBEADM_INIT.value,  # noqa: E501
                     logger=LOGGER
                 )
-                vcd_utils.wait_for_completion_of_post_customization_step(
+                vcd_utils.wait_for_completion_of_post_customization_procedure(
                     vm,
                     customization_phase=PostCustomizationPhase.KUBECTL_APPLY_WEAVE.value,  # noqa: E501
                     logger=LOGGER
                 )
 
-                vcd_utils.wait_for_completion_of_post_customization_step(
+                vcd_utils.wait_for_completion_of_post_customization_procedure(
                     vm,
                     customization_phase=PostCustomizationPhase.KUBEADM_JOIN.value,  # noqa: E501
                     logger=LOGGER
@@ -2596,7 +2407,7 @@ def _add_control_plane_nodes(sysadmin_client, num_nodes, org, vdc, vapp,
 
         except Exception as err:
             LOGGER.error(err, exc_info=True)
-            node_list = [entry.get('target_vm_name') for entry in specs]
+            node_list = [entry.get('target_vm_name') for entry in vm_specs]
             if hasattr(err, 'vcd_error') and err.vcd_error is not None and \
                     "throwPolicyNotAvailableException" in err.vcd_error.get('stackTrace', ''):  # noqa: E501
                 raise exceptions.NodeCreationError(
@@ -2606,7 +2417,171 @@ def _add_control_plane_nodes(sysadmin_client, num_nodes, org, vdc, vapp,
             raise exceptions.NodeCreationError(node_list, str(err))
 
         vapp.reload()
-        return {'task': task, 'specs': specs}
+        return {'task': task, 'specs': vm_specs}
+
+
+def _add_worker_nodes(sysadmin_client, num_nodes, org, vdc, vapp,
+                      catalog_name, template, network_name,
+                      storage_profile=None, ssh_key=None,
+                      sizing_class_name=None):
+    vcd_utils.raise_error_if_user_not_from_system_org(sysadmin_client)
+
+    if num_nodes > 0:
+
+        try:
+
+            control_plane_join_cmd = _get_join_cmd(
+                sysadmin_client=sysadmin_client,
+                vapp=vapp
+            )
+
+            templated_script = get_cluster_script_file_contents(
+                ClusterScriptFile.NODE, ClusterScriptFile.VERSION_2_X)
+
+            cust_script = templated_script.format(
+                ssh_key=ssh_key if ssh_key else '',
+                kubeadm_join_cmd=control_plane_join_cmd
+            )
+
+            vm_specs = _get_vm_specifications(
+                client=sysadmin_client,
+                num_nodes=num_nodes,
+                node_type=NodeType.WORKER.value,
+                org=org,
+                vdc=vdc,
+                vapp=vapp,
+                catalog_name=catalog_name,
+                template=template,
+                network_name=network_name,
+                storage_profile=storage_profile,
+                sizing_class_name=sizing_class_name,
+                cust_script=cust_script
+            )
+
+            task = vapp.add_vms(vm_specs, power_on=False)
+            sysadmin_client.get_task_monitor().wait_for_status(
+                task,
+                callback=wait_for_adding_worker_vm_to_vapp
+            )
+            vapp.reload()
+
+            for spec in vm_specs:
+                vm_name = spec['target_vm_name']
+                vm_resource = vapp.get_vm(vm_name)
+                vm = vcd_vm.VM(sysadmin_client, resource=vm_resource)
+                task = vm.power_on()
+                sysadmin_client.get_task_monitor().wait_for_status(
+                    task,
+                    callback=wait_for_vapp_power_on
+                )
+                vapp.reload()
+
+                vcd_utils.wait_for_completion_of_post_customization_procedure(
+                    vm,
+                    customization_phase=PostCustomizationPhase.STORE_SSH_KEY.value,  # noqa: E501
+                    logger=LOGGER
+                )
+
+                LOGGER.debug(f"worker {vm_name} to join cluster using:\n{control_plane_join_cmd}")  # noqa: E501
+
+                vcd_utils.wait_for_completion_of_post_customization_procedure(
+                    vm,
+                    customization_phase=PostCustomizationPhase.KUBEADM_JOIN.value,  # noqa: E501
+                    logger=LOGGER
+                )
+
+        except Exception as err:
+            LOGGER.error(err, exc_info=True)
+            # TODO: get details of the exception to determine cause of failure,
+            # e.g. not enough resources available.
+            node_list = [entry.get('target_vm_name') for entry in vm_specs]
+            if hasattr(err, 'vcd_error') and err.vcd_error is not None and \
+                    "throwPolicyNotAvailableException" in err.vcd_error.get('stackTrace', ''):  # noqa: E501
+                raise exceptions.NodeCreationError(
+                    node_list,
+                    f"OVDC not enabled for {template[LocalTemplateKey.KIND]}")  # noqa: E501
+
+            raise exceptions.NodeCreationError(node_list, str(err))
+
+        vapp.reload()
+        return {'task': task, 'specs': vm_specs}
+
+
+def _add_nfs_nodes(sysadmin_client, num_nodes, org, vdc, vapp,
+                   catalog_name, template, network_name, storage_profile=None,
+                   ssh_key=None, sizing_class_name=None):
+    vcd_utils.raise_error_if_user_not_from_system_org(sysadmin_client)
+
+    if num_nodes > 0:
+        try:
+            cust_script = None
+            if ssh_key is not None:
+                cust_script = \
+                    "#!/usr/bin/env bash\n" \
+                    "if [ x$1=x\"postcustomization\" ];\n" \
+                    "then\n" \
+                    "mkdir -p /root/.ssh\n" \
+                    f"echo '{ssh_key}' >> /root/.ssh/authorized_keys\n" \
+                    "chmod -R go-rwx /root/.ssh\n" \
+                    "fi"
+            vm_specs = _get_vm_specifications(
+                client=sysadmin_client,
+                num_nodes=num_nodes,
+                node_type=NodeType.NFS.value,
+                org=org,
+                vdc=vdc,
+                vapp=vapp,
+                catalog_name=catalog_name,
+                template=template,
+                network_name=network_name,
+                storage_profile=storage_profile,
+                sizing_class_name=sizing_class_name,
+                cust_script=cust_script
+            )
+            task = vapp.add_vms(vm_specs, power_on=False)
+            sysadmin_client.get_task_monitor().wait_for_status(task)
+            vapp.reload()
+
+            script_filepath = ltm.get_script_filepath(
+                semver.Version(template[LocalTemplateKey.COOKBOOK_VERSION]),  # noqa: E501
+                template[LocalTemplateKey.NAME],
+                template[LocalTemplateKey.REVISION],
+                TemplateScriptFile.NFSD)
+            script = utils.read_data_file(script_filepath, logger=LOGGER)  # noqa: E501
+
+            for spec in vm_specs:
+                vm_name = spec['target_vm_name']
+                vm_resource = vapp.get_vm(vm_name)
+                vm = vcd_vm.VM(sysadmin_client, resource=vm_resource)
+
+                task = vm.power_on()
+                sysadmin_client.get_task_monitor().wait_for_status(task)
+                vapp.reload()
+                LOGGER.debug(f"Enabling NFS server on {vm_name}")
+
+                exec_results = _execute_script_in_nodes(
+                    sysadmin_client, vapp=vapp, node_names=[vm_name],
+                    script=script)
+                errors = _get_script_execution_errors(exec_results)
+                if errors:
+                    raise exceptions.ScriptExecutionError(
+                        f"VM customization script execution failed "
+                        f"on node {vm_name}:{errors}")
+        except Exception as err:
+            LOGGER.error(err, exc_info=True)
+            # TODO: get details of the exception to determine cause of failure,
+            # e.g. not enough resources available.
+            node_list = [entry.get('target_vm_name') for entry in vm_specs]
+            if hasattr(err, 'vcd_error') and err.vcd_error is not None and \
+                    "throwPolicyNotAvailableException" in err.vcd_error.get('stackTrace', ''):  # noqa: E501
+                raise exceptions.NodeCreationError(
+                    node_list,
+                    f"OVDC not enabled for {template[LocalTemplateKey.KIND]}")  # noqa: E501
+
+            raise exceptions.NodeCreationError(node_list, str(err))
+
+        vapp.reload()
+        return {'task': task, 'specs': vm_specs}
 
 
 def _get_node_names(vapp, node_type):
@@ -2660,58 +2635,6 @@ def _init_cluster(sysadmin_client: vcd_client.Client, vapp, cluster_kind,
             f"Couldn't initialize cluster: {str(err)}")
 
 
-def _join_cluster(sysadmin_client: vcd_client.Client, vapp, target_nodes=None):
-    vcd_utils.raise_error_if_user_not_from_system_org(sysadmin_client)
-    try:
-
-        script = """
-                 #!/usr/bin/env bash
-                 kubeadm token create --print-join-command
-            """
-
-        node_names = _get_node_names(vapp, NodeType.CONTROL_PLANE)
-        control_plane_result = _execute_script_in_nodes(sysadmin_client,
-                                                        vapp=vapp,
-                                                        node_names=node_names,
-                                                        script=script)
-        errors = _get_script_execution_errors(control_plane_result)
-        if errors:
-            raise exceptions.ClusterJoiningError(
-                "Join cluster script execution failed on "
-                f"control plane node {node_names}:{errors}")
-        # kubeadm join <ip:port> --token <token> --discovery-token-ca-cert-hash <discovery_token> # noqa: E501
-        join_info = control_plane_result[0][1].content.decode().split()
-
-        templated_script = get_cluster_script_file_contents(
-            ClusterScriptFile.NODE, ClusterScriptFile.VERSION_2_X)
-        script = templated_script.format(
-            ip_port=join_info[2],
-            token=join_info[4],
-            discovery_token_ca_cert_hash=join_info[6])
-
-        node_names = _get_node_names(vapp, NodeType.WORKER)
-        if target_nodes is not None:
-            node_names = [name for name in node_names if name in target_nodes]
-
-        worker_results = _execute_script_in_nodes(sysadmin_client, vapp=vapp,
-                                                  node_names=node_names,
-                                                  script=script)
-        errors = _get_script_execution_errors(worker_results)
-        if errors:
-            raise exceptions.ClusterJoiningError(
-                "Join cluster script execution failed "
-                f"on worker node  {node_names}:{errors}")
-        for result in worker_results:
-            if result[0] != 0:
-                raise exceptions.ClusterJoiningError(
-                    "Couldn't join cluster:\n"
-                    f"{result[2].content.decode()}")
-    except Exception as err:
-        LOGGER.error(err, exc_info=True)
-        raise exceptions.ClusterJoiningError(
-            f"Couldn't join cluster: {str(err)}")
-
-
 def _get_join_cmd(sysadmin_client: vcd_client.Client, vapp):
     vcd_utils.raise_error_if_user_not_from_system_org(sysadmin_client)
     node_names = _get_node_names(vapp, NodeType.CONTROL_PLANE)
@@ -2724,7 +2647,6 @@ def _get_join_cmd(sysadmin_client: vcd_client.Client, vapp):
 
     if not control_plane_join_cmd:
         raise exceptions.ClusterJoiningError("Join cluster failure: join info not found in control plane node")   # noqa: E501
-    print(f"join cmd={control_plane_join_cmd}")
     return control_plane_join_cmd
 
 
@@ -2885,3 +2807,79 @@ def _create_k8s_software_string(software_name: str, software_version: str) -> st
     :rtype: str
     """
     return f"{software_name} {software_version}"
+
+
+def _get_vm_specifications(
+        client,
+        num_nodes,
+        node_type,
+        org,
+        vdc,
+        vapp,
+        catalog_name,
+        template,
+        network_name,
+        storage_profile=None,
+        sizing_class_name=None,
+        cust_script=None):
+    org_name = org.get_name()
+    org_resource = client.get_org_by_name(org_name)
+    org_sa = vcd_org.Org(client, resource=org_resource)
+    catalog_item = org_sa.get_catalog_item(
+        catalog_name, template[LocalTemplateKey.CATALOG_ITEM_NAME])
+    catalog_item_href = catalog_item.Entity.get('href')
+
+    source_vapp = vcd_vapp.VApp(client, href=catalog_item_href)  # noqa: E501
+    source_vm = source_vapp.get_all_vms()[0].get('name')
+    if storage_profile is not None:
+        storage_profile = vdc.get_storage_profile(storage_profile)
+
+    config = server_utils.get_server_runtime_config()
+    cpm = compute_policy_manager.ComputePolicyManager(
+        client,
+        log_wire=utils.str_to_bool(config['service']['log_wire'])
+    )
+    sizing_class_href = None
+    if sizing_class_name:
+        vdc_resource = vdc.get_resource()
+        for policy in cpm.list_vdc_sizing_policies_on_vdc(vdc_resource.get('id')):  # noqa: E501
+            if policy['name'] == sizing_class_name:
+                if not sizing_class_href:
+                    sizing_class_href = policy['href']
+                else:
+                    msg = f"Duplicate sizing policies with the name {sizing_class_name}"  # noqa: E501
+                    LOGGER.error(msg)
+                    raise Exception(msg)
+        if not sizing_class_href:
+            msg = f"No sizing policy with the name {sizing_class_name} exists on the VDC"  # noqa: E501
+            LOGGER.error(msg)
+            raise Exception(msg)
+        LOGGER.debug(f"Found sizing policy with name {sizing_class_name} on the VDC {vdc_resource.get('name')}")  # noqa: E501
+
+    vapp.reload()
+    specs = []
+    for n in range(num_nodes):
+        while True:
+            name = f"{node_type}-{''.join(random.choices(string.ascii_lowercase + string.digits, k=4))}"  # noqa: E501
+            try:
+                vapp.get_vm(name)
+            except Exception:
+                break
+        spec = {
+            'source_vm_name': source_vm,
+            'vapp': source_vapp.resource,
+            'target_vm_name': name,
+            'hostname': name,
+            'password_auto': True,
+            'network': network_name,
+            'ip_allocation_mode': 'pool'
+        }
+        if sizing_class_href:
+            spec['sizing_policy_href'] = sizing_class_href
+            spec['placement_policy_href'] = config['placement_policy_hrefs'][template[LocalTemplateKey.KIND]]  # noqa: E501
+        if cust_script is not None:
+            spec['cust_script'] = cust_script
+        if storage_profile is not None:
+            spec['storage_profile'] = storage_profile
+        specs.append(spec)
+    return specs

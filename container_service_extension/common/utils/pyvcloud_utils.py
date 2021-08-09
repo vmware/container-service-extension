@@ -693,7 +693,7 @@ def get_vm_extra_config_element(vm: VM, element_name: str) -> str:
     return vm_extra_config_elements.get(element_name)
 
 
-def wait_for_completion_of_post_customization_step(
+def wait_for_completion_of_post_customization_procedure(
         vm: VM,
         customization_phase: str,
         timeout=server_constants.DEFAULT_POST_CUSTOMIZATION_TIMEOUT_SEC,

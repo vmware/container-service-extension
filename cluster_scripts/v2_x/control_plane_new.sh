@@ -48,6 +48,9 @@ then
 
     vmtoolsd --cmd "info-set guestinfo.postcustomization.kubectl.apply.weave.status in_progress"
     export kubever=$(kubectl version --client | base64 | tr -d '\n')
+    mkdir -p /root/.kube
+    cp -f /etc/kubernetes/admin.conf /root/.kube/config
+    chown $(id -u):$(id -g) /root/.kube/config
     export KUBECONFIG=/etc/kubernetes/admin.conf
     vmtoolsd --cmd "info-set guestinfo.kubeconfig $(cat /etc/kubernetes/admin.conf)"
 
