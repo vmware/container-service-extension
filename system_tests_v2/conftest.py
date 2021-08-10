@@ -10,7 +10,6 @@ Fixtures defined here can be used without importing.
 import os
 
 import pytest
-
 import system_tests_v2.pytest_logger as pytest_logger
 
 import container_service_extension.system_test_framework.environment as env

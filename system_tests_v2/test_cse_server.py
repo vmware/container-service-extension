@@ -3,7 +3,6 @@
 # SPDX-License-Identifier: BSD-2-Clause
 
 import filecmp
-import logging
 import os
 import subprocess
 import tempfile
@@ -11,6 +10,7 @@ import tempfile
 import pytest
 from pyvcloud.vcd.exceptions import EntityNotFoundException
 from pyvcloud.vcd.vdc import VDC
+from system_tests_v2.pytest_logger import PYTEST_LOGGER
 
 from container_service_extension.common.utils import server_utils
 from container_service_extension.installer.config_validator import get_validated_config  # noqa: E501
@@ -18,7 +18,6 @@ import container_service_extension.installer.templates.local_template_manager as
 from container_service_extension.server.cli.server_cli import cli
 import container_service_extension.system_test_framework.environment as env
 import container_service_extension.system_test_framework.utils as testutils
-from system_tests_v2.pytest_logger import PYTEST_LOGGER
 
 PASSWORD_FOR_CONFIG_ENCRYPTION = "vmware"
 
@@ -204,8 +203,8 @@ def test_0040_config_missing_keys(config):
             assert False, f"{env.ACTIVE_CONFIG_FILEPATH} passed validation " \
                           f"when it should not have"
         except KeyError as e:
-            PYTEST_LOGGER.debug("Validation failed as expected due " \
-                                f"to invalid keys: {e}") 
+            PYTEST_LOGGER.debug("Validation failed as expected due "
+                                f"to invalid keys: {e}")
             pass
 
 
@@ -243,8 +242,8 @@ def test_0050_config_invalid_value_types(config):
             assert False, f"{env.ACTIVE_CONFIG_FILEPATH} passed validation " \
                           f"when it should not have"
         except TypeError as e:
-            PYTEST_LOGGER.debug("Validation failed as expected due " \
-                                f"to invalid value: {e}") 
+            PYTEST_LOGGER.debug("Validation failed as expected due "
+                                f"to invalid value: {e}")
             pass
 
 
@@ -254,7 +253,7 @@ def test_0060_config_valid(config):
     try:
         get_validated_config(env.ACTIVE_CONFIG_FILEPATH,
                              skip_config_decryption=True)
-        PYTEST_LOGGER.debug(f"Validation succeeded as expected.")
+        PYTEST_LOGGER.debug("Validation succeeded as expected.")
     except (KeyError, TypeError, ValueError) as e:
         PYTEST_LOGGER.debug(f"Failed to validate the config. Error: {e}")
         assert False, f"{env.ACTIVE_CONFIG_FILEPATH} did not pass validation" \
@@ -265,7 +264,8 @@ def test_0070_check_invalid_installation(config):
     """Test cse check against config that hasn't been used for installation."""
     try:
         cmd = f"check {env.ACTIVE_CONFIG_FILEPATH} --skip-config-decryption --check-install"  # noqa: E501
-        env.CLI_RUNNER.invoke(cli, cmd.split(), catch_exceptions=False)
+        result = env.CLI_RUNNER.invoke(
+            cli, cmd.split(), catch_exceptions=False)
         PYTEST_LOGGER.debug(f"Executing command: {cmd}")
         PYTEST_LOGGER.debug(f"Exit code: {result.exit_code}")
         PYTEST_LOGGER.debug(f"Output: {result.output}")
@@ -473,7 +473,8 @@ def test_0110_cse_check_valid_installation(config):
     """
     try:
         cmd = f"check {env.ACTIVE_CONFIG_FILEPATH} --skip-config-decryption --check-install"  # noqa: E501
-        result =env.CLI_RUNNER.invoke(cli, cmd.split(), catch_exceptions=False)
+        result = env.CLI_RUNNER.invoke(
+            cli, cmd.split(), catch_exceptions=False)
         PYTEST_LOGGER.debug(f"Executing command: {cmd}")
         PYTEST_LOGGER.debug(f"Exit code: {result.exit_code}")
         PYTEST_LOGGER.debug(f"Output: {result.output}")
@@ -535,9 +536,10 @@ def test_0130_cse_encrypt_decrypt_with_password_from_stdin(config):
     """
     encrypted_file = tempfile.NamedTemporaryFile()
     cmd = f"encrypt {env.ACTIVE_CONFIG_FILEPATH} -o {encrypted_file.name}"  # noqa: E501
-    result = env.CLI_RUNNER.invoke(cli, cmd.split(),
-                          input=PASSWORD_FOR_CONFIG_ENCRYPTION,
-                          catch_exceptions=False)
+    result = env.CLI_RUNNER.invoke(cli,
+                                   cmd.split(),
+                                   input=PASSWORD_FOR_CONFIG_ENCRYPTION,
+                                   catch_exceptions=False)
     PYTEST_LOGGER.debug(f"Executing command: {cmd}")
     PYTEST_LOGGER.debug(f"Exit code: {result.exit_code}")
     PYTEST_LOGGER.debug(f"Output: {result.output}")
