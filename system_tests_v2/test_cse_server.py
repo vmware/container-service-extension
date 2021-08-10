@@ -19,7 +19,6 @@ from container_service_extension.server.cli.server_cli import cli
 import container_service_extension.system_test_framework.environment as env
 import container_service_extension.system_test_framework.utils as testutils
 
-
 PASSWORD_FOR_CONFIG_ENCRYPTION = "vmware"
 
 """
