@@ -10,7 +10,6 @@ Fixtures defined here can be used without importing.
 import os
 
 import pytest
-
 import system_tests_v2.pytest_logger as pytest_logger
 
 import container_service_extension.system_test_framework.environment as env
@@ -70,7 +69,6 @@ def vcd_users():
                     env.CLUSTER_AUTHOR_PASSWORD,
                     env.CLUSTER_AUTHOR_ROLE_NAME,
                     logger=pytest_logger.PYTEST_LOGGER)
-    yield
 
 
 @pytest.fixture
@@ -97,7 +95,7 @@ def config():
 def test_config():
     """Fixture to provide 'test' section of test config to individual tests."""
     config = testutils.yaml_to_dict(env.BASE_CONFIG_FILEPATH)
-    yield config['test']
+    return config['test']
 
 
 @pytest.fixture
