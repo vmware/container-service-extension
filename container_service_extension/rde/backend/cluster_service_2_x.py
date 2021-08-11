@@ -935,6 +935,7 @@ class ClusterService(abstract_broker.AbstractBroker):
                 LOGGER.error(err, exc_info=True)
                 raise exceptions.ControlPlaneNodeCreationError(
                     f"Error adding control plane node: {err}")
+            vapp.reload()
 
             msg = f"Creating {num_workers} node(s) for cluster " \
                   f"'{cluster_name}' ({cluster_id})"
@@ -2316,6 +2317,8 @@ def _add_control_plane_nodes(sysadmin_client, num_nodes, org, vdc, vapp,
             expose_ip=''
         )
 
+        vm_specs = []
+
         try:
             vm_specs = _get_vm_specifications(
                 client=sysadmin_client,
@@ -2428,6 +2431,7 @@ def _add_worker_nodes(sysadmin_client, num_nodes, org, vdc, vapp,
 
     if num_nodes > 0:
 
+        vm_specs = []
         try:
 
             control_plane_join_cmd = _get_join_cmd(
@@ -2482,7 +2486,7 @@ def _add_worker_nodes(sysadmin_client, num_nodes, org, vdc, vapp,
                     logger=LOGGER
                 )
 
-                LOGGER.debug(f"worker {vm_name} to join cluster using:\n{control_plane_join_cmd}")  # noqa: E501
+                LOGGER.debug(f"worker {vm_name} to join cluster using:{control_plane_join_cmd}")  # noqa: E501
 
                 vcd_utils.wait_for_completion_of_post_customization_procedure(
                     vm,
@@ -2600,41 +2604,6 @@ def _get_control_plane_ip(sysadmin_client: vcd_client.Client, vapp):
     return control_plane_ip
 
 
-def _init_cluster(sysadmin_client: vcd_client.Client, vapp, cluster_kind,
-                  k8s_version, cni_version, expose_ip=None):
-    vcd_utils.raise_error_if_user_not_from_system_org(sysadmin_client)
-
-    try:
-        templated_script = get_cluster_script_file_contents(
-            ClusterScriptFile.CONTROL_PLANE, ClusterScriptFile.VERSION_2_X)
-        script = templated_script.format(
-            cluster_kind=cluster_kind,
-            k8s_version=k8s_version,
-            cni_version=cni_version)
-
-        # Expose cluster if given external ip
-        if expose_ip:
-            script = \
-                nw_exp_helper.construct_init_cluster_script_with_exposed_ip(
-                    script, expose_ip
-                )
-
-        node_names = _get_node_names(vapp, NodeType.CONTROL_PLANE)
-        result = _execute_script_in_nodes(sysadmin_client, vapp=vapp,
-                                          node_names=node_names, script=script)
-        errors = _get_script_execution_errors(result)
-        if errors:
-            raise exceptions.ScriptExecutionError(
-                f"Initialize cluster script execution failed on node "
-                f"{node_names}:{errors}")
-        if result[0][0] != 0:
-            raise exceptions.ClusterInitializationError(f"Couldn't initialize cluster:\n{result[0][2].content.decode()}")  # noqa: E501
-    except Exception as err:
-        LOGGER.error(err, exc_info=True)
-        raise exceptions.ClusterInitializationError(
-            f"Couldn't initialize cluster: {str(err)}")
-
-
 def _get_join_cmd(sysadmin_client: vcd_client.Client, vapp):
     vcd_utils.raise_error_if_user_not_from_system_org(sysadmin_client)
     node_names = _get_node_names(vapp, NodeType.CONTROL_PLANE)
@@ -2651,7 +2620,7 @@ def _get_join_cmd(sysadmin_client: vcd_client.Client, vapp):
 
 
 def wait_for_update_customization(message, exception=None):
-    LOGGER.debug(f"waiting for control plane add vm to vapp, status: {message}")  # noqa: E501
+    LOGGER.debug(f"waiting for updating customization, status: {message}")  # noqa: E501
     if exception is not None:
         LOGGER.error(f"exception: {str(exception)}")
 
