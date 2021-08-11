@@ -2305,7 +2305,8 @@ def _add_control_plane_nodes(sysadmin_client, num_nodes, org, vdc, vapp,
 
     if num_nodes > 0:
         templated_script = get_cluster_script_file_contents(
-            ClusterScriptFile.CONTROL_PLANE_NEW, ClusterScriptFile.VERSION_2_X)
+            ClusterScriptFile.CONTROL_PLANE_CUSTOMIZATION,
+            ClusterScriptFile.VERSION_2_X)
 
         # Get template with no expose_ip; expose_ip will be computed
         # later when control_plane internal ip is computed below.

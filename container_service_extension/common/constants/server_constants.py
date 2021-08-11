@@ -200,7 +200,7 @@ class ClusterScriptFile(str, Enum):
 
     SCRIPTS_DIR = "cluster_scripts"
     CONTROL_PLANE = 'control_plane.sh'
-    CONTROL_PLANE_NEW = 'control_plane_new.sh'
+    CONTROL_PLANE_CUSTOMIZATION = 'control_plane_customization.sh'
     NODE = 'node.sh'
 
     # Note that we need _ in the version instead of dots to allow
