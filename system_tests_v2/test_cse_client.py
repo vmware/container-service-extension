@@ -181,7 +181,7 @@ def vcd_sys_admin():
     # ovdc context may be nondeterministic when there's multiple ovdcs
     cmd = f"vdc use {env.TEST_VDC}"
     result = env.CLI_RUNNER.invoke(vcd, cmd.split(), catch_exceptions=False)
-    assert result.exit_code == 0,\
+    assert result.exit_code == 0, \
         testutils.format_command_info('vcd', cmd, result.exit_code,
                                       result.output)
     PYTEST_LOGGER.debug("Logged in as sys admin")
@@ -564,13 +564,15 @@ def _generate_cluster_apply_tests(test_users=None):
                          None, None, env.USERNAME_TO_CLUSTER_NAME[user]),
                         'CREATE:SUCCEEDED'
                     ),
-                    # # resize a failed deployment
+                    # resize a failed deployment
+                    # expected status is still CREATE:FAILED because the
+                    # request wont be acknowledged by CSE server
                     pytest.param(
                         user,
                         (1, 0, False,
                          template['name'], template['revision'], 'INVALID-NETWORK',  # noqa: E501
                          None, None, f"{env.USERNAME_TO_CLUSTER_NAME[user]}-case4"),  # noqa: E501
-                        'UPDATE:FAILED'
+                        'CREATE:FAILED'
                     ),
                     # Resize up a valid deployment
                     pytest.param(
@@ -580,7 +582,7 @@ def _generate_cluster_apply_tests(test_users=None):
                          None, None, f"{env.USERNAME_TO_CLUSTER_NAME[user]}"),
                         'UPDATE:SUCCEEDED'
                     ),
-                    # # Resize down a valid deployment
+                    # Resize down a valid deployment
                     pytest.param(
                         user,
                         (0, 1, False,
@@ -887,6 +889,123 @@ def test_0090_vcd_cse_cluster_delete(config):
             vdc_href=env.TEST_VDC_HREF,
             logger=PYTEST_LOGGER), \
             f"Cluster {cluster_name} exists when it should not"
+
+
+def generate_cluster_upgrade_tests(test_users=None):
+    """Generate test cases for upgrade test.
+
+    Test format:
+    user, template_upgrade_path, should_expect_failure
+    """
+    if not test_users:
+        # test for all the users
+        test_users = \
+            [
+                env.SYS_ADMIN_NAME,
+                # env.CLUSTER_ADMIN_NAME,
+                # env.CLUSTER_AUTHOR_NAME
+            ]
+    test_cases = []
+    for user in test_users:
+        for upgrade_path in env.TEMPLATE_UPGRADE_PATH_LIST:
+            test_cases.extend([
+                pytest.param(
+                    (user, upgrade_path),
+                    False
+                )
+            ])
+    return test_cases
+
+
+@pytest.fixture
+def upgrade_test_cases(request):
+    user, upgrade_path = request.param
+
+    # login as sys admin
+    cmd_list = [
+        testutils.CMD_BINDER(cmd=env.USERNAME_TO_LOGIN_CMD[user],
+                             exit_code=0,
+                             validate_output_func=None,
+                             test_user=user),
+        testutils.CMD_BINDER(cmd=f"org use {env.TEST_ORG}",
+                             exit_code=0,
+                             validate_output_func=None,
+                             test_user=user),
+        testutils.CMD_BINDER(cmd=f"vdc use {env.TEST_VDC}",
+                             exit_code=0,
+                             validate_output_func=None,
+                             test_user=user)
+    ]
+    testutils.execute_commands(cmd_list, logger=PYTEST_LOGGER)
+
+    initial_template = upgrade_path[0]
+    # create apply specification
+    spec_params = \
+        testutils.construct_apply_param(
+            (0, 0, False,
+             initial_template['name'], initial_template['revision'], None,
+             None, None, env.USERNAME_TO_CLUSTER_NAME[user]))
+    create_apply_spec(spec_params)
+
+    # create cluster from the first template
+    cmd_list = [
+        testutils.CMD_BINDER(cmd=f"cse cluster apply {env.APPLY_SPEC_PATH} ",
+                             exit_code=0,
+                             validate_output_func=_follow_apply_output(expect_failure=False),  # noqa: E501
+                             test_user=user)
+    ]
+    testutils.execute_commands(cmd_list, logger=PYTEST_LOGGER)
+
+    # return the remaining list of templates to test upgrade
+    test_cases = []
+    for template in upgrade_path[1:]:
+        spec_params = \
+            testutils.construct_apply_param(
+                (0, 0, False,
+                 template['name'], template['revision'], None,
+                 None, None, env.USERNAME_TO_CLUSTER_NAME[user]))
+        test_cases.append(spec_params)
+    return {
+        'apply_specifications': test_cases,
+        'user': user
+    }
+
+
+@pytest.mark.parametrize('upgrade_test_cases,expect_failure', generate_cluster_upgrade_tests(test_users=[env.SYS_ADMIN_NAME]), indirect=["upgrade_test_cases"])  # noqa: E501
+def test_0100_cluster_upgrade_trough_apply(upgrade_test_cases, expect_failure):
+    test_runner_username = upgrade_test_cases['user']
+    cmd_list = [
+        testutils.CMD_BINDER(
+            cmd=env.USERNAME_TO_LOGIN_CMD[test_runner_username],
+            exit_code=0,
+            validate_output_func=None,
+            test_user=test_runner_username),
+        testutils.CMD_BINDER(
+            cmd=f"org use {env.TEST_ORG}",
+            exit_code=0,
+            validate_output_func=None,
+            test_user=test_runner_username),
+        testutils.CMD_BINDER(
+            cmd=f"vdc use {env.TEST_VDC}",
+            exit_code=0,
+            validate_output_func=None,
+            test_user=test_runner_username)
+    ]
+    testutils.execute_commands(cmd_list, logger=PYTEST_LOGGER)
+
+    apply_specifications = upgrade_test_cases['apply_specifications']
+    for spec in apply_specifications:
+        # try to upgrade.
+        cmd_list = [
+            testutils.CMD_BINDER(
+                cmd=f"cse cluster apply {env.APPLY_SPEC_PATH} ",
+                exit_code=0,
+                validate_output_func=_follow_apply_output(expect_failure=expect_failure),  # noqa: E501
+                test_user=test_runner_username)
+        ]
+        testutils.execute_commands(cmd_list, logger=PYTEST_LOGGER)
+        assert _get_cluster_phase(spec['cluster_name'], test_runner_username) == 'UPGRADE:SUCCEEDED', \
+            "Expected RDE phase to be 'UPGRADE:SUCCEEDED'"  # noqa: E501
 
 
 def test_0100_vcd_ovdc_disable(vcd_sys_admin):

@@ -215,6 +215,7 @@ def validate_yaml_output():
             return True
         except ParserError:
             return False
+    return validator
 
 
 def get_worker_count_from_1_0_0_entity_dict(cluster_dict):
