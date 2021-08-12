@@ -383,17 +383,15 @@ def delete_test_clusters():
 
 
 @pytest.fixture
-def delete_clusters_before_test():
-    """Fixture to ensure that cluster don't exist before the test."""
-    cleanup_cluster_artifacts()
-    yield
-
-
-def delete_clusters_after_test():
-    """Fixture to ensure that cluster don't exist after the test."""
-    yield
-
-    cleanup_cluster_artifacts()
+def disable_test_vdc():
+    try:
+        cmd = f"cse ovdc disable {env.TEST_VDC} -n -o {env.TEST_ORG} -f"
+        result = env.CLI_RUNNER.invoke(vcd, cmd.split(), catch_exceptions=False)  # noqa: E501
+        PYTEST_LOGGER.debug(f"Executing command: {cmd}")
+        PYTEST_LOGGER.debug(f"Exit code: {result.exit_code}")
+        PYTEST_LOGGER.debug(f"Output: {result.output}")
+    except Exception as e:
+        PYTEST_LOGGER.error(f"Error disabling the ovdc {env.TEST_VDC}: {e}")
 
 
 def test_0010_vcd_cse_version():
@@ -420,7 +418,7 @@ def test_0020_vcd_cse_system_info(vcd_cluster_admin):
                                       result.output)
 
 
-def test_0020_vcd_ovdc_enable(vcd_sys_admin):
+def test_0020_vcd_ovdc_enable(vcd_sys_admin, disable_test_vdc):
     """Test ovdc enable operation.
 
     commands:
@@ -677,7 +675,10 @@ def test_0040_vcd_cse_cluster_apply(config, test_runner_username, test_case, exp
             cmd_list = [
             testutils.CMD_BINDER(cmd=f"cse cluster info {created_cluster_name}",   # noqa
                                  exit_code=0,
-                                 validate_output_func=testutils.generate_validate_node_count_func(expected_nodes=spec_params['worker_count']),  # noqa: E501
+                                 validate_output_func=testutils.generate_validate_node_count_func(  # noqa: E501
+                                     expected_nodes=spec_params['worker_count'],  # noqa: E501
+                                     rde_version=get_runtime_rde_version_by_vcd_api_version(env.VCD_API_VERSION_TO_USE),  # noqa: E501
+                                     logger=PYTEST_LOGGER),  # noqa: E501
                                  test_user=test_runner_username)
             ]
             testutils.execute_commands(cmd_list, logger=PYTEST_LOGGER)
@@ -971,6 +972,8 @@ def upgrade_test_cases(request):
     }
 
 
+@pytest.mark.skipif(not env.TEST_ALL_TEMPLATES,
+                    reason="Configuration specifies 'test_all_templates' as False")  # noqa: E501
 @pytest.mark.parametrize('upgrade_test_cases,expect_failure', generate_cluster_upgrade_tests(test_users=[env.SYS_ADMIN_NAME]), indirect=["upgrade_test_cases"])  # noqa: E501
 def test_0100_cluster_upgrade_trough_apply(upgrade_test_cases, expect_failure):
     test_runner_username = upgrade_test_cases['user']
