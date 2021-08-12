@@ -2383,7 +2383,7 @@ def _add_control_plane_nodes(sysadmin_client, num_nodes, org, vdc, vapp,
                 task = vm.power_on()
                 sysadmin_client.get_task_monitor().wait_for_status(
                     task,
-                    callback=wait_for_vapp_power_on
+                    callback=wait_for_vm_power_on
                 )
                 vapp.reload()
                 vcd_utils.wait_for_completion_of_post_customization_procedure(
@@ -2405,7 +2405,7 @@ def _add_control_plane_nodes(sysadmin_client, num_nodes, org, vdc, vapp,
 
                 vcd_utils.wait_for_completion_of_post_customization_procedure(
                     vm,
-                    customization_phase=PostCustomizationPhase.KUBEADM_JOIN.value,  # noqa: E501
+                    customization_phase=PostCustomizationPhase.KUBEADM_JOIN_TOKEN.value,  # noqa: E501
                     logger=LOGGER
                 )
 
@@ -2475,9 +2475,10 @@ def _add_worker_nodes(sysadmin_client, num_nodes, org, vdc, vapp,
                 vm_resource = vapp.get_vm(vm_name)
                 vm = vcd_vm.VM(sysadmin_client, resource=vm_resource)
                 task = vm.power_on()
+                # wait_for_vm_power_on is reused for all vm creation callback
                 sysadmin_client.get_task_monitor().wait_for_status(
                     task,
-                    callback=wait_for_vapp_power_on
+                    callback=wait_for_vm_power_on
                 )
                 vapp.reload()
 
@@ -2607,13 +2608,14 @@ def _get_control_plane_ip(sysadmin_client: vcd_client.Client, vapp):
 
 def _get_join_cmd(sysadmin_client: vcd_client.Client, vapp):
     vcd_utils.raise_error_if_user_not_from_system_org(sysadmin_client)
+    vapp.reload()
     node_names = _get_node_names(vapp, NodeType.CONTROL_PLANE)
     if not node_names:
         raise exceptions.ClusterJoiningError("Join cluster failure: no control plane node found")   # noqa: E501
 
     vm_resource = vapp.get_vm(node_names[0])
-    controle_plane_vm = vcd_vm.VM(sysadmin_client, resource=vm_resource)
-    control_plane_join_cmd: str = vcd_utils.get_vm_extra_config_element(controle_plane_vm, KUBEADM_JOIN_INFO)  # noqa: E501
+    control_plane_vm = vcd_vm.VM(sysadmin_client, resource=vm_resource)
+    control_plane_join_cmd: str = vcd_utils.get_vm_extra_config_element(control_plane_vm, KUBEADM_JOIN_INFO)  # noqa: E501
 
     if not control_plane_join_cmd:
         raise exceptions.ClusterJoiningError("Join cluster failure: join info not found in control plane node")   # noqa: E501
@@ -2634,8 +2636,8 @@ def wait_for_adding_worker_vm_to_vapp(task):
     LOGGER.debug(f"waiting for add worker vm to vapp, status: {task.get('status').lower()}")  # noqa: E501
 
 
-def wait_for_vapp_power_on(task):
-    LOGGER.debug(f"waiting for vapp power on, status: {task.get('status').lower()}")  # noqa: E501
+def wait_for_vm_power_on(task):
+    LOGGER.debug(f"waiting for vm:{task.get('owner_name')} power on, status: {task.get('status').lower()}")  # noqa: E501
 
 
 def _wait_for_tools_ready_callback(message, exception=None):
