@@ -59,9 +59,9 @@ then
     kubectl apply -f $WEAVE_VERSIONED_FILE >> /var/log/cse/customization/status.log 2>> /var/log/cse/customization/error.log
     vmtoolsd --cmd "info-set guestinfo.postcustomization.kubectl.apply.weave.status successful"
 
-    vmtoolsd --cmd "info-set guestinfo.postcustomization.kubeadm.join.status in_progress"
+    vmtoolsd --cmd "info-set guestinfo.postcustomization.kubeadm.join.token.status in_progress"
     kubeadm_join_info=$(kubeadm token create --print-join-command 2> /dev/null)
-    vmtoolsd --cmd "info-set guestinfo.postcustomization.kubeadm.join $kubeadm_join_info"
-    vmtoolsd --cmd "info-set guestinfo.postcustomization.kubeadm.join.status successful"
+    vmtoolsd --cmd "info-set guestinfo.postcustomization.kubeadm.join.token $kubeadm_join_info"
+    vmtoolsd --cmd "info-set guestinfo.postcustomization.kubeadm.join.token.status successful"
     echo "$(date) post customization script execution completed" &>> /var/log/cse/customization/status.log
 fi

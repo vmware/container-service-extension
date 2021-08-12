@@ -29,10 +29,10 @@ then
 
     while [[ `systemctl is-active docker` != 'active' ]]; do echo 'waiting for docker'; sleep 5; done
 
-    vmtoolsd --cmd "info-set guestinfo.postcustomization.kubeadm.join.status in_progress"
+    vmtoolsd --cmd "info-set guestinfo.postcustomization.kubeadm.node.join.status in_progress"
     echo "$(date) executing {kubeadm_join_cmd} on the node" &>> /var/log/cse/customization/status.log
     $({kubeadm_join_cmd} >> /var/log/cse/customization/status.log 2>> /var/log/cse/customization/error.log)
-    vmtoolsd --cmd "info-set guestinfo.postcustomization.kubeadm.join.status successful"
+    vmtoolsd --cmd "info-set guestinfo.postcustomization.kubeadm.node.join.status successful"
     echo "$(date) post customization script execution completed" &>> /var/log/cse/customization/status.log
 
 fi
