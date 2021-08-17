@@ -4,9 +4,11 @@
 
 import semantic_version
 
+from container_service_extension.common.constants.shared_constants import ClusterEntityKind  # noqa: E501
 import container_service_extension.common.utils.server_utils as server_utils
 from container_service_extension.rde.backend.cluster_service_1_x import ClusterService as ClusterService1X  # noqa: E501
 from container_service_extension.rde.backend.cluster_service_2_x import ClusterService as ClusterService2X  # noqa: E501
+from container_service_extension.rde.backend.cluster_service_2_x_tkgm import ClusterService as ClusterService2XTKGm  # noqa: E501
 
 
 class ClusterServiceFactory:
@@ -28,4 +30,7 @@ class ClusterServiceFactory:
         if rde_version.major == 1:
             return ClusterService1X(op_ctx=self.req_ctx)
         elif rde_version.major == 2:
-            return ClusterService2X(self.req_ctx)
+            if self.req_ctx.entity.get('kind') == ClusterEntityKind.TKG_M.value:  # noqa: E501
+                return ClusterService2XTKGm(self.req_ctx)
+            else:
+                return ClusterService2X(self.req_ctx)
