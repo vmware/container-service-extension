@@ -25,7 +25,7 @@ from container_service_extension.common.constants.server_constants import CSE_CL
 from container_service_extension.common.constants.server_constants import DefEntityOperation  # noqa: E501
 from container_service_extension.common.constants.server_constants import DefEntityOperationStatus  # noqa: E501
 from container_service_extension.common.constants.server_constants import DefEntityPhase  # noqa: E501
-from container_service_extension.common.constants.server_constants import KUBEADM_JOIN_INFO  # noqa: E501
+from container_service_extension.common.constants.server_constants import KUBEADM_TOKEN_INFO # noqa: E501
 from container_service_extension.common.constants.server_constants import LocalTemplateKey  # noqa: E501
 from container_service_extension.common.constants.server_constants import NodeType  # noqa: E501
 from container_service_extension.common.constants.server_constants import PostCustomizationPhase  # noqa: E501
@@ -2406,7 +2406,7 @@ def _add_control_plane_nodes(sysadmin_client, num_nodes, org, vdc, vapp,
 
                 vcd_utils.wait_for_completion_of_post_customization_procedure(
                     vm,
-                    customization_phase=PostCustomizationPhase.KUBEADM_JOIN_TOKEN.value,  # noqa: E501
+                    customization_phase=PostCustomizationPhase.KUBEADM_TOKEN_GENERATE.value,  # noqa: E501
                     logger=LOGGER
                 )
 
@@ -2616,7 +2616,7 @@ def _get_join_cmd(sysadmin_client: vcd_client.Client, vapp):
 
     vm_resource = vapp.get_vm(node_names[0])
     control_plane_vm = vcd_vm.VM(sysadmin_client, resource=vm_resource)
-    control_plane_join_cmd: str = vcd_utils.get_vm_extra_config_element(control_plane_vm, KUBEADM_JOIN_INFO)  # noqa: E501
+    control_plane_join_cmd: str = vcd_utils.get_vm_extra_config_element(control_plane_vm, KUBEADM_TOKEN_INFO)  # noqa: E501
 
     if not control_plane_join_cmd:
         raise exceptions.ClusterJoiningError("Join cluster failure: join info not found in control plane node")   # noqa: E501

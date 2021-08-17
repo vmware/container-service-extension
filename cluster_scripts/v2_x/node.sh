@@ -34,5 +34,4 @@ then
     $({kubeadm_join_cmd} >> /var/log/cse/customization/status.log 2>> /var/log/cse/customization/error.log)
     vmtoolsd --cmd "info-set guestinfo.postcustomization.kubeadm.node.join.status successful"
     echo "$(date) post customization script execution completed" &>> /var/log/cse/customization/status.log
-
 fi

@@ -742,7 +742,7 @@ def wait_for_completion_of_post_customization_procedure(
         if new_status != current_status:
             remaining_statuses.remove(current_status)
             current_status = new_status
-        logger.info(f"Post guest customization phase {customization_phase } is {new_status}")  # noqa: E501
+        logger.info(f"Post guest customization phase {customization_phase} is {new_status}")  # noqa: E501
         # Check for successful customization: reaching last status between
         if new_status == expected_target_status_list[-1]:
             return new_status
