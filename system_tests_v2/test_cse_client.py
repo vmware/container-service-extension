@@ -288,12 +288,6 @@ def _follow_apply_output(expect_failure=False):
     return validator
 
 
-def get_rde_version_from_apply_spec(sample_apply_spec):
-    rde_version = get_runtime_rde_version_by_vcd_api_version(
-        env.VCD_API_VERSION_TO_USE)
-    return rde_version
-
-
 def create_apply_spec(apply_spec_param):
     """Create apply specification throught cse cluster apply --sample command.
 
@@ -416,6 +410,7 @@ def test_0020_vcd_cse_system_info(vcd_cluster_admin):
     assert result.exit_code == 0,\
         testutils.format_command_info('vcd', cmd, result.exit_code,
                                       result.output)
+    assert "version" in result.output
 
 
 def test_0020_vcd_ovdc_enable(vcd_sys_admin, disable_test_vdc):
@@ -708,6 +703,7 @@ def get_nfs_node(cluster_info):
 def validate_if_node_not_present(node_name):
     def validator(output, test_runner_username):
         return node_name not in output
+    return validator
 
 
 @pytest.mark.parametrize('test_runner_username', [env.SYS_ADMIN_NAME,
@@ -840,42 +836,42 @@ def test_0090_vcd_cse_cluster_delete(config):
     :param config: cse config file for vcd configuration
     """
     cmd_list = [
-        testutils.CMD_BINDER(cmd=env.K8_AUTHOR_LOGIN_CMD,
+        testutils.CMD_BINDER(cmd=env.CLUSTER_AUTHOR_LOGIN_CMD,
                              exit_code=0,
                              validate_output_func=None,
                              test_user=env.K8_AUTHOR_NAME),
         testutils.CMD_BINDER(cmd=f"cse cluster delete {env.USERNAME_TO_CLUSTER_NAME[env.SYS_ADMIN_NAME]}",  # noqa: E501
                              exit_code=2,
-                             validate_output_func=None,
+                             validate_output_func=_follow_apply_output(expect_failure=True),  # noqa: E501
                              test_user=env.K8_AUTHOR_NAME),
-        testutils.CMD_BINDER(cmd=f"cse cluster delete {env.USERNAME_TO_CLUSTER_NAME[env.ORG_ADMIN_NAME]}",  # noqa: E501
+        testutils.CMD_BINDER(cmd=f"cse cluster delete {env.USERNAME_TO_CLUSTER_NAME[env.CLUSTER_ADMIN_NAME]}",  # noqa: E501
                              exit_code=2,
-                             validate_output_func=None,
-                             test_user=env.K8_AUTHOR_NAME),
-        testutils.CMD_BINDER(cmd=f"cse cluster delete {env.USERNAME_TO_CLUSTER_NAME[env.K8_AUTHOR_NAME]}",  # noqa: E501
+                             validate_output_func=_follow_apply_output(expect_failure=True),  # noqa: E501
+                             test_user=env.CLUSTER_AUTHOR_NAME),
+        testutils.CMD_BINDER(cmd=f"cse cluster delete {env.USERNAME_TO_CLUSTER_NAME[env.CLUSTER_AUTHOR_NAME]}",  # noqa: E501
                              exit_code=0,
-                             validate_output_func=None,
-                             test_user=env.K8_AUTHOR_NAME),
+                             validate_output_func=_follow_apply_output(expect_failure=False),  # noqa: E501
+                             test_user=env.CLUSTER_ADMIN_NAME),
         testutils.CMD_BINDER(cmd=env.USER_LOGOUT_CMD,
                              exit_code=0,
                              validate_output_func=None,
-                             test_user=env.K8_AUTHOR_NAME),
-        testutils.CMD_BINDER(cmd=env.ORG_ADMIN_LOGIN_CMD,
+                             test_user=env.CLUSTER_AUTHOR_NAME),
+        testutils.CMD_BINDER(cmd=env.CLUSTER_ADMIN_LOGIN_CMD,
                              exit_code=0,
                              validate_output_func=None,
-                             test_user=env.ORG_ADMIN_NAME),
+                             test_user=env.CLUSTER_ADMIN_NAME),
         testutils.CMD_BINDER(cmd=f"org use {env.TEST_ORG}",
                              exit_code=0,
                              validate_output_func=None,
-                             test_user='org_admin'),
+                             test_user=env.CLUSTER_ADMIN_NAME),
         testutils.CMD_BINDER(cmd=f"cse cluster delete {env.USERNAME_TO_CLUSTER_NAME[env.SYS_ADMIN_NAME]}",  # noqa: E501
                              exit_code=0,
-                             validate_output_func=None,
-                             test_user=env.ORG_ADMIN_NAME),
-        testutils.CMD_BINDER(cmd=f"cse cluster delete {env.USERNAME_TO_CLUSTER_NAME[env.ORG_ADMIN_NAME]}",  # noqa: E501
+                             validate_output_func=_follow_apply_output(expect_failure=True),  # noqa: E501
+                             test_user=env.CLUSTER_ADMIN_NAME),
+        testutils.CMD_BINDER(cmd=f"cse cluster delete {env.USERNAME_TO_CLUSTER_NAME[env.CLUSTER_ADMIN_NAME]}",  # noqa: E501
                              exit_code=0,
-                             validate_output_func=None,
-                             test_user=env.ORG_ADMIN_NAME),
+                             validate_output_func=_follow_apply_output(expect_failure=False),  # noqa: E501
+                             test_user=env.CLUSTER_ADMIN_NAME),
         testutils.CMD_BINDER(cmd=env.USER_LOGOUT_CMD,
                              exit_code=0,
                              validate_output_func=None,
