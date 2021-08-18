@@ -340,20 +340,29 @@ def _get_cluster_phase(cluster_name, test_runner_username, org_name=None, vdc_na
 
 def cleanup_cluster_artifacts():
     """Can be called to remove cluster artifacts such as Vapp and RDE."""
-    env.delete_vapp(env.SYS_ADMIN_TEST_CLUSTER_NAME,
-                    vdc_href=env.TEST_VDC_HREF,
-                    logger=PYTEST_LOGGER)
-    env.delete_rde(env.SYS_ADMIN_TEST_CLUSTER_NAME, logger=PYTEST_LOGGER)
+    env.delete_all_vapps_with_prefix(
+        env.SYS_ADMIN_TEST_CLUSTER_NAME,
+        vdc_href=env.TEST_VDC_HREF,
+        logger=PYTEST_LOGGER)
+    env.delete_all_rde_with_prefix(
+        env.SYS_ADMIN_TEST_CLUSTER_NAME,
+        logger=PYTEST_LOGGER)
 
-    env.delete_vapp(env.CLUSTER_ADMIN_TEST_CLUSTER_NAME,
-                    vdc_href=env.TEST_VDC_HREF,
-                    logger=PYTEST_LOGGER)
-    env.delete_rde(env.CLUSTER_ADMIN_TEST_CLUSTER_NAME, logger=PYTEST_LOGGER)
+    env.delete_all_vapps_with_prefix(
+        env.CLUSTER_ADMIN_TEST_CLUSTER_NAME,
+        vdc_href=env.TEST_VDC_HREF,
+        logger=PYTEST_LOGGER)
+    env.delete_all_rde_with_prefix(
+        env.CLUSTER_ADMIN_TEST_CLUSTER_NAME,
+        logger=PYTEST_LOGGER)
 
-    env.delete_vapp(env.CLUSTER_AUTHOR_TEST_CLUSTER_NAME,
-                    vdc_href=env.TEST_VDC_HREF,
-                    logger=PYTEST_LOGGER)
-    env.delete_rde(env.CLUSTER_AUTHOR_TEST_CLUSTER_NAME, logger=PYTEST_LOGGER)
+    env.delete_all_vapps_with_prefix(
+        env.CLUSTER_AUTHOR_TEST_CLUSTER_NAME,
+        vdc_href=env.TEST_VDC_HREF,
+        logger=PYTEST_LOGGER)
+    env.delete_all_rde_with_prefix(
+        env.CLUSTER_AUTHOR_TEST_CLUSTER_NAME,
+        logger=PYTEST_LOGGER)
 
 
 @pytest.fixture
@@ -434,7 +443,7 @@ def test_0020_vcd_ovdc_enable(vcd_sys_admin, disable_test_vdc):
     [pytest.param(
         env.SYS_ADMIN_NAME,
         (0, 0, False,
-         None, None, 'INVALID-NETWORK',
+         None, None, "Invalid-network",
          None, None, env.SYS_ADMIN_TEST_CLUSTER_NAME))])
 def test_0030_vcd_cse_system_toggle(config, delete_test_clusters, test_runner_username, test_case):  # noqa: E501
     """Test `vcd cse system ...` commands.
@@ -472,7 +481,7 @@ def test_0030_vcd_cse_system_toggle(config, delete_test_clusters, test_runner_us
                              test_user='sys_admin'),
         testutils.CMD_BINDER(cmd=f"cse cluster apply {env.APPLY_SPEC_PATH} ",
                              exit_code=0,
-                             validate_output_func=_follow_apply_output(),
+                             validate_output_func=_follow_apply_output(expect_failure=True),  # noqa: E501
                              test_user='sys_admin'),
         testutils.CMD_BINDER(cmd=env.USER_LOGOUT_CMD,
                              exit_code=0,
@@ -481,13 +490,6 @@ def test_0030_vcd_cse_system_toggle(config, delete_test_clusters, test_runner_us
     ]
 
     testutils.execute_commands(cmd_list, logger=PYTEST_LOGGER)
-
-    assert env.vapp_exists(env.SYS_ADMIN_TEST_CLUSTER_NAME,
-                           vdc_href=env.TEST_VDC_HREF,
-                           logger=PYTEST_LOGGER), \
-        "Cluster doesn't exist when it should."
-    assert env.rde_exists(env.USERNAME_TO_CLUSTER_NAME[env.SYS_ADMIN_NAME],
-                          logger=PYTEST_LOGGER)
 
 
 def _generate_cluster_apply_tests(test_users=None):

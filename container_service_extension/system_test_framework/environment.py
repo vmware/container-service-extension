@@ -8,7 +8,7 @@ from typing import List
 
 from click.testing import CliRunner
 from pyvcloud.vcd.api_extension import APIExtension
-from pyvcloud.vcd.client import BasicLoginCredentials
+from pyvcloud.vcd.client import BasicLoginCredentials, ResourceType
 from pyvcloud.vcd.client import Client
 from pyvcloud.vcd.exceptions import EntityNotFoundException
 from pyvcloud.vcd.exceptions import MissingRecordException
@@ -559,7 +559,7 @@ def delete_catalog_item(item_name, logger=NULL_LOGGER):
         org.reload()
         logger.debug(f"Successfully deleted the catalog item: {item_name}")
     except EntityNotFoundException as e:
-        logger.debug(f"Failed to delete catalog item {item_name}: {e}")
+        logger.warning(f"Failed to delete catalog item {item_name}: {e}")
 
 
 def delete_vapp(vapp_name, vdc_href, logger=NULL_LOGGER):
@@ -571,7 +571,7 @@ def delete_vapp(vapp_name, vdc_href, logger=NULL_LOGGER):
         vdc.reload()
         logger.debug(f"Successfully deleted the vapp {vapp_name}.")
     except EntityNotFoundException as e:
-        logger.debug(f"Failed to vapp {vapp_name}: {e}")
+        logger.warning(f"Failed to vapp {vapp_name}: {e}")
 
 
 def delete_rde(cluster_name, logger=NULL_LOGGER):
@@ -610,7 +610,7 @@ def delete_catalog(catalog_name=None, logger=NULL_LOGGER):
         # org.reload()
         logger.debug(f"Successfully deleted the catalog {catalog_name}")
     except EntityNotFoundException:
-        logger.debug(f"Failed to delete catalog {catalog_name}")
+        logger.warning(f"Failed to delete catalog {catalog_name}")
 
 
 # TODO remove after removing legacy mode
@@ -639,7 +639,7 @@ def unregister_cse_in_mqtt(logger=NULL_LOGGER):
             ext_urn_id=ext_urn_id)
         logger.debug("Successfully unregistered CSE as MQTT extension")
     except Exception as e:
-        logger.debug(f"Failed to unregister CSE from MQTT: {e}")
+        logger.warning(f"Failed to unregister CSE from MQTT: {e}")
 
 
 def publish_right_bundle_to_deployment_org(logger=NULL_LOGGER):
@@ -654,8 +654,8 @@ def publish_right_bundle_to_deployment_org(logger=NULL_LOGGER):
         logger.debug(
             f"Successfully published native right bundle to orgs {TEST_ORG}")
     except Exception as e:
-        logger.debug(f"Failed to publish native right bundle "
-                     f"to org {TEST_ORG}: {e}")
+        logger.warning(f"Failed to publish native right bundle "
+                       f"to org {TEST_ORG}: {e}")
 
 
 def assign_native_rights(role_name, right_list=None, logger=NULL_LOGGER):
@@ -672,8 +672,8 @@ def assign_native_rights(role_name, right_list=None, logger=NULL_LOGGER):
         initial_right_set.update(right_set)
         role.add_rights(list(initial_right_set), test_org)
     except Exception as e:
-        logger.debug(f"Failed to assign native rights "
-                     f"{right_list} to role {role_name}: {e} ")
+        logger.warning(f"Failed to assign native rights "
+                       f"{right_list} to role {role_name}: {e} ")
 
 
 def cleanup_rde_artifacts(logger=NULL_LOGGER):
@@ -706,7 +706,7 @@ def cleanup_rde_artifacts(logger=NULL_LOGGER):
                     schema_svc.delete_interface(interface_id)
                     logger.debug(f"Deleted interface: {i.name}")
     except Exception as e:
-        logger.error(f"Failed to clean up RDE artifacts: {e}")
+        logger.warning(f"Failed to clean up RDE artifacts: {e}")
 
 
 def cleanup_roles_and_users(logger=NULL_LOGGER):
@@ -730,8 +730,8 @@ def cleanup_roles_and_users(logger=NULL_LOGGER):
             org.delete_user(user_and_role[0])
             org.delete_role(user_and_role[1])
         except Exception as e:
-            logger.debug("Exception occurred when "
-                         f"cleaning up roles and users: {e}")
+            logger.warning("Exception occurred when "
+                           f"cleaning up roles and users: {e}")
 
 
 def catalog_item_exists(catalog_item, catalog_name=None, logger=NULL_LOGGER):
@@ -750,6 +750,27 @@ def catalog_item_exists(catalog_item, catalog_name=None, logger=NULL_LOGGER):
         return False
 
 
+def vapp_with_prefix_exists(prefix, vdc_href, logger=NULL_LOGGER):
+    q = CLIENT.get_typed_query(
+        ResourceType.ADMIN_VAPP.value,
+        qfilter=f"name=={prefix}*&",
+        equality_filter=("vdc", vdc_href))
+    vapp_records = q.execute()
+    if len(vapp_records) > 0:
+        return True
+    return False
+
+
+def delete_all_vapps_with_prefix(prefix, vdc_href, logger=NULL_LOGGER):
+    q = CLIENT.get_typed_query(
+        ResourceType.ADMIN_VAPP.value,
+        qfilter=f"name=={prefix}*&",
+        equality_filter=("vdc", vdc_href))
+    vapp_records = q.execute()
+    for vapp_record in vapp_records:
+        delete_vapp(vapp_record.get('name'), vdc_href, logger=logger)
+
+
 def vapp_exists(vapp_name, vdc_href, logger=NULL_LOGGER):
     vdc = VDC(CLIENT, href=vdc_href)
     try:
@@ -757,8 +778,16 @@ def vapp_exists(vapp_name, vdc_href, logger=NULL_LOGGER):
         logger.debug(f"Vapp {vapp_name} found in vdc {vdc.name}")
         return True
     except EntityNotFoundException:
-        logger.debug(f"Vapp {vapp_name} not found in vdc {vdc.name}")
+        logger.warning(f"Vapp {vapp_name} not found in vdc {vdc.name}")
         return False
+
+
+def rde_with_prefix_exists(prefix, logger=NULL_LOGGER):
+    return rde_exists(f"{prefix}*")
+
+
+def delete_all_rde_with_prefix(prefix, logger=NULL_LOGGER):
+    return delete_rde(f"{prefix}*", logger=logger)
 
 
 def rde_exists(rde_name, logger=NULL_LOGGER):
@@ -779,7 +808,7 @@ def rde_exists(rde_name, logger=NULL_LOGGER):
                 rde_name, rde_version)
         return bool(entity)
     except Exception as e:
-        logger.debug(f"Exception occured when checking if rde exists: {e}")
+        logger.warning(f"Exception occured when checking if rde exists: {e}")
         return False
 
 
