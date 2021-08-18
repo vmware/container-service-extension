@@ -206,7 +206,6 @@ def test_0040_config_missing_keys(config):
         except KeyError as e:
             PYTEST_LOGGER.debug("Validation failed as expected due "
                                 f"to invalid keys: {e}")
-            pass
 
 
 def test_0050_config_invalid_value_types(config):
