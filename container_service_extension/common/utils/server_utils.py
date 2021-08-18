@@ -94,6 +94,21 @@ def is_tkg_plus_enabled(config: dict = None):
     return False
 
 
+def is_tkg_m_enabled(config: dict = None):
+    if not config:
+        try:
+            config = get_server_runtime_config()
+        except Exception:
+            return False
+    service_section = config.get('service', {})
+    tkg_m_enabled = service_section.get('enable_tkg_m', False)
+    if isinstance(tkg_m_enabled, bool):
+        return tkg_m_enabled
+    elif isinstance(tkg_m_enabled, str):
+        return utils.str_to_bool(tkg_m_enabled)
+    return False
+
+
 def should_use_mqtt_protocol(config):
     """Return true if should use the mqtt protocol; false otherwise.
 

@@ -310,11 +310,13 @@ def install_cse(config_file_name, config, skip_template_creation,
                              log_wire=log_wire)
 
         # set up placement policies for all types of clusters
-        is_tkg_plus_enabled = server_utils.is_tkg_plus_enabled(config=config)  # noqa: E501
+        is_tkg_plus_enabled = server_utils.is_tkg_plus_enabled(config=config)
+        is_tkg_m_enabled = server_utils.is_tkg_m_enabled(config=config)
         _setup_placement_policies(
             client=client,
             policy_list=shared_constants.CLUSTER_RUNTIME_PLACEMENT_POLICIES,
             is_tkg_plus_enabled=is_tkg_plus_enabled,
+            is_tkg_m_enabled=is_tkg_m_enabled,
             msg_update_callback=msg_update_callback,
             log_wire=log_wire)
 
@@ -1544,6 +1546,7 @@ def _register_right(client, right_name, description, category, bundle_key,
 def _setup_placement_policies(client,
                               policy_list,
                               is_tkg_plus_enabled,
+                              is_tkg_m_enabled,
                               msg_update_callback=utils.NullPrinter(),
                               log_wire=False):
     """Create placement policies for each cluster type.
@@ -1582,6 +1585,9 @@ def _setup_placement_policies(client,
         for policy_name in policy_list:
             if not is_tkg_plus_enabled and \
                     policy_name == shared_constants.TKG_PLUS_CLUSTER_RUNTIME_INTERNAL_NAME:  # noqa: E501
+                continue
+            if not is_tkg_m_enabled and \
+                    policy_name == shared_constants.TKG_M_CLUSTER_RUNTIME_INTERNAL_NAME:  # noqa: E501
                 continue
             try:
                 compute_policy_manager.get_cse_vdc_compute_policy(
@@ -2012,12 +2018,14 @@ def _upgrade_to_cse_3_1_non_legacy(client, config,
         components were not installed correctly
     """
     is_tkg_plus_enabled = server_utils.is_tkg_plus_enabled(config=config)
+    is_tkg_m_enabled = server_utils.is_tkg_m_enabled(config=config)
 
     # Add global placement policies
     _setup_placement_policies(
         client=client,
         policy_list=shared_constants.CLUSTER_RUNTIME_PLACEMENT_POLICIES,
         is_tkg_plus_enabled=is_tkg_plus_enabled,
+        is_tkg_m_enabled=is_tkg_m_enabled,
         msg_update_callback=msg_update_callback,
         log_wire=log_wire)
 
@@ -2180,6 +2188,7 @@ def _assign_placement_policy_to_vdc_and_right_bundle_to_org(
         client,
         cse_clusters,
         is_tkg_plus_enabled,
+        is_tkg_m_enabled,
         msg_update_callback=utils.NullPrinter(),
         log_wire=False):
     """Assign placement policies to VDCs and right bundles to Orgs with existing clusters."""  # noqa: E501
@@ -2195,8 +2204,9 @@ def _assign_placement_policy_to_vdc_and_right_bundle_to_org(
     msg_update_callback.info(msg)
     INSTALL_LOGGER.info(msg)
 
-    tkg_plus_ovdcs = []
-    native_ovdcs = []
+    tkg_plus_ovdcs = set()
+    native_ovdcs = set()
+    tkg_m_ovdcs = set()
     vdc_names = {}
     org_ids = set()
     for cluster in cse_clusters:
@@ -2211,17 +2221,18 @@ def _assign_placement_policy_to_vdc_and_right_bundle_to_org(
 
         if policy_name == shared_constants.NATIVE_CLUSTER_RUNTIME_INTERNAL_NAME:  # noqa: E501
             vdc_id = cluster['vdc_id']
-            native_ovdcs.append(vdc_id)
+            native_ovdcs.add(vdc_id)
             vdc_names[vdc_id] = cluster['vdc_name']
         elif policy_name == shared_constants.TKG_PLUS_CLUSTER_RUNTIME_INTERNAL_NAME:  # noqa: E501
             vdc_id = cluster['vdc_id']
-            tkg_plus_ovdcs.append(vdc_id)
+            tkg_plus_ovdcs.add(vdc_id)
+            vdc_names[vdc_id] = cluster['vdc_name']
+        elif policy_name == shared_constants.TKG_M_CLUSTER_RUNTIME_INTERNAL_NAME:  # noqa: E501
+            vdc_id = cluster['vdc_id']
+            tkg_m_ovdcs.add(vdc_id)
             vdc_names[vdc_id] = cluster['vdc_name']
         org_id = cluster['org_href'].split('/')[-1]
         org_ids.add(org_id)
-
-    native_ovdcs = set(native_ovdcs)
-    tkg_plus_ovdcs = set(tkg_plus_ovdcs)
 
     cpm = \
         compute_policy_manager.ComputePolicyManager(client, log_wire=log_wire)
@@ -2271,6 +2282,32 @@ def _assign_placement_policy_to_vdc_and_right_bundle_to_org(
                       f"'{vdc_names[vdc_id]}'"
                 INSTALL_LOGGER.info(msg)
                 msg_update_callback.general(msg)
+
+    if tkg_m_ovdcs:
+        msg = f"Found {len(tkg_m_ovdcs)} vDC(s) hosting TKGm clusters."
+        if not is_tkg_m_enabled:
+            msg += " However TKGm is not enabled on CSE. vDC(s) hosting " \
+                   "TKGm clusters will not be processed. Please enable " \
+                   "TKGm for CSE via config file and re-run `cse upgrade` " \
+                   "to process these vDC(s)."
+            INSTALL_LOGGER.error(msg)
+            raise cse_exception.CseUpgradeError(msg)
+        msg_update_callback.info(msg)
+        INSTALL_LOGGER.info(msg)
+
+        tkg_m_policy = compute_policy_manager.get_cse_vdc_compute_policy(
+            cpm,
+            shared_constants.TKG_M_CLUSTER_RUNTIME_INTERNAL_NAME,
+            is_placement_policy=True)
+        for vdc_id in tkg_m_ovdcs:
+            cpm.add_compute_policy_to_vdc(
+                vdc_id=vdc_id,
+                compute_policy_href=tkg_m_policy['href'])
+            msg = "Added compute policy " \
+                  f"'{tkg_m_policy['display_name']}' to vDC " \
+                  f"'{vdc_names[vdc_id]}'"
+            INSTALL_LOGGER.info(msg)
+            msg_update_callback.general(msg)
 
     if len(org_ids) > 0:
         msg = "Publishing CSE native cluster right bundles to orgs where " \

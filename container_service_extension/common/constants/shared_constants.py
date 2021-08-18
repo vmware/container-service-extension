@@ -36,12 +36,18 @@ class ClusterEntityKind(Enum):
     TKG_M = 'TKGm'
 
 
+CSE_SERVER_RUNTIMES = [ClusterEntityKind.NATIVE.value,
+                       ClusterEntityKind.TKG_PLUS.value,
+                       ClusterEntityKind.TKG_M.value]
+
+
 # Cluster runtimes and placement policies
 NATIVE_CLUSTER_RUNTIME_INTERNAL_NAME = 'native'
 TKG_PLUS_CLUSTER_RUNTIME_INTERNAL_NAME = 'tkgplus'
 TKG_M_CLUSTER_RUNTIME_INTERNAL_NAME = 'tkgm'
 CLUSTER_RUNTIME_PLACEMENT_POLICIES = [NATIVE_CLUSTER_RUNTIME_INTERNAL_NAME,
-                                      TKG_PLUS_CLUSTER_RUNTIME_INTERNAL_NAME]
+                                      TKG_PLUS_CLUSTER_RUNTIME_INTERNAL_NAME,
+                                      TKG_M_CLUSTER_RUNTIME_INTERNAL_NAME]
 
 
 RUNTIME_DISPLAY_NAME_TO_INTERNAL_NAME_MAP = {
