@@ -142,10 +142,12 @@ def _populate_template_upgrade_paths(config, logger=NULL_LOGGER):
     # The following function call will filter out the templates based on
     # cse version as well.
     template_cookbook = rtm.get_filtered_remote_template_cookbook()
+    logger.debug(f"Template cookbook: {template_cookbook}")
     all_template_definitions = template_cookbook['templates']
     # filter out photon templates
     all_ubuntu_templates = \
         [template_definition for template_definition in all_template_definitions if 'ubuntu' in template_definition['name']]  # noqa: E501
+    logger.debug(f"All template definitions: {all_ubuntu_templates}")
     RT_KEYS = get_template_descriptor_keys(rtm.cookbook_version)
 
     template_name_to_desc = {}
