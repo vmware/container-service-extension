@@ -1,6 +1,7 @@
 # container-service-extension
 # Copyright (c) 2019 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
+import time
 
 from pyvcloud.vcd.client import FenceMode
 from pyvcloud.vcd.client import NetworkAdapterType
@@ -308,6 +309,7 @@ class TemplateBuilder:
         password_auto = vapp.get_admin_password(vm_name)
 
         try:
+            time.sleep(75)  # temporary hack for authentication
             result = vs.execute_script_in_guest(
                 vs.get_vm_by_moid(vapp.get_vm_moid(vm_name)),
                 'root',
