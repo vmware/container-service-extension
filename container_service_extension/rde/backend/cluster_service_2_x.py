@@ -894,7 +894,11 @@ class ClusterService(abstract_broker.AbstractBroker):
                 ClusterMetadataKey.CNI: template[LocalTemplateKey.CNI],
                 ClusterMetadataKey.CNI_VERSION: template[LocalTemplateKey.CNI_VERSION]  # noqa: E501
             }
-            vapp = vcd_vapp.VApp(client_v36,
+
+            sysadmin_client_v36 = self.context.get_sysadmin_client(
+                api_version=DEFAULT_API_VERSION)
+            # Extra config elements of VApp are visible only for admin client
+            vapp = vcd_vapp.VApp(sysadmin_client_v36,
                                  href=vapp_resource.get('href'))
             task = vapp.set_multiple_metadata(tags)
             client_v36.get_task_monitor().wait_for_status(task)
@@ -906,8 +910,6 @@ class ClusterService(abstract_broker.AbstractBroker):
             vapp.reload()
             server_config = server_utils.get_server_runtime_config()
             catalog_name = server_config['broker']['catalog']
-            sysadmin_client_v36 = self.context.get_sysadmin_client(
-                api_version=DEFAULT_API_VERSION)
 
             msg = f"Adding control plane node for '{cluster_name}' ({cluster_id})"  # noqa: E501
             LOGGER.debug(msg)
@@ -1363,7 +1365,8 @@ class ClusterService(abstract_broker.AbstractBroker):
                 api_version=DEFAULT_API_VERSION)
             org = vcd_utils.get_org(client_v36, org_name=org_name)
             ovdc = vcd_utils.get_vdc(client_v36, vdc_name=ovdc_name, org=org)
-            vapp = vcd_vapp.VApp(client_v36, href=vapp_href)
+            # Extra config elements of VApp are visible only for admin client
+            vapp = vcd_vapp.VApp(sysadmin_client_v36, href=vapp_href)
 
             if num_workers_to_add > 0:
                 msg = f"Creating {num_workers_to_add} workers from template" \
