@@ -52,7 +52,7 @@ then
     cp -f /etc/kubernetes/admin.conf /root/.kube/config
     chown $(id -u):$(id -g) /root/.kube/config
     export KUBECONFIG=/etc/kubernetes/admin.conf
-    vmtoolsd --cmd "info-set guestinfo.kubeconfig $(cat /etc/kubernetes/admin.conf)"
+    vmtoolsd --cmd "info-set guestinfo.kubeconfig $(cat /etc/kubernetes/admin.conf | base64 | tr -d '\n')"
 
     WEAVE_VERSIONED_FILE="/root/weave_v$(echo {cni_version} | sed -r 's/\./\-/g').yml"
     echo $WEAVE_VERSIONED_FILE >> /var/log/cse/customization/status.log
