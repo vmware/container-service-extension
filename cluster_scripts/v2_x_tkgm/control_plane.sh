@@ -22,11 +22,11 @@ do
 
   # save image tags for later
   if [ "$image" = "coredns" ]; then
-    coredns_image_version=new_tag_version
+    coredns_image_version=$new_tag_version
   elif [ "$image" = "etcd" ]; then
-    etcd_image_version=new_tag_version
+    etcd_image_version=$new_tag_version
   elif [ "$image" = "kube-proxy" ]; then # selecting other kube-* images would work too
-    kubernetes_version=new_tag_version
+    kubernetes_version=$new_tag_version
   fi
 done
 
