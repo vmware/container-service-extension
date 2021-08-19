@@ -1355,9 +1355,9 @@ def import_tkgm_template(
             msg = "Provided OVA doesn't seem to be a standard TKGm OVA. " \
                   "Do you still want to continue? [y/n]"
             answer = utils.prompt_text(msg, color='green')
-            if answer not in ["Y", "y"]:
+            if answer.lower() not in ["yes", "y"]:
                 console_message_printer.general(
-                    "Aborting import of TKGm template."
+                    "Aborting import of TKGm OVA."
                 )
                 return
 
@@ -1376,7 +1376,7 @@ def import_tkgm_template(
         ova_file_name_no_ext = p_no_ext.name
         catalog_item_name = ova_file_name_no_ext
         org_name = config['broker']['org']
-        ttm.upload_tkgm_template(
+        success = ttm.upload_tkgm_template(
             client=client,
             ova_file_path=ova_file_path,
             catalog_name=catalog_name,
@@ -1386,6 +1386,9 @@ def import_tkgm_template(
             logger=INSTALL_LOGGER,
             msg_update_callback=console_message_printer
         )
+
+        if not success:
+            return
 
         property_map = ttm.get_template_property(
             client=client,
@@ -1401,8 +1404,11 @@ def import_tkgm_template(
         cse_version = utils.get_installed_cse_version()
         kind = shared_constants.ClusterEntityKind.TKG_M.value
         kubernetes = "TKGm"
-        os_name = os_name_from_property_map or "ubuntu"
 
+        os_name = os_name_from_property_map
+        if not os_name:
+            msg = "Please enter the name of the OS in the template"
+            os_name = utils.prompt_text(msg, color='green')
         os_version = os_version_from_property_map or os_version_from_ova_name
         if not os_version:
             msg = "Please enter the version of the OS in the template"
@@ -1417,8 +1423,9 @@ def import_tkgm_template(
             containerd_version = utils.prompt_text(msg, color='green')
 
         metadata_dict = {
-            server_constants.TKGmTemplateKey.CNI: '',
-            server_constants.TKGmTemplateKey.CNI_VERSION: '',
+            server_constants.TKGmTemplateKey.CNI: 'antrea',
+            # ToDo: Decide on this
+            server_constants.TKGmTemplateKey.CNI_VERSION: '0.0.0',
             server_constants.TKGmTemplateKey.CONTAINER_RUNTIME: 'containerd',
             server_constants.TKGmTemplateKey.CONTAINER_RUNTIME_VERSION: containerd_version,  # noqa: E501
             server_constants.TKGmTemplateKey.CSE_VERSION: cse_version,
@@ -1428,9 +1435,16 @@ def import_tkgm_template(
             server_constants.TKGmTemplateKey.NAME: catalog_item_name,
             server_constants.TKGmTemplateKey.OS: os_name,
             server_constants.TKGmTemplateKey.OS_VERSION: os_version,
-            server_constants.TKGmTemplateKey.REVISION: 1
+            server_constants.TKGmTemplateKey.REVISION: '1'
         }
 
+        INSTALL_LOGGER.debug(
+            "Writing metadata to catalog item "
+            f"`{catalog_item_name}` : {metadata_dict}"
+        )
+        msg = f"Writing metadata onto catalog item {catalog_item_name}."
+        INSTALL_LOGGER.debug(msg)
+        console_message_printer.info(msg)
         ttm.save_metadata(
             client=client,
             org_name=org_name,
@@ -1439,6 +1453,9 @@ def import_tkgm_template(
             data=metadata_dict,
             keys_to_write=metadata_dict.keys()
         )
+        msg = "Successfully imported TKGm OVA."
+        INSTALL_LOGGER.debug(msg)
+        console_message_printer.general(msg)
     except Exception as err:
         SERVER_CLI_LOGGER.error(str(err), exc_info=True)
         console_message_printer.error(str(err))

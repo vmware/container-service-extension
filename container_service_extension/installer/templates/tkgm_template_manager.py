@@ -52,7 +52,7 @@ def upload_tkgm_template(
                   f"in catalog '{catalog_name}'"
             msg_update_callback.info(msg)
             logger.info(msg)
-            return
+            return False
         else:
             msg = f"Deleting catalog item '{catalog_item_name}' " \
                   f"from catalog '{catalog_name}'"
@@ -70,6 +70,7 @@ def upload_tkgm_template(
         logger=logger,
         msg_update_callback=msg_update_callback
     )
+    return True
 
 
 def get_template_property(

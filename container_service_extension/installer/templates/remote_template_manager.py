@@ -121,7 +121,7 @@ class RemoteTemplateManager:
         if self.cookbook_version < \
                 RemoteTemplateCookbookVersion.Version2.value:
             msg = "Skipping filtering templates as cookbook version " \
-                f"{self.cookbook_version} doesn't have supported " \
+                f"{self.cookbook_version} does not have supported " \
                 "CSE version information."
             self.logger.debug(msg)
             self.msg_update_callback.general(msg)
@@ -244,7 +244,6 @@ class RemoteTemplateManager:
             self.logger.debug(msg)
             self.msg_update_callback(msg)
         else:
-            template_cookbook_as_str = None
             try:
                 template_cookbook_as_str = download_file_into_memory(self.url)
             except requests.exceptions.ConnectionError as e:
