@@ -15,15 +15,6 @@ import container_service_extension.common.utils.core_utils as utils
 import container_service_extension.rde.models.common_models as common_models
 
 
-def get_installed_cse_version() -> semantic_version.Version:
-    """."""
-    cse_version_raw = utils.get_cse_info()['version']
-    # Cleanup version string. Strip dev version string segment.
-    # e.g. convert '2.6.0.0b2.dev5' to '2.6.0'
-    tokens = cse_version_raw.split('.')[:3]
-    return semantic_version.Version('.'.join(tokens))
-
-
 def get_server_runtime_config():
     import container_service_extension.server.service as cse_service
     return cse_service.Service().get_service_config()
