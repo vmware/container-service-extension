@@ -13,8 +13,7 @@ csi_node_path=/root/csi-node.yaml
 coredns_image_version=""
 etcd_image_version=""
 kubernetes_version=""
-declare -a tag_arr=("coredns" "etcd" "kube-proxy" "kube-apiserver" "kube-controller-manager" "kube-scheduler")
-for image in "${tag_arr[@]}"
+for image in "coredns" "etcd" "kube-proxy" "kube-apiserver" "kube-controller-manager" "kube-scheduler"
 do
   image_ref=$(ctr -n=k8s.io image list | cut -d" " -f1 | grep $image)
   ref_path=$(echo $image_ref | sed 's/:.*//')
@@ -26,7 +25,7 @@ do
     coredns_image_version=new_tag_version
   elif [ "$image" = "etcd" ]; then
     etcd_image_version=new_tag_version
-  elif [ "$image" = "kube-proxy" ]; then # selecting other kube-* would work too
+  elif [ "$image" = "kube-proxy" ]; then # selecting other kube-* images would work too
     kubernetes_version=new_tag_version
   fi
 done
