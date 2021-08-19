@@ -1438,12 +1438,9 @@ def import_tkgm_template(
             server_constants.TKGmTemplateKey.REVISION: '1'
         }
 
-        INSTALL_LOGGER.debug(
-            "Writing metadata to catalog item "
-            f"`{catalog_item_name}` : {metadata_dict}"
-        )
         msg = f"Writing metadata onto catalog item {catalog_item_name}."
-        INSTALL_LOGGER.debug(msg)
+        INSTALL_LOGGER.info(msg)
+        INSTALL_LOGGER.debug(f"{metadata_dict}")
         console_message_printer.info(msg)
         ttm.save_metadata(
             client=client,

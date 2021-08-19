@@ -316,7 +316,7 @@ class TKGmTemplateKey(str, Enum):
 
 @unique
 class TKGmProperty(str, Enum):
-    """Enumerate the keys  in TKGm template ProductSection."""
+    """Enumerate the keys in TKGm template ProductSection."""
 
     BUILD_TIMESTAMP = 'BUILD_TIMESTAMP'
     BUILD_DATE = 'BUILD_DATE'
