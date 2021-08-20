@@ -8,7 +8,10 @@ import re
 
 from pyvcloud.vcd.client import MetadataDomain
 from pyvcloud.vcd.client import MetadataVisibility
+from pyvcloud.vcd.utils import metadata_to_dict
 
+import container_service_extension.common.constants.server_constants as server_constants  # noqa: E501
+import container_service_extension.common.constants.shared_constants as shared_constants  # noqa: E501
 import container_service_extension.common.utils.core_utils as utils
 import container_service_extension.common.utils.pyvcloud_utils as vcd_utils
 from container_service_extension.logging.logger import NULL_LOGGER
@@ -118,3 +121,38 @@ def save_metadata(
         domain=MetadataDomain.SYSTEM,
         visibility=MetadataVisibility.PRIVATE
     )
+
+
+def read_all_tkgm_template(
+        client,
+        org_name,
+        catalog_name,
+        logger=NULL_LOGGER,
+        msg_update_callback=utils.NullPrinter()
+):
+    """."""
+    org = vcd_utils.get_org(client, org_name=org_name)
+    catalog_item_names = [
+        entry['name'] for entry in org.list_catalog_items(catalog_name)
+    ]
+
+    templates = []
+    for item_name in catalog_item_names:
+        md = org.get_all_metadata_from_catalog_item(
+            catalog_name=catalog_name,
+            item_name=item_name
+        )
+        metadata_dict = metadata_to_dict(md)
+        filtered_dict = {}
+        kind = metadata_dict.get(server_constants.TKGmTemplateKey.KIND)
+        if kind == shared_constants.ClusterEntityKind.TKG_M.value:
+            msg = f"Found TKGm template {item_name}."
+            logger.debug(msg)
+            msg_update_callback.general(msg)
+            for item in server_constants.TKGmTemplateKey:
+                key = item.value
+                value = metadata_dict.get(key, '')
+                filtered_dict[key] = value
+            templates.append(filtered_dict)
+
+    return templates

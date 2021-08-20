@@ -455,6 +455,7 @@ class CseOperation(Enum):
     SYSTEM_INFO = ('get info of system', '/cse/system')
     SYSTEM_UPDATE = ('update system status', '/cse/system')
     TEMPLATE_LIST = ('list all templates', '/cse/templates')
+    TKGM_TEMPLATE_LIST = ('list TKGm templates', '/cse/templates/tkgm')
 
     V35_OVDC_LIST = ('list ovdcs for v35', '/cse/3.0/ovdcs')
     V35_ORG_VDC_LIST = ('list org VDCs', '/cse/3.0/orgvdcs')

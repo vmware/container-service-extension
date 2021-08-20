@@ -29,6 +29,7 @@ import container_service_extension.exception.exceptions as cse_exception
 import container_service_extension.installer.configure_cse as configure_cse
 import container_service_extension.installer.templates.local_template_manager as ltm  # noqa: E501
 from container_service_extension.installer.templates.template_rule import TemplateRule  # noqa: E501
+import container_service_extension.installer.templates.tkgm_template_manager as ttm  # noqa: E501
 from container_service_extension.lib.telemetry.constants import CseOperation
 from container_service_extension.lib.telemetry.constants import PayloadKey
 from container_service_extension.lib.telemetry.telemetry_handler \
@@ -371,22 +372,32 @@ class Service(object, metaclass=Singleton):
         # Read k8s catalog definition from catalog item metadata and append
         # the same to to server run-time config
         self._load_template_definition_from_catalog(
-            msg_update_callback=msg_update_callback)
+            msg_update_callback=msg_update_callback
+        )
+
+        # Read TKGm catalog definition from catalog item metadata and append
+        # the same to to server run-time config
+        self._load_tkgm_template_definition_from_catalog(
+            msg_update_callback=msg_update_callback
+        )
 
         self._load_placement_policy_details(
-            msg_update_callback=msg_update_callback)
+            msg_update_callback=msg_update_callback
+        )
 
         if self.config['service']['legacy_mode']:
             # Read templates rules from config and update template definition
             # in server run-time config
             self._process_template_rules(
-                msg_update_callback=msg_update_callback)
+                msg_update_callback=msg_update_callback
+            )
 
             # Make sure that all vms in templates are compliant with the
             # compute policy specified in template definition (can be affected
             # by rules).
             self._process_template_compute_policy_compliance(
-                msg_update_callback=msg_update_callback)
+                msg_update_callback=msg_update_callback
+            )
         else:
             msg = "Template rules are not supported by CSE for vCD api " \
                   "version 35.0 or above. Skipping template rule processing."
@@ -591,7 +602,9 @@ class Service(object, metaclass=Singleton):
             raise
 
     def _load_template_definition_from_catalog(
-            self, msg_update_callback=utils.NullPrinter()):
+            self,
+            msg_update_callback=utils.NullPrinter()
+    ):
         # NOTE: If `enable_tkg_plus` in the config file is set to false,
         # CSE server will skip loading the TKG+ template this will prevent
         # users from performing TKG+ related operations.
@@ -663,6 +676,58 @@ class Service(object, metaclass=Singleton):
                 sys.exit(1)
 
             self.config['broker']['templates'] = k8_templates
+        finally:
+            if client:
+                client.logout()
+
+    def _load_tkgm_template_definition_from_catalog(
+            self,
+            msg_update_callback=utils.NullPrinter()
+    ):
+        msg = "Loading TKGm template definition from catalog"
+        logger.SERVER_LOGGER.info(msg)
+        msg_update_callback.general_no_color(msg)
+
+        client = None
+        try:
+            log_filename = None
+            log_wire = utils.str_to_bool(
+                self.config['service'].get('log_wire')
+            )
+            if log_wire:
+                log_filename = logger.SERVER_DEBUG_WIRELOG_FILEPATH
+
+            # Since the config param has been read from file by
+            # get_validated_config method, we can safely use the
+            # default_api_version key, it will be set to the highest api
+            # version supported by VCD and CSE.
+            client = Client(
+                self.config['vcd']['host'],
+                api_version=self.config['service']['default_api_version'],
+                verify_ssl_certs=self.config['vcd']['verify'],
+                log_file=log_filename,
+                log_requests=log_wire,
+                log_headers=log_wire,
+                log_bodies=log_wire
+            )
+            credentials = BasicLoginCredentials(
+                self.config['vcd']['username'],
+                shared_constants.SYSTEM_ORG_NAME,
+                self.config['vcd']['password']
+            )
+            client.set_credentials(credentials)
+
+            org_name = self.config['broker']['org']
+            catalog_name = self.config['broker']['catalog']
+            tkgm_templates = ttm.read_all_tkgm_template(
+                client=client,
+                org_name=org_name,
+                catalog_name=catalog_name,
+                logger=logger.SERVER_LOGGER,
+                msg_update_callback=msg_update_callback
+            )
+
+            self.config['broker']['tkgm_templates'] = tkgm_templates
         finally:
             if client:
                 client.logout()
