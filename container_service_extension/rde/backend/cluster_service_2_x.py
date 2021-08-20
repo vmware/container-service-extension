@@ -1399,6 +1399,16 @@ class ClusterService(abstract_broker.AbstractBroker):
                     f"{cluster_name}({cluster_id})"
                 self._update_task(BehaviorTaskStatus.RUNNING, message=msg)
 
+                # Get join cmd from RDE;fallback to control plane extra config  # noqa: E501
+                if hasattr(curr_native_entity.status, 'private') and hasattr(
+                        curr_native_entity.status.private, 'kube_token'):
+                    control_plane_join_cmd = curr_native_entity.status.private.kube_token  # noqa: E501
+                else:
+                    control_plane_join_cmd = _get_join_cmd(
+                        sysadmin_client=sysadmin_client_v36,
+                        vapp=vapp
+                    )
+
                 _add_worker_nodes(
                     sysadmin_client_v36,
                     num_nodes=num_workers_to_add,
@@ -1411,7 +1421,7 @@ class ClusterService(abstract_broker.AbstractBroker):
                     storage_profile=worker_storage_profile,
                     ssh_key=ssh_key,
                     sizing_class_name=worker_sizing_class,
-                    control_plane_join_cmd=curr_native_entity.status.private.kube_token  # noqa: E501
+                    control_plane_join_cmd=control_plane_join_cmd  # noqa: E501
                 )
 
                 msg = f"Added {num_workers_to_add} node(s) to cluster " \
