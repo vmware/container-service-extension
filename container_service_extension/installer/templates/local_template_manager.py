@@ -8,7 +8,6 @@ import pathlib
 
 from pyvcloud.vcd.client import MetadataDomain
 from pyvcloud.vcd.client import MetadataVisibility
-from pyvcloud.vcd.org import Org
 from pyvcloud.vcd.utils import metadata_to_dict
 import semantic_version
 
@@ -17,8 +16,7 @@ from container_service_extension.common.constants.server_constants import LocalT
 import container_service_extension.common.constants.shared_constants as \
     shared_constants
 import container_service_extension.common.utils.core_utils as utils
-from container_service_extension.common.utils.pyvcloud_utils import get_org
-import container_service_extension.common.utils.server_utils as server_utils
+import container_service_extension.common.utils.pyvcloud_utils as vcd_utils
 import container_service_extension.logging.logger as logger
 
 
@@ -82,7 +80,7 @@ def get_all_k8s_local_template_definition(client, catalog_name, org=None,
     if not ignore_metadata_keys:
         ignore_metadata_keys = []
     if not org:
-        org = get_org(client, org_name=org_name)
+        org = vcd_utils.get_org(client, org_name=org_name)
     catalog_item_names = [
         entry['name'] for entry in org.list_catalog_items(catalog_name)]
     templates = []
@@ -124,7 +122,7 @@ def get_all_k8s_local_template_definition(client, catalog_name, org=None,
             # Do not load the template in non-legacy_mode if
             # min_cse_version and max_cse_version are not present
             # in the metadata_dict
-            curr_cse_version = server_utils.get_installed_cse_version()
+            curr_cse_version = utils.get_installed_cse_version()
             valid_cse_versions = semantic_version.SimpleSpec(
                 f">={metadata_dict[localTemplateKey.MIN_CSE_VERSION]},"
                 f"<={metadata_dict[localTemplateKey.MAX_CSE_VERSION]}")
@@ -210,11 +208,10 @@ def get_valid_k8s_local_template_definition(client, catalog_name, org=None,
 def save_metadata(client, org_name, catalog_name, catalog_item_name,
                   template_data, metadata_key_list=None):
     metadata_key_list = metadata_key_list or []
-    org_resource = client.get_org_by_name(org_name=org_name)
-    org = Org(client, resource=org_resource)
+    org = vcd_utils.get_org(client, org_name=org_name)
     org.set_multiple_metadata_on_catalog_item(
         catalog_name=catalog_name,
         item_name=catalog_item_name,
-        key_value_dict={k: template_data[k] for k in metadata_key_list},
+        key_value_dict={k: template_data.get(k, '') for k in metadata_key_list},  # noqa: E501
         domain=MetadataDomain.SYSTEM,
         visibility=MetadataVisibility.PRIVATE)

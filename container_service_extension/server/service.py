@@ -120,7 +120,7 @@ def verify_version_compatibility(
             "Please upgrade CSE and retry.")
 
     error_msg = ''
-    cse_version = server_utils.get_installed_cse_version()
+    cse_version = utils.get_installed_cse_version()
     # Trying to use newer version of CSE without running `cse upgrade`
     if cse_version > ext_cse_version:
         error_msg += \

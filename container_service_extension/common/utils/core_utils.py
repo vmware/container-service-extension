@@ -16,6 +16,7 @@ import urllib
 import click
 import pkg_resources
 import requests
+import semantic_version
 
 from container_service_extension.logging.logger import NULL_LOGGER
 
@@ -73,6 +74,15 @@ def get_cse_info():
         'version': pkg_resources.require('container-service-extension')[0].version,  # noqa: E501
         'python': platform.python_version()
     }
+
+
+def get_installed_cse_version() -> semantic_version.Version:
+    """."""
+    cse_version_raw = get_cse_info()['version']
+    # Cleanup version string. Strip dev version string segment.
+    # e.g. convert '2.6.0.0b2.dev5' to '2.6.0'
+    tokens = cse_version_raw.split('.')[:3]
+    return semantic_version.Version('.'.join(tokens))
 
 
 def prompt_text(text, color='black', hide_input=False):

@@ -13,8 +13,7 @@ import yaml
 from container_service_extension.common.constants.server_constants import RemoteTemplateCookbookVersion  # noqa: E501
 from container_service_extension.common.constants.server_constants import ScriptFile  # noqa: E501
 from container_service_extension.common.constants.server_constants import TemplateScriptFile  # noqa: E501
-from container_service_extension.common.utils.core_utils import download_file
-from container_service_extension.common.utils.core_utils import NullPrinter
+import container_service_extension.common.utils.core_utils as utils
 import container_service_extension.common.utils.server_utils as server_utils
 import container_service_extension.installer.templates.local_template_manager as ltm  # noqa: E501
 from container_service_extension.logging.logger import NULL_LOGGER
@@ -46,7 +45,7 @@ class RemoteTemplateManager:
 
     def __init__(self, remote_template_cookbook_url, legacy_mode: bool = False,
                  cookbook_version=None, logger=NULL_LOGGER,
-                 msg_update_callback=NullPrinter()):
+                 msg_update_callback=utils.NullPrinter()):
         """.
 
         :param str remote_template_cookbook_url:
@@ -122,13 +121,13 @@ class RemoteTemplateManager:
         if self.cookbook_version < \
                 RemoteTemplateCookbookVersion.Version2.value:
             msg = "Skipping filtering templates as cookbook version " \
-                f"{self.cookbook_version} doesn't have supported " \
+                f"{self.cookbook_version} does not have supported " \
                 "CSE version information."
             self.logger.debug(msg)
             self.msg_update_callback.general(msg)
             return
         # Fetch current CSE version
-        current_cse_version = server_utils.get_installed_cse_version()
+        current_cse_version = utils.get_installed_cse_version()
         supported_templates = []
         remote_template_key = server_utils.get_template_descriptor_keys(self.cookbook_version)  # noqa: E501
         for template_description in self.unfiltered_cookbook['templates']:
@@ -245,7 +244,6 @@ class RemoteTemplateManager:
             self.logger.debug(msg)
             self.msg_update_callback(msg)
         else:
-            template_cookbook_as_str = None
             try:
                 template_cookbook_as_str = download_file_into_memory(self.url)
             except requests.exceptions.ConnectionError as e:
@@ -314,11 +312,13 @@ class RemoteTemplateManager:
 
             local_script_filepath = ltm.get_script_filepath(
                 self.cookbook_version, template_name, revision, script_file)
-            download_file(url=remote_script_url,
-                          filepath=local_script_filepath,
-                          force_overwrite=force_overwrite,
-                          logger=self.logger,
-                          msg_update_callback=self.msg_update_callback)
+            utils.download_file(
+                url=remote_script_url,
+                filepath=local_script_filepath,
+                force_overwrite=force_overwrite,
+                logger=self.logger,
+                msg_update_callback=self.msg_update_callback
+            )
 
             # Set Read,Write permission only for the owner
             if os.name != 'nt':
