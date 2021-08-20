@@ -438,6 +438,24 @@ def test_0020_vcd_ovdc_enable(vcd_sys_admin, disable_test_vdc):
                                       result.output)
 
 
+def test_0020_vcd_ovdc_enable_again(vcd_sys_admin):
+    """Test ovdc enable operation.
+
+    Test that re-enabling the same ovdc for the same runtime should give an
+        error.
+    commands:
+    $ vcd cse ovdc enable -n -o TEST_ORG TEST_VDC
+    """
+    cmd = f"cse ovdc enable {env.TEST_VDC} -n -o {env.TEST_ORG}"
+    result = env.CLI_RUNNER.invoke(vcd, cmd.split(), catch_exceptions=False)
+    PYTEST_LOGGER.debug(f"Executing command: {cmd}")
+    PYTEST_LOGGER.debug(f"Exit code: {result.exit_code}")
+    PYTEST_LOGGER.debug(f"Output: {result.output}")
+    assert result.exit_code == 2, \
+        testutils.format_command_info('vcd', cmd, result.exit_code,
+                                      result.output)
+
+
 @pytest.mark.parametrize(
     "test_runner_username,test_case",
     [pytest.param(
@@ -524,37 +542,37 @@ def _generate_cluster_apply_tests(test_users=None):
             test_cases.extend(
                 [
                     # Invalid Sizing policy
-                    # pytest.param(
-                    #     user,
-                    #     (0, 0, True,
-                    #      template['name'], template['revision'], None,
-                    #      "INVALID-VALUE", None, f"{env.USERNAME_TO_CLUSTER_NAME[user]}-case1"),  # noqa: E501
-                    #     "CREATE:FAILED"
-                    # ),
-                    # # Invalid Storage profile
-                    # pytest.param(
-                    #     user,
-                    #     (0, 0, True,
-                    #      template['name'], template['revision'], None,
-                    #      None, "INVALID-VALUE", f"{env.USERNAME_TO_CLUSTER_NAME[user]}-case2"),  # noqa: E501
-                    #     "CREATE:FAILED"
-                    # ),
-                    # # Invalid Network
-                    # pytest.param(
-                    #     user,
-                    #     (0, 0, True,
-                    #      template['name'], template['revision'], "INVALID-VALUE",  # noqa: E501
-                    #      None, None, f"{env.USERNAME_TO_CLUSTER_NAME[user]}-case3"),  # noqa: E501
-                    #     "CREATE:FAILED"
-                    # ),
-                    # # Invalid network with rollback
-                    # pytest.param(
-                    #     user,
-                    #     (0, 0, False,
-                    #      template['name'], template['revision'], 'INVALID-NETWORK',  # noqa: E501
-                    #      None, None, f"{env.USERNAME_TO_CLUSTER_NAME[user]}-case4"),  # noqa: E501
-                    #     'CREATE:FAILED'
-                    # ),
+                    pytest.param(
+                        user,
+                        (0, 0, True,
+                         template['name'], template['revision'], None,
+                         "INVALID-VALUE", None, f"{env.USERNAME_TO_CLUSTER_NAME[user]}-case1"),  # noqa: E501
+                        "CREATE:FAILED"
+                    ),
+                    # Invalid Storage profile
+                    pytest.param(
+                        user,
+                        (0, 0, True,
+                         template['name'], template['revision'], None,
+                         None, "INVALID-VALUE", f"{env.USERNAME_TO_CLUSTER_NAME[user]}-case2"),  # noqa: E501
+                        "CREATE:FAILED"
+                    ),
+                    # Invalid Network
+                    pytest.param(
+                        user,
+                        (0, 0, True,
+                         template['name'], template['revision'], "INVALID-VALUE",  # noqa: E501
+                         None, None, f"{env.USERNAME_TO_CLUSTER_NAME[user]}-case3"),  # noqa: E501
+                        "CREATE:FAILED"
+                    ),
+                    # Invalid network with rollback
+                    pytest.param(
+                        user,
+                        (0, 0, False,
+                         template['name'], template['revision'], 'INVALID-NETWORK',  # noqa: E501
+                         None, None, f"{env.USERNAME_TO_CLUSTER_NAME[user]}-case4"),  # noqa: E501
+                        'CREATE:FAILED'
+                    ),
                     # Valid case
                     pytest.param(
                         user,
@@ -813,7 +831,7 @@ def test_0080_vcd_cse_cluster_config(test_runner_username):
                              test_user=test_runner_username),
         testutils.CMD_BINDER(cmd=f"cse cluster config {env.USERNAME_TO_CLUSTER_NAME[test_runner_username]}",  # noqa: E501
                              exit_code=0,
-                             validate_output_func=None,
+                             validate_output_func=testutils.validate_yaml_output(),  # noqa: E501
                              test_user=test_runner_username),
         testutils.CMD_BINDER(cmd=env.USER_LOGOUT_CMD,
                              exit_code=0,
@@ -905,8 +923,8 @@ def generate_cluster_upgrade_tests(test_users=None):
         test_users = \
             [
                 env.SYS_ADMIN_NAME,
-                # env.CLUSTER_ADMIN_NAME,
-                # env.CLUSTER_AUTHOR_NAME
+                env.CLUSTER_ADMIN_NAME,
+                env.CLUSTER_AUTHOR_NAME
             ]
     test_cases = []
     for user in test_users:
@@ -1013,13 +1031,29 @@ def test_0100_cluster_upgrade_trough_apply(upgrade_test_cases, expect_failure):
             "Expected RDE phase to be 'UPGRADE:SUCCEEDED'"  # noqa: E501
 
 
-def test_0100_vcd_ovdc_disable(vcd_sys_admin):
-    """Test ovdc enable operation.
+def test_110_vcd_ovdc_disable_with_insufficient_permission(vcd_cluster_author):
+    """Test ovdc disable operation when insufficient permission is present.
 
     commands:
-    $ vcd cse ovdc enable -n -o TEST_ORG TEST_VDC
+    $ vcd cse ovdc disable -n -o TEST_ORG TEST_VDC
     """
     cmd = f"cse ovdc disable {env.TEST_VDC} -n -o {env.TEST_ORG}"
+    result = env.CLI_RUNNER.invoke(vcd, cmd.split(), catch_exceptions=False)
+    PYTEST_LOGGER.debug(f"Executing command: {cmd}")
+    PYTEST_LOGGER.debug(f"Exit code: {result.exit_code}")
+    PYTEST_LOGGER.debug(f"Output: {result.output}")
+    assert result.exit_code == 2, \
+        testutils.format_command_info('vcd', cmd, result.exit_code,
+                                      result.output)
+
+
+def test_0100_vcd_ovdc_disable(vcd_sys_admin):
+    """Test ovdc disable operation.
+
+    commands:
+    $ vcd cse ovdc disable -n -o TEST_ORG TEST_VDC
+    """
+    cmd = f"cse ovdc disable {env.TEST_VDC} -n -o {env.TEST_ORG} --force"
     result = env.CLI_RUNNER.invoke(vcd, cmd.split(), catch_exceptions=False)
     PYTEST_LOGGER.debug(f"Executing command: {cmd}")
     PYTEST_LOGGER.debug(f"Exit code: {result.exit_code}")
