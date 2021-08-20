@@ -732,7 +732,7 @@ class PostCustomizationStatus(Enum):
 class PostCustomizationPhase(Enum):
     STORE_SSH_KEY = 'guestinfo.postcustomization.store.sshkey.status'
     KUBEADM_INIT = 'guestinfo.postcustomization.kubeinit.status'
-    KUBECTL_APPLY_WEAVE = 'guestinfo.postcustomization.kubectl.apply.weave.status'  # noqa: E501
+    KUBECTL_APPLY_CNI = 'guestinfo.postcustomization.kubectl.apply.cni.status'  # noqa: E501
     KUBEADM_TOKEN_GENERATE = 'guestinfo.postcustomization.kubeadm.token.generate.status'  # noqa: E501
     KUBEADM_NODE_JOIN = 'guestinfo.postcustomization.kubeadm.node.join.status'
 

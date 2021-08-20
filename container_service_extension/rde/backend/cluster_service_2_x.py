@@ -2444,7 +2444,7 @@ def _add_control_plane_nodes(sysadmin_client, num_nodes, org, vdc, vapp,
                 )
                 vcd_utils.wait_for_completion_of_post_customization_procedure(
                     vm,
-                    customization_phase=PostCustomizationPhase.KUBECTL_APPLY_WEAVE.value,  # noqa: E501
+                    customization_phase=PostCustomizationPhase.KUBECTL_APPLY_CNI.value,  # noqa: E501
                     logger=LOGGER
                 )
 
