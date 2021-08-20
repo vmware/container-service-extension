@@ -2680,10 +2680,8 @@ def _get_kube_config_from_control_plane_vm(sysadmin_client: vcd_client.Client, v
     return kube_config_in_bytes.decode()
 
 
-def wait_for_update_customization(message, exception=None):
-    LOGGER.debug(f"waiting for updating customization, status: {message}")  # noqa: E501
-    if exception is not None:
-        LOGGER.error(f"exception: {str(exception)}")
+def wait_for_update_customization(task):
+    LOGGER.debug(f"waiting for updating customization, status: {task.get('status').lower()}")  # noqa: E501
 
 
 def wait_for_adding_control_plane_vm_to_vapp(task):
