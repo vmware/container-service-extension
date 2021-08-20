@@ -1411,7 +1411,7 @@ class ClusterService(abstract_broker.AbstractBroker):
                     storage_profile=worker_storage_profile,
                     ssh_key=ssh_key,
                     sizing_class_name=worker_sizing_class,
-                    control_plane_join_cmd=curr_native_entity.status.private.kube_token  # noqa: E501control_plane_join_cmd=curr_native_entity.status.private.kube_token  # noqa: E501
+                    control_plane_join_cmd=curr_native_entity.status.private.kube_token  # noqa: E501
                 )
 
                 msg = f"Added {num_workers_to_add} node(s) to cluster " \
