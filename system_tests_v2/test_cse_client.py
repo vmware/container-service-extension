@@ -462,6 +462,10 @@ def test_0030_vcd_cse_system_toggle(config, delete_test_clusters, test_runner_us
     :param test_runner_username: parameterized persona to run tests with
     different users
     """
+    # create apply specification
+    spec_params = testutils.construct_apply_param(test_case)
+    create_apply_spec(spec_params)
+
     cmd_list = [
         testutils.CMD_BINDER(cmd=env.SYS_ADMIN_LOGIN_CMD,
                              exit_code=0,
@@ -510,8 +514,8 @@ def _generate_cluster_apply_tests(test_users=None):
         test_users = \
             [
                 env.SYS_ADMIN_NAME,
-                env.CLUSTER_ADMIN_NAME,
-                env.CLUSTER_AUTHOR_NAME
+                # env.CLUSTER_ADMIN_NAME,
+                # env.CLUSTER_AUTHOR_NAME
             ]
 
     test_cases = []
@@ -520,37 +524,37 @@ def _generate_cluster_apply_tests(test_users=None):
             test_cases.extend(
                 [
                     # Invalid Sizing policy
-                    pytest.param(
-                        user,
-                        (0, 0, True,
-                         template['name'], template['revision'], None,
-                         "INVALID-VALUE", None, f"{env.USERNAME_TO_CLUSTER_NAME[user]}-case1"),  # noqa: E501
-                        "CREATE:FAILED"
-                    ),
-                    # Invalid Storage profile
-                    pytest.param(
-                        user,
-                        (0, 0, True,
-                         template['name'], template['revision'], None,
-                         None, "INVALID-VALUE", f"{env.USERNAME_TO_CLUSTER_NAME[user]}-case2"),  # noqa: E501
-                        "CREATE:FAILED"
-                    ),
-                    # Invalid Network
-                    pytest.param(
-                        user,
-                        (0, 0, True,
-                         template['name'], template['revision'], "INVALID-VALUE",  # noqa: E501
-                         None, None, f"{env.USERNAME_TO_CLUSTER_NAME[user]}-case3"),  # noqa: E501
-                        "CREATE:FAILED"
-                    ),
-                    # Invalid network with rollback
-                    pytest.param(
-                        user,
-                        (0, 0, False,
-                         template['name'], template['revision'], 'INVALID-NETWORK',  # noqa: E501
-                         None, None, f"{env.USERNAME_TO_CLUSTER_NAME[user]}-case4"),  # noqa: E501
-                        'CREATE:FAILED'
-                    ),
+                    # pytest.param(
+                    #     user,
+                    #     (0, 0, True,
+                    #      template['name'], template['revision'], None,
+                    #      "INVALID-VALUE", None, f"{env.USERNAME_TO_CLUSTER_NAME[user]}-case1"),  # noqa: E501
+                    #     "CREATE:FAILED"
+                    # ),
+                    # # Invalid Storage profile
+                    # pytest.param(
+                    #     user,
+                    #     (0, 0, True,
+                    #      template['name'], template['revision'], None,
+                    #      None, "INVALID-VALUE", f"{env.USERNAME_TO_CLUSTER_NAME[user]}-case2"),  # noqa: E501
+                    #     "CREATE:FAILED"
+                    # ),
+                    # # Invalid Network
+                    # pytest.param(
+                    #     user,
+                    #     (0, 0, True,
+                    #      template['name'], template['revision'], "INVALID-VALUE",  # noqa: E501
+                    #      None, None, f"{env.USERNAME_TO_CLUSTER_NAME[user]}-case3"),  # noqa: E501
+                    #     "CREATE:FAILED"
+                    # ),
+                    # # Invalid network with rollback
+                    # pytest.param(
+                    #     user,
+                    #     (0, 0, False,
+                    #      template['name'], template['revision'], 'INVALID-NETWORK',  # noqa: E501
+                    #      None, None, f"{env.USERNAME_TO_CLUSTER_NAME[user]}-case4"),  # noqa: E501
+                    #     'CREATE:FAILED'
+                    # ),
                     # Valid case
                     pytest.param(
                         user,
