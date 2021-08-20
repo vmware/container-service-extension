@@ -558,7 +558,7 @@ def install_template(template_name, template_revision, config_file_name,
                 if template_name_matched and template_revision_matched:
                     msg = f"Template '{template_name}' at revision " \
                           f"'{template_revision}' is not supported by " \
-                          f"CSE {server_utils.get_installed_cse_version()}"
+                          f"CSE {utils.get_installed_cse_version()}"
                     INSTALL_LOGGER.debug(msg)
                     msg_update_callback.general(msg)
                     raise Exception(msg)
@@ -698,7 +698,7 @@ def upgrade_cse(config_file_name, config, skip_template_creation,
             msg_update_callback.general(msg)
             INSTALL_LOGGER.info(msg)
 
-        target_cse_version = server_utils.get_installed_cse_version()
+        target_cse_version = utils.get_installed_cse_version()
 
         # ToDo: Record `legacy mode` flag instead of api versions
         # ToDo: Record 'rde version' in use flag
@@ -970,7 +970,7 @@ def _check_mqtt_extension_installation(client, msg_update_callback, err_msgs):
 
 def _construct_cse_extension_description(
         rde_version_in_use: Union[semantic_version.Version, str]) -> str:
-    cse_version = server_utils.get_installed_cse_version()
+    cse_version = utils.get_installed_cse_version()
     global LEGACY_MODE
     if not rde_version_in_use:
         rde_version_in_use = semantic_version.Version("0.0.0")
@@ -2636,7 +2636,7 @@ def _upgrade_cluster_rde(client, cluster, rde_to_upgrade,
     # because the format of the entity ID has changed to omit version string.
     tags = {
         server_constants.ClusterMetadataKey.CLUSTER_ID: upgraded_rde.id,
-        server_constants.ClusterMetadataKey.CSE_VERSION: server_utils.get_installed_cse_version()  # noqa: E501
+        server_constants.ClusterMetadataKey.CSE_VERSION: utils.get_installed_cse_version()  # noqa: E501
     }
     vapp = VApp(client, href=cluster['vapp_href'])
     task = vapp.set_multiple_metadata(tags)

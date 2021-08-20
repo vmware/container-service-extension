@@ -4,7 +4,6 @@
 
 """Utility module to perform operations which involve pyvcloud calls."""
 from datetime import datetime, timedelta
-import pathlib
 import time
 from typing import Optional
 import urllib
@@ -20,7 +19,7 @@ from pyvcloud.vcd.vdc import VDC
 from pyvcloud.vcd.vm import VM
 import requests
 
-import container_service_extension.common.constants.server_constants as server_constants # noqa: E501
+import container_service_extension.common.constants.server_constants as server_constants  # noqa: E501
 import container_service_extension.common.constants.shared_constants as shared_constants  # noqa: E501
 from container_service_extension.common.utils.core_utils import extract_id_from_href  # noqa: E501
 from container_service_extension.common.utils.core_utils import NullPrinter
@@ -257,14 +256,23 @@ def get_pvdc_id_from_pvdc_name(name, vc_name_in_vcd):
             client.logout()
 
 
-def upload_ova_to_catalog(client, catalog_name, filepath, update=False,
-                          org=None, org_name=None, logger=NULL_LOGGER,
-                          msg_update_callback=NullPrinter()):
+def upload_ova_to_catalog(
+        client,
+        source_filepath,
+        catalog_name,
+        catalog_item_name,
+        update=False,
+        org=None,
+        org_name=None,
+        logger=NULL_LOGGER,
+        msg_update_callback=NullPrinter()
+):
     """Upload local ova file to vCD catalog.
 
     :param pyvcloud.vcd.client.Client client:
-    :param str filepath: file path to the .ova file.
+    :param str source_filepath: file path to the .ova file.
     :param str catalog_name: name of catalog.
+    :param str catalog_item_name: name of the catalog item
     :param bool update: signals whether to overwrite an existing catalog
         item with this new one.
     :param pyvcloud.vcd.org.Org org: specific org to use.
@@ -280,7 +288,6 @@ def upload_ova_to_catalog(client, catalog_name, filepath, update=False,
     """
     if org is None:
         org = get_org(client, org_name=org_name)
-    catalog_item_name = pathlib.Path(filepath).name
     if update:
         try:
             msg = f"Update flag set. Checking catalog '{catalog_name}' for " \
@@ -320,7 +327,11 @@ def upload_ova_to_catalog(client, catalog_name, filepath, update=False,
     msg_update_callback.info(msg)
     logger.info(msg)
 
-    org.upload_ovf(catalog_name, filepath)
+    org.upload_ovf(
+        catalog_name=catalog_name,
+        file_name=source_filepath,
+        item_name=catalog_item_name
+    )
     org.reload()
     wait_for_catalog_item_to_resolve(client, catalog_name, catalog_item_name,
                                      org=org)

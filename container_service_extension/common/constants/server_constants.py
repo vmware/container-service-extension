@@ -298,6 +298,42 @@ class LocalTemplateKey(str, Enum):
 
 
 @unique
+class TKGmTemplateKey(str, Enum):
+    """Enumerate the keys that define an imported TKGm template."""
+
+    CNI = 'cni'
+    CNI_VERSION = 'cni_version'
+    CONTAINER_RUNTIME = 'container_runtime'
+    CONTAINER_RUNTIME_VERSION = 'container_runtime_version'
+    CSE_VERSION = 'cse_version'
+    KIND = 'kind'
+    KUBERNETES = 'kubernetes'
+    KUBERNETES_VERSION = 'kubernetes_version'
+    NAME = 'name'
+    OS = 'os'
+    OS_VERSION = 'os_version'
+    REVISION = 'revision'
+
+
+@unique
+class TKGmProperty(str, Enum):
+    """Enumerate the keys in TKGm template ProductSection."""
+
+    BUILD_TIMESTAMP = 'BUILD_TIMESTAMP'
+    BUILD_DATE = 'BUILD_DATE'
+    CUSTOM_ROLE = 'CUSTOM_ROLE'
+    IMAGE_BUILDER_VERSION = 'IMAGE_BUILDER_VERSION'
+    DISTRO_NAME = 'DISTRO_NAME'
+    DISTRO_VERSION = 'DISTRO_VERSION'
+    DISTRO_ARCH = 'DISTRO_ARCH'
+    CNI_VERSION = 'CNI_VERSION'
+    CONTAINDERD_VERSION = 'CONTAINERD_VERSION'
+    KUBERNETES_SEMVER = 'KUBERNETES_SEMVER'
+    KUBERNETES_SOURCE_TYPE = 'KUBERNETES_SOURCE_TYPE'
+    VERSION = 'VERSION'
+
+
+@unique
 class RemoteTemplateKeyV1(str, Enum):
     """Enumerate the keys that define a template."""
 
