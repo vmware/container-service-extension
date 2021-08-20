@@ -2499,8 +2499,8 @@ def _init_cluster(sysadmin_client: vcd_client.Client, vapp,
             ClusterScriptFile.CONTROL_PLANE,
             ClusterScriptFile.VERSION_2_X_TKGM)
         # TODO: get username/password or replace with token
-        base64_username = "username"
-        base64_password = "password"
+        base64_username = "base64_username"
+        base64_password = "base64_password"
         vip_subnet_cidr_ip = DEFAULT_SUBNET_CIDR_IP  # TODO: get subnet
         vip_subnet_cidr_suffix = DEFAULT_SUBNET_CIDR_SUFFIX
         script = templated_script.format(
