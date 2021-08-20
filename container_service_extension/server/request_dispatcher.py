@@ -79,6 +79,17 @@ TEMPLATE_HANDLERS = [
                 'handler': template_handler.template_list
             }
         }
+    },
+    {
+        'url': "cse/templates/tkgm",
+        RequestMethod.GET: {
+            ('36.0', ): {
+                'allowed_params': [],
+                'required_params': [],
+                'operation': CseOperation.TEMPLATE_LIST,
+                'handler': template_handler.tkgm_template_list
+            }
+        }
     }
 ]
 
