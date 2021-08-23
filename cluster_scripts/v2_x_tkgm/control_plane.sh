@@ -21,11 +21,11 @@ do
   ctr -n=k8s.io image tag $image_ref $ref_path:$new_tag_version
 
   # save image tags for later
-  if [ "$image" = "coredns" ]; then
+  if [[ "$image" = "coredns" ]]; then
     coredns_image_version=$new_tag_version
-  elif [ "$image" = "etcd" ]; then
+  elif [[ "$image" = "etcd" ]]; then
     etcd_image_version=$new_tag_version
-  elif [ "$image" = "kube-proxy" ]; then # selecting other kube-* images would work too
+  elif [[ "$image" = "kube-proxy" ]]; then # selecting other kube-* images would work too
     kubernetes_version=$new_tag_version
   fi
 done
@@ -67,11 +67,10 @@ kubeadm init --config $kubeadm_config_path > /root/kubeadm-init.out
 mkdir -p /root/.kube
 cp -f /etc/kubernetes/admin.conf /root/.kube/config
 chown $(id -u):$(id -g) /root/.kube/config
-export kubever=$(kubectl version --client | base64 | tr -d '\n')
 
 kubectl apply -f https://github.com/vmware-tanzu/antrea/releases/download/v0.11.3/antrea.yml
 systemctl restart kubelet
-while [ `systemctl is-active kubelet` != 'active' ]; do echo 'waiting for kubelet'; sleep 5; done
+while [[ `systemctl is-active kubelet` != 'active' ]]; do echo 'waiting for kubelet'; sleep 5; done
 
 # Download cpi and csi yaml
 #wget -O /root/vcloud-basic-auth.yaml https://raw.githubusercontent.com/vmware/cloud-provider-for-cloud-director/main/manifests/vcloud-basic-auth.yaml
