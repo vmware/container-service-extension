@@ -89,6 +89,12 @@ VCENTER_LOGIN_ERROR_MSG = "vCenter login failed (check config file for "\
 # Request Id format for logging
 REQUEST_ID_FORMAT = 'Request Id: %(requestId)s | '
 
+# TKGM init values
+TKGM_DEFAULT_POD_NETWORK_CIDR = '100.66.0.0/16'
+TKGM_DEFAULT_SERVICE_CIDR = '100.77.0.0/16'
+DEFAULT_SUBNET_CIDR_IP = '10.150.191.253'
+DEFAULT_SUBNET_CIDR_SUFFIX = '19'
+
 
 @unique
 class OperationType(str, Enum):
@@ -207,6 +213,7 @@ class ClusterScriptFile(str, Enum):
     # python package parsing methods to work well
     VERSION_1_X = "v1_x"
     VERSION_2_X = "v2_x"
+    VERSION_2_X_TKGM = "v2_x_tkgm"
 
 
 @unique
