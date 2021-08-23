@@ -10,7 +10,9 @@ import urllib
 
 import pyvcloud.vcd.client as vcd_client
 from pyvcloud.vcd.exceptions import EntityNotFoundException
+from pyvcloud.vcd.exceptions import OperationNotSupportedException
 import pyvcloud.vcd.org as vcd_org
+import pyvcloud.vcd.role as vcd_role
 from pyvcloud.vcd.utils import extract_id
 from pyvcloud.vcd.utils import get_admin_href
 from pyvcloud.vcd.utils import to_dict
@@ -770,3 +772,32 @@ def wait_for_completion_of_post_customization_procedure(
         time.sleep(poll_frequency)
     logger.error(f"VM Post guest customization failed due to timeout({timeout} sec)")  # noqa: E501
     raise exceptions.PostCustomizationTimeoutError
+
+
+def has_full_access_to_native_cluster(
+        client: vcd_client.Client,
+        logger=NULL_LOGGER):
+    """Check the logged-in user has role with full access to native cluster.
+
+    :param vcd_client.Client client: current client
+    :param logging.Logger logger: logger to record errors.
+    :return: True if the role has full access to native cluster else False
+    :rtype: bool
+    """
+    try:
+        role_name = get_user_role_name(client)
+        org_obj = vcd_org.Org(client, resource=client.get_org())
+        role_obj = vcd_role.Role(client, resource=org_obj.get_role_resource(role_name))  # noqa: E501
+        rights_set = set(
+            [right['name'] for right in role_obj.list_rights() if
+             right['name'].startswith('cse')]
+        )
+        for native_right in server_constants.CSE_NATIVE_CLUSTER_FULL_ACCESS_RIGHTS:  # noqa: E501
+            if native_right in rights_set:
+                return True
+    except OperationNotSupportedException as err:
+        logger.info(f"Cannot determine the rights associated with role:{role_name} {err}")  # noqa: E501
+    except Exception as err:
+        logger.info(f"Cannot determine the rights associated with role:{role_name} {err}")  # noqa: E501
+
+    return False

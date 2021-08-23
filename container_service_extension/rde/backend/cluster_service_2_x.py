@@ -1,6 +1,7 @@
 # container-service-extension
 # Copyright (c) 2021 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
+import base64
 from dataclasses import asdict
 import random
 import re
@@ -25,6 +26,7 @@ from container_service_extension.common.constants.server_constants import CSE_CL
 from container_service_extension.common.constants.server_constants import DefEntityOperation  # noqa: E501
 from container_service_extension.common.constants.server_constants import DefEntityOperationStatus  # noqa: E501
 from container_service_extension.common.constants.server_constants import DefEntityPhase  # noqa: E501
+from container_service_extension.common.constants.server_constants import KUBE_CONFIG  # noqa: E501
 from container_service_extension.common.constants.server_constants import KUBEADM_TOKEN_INFO # noqa: E501
 from container_service_extension.common.constants.server_constants import LocalTemplateKey  # noqa: E501
 from container_service_extension.common.constants.server_constants import NodeType  # noqa: E501
@@ -87,12 +89,15 @@ class ClusterService(abstract_broker.AbstractBroker):
         self.mqtt_publisher: MQTTPublisher = ctx.mqtt_publisher
         cloudapi_client_v36 = self.context.get_cloudapi_client(
             api_version=DEFAULT_API_VERSION)
-        self.entity_svc = def_entity_svc.DefEntityService(cloudapi_client_v36)
+        self.entity_svc = def_entity_svc.DefEntityService(
+            cloudapi_client=cloudapi_client_v36, vcd_client=client_v36)
         sysadmin_cloudapi_client_v36 = \
             self.context.get_sysadmin_cloudapi_client(
                 api_version=DEFAULT_API_VERSION)
         self.sysadmin_entity_svc = def_entity_svc.DefEntityService(
-            sysadmin_cloudapi_client_v36)
+            cloudapi_client=sysadmin_cloudapi_client_v36,
+            vcd_client=client_v36
+        )
 
     def get_cluster_info(self, cluster_id: str) -> common_models.DefEntity:
         """Get the corresponding defined entity of the native cluster.
@@ -894,7 +899,11 @@ class ClusterService(abstract_broker.AbstractBroker):
                 ClusterMetadataKey.CNI: template[LocalTemplateKey.CNI],
                 ClusterMetadataKey.CNI_VERSION: template[LocalTemplateKey.CNI_VERSION]  # noqa: E501
             }
-            vapp = vcd_vapp.VApp(client_v36,
+
+            sysadmin_client_v36 = self.context.get_sysadmin_client(
+                api_version=DEFAULT_API_VERSION)
+            # Extra config elements of VApp are visible only for admin client
+            vapp = vcd_vapp.VApp(sysadmin_client_v36,
                                  href=vapp_resource.get('href'))
             task = vapp.set_multiple_metadata(tags)
             client_v36.get_task_monitor().wait_for_status(task)
@@ -906,8 +915,6 @@ class ClusterService(abstract_broker.AbstractBroker):
             vapp.reload()
             server_config = server_utils.get_server_runtime_config()
             catalog_name = server_config['broker']['catalog']
-            sysadmin_client_v36 = self.context.get_sysadmin_client(
-                api_version=DEFAULT_API_VERSION)
 
             msg = f"Adding control plane node for '{cluster_name}' ({cluster_id})"  # noqa: E501
             LOGGER.debug(msg)
@@ -937,6 +944,11 @@ class ClusterService(abstract_broker.AbstractBroker):
                     f"Error adding control plane node: {err}")
             vapp.reload()
 
+            control_plane_join_cmd = _get_join_cmd(
+                sysadmin_client=sysadmin_client_v36,
+                vapp=vapp
+            )
+
             msg = f"Creating {num_workers} node(s) for cluster " \
                   f"'{cluster_name}' ({cluster_id})"
             LOGGER.debug(msg)
@@ -953,7 +965,9 @@ class ClusterService(abstract_broker.AbstractBroker):
                     network_name=network_name,
                     storage_profile=worker_storage_profile,
                     ssh_key=ssh_key,
-                    sizing_class_name=worker_sizing_class)
+                    sizing_class_name=worker_sizing_class,
+                    control_plane_join_cmd=control_plane_join_cmd
+                )
             except Exception as err:
                 LOGGER.error(err, exc_info=True)
                 raise exceptions.WorkerNodeCreationError(
@@ -997,6 +1011,13 @@ class ClusterService(abstract_broker.AbstractBroker):
             curr_rde: common_models.DefEntity = self.entity_svc.get_entity(cluster_id)  # noqa: E501
             curr_native_entity: rde_2_x.NativeEntity = curr_rde.entity
             new_status: rde_2_x.Status = curr_native_entity.status
+            new_status.private = rde_2_x.Private(
+                kube_token=control_plane_join_cmd,
+                kube_config=_get_kube_config_from_control_plane_vm(
+                    sysadmin_client=sysadmin_client_v36,
+                    vapp=vapp
+                )
+            )
             new_status.uid = cluster_id
             new_status.phase = str(
                 DefEntityPhase(
@@ -1206,11 +1227,11 @@ class ClusterService(abstract_broker.AbstractBroker):
                                          href=vapp_href)
                     control_plane_internal_ip = _get_control_plane_ip(
                         sysadmin_client=self.context.sysadmin_client,
-                        vapp=vapp,
-                        check_tools=True)
+                        vapp=vapp
+                    )
 
                     # update kubeconfig with internal ip
-                    self._replace_kubeconfig_expose_ip(
+                    updated_kube_config = self._replace_kubeconfig_expose_ip(
                         internal_ip=control_plane_internal_ip,
                         cluster_id=cluster_id,
                         vapp=vapp)
@@ -1234,6 +1255,7 @@ class ClusterService(abstract_broker.AbstractBroker):
 
                     curr_native_entity.status.cloud_properties.exposed = False
                     curr_native_entity.status.external_ip = None
+                    curr_native_entity.status.private.kube_config = updated_kube_config  # noqa: E501
                     unexpose_success = True
                 except Exception as err:
                     LOGGER.error(
@@ -1363,7 +1385,8 @@ class ClusterService(abstract_broker.AbstractBroker):
                 api_version=DEFAULT_API_VERSION)
             org = vcd_utils.get_org(client_v36, org_name=org_name)
             ovdc = vcd_utils.get_vdc(client_v36, vdc_name=ovdc_name, org=org)
-            vapp = vcd_vapp.VApp(client_v36, href=vapp_href)
+            # Extra config elements of VApp are visible only for admin client
+            vapp = vcd_vapp.VApp(sysadmin_client_v36, href=vapp_href)
 
             if num_workers_to_add > 0:
                 msg = f"Creating {num_workers_to_add} workers from template" \
@@ -1376,6 +1399,16 @@ class ClusterService(abstract_broker.AbstractBroker):
                     f"{cluster_name}({cluster_id})"
                 self._update_task(BehaviorTaskStatus.RUNNING, message=msg)
 
+                # Get join cmd from RDE;fallback to control plane extra config  # noqa: E501
+                if hasattr(curr_native_entity.status, 'private') and hasattr(
+                        curr_native_entity.status.private, 'kube_token'):
+                    control_plane_join_cmd = curr_native_entity.status.private.kube_token  # noqa: E501
+                else:
+                    control_plane_join_cmd = _get_join_cmd(
+                        sysadmin_client=sysadmin_client_v36,
+                        vapp=vapp
+                    )
+
                 _add_worker_nodes(
                     sysadmin_client_v36,
                     num_nodes=num_workers_to_add,
@@ -1387,7 +1420,8 @@ class ClusterService(abstract_broker.AbstractBroker):
                     network_name=network_name,
                     storage_profile=worker_storage_profile,
                     ssh_key=ssh_key,
-                    sizing_class_name=worker_sizing_class
+                    sizing_class_name=worker_sizing_class,
+                    control_plane_join_cmd=control_plane_join_cmd  # noqa: E501
                 )
 
                 msg = f"Added {num_workers_to_add} node(s) to cluster " \
@@ -2003,7 +2037,7 @@ class ClusterService(abstract_broker.AbstractBroker):
     def _replace_kubeconfig_expose_ip(self, internal_ip: str, cluster_id: str,
                                       vapp: vcd_vapp.VApp):
         # Form kubeconfig with internal ip
-        kubeconfig_with_exposed_ip = self.get_cluster_config(cluster_id)
+        kubeconfig_with_exposed_ip = self._get_kube_config_from_rde(cluster_id)
         script = \
             nw_exp_helper.construct_script_to_update_kubeconfig_with_internal_ip(  # noqa: E501
                 kubeconfig_with_exposed_ip=kubeconfig_with_exposed_ip,
@@ -2025,6 +2059,16 @@ class ClusterService(abstract_broker.AbstractBroker):
                 f"Failed to overwrite kubeconfig with internal ip: "
                 f"{internal_ip}: {errors}"
             )
+
+        return nw_exp_helper.get_updated_kubeconfig_with_internal_ip(
+            kubeconfig_with_exposed_ip=kubeconfig_with_exposed_ip,
+            internal_ip=internal_ip
+        )
+
+    def _get_kube_config_from_rde(self, cluster_id: str):
+        rde = self.entity_svc.get_entity(cluster_id)
+        native_entity: rde_2_x.NativeEntity = rde.entity
+        return native_entity.status.private.kube_config
 
 
 def _get_cluster_upgrade_target_templates(
@@ -2400,7 +2444,7 @@ def _add_control_plane_nodes(sysadmin_client, num_nodes, org, vdc, vapp,
                 )
                 vcd_utils.wait_for_completion_of_post_customization_procedure(
                     vm,
-                    customization_phase=PostCustomizationPhase.KUBECTL_APPLY_WEAVE.value,  # noqa: E501
+                    customization_phase=PostCustomizationPhase.KUBECTL_APPLY_CNI.value,  # noqa: E501
                     logger=LOGGER
                 )
 
@@ -2428,18 +2472,14 @@ def _add_control_plane_nodes(sysadmin_client, num_nodes, org, vdc, vapp,
 def _add_worker_nodes(sysadmin_client, num_nodes, org, vdc, vapp,
                       catalog_name, template, network_name,
                       storage_profile=None, ssh_key=None,
-                      sizing_class_name=None):
+                      sizing_class_name=None,
+                      control_plane_join_cmd=''):
     vcd_utils.raise_error_if_user_not_from_system_org(sysadmin_client)
 
     if num_nodes > 0:
 
         vm_specs = []
         try:
-
-            control_plane_join_cmd = _get_join_cmd(
-                sysadmin_client=sysadmin_client,
-                vapp=vapp
-            )
 
             templated_script = get_cluster_script_file_contents(
                 ClusterScriptFile.NODE, ClusterScriptFile.VERSION_2_X)
@@ -2617,16 +2657,31 @@ def _get_join_cmd(sysadmin_client: vcd_client.Client, vapp):
     vm_resource = vapp.get_vm(node_names[0])
     control_plane_vm = vcd_vm.VM(sysadmin_client, resource=vm_resource)
     control_plane_join_cmd: str = vcd_utils.get_vm_extra_config_element(control_plane_vm, KUBEADM_TOKEN_INFO)  # noqa: E501
-
+    control_plane_vm.reload()
     if not control_plane_join_cmd:
         raise exceptions.ClusterJoiningError("Join cluster failure: join info not found in control plane node")   # noqa: E501
     return control_plane_join_cmd
 
 
-def wait_for_update_customization(message, exception=None):
-    LOGGER.debug(f"waiting for updating customization, status: {message}")  # noqa: E501
-    if exception is not None:
-        LOGGER.error(f"exception: {str(exception)}")
+def _get_kube_config_from_control_plane_vm(sysadmin_client: vcd_client.Client, vapp):  # noqa: E501
+    vcd_utils.raise_error_if_user_not_from_system_org(sysadmin_client)
+    vapp.reload()
+    node_names = _get_node_names(vapp, NodeType.CONTROL_PLANE)
+    if not node_names:
+        raise exceptions.KubeconfigNotFound("No control plane node found")   # noqa: E501
+
+    vm_resource = vapp.get_vm(node_names[0])
+    control_plane_vm = vcd_vm.VM(sysadmin_client, resource=vm_resource)
+    control_plane_vm.reload()
+    kube_config: str = vcd_utils.get_vm_extra_config_element(control_plane_vm, KUBE_CONFIG)  # noqa: E501
+    if not kube_config:
+        raise exceptions.KubeconfigNotFound("Control plane has no kubeconfig")   # noqa: E501
+    kube_config_in_bytes: bytes = base64.b64decode(kube_config)
+    return kube_config_in_bytes.decode()
+
+
+def wait_for_update_customization(task):
+    LOGGER.debug(f"waiting for updating customization, status: {task.get('status').lower()}")  # noqa: E501
 
 
 def wait_for_adding_control_plane_vm_to_vapp(task):

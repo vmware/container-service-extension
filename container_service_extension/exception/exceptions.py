@@ -157,6 +157,10 @@ class ClusterJoiningError(ClusterOperationError):
     """Raised when any error happens while cluster join operation."""
 
 
+class KubeconfigNotFound(ClusterOperationError):
+    """Raised when any error happens while getting Kubeconfig from control plane."""   # noqa: E501
+
+
 class ClusterInitializationError(ClusterOperationError):
     """Raised when any error happens while cluster initialization."""
 
