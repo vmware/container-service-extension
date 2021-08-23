@@ -51,9 +51,9 @@ service:
 
 broker:
   catalog: cse                          # public shared catalog within org where the template will be published
-  default_template_name: photon-v2_k8-1.14_weave-2.5.2
+  default_template_name: ubuntu-16.04_k8-1.21_weave-2.8.1
                                         # name of the default template to use if none is specified
-  default_template_revision: 4          # revision of the default template to use if none is specified
+  default_template_revision: 1          # revision of the default template to use if none is specified
   ip_allocation_mode: pool              # dhcp or pool
   network: '???'                        # org network within @vdc that will be used during the install process to build the template
                                         #   Should have outbound access to the public internet
