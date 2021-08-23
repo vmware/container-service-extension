@@ -790,6 +790,8 @@ def run(ctx, config_file_path, pks_config_file_path, skip_check,
     SERVER_CLI_LOGGER.debug(f"Executing command: {ctx.command_path}")
     console_message_printer = utils.ConsoleMessagePrinter()
     utils.check_python_version(console_message_printer)
+    cse_version = utils.get_cse_info()['version']
+    console_message_printer.general_no_color(f"CSE version: {cse_version}")
 
     password = None
     if not skip_config_decryption:
