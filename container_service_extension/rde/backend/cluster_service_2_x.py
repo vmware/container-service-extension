@@ -2413,7 +2413,6 @@ def _add_control_plane_nodes(sysadmin_client, num_nodes, org, vdc, vapp,
                             internal_ip=vapp.get_primary_ip(vm_name=vm_name))
                     except Exception as err:
                         LOGGER.error(f"Exposing cluster failed: {str(err)}", exc_info=True)  # noqa: E501
-                        expose_ip = ''
 
                 cust_script = templated_script.format(
                     cluster_kind=template[LocalTemplateKey.KIND],
