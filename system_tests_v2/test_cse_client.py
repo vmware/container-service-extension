@@ -463,7 +463,7 @@ def test_0020_vcd_ovdc_enable_again(vcd_sys_admin):
         (0, 0, False,
          None, None, "Invalid-network",
          None, None, env.SYS_ADMIN_TEST_CLUSTER_NAME))])
-def test_0030_vcd_cse_system_toggle(config, delete_test_clusters, test_runner_username, test_case):  # noqa: E501
+def test_0030_vcd_cse_system_toggle(config, vcd_sys_admin, delete_test_clusters, test_runner_username, test_case):  # noqa: E501
     """Test `vcd cse system ...` commands.
 
     Test that on disabling CSE, cluster deployments are no longer
