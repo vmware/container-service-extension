@@ -11,11 +11,11 @@ test:
                                                            #   if false, do not delete test cluster on test failure.
                                                            #   if this key is omitted, defaults to true.
                                                            # Successful client tests will not leave clusters up.
-  test_all_templates: true                                 # Affects test_cse_client.py.
+  test_all_templates: false                                 # Affects test_cse_client.py.
                                                            #   if true, tests cluster deployment on all templates found.
                                                            #   if false, tests cluster deployment only for first template found.
                                                            #   if this key is omitted, defaults to false.
-  test_templates: "???"                                    # Tests will only create these templates if test_all_templates is set to false
+  test_templates: "ubuntu-16.04_k8-1.21_weave-2.8.1:1"                                    # Tests will only create these templates if test_all_templates is set to false
                                                            #   format -> "template_1_name:template_1_revision,template_2_name:template_2_revision"
   upgrade_template_repo_url: '???'                         #
   network: '???'                                           # org network within @vdc that will be used during testing
@@ -51,9 +51,9 @@ service:
 
 broker:
   catalog: cse                          # public shared catalog within org where the template will be published
-  default_template_name: photon-v2_k8-1.14_weave-2.5.2
+  default_template_name: ubuntu-16.04_k8-1.21_weave-2.8.1
                                         # name of the default template to use if none is specified
-  default_template_revision: 4          # revision of the default template to use if none is specified
+  default_template_revision: 1          # revision of the default template to use if none is specified
   ip_allocation_mode: pool              # dhcp or pool
   network: '???'                        # org network within @vdc that will be used during the install process to build the template
                                         #   Should have outbound access to the public internet
