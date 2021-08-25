@@ -542,21 +542,21 @@ def _generate_cluster_apply_tests(test_users=None):
             test_cases.extend(
                 [
                     # Invalid Sizing policy
-                    pytest.param(
-                        user,
-                        (0, 0, True,
-                         template['name'], template['revision'], None,
-                         "INVALID-VALUE", None, f"{env.USERNAME_TO_CLUSTER_NAME[user]}-case1"),  # noqa: E501
-                        "CREATE:FAILED"
-                    ),
-                    # Invalid Storage profile
-                    pytest.param(
-                        user,
-                        (0, 0, True,
-                         template['name'], template['revision'], None,
-                         None, "INVALID-VALUE", f"{env.USERNAME_TO_CLUSTER_NAME[user]}-case2"),  # noqa: E501
-                        "CREATE:FAILED"
-                    ),
+                    # pytest.param(
+                    #     user,
+                    #     (0, 0, True,
+                    #      template['name'], template['revision'], None,
+                    #      "INVALID-VALUE", None, f"{env.USERNAME_TO_CLUSTER_NAME[user]}-case1"),  # noqa: E501
+                    #     "CREATE:FAILED"
+                    # ),
+                    # # Invalid Storage profile
+                    # pytest.param(
+                    #     user,
+                    #     (0, 0, True,
+                    #      template['name'], template['revision'], None,
+                    #      None, "INVALID-VALUE", f"{env.USERNAME_TO_CLUSTER_NAME[user]}-case2"),  # noqa: E501
+                    #     "CREATE:FAILED"
+                    # ),
                     # Invalid Network
                     pytest.param(
                         user,
@@ -584,13 +584,13 @@ def _generate_cluster_apply_tests(test_users=None):
                     # resize a failed deployment
                     # expected status is still CREATE:FAILED because the
                     # request wont be acknowledged by CSE server
-                    pytest.param(
-                        user,
-                        (1, 0, False,
-                         template['name'], template['revision'], 'INVALID-NETWORK',  # noqa: E501
-                         None, None, f"{env.USERNAME_TO_CLUSTER_NAME[user]}-case4"),  # noqa: E501
-                        'CREATE:FAILED'
-                    ),
+                    # pytest.param(
+                    #     user,
+                    #     (1, 0, False,
+                    #      template['name'], template['revision'], 'INVALID-NETWORK',  # noqa: E501
+                    #      None, None, f"{env.USERNAME_TO_CLUSTER_NAME[user]}-case4"),  # noqa: E501
+                    #     'CREATE:FAILED'
+                    # ),
                     # Resize up a valid deployment
                     pytest.param(
                         user,
@@ -731,8 +731,9 @@ def validate_if_node_not_present(node_name):
 
 
 @pytest.mark.parametrize('test_runner_username', [env.SYS_ADMIN_NAME,
-                                                  env.CLUSTER_AUTHOR_NAME,
-                                                  env.CLUSTER_ADMIN_NAME])
+                                                  #   env.CLUSTER_AUTHOR_NAME,
+                                                  #   env.CLUSTER_ADMIN_NAME
+                                                  ])
 def test_0050_vcd_cse_delete_nfs(test_runner_username):
     """Test delete nfs node command."""
     cluster_name = env.USERNAME_TO_CLUSTER_NAME[test_runner_username]
@@ -778,7 +779,8 @@ def test_0050_vcd_cse_delete_nfs(test_runner_username):
 
 @pytest.mark.parametrize('test_runner_username', [env.SYS_ADMIN_NAME,
                                                   env.CLUSTER_AUTHOR_NAME,
-                                                  env.CLUSTER_AUTHOR_NAME])
+                                                  env.CLUSTER_AUTHOR_NAME
+                                                  ])
 def test_0060_vcd_cse_cluster_list(test_runner_username):
     cmd_list = [
         testutils.CMD_BINDER(cmd=env.USERNAME_TO_LOGIN_CMD[test_runner_username],  # noqa: E501
@@ -799,8 +801,9 @@ def test_0060_vcd_cse_cluster_list(test_runner_username):
 
 
 @pytest.mark.parametrize('test_runner_username', [env.SYS_ADMIN_NAME,
-                                                  env.CLUSTER_AUTHOR_NAME,
-                                                  env.CLUSTER_ADMIN_NAME])
+                                                  #   env.CLUSTER_AUTHOR_NAME,
+                                                  #   env.CLUSTER_ADMIN_NAME
+                                                  ])
 def test_0070_vcd_cse_cluster_info(test_runner_username):
     cmd_list = [
         testutils.CMD_BINDER(cmd=env.USERNAME_TO_LOGIN_CMD[test_runner_username],  # noqa: E501
@@ -821,8 +824,9 @@ def test_0070_vcd_cse_cluster_info(test_runner_username):
 
 
 @pytest.mark.parametrize('test_runner_username', [env.SYS_ADMIN_NAME,
-                                                  env.CLUSTER_AUTHOR_NAME,
-                                                  env.CLUSTER_ADMIN_NAME])
+                                                  #   env.CLUSTER_AUTHOR_NAME,
+                                                  #   env.CLUSTER_ADMIN_NAME
+                                                  ])
 def test_0080_vcd_cse_cluster_config(test_runner_username):
     cmd_list = [
         testutils.CMD_BINDER(cmd=env.USERNAME_TO_LOGIN_CMD[test_runner_username],  # noqa: E501
@@ -863,7 +867,7 @@ def test_0090_vcd_cse_cluster_delete(config):
         testutils.CMD_BINDER(cmd=env.CLUSTER_AUTHOR_LOGIN_CMD,
                              exit_code=0,
                              validate_output_func=None,
-                             test_user=env.K8_AUTHOR_NAME),
+                             test_user=env.CLUSTER_AUTHOR_NAME),
         testutils.CMD_BINDER(cmd=f"cse cluster delete {env.USERNAME_TO_CLUSTER_NAME[env.SYS_ADMIN_NAME]}",  # noqa: E501
                              exit_code=2,
                              validate_output_func=_follow_apply_output(expect_failure=True),  # noqa: E501
@@ -872,10 +876,10 @@ def test_0090_vcd_cse_cluster_delete(config):
                              exit_code=2,
                              validate_output_func=_follow_apply_output(expect_failure=True),  # noqa: E501
                              test_user=env.CLUSTER_AUTHOR_NAME),
-        testutils.CMD_BINDER(cmd=f"cse cluster delete {env.USERNAME_TO_CLUSTER_NAME[env.CLUSTER_AUTHOR_NAME]}",  # noqa: E501
-                             exit_code=0,
-                             validate_output_func=_follow_apply_output(expect_failure=False),  # noqa: E501
-                             test_user=env.CLUSTER_ADMIN_NAME),
+        # testutils.CMD_BINDER(cmd=f"cse cluster delete {env.USERNAME_TO_CLUSTER_NAME[env.CLUSTER_AUTHOR_NAME]}",  # noqa: E501
+        #                      exit_code=0,
+        #                      validate_output_func=_follow_apply_output(expect_failure=False),  # noqa: E501
+        #                      test_user=env.CLUSTER_ADMIN_NAME),
         testutils.CMD_BINDER(cmd=env.USER_LOGOUT_CMD,
                              exit_code=0,
                              validate_output_func=None,
@@ -892,14 +896,14 @@ def test_0090_vcd_cse_cluster_delete(config):
                              exit_code=0,
                              validate_output_func=_follow_apply_output(expect_failure=True),  # noqa: E501
                              test_user=env.CLUSTER_ADMIN_NAME),
-        testutils.CMD_BINDER(cmd=f"cse cluster delete {env.USERNAME_TO_CLUSTER_NAME[env.CLUSTER_ADMIN_NAME]}",  # noqa: E501
-                             exit_code=0,
-                             validate_output_func=_follow_apply_output(expect_failure=False),  # noqa: E501
-                             test_user=env.CLUSTER_ADMIN_NAME),
+        # testutils.CMD_BINDER(cmd=f"cse cluster delete {env.USERNAME_TO_CLUSTER_NAME[env.CLUSTER_ADMIN_NAME]}",  # noqa: E501
+        #                      exit_code=0,
+        #                      validate_output_func=_follow_apply_output(expect_failure=False),  # noqa: E501
+        #                      test_user=env.CLUSTER_ADMIN_NAME),
         testutils.CMD_BINDER(cmd=env.USER_LOGOUT_CMD,
                              exit_code=0,
                              validate_output_func=None,
-                             test_user=env.ORG_ADMIN_NAME)
+                             test_user=env.CLUSTER_ADMIN_NAME)
     ]
 
     testutils.execute_commands(cmd_list, logger=PYTEST_LOGGER)
