@@ -240,3 +240,10 @@ class ClusterDetailsKey(str, Enum):
 class HttpResponseHeader(str, Enum):
     LOCATION = 'Location'
     X_VMWARE_VCLOUD_TASK_LOCATION = 'X-VMWARE-VCLOUD-TASK-LOCATION'
+
+
+@unique
+class RDEProperty(str, Enum):
+    PRIVATE = 'private'
+    KUBE_TOKEN = 'kube_token'
+    KUBE_CONFIG = 'kube_config'

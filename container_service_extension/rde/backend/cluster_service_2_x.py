@@ -22,7 +22,6 @@ import semantic_version as semver
 from container_service_extension.common.constants.server_constants import CLUSTER_ENTITY  # noqa: E501
 from container_service_extension.common.constants.server_constants import ClusterMetadataKey  # noqa: E501
 from container_service_extension.common.constants.server_constants import ClusterScriptFile, TemplateScriptFile  # noqa: E501
-from container_service_extension.common.constants.server_constants import CSE_CLUSTER_KUBECONFIG_PATH  # noqa: E501
 from container_service_extension.common.constants.server_constants import DefEntityOperation  # noqa: E501
 from container_service_extension.common.constants.server_constants import DefEntityOperationStatus  # noqa: E501
 from container_service_extension.common.constants.server_constants import DefEntityPhase  # noqa: E501
@@ -198,36 +197,21 @@ class ClusterService(abstract_broker.AbstractBroker):
             }
         )
 
-        if curr_rde.externalId is None:
-            msg = f"Cannot find VApp href for cluster {curr_rde.name} " \
-                  f"with id {cluster_id}"
-            LOGGER.error(msg)
-            raise exceptions.CseServerError(msg)
+        # Get kube config from RDE else fallback to control plane vm
+        kube_config = None
+        if hasattr(curr_native_entity.status,
+                   shared_constants.RDEProperty.PRIVATE.value) and \
+                hasattr(curr_native_entity.status.private,
+                        shared_constants.RDEProperty.KUBE_CONFIG.value):
+            kube_config = curr_native_entity.status.private.kube_config
 
-        client_v36 = self.context.get_client(api_version=DEFAULT_API_VERSION)
-        vapp = vcd_vapp.VApp(client_v36, href=curr_rde.externalId)
-        control_plane_node_name = curr_native_entity.status.nodes.control_plane.name  # noqa: E501
-
-        LOGGER.debug(f"getting file from node {control_plane_node_name}")
-        password = vapp.get_admin_password(control_plane_node_name)
-        sysadmin_client_v36 = self.context.get_sysadmin_client(
-            api_version=DEFAULT_API_VERSION)
-        vs = vs_utils.get_vsphere(sysadmin_client_v36, vapp,
-                                  vm_name=control_plane_node_name,
-                                  logger=LOGGER)
-        vs.connect()
-        moid = vapp.get_vm_moid(control_plane_node_name)
-        vm = vs.get_vm_by_moid(moid)
-        result = vs.download_file_from_guest(vm, 'root', password,
-                                             CSE_CLUSTER_KUBECONFIG_PATH)
-
-        if not result:
+        if not kube_config:
             msg = "Failed to get cluster kube-config"
             LOGGER.error(msg)
             raise exceptions.ClusterOperationError(msg)
 
         return self.mqtt_publisher.construct_behavior_payload(
-            message=result.content.decode(),
+            message=kube_config,
             status=BehaviorTaskStatus.SUCCESS.value)
 
     def create_cluster(self, entity_id: str, input_native_entity: rde_2_x.NativeEntity):  # noqa: E501
@@ -1400,14 +1384,12 @@ class ClusterService(abstract_broker.AbstractBroker):
                 self._update_task(BehaviorTaskStatus.RUNNING, message=msg)
 
                 # Get join cmd from RDE;fallback to control plane extra config  # noqa: E501
-                if hasattr(curr_native_entity.status, 'private') and hasattr(
-                        curr_native_entity.status.private, 'kube_token'):
+                control_plane_join_cmd = ''
+                if hasattr(curr_native_entity.status,
+                           shared_constants.RDEProperty.PRIVATE.value) \
+                        and hasattr(curr_native_entity.status.private,
+                                    shared_constants.RDEProperty.KUBE_TOKEN.value):  # noqa: E501
                     control_plane_join_cmd = curr_native_entity.status.private.kube_token  # noqa: E501
-                else:
-                    control_plane_join_cmd = _get_join_cmd(
-                        sysadmin_client=sysadmin_client_v36,
-                        vapp=vapp
-                    )
 
                 _add_worker_nodes(
                     sysadmin_client_v36,
@@ -1421,7 +1403,7 @@ class ClusterService(abstract_broker.AbstractBroker):
                     storage_profile=worker_storage_profile,
                     ssh_key=ssh_key,
                     sizing_class_name=worker_sizing_class,
-                    control_plane_join_cmd=control_plane_join_cmd  # noqa: E501
+                    control_plane_join_cmd=control_plane_join_cmd
                 )
 
                 msg = f"Added {num_workers_to_add} node(s) to cluster " \
@@ -2038,6 +2020,11 @@ class ClusterService(abstract_broker.AbstractBroker):
                                       vapp: vcd_vapp.VApp):
         # Form kubeconfig with internal ip
         kubeconfig_with_exposed_ip = self._get_kube_config_from_rde(cluster_id)
+        if not kubeconfig_with_exposed_ip:
+            msg = "Failed to get cluster kube-config"
+            LOGGER.error(msg)
+            raise exceptions.ClusterOperationError(msg)
+
         script = \
             nw_exp_helper.construct_script_to_update_kubeconfig_with_internal_ip(  # noqa: E501
                 kubeconfig_with_exposed_ip=kubeconfig_with_exposed_ip,
@@ -2068,7 +2055,12 @@ class ClusterService(abstract_broker.AbstractBroker):
     def _get_kube_config_from_rde(self, cluster_id: str):
         rde = self.entity_svc.get_entity(cluster_id)
         native_entity: rde_2_x.NativeEntity = rde.entity
-        return native_entity.status.private.kube_config
+        if hasattr(native_entity.status,
+                   shared_constants.RDEProperty.PRIVATE.value) and hasattr(
+                native_entity.status.private,
+                shared_constants.RDEProperty.KUBE_CONFIG.value):
+            return native_entity.status.private.kube_config
+        return None
 
 
 def _get_cluster_upgrade_target_templates(
@@ -2405,7 +2397,6 @@ def _add_control_plane_nodes(sysadmin_client, num_nodes, org, vdc, vapp,
                             internal_ip=vapp.get_primary_ip(vm_name=vm_name))
                     except Exception as err:
                         LOGGER.error(f"Exposing cluster failed: {str(err)}", exc_info=True)  # noqa: E501
-                        expose_ip = ''
 
                 cust_script = templated_script.format(
                     cluster_kind=template[LocalTemplateKey.KIND],
@@ -2675,7 +2666,8 @@ def _get_kube_config_from_control_plane_vm(sysadmin_client: vcd_client.Client, v
     control_plane_vm.reload()
     kube_config: str = vcd_utils.get_vm_extra_config_element(control_plane_vm, KUBE_CONFIG)  # noqa: E501
     if not kube_config:
-        raise exceptions.KubeconfigNotFound("Control plane has no kubeconfig")   # noqa: E501
+        raise exceptions.KubeconfigNotFound("kubeconfig not found in control plane extra configuration")   # noqa: E501
+    LOGGER.debug(f"Got kubeconfig from control plane:{node_names[0]} successfully")  # noqa: E501
     kube_config_in_bytes: bytes = base64.b64decode(kube_config)
     return kube_config_in_bytes.decode()
 
