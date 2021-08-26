@@ -2060,6 +2060,7 @@ class ClusterService(abstract_broker.AbstractBroker):
                 native_entity.status.private,
                 shared_constants.RDEProperty.KUBE_CONFIG.value):
             return native_entity.status.private.kube_config
+        return None
 
 
 def _get_cluster_upgrade_target_templates(
