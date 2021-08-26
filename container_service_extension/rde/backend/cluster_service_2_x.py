@@ -198,25 +198,12 @@ class ClusterService(abstract_broker.AbstractBroker):
         )
 
         # Get kube config from RDE else fallback to control plane vm
+        kube_config = None
         if hasattr(curr_native_entity.status,
                    shared_constants.RDEProperty.PRIVATE.value) and \
                 hasattr(curr_native_entity.status.private,
                         shared_constants.RDEProperty.KUBE_CONFIG.value):
             kube_config = curr_native_entity.status.private.kube_config
-        else:
-            if curr_rde.externalId is None:
-                msg = f"Cannot find VApp href for cluster {curr_rde.name} " \
-                      f"with id {cluster_id}"
-                LOGGER.error(msg)
-                raise exceptions.CseServerError(msg)
-
-            sysadmin_client_v36 = self.context.get_sysadmin_client(
-                api_version=DEFAULT_API_VERSION)
-            vapp = vcd_vapp.VApp(
-                sysadmin_client_v36,
-                href=curr_rde.externalId
-            )
-            kube_config = _get_kube_config_from_control_plane_vm(sysadmin_client_v36, vapp)  # noqa: E501
 
         if not kube_config:
             msg = "Failed to get cluster kube-config"
@@ -1397,16 +1384,12 @@ class ClusterService(abstract_broker.AbstractBroker):
                 self._update_task(BehaviorTaskStatus.RUNNING, message=msg)
 
                 # Get join cmd from RDE;fallback to control plane extra config  # noqa: E501
+                control_plane_join_cmd = ''
                 if hasattr(curr_native_entity.status,
                            shared_constants.RDEProperty.PRIVATE.value) \
                         and hasattr(curr_native_entity.status.private,
                                     shared_constants.RDEProperty.KUBE_TOKEN.value):  # noqa: E501
                     control_plane_join_cmd = curr_native_entity.status.private.kube_token  # noqa: E501
-                else:
-                    control_plane_join_cmd = _get_join_cmd(
-                        sysadmin_client=sysadmin_client_v36,
-                        vapp=vapp
-                    )
 
                 _add_worker_nodes(
                     sysadmin_client_v36,
@@ -2038,10 +2021,10 @@ class ClusterService(abstract_broker.AbstractBroker):
         # Form kubeconfig with internal ip
         kubeconfig_with_exposed_ip = self._get_kube_config_from_rde(cluster_id)
         if not kubeconfig_with_exposed_ip:
-            kubeconfig_with_exposed_ip = _get_kube_config_from_control_plane_vm(  # noqa: E501
-                sysadmin_client=self.context.sysadmin_client,
-                vapp=vapp
-            )
+            msg = "Failed to get cluster kube-config"
+            LOGGER.error(msg)
+            raise exceptions.ClusterOperationError(msg)
+
         script = \
             nw_exp_helper.construct_script_to_update_kubeconfig_with_internal_ip(  # noqa: E501
                 kubeconfig_with_exposed_ip=kubeconfig_with_exposed_ip,
