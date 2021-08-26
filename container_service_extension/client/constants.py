@@ -13,7 +13,6 @@ import container_service_extension.common.constants.shared_constants as shared_c
 # Client environment variables
 ENV_CSE_CLIENT_WIRE_LOGGING = 'CSE_CLIENT_WIRE_LOGGING'
 ENV_CSE_TKG_PLUS_ENABLED = 'CSE_TKG_PLUS_ENABLED'
-ENV_CSE_TKG_M_ENABLED = 'CSE_TKG_M_ENABLED'
 
 
 # if cse_server_running key is set to false in profiles.yaml, CSE CLI can

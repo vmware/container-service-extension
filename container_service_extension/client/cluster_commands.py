@@ -562,7 +562,6 @@ Examples
     '--tkg',
     'k8_runtime',
     is_flag=True,
-    hidden=not utils.is_environment_variable_enabled(cli_constants.ENV_CSE_TKG_M_ENABLED),  # noqa: E501
     flag_value=shared_constants.ClusterEntityKind.TKG_M.value,
     help="should be used with --sample, this flag generates sample yaml for k8 runtime: TKGm"  # noqa: E501
 )
@@ -609,21 +608,16 @@ def apply(ctx, cluster_config_file_path, generate_sample_config, k8_runtime, out
         client = ctx.obj['client']
         if generate_sample_config:
             tkg_plus_env_enabled = utils.is_environment_variable_enabled(cli_constants.ENV_CSE_TKG_PLUS_ENABLED)  # noqa: E501
-            tkg_m_env_enabled = utils.is_environment_variable_enabled(cli_constants.ENV_CSE_TKG_M_ENABLED)  # noqa: E501
 
             if not k8_runtime:
                 console_message_printer.general_no_color(ctx.get_help())
-                msg = "with option --sample you must specify either of options: --native or --tkg-s"  # noqa: E501
+                msg = "with option --sample you must specify either of options: --native or --tkg-s or --tkg"  # noqa: E501
                 if tkg_plus_env_enabled:
                     msg += " or --tkg-plus"
-                if tkg_m_env_enabled:
-                    msg += " or --tkg"
                 CLIENT_LOGGER.error(msg)
                 raise Exception(msg)
             if k8_runtime == shared_constants.ClusterEntityKind.TKG_PLUS.value and not tkg_plus_env_enabled:  # noqa: E501
                 raise Exception(f"{shared_constants.ClusterEntityKind.TKG_PLUS.value} not enabled")  # noqa: E501
-            if k8_runtime == shared_constants.ClusterEntityKind.TKG_M.value and not tkg_m_env_enabled:  # noqa: E501
-                raise Exception(f"{shared_constants.ClusterEntityKind.TKG_M.value} not enabled")  # noqa: E501
             # since apply command is not exposed when CSE server is not
             # running, it is safe to get the server_rde_version from
             # VCD API version as VCD API version will be the supported by
