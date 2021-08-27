@@ -40,7 +40,6 @@ CSE_SERVER_RUNTIMES = [ClusterEntityKind.NATIVE.value,
                        ClusterEntityKind.TKG_PLUS.value,
                        ClusterEntityKind.TKG_M.value]
 
-
 # Cluster runtimes and placement policies
 NATIVE_CLUSTER_RUNTIME_INTERNAL_NAME = 'native'
 TKG_PLUS_CLUSTER_RUNTIME_INTERNAL_NAME = 'tkgplus'
@@ -60,7 +59,7 @@ RUNTIME_DISPLAY_NAME_TO_INTERNAL_NAME_MAP = {
 RUNTIME_INTERNAL_NAME_TO_DISPLAY_NAME_MAP = {
     NATIVE_CLUSTER_RUNTIME_INTERNAL_NAME: ClusterEntityKind.NATIVE.value,
     TKG_PLUS_CLUSTER_RUNTIME_INTERNAL_NAME: ClusterEntityKind.TKG_PLUS.value,
-    TKG_M_CLUSTER_RUNTIME_INTERNAL_NAME: ClusterEntityKind.TKG_M.value
+    TKG_M_CLUSTER_RUNTIME_INTERNAL_NAME: ClusterEntityKind.TKG_M.value,
 }
 
 # CSE Server Busy string

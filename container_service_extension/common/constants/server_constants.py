@@ -769,9 +769,24 @@ class PostCustomizationStatus(Enum):
 
 
 @unique
+class ToolsDeployPkgCustomizationStatus(Enum):
+    NONE = None
+    IN_PROGRESS = 'Started'
+    SUCCESSFUL = 'Successful'
+
+
+@unique
+class PreCustomizationPhase(Enum):
+    POST_BOOT_CUSTOMIZATION_SERVICE_SETUP = 'guestinfo.gc.status'
+
+
+@unique
 class PostCustomizationPhase(Enum):
+    HOSTNAME_SETUP = 'guestinfo.postcustomization.hostname.status'
+    NETWORK_CONFIGURATION = 'guestinfo.postcustomization.networkconfiguration.status'
     STORE_SSH_KEY = 'guestinfo.postcustomization.store.sshkey.status'
     KUBEADM_INIT = 'guestinfo.postcustomization.kubeinit.status'
+    NAMESERVER_SETUP = 'guestinfo.postcustomization.nameserverconfig.resolvconf.status'
     KUBECTL_APPLY_CNI = 'guestinfo.postcustomization.kubectl.apply.cni.status'  # noqa: E501
     KUBEADM_TOKEN_GENERATE = 'guestinfo.postcustomization.kubeadm.token.generate.status'  # noqa: E501
     KUBEADM_NODE_JOIN = 'guestinfo.postcustomization.kubeadm.node.join.status'
