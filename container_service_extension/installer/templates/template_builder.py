@@ -1,15 +1,16 @@
 # container-service-extension
 # Copyright (c) 2019 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
+import pathlib
 import time
 
-import pathlib
 
 from pyvcloud.vcd.client import FenceMode
 from pyvcloud.vcd.client import NetworkAdapterType
 from pyvcloud.vcd.exceptions import EntityNotFoundException
 from pyvcloud.vcd.exceptions import OperationNotSupportedException
 from pyvcloud.vcd.vapp import VApp
+from pyvcloud.vcd.vapp import VM
 
 from container_service_extension.common.constants.server_constants import TemplateBuildKey, TemplateScriptFile  # noqa: E501
 from container_service_extension.common.utils.core_utils import download_file
@@ -27,6 +28,7 @@ import container_service_extension.server.compute_policy_manager as compute_poli
 # used for creating temp vapp
 TEMP_VAPP_NETWORK_ADAPTER_TYPE = NetworkAdapterType.VMXNET3.value
 TEMP_VAPP_FENCE_MODE = FenceMode.BRIDGED.value
+DISK_ENABLE_UUID = 'disk.enableUUID'
 
 
 def assign_placement_policy_to_template(client, cse_placement_policy,
@@ -375,6 +377,16 @@ class TemplateBuilder:
             # TODO: replace raw exception with specific exception
             raise Exception(f"{msg}; Result: {result}")
 
+        # CSI disk mounting requires the following extra config on the vm
+        vm_resource = vapp.get_vm(vm_name=vm_name)
+        template_vm = VM(self.sys_admin_client, resource=vm_resource)
+        task = template_vm.add_extra_config_element(DISK_ENABLE_UUID, "1", True)  # noqa: E501
+        self.sys_admin_client.get_task_monitor().wait_for_status(
+            task,
+            callback=self.wait_for_updating_extra_config
+        )
+        vapp.reload()
+
         # Do not reboot VM after customization. Reboot will generate a new
         # machine-id, and once we capture the VM, all VMs deployed from the
         # template will have the same machine-id, which can lead to
@@ -486,3 +498,6 @@ class TemplateBuilder:
         self._tag_with_cse_placement_policy()
         if not retain_temp_vapp:
             self._delete_temp_vapp()
+
+    def wait_for_updating_extra_config(self, task):
+        self.msg_update_callback.info(f"waiting for updating extra config: {task.get('status').lower()}")  # noqa: E501
