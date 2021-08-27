@@ -130,7 +130,7 @@ def construct_expose_dnat_rule_name(cluster_name: str, cluster_id: str):
 
 
 def construct_script_to_update_kubeconfig_with_internal_ip(
-        kubeconfig_with_exposed_ip: dict, internal_ip: str):
+        kubeconfig_with_exposed_ip: str, internal_ip: str):
     """Construct script to update kubeconfig file with internal ip.
 
     :param dict kubeconfig_with_exposed_ip: the current kubeconfig
