@@ -18,7 +18,7 @@ class CloudApiClient(object):
     def __init__(self,
                  base_url: str,
                  token: str,
-                 is_jwt_token: str,
+                 is_jwt_token: bool,
                  api_version: str,
                  logger_debug: logging.Logger,
                  logger_wire: logging.Logger,

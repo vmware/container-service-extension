@@ -46,18 +46,18 @@ then
     fi
     vmtoolsd --cmd "info-set guestinfo.postcustomization.kubeinit.status successful"
 
-    vmtoolsd --cmd "info-set guestinfo.postcustomization.kubectl.apply.weave.status in_progress"
+    vmtoolsd --cmd "info-set guestinfo.postcustomization.kubectl.apply.cni.status in_progress"
     export kubever=$(kubectl version --client | base64 | tr -d '\n')
     mkdir -p /root/.kube
     cp -f /etc/kubernetes/admin.conf /root/.kube/config
     chown $(id -u):$(id -g) /root/.kube/config
     export KUBECONFIG=/etc/kubernetes/admin.conf
-    vmtoolsd --cmd "info-set guestinfo.kubeconfig $(cat /etc/kubernetes/admin.conf)"
+    vmtoolsd --cmd "info-set guestinfo.kubeconfig $(cat /etc/kubernetes/admin.conf | base64 | tr -d '\n')"
 
     WEAVE_VERSIONED_FILE="/root/weave_v$(echo {cni_version} | sed -r 's/\./\-/g').yml"
     echo $WEAVE_VERSIONED_FILE >> /var/log/cse/customization/status.log
     kubectl apply -f $WEAVE_VERSIONED_FILE >> /var/log/cse/customization/status.log 2>> /var/log/cse/customization/error.log
-    vmtoolsd --cmd "info-set guestinfo.postcustomization.kubectl.apply.weave.status successful"
+    vmtoolsd --cmd "info-set guestinfo.postcustomization.kubectl.apply.cni.status successful"
 
     vmtoolsd --cmd "info-set guestinfo.postcustomization.kubeadm.token.generate.status in_progress"
     kubeadm_join_info=$(kubeadm token create --print-join-command 2> /dev/null)
