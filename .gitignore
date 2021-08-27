@@ -101,3 +101,6 @@ _site/
 cse_cache
 
 tests/private.config.yml
+
+# intellij metadata
+.idea/*
