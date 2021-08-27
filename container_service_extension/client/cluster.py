@@ -9,6 +9,7 @@ from container_service_extension.client.de_cluster_native import DEClusterNative
 from container_service_extension.client.de_cluster_tkg_s import DEClusterTKGS
 from container_service_extension.client.legacy_cluster_native import LegacyClusterNative  # noqa: E501
 from container_service_extension.common.constants.shared_constants import ClusterEntityKind  # noqa: E501
+from container_service_extension.common.constants.shared_constants import CSE_SERVER_RUNTIMES  # noqa: E501
 
 
 class Cluster:
@@ -32,7 +33,7 @@ class Cluster:
         if float(api_version) < float(vcd_client.ApiVersion.VERSION_35.value):   # noqa: E501
             return LegacyClusterNative(client)
         elif float(api_version) >= float(vcd_client.ApiVersion.VERSION_35.value):  # noqa: E501
-            if k8_runtime == ClusterEntityKind.NATIVE.value or k8_runtime == ClusterEntityKind.TKG_PLUS.value or k8_runtime == ClusterEntityKind.TKG_M.value:  # noqa: E501
+            if k8_runtime in CSE_SERVER_RUNTIMES:
                 return DEClusterNative(client)
             elif k8_runtime == ClusterEntityKind.TKG_S.value:
                 return DEClusterTKGS(client)

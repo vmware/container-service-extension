@@ -310,7 +310,7 @@ def install_cse(config_file_name, config, skip_template_creation,
                              log_wire=log_wire)
 
         # set up placement policies for all types of clusters
-        is_tkg_plus_enabled = server_utils.is_tkg_plus_enabled(config=config)  # noqa: E501
+        is_tkg_plus_enabled = server_utils.is_tkg_plus_enabled(config=config)
         _setup_placement_policies(
             client=client,
             policy_list=shared_constants.CLUSTER_RUNTIME_PLACEMENT_POLICIES,
@@ -1727,6 +1727,7 @@ def _assign_placement_policies_to_existing_templates(client: Client,
                   "`cse upgrade` to process these vDC(s)."
             INSTALL_LOGGER.error(msg)
             raise cse_exception.CseUpgradeError(msg)
+
         placement_policy_name = \
             shared_constants.RUNTIME_DISPLAY_NAME_TO_INTERNAL_NAME_MAP[kind]
         template_builder.assign_placement_policy_to_template(
@@ -1923,6 +1924,7 @@ def _install_single_template(
         INSTALL_LOGGER.error(msg)
         msg_update_callback.error(msg)
         raise Exception(msg)
+
     localTemplateKey = server_constants.LocalTemplateKey
     remote_template_keys = server_utils.get_template_descriptor_keys(
         remote_template_manager.cookbook_version)
@@ -2195,8 +2197,8 @@ def _assign_placement_policy_to_vdc_and_right_bundle_to_org(
     msg_update_callback.info(msg)
     INSTALL_LOGGER.info(msg)
 
-    tkg_plus_ovdcs = []
-    native_ovdcs = []
+    tkg_plus_ovdcs = set()
+    native_ovdcs = set()
     vdc_names = {}
     org_ids = set()
     for cluster in cse_clusters:
@@ -2211,17 +2213,14 @@ def _assign_placement_policy_to_vdc_and_right_bundle_to_org(
 
         if policy_name == shared_constants.NATIVE_CLUSTER_RUNTIME_INTERNAL_NAME:  # noqa: E501
             vdc_id = cluster['vdc_id']
-            native_ovdcs.append(vdc_id)
+            native_ovdcs.add(vdc_id)
             vdc_names[vdc_id] = cluster['vdc_name']
         elif policy_name == shared_constants.TKG_PLUS_CLUSTER_RUNTIME_INTERNAL_NAME:  # noqa: E501
             vdc_id = cluster['vdc_id']
-            tkg_plus_ovdcs.append(vdc_id)
+            tkg_plus_ovdcs.add(vdc_id)
             vdc_names[vdc_id] = cluster['vdc_name']
         org_id = cluster['org_href'].split('/')[-1]
         org_ids.add(org_id)
-
-    native_ovdcs = set(native_ovdcs)
-    tkg_plus_ovdcs = set(tkg_plus_ovdcs)
 
     cpm = \
         compute_policy_manager.ComputePolicyManager(client, log_wire=log_wire)
