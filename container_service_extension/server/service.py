@@ -582,8 +582,10 @@ class Service(object, metaclass=Singleton):
                 msg_update_callback.info(msg)
                 return
             placement_policy_name_to_href = {}
-            cpm = compute_policy_manager.ComputePolicyManager(sysadmin_client,
-                                                              log_wire=self.config['service'].get('log_wire'))  # noqa: E501
+            cpm = compute_policy_manager.ComputePolicyManager(
+                sysadmin_client,
+                log_wire=self.config['service'].get('log_wire')
+            )
             for runtime_policy in shared_constants.CLUSTER_RUNTIME_PLACEMENT_POLICIES:  # noqa: E501
                 k8_runtime = shared_constants.RUNTIME_INTERNAL_NAME_TO_DISPLAY_NAME_MAP[runtime_policy]  # noqa: E501
                 try:

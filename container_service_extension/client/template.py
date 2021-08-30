@@ -9,5 +9,5 @@ class Template:
     def __init__(self, client):
         self._templates_api = TemplatesApi(client)
 
-    def get_templates(self):
-        return self._templates_api.list_templates()
+    def get_templates(self, is_tkgm: bool):
+        return self._templates_api.list_templates(is_tkgm)
