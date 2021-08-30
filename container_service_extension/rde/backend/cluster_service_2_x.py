@@ -25,6 +25,7 @@ from container_service_extension.common.constants.server_constants import Cluste
 from container_service_extension.common.constants.server_constants import DefEntityOperation  # noqa: E501
 from container_service_extension.common.constants.server_constants import DefEntityOperationStatus  # noqa: E501
 from container_service_extension.common.constants.server_constants import DefEntityPhase  # noqa: E501
+from container_service_extension.common.constants.server_constants import DISK_ENABLE_UUID  # noqa: E501
 from container_service_extension.common.constants.server_constants import KUBE_CONFIG  # noqa: E501
 from container_service_extension.common.constants.server_constants import KUBEADM_TOKEN_INFO # noqa: E501
 from container_service_extension.common.constants.server_constants import LocalTemplateKey  # noqa: E501
@@ -2445,6 +2446,13 @@ def _add_control_plane_nodes(sysadmin_client, num_nodes, org, vdc, vapp,
                     logger=LOGGER
                 )
 
+                task = vm.add_extra_config_element(DISK_ENABLE_UUID, "1", True)  # noqa: E501
+                sysadmin_client.get_task_monitor().wait_for_status(
+                    task,
+                    callback=wait_for_updating_disk_enable_uuid
+                )
+                vapp.reload()
+
         except Exception as err:
             LOGGER.error(err, exc_info=True)
             node_list = [entry.get('target_vm_name') for entry in vm_specs]
@@ -2527,6 +2535,13 @@ def _add_worker_nodes(sysadmin_client, num_nodes, org, vdc, vapp,
                     customization_phase=PostCustomizationPhase.KUBEADM_NODE_JOIN.value,  # noqa: E501
                     logger=LOGGER
                 )
+
+                task = vm.add_extra_config_element(DISK_ENABLE_UUID, "1", True)  # noqa: E501
+                sysadmin_client.get_task_monitor().wait_for_status(
+                    task,
+                    callback=wait_for_updating_disk_enable_uuid
+                )
+                vapp.reload()
 
         except Exception as err:
             LOGGER.error(err, exc_info=True)
@@ -2670,6 +2685,10 @@ def _get_kube_config_from_control_plane_vm(sysadmin_client: vcd_client.Client, v
     LOGGER.debug(f"Got kubeconfig from control plane:{node_names[0]} successfully")  # noqa: E501
     kube_config_in_bytes: bytes = base64.b64decode(kube_config)
     return kube_config_in_bytes.decode()
+
+
+def wait_for_updating_disk_enable_uuid(task):
+    LOGGER.debug(f"enable disk uuid, status: {task.get('status').lower()}")  # noqa: E501
 
 
 def wait_for_update_customization(task):
