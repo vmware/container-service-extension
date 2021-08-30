@@ -66,11 +66,15 @@ class ConsoleMessagePrinter(NullPrinter):
         click.secho(msg, fg='red')
 
 
+def get_cse_version():
+    return pkg_resources.require('container-service-extension')[0].version
+
+
 def get_cse_info():
     return {
         'product': 'CSE',
         'description': 'Container Service Extension for VMware vCloud Director',  # noqa: E501
-        'version': pkg_resources.require('container-service-extension')[0].version,  # noqa: E501
+        'version': get_cse_version(),
         'python': platform.python_version()
     }
 
