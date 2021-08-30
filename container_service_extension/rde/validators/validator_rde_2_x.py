@@ -71,9 +71,9 @@ class Validator_2_0_0(AbstractValidator):
             if isinstance(input_entity, rde_2_0_0.NativeEntity):
                 # cpu and mem are properties of only rde 2.0.0
                 if input_entity.spec.topology.workers.sizing_class and (input_entity.spec.topology.workers.cpu or input_entity.spec.topology.workers.memory):  # noqa: E501
-                    bad_request_msg = "Cannot specify sizing class and cpu/memory for Workers nodes."  # noqa: E501
+                    bad_request_msg = "Cannot specify both sizing class and cpu/memory for Workers nodes."  # noqa: E501
                 if input_entity.spec.topology.control_plane.sizing_class and (input_entity.spec.topology.control_plane.cpu or input_entity.spec.topology.control_plane.memory):  # noqa: E501
-                    bad_request_msg = "Cannot specify sizing class and cpu/memory for Control Plane nodes."  # noqa: E501
+                    bad_request_msg = "Cannot specify both sizing class and cpu/memory for Control Plane nodes."  # noqa: E501
             if bad_request_msg:
                 raise BadRequestError(bad_request_msg)
             return True

@@ -444,16 +444,17 @@ class NativeEntity(AbstractNativeEntity):
         control_plane_nodes = cluster['master_nodes']
         topology_control_plane = ControlPlane(
             count=len(control_plane_nodes),
-            storage_profile=cluster['storage_profile_name'],
-            cpu=control_plane_nodes[0]['numberOfCpus'],
-            memory=control_plane_nodes[0]['memoryMB']
+            storage_profile=cluster['storage_profile_name']
         )
+        if kind != shared_constants.ClusterEntityKind.TKG_M.value:
+            topology_control_plane.cpu = control_plane_nodes[0]['numberOfCpus']
+            topology_control_plane.memory = control_plane_nodes[0]['memoryMB']
         worker_nodes = cluster.get('nodes')
         topology_worker_nodes = Workers(
             count=len(worker_nodes),
             storage_profile=cluster['storage_profile_name']
         )
-        if len(worker_nodes) > 0:
+        if kind != shared_constants.ClusterEntityKind.TKG_M and len(worker_nodes) > 0:  # noqa: E501
             topology_worker_nodes.cpu = worker_nodes[0]['numberOfCpus']
             topology_worker_nodes.memory = worker_nodes[0]['memoryMB']
 
@@ -476,6 +477,16 @@ class NativeEntity(AbstractNativeEntity):
                 storage_profile=cluster['storage_profile_name']
             )
         )
+        node_control_plane = Node(
+            name=control_plane_nodes[0]['name'],
+            ip=control_plane_nodes[0]['ipAddress'],
+            storage_profile=cluster['storage_profile_name'],
+            cpu=control_plane_nodes[0]['numberOfCpus'],
+            memory=control_plane_nodes[0]['memoryMB']
+        )
+        if kind != shared_constants.ClusterEntityKind.TKG_M.value:
+            node_control_plane.cpu = control_plane_nodes[0]['numberOfCpus']
+            node_control_plane.memory = control_plane_nodes[0]['memoryMB']
         cluster_entity = cls(
             kind=kind,
             spec=ClusterSpec(
@@ -496,13 +507,7 @@ class NativeEntity(AbstractNativeEntity):
                 os=cluster['os'],
                 docker_version=cluster['docker_version'],
                 nodes=Nodes(
-                    control_plane=Node(
-                        name=control_plane_nodes[0]['name'],
-                        ip=control_plane_nodes[0]['ipAddress'],
-                        storage_profile=cluster['storage_profile_name'],
-                        cpu=control_plane_nodes[0]['numberOfCpus'],
-                        memory=control_plane_nodes[0]['memoryMB']
-                    ),
+                    control_plane=node_control_plane,
                     workers=worker_nodes,
                     nfs=nfs_nodes
                 ),
@@ -615,6 +620,10 @@ class NativeEntity(AbstractNativeEntity):
         # Andromeda (CSE 3.1) spec.settings.network is targeted
         # for CSE 3.1.1 to accommodate Antrea as CNI
         # Below line can be deleted post Andromeda (CSE 3.1)
+
+        if k8_runtime == shared_constants.ClusterEntityKind.TKG_M.value:
+            del native_entity_dict['spec']['topology']['controlPlane']['cpu']
+            del native_entity_dict['spec']['topology']['controlPlane']['memory']  # noqa: E501
         del native_entity_dict['spec']['settings']['network']['cni']
         del native_entity_dict['spec']['settings']['network']['pods']
         del native_entity_dict['spec']['settings']['network']['services']

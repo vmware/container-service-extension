@@ -2361,7 +2361,7 @@ def _add_control_plane_nodes(sysadmin_client, num_nodes, org, vdc, vapp,
     vcd_utils.raise_error_if_user_not_from_system_org(sysadmin_client)
 
     if (cpu_count or memory_mb) and sizing_class_name:
-        raise exceptions.BadRequestError("Cannot specify cpu/memory and "
+        raise exceptions.BadRequestError("Cannot specify both cpu/memory and "
                                          "sizing class for control plane "
                                          "node creation")
     if num_nodes > 0:
@@ -2507,7 +2507,7 @@ def _add_worker_nodes(sysadmin_client, num_nodes, org, vdc, vapp,
     vcd_utils.raise_error_if_user_not_from_system_org(sysadmin_client)
 
     if (cpu_count or memory_mb) and sizing_class_name:
-        raise exceptions.BadRequestError("Cannot specify cpu/memory and "
+        raise exceptions.BadRequestError("Cannot specify both cpu/memory and "
                                          "sizing class for worker "
                                          "node creation")
 
