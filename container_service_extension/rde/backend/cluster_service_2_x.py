@@ -2739,7 +2739,7 @@ def wait_for_cpu_modification(task):
 
 
 def wait_for_memory_modification(task):
-    LOGGER.debug(f"waiting for CPU count modification, status: {task.get('status').lower()}")  # noqa: E501
+    LOGGER.debug(f"waiting for memory modification, status: {task.get('status').lower()}")  # noqa: E501
 
 
 def wait_for_adding_control_plane_vm_to_vapp(task):

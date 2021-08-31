@@ -484,9 +484,6 @@ class NativeEntity(AbstractNativeEntity):
             cpu=control_plane_nodes[0]['numberOfCpus'],
             memory=control_plane_nodes[0]['memoryMB']
         )
-        if kind != shared_constants.ClusterEntityKind.TKG_M.value:
-            node_control_plane.cpu = control_plane_nodes[0]['numberOfCpus']
-            node_control_plane.memory = control_plane_nodes[0]['memoryMB']
         cluster_entity = cls(
             kind=kind,
             spec=ClusterSpec(
