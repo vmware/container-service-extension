@@ -141,23 +141,16 @@ def construct_script_to_update_kubeconfig_with_internal_ip(
 
     :rtype: str
     """
-    kubeconfig_with_internal_ip = get_updated_kubeconfig_with_internal_ip(
-        kubeconfig_with_exposed_ip, internal_ip
-    )
-    script = f"#!/usr/bin/env bash\n" \
-             f"echo \'{kubeconfig_with_internal_ip}\' > " \
-             f"{CSE_CLUSTER_KUBECONFIG_PATH}\n"
-    return script
-
-
-def get_updated_kubeconfig_with_internal_ip(
-        kubeconfig_with_exposed_ip,
-        internal_ip: str):
-    return re.sub(
+    kubeconfig_with_internal_ip = re.sub(
         pattern=IP_PORT_REGEX,
         repl=f'{internal_ip}:6443',
         string=str(kubeconfig_with_exposed_ip)
     )
+
+    script = f"#!/usr/bin/env bash\n" \
+             f"echo \'{kubeconfig_with_internal_ip}\' > " \
+             f"{CSE_CLUSTER_KUBECONFIG_PATH}\n"
+    return script
 
 
 def expose_cluster(client: vcd_client.Client, org_name: str, ovdc_name: str,
