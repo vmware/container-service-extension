@@ -8,6 +8,7 @@ import click
 from pyvcloud.vcd.client import Client
 import pyvcloud.vcd.org as vcd_org
 import pyvcloud.vcd.utils as vcd_utils
+from pyvcloud.vcd.vcd_api_version import VCDApiVersion
 import requests
 import semantic_version
 import six
@@ -138,12 +139,12 @@ def _override_client(ctx) -> None:
                 # ToDo: Instead of float use proper version comparison
                 if is_cse_server_running_in_legacy_mode:
                     common_supported_api_versions = \
-                        [float(x) for x in common_supported_api_versions
-                            if float(x) < 35.0]
+                        [VCDApiVersion(x) for x in common_supported_api_versions  # noqa: E501
+                            if VCDApiVersion(x) < VCDApiVersion('35.0')]
                 else:
                     common_supported_api_versions = \
-                        [float(x) for x in common_supported_api_versions
-                            if float(x) >= 35.0]
+                        [VCDApiVersion(x) for x in common_supported_api_versions  # noqa: E501
+                            if VCDApiVersion(x) >= VCDApiVersion('35.0')]
 
                 cse_server_api_version = \
                     str(max(common_supported_api_versions))
