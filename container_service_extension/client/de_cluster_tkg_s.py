@@ -5,6 +5,7 @@
 import json
 
 from pyvcloud.vcd.client import ApiVersion
+from pyvcloud.vcd.vcd_api_version import VCDApiVersion
 import yaml
 
 import container_service_extension.client.constants as cli_constants
@@ -55,7 +56,7 @@ class DEClusterTKGS:
 
         # api_version = self._client.get_api_version()
         # use api_version 37.0.0-alpha if VCD 10.3 is used.
-        if float(max_api_version) >= float(ApiVersion.VERSION_36.value):
+        if VCDApiVersion(max_api_version) >= VCDApiVersion(ApiVersion.VERSION_36.value):  # noqa: E501
             api_version = '37.0.0-alpha'
         self._tkg_s_client.set_default_header(cli_constants.TKGRequestHeaderKey.ACCEPT,  # noqa: E501
                                               f"application/json;version={api_version}")  # noqa: E501

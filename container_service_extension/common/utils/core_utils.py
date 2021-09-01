@@ -15,6 +15,7 @@ import urllib
 
 import click
 import pkg_resources
+from pyvcloud.vcd.vcd_api_version import VCDApiVersion
 import requests
 import semantic_version
 
@@ -398,4 +399,4 @@ def extract_id_from_href(href):
 # without converting the strings to float.
 # e.g. 5.20 will be smaller than 5.8 if compared as float, which is wrong
 def get_max_api_version(api_versions: List[str]) -> str:
-    return str(max(float(x) for x in api_versions))
+    return str(max(VCDApiVersion(x) for x in api_versions))

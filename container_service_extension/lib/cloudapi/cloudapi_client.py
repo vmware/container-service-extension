@@ -7,6 +7,7 @@ import json
 import logging
 from urllib import parse
 
+from pyvcloud.vcd.vcd_api_version import VCDApiVersion
 import requests
 
 from container_service_extension.lib.cloudapi.constants import ResponseKeys
@@ -45,6 +46,9 @@ class CloudApiClient(object):
 
     def get_api_version(self):
         return self._api_version
+
+    def get_vcd_api_version(self):
+        return VCDApiVersion(self._api_version)
 
     def get_base_url(self):
         return self._base_url

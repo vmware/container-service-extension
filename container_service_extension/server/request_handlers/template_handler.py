@@ -64,7 +64,7 @@ def tkgm_template_list(request_data, op_ctx):
             'description': '',
             'docker_version': 'n/a',
             'container_runtime': t[TKGmTemplateKey.CONTAINER_RUNTIME],
-            'container_runtime_version': t[TKGmTemplateKey.CONTAINER_RUNTIME_VERSION],
+            'container_runtime_version': t[TKGmTemplateKey.CONTAINER_RUNTIME_VERSION],  # noqa: E501
             'is_default': 'No',
             'kind': t[TKGmTemplateKey.KIND],
             'kubernetes': t[TKGmTemplateKey.KUBERNETES],
