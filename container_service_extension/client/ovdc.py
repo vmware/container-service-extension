@@ -3,6 +3,7 @@
 # SPDX-License-Identifier: BSD-2-Clause
 
 import pyvcloud.vcd.client as vcd_client
+from pyvcloud.vcd.vcd_api_version import VCDApiVersion
 
 from container_service_extension.client.metadata_based_ovdc import MetadataBasedOvdc  # noqa: E501
 from container_service_extension.client.policy_based_ovdc import PolicyBasedOvdc  # noqa: E501
@@ -21,7 +22,7 @@ class Ovdc:
         :return: instance of version specific client side Ovdc class
         """
         api_version = client.get_api_version()
-        if float(api_version) < float(vcd_client.ApiVersion.VERSION_35.value):
+        if VCDApiVersion(api_version) < VCDApiVersion(vcd_client.ApiVersion.VERSION_35.value):  # noqa: E501
             return MetadataBasedOvdc(client)
-        elif float(api_version) >= float(vcd_client.ApiVersion.VERSION_35.value):  # noqa: E501
+        elif VCDApiVersion(api_version) >= VCDApiVersion(vcd_client.ApiVersion.VERSION_35.value):  # noqa: E501
             return PolicyBasedOvdc(client)

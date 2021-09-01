@@ -7,6 +7,7 @@ from pyvcloud.vcd.exceptions import EntityNotFoundException
 from pyvcloud.vcd.exceptions import OperationNotSupportedException
 from pyvcloud.vcd.task import Task
 from pyvcloud.vcd.utils import retrieve_compute_policy_id_from_href
+from pyvcloud.vcd.vcd_api_version import VCDApiVersion
 from pyvcloud.vcd.vm import VM
 import requests
 
@@ -22,7 +23,7 @@ import container_service_extension.logging.logger as logger
 # cse compute policy prefix
 CSE_COMPUTE_POLICY_PREFIX = 'cse----'
 _SYSTEM_DEFAULT_COMPUTE_POLICY = 'System Default'
-GLOBAL_PVDC_COMPUTE_POLICY_MIN_VERSION = 35.0
+GLOBAL_PVDC_COMPUTE_POLICY_MIN_VERSION = VCDApiVersion('35.0')
 PVDC_VM_POLICY_NAME = "PvdcVmPolicy"
 VDC_VM_POLICY_NAME = "VdcVmPolicy"
 
@@ -56,7 +57,7 @@ class ComputePolicyManager:
                                                               wire_logger)
             self._cloudapi_version = \
                 cloudapi_constants.CloudApiVersion.VERSION_2_0_0
-            if float(self._cloudapi_client.get_api_version()) < \
+            if self._cloudapi_client.get_vcd_api_version() < \
                     GLOBAL_PVDC_COMPUTE_POLICY_MIN_VERSION:
                 self._cloudapi_version = \
                     cloudapi_constants.CloudApiVersion.VERSION_1_0_0
@@ -534,7 +535,7 @@ class ComputePolicyManager:
 
     def _raise_error_if_global_pvdc_compute_policy_not_supported(self):
         """Raise exception if higher api version is needed."""
-        api_version = float(self._cloudapi_client.get_api_version())
+        api_version = self._cloudapi_client.get_vcd_api_version()
         if api_version < GLOBAL_PVDC_COMPUTE_POLICY_MIN_VERSION: # noqa: E501
             msg = f"Recieved api version {api_version}." \
                   f" But atleast {GLOBAL_PVDC_COMPUTE_POLICY_MIN_VERSION} is required" # noqa: E501

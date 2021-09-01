@@ -16,6 +16,7 @@ from pyvcloud.vcd.org import Org
 from pyvcloud.vcd.role import Role
 import pyvcloud.vcd.utils as pyvcloud_vcd_utils
 from pyvcloud.vcd.vapp import VApp
+from pyvcloud.vcd.vcd_api_version import VCDApiVersion
 import requests
 import semantic_version
 
@@ -208,7 +209,7 @@ def parse_cse_extension_description(description: str):
             vcd_api_tokens = tokens[1].split("-")
             if len(vcd_api_tokens) == 2:
                 vcd_api_version = vcd_api_tokens[1]
-                if float(vcd_api_version) >= 35.0:
+                if VCDApiVersion(vcd_api_version) >= VCDApiVersion('35.0'):
                     legacy_mode = False
         result = {
             server_constants.CSE_VERSION_KEY: cse_version,

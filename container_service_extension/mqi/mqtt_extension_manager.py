@@ -73,7 +73,7 @@ class MQTTExtensionManager:
                  debug_logger=logger.SERVER_LOGGER, log_wire=True):
         # Ensure correct credentials and api version
         vcd_utils.raise_error_if_user_not_from_system_org(sysadmin_client)
-        client_api_version = float(sysadmin_client.get_api_version())
+        client_api_version = sysadmin_client.get_vcd_api_version()
         if client_api_version < constants.MQTT_MIN_API_VERSION:
             raise ValueError(f'API version {client_api_version} '
                              f'is less than required version '

@@ -7,6 +7,7 @@ import json
 from typing import List, Tuple, Union
 
 import pyvcloud.vcd.client as vcd_client
+from pyvcloud.vcd.vcd_api_version import VCDApiVersion
 from requests.exceptions import HTTPError
 
 import container_service_extension.common.constants.shared_constants as shared_constants  # noqa: E501
@@ -273,11 +274,11 @@ class DefEntityService:
         :rtype: Union[DefEntity, Tuple[DefEntity, dict]]
         """
         resource_url_relative_path = f"{CloudApiResource.ENTITIES}/{entity_id}"
-        vcd_api_version = self._cloudapi_client.get_api_version()
+        vcd_api_version = self._cloudapi_client.get_vcd_api_version()
         # TODO Float conversions must be changed to Semantic versioning.
         # TODO: Also include any persona having Administrator:FullControl
         #  on CSE:nativeCluster
-        if float(vcd_api_version) >= float(vcd_client.ApiVersion.VERSION_36.value) and \
+        if vcd_api_version >= VCDApiVersion(vcd_client.ApiVersion.VERSION_36.value) and \
                 self._cloudapi_client.is_sys_admin and not invoke_hooks:  # noqa: E501
             resource_url_relative_path += f"?invokeHooks={str(invoke_hooks).lower()}"  # noqa: E501
 
@@ -320,7 +321,7 @@ class DefEntityService:
         :param str entity_id: Id of the entity.
         :return: Details of the entity.
         :rtype: DefEntity
-        """
+    """
         response_body = self._cloudapi_client.do_request(
             method=RequestMethod.GET,
             cloudapi_version=CloudApiVersion.VERSION_1_0_0,
@@ -421,7 +422,7 @@ class DefEntityService:
         """
         # response will be a tuple (response_body, response_header) if
         # is_request_async is true. Else, it will be just response_body
-        vcd_api_version = self._cloudapi_client.get_api_version()
+        vcd_api_version = self._cloudapi_client.get_vcd_api_version()
         resource_url_relative_path = f"{CloudApiResource.ENTITIES}/{entity_id}"
 
         # TODO: Also include any persona having Administrator:FullControl
