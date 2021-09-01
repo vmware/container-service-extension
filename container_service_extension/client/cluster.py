@@ -3,6 +3,7 @@
 # SPDX-License-Identifier: BSD-2-Clause
 
 import pyvcloud.vcd.client as vcd_client
+from pyvcloud.vcd.vcd_api_version import VCDApiVersion
 
 from container_service_extension.client.de_cluster import DECluster
 from container_service_extension.client.de_cluster_native import DEClusterNative  # noqa: E501
@@ -30,9 +31,9 @@ class Cluster:
         :return: instance of version specific client side cluster
         """
         api_version = client.get_api_version()
-        if float(api_version) < float(vcd_client.ApiVersion.VERSION_35.value):   # noqa: E501
+        if VCDApiVersion(api_version) < VCDApiVersion(vcd_client.ApiVersion.VERSION_35.value):   # noqa: E501
             return LegacyClusterNative(client)
-        elif float(api_version) >= float(vcd_client.ApiVersion.VERSION_35.value):  # noqa: E501
+        elif VCDApiVersion(api_version) >= VCDApiVersion(vcd_client.ApiVersion.VERSION_35.value):  # noqa: E501
             if k8_runtime in CSE_SERVER_RUNTIMES:
                 return DEClusterNative(client)
             elif k8_runtime == ClusterEntityKind.TKG_S.value:
