@@ -206,7 +206,6 @@ class ClusterScriptFile(str, Enum):
 
     SCRIPTS_DIR = "cluster_scripts"
     CONTROL_PLANE = 'control_plane.sh'
-    CONTROL_PLANE_CUSTOMIZATION = 'control_plane_customization.sh'
     NODE = 'node.sh'
 
     # Note that we need _ in the version instead of dots to allow
@@ -677,11 +676,6 @@ CSE_SERVICE_ROLE_RIGHTS = [
     "vmware:tkgcluster: Modify",
     "vmware:tkgcluster: View"
 ]
-
-CSE_NATIVE_CLUSTER_FULL_ACCESS_RIGHTS = {
-    'cse:nativeCluster: Administrator View',
-    'cse:nativeCluster: Full Access'
-}
 
 
 @dataclass
