@@ -6,7 +6,7 @@ import functools
 import json
 from typing import List, Tuple, Union
 
-from pyvcloud.vcd.client import ApiVersion
+import pyvcloud.vcd.client as vcd_client
 from requests.exceptions import HTTPError
 
 import container_service_extension.common.constants.shared_constants as shared_constants  # noqa: E501
@@ -277,7 +277,8 @@ class DefEntityService:
         # TODO Float conversions must be changed to Semantic versioning.
         # TODO: Also include any persona having Administrator:FullControl
         #  on CSE:nativeCluster
-        if float(vcd_api_version) >= float(ApiVersion.VERSION_36.value) and \
+        if float(vcd_api_version) >= float(
+                vcd_client.ApiVersion.VERSION_36.value) and \
                 self._cloudapi_client.is_sys_admin and not invoke_hooks:
             resource_url_relative_path += f"?invokeHooks={str(invoke_hooks).lower()}"  # noqa: E501
 
@@ -426,7 +427,8 @@ class DefEntityService:
 
         # TODO: Also include any persona having Administrator:FullControl
         #  on CSE:nativeCluster
-        if float(vcd_api_version) >= float(ApiVersion.VERSION_36.value) and \
+        if float(vcd_api_version) >= float(
+                vcd_client.ApiVersion.VERSION_36.value) and \
                 self._cloudapi_client.is_sys_admin and not invoke_hooks:
             resource_url_relative_path += f"?invokeHooks={str(invoke_hooks).lower()}"  # noqa: E501
 
