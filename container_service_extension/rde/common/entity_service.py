@@ -15,7 +15,6 @@ from container_service_extension.common.constants.shared_constants import CSE_PA
 from container_service_extension.common.constants.shared_constants import HttpResponseHeader  # noqa: E501
 from container_service_extension.common.constants.shared_constants import RequestMethod  # noqa: E501
 import container_service_extension.common.utils.core_utils as utils
-import container_service_extension.common.utils.pyvcloud_utils as pyvcloud_utils  # noqa: E501
 import container_service_extension.exception.exceptions as cse_exception
 from container_service_extension.exception.minor_error_codes import MinorErrorCode  # noqa: E501
 from container_service_extension.lib.cloudapi.cloudapi_client import CloudApiClient  # noqa: E501
@@ -69,10 +68,9 @@ class DefEntityService:
      be used if and only if vCD API version >= v35.
     """
 
-    def __init__(self, cloudapi_client: CloudApiClient, vcd_client: vcd_client.Client = None):  # noqa: E501
+    def __init__(self, cloudapi_client: CloudApiClient):
         def_utils.raise_error_if_def_not_supported(cloudapi_client)
         self._cloudapi_client = cloudapi_client
-        self._vcd_client = vcd_client
 
     @handle_entity_service_exception
     def create_entity(self, entity_type_id: str, entity: DefEntity,
@@ -279,7 +277,8 @@ class DefEntityService:
         # TODO Float conversions must be changed to Semantic versioning.
         # TODO: Also include any persona having Administrator:FullControl
         #  on CSE:nativeCluster
-        if float(vcd_api_version) >= float(vcd_client.ApiVersion.VERSION_36.value) and \
+        if float(vcd_api_version) >= float(
+                vcd_client.ApiVersion.VERSION_36.value) and \
                 self._cloudapi_client.is_sys_admin and not invoke_hooks:
             resource_url_relative_path += f"?invokeHooks={str(invoke_hooks).lower()}"  # noqa: E501
 
@@ -287,7 +286,10 @@ class DefEntityService:
 
         # Prevent users with rights <= EDIT/VIEW on CSE:NATIVECLUSTER from
         # updating "private" property of RDE "status" section
-        if self._vcd_client and not pyvcloud_utils.has_full_access_to_native_cluster(self._vcd_client):  # noqa: E501
+        # TODO: Replace sys admin check with FULL CONTROL rights check on
+        #  CSE:NATIVECLUSTER. Users with no FULL CONTROL rights cannot update
+        #  private property of entity->status.
+        if not self._cloudapi_client.is_sys_admin:
             payload.get('entity', {}).get('status', {}).pop('private', None)
 
         if is_request_async:
@@ -425,7 +427,8 @@ class DefEntityService:
 
         # TODO: Also include any persona having Administrator:FullControl
         #  on CSE:nativeCluster
-        if float(vcd_api_version) >= float(vcd_client.ApiVersion.VERSION_36.value) and \
+        if float(vcd_api_version) >= float(
+                vcd_client.ApiVersion.VERSION_36.value) and \
                 self._cloudapi_client.is_sys_admin and not invoke_hooks:
             resource_url_relative_path += f"?invokeHooks={str(invoke_hooks).lower()}"  # noqa: E501
 
