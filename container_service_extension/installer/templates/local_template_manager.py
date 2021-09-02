@@ -115,7 +115,6 @@ def get_all_k8s_local_template_definition(client, catalog_name, org=None,
                   f"{num_missing_metadata_keys} metadata: " \
                   f"{missing_metadata_keys}"  # noqa: F841
             logger_debug.debug(msg)
-            msg_update_callback.info(msg)
             continue
 
         if not legacy_mode:

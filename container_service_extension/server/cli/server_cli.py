@@ -60,6 +60,7 @@ DISPLAY_ALL = "all"
 DISPLAY_DIFF = "diff"
 DISPLAY_LOCAL = "local"
 DISPLAY_REMOTE = "remote"
+DISPLAY_TKGM = "tkg"
 
 # Prompt messages
 PASSWORD_FOR_CONFIG_ENCRYPTION_MSG = "Password for config file encryption"
@@ -820,7 +821,7 @@ def run(ctx, config_file_path, pks_config_file_path, skip_check,
         service.run(msg_update_callback=console_message_printer)
         cse_run_complete = True
     except Exception as err:
-        SERVER_CLI_LOGGER.error(str(err))
+        SERVER_CLI_LOGGER.error(str(err), exc_info=True)
         console_message_printer.error(str(err))
         console_message_printer.error("CSE Server failure. Please check the logs.")  # noqa: E501
         sys.exit(1)
@@ -987,7 +988,8 @@ def upgrade(ctx, config_file_path, skip_config_decryption,
     '--display',
     'display_option',
     type=click.Choice(
-        [DISPLAY_ALL, DISPLAY_DIFF, DISPLAY_LOCAL, DISPLAY_REMOTE]),
+        [DISPLAY_ALL, DISPLAY_DIFF, DISPLAY_LOCAL, DISPLAY_REMOTE, DISPLAY_TKGM]  # noqa: E501
+    ),
     default=DISPLAY_ALL,
     help='Choose templates to display.')
 def list_template(ctx, config_file_path, skip_config_decryption,
@@ -1020,16 +1022,53 @@ def list_template(ctx, config_file_path, skip_config_decryption,
                                    cse_params=cse_params,
                                    telemetry_settings=config_dict['service']['telemetry'])  # noqa: E501
 
-        local_templates = []
+        log_wire_file = None
+        log_wire = utils.str_to_bool(config_dict['service'].get('log_wire'))  # noqa: E501
+        if log_wire:
+            log_wire_file = SERVER_DEBUG_WIRELOG_FILEPATH
+
+        tkgm_templates = []
         legacy_mode = config_dict['service']['legacy_mode']
+        if display_option == DISPLAY_TKGM and not legacy_mode:
+            client = None
+            try:
+                # Note: This will get us a client with highest supported
+                # VCD api version.
+                client, _ = _get_clients_from_config(
+                    config_dict,
+                    log_wire_file=log_wire_file,
+                    log_wire=log_wire
+                )
+
+                org_name = config_dict['broker']['org']
+                catalog_name = config_dict['broker']['catalog']
+
+                tkgm_template_definitions = ttm.read_all_tkgm_template(
+                    client=client,
+                    org_name=org_name,
+                    catalog_name=catalog_name,
+                    logger=SERVER_CLI_LOGGER
+                )
+
+                for definition in tkgm_template_definitions:
+                    tkgm_template = {
+                        'name': definition[server_constants.TKGmTemplateKey.NAME],  # noqa: E501
+                        'revision': int(definition[server_constants.TKGmTemplateKey.REVISION]),  # noqa: E501
+                        'local': 'Yes',
+                        'remote': 'No',
+                        'cpu': 'n/a',
+                        'memory': 'n/a',
+                        'description': ''
+                    }
+                    tkgm_templates.append(tkgm_template)
+            finally:
+                if client:
+                    client.logout()
+
+        local_templates = []
         if display_option in (DISPLAY_ALL, DISPLAY_DIFF, DISPLAY_LOCAL):
             client = None
             try:
-                log_wire_file = None
-                log_wire = utils.str_to_bool(config_dict['service'].get('log_wire'))  # noqa: E501
-                if log_wire:
-                    log_wire_file = SERVER_DEBUG_WIRELOG_FILEPATH
-
                 # Note: This will get us a client with highest supported
                 # VCD api version.
                 client, _ = _get_clients_from_config(
@@ -1143,12 +1182,16 @@ def list_template(ctx, config_file_path, skip_config_decryption,
             result = local_templates
         elif display_option in DISPLAY_REMOTE:
             result = remote_templates
+        elif display_option in DISPLAY_TKGM:
+            result = tkgm_templates
 
         result = sorted(result, key=lambda t: (t['name'], t['revision']), reverse=True)  # noqa: E501
         stdout(result, ctx, sort_headers=False)
         SERVER_CLI_LOGGER.debug(result)
-        record_user_action(cse_operation=CseOperation.TEMPLATE_LIST,
-                           telemetry_settings=config_dict['service']['telemetry'])  # noqa: E501
+        record_user_action(
+            cse_operation=CseOperation.TEMPLATE_LIST,
+            telemetry_settings=config_dict['service']['telemetry']
+        )
     except Exception as err:
         SERVER_CLI_LOGGER.error(str(err))
         console_message_printer.error(str(err))
@@ -1316,14 +1359,15 @@ def install_cse_template(ctx, template_name, template_revision,
     '--force',
     'force_import',
     is_flag=True,
-    help='Force import TKGm templates on vCD even if they already exist')
+    help='Force import TKGm templates on vCD even if they already exist'
+)
 def import_tkgm_template(
         ctx,
         config_file_path,
         skip_config_decryption,
         ova_file_path,
         force_import):
-    """."""
+    """Upload TKGm OVA to CSE catalog."""
     SERVER_CLI_LOGGER.debug(f"Executing command: {ctx.command_path}")
     console_message_printer = utils.ConsoleMessagePrinter()
     utils.check_python_version(console_message_printer)

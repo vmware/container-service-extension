@@ -1,9 +1,8 @@
 # container-service-extension
 # Copyright (c) 2019 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
-import time
-
 import pathlib
+import time
 
 from pyvcloud.vcd.client import FenceMode
 from pyvcloud.vcd.client import NetworkAdapterType

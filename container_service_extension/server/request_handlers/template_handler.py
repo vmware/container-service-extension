@@ -60,18 +60,18 @@ def tkgm_template_list(request_data, op_ctx):
             'cni': t[TKGmTemplateKey.CNI],
             'cni_version': t[TKGmTemplateKey.CNI_VERSION],
             'cse_version': t[TKGmTemplateKey.CSE_VERSION],
-            'deprecated': 'n/a',
-            'description': '',
-            'docker_version': 'n/a',
+            'deprecated': None,
+            'description': None,
+            'docker_version': None,
             'container_runtime': t[TKGmTemplateKey.CONTAINER_RUNTIME],
-            'container_runtime_version': t[TKGmTemplateKey.CONTAINER_RUNTIME_VERSION],
-            'is_default': 'No',
+            'container_runtime_version': t[TKGmTemplateKey.CONTAINER_RUNTIME_VERSION],  # noqa: E501
+            'is_default': False,
             'kind': t[TKGmTemplateKey.KIND],
             'kubernetes': t[TKGmTemplateKey.KUBERNETES],
             'kubernetes_version': t[TKGmTemplateKey.KUBERNETES_VERSION],
             'name': t[TKGmTemplateKey.NAME],
             'os': f"{t[TKGmTemplateKey.OS]}-{t[TKGmTemplateKey.OS_VERSION]}",
-            'revision': str(t[TKGmTemplateKey.REVISION])
+            'revision': int(t[TKGmTemplateKey.REVISION])
         })
 
     return sorted(tkgm_templates, key=lambda i: (i['name'], i['revision']), reverse=True)  # noqa: E501
