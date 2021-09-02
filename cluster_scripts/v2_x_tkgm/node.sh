@@ -36,6 +36,17 @@ hostnamectl set-hostname {vm_host_name}
 vmtoolsd --cmd "info-set guestinfo.postcustomization.hostname.status successful"
 
 
+vmtoolsd --cmd "info-set guestinfo.postcustomization.networkconfiguration.status in_progress"
+  echo 'net.ipv6.conf.all.disable_ipv6 = 1' >> /etc/sysctl.conf
+  echo 'net.ipv6.conf.default.disable_ipv6 = 1' >> /etc/sysctl.conf
+  echo 'net.ipv6.conf.lo.disable_ipv6 = 1' >> /etc/sysctl.conf
+  sudo sysctl -p
+
+  # also remove ipv6 localhost entry from /etc/hosts
+  sed -i 's/::1/127.0.0.1/g' /etc/hosts || true
+vmtoolsd --cmd "info-set guestinfo.postcustomization.networkconfiguration.status successful"
+
+
 vmtoolsd --cmd "info-set guestinfo.postcustomization.store.sshkey.status in_progress"
   ssh_key="{ssh_key}"
   if [[ ! -z "$ssh_key" ]];
