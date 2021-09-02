@@ -278,7 +278,9 @@ class DEClusterNative:
     def apply(self, cluster_apply_spec: dict, cluster_id: str = None, **kwargs):  # noqa: E501
         """Apply the configuration either to create or update the cluster.
 
-        :param dict cluster_config: cluster configuration information
+        :param dict cluster_apply_spec: cluster configuration information
+        :param str cluster_id:
+
         :return: dictionary containing the apply operation task
         :rtype: dict
         """
