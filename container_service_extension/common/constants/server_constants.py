@@ -144,6 +144,8 @@ class FlattenedClusterSpecKey2X(Enum):
     WORKERS_COUNT = 'topology.workers.count'
     WORKERS_SIZING_CLASS = 'topology.workers.sizingClass'
     WORKERS_STORAGE_PROFILE = 'topology.workers.storageProfile'
+    WORKERS_CPU_COUNT = 'topology.workers.cpu'
+    WORKERS_MEMORY_MB = 'topology.workers.memory'
     NFS_COUNT = 'topology.nfs.count'
     NFS_SIZING_CLASS = 'topology.nfs.sizingClass'
     NFS_STORAGE_PROFILE = 'topology.nfs.storageProfile'
