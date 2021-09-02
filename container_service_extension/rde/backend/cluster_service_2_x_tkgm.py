@@ -26,7 +26,7 @@ from container_service_extension.common.constants.server_constants import DefEnt
 from container_service_extension.common.constants.server_constants import DefEntityOperationStatus  # noqa: E501
 from container_service_extension.common.constants.server_constants import DefEntityPhase  # noqa: E501
 from container_service_extension.common.constants.server_constants import KUBE_CONFIG  # noqa: E501
-from container_service_extension.common.constants.server_constants import KUBEADM_TOKEN_INFO # noqa: E501
+from container_service_extension.common.constants.server_constants import KUBEADM_TOKEN_INFO  # noqa: E501
 from container_service_extension.common.constants.server_constants import LocalTemplateKey  # noqa: E501
 from container_service_extension.common.constants.server_constants import NodeType  # noqa: E501
 from container_service_extension.common.constants.server_constants import PreCustomizationPhase  # noqa: E501
@@ -264,8 +264,7 @@ class ClusterService(abstract_broker.AbstractBroker):
                     f"Cluster '{cluster_name}' already exists.")
 
             # check that requested/default template is valid
-            template = _get_tkgm_template(
-                name=template_name, revision=template_revision)
+            template = _get_tkgm_template(template_name)
 
             # TODO(DEF) design and implement telemetry VCDA-1564 defined entity
             #  based clusters
@@ -522,7 +521,7 @@ class ClusterService(abstract_broker.AbstractBroker):
             message=f"{CLUSTER_DELETE_OPERATION_MESSAGE} ({cluster_id})",
             status=BehaviorTaskStatus.RUNNING.value, progress=5)
 
-    def get_cluster_upgrade_plan(self, cluster_id: str) ->List[Dict]:
+    def get_cluster_upgrade_plan(self, cluster_id: str) -> List[Dict]:
         """Get the template names/revisions that the cluster can upgrade to.
 
         :param str cluster_id:
@@ -745,7 +744,7 @@ class ClusterService(abstract_broker.AbstractBroker):
                     f"Error while creating vApp: {err}")
             client_v36.get_task_monitor().wait_for_status(vapp_resource.Tasks.Task[0])  # noqa: E501
 
-            template = _get_tkgm_template(template_name, template_revision)
+            template = _get_tkgm_template(template_name)
 
             LOGGER.debug(f"Setting metadata on cluster vApp '{cluster_name}'")
             tags = {
@@ -1006,14 +1005,13 @@ class ClusterService(abstract_broker.AbstractBroker):
                     server_utils.get_rde_version_in_use())
             curr_worker_count: int = current_spec.topology.workers.count
             template_name = current_spec.distribution.template_name
-            template_revision = current_spec.distribution.template_revision
 
             desired_worker_count: int = \
                 input_native_entity.spec.topology.workers.count
             num_workers_to_add: int = desired_worker_count - curr_worker_count
 
             if num_workers_to_add > 0:
-                _get_tkgm_template(name=template_name, revision=template_revision)
+                _get_tkgm_template(template_name)
                 self._create_nodes_async(input_native_entity)
 
                 # TODO Below is the temporary fix to avoid parallel Recompose
@@ -1199,7 +1197,7 @@ class ClusterService(abstract_broker.AbstractBroker):
             rollback = input_native_entity.spec.settings.rollback_on_failure
             template_name = input_native_entity.spec.distribution.template_name
             template_revision = input_native_entity.spec.distribution.template_revision  # noqa: E501
-            template = _get_tkgm_template(template_name, template_revision)
+            template = _get_tkgm_template(template_name)
 
             # compute the values of workers to be added or removed
             desired_worker_count: int = input_native_entity.spec.topology.workers.count  # noqa: E501
@@ -1632,6 +1630,7 @@ class ClusterService(abstract_broker.AbstractBroker):
         self.mqtt_publisher.send_response(response_json)
         self.task_status = status.value
 
+    # TODO: update RDE with the new kubeconfig
     def _replace_kubeconfig_expose_ip(self, internal_ip: str, cluster_id: str,
                                       vapp: vcd_vapp.VApp):
         # Form kubeconfig with internal ip
@@ -1711,6 +1710,13 @@ def _get_nodes_details(sysadmin_client, vapp):
                      f"cluster {vapp.name}: {err}", exc_info=True)
 
 
+def _drain_nodes(_: vcd_client.Client, vapp_href, node_names, cluster_name=''):
+    LOGGER.debug(f"Draining nodes {node_names} in cluster '{cluster_name}' "
+                 f"(vapp: {vapp_href})")
+    LOGGER.info("Draining is not supported since guest script execution is not permitted.")
+    return
+
+
 def _delete_vapp(client, org_name, ovdc_name, vapp_name):
     LOGGER.debug(
         f"Deleting vapp {vapp_name} in (org: {org_name}, vdc: {ovdc_name})")
@@ -1737,25 +1743,6 @@ def _delete_nodes(sysadmin_client: vcd_client.Client, vapp_href, node_names,
 
     LOGGER.debug(f"Deleting node(s) {node_names} from cluster '{cluster_name}'"
                  f" (vapp: {vapp_href})")
-    script = "#!/usr/bin/env bash\nkubectl delete node "
-    are_there_workers_to_del = False
-    for node_name in node_names:
-        if node_name.startswith(NodeType.WORKER):
-            script += f' {node_name}'
-            are_there_workers_to_del = True
-    script += '\n'
-
-    vapp = vcd_vapp.VApp(sysadmin_client, href=vapp_href)
-    try:
-        if are_there_workers_to_del:
-            control_plane_node_names = _get_node_names(vapp, NodeType.CONTROL_PLANE)  # noqa: E501
-            _run_script_in_nodes(sysadmin_client, vapp_href,
-                                 [control_plane_node_names[0]], script)
-    except Exception as err:
-        LOGGER.error(f"Failed to delete node(s) {node_names} from cluster "
-                     f"'{cluster_name}' using kubectl "
-                     f"(vapp: {vapp_href}): {err}", exc_info=True)
-
     vapp = vcd_vapp.VApp(sysadmin_client, href=vapp_href)
     for vm_name in node_names:
         vm = vcd_vm.VM(sysadmin_client, resource=vapp.get_vm(vm_name))
@@ -1800,7 +1787,7 @@ def _cluster_exists(client, cluster_name, org_name=None, ovdc_name=None):
     return len(list(result)) != 0
 
 
-def _get_tkgm_template(name=None, revision=None):
+def _get_tkgm_template(name: str):
     if name is None:  # noqa: E501
         raise ValueError("Template name should be specified.")
     server_config = server_utils.get_server_runtime_config()
@@ -1944,6 +1931,7 @@ def _add_control_plane_nodes(sysadmin_client, num_nodes, org, vdc, vapp,
 
             # Note that this is an ordered list.
             for customization_phase in [PostCustomizationPhase.HOSTNAME_SETUP,
+                                        PostCustomizationPhase.NETWORK_CONFIGURATION,
                                         PostCustomizationPhase.STORE_SSH_KEY,
                                         PostCustomizationPhase.NAMESERVER_SETUP,
                                         PostCustomizationPhase.KUBEADM_INIT,
@@ -2059,6 +2047,7 @@ def _add_worker_nodes(sysadmin_client, num_nodes, org, vdc, vapp,
             LOGGER.debug(f"worker {vm_name} to join cluster using:{control_plane_join_cmd}")  # noqa: E501
             # Note that this is an ordered list.
             for customization_phase in [PostCustomizationPhase.HOSTNAME_SETUP,
+                                        PostCustomizationPhase.NETWORK_CONFIGURATION,
                                         PostCustomizationPhase.STORE_SSH_KEY,
                                         PostCustomizationPhase.KUBEADM_NODE_JOIN,
                                         ]:

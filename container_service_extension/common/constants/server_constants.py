@@ -787,6 +787,7 @@ class PreCustomizationPhase(Enum):
 @unique
 class PostCustomizationPhase(Enum):
     HOSTNAME_SETUP = 'guestinfo.postcustomization.hostname.status'
+    NETWORK_CONFIGURATION = 'guestinfo.postcustomization.networkconfiguration.status'
     STORE_SSH_KEY = 'guestinfo.postcustomization.store.sshkey.status'
     KUBEADM_INIT = 'guestinfo.postcustomization.kubeinit.status'
     NAMESERVER_SETUP = 'guestinfo.postcustomization.nameserverconfig.resolvconf.status'
