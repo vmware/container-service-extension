@@ -773,8 +773,15 @@ class PostCustomizationStatus(Enum):
 
 
 @unique
+class ToolsDeployPkgCustomizationStatus(Enum):
+    NONE = None
+    IN_PROGRESS = 'Started'
+    SUCCESSFUL = 'Successful'
+
+
+@unique
 class PreCustomizationPhase(Enum):
-    PRECUSTOMIZATION_SCRIPT = 'guestinfo.precustomization.script.status'
+    POST_BOOT_CUSTOMIZATION_SERVICE_SETUP = 'guestinfo.gc.status'
 
 
 @unique

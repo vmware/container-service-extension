@@ -17,11 +17,11 @@ import pyvcloud.vcd.org as vcd_org
 import pyvcloud.vcd.vapp as vcd_vapp
 from pyvcloud.vcd.vdc import VDC
 import pyvcloud.vcd.vm as vcd_vm
-import semantic_version as semver
 
 from container_service_extension.common.constants.server_constants import CLUSTER_ENTITY  # noqa: E501
+from container_service_extension.common.constants.server_constants import ToolsDeployPkgCustomizationStatus  # noqa: E501
 from container_service_extension.common.constants.server_constants import ClusterMetadataKey  # noqa: E501
-from container_service_extension.common.constants.server_constants import ClusterScriptFile, TemplateScriptFile  # noqa: E501
+from container_service_extension.common.constants.server_constants import ClusterScriptFile
 from container_service_extension.common.constants.server_constants import DefEntityOperation  # noqa: E501
 from container_service_extension.common.constants.server_constants import DefEntityOperationStatus  # noqa: E501
 from container_service_extension.common.constants.server_constants import DefEntityPhase  # noqa: E501
@@ -44,9 +44,7 @@ import container_service_extension.common.utils.pyvcloud_utils as vcd_utils
 from container_service_extension.common.utils.script_utils import get_cluster_script_file_contents  # noqa: E501
 import container_service_extension.common.utils.server_utils as server_utils
 import container_service_extension.common.utils.thread_utils as thread_utils
-import container_service_extension.common.utils.vsphere_utils as vs_utils
 import container_service_extension.exception.exceptions as exceptions
-import container_service_extension.installer.templates.local_template_manager as ltm  # noqa: E501
 import container_service_extension.lib.telemetry.constants as telemetry_constants  # noqa: E501
 import container_service_extension.lib.telemetry.telemetry_handler as telemetry_handler  # noqa: E501
 from container_service_extension.logging.logger import SERVER_LOGGER as LOGGER
@@ -435,8 +433,10 @@ class ClusterService(abstract_broker.AbstractBroker):
         # update the task and defined entity.
         msg = f"Resizing the cluster '{cluster_name}' ({cluster_id}) to the " \
               f"desired worker count {desired_worker_count}"
+
         if unexpose:
             msg += " and unexposing the cluster"
+
         self._update_task(BehaviorTaskStatus.RUNNING, message=msg)
         # set entity status to busy
         new_status: rde_2_x.Status = curr_native_entity.status
@@ -1058,7 +1058,7 @@ class ClusterService(abstract_broker.AbstractBroker):
                                          href=vapp_href)
                     control_plane_internal_ip = _get_control_plane_ip(
                         sysadmin_client=self.context.sysadmin_client,
-                        vapp=vapp
+                        vapp=vapp,
                     )
 
                     # update kubeconfig with internal ip
@@ -1093,6 +1093,7 @@ class ClusterService(abstract_broker.AbstractBroker):
                         f"Failed to unexpose cluster with error: {str(err)}",
                         exc_info=True
                     )
+                    raise Exception("Unexpose of exposed cluster is not a valid operation.")
 
             # update the defined entity and the task status. Check if one of
             # the child threads had set the status to ERROR.
@@ -1640,28 +1641,6 @@ class ClusterService(abstract_broker.AbstractBroker):
             LOGGER.error(msg)
             raise exceptions.ClusterOperationError(msg)
 
-        script = \
-            nw_exp_helper.construct_script_to_update_kubeconfig_with_internal_ip(  # noqa: E501
-                kubeconfig_with_exposed_ip=kubeconfig_with_exposed_ip,
-                internal_ip=internal_ip
-            )
-
-        node_names = _get_node_names(vapp, NodeType.CONTROL_PLANE)
-        result = _execute_script_in_nodes(
-            self.context.sysadmin_client,
-            vapp=vapp,
-            node_names=node_names,
-            script=script,
-            check_tools=True
-        )
-
-        errors = _get_script_execution_errors(result)
-        if errors:
-            raise exceptions.ScriptExecutionError(
-                f"Failed to overwrite kubeconfig with internal ip: "
-                f"{internal_ip}: {errors}"
-            )
-
         return nw_exp_helper.get_updated_kubeconfig_with_internal_ip(
             kubeconfig_with_exposed_ip=kubeconfig_with_exposed_ip,
             internal_ip=internal_ip
@@ -1730,59 +1709,6 @@ def _get_nodes_details(sysadmin_client, vapp):
     except Exception as err:
         LOGGER.error("Failed to retrieve the status of the nodes of the "
                      f"cluster {vapp.name}: {err}", exc_info=True)
-
-
-def _drain_nodes(sysadmin_client: vcd_client.Client, vapp_href, node_names,
-                 cluster_name=''):
-    LOGGER.debug(f"Draining nodes {node_names} in cluster '{cluster_name}' "
-                 f"(vapp: {vapp_href})")
-    script = "#!/usr/bin/env bash\n"
-    for node_name in node_names:
-        script += f"kubectl drain {node_name} " \
-                  f"--force --ignore-daemonsets --timeout=60s --delete-local-data\n"  # noqa: E501
-
-    try:
-        vapp = vcd_vapp.VApp(sysadmin_client, href=vapp_href)
-        control_plane_node_names = _get_node_names(vapp, NodeType.CONTROL_PLANE)  # noqa: E501
-        _run_script_in_nodes(sysadmin_client,
-                             vapp_href,
-                             [control_plane_node_names[0]],
-                             script)
-    except Exception as err:
-        LOGGER.error(f"Failed to drain nodes {node_names} in cluster "
-                     f"'{cluster_name}' (vapp: {vapp_href}) with "
-                     f"error: {err}", exc_info=True)
-        raise
-
-    LOGGER.debug(f"Successfully drained nodes {node_names} in cluster "
-                 f"'{cluster_name}' (vapp: {vapp_href})")
-
-
-def _uncordon_nodes(sysadmin_client: vcd_client.Client, vapp_href, node_names,
-                    cluster_name=''):
-    vcd_utils.raise_error_if_user_not_from_system_org(sysadmin_client)
-
-    LOGGER.debug(f"Uncordoning nodes {node_names} in cluster '{cluster_name}' "
-                 f"(vapp: {vapp_href})")
-    script = "#!/usr/bin/env bash\n"
-    for node_name in node_names:
-        script += f"kubectl uncordon {node_name}\n"
-
-    try:
-        vapp = vcd_vapp.VApp(sysadmin_client, href=vapp_href)
-        control_plane_node_names = _get_node_names(vapp, NodeType.CONTROL_PLANE)  # noqa: E501
-        _run_script_in_nodes(sysadmin_client,
-                             vapp_href,
-                             [control_plane_node_names[0]],
-                             script)
-    except Exception as err:
-        LOGGER.error(f"Failed to uncordon nodes {node_names} in cluster "
-                     f"'{cluster_name}' (vapp: {vapp_href}) "
-                     f"with error: {err}", exc_info=True)
-        raise
-
-    LOGGER.debug(f"Successfully uncordoned nodes {node_names} in cluster "
-                 f"'{cluster_name}' (vapp: {vapp_href})")
 
 
 def _delete_vapp(client, org_name, ovdc_name, vapp_name):
@@ -1984,14 +1910,31 @@ def _add_control_plane_nodes(sysadmin_client, num_nodes, org, vdc, vapp,
             )
             vapp.reload()
 
+            # HACK: sometimes the dbus.service is not yet started by the time the ToolsDeployPkg
+            # scripts run. As a result, that script does install the post-customize service, but
+            # does not reboot the machine, which is needed in order to execute the postcustomization
+            # script where the bulk of our functionality lives.
+            # Guest customization works with the following gross steps:
+            # 1. run script with parameter "precustomization"
+            # 2. set up network
+            # 3. convert script with parameter "precustomization" to service
+            #   a. set the 'guestinfo.gc.status' to 'Successful'.
+            # 4. check if a forked script has completed setting up hostname (this fails sometimes)
+            # 5. Check for errors, cleanup and report.
+            # In the above steps, steps 4,5 take about 2s. Hence we wait for 3a and then wait for 10s
+            # and then trigger the reboot ourselves.
+            #
+            # However what happens when the bug is fixed in GOSC?
+            # In that case this hack will reboot the node one more time depending on a race. That is
+            # not detrimental to functionality, but we do have a slight delay due to the seconf reboot.
             vcd_utils.wait_for_completion_of_post_customization_procedure(
                 vm,
-                customization_phase=PreCustomizationPhase.PRECUSTOMIZATION_SCRIPT.value,
+                customization_phase=PreCustomizationPhase.POST_BOOT_CUSTOMIZATION_SERVICE_SETUP.value,
                 logger=LOGGER,
+                expected_target_status_list=[cust_status.value for cust_status in ToolsDeployPkgCustomizationStatus],
             )
 
-            # once precustomization is done, wait for a minute and reboot the node
-            time.sleep(60)
+            time.sleep(10)
             task = vm.reboot()
             sysadmin_client.get_task_monitor().wait_for_status(
                 task,
@@ -2096,14 +2039,16 @@ def _add_worker_nodes(sysadmin_client, num_nodes, org, vdc, vapp,
             )
             vapp.reload()
 
+            # HACK: Please read the long comment in the other similar section (look for
+            # POST_BOOT_CUSTOMIZATION_SERVICE_SETUP) which explains the rationale of the hack.
             vcd_utils.wait_for_completion_of_post_customization_procedure(
                 vm,
-                customization_phase=PreCustomizationPhase.PRECUSTOMIZATION_SCRIPT.value,
+                customization_phase=PreCustomizationPhase.POST_BOOT_CUSTOMIZATION_SERVICE_SETUP.value,
                 logger=LOGGER,
+                expected_target_status_list=[cust_status.value for cust_status in ToolsDeployPkgCustomizationStatus],
             )
 
-            # once precustomization is done, wait for a minute and reboot the node
-            time.sleep(60)
+            time.sleep(10)
             task = vm.reboot()
             sysadmin_client.get_task_monitor().wait_for_status(
                 task,
@@ -2216,122 +2161,6 @@ def _wait_for_guest_execution_callback(message, exception=None):
     LOGGER.debug(message)
     if exception is not None:
         LOGGER.error(f"exception: {str(exception)}")
-
-
-def _wait_until_ready_to_exec(vs, vm, password, tries=30):
-    ready = False
-    script = "#!/usr/bin/env bash\n" \
-             "uname -a\n"
-    for _ in range(tries):
-        result = vs.execute_script_in_guest(
-            vm, 'root', password, script,
-            target_file=None,
-            wait_for_completion=True,
-            wait_time=5,
-            get_output=True,
-            delete_script=True,
-            callback=_wait_for_guest_execution_callback)
-        if result[0] == 0:
-            ready = True
-            break
-        LOGGER.info(f"Script returned {result[0]}; VM is not "
-                    f"ready to execute scripts, yet")
-        time.sleep(2)
-
-    if not ready:
-        raise exceptions.CseServerError('VM is not ready to execute scripts')
-
-
-def _execute_script_in_nodes(sysadmin_client: vcd_client.Client,
-                             vapp, node_names, script,
-                             check_tools=True, wait=True):
-    vcd_utils.raise_error_if_user_not_from_system_org(sysadmin_client)
-    all_results = []
-    for node_name in node_names:
-        try:
-            LOGGER.debug(f"will try to execute script on {node_name}:\n"
-                         f"{script}")
-
-            vs = vs_utils.get_vsphere(sysadmin_client, vapp, vm_name=node_name,
-                                      logger=LOGGER)
-            vs.connect()
-            moid = vapp.get_vm_moid(node_name)
-            vm = vs.get_vm_by_moid(moid)
-            password = vapp.get_admin_password(node_name)
-            if check_tools:
-                LOGGER.debug(f"waiting for tools on {node_name}")
-                vs.wait_until_tools_ready(
-                    vm,
-                    sleep=5,
-                    callback=_wait_for_tools_ready_callback)
-                _wait_until_ready_to_exec(vs, vm, password)
-            LOGGER.debug(f"about to execute script on {node_name} "
-                         f"(vm={vm}), wait={wait}")
-            if wait:
-                result = vs.execute_script_in_guest(
-                    vm, 'root', password, script,
-                    target_file=None,
-                    wait_for_completion=True,
-                    wait_time=10,
-                    get_output=True,
-                    delete_script=True,
-                    callback=_wait_for_guest_execution_callback)
-                result_stdout = result[1].content.decode()
-                result_stderr = result[2].content.decode()
-            else:
-                result = [
-                    vs.execute_program_in_guest(vm, 'root', password, script,
-                                                wait_for_completion=False,
-                                                get_output=False)
-                ]
-                result_stdout = ''
-                result_stderr = ''
-            LOGGER.debug(result[0])
-            LOGGER.debug(result_stderr)
-            LOGGER.debug(result_stdout)
-            all_results.append(result)
-        except Exception as err:
-            msg = f"Error executing script in node {node_name}: {str(err)}"
-            LOGGER.error(msg, exc_info=True)
-            raise exceptions.ScriptExecutionError(msg)  # noqa: E501
-
-    return all_results
-
-
-def _run_script_in_nodes(sysadmin_client: vcd_client.Client, vapp_href,
-                         node_names, script):
-    """Run script in all specified nodes.
-
-    Wrapper around `execute_script_in_nodes()`. Use when we don't care about
-    preserving script results
-
-    :param pyvcloud.vcd.client.Client sysadmin_client:
-    :param str vapp_href:
-    :param List[str] node_names:
-    :param str script:
-    """
-    vcd_utils.raise_error_if_user_not_from_system_org(sysadmin_client)
-
-    # when is tools checking necessary?
-    vapp = vcd_vapp.VApp(sysadmin_client, href=vapp_href)
-    results = _execute_script_in_nodes(sysadmin_client,
-                                       vapp=vapp,
-                                       node_names=node_names,
-                                       script=script,
-                                       check_tools=False)
-    errors = _get_script_execution_errors(results)
-    if errors:
-        raise exceptions.ScriptExecutionError(
-            "Script execution failed on node "
-            f"{node_names}\nErrors: {errors}")
-    if results[0][0] != 0:
-        raise exceptions.NodeOperationError(
-            "Error during node operation:\n"
-            f"{results[0][2].content.decode()}")
-
-
-def _get_script_execution_errors(results):
-    return [result[2].content.decode() for result in results if result[0] != 0]
 
 
 def _create_k8s_software_string(software_name: str, software_version: str) -> str:  # noqa: E501

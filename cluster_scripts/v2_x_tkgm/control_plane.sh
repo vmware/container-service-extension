@@ -18,7 +18,6 @@ echo "$(date) This script was called with $1" &>> /var/log/cse/customization/sta
 if [ "$1" == "precustomization" ]
 then
   echo "$(date) Exiting early since phase is [$1]" &>> /var/log/cse/customization/status.log
-  vmtoolsd --cmd "info-set guestinfo.precustomization.script.status successful"
   exit 0
 elif [ "$1" != "postcustomization" ]
 then

@@ -106,31 +106,49 @@ def construct_2_0_0_cluster_spec_from_entity_status(entity_status: rde_2_0_0.Sta
     :return: Cluster Specification as defined in rde_2_0_0 model
     """
     # Currently only single control-plane is supported.
+    sizing_class = ''
+    storage_profile = ''
+    if (
+            entity_status is not None and
+            entity_status.nodes is not None and
+            entity_status.nodes.control_plane is not None
+    ):
+        sizing_class = entity_status.nodes.control_plane.sizing_class
+        storage_profile = entity_status.nodes.control_plane.storage_profile
+
     control_plane = rde_2_0_0.ControlPlane(
-        sizing_class=entity_status.nodes.control_plane.sizing_class,
-        storage_profile=entity_status.nodes.control_plane.storage_profile,
+        sizing_class=sizing_class,
+        storage_profile=storage_profile,
         count=1)
 
-    workers_count = len(entity_status.nodes.workers)
-    if workers_count == 0:
-        workers = rde_2_0_0.Workers(sizing_class=None,
-                                    storage_profile=None,
-                                    count=0)
-    else:
+    if (
+        entity_status is not None and
+        entity_status.nodes is not None and
+        entity_status.nodes.workers is not None and
+        len(entity_status.nodes.workers) > 0
+    ):
         workers = rde_2_0_0.Workers(
             sizing_class=entity_status.nodes.workers[0].sizing_class,
             storage_profile=entity_status.nodes.workers[0].storage_profile,
-            count=workers_count)
+            count=len(entity_status.nodes.workers))
+    else:
+        workers = rde_2_0_0.Workers(sizing_class=None,
+                                    storage_profile=None,
+                                    count=0)
 
-    nfs_count = len(entity_status.nodes.nfs)
-    if nfs_count == 0:
+    if (
+        entity_status is not None and
+        entity_status.nodes is not None and
+        entity_status.nodes.nfs is not None and
+        len(entity_status.nodes.nfs) > 0
+    ):
+        nfs = rde_2_0_0.Nfs(
+            sizing_class=entity_status.nodes.nfs[0].sizing_class,
+            storage_profile=entity_status.nodes.nfs[0].storage_profile,
+            count=len(entity_status.nodes.nfs))
+    else:
         nfs = rde_2_0_0.Nfs(sizing_class=None, storage_profile=None,
                             count=0)
-    else:
-        nfs = rde_2_0_0.Nfs(
-            sizing_class=entity_status.nodes.nfs[0].sizing_class,  # noqa: E501
-            storage_profile=entity_status.nodes.nfs[
-                0].storage_profile, count=nfs_count)
 
     k8_distribution = rde_2_0_0.Distribution(
         template_name=entity_status.cloud_properties.distribution.template_name,  # noqa: E501
