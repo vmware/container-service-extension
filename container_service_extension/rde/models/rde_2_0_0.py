@@ -452,7 +452,7 @@ class NativeEntity(AbstractNativeEntity):
             distribution=k8_distribution,
             ssh_key='')
         control_plane_nodes = cluster['master_nodes']
-        topology_contorl_plane = ControlPlane(
+        topology_control_plane = ControlPlane(
             count=len(control_plane_nodes),
             storage_profile=cluster['storage_profile_name']
         )
@@ -462,13 +462,13 @@ class NativeEntity(AbstractNativeEntity):
             storage_profile=cluster['storage_profile_name']
         )
         if kind != shared_constants.ClusterEntityKind.TKG_M.value and len(workers) > 0:  # noqa: E501
-            topology_contorl_plane.cpu = control_plane_nodes[0]['numberOfCpus']
-            topology_contorl_plane.memory = control_plane_nodes[0]['memoryMB']
+            topology_control_plane.cpu = control_plane_nodes[0]['numberOfCpus']
+            topology_control_plane.memory = control_plane_nodes[0]['memoryMB']
             topology_workers.cpu = workers[0]['numberOfCpus']
             topology_workers.memory = workers[0]['memoryMB']
         topology = Topology(
             workers=topology_workers,
-            control_plane=topology_contorl_plane,
+            control_plane=topology_control_plane,
             nfs=Nfs(
                 count=len(cluster['nfs_nodes']),
                 storage_profile=cluster['storage_profile_name']
