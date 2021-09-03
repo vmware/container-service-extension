@@ -2060,6 +2060,7 @@ def _add_worker_nodes(sysadmin_client, num_nodes, org, vdc, vapp,
             for customization_phase in [PostCustomizationPhase.HOSTNAME_SETUP,
                                         PostCustomizationPhase.NETWORK_CONFIGURATION,
                                         PostCustomizationPhase.STORE_SSH_KEY,
+                                        PostCustomizationPhase.NAMESERVER_SETUP,
                                         PostCustomizationPhase.KUBEADM_NODE_JOIN,
                                         ]:
                 vcd_utils.wait_for_completion_of_post_customization_procedure(
