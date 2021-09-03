@@ -8,7 +8,7 @@ import re
 import string
 import threading
 import time
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 import urllib
 
 import pkg_resources
@@ -781,7 +781,7 @@ class ClusterService(abstract_broker.AbstractBroker):
             vapp.reload()
 
             try:
-                _add_control_plane_nodes(
+                expose_ip, _ = _add_control_plane_nodes(
                     sysadmin_client_v36,
                     num_nodes=1,
                     org=org,
@@ -1802,10 +1802,12 @@ def _add_control_plane_nodes(sysadmin_client, num_nodes, org, vdc, vapp,
                              catalog_name, template, network_name,
                              storage_profile=None, ssh_key=None,
                              sizing_class_name=None, expose=False,
-                             cluster_name=None, cluster_id=None):
+                             cluster_name=None, cluster_id=None) -> Tuple[str, List[Dict]]:
+
     vcd_utils.raise_error_if_user_not_from_system_org(sysadmin_client)
 
     vm_specs = []
+    expose_ip = ''
     try:
         if num_nodes != 1:
             raise ValueError(f"Unexpected number of control-plane nodes. Expected 1, obtained [{num_nodes}].")
@@ -1839,7 +1841,7 @@ def _add_control_plane_nodes(sysadmin_client, num_nodes, org, vdc, vapp,
                 k8s_version=template[LocalTemplateKey.KUBERNETES_VERSION],
                 cni_version=template[LocalTemplateKey.CNI_VERSION],
                 ssh_key=ssh_key if ssh_key else '',
-                expose_ip='',
+                control_plane_endpoint='',
             )
 
         task = vapp.add_vms(vm_specs, power_on=False, deploy=False, all_eulas_accepted=True)
@@ -1849,12 +1851,17 @@ def _add_control_plane_nodes(sysadmin_client, num_nodes, org, vdc, vapp,
         )
         vapp.reload()
 
+        internal_ip = ''
+        if len(vm_specs) > 0:
+            spec = vm_specs[0]
+            internal_ip = vapp.get_primary_ip(vm_name=spec['target_vm_name'])
+
         for spec in vm_specs:
             vm_name = spec['target_vm_name']
             vm_resource = vapp.get_vm(vm_name)
             vm = vcd_vm.VM(sysadmin_client, resource=vm_resource)
             # Handle exposing cluster
-            expose_ip = ''
+            control_plane_endpoint = internal_ip
             if expose:
                 try:
                     expose_ip = nw_exp_helper.expose_cluster(
@@ -1864,30 +1871,33 @@ def _add_control_plane_nodes(sysadmin_client, num_nodes, org, vdc, vapp,
                         network_name=network_name,
                         cluster_name=cluster_name,
                         cluster_id=cluster_id,
-                        internal_ip=vapp.get_primary_ip(vm_name=vm_name))
+                        internal_ip=internal_ip)
+                    control_plane_endpoint = expose_ip
                 except Exception as err:
                     LOGGER.error(f"Exposing cluster failed: {str(err)}", exc_info=True)  # noqa: E501
 
-                cust_script = templated_script.format(
-                    vm_host_name=spec['target_vm_name'],
-                    service_cidr=TKGM_DEFAULT_SERVICE_CIDR,
-                    pod_cidr=TKGM_DEFAULT_POD_NETWORK_CIDR,
-                    cluster_kind=template[LocalTemplateKey.KIND],
-                    k8s_version=template[LocalTemplateKey.KUBERNETES_VERSION],
-                    cni_version=template[LocalTemplateKey.CNI_VERSION],
-                    ssh_key=ssh_key if ssh_key else '',
-                    expose_ip=expose_ip
-                )
-                task = vm.update_guest_customization_section(
-                    enabled=True,
-                    customization_script=cust_script)
+            # If expose is set, control_plane_endpoint is exposed ip
+            # Else control_plane_endpoint is internal_ip
+            cust_script = templated_script.format(
+                vm_host_name=spec['target_vm_name'],
+                service_cidr=TKGM_DEFAULT_SERVICE_CIDR,
+                pod_cidr=TKGM_DEFAULT_POD_NETWORK_CIDR,
+                cluster_kind=template[LocalTemplateKey.KIND],
+                k8s_version=template[LocalTemplateKey.KUBERNETES_VERSION],
+                cni_version=template[LocalTemplateKey.CNI_VERSION],
+                ssh_key=ssh_key if ssh_key else '',
+                control_plane_endpoint=f"{control_plane_endpoint}:6443"
+            )
+            task = vm.update_guest_customization_section(
+                enabled=True,
+                customization_script=cust_script)
 
-                sysadmin_client.get_task_monitor().wait_for_status(
-                    task,
-                    callback=wait_for_update_customization
-                )
-                vm.reload()
-                vapp.reload()
+            sysadmin_client.get_task_monitor().wait_for_status(
+                task,
+                callback=wait_for_update_customization
+            )
+            vm.reload()
+            vapp.reload()
 
             task = vm.power_on_and_force_recustomization()
             # wait_for_vm_power_on is reused for all vm creation callback
@@ -1956,7 +1966,7 @@ def _add_control_plane_nodes(sysadmin_client, num_nodes, org, vdc, vapp,
         raise exceptions.NodeCreationError(node_list, str(err))
 
     vapp.reload()
-    return {'task': task, 'specs': vm_specs}
+    return expose_ip, vm_specs
 
 
 def _add_worker_nodes(sysadmin_client, num_nodes, org, vdc, vapp,
@@ -2178,7 +2188,7 @@ def _get_vm_specifications(
         network_name,
         storage_profile=None,
         sizing_class_name=None,
-        cust_script=None):
+        cust_script=None) -> List[Dict]:
     org_name = org.get_name()
     org_resource = client.get_org_by_name(org_name)
     org_sa = vcd_org.Org(client, resource=org_resource)

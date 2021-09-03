@@ -113,6 +113,7 @@ nodeRegistration:
 ---
 apiVersion: kubeadm.k8s.io/v1beta2
 kind: ClusterConfiguration
+controlPlaneEndpoint: "{control_plane_endpoint}"
 dns:
   type: CoreDNS
   imageRepository: projects.registry.vmware.com/tkg
