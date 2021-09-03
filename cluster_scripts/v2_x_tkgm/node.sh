@@ -113,3 +113,4 @@ vmtoolsd --cmd "info-set guestinfo.postcustomization.kubeadm.node.join.status su
 echo "$(date) post customization script execution completed" &>> /var/log/cse/customization/status.log
 
 exit 0
+

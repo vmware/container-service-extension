@@ -197,7 +197,7 @@ class ClusterService(abstract_broker.AbstractBroker):
             }
         )
 
-        # Get kube config from RDE else fallback to control plane vm
+        # Get kube config from RDE
         kube_config = None
         if hasattr(curr_native_entity.status,
                    shared_constants.RDEProperty.PRIVATE.value) and \
@@ -562,7 +562,7 @@ class ClusterService(abstract_broker.AbstractBroker):
         desired_template_name = input_native_entity.spec.distribution.template_name  # noqa: E501
         desired_template_revision = input_native_entity.spec.distribution.template_revision  # noqa: E501
         if current_template_name != desired_template_name or current_template_revision != desired_template_revision:  # noqa: E501
-            raise Exception("Looks like an upgrade is required. Upgrades not supported in this version of CSE")
+            raise Exception("Looks like an upgrade is required. Upgrades not supported for TKGm in this version of CSE")
         raise exceptions.CseServerError("update not supported for the specified input specification")  # noqa: E501
 
     def get_cluster_acl_info(self, cluster_id, page: int, page_size: int):

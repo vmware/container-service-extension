@@ -32,7 +32,8 @@
         "distribution":{
             "type":"object",
             "required":[
-                "templateName"
+                "templateName",
+                "templateRevision"
             ],
             "properties":{
                 "templateName":{
@@ -414,3 +415,4 @@
     },
     "additionalProperties":true
 }
+
