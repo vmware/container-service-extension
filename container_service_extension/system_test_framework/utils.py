@@ -11,6 +11,8 @@ import yaml
 
 import container_service_extension.logging.logger as logger
 from container_service_extension.rde.constants import RuntimeRDEVersion
+import container_service_extension.rde.models.rde_1_0_0 as rde_1_0_0
+import container_service_extension.rde.models.rde_2_0_0 as rde_2_0_0
 from container_service_extension.rde.utils import get_runtime_rde_version_by_vcd_api_version  # noqa: E501
 import container_service_extension.system_test_framework.environment as env
 import container_service_extension.system_test_framework.utils as testutils
@@ -103,67 +105,76 @@ def list_cluster_output_validator(output, runner_username):
 
 
 def _update_cluster_apply_spec_for_2_0(apply_spec, properties):
-    modified_spec = apply_spec.copy()
-    modified_spec['spec']['settings']['ovdcNetwork'] = env.TEST_NETWORK
-    modified_spec['metadata']['orgName'] = env.TEST_ORG
-    modified_spec['metadata']['virtualDataCenterName'] = env.TEST_VDC
+    # setting default values for ovdc network, org name and ovdc name
+    apply_spec_rde: rde_2_0_0.NativeEntity = rde_2_0_0.NativeEntity.from_dict(apply_spec)  # noqa: E501
+    apply_spec_rde.spec.settings.ovdc_network = env.TEST_NETWORK
+    apply_spec_rde.metadata.org_name = env.TEST_ORG
+    apply_spec_rde.metadata.virtual_data_center_name = env.TEST_VDC
 
+    # set values sent in properties parameter
     for key, value in properties.items():
         if key == 'worker_count':
-            modified_spec['spec']['topology']['workers']['count'] = value
+            apply_spec_rde.spec.topology.workers.count = value
         elif key == 'nfs_count':
-            modified_spec['spec']['topology']['nfs']['count'] = value
+            apply_spec_rde.spec.topology.nfs.count = value
         elif key == 'rollback':
-            modified_spec['spec']['settings']['rollbackOnFailure'] = value
+            apply_spec_rde.spec.settings.rollback_on_failure = value
         elif key == 'sizing_class':
-            modified_spec['spec']['topology']['controlPlane']['sizingClass'] = value  # noqa: E501
-            modified_spec['spec']['topology']['workers']['sizingClass'] = value
-            modified_spec['spec']['topology']['nfs']['sizingClass'] = value
+            apply_spec_rde.spec.topology.control_plane.sizing_class = value
+            apply_spec_rde.spec.topology.workers.sizing_class = value
+            apply_spec_rde.spec.topology.nfs.sizing_class = value
         elif key == 'storage_profile':
-            modified_spec['spec']['topology']['controlPlane']['storageProfile'] = value  # noqa: E501
-            modified_spec['spec']['topology']['workers']['storageProfile'] = value  # noqa: E501
-            modified_spec['spec']['topology']['nfs']['storageProfile'] = value
+            apply_spec_rde.spec.topology.control_plane.storage_profile = value
+            apply_spec_rde.spec.topology.workers.storage_profile = value
+            apply_spec_rde.spec.topology.nfs.storage_profile = value
         elif key == 'template_name' and value:
-            modified_spec['spec']['distribution']['templateName'] = value
+            apply_spec_rde.spec.distribution.template_name = value
         elif key == 'template_revision' and value:
-            modified_spec['spec']['distribution']['templateRevision'] = value
+            apply_spec_rde.spec.distribution.template_revision = value
         elif key == 'cluster_name':
-            modified_spec['metadata']['name'] = value
+            apply_spec_rde.metadata.name = value
         elif key == 'network' and value:
-            modified_spec['spec']['settings']['ovdcNetwork'] = value
+            apply_spec_rde.spec.settings.ovdc_network = value
+    modified_spec = apply_spec_rde.to_dict()
+    del modified_spec['status']
     return modified_spec
 
 
 def _update_cluster_apply_spec_for_1_0(apply_spec, properties):
-    modified_spec = apply_spec.copy()
-    modified_spec['spec']['settings']['network'] = env.TEST_NETWORK
-    modified_spec['metadata']['org_name'] = env.TEST_ORG
-    modified_spec['metadata']['ovdc_name'] = env.TEST_VDC
+    # setting default values for ovdc network, org name and ovdc name
+    apply_spec_rde: rde_1_0_0.NativeEntity = \
+        rde_1_0_0.NativeEntity.from_dict(apply_spec)
+    apply_spec_rde.spec.settings.network = env.TEST_NETWORK
+    apply_spec_rde.metadata.org_name = env.TEST_ORG
+    apply_spec_rde.metadata.ovdc_name = env.TEST_VDC
 
+    # set values sent in properties parameter
     for key, value in properties.items():
         if key == 'worker_count':
-            modified_spec['spec']['workers']['count'] = value
+            apply_spec_rde.spec.workers.count = value
         elif key == 'nfs_count':
-            modified_spec['spec']['nfs']['count'] = value
+            apply_spec_rde.spec.nfs.count = value
         elif key == 'rollback':
-            modified_spec['spec']['settings']['rollback_on_failure'] = value
+            apply_spec_rde.spec.settings.rollback_on_failure = value
         elif key == 'sizing_class':
-            modified_spec['spec']['control_plane']['sizing_class'] = value
-            modified_spec['spec']['workers']['sizing_class'] = value
-            modified_spec['spec']['nfs']['sizing_class'] = value
+            apply_spec_rde.spec.control_plane.sizing_class = value
+            apply_spec_rde.spec.workers.sizing_class = value
+            apply_spec_rde.spec.nfs.sizing_class = value
         elif key == 'storage_profile':
-            modified_spec['spec']['control_plane']['storage_profile'] = value
-            modified_spec['spec']['workers']['storage_profile'] = value
-            modified_spec['spec']['nfs']['storage_profile'] = value
+            apply_spec_rde.spec.control_plane.storage_profile = value
+            apply_spec_rde.spec.workers.storage_profile = value
+            apply_spec_rde.spec.nfs.storage_profile = value
         elif key == 'template_name':
-            modified_spec['spec']['k8_distribution']['template_name'] = value
+            apply_spec_rde.spec.k8_distribution.template_name = value
         elif key == 'template_revision':
-            modified_spec['spec']['k8_distribution']['template_revision'] \
-                = value
+            apply_spec_rde.spec.k8_distribution.template_revision = value
         elif key == 'cluster_name':
-            modified_spec['metadata']['cluster_name'] = value
+            apply_spec_rde.metadata.cluster_name = value
         elif key == 'network':
-            modified_spec['spec']['settings']['network'] = value
+            apply_spec_rde.spec.settings.network = value
+
+    modified_spec = apply_spec_rde.to_dict()
+    del modified_spec['status']
     return modified_spec
 
 
@@ -189,11 +200,15 @@ def modify_cluster_apply_spec(apply_spec_file_path, properties):
 
 
 def get_worker_count_from_1_0_0_entity_dict(cluster_dict):
-    return len(cluster_dict['status']['nodes']['workers'])
+    native_entity: rde_1_0_0.NativeEntity = \
+        rde_1_0_0.NativeEntity.from_dict(cluster_dict)
+    return len(native_entity.status.nodes.workers)
 
 
 def get_worker_count_from_2_0_0_entity_dict(cluster_dict):
-    return len(cluster_dict['status']['nodes']['workers'])
+    native_entity: rde_2_0_0.NativeEntity = \
+        rde_2_0_0.NativeEntity.from_dict(cluster_dict)
+    return len(native_entity.status.nodes.workers)
 
 
 def generate_validate_node_count_func(expected_nodes, rde_version, logger=logger.NULL_LOGGER):  # noqa: E501
