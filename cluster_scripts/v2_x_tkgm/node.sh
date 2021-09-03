@@ -58,8 +58,37 @@ vmtoolsd --cmd "info-set guestinfo.postcustomization.store.sshkey.status in_prog
 vmtoolsd --cmd "info-set guestinfo.postcustomization.store.sshkey.status successful"
 
 
+vmtoolsd --cmd "info-set guestinfo.postcustomization.nameserverconfig.resolvconf.status in_progress"
+  echo 'nameserver 8.8.8.8
+nameserver 8.8.4.4
+nameserver 10.16.188.210
+nameserver 10.118.254.1' > /etc/resolv.conf
+vmtoolsd --cmd "info-set guestinfo.postcustomization.nameserverconfig.resolvconf.status successful"
+
+
 vmtoolsd --cmd "info-set guestinfo.postcustomization.kubeadm.node.join.status in_progress"
   kubeadm_config_path=/root/kubeadm-defaults-join.conf
+
+  # tag images
+  coredns_image_version=""
+  etcd_image_version=""
+  kubernetes_version=""
+  for image in "coredns" "etcd" "kube-proxy" "kube-apiserver" "kube-controller-manager" "kube-scheduler"
+  do
+    image_ref=$(ctr -n=k8s.io image list | cut -d" " -f1 | grep $image)
+    ref_path=$(echo $image_ref | sed 's/:.*//')
+    new_tag_version=$(echo $image_ref | sed 's/.*://' | sed 's/_/-/')
+    ctr -n=k8s.io image tag $image_ref $ref_path:$new_tag_version
+
+    # save image tags for later
+    if [[ "$image" = "coredns" ]]; then
+      coredns_image_version=$new_tag_version
+    elif [[ "$image" = "etcd" ]]; then
+      etcd_image_version=$new_tag_version
+    elif [[ "$image" = "kube-proxy" ]]; then # selecting other kube-* images would work too
+      kubernetes_version=$new_tag_version
+    fi
+  done
 
   echo "---
 apiVersion: kubeadm.k8s.io/v1beta2
