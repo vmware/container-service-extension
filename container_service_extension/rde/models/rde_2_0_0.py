@@ -418,8 +418,8 @@ class NativeEntity(AbstractNativeEntity):
                 name=item['name'],
                 ip=item['ipAddress'],
                 storage_profile=cluster['storage_profile_name'],
-                cpu=item['numberOfCpus'],
-                memory=item['memoryMB'])
+                cpu=int(item['numberOfCpus']),
+                memory=int(item['memoryMB']))
             worker_nodes.append(node)
         nfs_nodes = []
         for item in cluster['nfs_nodes']:
@@ -462,10 +462,10 @@ class NativeEntity(AbstractNativeEntity):
             storage_profile=cluster['storage_profile_name']
         )
         if kind != shared_constants.ClusterEntityKind.TKG_M.value and len(workers) > 0:  # noqa: E501
-            topology_control_plane.cpu = control_plane_nodes[0]['numberOfCpus']
-            topology_control_plane.memory = control_plane_nodes[0]['memoryMB']
-            topology_workers.cpu = workers[0]['numberOfCpus']
-            topology_workers.memory = workers[0]['memoryMB']
+            topology_control_plane.cpu = int(control_plane_nodes[0]['numberOfCpus'])  # noqa: E501
+            topology_control_plane.memory = int(control_plane_nodes[0]['memoryMB'])  # noqa: E501
+            topology_workers.cpu = int(workers[0]['numberOfCpus'])
+            topology_workers.memory = int(workers[0]['memoryMB'])
         topology = Topology(
             workers=topology_workers,
             control_plane=topology_control_plane,
@@ -478,8 +478,8 @@ class NativeEntity(AbstractNativeEntity):
             name=cluster['master_nodes'][0]['name'],
             ip=cluster['master_nodes'][0]['ipAddress'],
             storage_profile=cluster['storage_profile_name'],
-            cpu=control_plane_nodes[0]['numberOfCpus'],
-            memory=control_plane_nodes[0]['memoryMB'])
+            cpu=int(control_plane_nodes[0]['numberOfCpus']),
+            memory=int(control_plane_nodes[0]['memoryMB']))
         cluster_entity = cls(
             kind=kind,
             spec=ClusterSpec(
