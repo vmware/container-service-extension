@@ -64,6 +64,10 @@ import container_service_extension.server.compute_policy_manager as compute_poli
 
 DEFAULT_API_VERSION = vcd_client.ApiVersion.VERSION_36.value
 
+# Hardcode the Antrea CNI version until there's a better way to retrieve it
+CNI_NAME = "antrea"
+ANTREA_CNI_VERSION = 'v0.11.3'
+
 CLUSTER_CREATE_OPERATION_MESSAGE = 'Cluster create'
 CLUSTER_RESIZE_OPERATION_MESSAGE = 'Cluster resize'
 CLUSTER_DELETE_OPERATION_MESSAGE = 'Cluster delete'
@@ -243,7 +247,7 @@ class ClusterService(abstract_broker.AbstractBroker):
                     template_name=server_config['broker']['default_template_name'],  # noqa: E501
                     template_revision=int(server_config['broker']['default_template_revision']))  # noqa: E501
             template_name = input_native_entity.spec.distribution.template_name
-            template_revision = input_native_entity.spec.distribution.template_revision  # noqa: E501
+            template_revision = 1  # templateRevision for TKGm is always 1
 
             # check that cluster name is syntactically valid
             if not _is_valid_cluster_name(cluster_name):
@@ -270,7 +274,7 @@ class ClusterService(abstract_broker.AbstractBroker):
             #  based clusters
             k8_distribution = rde_2_x.Distribution(
                 template_name=template_name,
-                template_revision=template_revision
+                template_revision=1,
             )
             cloud_properties = rde_2_x.CloudProperties(
                 distribution=k8_distribution,
@@ -287,8 +291,8 @@ class ClusterService(abstract_broker.AbstractBroker):
                     template[LocalTemplateKey.KUBERNETES],
                     template[LocalTemplateKey.KUBERNETES_VERSION]),
                 cni=_create_k8s_software_string(
-                    template[LocalTemplateKey.CNI],
-                    template[LocalTemplateKey.CNI_VERSION]),
+                    CNI_NAME,
+                    ANTREA_CNI_VERSION),
                 os=template[LocalTemplateKey.OS],
                 cloud_properties=cloud_properties,
                 uid=entity_id,
@@ -751,12 +755,12 @@ class ClusterService(abstract_broker.AbstractBroker):
                 ClusterMetadataKey.CLUSTER_ID: cluster_id,
                 ClusterMetadataKey.CSE_VERSION: pkg_resources.require('container-service-extension')[0].version,  # noqa: E501
                 ClusterMetadataKey.TEMPLATE_NAME: template[LocalTemplateKey.NAME],  # noqa: E501
-                ClusterMetadataKey.TEMPLATE_REVISION: template[LocalTemplateKey.REVISION],  # noqa: E501
+                ClusterMetadataKey.TEMPLATE_REVISION: 1,  # templateRevision is hardcoded as 1 for TKGm
                 ClusterMetadataKey.OS: template[LocalTemplateKey.OS],
                 ClusterMetadataKey.KUBERNETES: template[LocalTemplateKey.KUBERNETES],  # noqa: E501
                 ClusterMetadataKey.KUBERNETES_VERSION: template[LocalTemplateKey.KUBERNETES_VERSION],  # noqa: E501
-                ClusterMetadataKey.CNI: template[LocalTemplateKey.CNI],
-                ClusterMetadataKey.CNI_VERSION: template[LocalTemplateKey.CNI_VERSION]  # noqa: E501
+                ClusterMetadataKey.CNI: CNI_NAME,
+                ClusterMetadataKey.CNI_VERSION: ANTREA_CNI_VERSION  # noqa: E501
             }
 
             sysadmin_client_v36 = self.context.get_sysadmin_client(
@@ -862,6 +866,11 @@ class ClusterService(abstract_broker.AbstractBroker):
             )
             new_status.nodes = _get_nodes_details(
                 sysadmin_client_v36, vapp)
+            new_status.cni = _create_k8s_software_string(
+                CNI_NAME,
+                ANTREA_CNI_VERSION,
+            )
+            new_status.cloud_properties.distribution.template_revision = tags[ClusterMetadataKey.TEMPLATE_REVISION]
 
             # Update status with exposed ip
             if expose_ip:
@@ -1837,9 +1846,7 @@ def _add_control_plane_nodes(sysadmin_client, num_nodes, org, vdc, vapp,
                 vm_host_name=spec['target_vm_name'],
                 service_cidr=TKGM_DEFAULT_SERVICE_CIDR,
                 pod_cidr=TKGM_DEFAULT_POD_NETWORK_CIDR,
-                cluster_kind=template[LocalTemplateKey.KIND],
-                k8s_version=template[LocalTemplateKey.KUBERNETES_VERSION],
-                cni_version=template[LocalTemplateKey.CNI_VERSION],
+                antrea_cni_version=ANTREA_CNI_VERSION,
                 ssh_key=ssh_key if ssh_key else '',
                 control_plane_endpoint='',
             )
@@ -1882,9 +1889,7 @@ def _add_control_plane_nodes(sysadmin_client, num_nodes, org, vdc, vapp,
                 vm_host_name=spec['target_vm_name'],
                 service_cidr=TKGM_DEFAULT_SERVICE_CIDR,
                 pod_cidr=TKGM_DEFAULT_POD_NETWORK_CIDR,
-                cluster_kind=template[LocalTemplateKey.KIND],
-                k8s_version=template[LocalTemplateKey.KUBERNETES_VERSION],
-                cni_version=template[LocalTemplateKey.CNI_VERSION],
+                antrea_cni_version=ANTREA_CNI_VERSION,
                 ssh_key=ssh_key if ssh_key else '',
                 control_plane_endpoint=f"{control_plane_endpoint}:6443"
             )

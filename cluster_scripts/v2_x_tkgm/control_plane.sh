@@ -135,7 +135,7 @@ vmtoolsd --cmd "info-set guestinfo.postcustomization.kubeinit.status successful"
 
 
 vmtoolsd --cmd "info-set guestinfo.postcustomization.kubectl.apply.cni.status in_progress"
-  kubectl apply -f https://github.com/vmware-tanzu/antrea/releases/download/v0.11.3/antrea.yml
+  kubectl apply -f https://github.com/vmware-tanzu/antrea/releases/download/{antrea_cni_version}/antrea.yml
 vmtoolsd --cmd "info-set guestinfo.postcustomization.kubectl.apply.cni.status successful"
 
 
