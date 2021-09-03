@@ -413,13 +413,14 @@ class NativeEntity(AbstractNativeEntity):
         site = kwargs.get('site', '')
         worker_nodes = []
         for item in cluster['nodes']:
-            worker_nodes.append(
-                Node(
-                    name=item['name'],
-                    ip=item['ipAddress'],
-                    storage_profile=cluster['storage_profile_name']
-                )
-            )
+            # Add cpu and memory details to the node part in status section
+            node = Node(
+                name=item['name'],
+                ip=item['ipAddress'],
+                storage_profile=cluster['storage_profile_name'],
+                cpu=int(item['numberOfCpus']),
+                memory=int(item['memoryMB']))
+            worker_nodes.append(node)
         nfs_nodes = []
         for item in cluster['nfs_nodes']:
             # The item['exports'] field is a string
@@ -430,7 +431,6 @@ class NativeEntity(AbstractNativeEntity):
             exports_list_string = item['exports']
             exports_list_string.replace('[', '').replace(']', '').replace('\'', '')  # noqa: E501
             exports_list = exports_list_string.split(", ")
-
             nfs_nodes.append(
                 NfsNode(
                     name=item['name'],
@@ -451,20 +451,35 @@ class NativeEntity(AbstractNativeEntity):
             ovdc_network_name=cluster['network_name'],
             distribution=k8_distribution,
             ssh_key='')
+        control_plane_nodes = cluster['master_nodes']
+        topology_control_plane = ControlPlane(
+            count=len(control_plane_nodes),
+            storage_profile=cluster['storage_profile_name']
+        )
+        workers = cluster.get('nodes', [])
+        topology_workers = Workers(
+            count=len(cluster['nodes']),
+            storage_profile=cluster['storage_profile_name']
+        )
+        if kind != shared_constants.ClusterEntityKind.TKG_M.value and len(workers) > 0:  # noqa: E501
+            topology_control_plane.cpu = int(control_plane_nodes[0]['numberOfCpus'])  # noqa: E501
+            topology_control_plane.memory = int(control_plane_nodes[0]['memoryMB'])  # noqa: E501
+            topology_workers.cpu = int(workers[0]['numberOfCpus'])
+            topology_workers.memory = int(workers[0]['memoryMB'])
         topology = Topology(
-            workers=Workers(
-                count=len(cluster['nodes']),
-                storage_profile=cluster['storage_profile_name']
-            ),
-            control_plane=ControlPlane(
-                count=len(cluster['master_nodes']),
-                storage_profile=cluster['storage_profile_name']
-            ),
+            workers=topology_workers,
+            control_plane=topology_control_plane,
             nfs=Nfs(
                 count=len(cluster['nfs_nodes']),
                 storage_profile=cluster['storage_profile_name']
             )
         )
+        node_control_plane = Node(
+            name=cluster['master_nodes'][0]['name'],
+            ip=cluster['master_nodes'][0]['ipAddress'],
+            storage_profile=cluster['storage_profile_name'],
+            cpu=int(control_plane_nodes[0]['numberOfCpus']),
+            memory=int(control_plane_nodes[0]['memoryMB']))
         cluster_entity = cls(
             kind=kind,
             spec=ClusterSpec(
@@ -485,11 +500,7 @@ class NativeEntity(AbstractNativeEntity):
                 os=cluster['os'],
                 docker_version=cluster['docker_version'],
                 nodes=Nodes(
-                    control_plane=Node(
-                        name=cluster['master_nodes'][0]['name'],
-                        ip=cluster['master_nodes'][0]['ipAddress'],
-                        storage_profile=cluster['storage_profile_name']
-                    ),
+                    control_plane=node_control_plane,
                     workers=worker_nodes,
                     nfs=nfs_nodes
                 ),
@@ -605,13 +616,12 @@ class NativeEntity(AbstractNativeEntity):
         del native_entity_dict['spec']['settings']['network']['cni']
         del native_entity_dict['spec']['settings']['network']['pods']
         del native_entity_dict['spec']['settings']['network']['services']
-        # Hiding the cpu and memory properties from controlPlane and workers
-        # for Andromeda (CSE 3.1). Below lines can be deleted once cpu and
-        # memory support is added in CSE 3.1.1
-        del native_entity_dict['spec']['topology']['controlPlane']['cpu']
-        del native_entity_dict['spec']['topology']['controlPlane']['memory']
-        del native_entity_dict['spec']['topology']['workers']['cpu']
-        del native_entity_dict['spec']['topology']['workers']['memory']
+
+        if k8_runtime == shared_constants.ClusterEntityKind.TKG_M.value:
+            del native_entity_dict['spec']['topology']['controlPlane']['cpu']
+            del native_entity_dict['spec']['topology']['controlPlane']['memory']  # noqa: E501
+            del native_entity_dict['spec']['topology']['workers']['cpu']
+            del native_entity_dict['spec']['topology']['workers']['memory']
 
         sample_apply_spec = yaml.dump(native_entity_dict)
         return cluster_spec_field_descriptions + sample_apply_spec

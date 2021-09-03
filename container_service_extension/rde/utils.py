@@ -106,21 +106,43 @@ def construct_2_0_0_cluster_spec_from_entity_status(entity_status: rde_2_0_0.Sta
     :return: Cluster Specification as defined in rde_2_0_0 model
     """
     # Currently only single control-plane is supported.
-    control_plane = rde_2_0_0.ControlPlane(
-        sizing_class=entity_status.nodes.control_plane.sizing_class,
-        storage_profile=entity_status.nodes.control_plane.storage_profile,
-        count=1)
+    if entity_status.nodes.control_plane.sizing_class:
+        control_plane = rde_2_0_0.ControlPlane(
+            sizing_class=entity_status.nodes.control_plane.sizing_class,
+            storage_profile=entity_status.nodes.control_plane.storage_profile,
+            cpu=None,
+            memory=None,
+            count=1)
+    else:
+        control_plane = rde_2_0_0.ControlPlane(
+            sizing_class=None,
+            storage_profile=entity_status.nodes.control_plane.storage_profile,
+            cpu=entity_status.nodes.control_plane.cpu,
+            memory=entity_status.nodes.control_plane.memory,
+            count=1)
 
     workers_count = len(entity_status.nodes.workers)
     if workers_count == 0:
         workers = rde_2_0_0.Workers(sizing_class=None,
+                                    cpu=None,
+                                    memory=None,
                                     storage_profile=None,
                                     count=0)
     else:
-        workers = rde_2_0_0.Workers(
-            sizing_class=entity_status.nodes.workers[0].sizing_class,
-            storage_profile=entity_status.nodes.workers[0].storage_profile,
-            count=workers_count)
+        if entity_status.nodes.workers[0].sizing_class:
+            workers = rde_2_0_0.Workers(
+                sizing_class=entity_status.nodes.workers[0].sizing_class,
+                cpu=None,
+                memory=None,
+                storage_profile=entity_status.nodes.workers[0].storage_profile,
+                count=workers_count)
+        else:
+            workers = rde_2_0_0.Workers(
+                sizing_class=None,
+                storage_profile=entity_status.nodes.workers[0].storage_profile,
+                cpu=entity_status.nodes.workers[0].cpu,
+                memory=entity_status.nodes.workers[0].memory,
+                count=workers_count)
 
     nfs_count = len(entity_status.nodes.nfs)
     if nfs_count == 0:

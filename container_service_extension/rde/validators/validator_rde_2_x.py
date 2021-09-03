@@ -21,7 +21,7 @@ class Validator_2_0_0(AbstractValidator):
         pass
 
     def validate(self, cloudapi_client: CloudApiClient, entity_id: str = None,
-                 entity: dict = None, operation: BehaviorOperation = None) -> bool:  # noqa: E501
+                 entity: dict = None, operation: BehaviorOperation = BehaviorOperation.CREATE_CLUSTER) -> bool:  # noqa: E501
         """Validate the input request.
 
         This method performs
@@ -65,7 +65,19 @@ class Validator_2_0_0(AbstractValidator):
                 raise BadRequestError(msg)
 
         # Return True if the operation is not specified.
-        if not operation:
+        if operation == BehaviorOperation.CREATE_CLUSTER:
+            # Need to ensure that sizing class along with cpu/memory is not
+            # present in the request
+            bad_request_msg = ""
+            if isinstance(input_entity, rde_2_0_0.NativeEntity):
+                # cpu and mem are properties of only rde 2.0.0
+                if input_entity.spec.topology.workers.sizing_class and \
+                        (input_entity.spec.topology.workers.cpu or input_entity.spec.topology.workers.memory):  # noqa: E501
+                    bad_request_msg = "Cannot specify both sizing class and cpu/memory for Workers nodes."  # noqa: E501
+                if input_entity.spec.topology.control_plane.sizing_class and (input_entity.spec.topology.control_plane.cpu or input_entity.spec.topology.control_plane.memory): # noqa: E501
+                    bad_request_msg = "Cannot specify both sizing class and cpu/memory for Control Plane nodes." # noqa: E501
+                if bad_request_msg:
+                    raise BadRequestError(bad_request_msg)
             return True
 
         # TODO: validators for rest of the CSE operations in V36 will be
@@ -105,6 +117,8 @@ def validate_cluster_update_request_and_check_cluster_upgrade(input_spec: rde_2_
         # validation if worker count is 0
         exclude_fields.append(FlattenedClusterSpecKey2X.WORKERS_SIZING_CLASS.value)  # noqa: E501
         exclude_fields.append(FlattenedClusterSpecKey2X.WORKERS_STORAGE_PROFILE.value)  # noqa: E501
+        exclude_fields.append(FlattenedClusterSpecKey2X.WORKERS_CPU_COUNT.value)  # noqa: E501
+        exclude_fields.append(FlattenedClusterSpecKey2X.WORKERS_MEMORY_MB.value)  # noqa: E501
     if reference_spec.topology.nfs.count == 0:
         # Exclude nfs nodes' sizing class and storage profile from validation
         # if nfs count is 0
