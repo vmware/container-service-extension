@@ -617,7 +617,7 @@ class NativeEntity(AbstractNativeEntity):
         del native_entity_dict['spec']['settings']['network']['pods']
         del native_entity_dict['spec']['settings']['network']['services']
 
-        if k8_runtime != shared_constants.ClusterEntityKind.TKG_M.value:
+        if k8_runtime == shared_constants.ClusterEntityKind.TKG_M.value:
             del native_entity_dict['spec']['topology']['controlPlane']['cpu']
             del native_entity_dict['spec']['topology']['controlPlane']['memory']  # noqa: E501
             del native_entity_dict['spec']['topology']['workers']['cpu']
