@@ -783,10 +783,10 @@ class PreCustomizationPhase(Enum):
 @unique
 class PostCustomizationPhase(Enum):
     HOSTNAME_SETUP = 'guestinfo.postcustomization.hostname.status'
-    NETWORK_CONFIGURATION = 'guestinfo.postcustomization.networkconfiguration.status'
+    NETWORK_CONFIGURATION = 'guestinfo.postcustomization.networkconfiguration.status'  # noqa: E501
     STORE_SSH_KEY = 'guestinfo.postcustomization.store.sshkey.status'
     KUBEADM_INIT = 'guestinfo.postcustomization.kubeinit.status'
-    NAMESERVER_SETUP = 'guestinfo.postcustomization.nameserverconfig.resolvconf.status'
+    NAMESERVER_SETUP = 'guestinfo.postcustomization.nameserverconfig.resolvconf.status'  # noqa: E501
     KUBECTL_APPLY_CNI = 'guestinfo.postcustomization.kubectl.apply.cni.status'  # noqa: E501
     KUBEADM_TOKEN_GENERATE = 'guestinfo.postcustomization.kubeadm.token.generate.status'  # noqa: E501
     KUBEADM_NODE_JOIN = 'guestinfo.postcustomization.kubeadm.node.join.status'

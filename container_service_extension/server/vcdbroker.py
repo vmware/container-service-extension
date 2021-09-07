@@ -2015,7 +2015,8 @@ def _init_cluster(sysadmin_client: vcd_client.Client, vapp, template_name,
                 f"{node_names}:{errors}")
         if result[0][0] != 0:
             raise e.ClusterInitializationError(
-                f"Could not initialize cluster:\n{result[0][2].content.decode()}"
+                "Could not initialize cluster:\n"
+                f"{result[0][2].content.decode()}"
             )
     except Exception as err:
         LOGGER.error(err, exc_info=True)
