@@ -12,6 +12,7 @@ from typing import Union
 
 import semantic_version
 
+from container_service_extension.common.constants.shared_constants import ClusterEntityKind # noqa: E501
 import container_service_extension.common.utils.core_utils as core_utils
 import container_service_extension.common.utils.server_utils as server_utils
 import container_service_extension.exception.exceptions as exceptions
@@ -215,6 +216,11 @@ def raise_error_if_unsupported_payload_version(payload_version: str):
     runtime_rde_version = server_utils.get_rde_version_in_use()
     if input_rde_version == def_constants.PayloadKey.UNKNOWN or semantic_version.Version(input_rde_version) > semantic_version.Version(runtime_rde_version):  # noqa: E501
         raise exceptions.BadRequestError(f"Unsupported payload version: {payload_version}")  # noqa: E501
+
+
+def raise_error_if_unsupported_cluster_operation(cluster_kind: str):
+    if cluster_kind and cluster_kind == ClusterEntityKind.TKG_M.value:
+        raise exceptions.BadRequestError(f"This operation is not supported for {cluster_kind} clusters")  # noqa: E501
 
 
 def convert_input_rde_to_runtime_rde_format(input_entity: dict):
