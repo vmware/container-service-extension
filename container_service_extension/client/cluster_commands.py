@@ -1108,6 +1108,10 @@ Examples:
         elif is_system_user and org is None:
             raise Exception("Need to specify cluster org since logged in user is in system org")  # noqa: E501
 
+        # If cluster kind is not specified, let the server handle this check
+        if k8_runtime:
+            def_utils.raise_error_if_unsupported_cluster_operation(cluster_kind=k8_runtime)  # noqa: E501
+
         users_list = list(users)
         cluster = Cluster(client, k8_runtime)
         cluster.share_cluster(cluster_id, name, users_list, access_level_id,
@@ -1205,6 +1209,10 @@ Examples:
         elif is_system_user and org is None:
             raise Exception("Need to specify cluster org since logged in user is in system org")  # noqa: E501
 
+        # If cluster kind is not specified, let the server handle this check
+        if k8_runtime:
+            def_utils.raise_error_if_unsupported_cluster_operation(cluster_kind=k8_runtime)  # noqa: E501
+
         cluster = Cluster(client, k8_runtime)
         share_entries = cluster.list_share_entries(cluster_id, name, org, vdc)
         client_utils.print_paginated_result(share_entries, should_print_all)
@@ -1290,6 +1298,10 @@ Examples:
             org = ctx.obj['profiles'].get('org_in_use')
         elif is_system_user and org is None:
             raise Exception("Need to specify cluster org since logged in user is in system org")  # noqa: E501
+
+        # If cluster kind is not specified, let the server handle this check
+        if k8_runtime:
+            def_utils.raise_error_if_unsupported_cluster_operation(cluster_kind=k8_runtime)  # noqa: E501
 
         users_list = list(users)
         cluster = Cluster(client, k8_runtime)
