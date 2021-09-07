@@ -1102,7 +1102,6 @@ def list_template(ctx, config_file_path, skip_config_decryption,
                     }
                     if legacy_mode:
                         local_template['compute_policy'] = definition[server_constants.LegacyLocalTemplateKey.COMPUTE_POLICY]  # noqa: E501
-                    local_template['default'] = 'No'
                     local_template['deprecated'] = 'Yes' if utils.str_to_bool(definition[server_constants.LocalTemplateKey.DEPRECATED]) else 'No'  # noqa: E501
 
                     local_templates.append(local_template)
@@ -1135,8 +1134,6 @@ def list_template(ctx, config_file_path, skip_config_decryption,
                 if legacy_mode:
                     remote_template['compute_policy'] = \
                         definition[remote_template_keys.COMPUTE_POLICY]
-                if display_option is DISPLAY_ALL:
-                    remote_template['default'] = 'No'
                 remote_template['deprecated'] = 'Yes' if utils.str_to_bool(definition[remote_template_keys.DEPRECATED]) else 'No'  # noqa: E501
 
                 remote_templates.append(remote_template)
@@ -1155,7 +1152,6 @@ def list_template(ctx, config_file_path, skip_config_decryption,
                             remote_template['compute_policy'] = \
                                 local_template['compute_policy']
                         remote_template['local'] = local_template['local']
-                        remote_template['default'] = local_template['default']
                         found = True
                         break
                 if not found:

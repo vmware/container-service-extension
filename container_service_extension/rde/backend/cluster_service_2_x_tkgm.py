@@ -1935,7 +1935,7 @@ def _add_control_plane_nodes(
             # lives. Guest customization works with the following gross steps:
             # 1. run script with parameter "precustomization"
             # 2. set up network
-            # 3. convert script with parameter "precustomization" to service
+            # 3. convert script with parameter "postcustomization" to service
             #   a. set the 'guestinfo.gc.status' to 'Successful'.
             # 4. check if a forked script has completed setting up hostname
             #       (this fails sometimes)
