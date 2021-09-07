@@ -235,15 +235,6 @@ class ClusterService(abstract_broker.AbstractBroker):
             cluster_name = input_native_entity.metadata.name
             org_name = input_native_entity.metadata.org_name
             ovdc_name = input_native_entity.metadata.virtual_data_center_name
-
-            # Pick default template name and revision if both template name
-            # and template revision is not provided in the input native entity
-            if not input_native_entity.spec.distribution.template_name and \
-                    not input_native_entity.spec.distribution.template_revision:  # noqa: E501
-                server_config: dict = server_utils.get_server_runtime_config()
-                input_native_entity.spec.distribution = rde_2_x.Distribution(
-                    template_name=server_config['broker']['default_template_name'],  # noqa: E501
-                    template_revision=int(server_config['broker']['default_template_revision']))  # noqa: E501
             template_name = input_native_entity.spec.distribution.template_name
             template_revision = 1  # templateRevision for TKGm is always 1
 
@@ -684,7 +675,7 @@ class ClusterService(abstract_broker.AbstractBroker):
             DefEntityPhase(DefEntityOperation.UPDATE,
                            DefEntityOperationStatus.IN_PROGRESS))
         try:
-            curr_rde = self._update_cluster_entity(cluster_id, new_status)
+            self._update_cluster_entity(cluster_id, new_status)
         except Exception as err:
             self._update_task(BehaviorTaskStatus.ERROR,
                               message=msg,
@@ -721,7 +712,6 @@ class ClusterService(abstract_broker.AbstractBroker):
             worker_storage_profile = input_native_entity.spec.topology.workers.storage_profile  # noqa: E501
             network_name = input_native_entity.spec.settings.ovdc_network
             template_name = input_native_entity.spec.distribution.template_name  # noqa: E501
-            template_revision = input_native_entity.spec.distribution.template_revision  # noqa: E501
             ssh_key = input_native_entity.spec.settings.ssh_key
             rollback = input_native_entity.spec.settings.rollback_on_failure
             expose = input_native_entity.spec.settings.network.expose
@@ -862,8 +852,7 @@ class ClusterService(abstract_broker.AbstractBroker):
                     DefEntityOperationStatus.SUCCEEDED
                 )
             )
-            new_status.nodes = _get_nodes_details(
-                sysadmin_client_v36, vapp)
+            new_status.nodes = _get_nodes_details(vapp)
             new_status.cni = _create_k8s_software_string(
                 CNI_NAME,
                 ANTREA_CNI_VERSION,
@@ -1069,8 +1058,8 @@ class ClusterService(abstract_broker.AbstractBroker):
                     # update kubeconfig with internal ip
                     updated_kube_config = self._replace_kubeconfig_expose_ip(
                         internal_ip=control_plane_internal_ip,
-                        cluster_id=cluster_id,
-                        vapp=vapp)
+                        cluster_id=cluster_id
+                    )
 
                     # Delete dnat rule
                     nw_exp_helper.handle_delete_expose_dnat_rule(
@@ -1079,7 +1068,8 @@ class ClusterService(abstract_broker.AbstractBroker):
                         ovdc_name=ovdc_name,
                         network_name=network_name,
                         cluster_name=cluster_name,
-                        cluster_id=cluster_id)
+                        cluster_id=cluster_id
+                    )
 
                     # For pure RDE2.0 based clusters this step won't be
                     # necessary, but we might have exposed clusters that were
@@ -1165,7 +1155,7 @@ class ClusterService(abstract_broker.AbstractBroker):
         Do's:
         - Update the defined entity in except blocks.
         - Can update the task status either to Running or Error
-        Dont's:
+        Do not:
         - Do not update the task status to SUCCESS. This will prevent other
         parallel threads if any to update the status. vCD interprets SUCCESS
         as a terminal state.
@@ -1470,7 +1460,7 @@ class ClusterService(abstract_broker.AbstractBroker):
         Do's:
         - Update the defined entity in except blocks.
         - Update the task status either to Running or Error
-        Dont's:
+        Do not:
         - Do not update the task status to SUCCESS. This will prevent other
         parallel threads if any to update the status. vCD interprets SUCCESS
         as a terminal state.
@@ -1569,13 +1559,10 @@ class ClusterService(abstract_broker.AbstractBroker):
         if not curr_rde.externalId and not vapp:
             return curr_rde
         if not vapp:
-            client_v36 = self.context.get_client(
-                api_version=DEFAULT_API_VERSION)
+            client_v36 = self.context.get_client(api_version=DEFAULT_API_VERSION)  # noqa: E501
             vapp = vcd_vapp.VApp(client_v36, href=curr_rde.externalId)
 
-        sysadmin_client_v36 = self.context.get_sysadmin_client(
-            api_version=DEFAULT_API_VERSION)
-        curr_nodes_status = _get_nodes_details(sysadmin_client_v36, vapp)
+        curr_nodes_status = _get_nodes_details(vapp)
 
         new_status: rde_2_x.Status = curr_rde.entity.status
         if curr_nodes_status:
@@ -1637,8 +1624,7 @@ class ClusterService(abstract_broker.AbstractBroker):
         self.mqtt_publisher.send_response(response_json)
         self.task_status = status.value
 
-    def _replace_kubeconfig_expose_ip(self, internal_ip: str, cluster_id: str,
-                                      vapp: vcd_vapp.VApp):
+    def _replace_kubeconfig_expose_ip(self, internal_ip: str, cluster_id: str):  # noqa: E501
         # Form kubeconfig with internal ip
         kubeconfig_with_exposed_ip = self._get_kube_config_from_rde(cluster_id)
         if not kubeconfig_with_exposed_ip:
@@ -1662,14 +1648,13 @@ class ClusterService(abstract_broker.AbstractBroker):
         return None
 
 
-def _get_nodes_details(sysadmin_client, vapp):
+def _get_nodes_details(vapp):
     """Get the details of the nodes given a vapp.
 
     This method should not raise an exception. It is being used in the
     exception blocks to sync the defined entity status of any given cluster
     It returns None in the case of any unexpected errors.
 
-    :param pyvcloud.client.Client sysadmin_client:
     :param pyvcloud.vapp.VApp vapp: vApp
 
     :return: Node details
@@ -1794,10 +1779,9 @@ def _cluster_exists(client, cluster_name, org_name=None, ovdc_name=None):
 
 
 def _get_tkgm_template(name: str):
-    if name is None:  # noqa: E501
+    if not name:
         raise ValueError("Template name should be specified.")
     server_config = server_utils.get_server_runtime_config()
-    name = name or server_config['broker']['default_template_name']
     for template in server_config['broker']['tkgm_templates']:
         if template[LocalTemplateKey.NAME] == name:
             return template
@@ -1925,7 +1909,7 @@ def _add_control_plane_nodes(sysadmin_client, num_nodes, org, vdc, vapp,
             #
             # However what happens when the bug is fixed in GOSC?
             # In that case this hack will reboot the node one more time depending on a race. That is
-            # not detrimental to functionality, but we do have a slight delay due to the seconf reboot.
+            # not detrimental to functionality, but we do have a slight delay due to the second reboot.
             vcd_utils.wait_for_completion_of_post_customization_procedure(
                 vm,
                 customization_phase=PreCustomizationPhase.POST_BOOT_CUSTOMIZATION_SERVICE_SETUP.value,

@@ -45,14 +45,6 @@ def get_registered_def_interface() -> common_models.DefInterface:
     return Service().get_kubernetes_interface()
 
 
-def get_default_k8_distribution():
-    config = get_server_runtime_config()
-    import container_service_extension.rde.models.rde_1_0_0 as rde_1_0_0
-    return rde_1_0_0.Distribution(
-        template_name=config['broker']['default_template_name'],
-        template_revision=config['broker']['default_template_revision'])
-
-
 def get_pks_cache():
     from container_service_extension.server.service import Service
     return Service().get_pks_cache()

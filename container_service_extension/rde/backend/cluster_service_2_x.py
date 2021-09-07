@@ -242,15 +242,6 @@ class ClusterService(abstract_broker.AbstractBroker):
             cluster_name = input_native_entity.metadata.name
             org_name = input_native_entity.metadata.org_name
             ovdc_name = input_native_entity.metadata.virtual_data_center_name
-
-            # Pick default template name and revision if both template name
-            # and template revision is not provided in the input native entity
-            if not input_native_entity.spec.distribution.template_name and \
-                    not input_native_entity.spec.distribution.template_revision:  # noqa: E501
-                server_config: dict = server_utils.get_server_runtime_config()
-                input_native_entity.spec.distribution = rde_2_x.Distribution(
-                    template_name=server_config['broker']['default_template_name'],  # noqa: E501
-                    template_revision=int(server_config['broker']['default_template_revision']))  # noqa: E501
             template_name = input_native_entity.spec.distribution.template_name
             template_revision = input_native_entity.spec.distribution.template_revision  # noqa: E501
 
@@ -843,8 +834,8 @@ class ClusterService(abstract_broker.AbstractBroker):
             ovdc_name = input_native_entity.metadata.virtual_data_center_name
             num_workers = input_native_entity.spec.topology.workers.count
             control_plane_sizing_class = input_native_entity.spec.topology.control_plane.sizing_class  # noqa: E501
-            control_plane_cpu_count = input_native_entity.spec.topology.control_plane.cpu # noqa: E501
-            control_plane_memory_mb = input_native_entity.spec.topology.control_plane.memory # noqa: E501
+            control_plane_cpu_count = input_native_entity.spec.topology.control_plane.cpu  # noqa: E501
+            control_plane_memory_mb = input_native_entity.spec.topology.control_plane.memory  # noqa: E501
             worker_sizing_class = input_native_entity.spec.topology.workers.sizing_class  # noqa: E501
             worker_cpu_count = input_native_entity.spec.topology.workers.cpu
             worker_memory_mb = input_native_entity.spec.topology.workers.memory
@@ -1338,7 +1329,7 @@ class ClusterService(abstract_broker.AbstractBroker):
         Do's:
         - Update the defined entity in except blocks.
         - Can update the task status either to Running or Error
-        Dont's:
+        Do not:
         - Do not update the task status to SUCCESS. This will prevent other
         parallel threads if any to update the status. vCD interprets SUCCESS
         as a terminal state.
@@ -1871,7 +1862,7 @@ class ClusterService(abstract_broker.AbstractBroker):
         Do's:
         - Update the defined entity in except blocks.
         - Update the task status either to Running or Error
-        Dont's:
+        Do not:
         - Do not update the task status to SUCCESS. This will prevent other
         parallel threads if any to update the status. vCD interprets SUCCESS
         as a terminal state.
@@ -2328,12 +2319,11 @@ def _cluster_exists(client, cluster_name, org_name=None, ovdc_name=None):
 
 
 def _get_template(name=None, revision=None):
-    if (name is None and revision is not None) or (name is not None and revision is None):  # noqa: E501
-        raise ValueError("If template revision is specified, then template "
-                         "name must also be specified (and vice versa).")
+    if not name or not revision:
+        raise ValueError(
+            "Template name and revision both must be is specified."
+        )
     server_config = server_utils.get_server_runtime_config()
-    name = name or server_config['broker']['default_template_name']
-    revision = revision or server_config['broker']['default_template_revision']
     for template in server_config['broker']['templates']:
         if (template[LocalTemplateKey.NAME], str(template[LocalTemplateKey.REVISION])) == (name, str(revision)):  # noqa: E501
             return template
@@ -2545,11 +2535,15 @@ def _init_cluster(sysadmin_client: vcd_client.Client, vapp, cluster_kind,
                 f"Initialize cluster script execution failed on node "
                 f"{node_names}:{errors}")
         if result[0][0] != 0:
-            raise exceptions.ClusterInitializationError(f"Couldn't initialize cluster:\n{result[0][2].content.decode()}")  # noqa: E501
+            raise exceptions.ClusterInitializationError(
+                "Could not initialize cluster:\n"
+                f"{result[0][2].content.decode()}"
+            )
     except Exception as err:
         LOGGER.error(err, exc_info=True)
         raise exceptions.ClusterInitializationError(
-            f"Couldn't initialize cluster: {str(err)}")
+            f"Could not initialize cluster: {str(err)}"
+        )
 
 
 def _join_cluster(sysadmin_client: vcd_client.Client, vapp, target_nodes=None):
@@ -2601,7 +2595,8 @@ def _join_cluster(sysadmin_client: vcd_client.Client, vapp, target_nodes=None):
     except Exception as err:
         LOGGER.error(err, exc_info=True)
         raise exceptions.ClusterJoiningError(
-            f"Couldn't join cluster: {str(err)}")
+            f"Could not join cluster: {str(err)}"
+        )
 
 
 def _wait_for_tools_ready_callback(message, exception=None):

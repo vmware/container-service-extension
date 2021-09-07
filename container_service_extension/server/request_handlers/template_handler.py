@@ -17,13 +17,10 @@ def template_list(request_data, op_ctx):
     """
     config = server_utils.get_server_runtime_config()
     templates = []
-    default_template_name = config['broker']['default_template_name']
-    default_template_revision = str(config['broker']['default_template_revision'])  # noqa: E501
 
     for t in config['broker']['templates']:
         template_name = t[LocalTemplateKey.NAME]
         template_revision = str(t[LocalTemplateKey.REVISION])
-        is_default = (template_name, template_revision) == (default_template_name, default_template_revision)  # noqa: E501
 
         templates.append({
             'catalog': config['broker']['catalog'],
@@ -33,7 +30,7 @@ def template_list(request_data, op_ctx):
             'deprecated': t[LocalTemplateKey.DEPRECATED],
             'description': t[LocalTemplateKey.DESCRIPTION].replace("\\n", ", "),  # noqa: E501
             'docker_version': t[LocalTemplateKey.DOCKER_VERSION],
-            'is_default': 'Yes' if is_default else 'No',
+            'is_default': 'No',
             'kind': t[LocalTemplateKey.KIND],
             'kubernetes': t[LocalTemplateKey.KUBERNETES],
             'kubernetes_version': t[LocalTemplateKey.KUBERNETES_VERSION],

@@ -124,8 +124,6 @@ SAMPLE_BROKER_CONFIG = {
         'network': 'my_network',
         'ip_allocation_mode': 'pool',
         'storage_profile': '*',
-        'default_template_name': 'my_template',
-        'default_template_revision': 0,
         'remote_template_cookbook_url': 'https://raw.githubusercontent.com/vmware/container-service-extension-templates/master/template_v2.yaml',  # noqa: E501
     }
 }
