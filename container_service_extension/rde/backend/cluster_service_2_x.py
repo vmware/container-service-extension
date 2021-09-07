@@ -2321,7 +2321,7 @@ def _cluster_exists(client, cluster_name, org_name=None, ovdc_name=None):
 def _get_template(name=None, revision=None):
     if not name or not revision:
         raise ValueError(
-            "Template name and revision both must be is specified."
+            "Template name and revision both must be specified."
         )
     server_config = server_utils.get_server_runtime_config()
     for template in server_config['broker']['templates']:
