@@ -19,9 +19,8 @@ from pyvcloud.vcd.vdc import VDC
 import pyvcloud.vcd.vm as vcd_vm
 
 from container_service_extension.common.constants.server_constants import CLUSTER_ENTITY  # noqa: E501
-from container_service_extension.common.constants.server_constants import ToolsDeployPkgCustomizationStatus  # noqa: E501
 from container_service_extension.common.constants.server_constants import ClusterMetadataKey  # noqa: E501
-from container_service_extension.common.constants.server_constants import ClusterScriptFile
+from container_service_extension.common.constants.server_constants import ClusterScriptFile  # noqa: E501
 from container_service_extension.common.constants.server_constants import DefEntityOperation  # noqa: E501
 from container_service_extension.common.constants.server_constants import DefEntityOperationStatus  # noqa: E501
 from container_service_extension.common.constants.server_constants import DefEntityPhase  # noqa: E501
@@ -29,11 +28,12 @@ from container_service_extension.common.constants.server_constants import KUBE_C
 from container_service_extension.common.constants.server_constants import KUBEADM_TOKEN_INFO  # noqa: E501
 from container_service_extension.common.constants.server_constants import LocalTemplateKey  # noqa: E501
 from container_service_extension.common.constants.server_constants import NodeType  # noqa: E501
-from container_service_extension.common.constants.server_constants import PreCustomizationPhase  # noqa: E501
 from container_service_extension.common.constants.server_constants import PostCustomizationPhase  # noqa: E501
+from container_service_extension.common.constants.server_constants import PreCustomizationPhase  # noqa: E501
 from container_service_extension.common.constants.server_constants import ThreadLocalData  # noqa: E501
 from container_service_extension.common.constants.server_constants import TKGM_DEFAULT_POD_NETWORK_CIDR  # noqa: E501
 from container_service_extension.common.constants.server_constants import TKGM_DEFAULT_SERVICE_CIDR  # noqa: E501
+from container_service_extension.common.constants.server_constants import ToolsDeployPkgCustomizationStatus  # noqa: E501
 import container_service_extension.common.constants.shared_constants as shared_constants  # noqa: E501
 from container_service_extension.common.constants.shared_constants import \
     CSE_PAGINATION_DEFAULT_PAGE_SIZE, SYSTEM_ORG_NAME
@@ -235,15 +235,6 @@ class ClusterService(abstract_broker.AbstractBroker):
             cluster_name = input_native_entity.metadata.name
             org_name = input_native_entity.metadata.org_name
             ovdc_name = input_native_entity.metadata.virtual_data_center_name
-
-            # Pick default template name and revision if both template name
-            # and template revision is not provided in the input native entity
-            if not input_native_entity.spec.distribution.template_name and \
-                    not input_native_entity.spec.distribution.template_revision:  # noqa: E501
-                server_config: dict = server_utils.get_server_runtime_config()
-                input_native_entity.spec.distribution = rde_2_x.Distribution(
-                    template_name=server_config['broker']['default_template_name'],  # noqa: E501
-                    template_revision=int(server_config['broker']['default_template_revision']))  # noqa: E501
             template_name = input_native_entity.spec.distribution.template_name
             template_revision = 1  # templateRevision for TKGm is always 1
 
@@ -564,8 +555,13 @@ class ClusterService(abstract_broker.AbstractBroker):
         desired_template_name = input_native_entity.spec.distribution.template_name  # noqa: E501
         desired_template_revision = input_native_entity.spec.distribution.template_revision  # noqa: E501
         if current_template_name != desired_template_name or current_template_revision != desired_template_revision:  # noqa: E501
-            raise Exception("Looks like an upgrade is required. Upgrades not supported for TKGm in this version of CSE")
-        raise exceptions.CseServerError("update not supported for the specified input specification")  # noqa: E501
+            raise Exception(
+                "Looks like an upgrade is required. "
+                "Upgrades not supported for TKGm in this version of CSE"
+            )
+        raise exceptions.CseServerError(
+            "update not supported for the specified input specification"
+        )
 
     def get_cluster_acl_info(self, cluster_id, page: int, page_size: int):
         """Get cluster ACL info based on the defined entity ACL."""
@@ -684,7 +680,7 @@ class ClusterService(abstract_broker.AbstractBroker):
             DefEntityPhase(DefEntityOperation.UPDATE,
                            DefEntityOperationStatus.IN_PROGRESS))
         try:
-            curr_rde = self._update_cluster_entity(cluster_id, new_status)
+            self._update_cluster_entity(cluster_id, new_status)
         except Exception as err:
             self._update_task(BehaviorTaskStatus.ERROR,
                               message=msg,
@@ -721,7 +717,6 @@ class ClusterService(abstract_broker.AbstractBroker):
             worker_storage_profile = input_native_entity.spec.topology.workers.storage_profile  # noqa: E501
             network_name = input_native_entity.spec.settings.ovdc_network
             template_name = input_native_entity.spec.distribution.template_name  # noqa: E501
-            template_revision = input_native_entity.spec.distribution.template_revision  # noqa: E501
             ssh_key = input_native_entity.spec.settings.ssh_key
             rollback = input_native_entity.spec.settings.rollback_on_failure
             expose = input_native_entity.spec.settings.network.expose
@@ -753,7 +748,8 @@ class ClusterService(abstract_broker.AbstractBroker):
                 ClusterMetadataKey.CLUSTER_ID: cluster_id,
                 ClusterMetadataKey.CSE_VERSION: pkg_resources.require('container-service-extension')[0].version,  # noqa: E501
                 ClusterMetadataKey.TEMPLATE_NAME: template[LocalTemplateKey.NAME],  # noqa: E501
-                ClusterMetadataKey.TEMPLATE_REVISION: 1,  # templateRevision is hardcoded as 1 for TKGm
+                # templateRevision is hardcoded as 1 for TKGm
+                ClusterMetadataKey.TEMPLATE_REVISION: 1,
                 ClusterMetadataKey.OS: template[LocalTemplateKey.OS],
                 ClusterMetadataKey.KUBERNETES: template[LocalTemplateKey.KUBERNETES],  # noqa: E501
                 ClusterMetadataKey.KUBERNETES_VERSION: template[LocalTemplateKey.KUBERNETES_VERSION],  # noqa: E501
@@ -862,13 +858,13 @@ class ClusterService(abstract_broker.AbstractBroker):
                     DefEntityOperationStatus.SUCCEEDED
                 )
             )
-            new_status.nodes = _get_nodes_details(
-                sysadmin_client_v36, vapp)
+            new_status.nodes = _get_nodes_details(vapp)
             new_status.cni = _create_k8s_software_string(
                 CNI_NAME,
                 ANTREA_CNI_VERSION,
             )
-            new_status.cloud_properties.distribution.template_revision = tags[ClusterMetadataKey.TEMPLATE_REVISION]
+            new_status.cloud_properties.distribution.template_revision = \
+                tags[ClusterMetadataKey.TEMPLATE_REVISION]
 
             # Update status with exposed ip
             if expose_ip:
@@ -1069,8 +1065,8 @@ class ClusterService(abstract_broker.AbstractBroker):
                     # update kubeconfig with internal ip
                     updated_kube_config = self._replace_kubeconfig_expose_ip(
                         internal_ip=control_plane_internal_ip,
-                        cluster_id=cluster_id,
-                        vapp=vapp)
+                        cluster_id=cluster_id
+                    )
 
                     # Delete dnat rule
                     nw_exp_helper.handle_delete_expose_dnat_rule(
@@ -1079,7 +1075,8 @@ class ClusterService(abstract_broker.AbstractBroker):
                         ovdc_name=ovdc_name,
                         network_name=network_name,
                         cluster_name=cluster_name,
-                        cluster_id=cluster_id)
+                        cluster_id=cluster_id
+                    )
 
                     # For pure RDE2.0 based clusters this step won't be
                     # necessary, but we might have exposed clusters that were
@@ -1098,7 +1095,9 @@ class ClusterService(abstract_broker.AbstractBroker):
                         f"Failed to unexpose cluster with error: {str(err)}",
                         exc_info=True
                     )
-                    raise Exception("Unexpose of exposed cluster is not a valid operation.")
+                    raise Exception(
+                        "Unexpose of exposed cluster is not a valid operation."
+                    )
 
             # update the defined entity and the task status. Check if one of
             # the child threads had set the status to ERROR.
@@ -1165,7 +1164,7 @@ class ClusterService(abstract_broker.AbstractBroker):
         Do's:
         - Update the defined entity in except blocks.
         - Can update the task status either to Running or Error
-        Dont's:
+        Do not:
         - Do not update the task status to SUCCESS. This will prevent other
         parallel threads if any to update the status. vCD interprets SUCCESS
         as a terminal state.
@@ -1256,7 +1255,7 @@ class ClusterService(abstract_broker.AbstractBroker):
                 msg = f"Added {num_workers_to_add} node(s) to cluster " \
                       f"{cluster_name}({cluster_id})"
                 self._update_task(BehaviorTaskStatus.RUNNING, message=msg)
-            msg = f"Created {num_workers_to_add} workers for '{cluster_name}' ({cluster_id}) "
+            msg = f"Created {num_workers_to_add} workers for '{cluster_name}' ({cluster_id}) "  # noqa: E501
             self._update_task(BehaviorTaskStatus.RUNNING, message=msg)
         except (exceptions.NodeCreationError, exceptions.ClusterJoiningError) as err:  # noqa: E501
             msg = f"Error adding nodes to cluster '{cluster_name}'"
@@ -1293,9 +1292,11 @@ class ClusterService(abstract_broker.AbstractBroker):
                 msg = f"Failed to sync defined entity of the cluster {cluster_id}"  # noqa: E501
                 LOGGER.error(f"{msg}", exc_info=True)
 
-            self._update_task(BehaviorTaskStatus.ERROR,
-                              message=msg,
-                              error_message=str(err))
+            self._update_task(
+                BehaviorTaskStatus.ERROR,
+                message=msg,
+                error_message=str(err)
+            )
         except Exception as err:
             LOGGER.error(err, exc_info=True)
             msg = f"Error adding nodes to cluster '{cluster_name}'"
@@ -1470,7 +1471,7 @@ class ClusterService(abstract_broker.AbstractBroker):
         Do's:
         - Update the defined entity in except blocks.
         - Update the task status either to Running or Error
-        Dont's:
+        Do not:
         - Do not update the task status to SUCCESS. This will prevent other
         parallel threads if any to update the status. vCD interprets SUCCESS
         as a terminal state.
@@ -1569,13 +1570,10 @@ class ClusterService(abstract_broker.AbstractBroker):
         if not curr_rde.externalId and not vapp:
             return curr_rde
         if not vapp:
-            client_v36 = self.context.get_client(
-                api_version=DEFAULT_API_VERSION)
+            client_v36 = self.context.get_client(api_version=DEFAULT_API_VERSION)  # noqa: E501
             vapp = vcd_vapp.VApp(client_v36, href=curr_rde.externalId)
 
-        sysadmin_client_v36 = self.context.get_sysadmin_client(
-            api_version=DEFAULT_API_VERSION)
-        curr_nodes_status = _get_nodes_details(sysadmin_client_v36, vapp)
+        curr_nodes_status = _get_nodes_details(vapp)
 
         new_status: rde_2_x.Status = curr_rde.entity.status
         if curr_nodes_status:
@@ -1637,8 +1635,7 @@ class ClusterService(abstract_broker.AbstractBroker):
         self.mqtt_publisher.send_response(response_json)
         self.task_status = status.value
 
-    def _replace_kubeconfig_expose_ip(self, internal_ip: str, cluster_id: str,
-                                      vapp: vcd_vapp.VApp):
+    def _replace_kubeconfig_expose_ip(self, internal_ip: str, cluster_id: str):  # noqa: E501
         # Form kubeconfig with internal ip
         kubeconfig_with_exposed_ip = self._get_kube_config_from_rde(cluster_id)
         if not kubeconfig_with_exposed_ip:
@@ -1662,14 +1659,13 @@ class ClusterService(abstract_broker.AbstractBroker):
         return None
 
 
-def _get_nodes_details(sysadmin_client, vapp):
+def _get_nodes_details(vapp):
     """Get the details of the nodes given a vapp.
 
     This method should not raise an exception. It is being used in the
     exception blocks to sync the defined entity status of any given cluster
     It returns None in the case of any unexpected errors.
 
-    :param pyvcloud.client.Client sysadmin_client:
     :param pyvcloud.vapp.VApp vapp: vApp
 
     :return: Node details
@@ -1719,7 +1715,10 @@ def _get_nodes_details(sysadmin_client, vapp):
 def _drain_nodes(_: vcd_client.Client, vapp_href, node_names, cluster_name=''):
     LOGGER.debug(f"Draining nodes {node_names} in cluster '{cluster_name}' "
                  f"(vapp: {vapp_href})")
-    LOGGER.info("Draining is not supported since guest script execution is not permitted.")
+    LOGGER.info(
+        "Draining is not supported since guest script "
+        "execution is not permitted."
+    )
     return
 
 
@@ -1794,29 +1793,43 @@ def _cluster_exists(client, cluster_name, org_name=None, ovdc_name=None):
 
 
 def _get_tkgm_template(name: str):
-    if name is None:  # noqa: E501
+    if not name:
         raise ValueError("Template name should be specified.")
     server_config = server_utils.get_server_runtime_config()
-    name = name or server_config['broker']['default_template_name']
     for template in server_config['broker']['tkgm_templates']:
         if template[LocalTemplateKey.NAME] == name:
             return template
-    raise Exception(f"Template '{name}' not found in list [{server_config['broker']['tkgm_templates']}]")
+    raise Exception(
+        f"Template '{name}' not found in list "
+        f"[{server_config['broker']['tkgm_templates']}]"
+    )
 
 
-def _add_control_plane_nodes(sysadmin_client, num_nodes, org, vdc, vapp,
-                             catalog_name, template, network_name,
-                             storage_profile=None, ssh_key=None,
-                             sizing_class_name=None, expose=False,
-                             cluster_name=None, cluster_id=None) -> Tuple[str, List[Dict]]:
-
+def _add_control_plane_nodes(
+        sysadmin_client,
+        num_nodes,
+        org,
+        vdc,
+        vapp,
+        catalog_name,
+        template,
+        network_name,
+        storage_profile=None,
+        ssh_key=None,
+        sizing_class_name=None,
+        expose=False,
+        cluster_name=None,
+        cluster_id=None) -> Tuple[str, List[Dict]]:
     vcd_utils.raise_error_if_user_not_from_system_org(sysadmin_client)
 
     vm_specs = []
     expose_ip = ''
     try:
         if num_nodes != 1:
-            raise ValueError(f"Unexpected number of control-plane nodes. Expected 1, obtained [{num_nodes}].")
+            raise ValueError(
+                "Unexpected number of control-plane nodes. Expected 1, "
+                f"obtained [{num_nodes}]."
+            )
 
         templated_script = get_cluster_script_file_contents(
             ClusterScriptFile.CONTROL_PLANE,
@@ -1848,7 +1861,12 @@ def _add_control_plane_nodes(sysadmin_client, num_nodes, org, vdc, vapp,
                 control_plane_endpoint='',
             )
 
-        task = vapp.add_vms(vm_specs, power_on=False, deploy=False, all_eulas_accepted=True)
+        task = vapp.add_vms(
+            vm_specs,
+            power_on=False,
+            deploy=False,
+            all_eulas_accepted=True
+        )
         sysadmin_client.get_task_monitor().wait_for_status(
             task,
             callback=wait_for_adding_control_plane_vm_to_vapp
@@ -1909,28 +1927,32 @@ def _add_control_plane_nodes(sysadmin_client, num_nodes, org, vdc, vapp,
             )
             vapp.reload()
 
-            # HACK: sometimes the dbus.service is not yet started by the time the ToolsDeployPkg
-            # scripts run. As a result, that script does install the post-customize service, but
-            # does not reboot the machine, which is needed in order to execute the postcustomization
-            # script where the bulk of our functionality lives.
-            # Guest customization works with the following gross steps:
+            # HACK: sometimes the dbus.service is not yet started by the time
+            # the ToolsDeployPkg scripts run. As a result, that script does
+            # install the post-customize service, but does not reboot the
+            # machine, which is needed in order to execute the
+            # postcustomization script where the bulk of our functionality
+            # lives. Guest customization works with the following gross steps:
             # 1. run script with parameter "precustomization"
             # 2. set up network
-            # 3. convert script with parameter "precustomization" to service
+            # 3. convert script with parameter "postcustomization" to service
             #   a. set the 'guestinfo.gc.status' to 'Successful'.
-            # 4. check if a forked script has completed setting up hostname (this fails sometimes)
+            # 4. check if a forked script has completed setting up hostname
+            #       (this fails sometimes)
             # 5. Check for errors, cleanup and report.
-            # In the above steps, steps 4,5 take about 2s. Hence we wait for 3a and then wait for 10s
+            # In the above steps, steps 4,5 take about 2s. Hence we wait
+            #       for 3a and then wait for 10s
             # and then trigger the reboot ourselves.
             #
             # However what happens when the bug is fixed in GOSC?
-            # In that case this hack will reboot the node one more time depending on a race. That is
-            # not detrimental to functionality, but we do have a slight delay due to the seconf reboot.
+            # In that case this hack will reboot the node one more time
+            # depending on a race. That is not detrimental to functionality,
+            # but we do have a slight delay due to the second reboot.
             vcd_utils.wait_for_completion_of_post_customization_procedure(
                 vm,
-                customization_phase=PreCustomizationPhase.POST_BOOT_CUSTOMIZATION_SERVICE_SETUP.value,
+                customization_phase=PreCustomizationPhase.POST_BOOT_CUSTOMIZATION_SERVICE_SETUP.value,  # noqa: E501
                 logger=LOGGER,
-                expected_target_status_list=[cust_status.value for cust_status in ToolsDeployPkgCustomizationStatus],
+                expected_target_status_list=[cust_status.value for cust_status in ToolsDeployPkgCustomizationStatus]  # noqa: E501
             )
 
             time.sleep(10)
@@ -1942,17 +1964,18 @@ def _add_control_plane_nodes(sysadmin_client, num_nodes, org, vdc, vapp,
             vm.reload()
 
             # Note that this is an ordered list.
-            for customization_phase in [PostCustomizationPhase.HOSTNAME_SETUP,
-                                        PostCustomizationPhase.NETWORK_CONFIGURATION,
-                                        PostCustomizationPhase.STORE_SSH_KEY,
-                                        PostCustomizationPhase.NAMESERVER_SETUP,
-                                        PostCustomizationPhase.KUBEADM_INIT,
-                                        PostCustomizationPhase.KUBECTL_APPLY_CNI,
-                                        PostCustomizationPhase.KUBEADM_TOKEN_GENERATE,
-                                        ]:
+            for customization_phase in [
+                PostCustomizationPhase.HOSTNAME_SETUP,
+                PostCustomizationPhase.NETWORK_CONFIGURATION,
+                PostCustomizationPhase.STORE_SSH_KEY,
+                PostCustomizationPhase.NAMESERVER_SETUP,
+                PostCustomizationPhase.KUBEADM_INIT,
+                PostCustomizationPhase.KUBECTL_APPLY_CNI,
+                PostCustomizationPhase.KUBEADM_TOKEN_GENERATE
+            ]:
                 vcd_utils.wait_for_completion_of_post_customization_procedure(
                     vm,
-                    customization_phase=customization_phase.value,  # noqa: E501
+                    customization_phase=customization_phase.value,
                     logger=LOGGER
                 )
 
@@ -1989,13 +2012,17 @@ def _add_worker_nodes(sysadmin_client, num_nodes, org, vdc, vapp,
         parts = control_plane_join_cmd.split()
         num_parts = 7
         if len(parts) != num_parts:
-            raise ValueError(f"Badly formatted join command [{control_plane_join_cmd}]. Expected {num_parts} parts.")
+            raise ValueError(
+                f"Badly formatted join command [{control_plane_join_cmd}]. "
+                f"Expected {num_parts} parts."
+            )
         ip_port = parts[2]
         token = parts[4]
         discovery_token_ca_cert_hash = parts[6]
 
-        # The cust_script needs the vm host name which is computed in the _get_vm_specifications
-        # function, so the specs are obtained and the cust_script is recomputed and added.
+        # The cust_script needs the vm host name which is computed in the
+        # _get_vm_specifications function, so the specs are obtained and
+        # the cust_script is recomputed and added.
         vm_specs = _get_vm_specifications(
             client=sysadmin_client,
             num_nodes=num_nodes,
@@ -2019,7 +2046,12 @@ def _add_worker_nodes(sysadmin_client, num_nodes, org, vdc, vapp,
                 discovery_token_ca_cert_hash=discovery_token_ca_cert_hash,
             )
 
-        task = vapp.add_vms(vm_specs, power_on=False, deploy=False, all_eulas_accepted=True)
+        task = vapp.add_vms(
+            vm_specs,
+            power_on=False,
+            deploy=False,
+            all_eulas_accepted=True
+        )
         sysadmin_client.get_task_monitor().wait_for_status(
             task,
             callback=wait_for_adding_worker_vm_to_vapp
@@ -2039,13 +2071,14 @@ def _add_worker_nodes(sysadmin_client, num_nodes, org, vdc, vapp,
             )
             vapp.reload()
 
-            # HACK: Please read the long comment in the other similar section (look for
-            # POST_BOOT_CUSTOMIZATION_SERVICE_SETUP) which explains the rationale of the hack.
+            # HACK: Please read the long comment in the other similar
+            # section (look for POST_BOOT_CUSTOMIZATION_SERVICE_SETUP)
+            # which explains the rationale of the hack.
             vcd_utils.wait_for_completion_of_post_customization_procedure(
                 vm,
-                customization_phase=PreCustomizationPhase.POST_BOOT_CUSTOMIZATION_SERVICE_SETUP.value,
+                customization_phase=PreCustomizationPhase.POST_BOOT_CUSTOMIZATION_SERVICE_SETUP.value,  # noqa: E501
                 logger=LOGGER,
-                expected_target_status_list=[cust_status.value for cust_status in ToolsDeployPkgCustomizationStatus],
+                expected_target_status_list=[cust_status.value for cust_status in ToolsDeployPkgCustomizationStatus]  # noqa: E501
             )
 
             time.sleep(10)
@@ -2059,12 +2092,13 @@ def _add_worker_nodes(sysadmin_client, num_nodes, org, vdc, vapp,
             LOGGER.debug(f"worker {vm_name} to join cluster using:{control_plane_join_cmd}")  # noqa: E501
 
             # Note that this is an ordered list.
-            for customization_phase in [PostCustomizationPhase.HOSTNAME_SETUP,
-                                        PostCustomizationPhase.NETWORK_CONFIGURATION,
-                                        PostCustomizationPhase.STORE_SSH_KEY,
-                                        PostCustomizationPhase.NAMESERVER_SETUP,
-                                        PostCustomizationPhase.KUBEADM_NODE_JOIN,
-                                        ]:
+            for customization_phase in [
+                PostCustomizationPhase.HOSTNAME_SETUP,
+                PostCustomizationPhase.NETWORK_CONFIGURATION,
+                PostCustomizationPhase.STORE_SSH_KEY,
+                PostCustomizationPhase.NAMESERVER_SETUP,
+                PostCustomizationPhase.KUBEADM_NODE_JOIN
+            ]:
                 vcd_utils.wait_for_completion_of_post_customization_procedure(
                     vm,
                     customization_phase=customization_phase.value,  # noqa: E501

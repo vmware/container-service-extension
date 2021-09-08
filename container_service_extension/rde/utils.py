@@ -112,12 +112,12 @@ def construct_2_0_0_cluster_spec_from_entity_status(entity_status: rde_2_0_0.Sta
     control_plane_cpu = None
     control_plane_memory = None
     if (
-        entity_status is not None and
-        entity_status.nodes is not None and
+        entity_status is not None and  # noqa: W504
+        entity_status.nodes is not None and  # noqa: W504
         entity_status.nodes.control_plane is not None
     ):
-        control_plane_sizing_class = entity_status.nodes.control_plane.sizing_class
-        control_plane_storage_profile = entity_status.nodes.control_plane.storage_profile
+        control_plane_sizing_class = entity_status.nodes.control_plane.sizing_class  # noqa: E501
+        control_plane_storage_profile = entity_status.nodes.control_plane.storage_profile  # noqa: E501
         control_plane_cpu = entity_status.nodes.control_plane.cpu
         control_plane_memory = entity_status.nodes.control_plane.memory
         if control_plane_sizing_class:
@@ -136,14 +136,14 @@ def construct_2_0_0_cluster_spec_from_entity_status(entity_status: rde_2_0_0.Sta
     worker_cpu = None
     worker_memory = None
     if (
-        entity_status is not None and
-        entity_status.nodes is not None and
+        entity_status is not None and  # noqa: W504
+        entity_status.nodes is not None and  # noqa: W504
         entity_status.nodes.workers is not None
     ):
         workers_count = len(entity_status.nodes.workers)
         if workers_count > 0:
             worker_sizing_class = entity_status.nodes.workers[0].sizing_class
-            worker_storage_profile = entity_status.nodes.workers[0].storage_profile
+            worker_storage_profile = entity_status.nodes.workers[0].storage_profile  # noqa: E501
             worker_cpu = entity_status.nodes.workers[0].cpu
             worker_memory = entity_status.nodes.workers[0].memory
         if worker_sizing_class:
@@ -159,8 +159,8 @@ def construct_2_0_0_cluster_spec_from_entity_status(entity_status: rde_2_0_0.Sta
     nfs_sizing_class = None
     nfs_storage_profile = None
     if (
-        entity_status is not None and
-        entity_status.nodes is not None and
+        entity_status is not None and  # noqa: W504
+        entity_status.nodes is not None and  # noqa: W504
         entity_status.nodes.nfs is not None
     ):
         nfs_count = len(entity_status.nodes.nfs)

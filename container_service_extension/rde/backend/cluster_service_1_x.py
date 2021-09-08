@@ -152,8 +152,8 @@ class ClusterService(abstract_broker.AbstractBroker):
         """Get the cluster's kube config contents.
 
         :param str cluster_id:
-        :return: Dictionary containing cluster config.
-        :rtype: dict
+        :return: cluster config.
+        :rtype: str
         """
         curr_entity = self.entity_svc.get_entity(cluster_id)
         if curr_entity.state != def_constants.DEF_RESOLVED_STATE:
@@ -209,11 +209,6 @@ class ClusterService(abstract_broker.AbstractBroker):
         ovdc_name = cluster_spec.metadata.ovdc_name
         template_name = cluster_spec.spec.k8_distribution.template_name
         template_revision = cluster_spec.spec.k8_distribution.template_revision
-        if not (template_name or template_revision):
-            default_dist = server_utils.get_default_k8_distribution()
-            cluster_spec.spec.k8_distribution = default_dist
-            template_name = default_dist.template_name
-            template_revision = default_dist.template_revision
 
         # check that cluster name is syntactically valid
         if not _is_valid_cluster_name(cluster_name):
@@ -1149,7 +1144,7 @@ class ClusterService(abstract_broker.AbstractBroker):
         Do's:
         - Update the defined entity in except blocks.
         - Can set the self.task status either to Running or Error
-        Don'ts:
+        Do not:
         - Do not set the self.task status to SUCCESS. This will prevent other
         parallel threads if any to update the status. vCD interprets SUCCESS
         as a terminal state.
@@ -1646,7 +1641,7 @@ class ClusterService(abstract_broker.AbstractBroker):
         Do's:
         - Update the defined entity in except blocks.
         - Set the self.task status either to Running or Error
-        Don'ts:
+        Do not:
         - Do not set the self.task status to SUCCESS. This will prevent other
         parallel threads if any to update the status. vCD interprets SUCCESS
         as a terminal state.
@@ -2099,12 +2094,11 @@ def _cluster_exists(client, cluster_name, org_name=None, ovdc_name=None):
 
 
 def _get_template(name=None, revision=None):
-    if (name is None and revision is not None) or (name is not None and revision is None):  # noqa: E501
-        raise ValueError("If template revision is specified, then template "
-                         "name must also be specified (and vice versa).")
+    if not name or not revision:
+        raise ValueError(
+            "Template name and revision both must be specified."
+        )
     server_config = server_utils.get_server_runtime_config()
-    name = name or server_config['broker']['default_template_name']
-    revision = revision or server_config['broker']['default_template_revision']
     for template in server_config['broker']['templates']:
         if (template[LocalTemplateKey.NAME], str(template[LocalTemplateKey.REVISION])) == (name, str(revision)):  # noqa: E501
             return template
@@ -2309,7 +2303,8 @@ def _init_cluster(sysadmin_client: vcd_client.Client, vapp, cluster_kind,
     except Exception as err:
         LOGGER.error(err, exc_info=True)
         raise exceptions.ClusterInitializationError(
-            f"Couldn't initialize cluster: {str(err)}")
+            f"Could not initialize cluster: {str(err)}"
+        )
 
 
 def _join_cluster(sysadmin_client: vcd_client.Client, vapp, target_nodes=None):
@@ -2356,12 +2351,14 @@ def _join_cluster(sysadmin_client: vcd_client.Client, vapp, target_nodes=None):
         for result in worker_results:
             if result[0] != 0:
                 raise exceptions.ClusterJoiningError(
-                    f"Couldn't join cluster:\n"
-                    f"{result[2].content.decode()}")
+                    "Could not join cluster:\n"
+                    f"{result[2].content.decode()}"
+                )
     except Exception as err:
         LOGGER.error(err, exc_info=True)
         raise exceptions.ClusterJoiningError(
-            f"Couldn't join cluster: {str(err)}")
+            f"Could not join cluster: {str(err)}"
+        )
 
 
 def _wait_for_tools_ready_callback(message, exception=None):

@@ -49,7 +49,6 @@ def list_templates(ctx, is_tkgm):
         value_field_to_display_field = {
             'name': 'Name',
             'revision': 'Revision',
-            'is_default': 'Default',
             'catalog': 'Catalog',
             'catalog_item': 'Catalog Item',
             'description': 'Description'

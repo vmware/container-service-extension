@@ -650,33 +650,6 @@ class Service(object, metaclass=Singleton):
                 logger_debug=logger.SERVER_LOGGER,
                 msg_update_callback=msg_update_callback)
 
-            if not k8_templates:
-                msg = "No valid K8 templates were found in catalog " \
-                      f"'{catalog_name}'. Unable to start CSE server."
-                msg_update_callback.error(msg)
-                logger.SERVER_LOGGER.error(msg)
-                sys.exit(1)
-
-            # Check that default k8s template exists in vCD at the correct
-            # revision
-            default_template_name = \
-                self.config['broker']['default_template_name']
-            default_template_revision = \
-                str(self.config['broker']['default_template_revision'])
-            found_default_template = False
-            for template in k8_templates:
-                if str(template[server_constants.LocalTemplateKey.REVISION]) == default_template_revision and \
-                        template[server_constants.LocalTemplateKey.NAME] == default_template_name:  # noqa: E501
-                    found_default_template = True
-
-            if not found_default_template:
-                msg = f"Default template {default_template_name} with " \
-                      f"revision {default_template_revision} not found." \
-                      " Unable to start CSE server."
-                msg_update_callback.error(msg)
-                logger.SERVER_LOGGER.error(msg)
-                sys.exit(1)
-
             self.config['broker']['templates'] = k8_templates
         finally:
             if client:

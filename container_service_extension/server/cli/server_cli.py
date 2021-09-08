@@ -1089,10 +1089,6 @@ def list_template(ctx, config_file_path, skip_config_decryption,
                         is_tkg_plus_enabled=is_tkg_plus_enabled,
                         org_name=org_name,
                         logger_debug=SERVER_CLI_LOGGER)
-                default_template_name = \
-                    config_dict['broker']['default_template_name']
-                default_template_revision = \
-                    str(config_dict['broker']['default_template_revision'])
 
                 for definition in local_template_definitions:
                     local_template = {
@@ -1106,12 +1102,6 @@ def list_template(ctx, config_file_path, skip_config_decryption,
                     }
                     if legacy_mode:
                         local_template['compute_policy'] = definition[server_constants.LegacyLocalTemplateKey.COMPUTE_POLICY]  # noqa: E501
-                    # Any metadata read from vCD is sting due to how pyvcloud
-                    # is coded, so we need to cast it back to int.
-                    if (definition[server_constants.LocalTemplateKey.NAME], str(definition[server_constants.LocalTemplateKey.REVISION])) == (default_template_name, default_template_revision):  # noqa: E501
-                        local_template['default'] = 'Yes'
-                    else:
-                        local_template['default'] = 'No'
                     local_template['deprecated'] = 'Yes' if utils.str_to_bool(definition[server_constants.LocalTemplateKey.DEPRECATED]) else 'No'  # noqa: E501
 
                     local_templates.append(local_template)
@@ -1144,8 +1134,6 @@ def list_template(ctx, config_file_path, skip_config_decryption,
                 if legacy_mode:
                     remote_template['compute_policy'] = \
                         definition[remote_template_keys.COMPUTE_POLICY]
-                if display_option is DISPLAY_ALL:
-                    remote_template['default'] = 'No'
                 remote_template['deprecated'] = 'Yes' if utils.str_to_bool(definition[remote_template_keys.DEPRECATED]) else 'No'  # noqa: E501
 
                 remote_templates.append(remote_template)
@@ -1164,7 +1152,6 @@ def list_template(ctx, config_file_path, skip_config_decryption,
                             remote_template['compute_policy'] = \
                                 local_template['compute_policy']
                         remote_template['local'] = local_template['local']
-                        remote_template['default'] = local_template['default']
                         found = True
                         break
                 if not found:
