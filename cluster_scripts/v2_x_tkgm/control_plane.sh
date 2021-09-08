@@ -11,7 +11,7 @@ mkdir -p /var/log/cse/customization
 
 trap 'catch $? $LINENO' ERR
 
-set -e
+set -ex
 
 echo "$(date) This script was called with $1" &>> /var/log/cse/customization/status.log
 
@@ -28,8 +28,12 @@ fi
 echo "$(date) Post Customization script execution in progress" &>> /var/log/cse/customization/status.log
 
 kubeadm_config_path=/root/kubeadm-defaults.conf
+
+vcloud_basic_auth_path=/root/vcloud-basic-auth.yaml
 vcloud_configmap_path=/root/vcloud-configmap.yaml
 vcloud_ccm_path=/root/cloud-director-ccm.yaml
+
+vcloud_csi_configmap_path=/root/vcloud-csi-configmap.yaml
 csi_driver_path=/root/csi-driver.yaml
 csi_controller_path=/root/csi-controller.yaml
 csi_node_path=/root/csi-node.yaml
@@ -66,10 +70,14 @@ vmtoolsd --cmd "info-set guestinfo.postcustomization.store.sshkey.status success
 
 
 vmtoolsd --cmd "info-set guestinfo.postcustomization.nameserverconfig.resolvconf.status in_progress"
-  echo 'nameserver 8.8.8.8
-nameserver 8.8.4.4
-nameserver 10.16.188.210
-nameserver 10.118.254.1' > /etc/resolv.conf
+  cat > /etc/systemd/resolved.conf << END
+[Resolve]
+DNS=10.166.1.201 8.8.8.8
+END
+
+  systemctl daemon-reload
+  systemctl restart systemd-resolved.service
+  ln -fs /run/systemd/resolve/resolv.conf /etc/resolv.conf
 vmtoolsd --cmd "info-set guestinfo.postcustomization.nameserverconfig.resolvconf.status successful"
 
 
@@ -96,7 +104,8 @@ vmtoolsd --cmd "info-set guestinfo.postcustomization.kubeinit.status in_progress
   done
 
   # create /root/kubeadm-defaults.conf
-  echo "---
+  cat > $kubeadm_config_path << END
+---
 apiVersion: kubeadm.k8s.io/v1beta2
 kind: InitConfiguration
 bootstrapTokens:
@@ -127,7 +136,9 @@ networking:
   podSubnet: {pod_cidr}
 imageRepository: projects.registry.vmware.com/tkg
 kubernetesVersion: $kubernetes_version
----" > /root/kubeadm-defaults.conf
+---
+END
+
   kubeadm init --config $kubeadm_config_path > /root/kubeadm-init.out
   export KUBECONFIG=/etc/kubernetes/admin.conf
 vmtoolsd --cmd "info-set guestinfo.kubeconfig $(cat /etc/kubernetes/admin.conf | base64 | tr -d '\n')"
@@ -141,19 +152,34 @@ vmtoolsd --cmd "info-set guestinfo.postcustomization.kubectl.apply.cni.status su
 
 vmtoolsd --cmd "info-set guestinfo.postcustomization.kubectl.cpi.install.status in_progress"
   # TODO: change to use main branch links
-  wget -O $vcloud_configmap_path https://raw.githubusercontent.com/ltimothy7/cloud-provider-for-cloud-director/auth_mount_internal/manifests/vcloud-configmap.yaml
-  wget -O $vcloud_ccm_path https://raw.githubusercontent.com/ltimothy7/cloud-provider-for-cloud-director/auth_mount_internal/manifests/cloud-director-ccm.yaml
+  wget -O $vcloud_basic_auth_path https://raw.githubusercontent.com/arunmk/cloud-provider-for-cloud-director/ak/tkgm-r1-beta/manifests/vcloud-basic-auth.yaml
+  kubectl apply -f $vcloud_basic_auth_path
 
+  wget -O $vcloud_configmap_path https://raw.githubusercontent.com/vmware/cloud-provider-for-cloud-director/main/manifests/vcloud-configmap.yaml
+  sed -i 's/VCD_HOST/"https:\/\/{vcd_host}"/' $vcloud_configmap_path
+  sed -i 's/ORG/"{org}"/' $vcloud_configmap_path
+  sed -i 's/OVDC/"{vdc}"/' $vcloud_configmap_path
+  sed -i 's/NETWORK/"{network_name}"/' $vcloud_configmap_path
+  sed -i 's/VIP_SUBNET_CIDR/"{vip_subnet_cidr}"/' $vcloud_configmap_path
+  sed -i 's/CLUSTER_ID/{cluster_id}/' $vcloud_configmap_path
   kubectl apply -f $vcloud_configmap_path
+
+  wget -O $vcloud_ccm_path https://raw.githubusercontent.com/vmware/cloud-provider-for-cloud-director/main/manifests/cloud-director-ccm.yaml
   kubectl apply -f $vcloud_ccm_path
 vmtoolsd --cmd "info-set guestinfo.postcustomization.kubectl.cpi.install.status successful"
 
 
 vmtoolsd --cmd "info-set guestinfo.postcustomization.kubectl.csi.install.status in_progress"
-  wget -O $csi_driver_path https://github.com/vmware/cloud-director-named-disk-csi-driver/raw/main/manifests/csi-driver.yaml
-  wget -O $csi_controller_path https://github.com/vmware/cloud-director-named-disk-csi-driver/raw/main/manifests/csi-controller.yaml
-  wget -O $csi_node_path https://github.com/vmware/cloud-director-named-disk-csi-driver/raw/main/manifests/csi-node.yaml
+  wget -O $vcloud_csi_configmap_path https://raw.githubusercontent.com/arunmk/cloud-director-named-disk-csi-driver/ak/csi-configmap/manifests/vcloud-csi-config.yaml
+  sed -i 's/VCD_HOST/"https:\/\/{vcd_host}"/' $vcloud_csi_configmap_path
+  sed -i 's/ORG/"{org}"/' $vcloud_csi_configmap_path
+  sed -i 's/OVDC/"{vdc}"/' $vcloud_csi_configmap_path
+  sed -i 's/CLUSTER_ID/"{cluster_id}"/' $vcloud_csi_configmap_path
+  kubectl apply -f $vcloud_csi_configmap_path
 
+  wget -O $csi_driver_path https://raw.githubusercontent.com/arunmk/cloud-director-named-disk-csi-driver/ak/csi-configmap/manifests/csi-driver.yaml
+  wget -O $csi_controller_path https://raw.githubusercontent.com/arunmk/cloud-director-named-disk-csi-driver/ak/csi-configmap/manifests/csi-controller.yaml
+  wget -O $csi_node_path https://raw.githubusercontent.com/arunmk/cloud-director-named-disk-csi-driver/ak/csi-configmap/manifests/csi-node.yaml
   kubectl apply -f $csi_driver_path
   kubectl apply -f $csi_controller_path
   kubectl apply -f $csi_node_path
