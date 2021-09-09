@@ -219,7 +219,8 @@ def _init_test_vars(config, logger=NULL_LOGGER):
                             specified_templates_def.append(template_def)
                             break
             TEMPLATE_DEFINITIONS = specified_templates_def
-    _populate_template_upgrade_paths(config, logger=NULL_LOGGER)
+    if TEST_CLUSTER_UPGRADES:
+        _populate_template_upgrade_paths(config, logger=NULL_LOGGER)
 
 
 _init_test_vars(testutils.yaml_to_dict(BASE_CONFIG_FILEPATH))

@@ -42,6 +42,7 @@ import subprocess
 import time
 
 import pytest
+from pyvcloud.vcd.client import ApiVersion
 from system_tests_v2.pytest_logger import PYTEST_LOGGER
 from vcd_cli.vcd import vcd
 import yaml
@@ -521,7 +522,7 @@ def _follow_apply_output(expect_failure=False):
         PYTEST_LOGGER.debug(f"Exit code: {result.exit_code}")
         PYTEST_LOGGER.debug(f"Output: {result.output}")
 
-        if result.exit_code != 0:
+        if "result: error" in result.output or result.exit_code != 0:
             if expect_failure:
                 PYTEST_LOGGER.debug(f"{task_wait_command} failed as expected. "
                                     f"Exit code {result.exit_code}. "
@@ -640,7 +641,7 @@ def _generate_cluster_apply_tests(test_users=None):
                     CLUSTER_APPLY_TEST_PARAM(
                         user=user,
                         password=None,
-                        cluster_name=f"{env.USERNAME_TO_CLUSTER_NAME[user]}-case1",
+                        cluster_name=f"{env.USERNAME_TO_CLUSTER_NAME[user]}-case1",  # noqa: E501
                         worker_count=0,
                         nfs_count=0,
                         rollback=True,
@@ -649,7 +650,8 @@ def _generate_cluster_apply_tests(test_users=None):
                         ovdc_network=None,
                         sizing_class="Invalid_value",
                         storage_profile=None,
-                        expected_phase="CREATE:FAILED"
+                        expected_phase="CREATE:FAILED",
+                        retain_cluster=False
                     ),
                     # Invalid Storage profile
                     CLUSTER_APPLY_TEST_PARAM(
@@ -663,8 +665,9 @@ def _generate_cluster_apply_tests(test_users=None):
                         ovdc_network=None,
                         sizing_class=None,
                         storage_profile="Invalid_value",
-                        cluster_name=f"{env.USERNAME_TO_CLUSTER_NAME[user]}-case2",
-                        expected_phase="CREATE:FAILED"
+                        cluster_name=f"{env.USERNAME_TO_CLUSTER_NAME[user]}-case2",  # noqa: E501
+                        expected_phase="CREATE:FAILED",
+                        retain_cluster=False
                     ),
                     # Invalid Network
                     CLUSTER_APPLY_TEST_PARAM(
@@ -678,8 +681,9 @@ def _generate_cluster_apply_tests(test_users=None):
                         ovdc_network="Invalid_value",
                         sizing_class=None,
                         storage_profile=None,
-                        cluster_name=f"{env.USERNAME_TO_CLUSTER_NAME[user]}-case3",
-                        expected_phase="CREATE:FAILED"
+                        cluster_name=f"{env.USERNAME_TO_CLUSTER_NAME[user]}-case3",  # noqa: E501
+                        expected_phase="CREATE:FAILED",
+                        retain_cluster=False
                     ),
                     # Invalid network with rollback
                     CLUSTER_APPLY_TEST_PARAM(
@@ -693,8 +697,9 @@ def _generate_cluster_apply_tests(test_users=None):
                         ovdc_network="Invalid_value",
                         sizing_class=None,
                         storage_profile=None,
-                        cluster_name=f"{env.USERNAME_TO_CLUSTER_NAME[user]}-case4",
-                        expected_phase="CREATE:FAILED"
+                        cluster_name=f"{env.USERNAME_TO_CLUSTER_NAME[user]}-case4",  # noqa: E501
+                        expected_phase="CREATE:FAILED",
+                        retain_cluster=False
                     ),
                     # Valid case
                     CLUSTER_APPLY_TEST_PARAM(
@@ -1135,7 +1140,7 @@ def cluster_upgrade_param(request):
 
     # enable ovdc for cluster creation
     cmd = f"cse ovdc enable --native --org {env.TEST_ORG} {env.TEST_VDC}"
-    env.CLI_RUNNER.invoke(vcd, cmd.split(), catch_exceptions=True)
+    env.CLI_RUNNER.invoke(vcd, cmd.split(), catch_exceptions=False)
 
     # create initial cluster
     cmd_list = [
@@ -1159,7 +1164,7 @@ def cluster_upgrade_param(request):
 @pytest.mark.skipif(not env.TEST_CLUSTER_UPGRADES,
                     reason="Configuration specifies 'test_cluster_upgrades' as False")  # noqa: E501
 @pytest.mark.parametrize('cluster_upgrade_param', generate_cluster_upgrade_tests(test_users=[env.SYS_ADMIN_NAME]), indirect=["cluster_upgrade_param"])  # noqa: E501
-def test_0100_cluster_upgrade_through_apply(cluster_upgrade_param: CLUSTER_UPGRADE_TEST_PARAM):  # noqa: E501
+def test_0100_cluster_upgrade(cluster_upgrade_param: CLUSTER_UPGRADE_TEST_PARAM):  # noqa: E501
     upgrade_path = cluster_upgrade_param.upgrade_path
 
     # The initial cluster will be created in the fixture
@@ -1181,16 +1186,25 @@ def test_0100_cluster_upgrade_through_apply(cluster_upgrade_param: CLUSTER_UPGRA
         # create spec
         spec['template_name'] = template['name']
         spec['template_revision'] = template['revision']
-        create_apply_spec(spec)
 
         # upgrade the cluster
-        cmd_list = [
-            testutils.CMD_BINDER(
-                cmd=f"cse cluster apply {env.APPLY_SPEC_PATH} ",
-                exit_code=0,
-                validate_output_func=_follow_apply_output(expect_failure=cluster_upgrade_param.expect_failure),  # noqa: E501
-                test_user=cluster_upgrade_param.user)
-        ]
+        if float(env.VCD_API_VERSION_TO_USE) < \
+                float(ApiVersion.VERSION_36.value):
+            create_apply_spec(spec)
+            cmd_list = [
+                testutils.CMD_BINDER(
+                    cmd=f"cse cluster upgrade {spec['cluster_name']} {spec['template_name']} {spec['template_revision']}",  # noqa: E501
+                    exit_code=1 if not cluster_apply_param.expect_failure else 0,  # noqa: E501
+                    validate_output_func=None,
+                    test_user=cluster_upgrade_param.user)]
+        else:
+            cmd_list = [
+                testutils.CMD_BINDER(
+                    cmd=f"cse cluster apply {env.APPLY_SPEC_PATH} ",
+                    exit_code=0,
+                    validate_output_func=_follow_apply_output(expect_failure=cluster_upgrade_param.expect_failure),  # noqa: E501
+                    test_user=cluster_upgrade_param.user)
+            ]
         testutils.execute_commands(cmd_list, logger=PYTEST_LOGGER)
         assert _get_cluster_phase(spec['cluster_name'], cluster_upgrade_param.user) == 'UPGRADE:SUCCEEDED', \
             "Expected RDE phase to be 'UPGRADE:SUCCEEDED'"  # noqa: E501
@@ -1202,7 +1216,7 @@ def test_0100_cluster_upgrade_through_apply(cluster_upgrade_param: CLUSTER_UPGRA
                           OVDC_DISABLE_TEST_PARAM(user=env.CLUSTER_AUTHOR_NAME, password=env.CLUSTER_AUTHOR_PASSWORD, org_name=env.TEST_ORG, ovdc_name=env.TEST_VDC, enable_before_test=True, expect_failure=True),  # noqa: E501
                           OVDC_DISABLE_TEST_PARAM(user=env.SYS_ADMIN_NAME, password="", org_name=env.TEST_ORG, ovdc_name=env.TEST_VDC, enable_before_test=False, expect_failure=True)],  # noqa: E501
                          indirect=['ovdc_disable_test_case'])
-def test_0100_vcd_ovdc_disable(ovdc_disable_test_case: OVDC_DISABLE_TEST_PARAM):  # noqa: E501
+def test_0110_vcd_ovdc_disable(ovdc_disable_test_case: OVDC_DISABLE_TEST_PARAM):  # noqa: E501
     """Test ovdc disable operation.
 
     commands:

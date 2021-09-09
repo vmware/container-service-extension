@@ -15,6 +15,7 @@ test:
                                                            #   if true, tests cluster deployment on all templates found.
                                                            #   if false, tests cluster deployment only for first template found.
                                                            #   if this key is omitted, defaults to false.
+  test_cluster_upgrades: false
   test_templates: "???"                                    # Tests will only create these templates if test_all_templates is set to false
                                                            #   format -> "template_1_name:template_1_revision,template_2_name:template_2_revision"
   upgrade_template_repo_url: '???'                         #
