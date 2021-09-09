@@ -5,7 +5,7 @@
 """Utility methods used only by the CLI client."""
 
 import click
-from pyvcloud.vcd.client import Client
+from pyvcloud.vcd.client import Client, VcdApiVersionObj
 import pyvcloud.vcd.org as vcd_org
 import pyvcloud.vcd.utils as vcd_utils
 from pyvcloud.vcd.vcd_api_version import VCDApiVersion
@@ -140,11 +140,11 @@ def _override_client(ctx) -> None:
                 if is_cse_server_running_in_legacy_mode:
                     common_supported_api_versions = \
                         [VCDApiVersion(x) for x in common_supported_api_versions  # noqa: E501
-                            if VCDApiVersion(x) < VCDApiVersion('35.0')]
+                            if VCDApiVersion(x) < VcdApiVersionObj.VERSION_35.value]  # noqa: E501
                 else:
                     common_supported_api_versions = \
                         [VCDApiVersion(x) for x in common_supported_api_versions  # noqa: E501
-                            if VCDApiVersion(x) >= VCDApiVersion('35.0')]
+                            if VCDApiVersion(x) >= VcdApiVersionObj.VERSION_35.value]  # noqa: E501
 
                 cse_server_api_version = \
                     str(max(common_supported_api_versions))

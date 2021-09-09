@@ -23,7 +23,7 @@ import container_service_extension.logging.logger as logger
 # cse compute policy prefix
 CSE_COMPUTE_POLICY_PREFIX = 'cse----'
 _SYSTEM_DEFAULT_COMPUTE_POLICY = 'System Default'
-GLOBAL_PVDC_COMPUTE_POLICY_MIN_VERSION = VCDApiVersion('35.0')
+GLOBAL_PVDC_COMPUTE_POLICY_MIN_VERSION = vcd_client.VcdApiVersionObj.VERSION_35.value  # noqa: E501
 PVDC_VM_POLICY_NAME = "PvdcVmPolicy"
 VDC_VM_POLICY_NAME = "VdcVmPolicy"
 

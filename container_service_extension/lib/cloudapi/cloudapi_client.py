@@ -43,6 +43,7 @@ class CloudApiClient(object):
         self._last_response = None
         self.is_sys_admin = is_sys_admin
         self._api_version = api_version
+        self._vcd_api_version = VCDApiVersion(api_version)
 
     def get_api_version(self):
         return self._api_version

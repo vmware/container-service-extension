@@ -9,6 +9,7 @@ import pyvcloud.vcd.api_extension as api_extension
 from pyvcloud.vcd.client import BasicLoginCredentials
 from pyvcloud.vcd.client import Client
 from pyvcloud.vcd.client import NSMAP
+from pyvcloud.vcd.client import VcdApiVersionObj
 from pyvcloud.vcd.exceptions import AccessForbiddenException
 from pyvcloud.vcd.exceptions import EntityNotFoundException
 from pyvcloud.vcd.exceptions import MissingRecordException
@@ -209,7 +210,7 @@ def parse_cse_extension_description(description: str):
             vcd_api_tokens = tokens[1].split("-")
             if len(vcd_api_tokens) == 2:
                 vcd_api_version = vcd_api_tokens[1]
-                if VCDApiVersion(vcd_api_version) >= VCDApiVersion('35.0'):
+                if VCDApiVersion(vcd_api_version) >= VcdApiVersionObj.VERSION_35.value:  # noqa: E501
                     legacy_mode = False
         result = {
             server_constants.CSE_VERSION_KEY: cse_version,

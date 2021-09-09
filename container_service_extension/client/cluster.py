@@ -30,10 +30,10 @@ class Cluster:
 
         :return: instance of version specific client side cluster
         """
-        api_version = client.get_api_version()
-        if VCDApiVersion(api_version) < VCDApiVersion(vcd_client.ApiVersion.VERSION_35.value):   # noqa: E501
+        api_version = client.get_vcd_api_version()
+        if api_version < vcd_client.VcdApiVersionObj.VERSION_35.value:
             return LegacyClusterNative(client)
-        elif VCDApiVersion(api_version) >= VCDApiVersion(vcd_client.ApiVersion.VERSION_35.value):  # noqa: E501
+        elif api_version >= vcd_client.VcdApiVersionObj.VERSION_35.value:
             if k8_runtime in CSE_SERVER_RUNTIMES:
                 return DEClusterNative(client)
             elif k8_runtime == ClusterEntityKind.TKG_S.value:
