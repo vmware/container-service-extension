@@ -59,7 +59,7 @@ from container_service_extension.security.encryption_engine import \
 from container_service_extension.server.pks.pks_cache import Credentials
 
 
-_MAX_API_VERSION_TO_RUN_CSE_WITH_AMQP_IN_NON_LEGACY_MODE = VcdApiVersionObj.VERSION_35.value
+_MAX_API_VERSION_TO_RUN_CSE_WITH_AMQP_IN_NON_LEGACY_MODE = VcdApiVersionObj.VERSION_35.value  # noqa: E501
 
 
 def get_validated_config(config_file_name,
@@ -297,7 +297,7 @@ def _raise_error_if_amqp_not_supported(is_mqtt_used, default_api_version,
     :raises: AmqpError
     """
     if not is_mqtt_used and VCDApiVersion(default_api_version) > \
-        _MAX_API_VERSION_TO_RUN_CSE_WITH_AMQP_IN_NON_LEGACY_MODE:
+            _MAX_API_VERSION_TO_RUN_CSE_WITH_AMQP_IN_NON_LEGACY_MODE:
         msg = f"Cannot use AMQP message bus when working with api version" \
             f" {default_api_version}. Please upgrade to MQTT."
         logger.error(msg)

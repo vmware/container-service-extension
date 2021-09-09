@@ -7,9 +7,8 @@
 from dataclasses import dataclass
 from enum import Enum
 from enum import unique
-from pyvcloud.vcd.client import VcdApiVersionObj
 
-from pyvcloud.vcd.vcd_api_version import VCDApiVersion
+from pyvcloud.vcd.client import VcdApiVersionObj
 import requests
 import semantic_version
 

@@ -7,7 +7,6 @@ from pyvcloud.vcd.exceptions import EntityNotFoundException
 from pyvcloud.vcd.exceptions import OperationNotSupportedException
 from pyvcloud.vcd.task import Task
 from pyvcloud.vcd.utils import retrieve_compute_policy_id_from_href
-from pyvcloud.vcd.vcd_api_version import VCDApiVersion
 from pyvcloud.vcd.vm import VM
 import requests
 

@@ -3,7 +3,6 @@
 # SPDX-License-Identifier: BSD-2-Clause
 
 import pyvcloud.vcd.client as vcd_client
-from pyvcloud.vcd.vcd_api_version import VCDApiVersion
 
 from container_service_extension.client.de_cluster import DECluster
 from container_service_extension.client.de_cluster_native import DEClusterNative  # noqa: E501

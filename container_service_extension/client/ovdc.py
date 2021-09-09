@@ -21,7 +21,7 @@ class Ovdc:
         :return: instance of version specific client side Ovdc class
         """
         api_version = client.get_vcd_api_version()
-        
+
         if api_version < vcd_client.VcdApiVersionObj.VERSION_35.value:
             return MetadataBasedOvdc(client)
         elif api_version >= vcd_client.VcdApiVersionObj.VERSION_35.value:  # noqa: E501
