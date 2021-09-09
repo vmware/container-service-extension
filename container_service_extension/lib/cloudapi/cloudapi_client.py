@@ -49,7 +49,7 @@ class CloudApiClient(object):
         return self._api_version
 
     def get_vcd_api_version(self):
-        return VCDApiVersion(self._api_version)
+        return self._vcd_api_version
 
     def get_base_url(self):
         return self._base_url
