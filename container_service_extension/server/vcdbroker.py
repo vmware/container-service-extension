@@ -1817,12 +1817,11 @@ def _get_cluster(client, cluster_name, cluster_id=None, org_name=None,
 
 
 def _get_template(name=None, revision=None):
-    if (name is None and revision is not None) or (name is not None and revision is None):  # noqa: E501
-        raise ValueError("If template revision is specified, then template "
-                         "name must also be specified (and vice versa).")
+    if name is None or revision is None:
+        raise ValueError(
+            "Template name and revision both must be specified."
+        )
     server_config = server_utils.get_server_runtime_config()
-    name = name or server_config['broker']['default_template_name']
-    revision = revision or server_config['broker']['default_template_revision']
     for template in server_config['broker']['templates']:
         if (template[LocalTemplateKey.NAME], str(template[LocalTemplateKey.REVISION])) == (name, str(revision)):  # noqa: E501
             return template
@@ -2015,11 +2014,15 @@ def _init_cluster(sysadmin_client: vcd_client.Client, vapp, template_name,
                 f"Initialize cluster script execution failed on node "
                 f"{node_names}:{errors}")
         if result[0][0] != 0:
-            raise e.ClusterInitializationError(f"Couldn't initialize cluster:\n{result[0][2].content.decode()}")  # noqa: E501
+            raise e.ClusterInitializationError(
+                "Could not initialize cluster:\n"
+                f"{result[0][2].content.decode()}"
+            )
     except Exception as err:
         LOGGER.error(err, exc_info=True)
         raise e.ClusterInitializationError(
-            f"Couldn't initialize cluster: {str(err)}")
+            f"Could not initialize cluster: {str(err)}"
+        )
 
 
 def _join_cluster(sysadmin_client: vcd_client.Client, vapp, template_name,
@@ -2060,11 +2063,12 @@ def _join_cluster(sysadmin_client: vcd_client.Client, vapp, template_name,
                                          f" {node_names}:{errors}")
         for result in worker_results:
             if result[0] != 0:
-                raise e.ClusterJoiningError(f"Couldn't join cluster:"
-                                            f"\n{result[2].content.decode()}")
+                raise e.ClusterJoiningError(
+                    f"Could not join cluster:\n{result[2].content.decode()}"
+                )
     except Exception as err:
         LOGGER.error(err, exc_info=True)
-        raise e.ClusterJoiningError(f"Couldn't join cluster: {str(err)}")
+        raise e.ClusterJoiningError(f"Could not join cluster: {str(err)}")
 
 
 def _wait_until_ready_to_exec(vs, vm, password, tries=30):

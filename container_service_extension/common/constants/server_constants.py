@@ -90,10 +90,8 @@ VCENTER_LOGIN_ERROR_MSG = "vCenter login failed (check config file for "\
 REQUEST_ID_FORMAT = 'Request Id: %(requestId)s | '
 
 # TKGM init values
-TKGM_DEFAULT_POD_NETWORK_CIDR = '100.66.0.0/16'
-TKGM_DEFAULT_SERVICE_CIDR = '100.77.0.0/16'
-DEFAULT_SUBNET_CIDR_IP = '10.150.191.253'
-DEFAULT_SUBNET_CIDR_SUFFIX = '19'
+TKGM_DEFAULT_POD_NETWORK_CIDR = '100.96.0.0/11'
+TKGM_DEFAULT_SERVICE_CIDR = '100.64.0.0/13'
 
 
 @unique
@@ -769,9 +767,24 @@ class PostCustomizationStatus(Enum):
 
 
 @unique
+class ToolsDeployPkgCustomizationStatus(Enum):
+    NONE = None
+    IN_PROGRESS = 'Started'
+    SUCCESSFUL = 'Successful'
+
+
+@unique
+class PreCustomizationPhase(Enum):
+    POST_BOOT_CUSTOMIZATION_SERVICE_SETUP = 'guestinfo.gc.status'
+
+
+@unique
 class PostCustomizationPhase(Enum):
+    HOSTNAME_SETUP = 'guestinfo.postcustomization.hostname.status'
+    NETWORK_CONFIGURATION = 'guestinfo.postcustomization.networkconfiguration.status'  # noqa: E501
     STORE_SSH_KEY = 'guestinfo.postcustomization.store.sshkey.status'
     KUBEADM_INIT = 'guestinfo.postcustomization.kubeinit.status'
+    NAMESERVER_SETUP = 'guestinfo.postcustomization.nameserverconfig.resolvconf.status'  # noqa: E501
     KUBECTL_APPLY_CNI = 'guestinfo.postcustomization.kubectl.apply.cni.status'  # noqa: E501
     KUBEADM_TOKEN_GENERATE = 'guestinfo.postcustomization.kubeadm.token.generate.status'  # noqa: E501
     KUBEADM_NODE_JOIN = 'guestinfo.postcustomization.kubeadm.node.join.status'
@@ -784,3 +797,4 @@ POST_CUSTOMIZATION_SCRIPT_EXECUTION_FAILURE_REASON = 'guestinfo.post_customizati
 DEFAULT_POST_CUSTOMIZATION_STATUS_LIST = [cust_status.value for cust_status in PostCustomizationStatus]  # noqa: E501
 DEFAULT_POST_CUSTOMIZATION_POLL_SEC = 5
 DEFAULT_POST_CUSTOMIZATION_TIMEOUT_SEC = 600
+DISK_ENABLE_UUID = 'disk.enableUUID'

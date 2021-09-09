@@ -105,54 +105,72 @@ def construct_2_0_0_cluster_spec_from_entity_status(entity_status: rde_2_0_0.Sta
     :param rde_2_0_0.Status entity_status: Entity Status as defined in rde_2_0_0  # noqa: E501
     :return: Cluster Specification as defined in rde_2_0_0 model
     """
+
     # Currently only single control-plane is supported.
-    if entity_status.nodes.control_plane.sizing_class:
-        control_plane = rde_2_0_0.ControlPlane(
-            sizing_class=entity_status.nodes.control_plane.sizing_class,
-            storage_profile=entity_status.nodes.control_plane.storage_profile,
-            cpu=None,
-            memory=None,
-            count=1)
-    else:
-        control_plane = rde_2_0_0.ControlPlane(
-            sizing_class=None,
-            storage_profile=entity_status.nodes.control_plane.storage_profile,
-            cpu=entity_status.nodes.control_plane.cpu,
-            memory=entity_status.nodes.control_plane.memory,
-            count=1)
+    control_plane_sizing_class = None
+    control_plane_storage_profile = None
+    control_plane_cpu = None
+    control_plane_memory = None
+    if (
+        entity_status is not None and  # noqa: W504
+        entity_status.nodes is not None and  # noqa: W504
+        entity_status.nodes.control_plane is not None
+    ):
+        control_plane_sizing_class = entity_status.nodes.control_plane.sizing_class  # noqa: E501
+        control_plane_storage_profile = entity_status.nodes.control_plane.storage_profile  # noqa: E501
+        control_plane_cpu = entity_status.nodes.control_plane.cpu
+        control_plane_memory = entity_status.nodes.control_plane.memory
+        if control_plane_sizing_class:
+            control_plane_cpu = None
+            control_plane_memory = None
+    control_plane = rde_2_0_0.ControlPlane(
+        sizing_class=control_plane_sizing_class,
+        storage_profile=control_plane_storage_profile,
+        cpu=control_plane_cpu,
+        memory=control_plane_memory,
+        count=1)
 
-    workers_count = len(entity_status.nodes.workers)
-    if workers_count == 0:
-        workers = rde_2_0_0.Workers(sizing_class=None,
-                                    cpu=None,
-                                    memory=None,
-                                    storage_profile=None,
-                                    count=0)
-    else:
-        if entity_status.nodes.workers[0].sizing_class:
-            workers = rde_2_0_0.Workers(
-                sizing_class=entity_status.nodes.workers[0].sizing_class,
-                cpu=None,
-                memory=None,
-                storage_profile=entity_status.nodes.workers[0].storage_profile,
-                count=workers_count)
-        else:
-            workers = rde_2_0_0.Workers(
-                sizing_class=None,
-                storage_profile=entity_status.nodes.workers[0].storage_profile,
-                cpu=entity_status.nodes.workers[0].cpu,
-                memory=entity_status.nodes.workers[0].memory,
-                count=workers_count)
+    workers_count = 0
+    worker_sizing_class = None
+    worker_storage_profile = None
+    worker_cpu = None
+    worker_memory = None
+    if (
+        entity_status is not None and  # noqa: W504
+        entity_status.nodes is not None and  # noqa: W504
+        entity_status.nodes.workers is not None
+    ):
+        workers_count = len(entity_status.nodes.workers)
+        if workers_count > 0:
+            worker_sizing_class = entity_status.nodes.workers[0].sizing_class
+            worker_storage_profile = entity_status.nodes.workers[0].storage_profile  # noqa: E501
+            worker_cpu = entity_status.nodes.workers[0].cpu
+            worker_memory = entity_status.nodes.workers[0].memory
+        if worker_sizing_class:
+            worker_cpu = None
+            worker_memory = None
+    workers = rde_2_0_0.Workers(sizing_class=worker_sizing_class,
+                                cpu=worker_cpu,
+                                memory=worker_memory,
+                                storage_profile=worker_storage_profile,
+                                count=workers_count)
 
-    nfs_count = len(entity_status.nodes.nfs)
-    if nfs_count == 0:
-        nfs = rde_2_0_0.Nfs(sizing_class=None, storage_profile=None,
-                            count=0)
-    else:
-        nfs = rde_2_0_0.Nfs(
-            sizing_class=entity_status.nodes.nfs[0].sizing_class,  # noqa: E501
-            storage_profile=entity_status.nodes.nfs[
-                0].storage_profile, count=nfs_count)
+    nfs_count = 0
+    nfs_sizing_class = None
+    nfs_storage_profile = None
+    if (
+        entity_status is not None and  # noqa: W504
+        entity_status.nodes is not None and  # noqa: W504
+        entity_status.nodes.nfs is not None
+    ):
+        nfs_count = len(entity_status.nodes.nfs)
+        if nfs_count > 0:
+            nfs_sizing_class = entity_status.nodes.nfs[0].sizing_class
+            nfs_storage_profile = entity_status.nodes.nfs[0].storage_profile
+    nfs = rde_2_0_0.Nfs(
+        sizing_class=nfs_sizing_class,
+        storage_profile=nfs_storage_profile,
+        count=nfs_count)
 
     k8_distribution = rde_2_0_0.Distribution(
         template_name=entity_status.cloud_properties.distribution.template_name,  # noqa: E501
