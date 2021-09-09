@@ -11,7 +11,7 @@ mkdir -p /var/log/cse/customization
 
 trap 'catch $? $LINENO' ERR
 
-set -e
+set -ex
 
 echo "$(date) This script was called with $1" &>> /var/log/cse/customization/status.log
 
@@ -59,16 +59,18 @@ vmtoolsd --cmd "info-set guestinfo.postcustomization.store.sshkey.status success
 
 
 vmtoolsd --cmd "info-set guestinfo.postcustomization.nameserverconfig.resolvconf.status in_progress"
-  echo 'nameserver 8.8.8.8
-nameserver 8.8.4.4
-nameserver 10.16.188.210
-nameserver 10.118.254.1' > /etc/resolv.conf
+  cat > /etc/systemd/resolved.conf << END
+[Resolve]
+DNS=10.166.1.201 8.8.8.8
+END
+
+  systemctl daemon-reload
+  systemctl restart systemd-resolved.service
+  ln -fs /run/systemd/resolve/resolv.conf /etc/resolv.conf
 vmtoolsd --cmd "info-set guestinfo.postcustomization.nameserverconfig.resolvconf.status successful"
 
 
 vmtoolsd --cmd "info-set guestinfo.postcustomization.kubeadm.node.join.status in_progress"
-  kubeadm_config_path=/root/kubeadm-defaults-join.conf
-
   # tag images
   coredns_image_version=""
   etcd_image_version=""
@@ -90,7 +92,8 @@ vmtoolsd --cmd "info-set guestinfo.postcustomization.kubeadm.node.join.status in
     fi
   done
 
-  echo "---
+  cat > /root/kubeadm-defaults-join.conf << END
+---
 apiVersion: kubeadm.k8s.io/v1beta2
 kind: JoinConfiguration
 caCertPath: /etc/kubernetes/pki/ca.crt
@@ -105,9 +108,10 @@ nodeRegistration:
   criSocket: /run/containerd/containerd.sock
   kubeletExtraArgs:
     cloud-provider: external
----" > /root/kubeadm-defaults-join.conf
+---
+END
 
-  kubeadm join --config $kubeadm_config_path
+  kubeadm join --config /root/kubeadm-defaults-join.conf
 vmtoolsd --cmd "info-set guestinfo.postcustomization.kubeadm.node.join.status successful"
 
 echo "$(date) post customization script execution completed" &>> /var/log/cse/customization/status.log

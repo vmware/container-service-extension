@@ -8,7 +8,7 @@ import re
 import string
 import threading
 import time
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, Union
 import urllib
 
 import pkg_resources
@@ -24,6 +24,7 @@ from container_service_extension.common.constants.server_constants import Cluste
 from container_service_extension.common.constants.server_constants import DefEntityOperation  # noqa: E501
 from container_service_extension.common.constants.server_constants import DefEntityOperationStatus  # noqa: E501
 from container_service_extension.common.constants.server_constants import DefEntityPhase  # noqa: E501
+from container_service_extension.common.constants.server_constants import DISK_ENABLE_UUID  # noqa: E501
 from container_service_extension.common.constants.server_constants import KUBE_CONFIG  # noqa: E501
 from container_service_extension.common.constants.server_constants import KUBEADM_TOKEN_INFO  # noqa: E501
 from container_service_extension.common.constants.server_constants import LocalTemplateKey  # noqa: E501
@@ -231,6 +232,7 @@ class ClusterService(abstract_broker.AbstractBroker):
         cluster_name: Optional[str] = None
         org_name: Optional[str] = None
         ovdc_name: Optional[str] = None
+        curr_rde: Optional[Union[common_models.DefEntity, Tuple[common_models.DefEntity, dict]]] = None
         try:
             cluster_name = input_native_entity.metadata.name
             org_name = input_native_entity.metadata.org_name
@@ -706,8 +708,10 @@ class ClusterService(abstract_broker.AbstractBroker):
         expose_ip: str = ''
         network_name = ''
         client_v36 = self.context.get_client(api_version=DEFAULT_API_VERSION)
+        curr_rde: Optional[Union[common_models.DefEntity, Tuple[common_models.DefEntity, dict]]] = None
         try:
             cluster_name = input_native_entity.metadata.name
+            vcd_host = input_native_entity.metadata.site
             org_name = input_native_entity.metadata.org_name
             ovdc_name = input_native_entity.metadata.virtual_data_center_name
             num_workers = input_native_entity.spec.topology.workers.count
@@ -720,6 +724,26 @@ class ClusterService(abstract_broker.AbstractBroker):
             ssh_key = input_native_entity.spec.settings.ssh_key
             rollback = input_native_entity.spec.settings.rollback_on_failure
             expose = input_native_entity.spec.settings.network.expose
+
+            k8s_pod_cidr = TKGM_DEFAULT_POD_NETWORK_CIDR
+            if (
+                input_native_entity.spec.settings is not None
+                and input_native_entity.spec.settings.network is not None
+                and input_native_entity.spec.settings.network.pods is not None
+                and input_native_entity.spec.settings.network.pods.cidr_blocks is not None
+                and len(input_native_entity.spec.settings.network.pods.cidr_blocks) > 0
+            ):
+                k8s_pod_cidr = input_native_entity.spec.settings.network.pods.cidr_blocks[0]
+
+            k8s_svc_cidr = TKGM_DEFAULT_SERVICE_CIDR
+            if (
+                input_native_entity.spec.settings is not None
+                and input_native_entity.spec.settings.network is not None
+                and input_native_entity.spec.settings.network.services is not None
+                and input_native_entity.spec.settings.network.services.cidr_blocks is not None
+                and len(input_native_entity.spec.settings.network.services.cidr_blocks) > 0
+            ):
+                k8s_svc_cidr = input_native_entity.spec.settings.network.services.cidr_blocks[0]
 
             org = vcd_utils.get_org(client_v36, org_name=org_name)
             vdc = vcd_utils.get_vdc(client_v36, vdc_name=ovdc_name, org=org)
@@ -782,12 +806,15 @@ class ClusterService(abstract_broker.AbstractBroker):
                 expose_ip, _ = _add_control_plane_nodes(
                     sysadmin_client_v36,
                     num_nodes=1,
+                    vcd_host=vcd_host,
                     org=org,
                     vdc=vdc,
                     vapp=vapp,
                     catalog_name=catalog_name,
                     template=template,
                     network_name=network_name,
+                    k8s_pod_cidr=k8s_pod_cidr,
+                    k8s_svc_cidr=k8s_svc_cidr,
                     storage_profile=control_plane_storage_profile,
                     ssh_key=ssh_key,
                     sizing_class_name=control_plane_sizing_class,
@@ -946,9 +973,14 @@ class ClusterService(abstract_broker.AbstractBroker):
                     self.sysadmin_entity_svc.delete_entity(cluster_id,
                                                            invoke_hooks=False)
                 except Exception:
-                    LOGGER.error("Failed to delete the defined entity for "
-                                 f"cluster '{cluster_name}' with state "
-                                 f"'{curr_rde.state}'", exc_info=True)
+                    if curr_rde is not None:
+                        LOGGER.error("Failed to delete the defined entity for "
+                                     f"cluster '{cluster_name}' with state "
+                                     f"'{curr_rde.state}'", exc_info=True)
+                    else:
+                        LOGGER.error(f"Failed to delete the defined entity for "
+                                     f"cluster '{cluster_name}' with unknown "
+                                     f"state", exc_info=True)
 
             self._update_task(BehaviorTaskStatus.ERROR,
                               message=msg,
@@ -1808,18 +1840,22 @@ def _get_tkgm_template(name: str):
 def _add_control_plane_nodes(
         sysadmin_client,
         num_nodes,
+        vcd_host,
         org,
         vdc,
         vapp,
         catalog_name,
         template,
         network_name,
+        k8s_pod_cidr,
+        k8s_svc_cidr,
         storage_profile=None,
         ssh_key=None,
         sizing_class_name=None,
         expose=False,
         cluster_name=None,
         cluster_id=None) -> Tuple[str, List[Dict]]:
+
     vcd_utils.raise_error_if_user_not_from_system_org(sysadmin_client)
 
     vm_specs = []
@@ -1853,9 +1889,15 @@ def _add_control_plane_nodes(
         )
         for spec in vm_specs:
             spec['cust_script'] = templated_script.format(
+                vcd_host=vcd_host,
+                org=org,
+                vdc=vdc,
+                network_name=network_name,
+                vip_subnet_cidr="",
+                cluster_id=cluster_id,
                 vm_host_name=spec['target_vm_name'],
-                service_cidr=TKGM_DEFAULT_SERVICE_CIDR,
-                pod_cidr=TKGM_DEFAULT_POD_NETWORK_CIDR,
+                service_cidr=k8s_svc_cidr,
+                pod_cidr=k8s_pod_cidr,
                 antrea_cni_version=ANTREA_CNI_VERSION,
                 ssh_key=ssh_key if ssh_key else '',
                 control_plane_endpoint='',
@@ -1897,13 +1939,22 @@ def _add_control_plane_nodes(
                     control_plane_endpoint = expose_ip
                 except Exception as err:
                     LOGGER.error(f"Exposing cluster failed: {str(err)}", exc_info=True)  # noqa: E501
+                    # This is a deviation from native: we do not want silent failures when expose
+                    # functionality fails.
+                    raise
 
             # If expose is set, control_plane_endpoint is exposed ip
             # Else control_plane_endpoint is internal_ip
             cust_script = templated_script.format(
+                vcd_host=vcd_host,
+                org=org.get_name(),
+                vdc=vdc.name,
+                network_name=network_name,
+                vip_subnet_cidr="",
+                cluster_id=cluster_id,
                 vm_host_name=spec['target_vm_name'],
-                service_cidr=TKGM_DEFAULT_SERVICE_CIDR,
-                pod_cidr=TKGM_DEFAULT_POD_NETWORK_CIDR,
+                service_cidr=k8s_svc_cidr,
+                pod_cidr=k8s_pod_cidr,
                 antrea_cni_version=ANTREA_CNI_VERSION,
                 ssh_key=ssh_key if ssh_key else '',
                 control_plane_endpoint=f"{control_plane_endpoint}:6443"
@@ -1956,11 +2007,15 @@ def _add_control_plane_nodes(
             )
 
             time.sleep(10)
-            task = vm.reboot()
-            sysadmin_client.get_task_monitor().wait_for_status(
-                task,
-                callback=wait_for_vm_power_on
-            )
+            try:
+                task = vm.reboot()
+                sysadmin_client.get_task_monitor().wait_for_status(
+                    task,
+                    callback=wait_for_vm_power_on
+                )
+            except Exception as err:
+                LOGGER.info(f"Reboot of [{vm_name}] failed. This implies that "
+                            f"the machine is undergoing reboot: [{err}]")
             vm.reload()
 
             # Note that this is an ordered list.
@@ -1971,13 +2026,22 @@ def _add_control_plane_nodes(
                 PostCustomizationPhase.NAMESERVER_SETUP,
                 PostCustomizationPhase.KUBEADM_INIT,
                 PostCustomizationPhase.KUBECTL_APPLY_CNI,
-                PostCustomizationPhase.KUBEADM_TOKEN_GENERATE
+                PostCustomizationPhase.KUBEADM_TOKEN_GENERATE,
             ]:
+                vapp.reload()
                 vcd_utils.wait_for_completion_of_post_customization_procedure(
                     vm,
-                    customization_phase=customization_phase.value,
+                    customization_phase=customization_phase.value,  # noqa: E501
                     logger=LOGGER
                 )
+            vm.reload()
+
+            task = vm.add_extra_config_element(DISK_ENABLE_UUID, "1", True)  # noqa: E501
+            sysadmin_client.get_task_monitor().wait_for_status(
+                task,
+                callback=wait_for_updating_disk_enable_uuid
+            )
+            vapp.reload()
 
     except Exception as err:
         LOGGER.error(err, exc_info=True)
@@ -1990,7 +2054,6 @@ def _add_control_plane_nodes(
 
         raise exceptions.NodeCreationError(node_list, str(err))
 
-    vapp.reload()
     return expose_ip, vm_specs
 
 
@@ -2082,11 +2145,15 @@ def _add_worker_nodes(sysadmin_client, num_nodes, org, vdc, vapp,
             )
 
             time.sleep(10)
-            task = vm.reboot()
-            sysadmin_client.get_task_monitor().wait_for_status(
-                task,
-                callback=wait_for_vm_power_on
-            )
+            try:
+                task = vm.reboot()
+                sysadmin_client.get_task_monitor().wait_for_status(
+                    task,
+                    callback=wait_for_vm_power_on
+                )
+            except Exception as err:
+                LOGGER.info(f"Reboot of [{vm_name}] failed. This implies that "
+                            f"the machine is undergoing reboot: [{err}]")
             vm.reload()
 
             LOGGER.debug(f"worker {vm_name} to join cluster using:{control_plane_join_cmd}")  # noqa: E501
@@ -2097,13 +2164,22 @@ def _add_worker_nodes(sysadmin_client, num_nodes, org, vdc, vapp,
                 PostCustomizationPhase.NETWORK_CONFIGURATION,
                 PostCustomizationPhase.STORE_SSH_KEY,
                 PostCustomizationPhase.NAMESERVER_SETUP,
-                PostCustomizationPhase.KUBEADM_NODE_JOIN
+                PostCustomizationPhase.KUBEADM_NODE_JOIN,
             ]:
+                vapp.reload()
                 vcd_utils.wait_for_completion_of_post_customization_procedure(
                     vm,
                     customization_phase=customization_phase.value,  # noqa: E501
                     logger=LOGGER
                 )
+            vm.reload()
+
+            task = vm.add_extra_config_element(DISK_ENABLE_UUID, "1", True)  # noqa: E501
+            sysadmin_client.get_task_monitor().wait_for_status(
+                task,
+                callback=wait_for_updating_disk_enable_uuid
+            )
+            vapp.reload()
 
     except Exception as err:
         LOGGER.error(err, exc_info=True)
@@ -2118,7 +2194,6 @@ def _add_worker_nodes(sysadmin_client, num_nodes, org, vdc, vapp,
 
         raise exceptions.NodeCreationError(node_list, str(err))
 
-    vapp.reload()
     return vm_specs
 
 
@@ -2198,6 +2273,10 @@ def _wait_for_guest_execution_callback(message, exception=None):
     LOGGER.debug(message)
     if exception is not None:
         LOGGER.error(f"exception: {str(exception)}")
+
+
+def wait_for_updating_disk_enable_uuid(task):
+    LOGGER.debug(f"enable disk uuid, status: {task.get('status').lower()}")  # noqa: E501
 
 
 def _create_k8s_software_string(software_name: str, software_version: str) -> str:  # noqa: E501
@@ -2280,7 +2359,6 @@ def _get_vm_specifications(
         }
         if sizing_class_href:
             spec['sizing_policy_href'] = sizing_class_href
-            spec['placement_policy_href'] = config['placement_policy_hrefs'][template[LocalTemplateKey.KIND]]  # noqa: E501
         if cust_script is not None:
             spec['cust_script'] = cust_script
         if storage_profile is not None:
