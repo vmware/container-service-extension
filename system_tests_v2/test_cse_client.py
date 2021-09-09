@@ -57,6 +57,7 @@ OVDC_DISABLE_TEST_PARAM = collections.namedtuple("OvdcDisableParam", "user passw
 SYSTEM_TOGGLE_TEST_PARAM = collections.namedtuple("SystemToggleTestParam", "user password cluster_name worker_count nfs_count rollback sizing_class storage_profile ovdc_network template_name template_revision expect_failure")  # noqa: E501
 CLUSTER_APPLY_TEST_PARAM = collections.namedtuple("ClusterApplyTestParam", "user password cluster_name worker_count nfs_count rollback sizing_class storage_profile ovdc_network template_name template_revision expected_phase retain_cluster")  # noqa: E501
 CLUSTER_DELETE_TEST_PARAM = collections.namedtuple("CluserDeleteTestParam", "user password cluster_name org ovdc expect_failure")  # noqa: E501
+CLUSTER_UPGRADE_TEST_PARAM = collections.namedtuple("ClusterUpgradeTestParam", "user password cluster_name worker_count nfs_count rollback sizing_class storage_profile ovdc_network upgrade_path expect_failure")  # noqa: E501
 
 
 @pytest.fixture(scope='module', autouse=True)
@@ -626,8 +627,8 @@ def _generate_cluster_apply_tests(test_users=None):
         test_users = \
             [
                 env.SYS_ADMIN_NAME,
-                # env.CLUSTER_ADMIN_NAME,
-                # env.CLUSTER_AUTHOR_NAME
+                env.CLUSTER_ADMIN_NAME,
+                env.CLUSTER_AUTHOR_NAME
             ]
 
     test_cases = []
@@ -636,65 +637,65 @@ def _generate_cluster_apply_tests(test_users=None):
             test_cases.extend(
                 [
                     # Invalid Sizing policy
-                    # CLUSTER_APPLY_TEST_PARAM(
-                    #     user=user,
-                    #     password=None,
-                    #     cluster_name=f"{env.USERNAME_TO_CLUSTER_NAME[user]}-case1",
-                    #     worker_count=0,
-                    #     nfs_count=0,
-                    #     rollback=True,
-                    #     template_name=template['name'],
-                    #     template_revision=template['revision'],
-                    #     ovdc_network=None,
-                    #     sizing_class="Invalid_value",
-                    #     storage_profile=None,
-                    #     expected_phase="CREATE:FAILED"
-                    # ),
+                    CLUSTER_APPLY_TEST_PARAM(
+                        user=user,
+                        password=None,
+                        cluster_name=f"{env.USERNAME_TO_CLUSTER_NAME[user]}-case1",
+                        worker_count=0,
+                        nfs_count=0,
+                        rollback=True,
+                        template_name=template['name'],
+                        template_revision=template['revision'],
+                        ovdc_network=None,
+                        sizing_class="Invalid_value",
+                        storage_profile=None,
+                        expected_phase="CREATE:FAILED"
+                    ),
                     # Invalid Storage profile
-                    # CLUSTER_APPLY_TEST_PARAM(
-                    #     user=user,
-                    #     password=None,
-                    #     worker_count=0,
-                    #     nfs_count=0,
-                    #     rollback=True,
-                    #     template_name=template['name'],
-                    #     template_revision=template['revision'],
-                    #     ovdc_network=None,
-                    #     sizing_class=None,
-                    #     storage_profile="Invalid_value",
-                    #     cluster_name=f"{env.USERNAME_TO_CLUSTER_NAME[user]}-case2",
-                    #     expected_phase="CREATE:FAILED"
-                    # ),
+                    CLUSTER_APPLY_TEST_PARAM(
+                        user=user,
+                        password=None,
+                        worker_count=0,
+                        nfs_count=0,
+                        rollback=True,
+                        template_name=template['name'],
+                        template_revision=template['revision'],
+                        ovdc_network=None,
+                        sizing_class=None,
+                        storage_profile="Invalid_value",
+                        cluster_name=f"{env.USERNAME_TO_CLUSTER_NAME[user]}-case2",
+                        expected_phase="CREATE:FAILED"
+                    ),
                     # Invalid Network
-                    # CLUSTER_APPLY_TEST_PARAM(
-                    #     user=user,
-                    #     password=None,
-                    #     worker_count=0,
-                    #     nfs_count=0,
-                    #     rollback=True,
-                    #     template_name=template['name'],
-                    #     template_revision=template['revision'],
-                    #     ovdc_network="Invalid_value",
-                    #     sizing_class=None,
-                    #     storage_profile=None,
-                    #     cluster_name=f"{env.USERNAME_TO_CLUSTER_NAME[user]}-case3",
-                    #     expected_phase="CREATE:FAILED"
-                    # ),
+                    CLUSTER_APPLY_TEST_PARAM(
+                        user=user,
+                        password=None,
+                        worker_count=0,
+                        nfs_count=0,
+                        rollback=True,
+                        template_name=template['name'],
+                        template_revision=template['revision'],
+                        ovdc_network="Invalid_value",
+                        sizing_class=None,
+                        storage_profile=None,
+                        cluster_name=f"{env.USERNAME_TO_CLUSTER_NAME[user]}-case3",
+                        expected_phase="CREATE:FAILED"
+                    ),
                     # Invalid network with rollback
-                    # CLUSTER_APPLY_TEST_PARAM(
-                    #     user=user,
-                    #     password=None,
-                    #     worker_count=0,
-                    #     nfs_count=0,
-                    #     rollback=False,
-                    #     template_name=template['name'],
-                    #     template_revision=template['revision'],
-                    #     ovdc_network="Invalid_value",
-                    #     sizing_class=None,
-                    #     storage_profile=None,
-                    #     cluster_name=f"{env.USERNAME_TO_CLUSTER_NAME[user]}-case4",
-                    #     expected_phase="CREATE:FAILED"
-                    # ),
+                    CLUSTER_APPLY_TEST_PARAM(
+                        user=user,
+                        password=None,
+                        worker_count=0,
+                        nfs_count=0,
+                        rollback=False,
+                        template_name=template['name'],
+                        template_revision=template['revision'],
+                        ovdc_network="Invalid_value",
+                        sizing_class=None,
+                        storage_profile=None,
+                        cluster_name=f"{env.USERNAME_TO_CLUSTER_NAME[user]}-case4",
+                        expected_phase="CREATE:FAILED"
+                    ),
                     # Valid case
                     CLUSTER_APPLY_TEST_PARAM(
                         user=user,
@@ -711,23 +712,6 @@ def _generate_cluster_apply_tests(test_users=None):
                         expected_phase="CREATE:SUCCEEDED",
                         retain_cluster=True
                     ),
-                    # resize a failed deployment
-                    # expected status is still CREATE:FAILED because the
-                    # request wont be acknowledged by CSE server
-                    # CLUSTER_APPLY_TEST_PARAM(
-                    #     user=user,
-                    #     password=None,
-                    #     worker_count=1,
-                    #     nfs_count=0,
-                    #     rollback=False,
-                    #     template_name=template['name'],
-                    #     template_revision=template['revision'],
-                    #     ovdc_network='Invalid_value',
-                    #     sizing_class=None,
-                    #     storage_profile=None,
-                    #     cluster_name=f"{env.USERNAME_TO_CLUSTER_NAME[user]}-case4",
-                    #     expected_phase='CREATE:FAILED'
-                    # ),
                     # Resize up a valid deployment
                     CLUSTER_APPLY_TEST_PARAM(
                         user=user,
@@ -1083,6 +1067,133 @@ def test_0090_vcd_cse_cluster_delete(cluster_delete_param: CLUSTER_DELETE_TEST_P
             vdc_href=env.TEST_VDC_HREF,
             logger=PYTEST_LOGGER), \
             f"Cluster {cluster_delete_param.cluster_name} exists when it should not"  # noqa: E501
+
+
+def generate_cluster_upgrade_tests(test_users=None):
+    """Generate test cases for upgrade test.
+
+    Test format:
+    user, template_upgrade_path, should_expect_failure
+    """
+    if not test_users:
+        # test for all the users
+        test_users = \
+            [
+                env.SYS_ADMIN_NAME
+            ]
+    test_cases = []
+    for user in test_users:
+        for upgrade_path in env.TEMPLATE_UPGRADE_PATH_LIST:
+            test_cases.extend([
+                CLUSTER_UPGRADE_TEST_PARAM(
+                    user=user,
+                    password=None,
+                    cluster_name=env.USERNAME_TO_CLUSTER_NAME[user],
+                    worker_count=1,
+                    nfs_count=0,
+                    rollback=True,
+                    sizing_class=None,
+                    storage_profile=None,
+                    ovdc_network=env.TEST_NETWORK,
+                    expect_failure=False,
+                    upgrade_path=upgrade_path
+                )
+            ])
+    return test_cases
+
+
+@pytest.fixture
+def cluster_upgrade_param(request):
+    param: CLUSTER_UPGRADE_TEST_PARAM = request.param
+    # user, cluster_name, upgrade_path = request.param
+
+    # cleanup clusters
+    env.delete_vapp(param.cluster_name, vdc_href=env.TEST_VDC_HREF)
+    env.delete_rde(param.cluster_name)
+
+    # login as the user
+    login_cmd = env.USERNAME_TO_LOGIN_CMD[param.user]
+    env.CLI_RUNNER.invoke(vcd, login_cmd.split(), catch_exceptions=False)
+
+    PYTEST_LOGGER.debug(f"Logged in as {param.user}")
+
+    # create initial cluster
+    initial_cluster_tempalte_name = param.upgrade_path[0]['name']
+    initial_cluster_template_revision = param.upgrade_path[0]['revision']
+    spec_params = {
+        'worker_count': param.worker_count,
+        'nfs_count': param.nfs_count,
+        'rollback': param.rollback,
+        'template_name': initial_cluster_tempalte_name,
+        'template_revision': initial_cluster_template_revision,
+        'network': param.ovdc_network,
+        'sizing_class': param.sizing_class,
+        'storage_profile': param.storage_profile,
+        'cluster_name': param.cluster_name
+    }
+    create_apply_spec(spec_params)
+
+    # enable ovdc for cluster creation
+    cmd = f"cse ovdc enable --native --org {env.TEST_ORG} {env.TEST_VDC}"
+    env.CLI_RUNNER.invoke(vcd, cmd.split(), catch_exceptions=True)
+
+    # create initial cluster
+    cmd_list = [
+        testutils.CMD_BINDER(
+            cmd=f"cse cluster apply {env.APPLY_SPEC_PATH} ",
+            exit_code=0,
+            validate_output_func=_follow_apply_output(expect_failure=False),  # noqa: E501
+            test_user=param.user)
+    ]
+    testutils.execute_commands(cmd_list, logger=PYTEST_LOGGER)
+
+    yield param
+
+    env.delete_rde(param.cluster_name)
+    env.delete_vapp(param.cluster_name, vdc_href=env.TEST_VDC_HREF)
+
+    env.CLI_RUNNER.invoke(vcd, ['logout'])
+    PYTEST_LOGGER.debug(f"Logged out as {param.user}")
+
+
+@pytest.mark.skipif(not env.TEST_CLUSTER_UPGRADES,
+                    reason="Configuration specifies 'test_cluster_upgrades' as False")  # noqa: E501
+@pytest.mark.parametrize('cluster_upgrade_param', generate_cluster_upgrade_tests(test_users=[env.SYS_ADMIN_NAME]), indirect=["cluster_upgrade_param"])  # noqa: E501
+def test_0100_cluster_upgrade_through_apply(cluster_upgrade_param: CLUSTER_UPGRADE_TEST_PARAM):  # noqa: E501
+    upgrade_path = cluster_upgrade_param.upgrade_path
+
+    # The initial cluster will be created in the fixture
+    # 'cluster_upgrade_param'
+    # The created cluster will be using the first template in
+    # `cluster_upgrade_param.upgrade_path`.
+    # The test should proceed by upgrading the initial cluster step by step
+    # to rest of the templates in the upgrade path
+    spec = {
+        'worker_count': cluster_upgrade_param.worker_count,
+        'nfs_count': cluster_upgrade_param.nfs_count,
+        'rollback': cluster_upgrade_param.rollback,
+        'network': cluster_upgrade_param.ovdc_network,
+        'sizing_class': cluster_upgrade_param.sizing_class,
+        'storage_profile': cluster_upgrade_param.storage_profile,
+        'cluster_name': cluster_upgrade_param.cluster_name
+    }
+    for template in upgrade_path[1:]:
+        # create spec
+        spec['template_name'] = template['name']
+        spec['template_revision'] = template['revision']
+        create_apply_spec(spec)
+
+        # upgrade the cluster
+        cmd_list = [
+            testutils.CMD_BINDER(
+                cmd=f"cse cluster apply {env.APPLY_SPEC_PATH} ",
+                exit_code=0,
+                validate_output_func=_follow_apply_output(expect_failure=cluster_upgrade_param.expect_failure),  # noqa: E501
+                test_user=cluster_upgrade_param.user)
+        ]
+        testutils.execute_commands(cmd_list, logger=PYTEST_LOGGER)
+        assert _get_cluster_phase(spec['cluster_name'], cluster_upgrade_param.user) == 'UPGRADE:SUCCEEDED', \
+            "Expected RDE phase to be 'UPGRADE:SUCCEEDED'"  # noqa: E501
 
 
 @pytest.mark.parametrize("ovdc_disable_test_case",

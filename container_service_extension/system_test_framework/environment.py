@@ -15,6 +15,7 @@ from pyvcloud.vcd.exceptions import MissingRecordException
 from pyvcloud.vcd.org import Org
 from pyvcloud.vcd.role import Role
 from pyvcloud.vcd.vdc import VDC
+import semantic_version
 from system_tests_v2.pytest_logger import PYTEST_LOGGER
 from vcd_cli.vcd import vcd
 
@@ -22,6 +23,7 @@ import container_service_extension.common.constants.server_constants as server_c
 import container_service_extension.common.constants.shared_constants as shared_constants  # noqa: E501
 from container_service_extension.common.utils.core_utils import get_max_api_version  # noqa: E501
 import container_service_extension.common.utils.pyvcloud_utils as pyvcloud_utils  # noqa: E501
+from container_service_extension.common.utils.server_utils import get_template_descriptor_keys  # noqa: E501
 import container_service_extension.exception.exceptions as cse_exceptions
 from container_service_extension.installer.right_bundle_manager import RightBundleManager  # noqa: E501
 from container_service_extension.installer.templates.remote_template_manager import RemoteTemplateManager  # noqa: E501
@@ -91,6 +93,8 @@ VCD_API_VERSION_TO_USE = None
 # config file 'test' section flags
 TEARDOWN_INSTALLATION = None
 TEARDOWN_CLUSTERS = None
+TEST_CLUSTER_UPGRADES = None
+TEMPLATE_UPGRADE_PATH_LIST = None
 TEST_ALL_TEMPLATES = None
 TEST_ORG = None
 TEST_VDC = None
@@ -130,18 +134,68 @@ USERNAME_TO_CLUSTER_NAME = {
 }
 
 
+def _populate_template_upgrade_paths(config, logger=NULL_LOGGER):
+    global TEMPLATE_UPGRADE_PATH_LIST
+    rtm = RemoteTemplateManager(
+        config['broker']['remote_template_cookbook_url'],
+        legacy_mode=config['service']['legacy_mode'])
+    # The following function call will filter out the templates based on
+    # cse version as well.
+    template_cookbook = rtm.get_filtered_remote_template_cookbook()
+    logger.debug(f"Template cookbook: {template_cookbook}")
+    all_template_definitions = template_cookbook['templates']
+    # filter out photon templates
+    all_ubuntu_templates = \
+        [template_definition for template_definition in all_template_definitions if 'ubuntu' in template_definition['name']]  # noqa: E501
+    print(all_ubuntu_templates)
+    logger.debug(f"All template definitions: {all_ubuntu_templates}")
+    RT_KEYS = get_template_descriptor_keys(rtm.cookbook_version)
+
+    template_name_to_desc = {}
+    for t in all_ubuntu_templates:
+        template_name_to_desc[t['name']] = t
+
+    max_ubuntu_template = all_ubuntu_templates[0]
+    max_ubuntu_template_version = semantic_version.Version(max_ubuntu_template[RT_KEYS.KUBERNETES_VERSION])  # noqa: E501
+    for t in all_ubuntu_templates[1:]:
+        if semantic_version.Version(t[RT_KEYS.KUBERNETES_VERSION]) > max_ubuntu_template_version:  # noqa: E501
+            max_ubuntu_template = t
+            max_ubuntu_template_version = semantic_version.Version(t[RT_KEYS.KUBERNETES_VERSION])  # noqa: E501
+
+    paths_arr = [[max_ubuntu_template]]
+
+    # this list will contain all the bottom to top upgrade paths.
+    TEMPLATE_UPGRADE_PATH_LIST = []
+
+    while len(paths_arr) > 0:
+        path = paths_arr.pop()
+        prev_template = path[0]
+        for t_name in prev_template.get('upgrade_from', []):
+            if t_name not in template_name_to_desc:
+                # Add existing path to the final arr
+                TEMPLATE_UPGRADE_PATH_LIST.append(path)
+            else:
+                t_desc = template_name_to_desc.get(t_name)
+                if t_name != prev_template['name']:
+                    new_path = [t_desc] + path
+                    paths_arr.append(new_path)
+    logger.debug(f"Collected upgrade path list: {TEMPLATE_UPGRADE_PATH_LIST}")
+
+
 def _init_test_vars(config, logger=NULL_LOGGER):
     """Initialize all the environment variables that are used for test.
 
     :param dict test_config: test section of config.yaml
     """
     global TEMPLATE_DEFINITIONS, TEARDOWN_INSTALLATION, TEARDOWN_CLUSTERS, \
-        TEST_ALL_TEMPLATES, TEST_ORG, TEST_VDC, TEST_NETWORK
+        TEST_ALL_TEMPLATES, TEST_CLUSTER_UPGRADES, TEST_ORG, TEST_VDC, \
+        TEST_NETWORK
     test_config = config['test']
     if test_config is not None:
         TEARDOWN_INSTALLATION = test_config.get('teardown_installation', True)
         TEARDOWN_CLUSTERS = test_config.get('teardown_clusters', True)
         TEST_ALL_TEMPLATES = test_config.get('test_all_templates', False)
+        TEST_CLUSTER_UPGRADES = test_config.get('test_cluster_upgrades', False)
         TEST_ORG = test_config.get('org', 'test-org')
         TEST_VDC = test_config.get('vdc', 'test-vdc')
         TEST_NETWORK = test_config.get('network', 'test-network')
@@ -165,6 +219,7 @@ def _init_test_vars(config, logger=NULL_LOGGER):
                             specified_templates_def.append(template_def)
                             break
             TEMPLATE_DEFINITIONS = specified_templates_def
+    _populate_template_upgrade_paths(config, logger=NULL_LOGGER)
 
 
 _init_test_vars(testutils.yaml_to_dict(BASE_CONFIG_FILEPATH))
