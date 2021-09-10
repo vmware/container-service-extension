@@ -558,7 +558,6 @@ class ClusterService(abstract_broker.AbstractBroker):
         desired_template_revision = input_native_entity.spec.distribution.template_revision  # noqa: E501
         if current_template_name != desired_template_name or current_template_revision != desired_template_revision:  # noqa: E501
             raise Exception(
-                "Looks like an upgrade is required. "
                 "Upgrades not supported for TKGm in this version of CSE"
             )
         raise exceptions.CseServerError(
@@ -2072,6 +2071,9 @@ def _add_worker_nodes(sysadmin_client, num_nodes, org, vdc, vapp,
         templated_script = get_cluster_script_file_contents(
             ClusterScriptFile.NODE, ClusterScriptFile.VERSION_2_X_TKGM)
 
+        # Example format:
+        # kubeadm join 192.168.7.8:6443 --token 5edbci.duu55v7k6hdv52sm \
+        #     --discovery-token-ca-cert-hash sha256:26326dcdef13e627e30ce93800e549855cba3eb03dbedcdab57c696bea17b02d
         parts = control_plane_join_cmd.split()
         num_parts = 7
         if len(parts) != num_parts:
