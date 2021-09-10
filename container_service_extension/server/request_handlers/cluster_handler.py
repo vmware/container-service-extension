@@ -98,7 +98,7 @@ def native_cluster_list(data: dict, op_ctx: ctx.OperationContext):
 
     :return: List
     """
-    svc = cluster_service_factory.ClusterServiceFactory(_get_request_context(op_ctx)).get_cluster_service()  # noqa: E501
+    svc = cluster_service_factory.ClusterServiceFactory(_get_request_context(op_ctx)).get_cluster_service(skip_tkgm_check=True)  # noqa: E501
     filters = data.get(RequestKey.QUERY_PARAMS, {})
     page_number = int(filters.get(PaginationKey.PAGE_NUMBER,
                                   CSE_PAGINATION_FIRST_PAGE_NUMBER))
@@ -133,7 +133,7 @@ def cluster_list(data: dict, op_ctx: ctx.OperationContext):
 
     :return: List
     """
-    svc = cluster_service_factory.ClusterServiceFactory(_get_request_context(op_ctx)).get_cluster_service()  # noqa: E501
+    svc = cluster_service_factory.ClusterServiceFactory(_get_request_context(op_ctx)).get_cluster_service(skip_tkgm_check=True)  # noqa: E501
     # response should not be paginated
     return [def_entity.to_dict() for def_entity in
             svc.list_clusters(data.get(RequestKey.QUERY_PARAMS, {}))]
@@ -151,6 +151,7 @@ def cluster_info(data: dict, op_ctx: ctx.OperationContext):
 
     :return: Dict
     """
+    op_ctx.entity_id = data[RequestKey.CLUSTER_ID]  # hack for passing entity id  # noqa: E501
     svc = cluster_service_factory.ClusterServiceFactory(_get_request_context(op_ctx)).get_cluster_service()  # noqa: E501
     cluster_id = data[RequestKey.CLUSTER_ID]
     return svc.get_cluster_info(cluster_id).to_dict()
@@ -222,6 +223,7 @@ def cluster_upgrade_plan(data, op_ctx: ctx.OperationContext):
 
     :return: List[Tuple(str, str)]
     """
+    op_ctx.entity_id = data[RequestKey.CLUSTER_ID]  # hack for passing entity id  # noqa: E501
     svc = cluster_service_factory.ClusterServiceFactory(_get_request_context(op_ctx)).get_cluster_service()  # noqa: E501
     return svc.get_cluster_upgrade_plan(data[RequestKey.CLUSTER_ID])
 
@@ -286,6 +288,7 @@ def nfs_node_delete(data, op_ctx: ctx.OperationContext):
 @request_utils.cluster_api_exception_handler
 def cluster_acl_info(data: dict, op_ctx: ctx.OperationContext):
     """Request handler for cluster acl list operation."""
+    op_ctx.entity_id = data[RequestKey.CLUSTER_ID]  # hack for passing entity id  # noqa: E501
     svc = cluster_service_factory.ClusterServiceFactory(_get_request_context(op_ctx)).get_cluster_service()  # noqa: E501
     cluster_id = data[RequestKey.CLUSTER_ID]
     query = data.get(RequestKey.QUERY_PARAMS, {})
@@ -306,6 +309,7 @@ def cluster_acl_info(data: dict, op_ctx: ctx.OperationContext):
 @request_utils.cluster_api_exception_handler
 def cluster_acl_update(data: dict, op_ctx: ctx.OperationContext):
     """Request handler for cluster acl update operation."""
+    op_ctx.entity_id = data[RequestKey.CLUSTER_ID]  # hack for passing entity id  # noqa: E501
     svc = cluster_service_factory.ClusterServiceFactory(_get_request_context(op_ctx)).get_cluster_service()  # noqa: E501
     cluster_id = data[RequestKey.CLUSTER_ID]
     update_acl_entries = data.get(RequestKey.INPUT_SPEC, {}).get(ClusterAclKey.ACCESS_SETTING)  # noqa: E501
