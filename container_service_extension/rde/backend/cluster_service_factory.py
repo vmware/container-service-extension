@@ -2,8 +2,6 @@
 # Copyright (c) 2021 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 
-import dataclasses
-
 import semantic_version
 
 from container_service_extension.common.constants.shared_constants import ClusterEntityKind  # noqa: E501
@@ -38,7 +36,7 @@ class ClusterServiceFactory:
             if not skip_tkgm_check and entity is None:
                 def_entity_svc = entity_service.DefEntityService(self.req_ctx.op_ctx.cloudapi_client)  # noqa: E501
                 def_entity = def_entity_svc.get_entity(self.req_ctx.op_ctx.entity_id)  # noqa: E501
-                entity = dataclasses.asdict(def_entity.entity)
+                entity = def_entity.entity.to_dict()
             if not skip_tkgm_check and entity.get('kind') == ClusterEntityKind.TKG_M.value:  # noqa: E501
                 return ClusterService2XTKGm(self.req_ctx)
             else:
