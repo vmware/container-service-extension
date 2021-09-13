@@ -289,7 +289,7 @@ def cluster_acl_info(data: dict, op_ctx: ctx.OperationContext):
     cluster_id = data[RequestKey.CLUSTER_ID]
     def_entity_service = entity_service.DefEntityService(op_ctx.cloudapi_client)  # noqa: E501
     def_entity = def_entity_service.get_entity(cluster_id)
-    rde_utils.raise_error_if_unsupported_cluster_operation(def_entity.entity.kind)  # noqa: E501
+    rde_utils.raise_error_if_tkgm_cluster_operation(def_entity.entity.kind)  # noqa: E501
     query = data.get(RequestKey.QUERY_PARAMS, {})
     page = int(query.get(PaginationKey.PAGE_NUMBER, CSE_PAGINATION_FIRST_PAGE_NUMBER))  # noqa: E501
     page_size = int(query.get(PaginationKey.PAGE_SIZE, CSE_PAGINATION_DEFAULT_PAGE_SIZE))  # noqa: E501
@@ -312,7 +312,7 @@ def cluster_acl_update(data: dict, op_ctx: ctx.OperationContext):
     cluster_id = data[RequestKey.CLUSTER_ID]
     def_entity_service = entity_service.DefEntityService(op_ctx.cloudapi_client)  # noqa: E501
     def_entity = def_entity_service.get_entity(cluster_id)
-    rde_utils.raise_error_if_unsupported_cluster_operation(def_entity.entity.kind)  # noqa: E501
+    rde_utils.raise_error_if_tkgm_cluster_operation(def_entity.entity.kind)  # noqa: E501
     svc = cluster_service_factory.ClusterServiceFactory(_get_request_context(op_ctx)).get_cluster_service()  # noqa: E501
     update_acl_entries = data.get(RequestKey.INPUT_SPEC, {}).get(ClusterAclKey.ACCESS_SETTING)  # noqa: E501
     svc.update_cluster_acl(cluster_id, update_acl_entries)
