@@ -42,11 +42,12 @@ CSE 3.1.1 beta.
 **Notes to System Administrator**  
 * CSE 3.1.1.0b1 is supposed to be a fresh install only release, and
 won't support upgrades to CSE 3.1.1.
-* It is advisable to deploy TKGm clusters with `expose` field set to `True`. Read more
-about `expose` functionality [here](CLUSTER_MANAGEMENT.html#expose_cluster).
+* It is mandatory to deploy TKGm clusters with `expose` field set to `True`. Read more
+about `expose` functionality [here](CLUSTER_MANAGEMENT.html#expose_cluster). External
+connectivity for the cluster is crucial for VCD CPI to work properly
 * Users deploying TKGm clusters should have atleast the rights required to deploy
 `exposed` native clusters and additionally the right `Full Control: CSE:NATIVECLUSTER`.
-This right is crucial for VCD CPI to work properly.  
+This right is crucial for VCD CPI to work properly.
 * Additionally, all TKGm clusters should be connected to a network that can access
 the public end point of the VCD.
 
