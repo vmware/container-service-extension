@@ -9,23 +9,25 @@ For greenfield installations, please get started with [CSE introduction](INTRO.h
 <a name="overview"></a>
 ## 1. Overview
 
-* CSE 3.1 need not be started with a particular VCD API version. It is now capable of 
+* CSE 3.1 need not be started with a particular VCD API version. It is now capable of
   accepting incoming requests at any supported VCD API version. Refer to changes in the [configuration file](#cse31-config).
-  
-* A new version of the template recipe cookbook 2.0.0 is introduced. Each template has 
-  a new descriptor that lets CSE 3.1 determine the templates it can support. 
+
+* A new version of the template recipe cookbook 2.0.0 is introduced. Each template has
+  a new descriptor that lets CSE 3.1 determine the templates it can support.
   Refer to changes in the [configuration file](#cse31-config)
-  
+
 * CSE CLI offers new capabilities to upgrade and share clusters. Refer to the [commands](CLUSTER_MANAGEMENT.html#cse31_cluster_apply) here.
 
-    
-* Kubernetes Clusters UI Plugin 3.0 offers a new capability to upgrade clusters. 
+
+* Kubernetes Clusters UI Plugin 3.0 offers a new capability to upgrade clusters.
   It also enables one to view clusters that are deployed across multisite VCD instances.
-  
-* Newer versions of native Kubernetes templates are available. Refer to 
+
+* Newer versions of native Kubernetes templates are available. Refer to
   [Template announcements](TEMPLATE_ANNOUNCEMENTS.html)
-  
+
 * CSE 3.1 drops the support with VCD 10.0.
+
+* Deprecation of TKGI (Enterprise PKS) - CSE Server and Kubernetes Container Clusters plug-in will soon drop support TKGI (previously known as Enterprise PKS). Consider using CSE-TKG or VCD-Tanzu for management of Kubernetes clusters with VCD.
 
 **Terminology:**
 * TKGS cluster ~ Tanzu Kubernetes Grid Service cluster ~ vSphere with Tanzu cluster
@@ -67,11 +69,11 @@ Refer to the [sample config file](CSE_CONFIG.html)
 
 1. Removal of property [api_version](CSE_CONFIG.html#api_version)
 2. Addition of property [legacy_mode](CSE_CONFIG.html#legacy_mode)
-3. [New template cookbook 2.0](CSE_CONFIG.md#template_cookbook_20) is introduced; 
+3. [New template cookbook 2.0](CSE_CONFIG.md#template_cookbook_20) is introduced;
    refer to the  `remote_template_cookbook_url` for the location
 4. [mqtt](CSE_CONFIG.html#mqtt) property must be enabled when CSE 3.1 is configured with VCD 10.3.
 
-#### 2.2.1 Greenfield installation 
+#### 2.2.1 Greenfield installation
 
 Refer to [CSE 3.1 installation](CSE_SERVER_MANAGEMENT.html#cse31-greenfield).
 
@@ -79,8 +81,8 @@ Refer to [CSE 3.1 installation](CSE_SERVER_MANAGEMENT.html#cse31-greenfield).
 
 CSE 3.1 can only be upgraded from CSE 3.0.z product line. Any CSE release older than CSE 3.0 first needs to be upgraded to CSE 3.0 product line before it can be upgraded to CSE 3.1.
 
-Note: If Tanzu Kubernetes Grid (TKG) distribution is enabled in [CSE 3.0.3](https://github.com/vmware/container-service-extension-templates/blob/tkgm/TKG_INSTRUCTIONS.md), then CSE 3.0.3 will not be upgraded to CSE 3.1. 
-    
+Note: If Tanzu Kubernetes Grid (TKG) distribution is enabled in [CSE 3.0.3](https://github.com/vmware/container-service-extension-templates/blob/tkgm/TKG_INSTRUCTIONS.md), then CSE 3.0.3 will not be upgraded to CSE 3.1.
+
 Refer to [CSE 3.1 upgrade command](CSE_SERVER_MANAGEMENT.html#cse31-upgrade-cmd) for details.
 
 #### 2.2.3 Tenant onboarding
@@ -105,15 +107,15 @@ Refer to [Register CSE UI Plugin 1.0.3](CSE_UI_PLUGIN.html) for more details.
 
 <a name="tenant-workflows"></a>
 ## 3. Tenant workflows
-Tenant users can manage the Kubernetes cluster deployments either through 
+Tenant users can manage the Kubernetes cluster deployments either through
 CSE CLI or Kubernetes Clusters UI Plugin
 
 ### 3.1 CLI for Container Extension
 CSE 3.1 introduces below changes in CLI
 
-1. Cluster upgrades (Native and vSphere with Tanzu) can now be performed using `vcd cse cluster apply <upgrade_cluster.yaml>`. 
+1. Cluster upgrades (Native and vSphere with Tanzu) can now be performed using `vcd cse cluster apply <upgrade_cluster.yaml>`.
    Refer to [cluster apply usage](CLUSTER_MANAGEMENT.html#cse31_cluster_apply) for more details.
-2. Clusters can be shared to other users using new `vcd cse cluster share` command. 
+2. Clusters can be shared to other users using new `vcd cse cluster share` command.
    Refer to [cluster share usage](CLUSTER_MANAGEMENT.html#cse31_cluster_share)
 
 ### 3.2 Kubernetes Clusters UI Plugin

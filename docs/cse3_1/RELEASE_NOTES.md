@@ -20,7 +20,7 @@ the same will be fixed in a future CSE release.
 | 3.1.1.0b1  | 3.1.1.0b1 | 3.0.1* | 10.3           | 6.4.10 | NSX-T 3.1.1 and Avi 20.1.3 | Native, TKG-S and TKG         |
 | NA         | 3.1.1.0b1 | 3.0.1* | 10.3           | NA     | NA                         | TKG-S cluster management only |
 
-3.0.1* -> Please download Kubernetes Container Clusters UI Plugin from [here](https://github.com/vmware/container-service-extension/raw/master/cse_ui/3.0.1/container-ui-plugin.zip)  
+3.0.1* -> Please download Kubernetes Container Clusters UI Plugin from [here](https://github.com/vmware/container-service-extension/raw/master/cse_ui/3.0.1/container-ui-plugin.zip)
 
 **Installation of binaries**
 ```
@@ -39,11 +39,11 @@ CSE 3.1.1 beta.
   and [VCD CSI](https://github.com/vmware/cloud-director-named-disk-csi-driver/blob/0.1.0-beta/README.md)
 
 **Supported VMware Tanzu Kubernetes Grid OVAs**
-* VMware Tanzu Kubernetes Grid 1.3.0 : Ubuntu 20.04, Kubernetes v1.20.4 vmware.1 (ubuntu-2004-kube-v1.20.4-vmware.1-tkg.0-16153464878630780629.ova)  
-* VMware Tanzu Kubernetes Grid 1.3.1 : Ubuntu 20.04, Kubernetes v1.20.5 vmware.2 (ubuntu-2004-kube-v1.20.5-vmware.2-tkg.1-6700972457122900687.ova)  
+* VMware Tanzu Kubernetes Grid 1.3.0 : Ubuntu 20.04, Kubernetes v1.20.4 vmware.1 (ubuntu-2004-kube-v1.20.4-vmware.1-tkg.0-16153464878630780629.ova)
+* VMware Tanzu Kubernetes Grid 1.3.1 : Ubuntu 20.04, Kubernetes v1.20.5 vmware.2 (ubuntu-2004-kube-v1.20.5-vmware.2-tkg.1-6700972457122900687.ova)
 * VMware Tanzu Kubernetes Grid 1.4.0 : Ubuntu 20.04, Kubernetes v1.21.2 vmware.1 (ubuntu-2004-kube-v1.21.2+vmware.1-tkg.1-7832907791984498322.ova)
 
-**Notes to System Administrator**  
+**Notes to System Administrator**
 * CSE 3.1.1.0b1 is supposed to be a fresh install only release, and
 won't support upgrades to CSE 3.1.1.
 * It is mandatory to deploy VMware Tanzu Kubernetes Grid clusters with `expose` field set to `True`.
@@ -58,7 +58,7 @@ docs list down all rights required for their proper functioning.
 * VMware Tanzu Kubernetes Grid clusters should be connected to a network that can access
 the public end point of the VCD.
 
-**Known issues**:  
+**Known issues**:
 Scaling down Kubernetes clusters  via `cse cluster apply` does not drain the worker nodes
 properly and can lead to loss in application data. If users wish to shrink their TKG clusters,
 they need to use `kubectl` to do it.
@@ -94,6 +94,7 @@ the same will be fixed in a future CSE release.
 1. Refer to [What's new in CSE 3.1?](CSE31.html) for more details.
 2. Newer versions of native kubernetes templates are available. Refer to
 [Template Announcements](TEMPLATE_ANNOUNCEMENTS.html)
+3. Deprecation of TKGI (Enterprise PKS) - CSE Server and Kubernetes Container Clusters plug-in will soon drop support TKGI (previously known as Enterprise PKS). Consider using CSE-TKG or VCD-Tanzu for management of Kubernetes clusters with VCD.
 
 ## CSE 3.1.0 Beta (3.1.0.0b1)
 Release Date: 2021-04-14
@@ -122,11 +123,11 @@ CSE 3.1.0 beta.
 * PUT on `/api/cse/3.0/cluster/<id>` endpoint now supports cluster upgrades in addition to the resize operation.
     * `/api/cse/3.0/cluster/<id>/action/upgrade` is not supported at api_version = 36.0
 * Cluster YAML specification changes
-    * Keys of all the properties are expected to be in CamelCase. 
-    * New required field `apiVersion` in the cluster YAML specification. The 
-      value for it must be `cse.vmware.com/v2.0`, which indicates the RDE version 
+    * Keys of all the properties are expected to be in CamelCase.
+    * New required field `apiVersion` in the cluster YAML specification. The
+      value for it must be `cse.vmware.com/v2.0`, which indicates the RDE version
       of the native clusters, that CSE server uses.
-    * Sample input YAML 
+    * Sample input YAML
         * ```
           apiVersion: cse.vmware.com/v2.0
           kind: native
@@ -164,5 +165,5 @@ the issue related to runtime defined entities listed in [Known Issues](KNOWN_ISS
 
 **Known issues specific to 3.1.0-beta**:
 Resizing an empty cluster will fail for non-null values of sizingClass and storageProfile in the input yaml spec.
-Workaround: specify `storageProfile: null` and `sizingClass: null` in 
+Workaround: specify `storageProfile: null` and `sizingClass: null` in
 the `vcd cse cluster apply` specification for worker/nfs nodes.
