@@ -8,23 +8,19 @@ title: Release Notes
 ## CSE 3.1.1 Beta (3.1.1.0b1)
 Release Date: 2021-09-13
 
-**Supported (and tested) VCD versions**: 10.3, 10.2, 10.1
+**Supported (and tested) VCD versions**: 10.3.0 GA
 
 Note: Future update/patch releases of these vCD versions will be supported by CSE but
 they won't be tested individually. If a bug is found in their interoperability
 with CSE, please file a github [issue](https://github.com/vmware/container-service-extension/issues),
 the same will be fixed in a future CSE release.
 
-| CSE Server | CSE CLI   | CSE UI | Cloud Director | Ent-PKS with NSX-T | NSX-V  | NSX-T with AVI             | Features offered                                                                                           |
-|------------|-----------|--------|----------------|--------------------|--------|----------------------------|------------------------------------------------------------------------------------------------------------|
-| 3.1.1.0b1  | 3.1.1.0b1 | 3.0.1* | 10.3           | 1.7 with 2.5.1     | 6.4.10 | NSX-T 3.1.1 and Avi 20.1.3 | Native, TKG-S, TKGm and Ent-PKS Cluster management; Defined entity representation for both native and tkg. |
-| 3.1.1.0b1  | 3.1.1.0b1 | 2.0.0* | 10.2           | 1.7 with 2.5.1     | 6.4.10 | NA                         | Native, TKG-S, and Ent-PKS Cluster management; Defined entity representation for both native and tkg.      |
-| 3.1.1.0b1  | 3.1.1.0b1 | 1.0.3  | 10.1           | 1.7 with 2.5.1     | 6.4.8  | NA                         | Native and Ent-PKS cluster management                                                                      |
-| NA         | 3.1.1.0b1 | 3.0.1* | 10.3           | NA                 | NA     | NA                         | TKG-S cluster management only                                                                              |
-| NA         | 3.1.1.0b1 | 2.0.0* | 10.2           | NA                 | NA     | NA                         | TKG-S cluster management only                                                                              |
+| CSE Server | CSE CLI   | CSE UI | Cloud Director | NSX-V  | NSX-T with AVI             | Features offered              |
+|------------|-----------|--------|----------------|--------|----------------------------|-------------------------------|
+| 3.1.1.0b1  | 3.1.1.0b1 | 3.0.1* | 10.3           | 6.4.10 | NSX-T 3.1.1 and Avi 20.1.3 | Native, TKG-S and TKGm        |
+| NA         | 3.1.1.0b1 | 3.0.1* | 10.3           | NA     | NA                         | TKG-S cluster management only |
 
 3.0.1* -> Please download Kubernetes Clusters UI Plugin from [here](www.vmware.com)  
-2.0.0* -> Kubernetes Clusters UI Plugins 2.0.0 ships with VCD 10.2.
 
 **Installation of binaries**
 
@@ -40,7 +36,8 @@ CSE 3.1.1 beta.
 * Support for importing standard TKGm OVA and deploying Kubernetes clusters using them.
   * Supported TKGm OVAs : TKGm 1.4, 1.3.1 - Ubuntu 20.04 Kubernetes v1.20.5 vmware.2
 * Kubernetes clusters based on TKGm runtime with VCD CPI and VCD CSI
-  * Learn more about them [here](www.vmware.com) and [here](www.vmware.com)
+  * Learn more about them [here](https://github.com/vmware/cloud-provider-for-cloud-director/blob/0.1.0-beta/README.md)
+  and [here](https://github.com/vmware/cloud-director-named-disk-csi-driver/blob/0.1.0-beta/README.md)
 
 **Notes to System Administrator**  
 * CSE 3.1.1.0b1 is supposed to be a fresh install only release, and
