@@ -390,11 +390,11 @@ The value for the `exposed` field would be `False` for clusters that are not exp
 An exposed cluster if ever de-exposed can't be re-exposed.
 
 <a name="tkgm_clusters"></a>
-## Creating clusters with VMware Tanzu Kubernetes Grid runtime
+## Creating clusters with VMware Tanzu Kubernetes Grid
 VMware Tanzu Kubernetes Grid (TKG) Clusters are deployed like
 Native clusters using `vcd cse cluster apply` command. TKG cluster
 specification file differs from a native cluster specification file
-in the value of the field kind.  
+in the value of the fields `kind` and `template_name`.
 **Please note:**
 * NFS based Persistent Volumes are not supported for TKG clusters.
 Instead, use VCD CSI for Dynamic Persistent Volumes.

@@ -23,11 +23,9 @@ the same will be fixed in a future CSE release.
 3.0.1* -> Please download Kubernetes Container Clusters UI Plugin from [here](https://github.com/vmware/container-service-extension/raw/master/cse_ui/3.0.1/container-ui-plugin.zip)  
 
 **Installation of binaries**
-
 ```
 pip install container-service-extension==3.1.1.0b1
 ```
-
 Note: `pip install container-service-extension` installs previous official
 version of CSE viz. 3.1.0. Specify the exact version mentioned above to install
 CSE 3.1.1 beta.
@@ -61,7 +59,7 @@ docs list down all rights required for their proper functioning.
 the public end point of the VCD.
 
 **Known issues**:  
-Scaling down Kubernetes clusters  via `cse cluster apply` does not drain the worker node
+Scaling down Kubernetes clusters  via `cse cluster apply` does not drain the worker nodes
 properly and can lead to loss in application data. If users wish to shrink their TKG clusters,
 they need to use `kubectl` to do it.
   * On control plane node
