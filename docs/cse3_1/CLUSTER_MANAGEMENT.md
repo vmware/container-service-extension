@@ -82,11 +82,12 @@ can choose to monitor the task progress manually.
       expose the cluster to the external world. This would require user to have 
       EDIT rights on edge gateway. Refer to [expose cluster](#expose_cluster) for more details.
     * Command usage examples:
-        ```sh
+        ```
         vcd cse cluster apply <create_cluster.yaml> (creates the cluster if the resource already does not exist.)
         vcd cse cluster apply <resize_cluster.yaml> (resizes the specification on the resource specified). 
         vcd cse cluster apply <upgrade_cluster.yaml> (upgrades the cluster to match the user specified template and revision)
-        vcd cse cluster apply --sample --tkg-s (generates the sample specification file for tkg clusters).
+        vcd cse cluster apply --sample --tkg-s (generates the sample specification file for tkg-s clusters).
+        vcd cse cluster apply --sample --tkg (generates the sample specification file for tkg clusters).
         vcd cse cluster apply --sample --native (generates the sample specification file for native clusters).
         ```
     * How to construct the specification for the cluster creation?
@@ -209,7 +210,7 @@ every three months and numerous patch releases (including security patches) in
 between those minor releases. To keep already deployed clusters up to date, in
 CSE 2.6.0 we have added support for in place software upgrade for Kubernetes
 clusters. The softwares that can be upgraded to a newer version are
-* Kuberenetes components e.g. kube-server, kubelet, kubedns etc.
+* Kubernetes components e.g. kube-server, kubelet, kubedns etc.
 * Weave (CNI)
 * Docker engine
 
@@ -387,3 +388,15 @@ Users can de-`expose` a cluster, by setting the value of `expose` field to `Fals
 and applying the updated specification on the cluster via `vcd cse cluster apply`.
 The value for the `exposed` field would be `False` for clusters that are not exposed.
 An exposed cluster if ever de-exposed can't be re-exposed.
+
+<a name="tkgm_clusters"></a>
+## Creating clusters with VMware Tanzu Kubernetes Grid
+VMware Tanzu Kubernetes Grid (TKG) Clusters are deployed like
+Native clusters using `vcd cse cluster apply` command. TKG cluster
+specification file differs from a native cluster specification file
+in the value of the fields `kind` and `template_name`.
+**Please note:**
+* NFS based Persistent Volumes are not supported for TKG clusters.
+Instead, use VCD CSI for Dynamic Persistent Volumes.
+* Cluster sharing is not supported for TKG clusters.
+* Kubernetes upgrade is not supported for TKG clusters.
