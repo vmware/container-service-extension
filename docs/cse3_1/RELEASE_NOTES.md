@@ -33,13 +33,14 @@ version of CSE viz. 3.1.0. Specify the exact version mentioned above to install
 CSE 3.1.1 beta.
 
 **What's New**
-* Support for importing standard TKG OVA and deploying Kubernetes clusters using them.
-  * Learn more about using [TKG OVA with CSE](TEMPLATE_MANAGEMENT.HTML#tkgm_templates)
-* Kubernetes clusters based on TKG runtime with VCD CPI and VCD CSI
+* Support for importing VMware Tanzu Kubernetes Grid OVA and deploying Kubernetes clusters using them.
+  * Learn more about using [VMware Tanzu Kubernetes Grid OVA with CSE](TEMPLATE_MANAGEMENT.HTML#tkgm_templates)
+  * Learn more about deploying a Kubernetes cluster with VMware Tanzu Kubernetes Grid runtime [here](CLUSTER_MANAGEMENT.html#tkgm_clusters)
+* Kubernetes clusters based on VMware Tanzu Kubernetes Grid runtime with VCD CPI and VCD CSI
   * Learn more about [VCD CPI](https://github.com/vmware/cloud-provider-for-cloud-director/blob/0.1.0-beta/README.md)
   and [VCD CSI](https://github.com/vmware/cloud-director-named-disk-csi-driver/blob/0.1.0-beta/README.md)
 
-**Supported TKG OVAs**
+**Supported VMware Tanzu Kubernetes Grid OVAs**
 * VMware Tanzu Kubernetes Grid 1.3.0 : Ubuntu 20.04, Kubernetes v1.20.4 vmware.1 (ubuntu-2004-kube-v1.20.4-vmware.1-tkg.0-16153464878630780629.ova)  
 * VMware Tanzu Kubernetes Grid 1.3.1 : Ubuntu 20.04, Kubernetes v1.20.5 vmware.2 (ubuntu-2004-kube-v1.20.5-vmware.2-tkg.1-6700972457122900687.ova)  
 * VMware Tanzu Kubernetes Grid 1.4.0 : Ubuntu 20.04, Kubernetes v1.21.2 vmware.1 (ubuntu-2004-kube-v1.21.2+vmware.1-tkg.1-7832907791984498322.ova)
@@ -47,14 +48,14 @@ CSE 3.1.1 beta.
 **Notes to System Administrator**  
 * CSE 3.1.1.0b1 is supposed to be a fresh install only release, and
 won't support upgrades to CSE 3.1.1.
-* Users deploying TKG clusters should have atleast the rights required to deploy
-`exposed` native clusters and additionally the right `Full Control: CSE:NATIVECLUSTER`.
-This right is crucial for VCD CPI to work properly.
-* It is mandatory to deploy TKG clusters with `expose` field set to `True`. Read more
-about `expose` functionality [here](CLUSTER_MANAGEMENT.html#expose_cluster).
+* It is mandatory to deploy VMware Tanzu Kubernetes Grid clusters with `expose` field set to `True`.
+Read more about `expose` functionality [here](CLUSTER_MANAGEMENT.html#expose_cluster).
 Routablility of external network traffic to the cluster is crucial for VCD CPI to
-work properly
-* TKG clusters should be connected to a network that can access
+work properly.
+* Users deploying VMware Tanzu Kubernetes Grid clusters should have the rights required
+to deploy `exposed` native clusters and additionally the right `Full Control: CSE:NATIVECLUSTER`.
+This right is crucial for VCD CPI to work properly.
+* VMware Tanzu Kubernetes Grid clusters should be connected to a network that can access
 the public end point of the VCD.
 
 **Known issues**:  
