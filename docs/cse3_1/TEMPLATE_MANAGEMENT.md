@@ -8,12 +8,13 @@ title: Kubernetes Template Management
 ## Overview
 CSE uses customized VM templates (Kubernetes templates) as building blocks for
 deployment of Kubernetes clusters. These templates are crucial for CSE to
-function properly. This document describes the various aspects of these
-Kubernetes templates including their life cycle management.
+function properly. With CSE 3.1.1, CSE is adding support for importing
+VMware Tanzu Kubernetes Grid OVAs (TKG templates) and allow their usage for
+deploying Kubernetes clusters. This document describes the various aspects of
+these templates including their life cycle management.
 
 <a name="kubernetes_templates"></a>
 ## Kubernetes Templates
-
 Starting CSE 2.5, Kubernetes cluster deployment from multiple Kubernetes
 templates is supported. Templates vary by guest OS (e.g. PhotonOS, Ubuntu), as well as,
 software versions, like Kubernetes, Docker, or Weave. Each template name is
@@ -34,7 +35,7 @@ Alternatively, Service Providers have the option to install CSE server with
 Kubernetes templates during installation. Once CSE server installation is
 complete, Service Providers can create selective Kubernetes templates using the
  following command.
-```sh
+```
 cse template list
 cse template install TEMPLATE_NAME TEMPLATE_REVISION
 ```
@@ -44,10 +45,12 @@ While starting the CSE server, a default Kubernetes template and revision must
 be specified in the config file, for CSE server to successfully start up.
 Tenants can always override the default templates via specifying their choice
 of revision of a template during cluster operations like
-`vcd cse cluster create`, `vcd cse cluster resize`, and `vcd cse node create`.
+`vcd cse cluster create`, `vcd cse cluster resize`, and `vcd cse node create`.  
+**Please note:** Support for default template has been removed in CSE 3.1.1.
+There is no default Kubernetes template anymore, and it is expected that
+users always specify template name and revision while deploying a native cluster.
 
 ### Updating Kubernetes Templates
-
 Service Providers can expect newer templates as updates to OS versions,
 Kubernetes major or minor versions, or Weave major or minor versions are made
 available. They can also expect revised templates (through a change to the
@@ -61,6 +64,25 @@ cse template install TEMPLATE_NAME TEMPLATE_REVISION
 ```
 The refreshed templates do not impact existing Kubernetes clusters in the
 environment.
+
+<a name="tkgm_templates"></a>
+## TKG Templates
+Starting CSE 3.1.1, CSE will allow providers to import standard VMware Tanzu
+Kubernetes Grid OVA into VCD via CSE server cli. Once these OVAs are imported
+into VCD, `vcd-cli with CSE plugin` and `Kubernetes Container Clusters UI plugin`
+can be used to deploy clusters from the TKG templates. CSE will publish and keep
+an updated list of VMware Tanzu Kubernetes Grid OVAs that have been tested and
+verified to work with CSE.
+
+<a name="import_tkgm_templates"></a>
+### Importing VMware Tanzu Kubernetes Grid OVAs into VCD
+Before users can deploy Kubernetes clusters with VMware Tanzu Kubernetes Grid
+runtime, providers are required to import the VMware Tanzu Kubernetes Grid OVA
+into VCD via CSE server cli. CSE 3.1.1 has added a new command to aid providers.
+The command is `cse template import`. Currently, the command can upload the OVA
+from only local disk. Learn more about the command by running `cse template import -h`.
+The imported TKG templates can be listed via `cse template list -d tkg`.
+
 
 <a name="restrict_templates"></a>
 ## Restricting Kubernetes Templates for Tenants
@@ -169,6 +191,11 @@ template_rules:
   action:
     compute_policy: ""
 ```
+
+## Restricting TKG Templates for Tenants
+As of CSE 3.1.1, TKG templates are not restricted to any Org VDCs
+for cluster deployment.
+
 
 <a name="template_os_source"></a>
 ## Source .ova Files for Kubernetes Templates
