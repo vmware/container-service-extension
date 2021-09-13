@@ -66,6 +66,8 @@ service:
 
 broker:
   catalog: cse
+# default_template_name: my_template
+# default_template_revision: 0
   ip_allocation_mode: pool
   network: my_network
   org: my_org
@@ -176,6 +178,8 @@ The following table summarizes key parameters.
 | Property                     | Value                                                                                                                                                                                                                |
 |------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | catalog                      | Publicly shared catalog within `org` where K8s templates will be stored                                                                                                                                              |
+| default_template_name        | Name of the default template to use if one is not specified during cluster and node operations. CSE server won't start up if this value is invalid. (Added in CSE 2.5.0, Removed in CSE 3.1.1)                       |
+| default_template_revision    | Revision of the default template to use if one is not is specified during cluster and node operations. CSE server won't start up if this value is invalid. (Added in CSE 2.5.0, Removed in CSE 3.1.1)                |
 | ip_allocation_mode           | IP allocation mode to be used during the install process to build the template. Possible values are `dhcp` or `pool`. During creation of clusters for tenants, `pool` IP allocation mode is always used              |
 | network                      | Org Network within `vdc` that will be used during the install process to build the template. It should have outbound access to the public Internet. The `CSE` appliance doesn't need to be connected to this network |
 | org                          | VCD organization that contains the shared catalog where the K8s templates will be stored                                                                                                                             |
