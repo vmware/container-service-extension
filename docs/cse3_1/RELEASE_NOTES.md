@@ -20,7 +20,7 @@ the same will be fixed in a future CSE release.
 | 3.1.1.0b1  | 3.1.1.0b1 | 3.0.1* | 10.3           | 6.4.10 | NSX-T 3.1.1 and Avi 20.1.3 | Native, TKG-S and TKG         |
 | NA         | 3.1.1.0b1 | 3.0.1* | 10.3           | NA     | NA                         | TKG-S cluster management only |
 
-3.0.1* -> Please download Kubernetes Container Clusters UI Plugin from [here](www.vmware.com)  
+3.0.1* -> Please download Kubernetes Container Clusters UI Plugin from [here](https://github.com/vmware/container-service-extension/raw/master/cse_ui/3.0.1/container-ui-plugin.zip)  
 
 **Installation of binaries**
 
