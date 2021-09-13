@@ -8,15 +8,13 @@ title: Kubernetes Template Management
 ## Overview
 CSE uses customized VM templates (Kubernetes templates) as building blocks for
 deployment of Kubernetes clusters. These templates are crucial for CSE to
-function properly.  
-With CSE 3.1.1, CSE is adding support for importing standard TKGm OVAs and
-allow their usage for deploying Kubernetes clusters.  
-This document describes the various aspects of these
-Kubernetes templates including their life cycle management.
+function properly. With CSE 3.1.1, CSE is adding support for importing standard
+TKGm OVAs (TKGm templates) and allow their usage for deploying Kubernetes clusters.
+This document describes the various aspects of these templates including their
+life cycle management.
 
 <a name="kubernetes_templates"></a>
 ## Kubernetes Templates
-
 Starting CSE 2.5, Kubernetes cluster deployment from multiple Kubernetes
 templates is supported. Templates vary by guest OS (e.g. PhotonOS, Ubuntu), as well as,
 software versions, like Kubernetes, Docker, or Weave. Each template name is
@@ -48,7 +46,9 @@ be specified in the config file, for CSE server to successfully start up.
 Tenants can always override the default templates via specifying their choice
 of revision of a template during cluster operations like
 `vcd cse cluster create`, `vcd cse cluster resize`, and `vcd cse node create`.
-Please note that this restriction has been removed since CSE 3.1.1.
+**Please note:** This restriction has been removed in CSE 3.1.1. There is no
+default Kubernetes template anymore, and it is expected that users always
+specify template name and revision while deploying a native cluster.
 
 ### Updating Kubernetes Templates
 Service Providers can expect newer templates as updates to OS versions,
@@ -67,21 +67,29 @@ environment.
 
 ## TKGm Templates
 Starting CSE 3.1.1, CSE will allow providers to import standard TKGm OVA into
-VCD via CSE server cli. Once these OVAs are imported into VCD, CSE vcd-cli and
-Container UI plugin can be used to deploy clusters from the TKGm templates.
-Users with proper TKGm license can even get support from VMware for these
-clusters running TKGm runtime. CSE will publish and keep an updated list of
-TKGm OVAs that has been tested and verified to work with CSE. Users can
-choose to use other available TKGm OVAs but they may not work properly with
+VCD via CSE server cli. Once these OVAs are imported into VCD, `vcd-cli` with
+`CSE plugin` and `Container UI plugin` can be used to deploy clusters from the
+TKGm templates. Users with proper TKGm license can even get support from VMware
+for these clusters running TKGm runtime. CSE will publish and keep an updated
+list of TKGm OVAs that has been tested and verified to work with CSE. Users
+can choose to use other available TKGm OVAs but they may not work properly with
 CSE.
 
 ### Importing TKGm templates into VCD
-Before users can deploy Kuberenetes clusters with TKGm runtime, providers are
+Before users can deploy Kubernetes clusters with TKGm runtime, providers are
 required to import the TKGm OVA into VCD via CSE server cli. CSE 3.1.1 has
 added a new command to aid providers. The command is `cse template import`.
-Currently, the command can upload the OVA from 
+Currently, the command can upload the OVA from only local disk. Learn more
+about the command by running `cse template import -h`.  
+The imported TKGm templates can be listed via the following commands
+```
+cse template list -d tkg
+vcd cse template list -t (needs CSE server to be up and running)
+```
 
 ### Using TKGm templates to deploy clusters
+To deploy a Kubernetes cluster with TKGm runtime, please follow these
+[instructions](CLUSTER_MANAGEMENT.html#tkgm_clusters).
 
 
 <a name="restrict_templates"></a>

@@ -86,7 +86,8 @@ can choose to monitor the task progress manually.
         vcd cse cluster apply <create_cluster.yaml> (creates the cluster if the resource already does not exist.)
         vcd cse cluster apply <resize_cluster.yaml> (resizes the specification on the resource specified). 
         vcd cse cluster apply <upgrade_cluster.yaml> (upgrades the cluster to match the user specified template and revision)
-        vcd cse cluster apply --sample --tkg-s (generates the sample specification file for tkg clusters).
+        vcd cse cluster apply --sample --tkg-s (generates the sample specification file for tkg-s clusters).
+        vcd cse cluster apply --sample --tkg (generates the sample specification file for tkgm clusters).
         vcd cse cluster apply --sample --native (generates the sample specification file for native clusters).
         ```
     * How to construct the specification for the cluster creation?
@@ -387,3 +388,6 @@ Users can de-`expose` a cluster, by setting the value of `expose` field to `Fals
 and applying the updated specification on the cluster via `vcd cse cluster apply`.
 The value for the `exposed` field would be `False` for clusters that are not exposed.
 An exposed cluster if ever de-exposed can't be re-exposed.
+
+<a name="tkgm_clusters"></a>
+## Creating clusters with TKGm runtime
