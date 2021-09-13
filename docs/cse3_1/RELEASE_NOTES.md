@@ -10,21 +10,21 @@ Release Date: 2021-09-13
 
 **Supported (and tested) VCD versions**: 10.3.0 GA
 
-Note: Future update/patch releases of these vCD versions will be supported by CSE but
+Note: Future update/patch releases of these VCD versions will be supported by CSE but
 they won't be tested individually. If a bug is found in their interoperability
 with CSE, please file a github [issue](https://github.com/vmware/container-service-extension/issues),
 the same will be fixed in a future CSE release.
 
-| CSE Server | CSE CLI   | CSE UI | Cloud Director | NSX-V  | NSX-T with AVI             | Features offered              |
+| CSE Server | CSE CLI   | CSE UI | Cloud Director | NSX-V  | NSX-T with Avi             | Features offered              |
 |------------|-----------|--------|----------------|--------|----------------------------|-------------------------------|
 | 3.1.1.0b1  | 3.1.1.0b1 | 3.0.1* | 10.3           | 6.4.10 | NSX-T 3.1.1 and Avi 20.1.3 | Native, TKG-S and TKG         |
 | NA         | 3.1.1.0b1 | 3.0.1* | 10.3           | NA     | NA                         | TKG-S cluster management only |
 
-3.0.1* -> Please download Kubernetes Clusters UI Plugin from [here](www.vmware.com)  
+3.0.1* -> Please download Kubernetes Container Clusters UI Plugin from [here](www.vmware.com)  
 
 **Installation of binaries**
 
-```sh
+```
 pip install container-service-extension==3.1.1.0b1
 ```
 
@@ -35,8 +35,8 @@ CSE 3.1.1 beta.
 **What's New**
 * Support for importing VMware Tanzu Kubernetes Grid OVA and deploying Kubernetes clusters using them.
   * Learn more about using [VMware Tanzu Kubernetes Grid OVA with CSE](TEMPLATE_MANAGEMENT.HTML#tkgm_templates)
-  * Learn more about deploying a Kubernetes cluster with VMware Tanzu Kubernetes Grid runtime [here](CLUSTER_MANAGEMENT.html#tkgm_clusters)
-* Kubernetes clusters based on VMware Tanzu Kubernetes Grid runtime with VCD CPI and VCD CSI
+  * Learn more about deploying a Kubernetes cluster based on VMware Tanzu Kubernetes Grid [here](CLUSTER_MANAGEMENT.html#tkgm_clusters)
+* VCD CPI and VCD CSI for Kubernetes clusters based on VMware Tanzu Kubernetes Grid
   * Learn more about [VCD CPI](https://github.com/vmware/cloud-provider-for-cloud-director/blob/0.1.0-beta/README.md)
   and [VCD CSI](https://github.com/vmware/cloud-director-named-disk-csi-driver/blob/0.1.0-beta/README.md)
 
@@ -50,23 +50,26 @@ CSE 3.1.1 beta.
 won't support upgrades to CSE 3.1.1.
 * It is mandatory to deploy VMware Tanzu Kubernetes Grid clusters with `expose` field set to `True`.
 Read more about `expose` functionality [here](CLUSTER_MANAGEMENT.html#expose_cluster).
-Routablility of external network traffic to the cluster is crucial for VCD CPI to
+Routability of external network traffic to the cluster is crucial for VCD CPI to
 work properly.
 * Users deploying VMware Tanzu Kubernetes Grid clusters should have the rights required
 to deploy `exposed` native clusters and additionally the right `Full Control: CSE:NATIVECLUSTER`.
-This right is crucial for VCD CPI to work properly.
+This right is crucial for VCD CPI to work properly. [VCD CPI](https://github.com/vmware/cloud-provider-for-cloud-director/blob/0.1.0-beta/README.md)
+and [VCD CSI](https://github.com/vmware/cloud-director-named-disk-csi-driver/blob/0.1.0-beta/README.md)
+docs list down all rights required for their proper functioning.
 * VMware Tanzu Kubernetes Grid clusters should be connected to a network that can access
 the public end point of the VCD.
 
 **Known issues**:  
-Shrinking TKG clusters via `cse cluster apply` is not supported. If users
-wish to shrink their TKG clusters, they need to use `kubectl` to do it.
+Scaling down Kubernetes clusters  via `cse cluster apply` does not drain the worker node
+properly and can lead to loss in application data. If users wish to shrink their TKG clusters,
+they need to use `kubectl` to do it.
   * On control plane node
     * `kubetcl cordon [node name]`
     * `kubectl drain [node name]`
     * `kubectl delete [node name]` (Optional, VCD CPI will update the state of the cluster once the actual worker VM is deleted)
   * On worker node
-    * Once the commands on control plane node has succeddfully completed,
+    * Once the commands on control plane node have successfully completed,
       power off the vm and delete it from VCD UI
 
 
@@ -88,7 +91,7 @@ the same will be fixed in a future CSE release.
 | NA         | 3.1     | 3.0*   | 10.3           | NA                 | NA     | TKG-S cluster management only                                                                         |
 | NA         | 3.1     | 2.0*   | 10.2           | NA                 | NA     | TKG-S cluster management only                                                                         |
 
-3.0*, 2.0* -> Kubernetes Clusters UI Plugins 3.0 and 2.0 ship with VCD 10.3 and VCD 10.2 respectively.
+3.0*, 2.0* -> Kubernetes Container Clusters UI Plugins 3.0 and 2.0 ship with VCD 10.3 and VCD 10.2 respectively.
 
 1. Refer to [What's new in CSE 3.1?](CSE31.html) for more details.
 2. Newer versions of native kubernetes templates are available. Refer to
@@ -108,7 +111,7 @@ Supported VCD versions: 10.3.0-Beta, 10.2.2, 10.1.3, 10.0.0.3
 
 **Installation of binaries**
 
-```sh
+```
 pip install container-service-extension==3.1.0.0b1
 ```
 

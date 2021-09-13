@@ -210,7 +210,7 @@ every three months and numerous patch releases (including security patches) in
 between those minor releases. To keep already deployed clusters up to date, in
 CSE 2.6.0 we have added support for in place software upgrade for Kubernetes
 clusters. The softwares that can be upgraded to a newer version are
-* Kuberenetes components e.g. kube-server, kubelet, kubedns etc.
+* Kubernetes components e.g. kube-server, kubelet, kubedns etc.
 * Weave (CNI)
 * Docker engine
 
@@ -391,12 +391,12 @@ An exposed cluster if ever de-exposed can't be re-exposed.
 
 <a name="tkgm_clusters"></a>
 ## Creating clusters with VMware Tanzu Kubernetes Grid runtime
-VMware Tanzu Kubernetes Grid (TKG) Clusters are deployed similar to
+VMware Tanzu Kubernetes Grid (TKG) Clusters are deployed like
 Native clusters using `vcd cse cluster apply` command. TKG cluster
 specification file differs from a native cluster specification file
 in the value of the field kind.  
 **Please note:**
 * NFS based Persistent Volumes are not supported for TKG clusters.
-Instead, use VCD CSI for  Dynamic Persistent Volumes.
+Instead, use VCD CSI for Dynamic Persistent Volumes.
 * Cluster sharing is not supported for TKG clusters.
-* Kuberenetes upgrade is not supported for TKG clusters.
+* Kubernetes upgrade is not supported for TKG clusters.

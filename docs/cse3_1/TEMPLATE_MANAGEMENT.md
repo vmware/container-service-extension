@@ -69,13 +69,10 @@ environment.
 ## TKG Templates
 Starting CSE 3.1.1, CSE will allow providers to import standard VMware Tanzu
 Kubernetes Grid OVA into VCD via CSE server cli. Once these OVAs are imported
-into VCD, `vcd-cli with CSE plugin` and `Container UI plugin` can be used to
-deploy clusters from the TKG templates. Users with proper VMware Tanzu Kubernetes
-Grid license can even get support from VMware for these clusters running VMware
-Tanzu Kubernetes Grid runtime. CSE will publish and keep an updated
-list of VMware Tanzu Kubernetes Grid OVAs that has been tested and verified to
-work with CSE. Users can choose to use other available VMware Tanzu Kubernetes Grid
-OVAs but they may not work properly with CSE.
+into VCD, `vcd-cli with CSE plugin` and `Kubernetes Container Clusters UI plugin`
+can be used to deploy clusters from the TKG templates. CSE will publish and keep
+an updated list of VMware Tanzu Kubernetes Grid OVAs that have been tested and
+verified to work with CSE.
 
 <a name="import_tkgm_templates"></a>
 ### Importing VMware Tanzu Kubernetes Grid OVAs into VCD
