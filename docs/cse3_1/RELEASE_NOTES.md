@@ -42,14 +42,24 @@ CSE 3.1.1 beta.
 **Notes to System Administrator**  
 * CSE 3.1.1.0b1 is supposed to be a fresh install only release, and
 won't support upgrades to CSE 3.1.1.
-* It is mandatory to deploy TKGm clusters with `expose` field set to `True`. Read more
-about `expose` functionality [here](CLUSTER_MANAGEMENT.html#expose_cluster). External
-connectivity for the cluster is crucial for VCD CPI to work properly
 * Users deploying TKGm clusters should have atleast the rights required to deploy
 `exposed` native clusters and additionally the right `Full Control: CSE:NATIVECLUSTER`.
 This right is crucial for VCD CPI to work properly.
-* Additionally, all TKGm clusters should be connected to a network that can access
+* It is mandatory to deploy TKGm clusters with `expose` field set to `True`. Read more
+about `expose` functionality [here](CLUSTER_MANAGEMENT.html#expose_cluster).
+Routablility of external network traffic to the cluster is crucial for VCD CPI to
+work properly
+* TKGm clusters should be connected to a network that can access
 the public end point of the VCD.
+* Shrinking TKGm clusters via `cse cluster apply` is not supported. If users
+wish to shrink their TKGm clusters, they need to use `kubectl` to do it.
+  * On control plane node
+    * `kubetcl cordon [node name]`
+    * `kubectl drain [node name]`
+    * `kubectl delete [node name]` (Optional, VCD CPI will update the state of the cluster once the actual worker VM is deleted)
+  * On worker node
+    * Once the commands on control plane node has succeddfully completed,
+      power off the vm and delete it from VCD UI
 
 **Known issues specific to 3.1.1-beta**:
 TODO
