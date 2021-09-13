@@ -32,7 +32,7 @@ CSE 3.1.1 beta.
 
 **What's New**
 * Support for importing VMware Tanzu Kubernetes Grid OVA and deploying Kubernetes clusters using them.
-  * Learn more about using [VMware Tanzu Kubernetes Grid OVA with CSE](TEMPLATE_MANAGEMENT.HTML#tkgm_templates)
+  * Learn more about using [VMware Tanzu Kubernetes Grid OVA with CSE](TEMPLATE_MANAGEMENT.html#tkgm_templates)
   * Learn more about deploying a Kubernetes cluster based on VMware Tanzu Kubernetes Grid [here](CLUSTER_MANAGEMENT.html#tkgm_clusters)
 * VCD CPI and VCD CSI for Kubernetes clusters based on VMware Tanzu Kubernetes Grid
   * Learn more about [VCD CPI](https://github.com/vmware/cloud-provider-for-cloud-director/blob/0.1.0-beta/README.md)
