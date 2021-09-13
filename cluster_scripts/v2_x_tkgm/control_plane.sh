@@ -72,7 +72,7 @@ vmtoolsd --cmd "info-set guestinfo.postcustomization.store.sshkey.status success
 vmtoolsd --cmd "info-set guestinfo.postcustomization.nameserverconfig.resolvconf.status in_progress"
   cat > /etc/systemd/resolved.conf << END
 [Resolve]
-DNS=10.166.1.201 8.8.8.8
+DNS=8.8.8.8
 END
 
   systemctl daemon-reload
