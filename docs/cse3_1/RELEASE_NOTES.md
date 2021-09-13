@@ -17,7 +17,7 @@ the same will be fixed in a future CSE release.
 
 | CSE Server | CSE CLI   | CSE UI | Cloud Director | NSX-V  | NSX-T with AVI             | Features offered              |
 |------------|-----------|--------|----------------|--------|----------------------------|-------------------------------|
-| 3.1.1.0b1  | 3.1.1.0b1 | 3.0.1* | 10.3           | 6.4.10 | NSX-T 3.1.1 and Avi 20.1.3 | Native, TKG-S and TKGm        |
+| 3.1.1.0b1  | 3.1.1.0b1 | 3.0.1* | 10.3           | 6.4.10 | NSX-T 3.1.1 and Avi 20.1.3 | Native, TKG-S and TKG         |
 | NA         | 3.1.1.0b1 | 3.0.1* | 10.3           | NA     | NA                         | TKG-S cluster management only |
 
 3.0.1* -> Please download Kubernetes Clusters UI Plugin from [here](www.vmware.com)  
@@ -33,26 +33,28 @@ version of CSE viz. 3.1.0. Specify the exact version mentioned above to install
 CSE 3.1.1 beta.
 
 **What's New**
-* Support for importing standard TKGm OVA and deploying Kubernetes clusters using them.
-  * Supported TKGm OVAs : TKGm 1.4, 1.3.1 - Ubuntu 20.04 Kubernetes v1.20.5 vmware.2
-* Kubernetes clusters based on TKGm runtime with VCD CPI and VCD CSI
+* Support for importing standard TKG OVA and deploying Kubernetes clusters using them.
+  * Supported TKG OVAs : TKG 1.4, 1.3.1 - Ubuntu 20.04 Kubernetes v1.20.5 vmware.2
+* Kubernetes clusters based on TKG runtime with VCD CPI and VCD CSI
   * Learn more about [VCD CPI](https://github.com/vmware/cloud-provider-for-cloud-director/blob/0.1.0-beta/README.md)
   and [VCD CSI](https://github.com/vmware/cloud-director-named-disk-csi-driver/blob/0.1.0-beta/README.md)
 
 **Notes to System Administrator**  
 * CSE 3.1.1.0b1 is supposed to be a fresh install only release, and
 won't support upgrades to CSE 3.1.1.
-* Users deploying TKGm clusters should have atleast the rights required to deploy
+* Users deploying TKG clusters should have atleast the rights required to deploy
 `exposed` native clusters and additionally the right `Full Control: CSE:NATIVECLUSTER`.
 This right is crucial for VCD CPI to work properly.
-* It is mandatory to deploy TKGm clusters with `expose` field set to `True`. Read more
+* It is mandatory to deploy TKG clusters with `expose` field set to `True`. Read more
 about `expose` functionality [here](CLUSTER_MANAGEMENT.html#expose_cluster).
 Routablility of external network traffic to the cluster is crucial for VCD CPI to
 work properly
-* TKGm clusters should be connected to a network that can access
+* TKG clusters should be connected to a network that can access
 the public end point of the VCD.
-* Shrinking TKGm clusters via `cse cluster apply` is not supported. If users
-wish to shrink their TKGm clusters, they need to use `kubectl` to do it.
+
+**Known issues**:  
+Shrinking TKG clusters via `cse cluster apply` is not supported. If users
+wish to shrink their TKG clusters, they need to use `kubectl` to do it.
   * On control plane node
     * `kubetcl cordon [node name]`
     * `kubectl drain [node name]`
@@ -60,9 +62,6 @@ wish to shrink their TKGm clusters, they need to use `kubectl` to do it.
   * On worker node
     * Once the commands on control plane node has succeddfully completed,
       power off the vm and delete it from VCD UI
-
-**Known issues specific to 3.1.1-beta**:
-TODO
 
 
 ## CSE 3.1.0
