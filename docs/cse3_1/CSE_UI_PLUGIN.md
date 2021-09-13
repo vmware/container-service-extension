@@ -22,28 +22,7 @@ The v1.0.3 plugin binary can be downloaded from [here](https://github.com/vmware
 
 ## Register and publish Kubernetes Clusters UI Plugin
 
-**Method 1:** Via CSE server cli
-
-To register the plugin, run
-
-```sh
-cse ui-plugin register [path to plugin zip file] -c [path to CSE config file] -s
-```
-
-To unregister the plugin, first we need to figure out the ID of the plugin.
-List all installed plugins, and get ID of the CSE UI Plugin, by running
-
-```sh
-cse ui-plugin list -c [path to CSE config file] -s
-```
-
-Run the following command to remove the plugin from VCD.
-
-```sh
-cse ui-plugin deregister [ID] -c [path to CSE config file] -s
-```
-
-**Method 2:** Via VCD UI portal
+**Via VCD UI portal**
 
 To register the plugin, upload `container-ui-plugin.zip` to VCD through `Customize Portal`
 option in the navigation menu of VCD Service Provider view. Then follow the

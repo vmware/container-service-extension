@@ -45,10 +45,10 @@ While starting the CSE server, a default Kubernetes template and revision must
 be specified in the config file, for CSE server to successfully start up.
 Tenants can always override the default templates via specifying their choice
 of revision of a template during cluster operations like
-`vcd cse cluster create`, `vcd cse cluster resize`, and `vcd cse node create`.
-**Please note:** This restriction has been removed in CSE 3.1.1. There is no
-default Kubernetes template anymore, and it is expected that users always
-specify template name and revision while deploying a native cluster.
+`vcd cse cluster create`, `vcd cse cluster resize`, and `vcd cse node create`.  
+**Please note:** Support for default template has been removed in CSE 3.1.1.
+There is no default Kubernetes template anymore, and it is expected that
+users always specify template name and revision while deploying a native cluster.
 
 ### Updating Kubernetes Templates
 Service Providers can expect newer templates as updates to OS versions,
