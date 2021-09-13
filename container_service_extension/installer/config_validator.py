@@ -30,7 +30,7 @@ from container_service_extension.common.utils.core_utils import get_duplicate_it
 from container_service_extension.common.utils.core_utils import get_max_api_version  # noqa: E501
 from container_service_extension.common.utils.core_utils import NullPrinter
 from container_service_extension.common.utils.core_utils import str_to_bool
-from container_service_extension.common.utils.server_utils import should_use_mqtt_protocol  # noqa: E501
+import container_service_extension.common.utils.server_utils as server_utils
 from container_service_extension.exception.exceptions import AmqpConnectionError  # noqa: E501
 from container_service_extension.exception.exceptions import AmqpError
 from container_service_extension.installer.sample_generator import \
@@ -62,13 +62,15 @@ from container_service_extension.server.pks.pks_cache import Credentials
 _MAX_API_VERSION_TO_RUN_CSE_WITH_AMQP_IN_NON_LEGACY_MODE = VcdApiVersionObj.VERSION_35.value  # noqa: E501
 
 
-def get_validated_config(config_file_name,
-                         pks_config_file_name=None,
-                         skip_config_decryption=False,
-                         decryption_password=None,
-                         log_wire_file=None,
-                         logger_debug=NULL_LOGGER,
-                         msg_update_callback=NullPrinter()):
+def get_validated_config(
+        config_file_name,
+        pks_config_file_name=None,
+        skip_config_decryption=False,
+        decryption_password=None,
+        log_wire_file=None,
+        logger_debug=NULL_LOGGER,
+        msg_update_callback=NullPrinter()
+):
     """Get the config file as a dictionary and check for validity.
 
     Ensures that all properties exist and all values are the expected type.
@@ -113,15 +115,19 @@ def get_validated_config(config_file_name,
             f"Decrypting '{config_file_name}'")
         try:
             config = yaml.safe_load(
-                get_decrypted_file_contents(config_file_name,
-                                            decryption_password)) or {}
+                get_decrypted_file_contents(
+                    config_file_name,
+                    decryption_password
+                )
+            ) or {}
         except cryptography.fernet.InvalidToken:
             raise Exception(CONFIG_DECRYPTION_ERROR_MSG)
 
     msg_update_callback.info(
-        f"Validating config file '{config_file_name}'")
+        f"Validating config file '{config_file_name}'"
+    )
     # This allows us to compare top-level config keys and value types
-    use_mqtt = should_use_mqtt_protocol(config)
+    use_mqtt = server_utils.should_use_mqtt_protocol(config)
     sample_message_queue_config = SAMPLE_AMQP_CONFIG if not use_mqtt \
         else SAMPLE_MQTT_CONFIG
     sample_config = {
@@ -134,18 +140,46 @@ def get_validated_config(config_file_name,
     if not log_wire:
         log_wire_file = None
         nsxt_wire_logger = SERVER_NSXT_WIRE_LOGGER
-    check_keys_and_value_types(config, sample_config, location='config file',
-                               msg_update_callback=msg_update_callback)
+
+    check_keys_and_value_types(
+        config,
+        sample_config,
+        location='config file',
+        msg_update_callback=msg_update_callback
+    )
     # MQTT validation not required because no MQTT host, exchange, etc.
     # is needed in the config file since the server code creates and
     # registers the MQTT extension directly using server constants
     if not use_mqtt:
         _validate_amqp_config(config['amqp'], msg_update_callback)
+
+    # Validation of service properties is done first as those properties are
+    # used in broker validation.
+    check_keys_and_value_types(
+        config['service'],
+        SAMPLE_SERVICE_CONFIG['service'],
+        location="config file 'service' section",
+        excluded_keys=['log_wire'],
+        msg_update_callback=msg_update_callback
+    )
+
+    is_tkgm_only_mode = server_utils.is_tkgm_only_mode(config)
+
     try:
-        _validate_vcd_and_vcs_config(config['vcd'], config['vcs'],
-                                     msg_update_callback,
-                                     log_file=log_wire_file,
-                                     log_wire=log_wire)
+        _validate_vcd_config(
+            config['vcd'],
+            msg_update_callback,
+            log_file=log_wire_file,
+            log_wire=log_wire
+        )
+        if not is_tkgm_only_mode:
+            _validate_vcs_config(
+                config['vcd'],
+                config['vcs'],
+                msg_update_callback,
+                log_file=log_wire_file,
+                log_wire=log_wire
+            )
     except vim.fault.InvalidLogin:
         raise Exception(VCENTER_LOGIN_ERROR_MSG)
     except requests.exceptions.SSLError as err:
@@ -153,33 +187,34 @@ def get_validated_config(config_file_name,
     except requests.exceptions.ConnectionError as err:
         raise Exception(f"Cannot connect to {err.request.url}.")
 
-    # Validation of service properties is done first as those properties are
-    # used in broker validation.
-    check_keys_and_value_types(config['service'],
-                               SAMPLE_SERVICE_CONFIG['service'],
-                               location="config file 'service' section",
-                               excluded_keys=['log_wire'],
-                               msg_update_callback=msg_update_callback)
-    check_keys_and_value_types(config['service']['telemetry'],
-                               SAMPLE_SERVICE_CONFIG['service']['telemetry'],
-                               location="config file 'service->telemetry' "
-                                        "section",
-                               msg_update_callback=msg_update_callback)
+    check_keys_and_value_types(
+        config['service']['telemetry'],
+        SAMPLE_SERVICE_CONFIG['service']['telemetry'],
+        location="config file 'service->telemetry' section",
+        msg_update_callback=msg_update_callback
+    )
 
-    _validate_broker_config(config['broker'],
-                            legacy_mode=config['service']['legacy_mode'],
-                            msg_update_callback=msg_update_callback,
-                            logger_debug=logger_debug)
+    _validate_broker_config(
+        config['broker'],
+        legacy_mode=config['service']['legacy_mode'],
+        msg_update_callback=msg_update_callback,
+        logger_debug=logger_debug
+    )
 
     config = _add_additional_details_to_config(
-        config=config, log_wire=log_wire, log_wire_file=log_wire_file)
+        config=config,
+        log_wire=log_wire,
+        log_wire_file=log_wire_file
+    )
     _raise_error_if_amqp_not_supported(
         use_mqtt,
         config['service']['default_api_version'],
-        logger=logger_debug)
+        logger=logger_debug
+    )
 
     msg_update_callback.general(
-        f"Config file '{config_file_name}' is valid")
+        f"Config file '{config_file_name}' is valid"
+    )
 
     if pks_config_file_name:
         check_file_permissions(pks_config_file_name,
@@ -216,7 +251,8 @@ def get_validated_config(config_file_name,
 def _add_additional_details_to_config(
         config: Dict,
         log_wire: bool,
-        log_wire_file: str):
+        log_wire_file: str
+):
     """Update config dict with computed key-value pairs.
 
     :param dict config:
@@ -286,8 +322,11 @@ def _add_additional_details_to_config(
     return config
 
 
-def _raise_error_if_amqp_not_supported(is_mqtt_used, default_api_version,
-                                       logger=NULL_LOGGER):  # noqa: E501
+def _raise_error_if_amqp_not_supported(
+        is_mqtt_used,
+        default_api_version,
+        logger=NULL_LOGGER
+):
     """Raise error if CSE is configured with AMQP but AMQP bus not supported.
 
     AMQP cannot be used if CSE 3.1 or above is configured with 10.3 or above.
@@ -343,11 +382,73 @@ def _validate_amqp_config(amqp_dict, msg_update_callback=NullPrinter()):
             connection.close()
 
 
-def _validate_vcd_and_vcs_config(vcd_dict,
-                                 vcs,
-                                 msg_update_callback=NullPrinter(),
-                                 log_file=None,
-                                 log_wire=False):
+def _validate_vcd_config(
+        vcd_dict,
+        msg_update_callback=NullPrinter(),
+        log_file=None,
+        log_wire=False
+):
+    """Ensure that 'vcd' section of config is correct.
+
+    Checks that
+        * 'vcd' section of config has correct keys and value types.
+        * vCD is accessible.
+
+    :param dict vcd_dict: 'vcd' section of config file as a dict.
+    :param utils.ConsoleMessagePrinter msg_update_callback: Callback object.
+    :param str log_file: log_file for pyvcloud wire log.
+    :param bool log_wire: If pyvcloud requests should be logged.
+
+    :raises KeyError: if @vcd_dict has missing
+    :raises TypeError: if the value type for a @vcd_dict is incorrect.
+    """
+    check_keys_and_value_types(
+        vcd_dict,
+        SAMPLE_VCD_CONFIG['vcd'],
+        location="config file 'vcd' section",
+        msg_update_callback=msg_update_callback
+    )
+    if not vcd_dict['verify']:
+        msg_update_callback.general(
+            'InsecureRequestWarning: Unverified HTTPS request is '
+            'being made. Adding certificate verification is '
+            'strongly advised.'
+        )
+        requests.packages.urllib3.disable_warnings()
+
+    client = None
+    try:
+        client = Client(
+            vcd_dict['host'],
+            verify_ssl_certs=vcd_dict['verify'],
+            log_file=log_file,
+            log_requests=log_wire,
+            log_headers=log_wire,
+            log_bodies=log_wire
+        )
+        client.set_credentials(
+            BasicLoginCredentials(
+                vcd_dict['username'],
+                SYSTEM_ORG_NAME,
+                vcd_dict['password']
+            )
+        )
+        msg_update_callback.general(
+            "Connected to vCloud Director "
+            f"({vcd_dict['host']}:{vcd_dict['port']})"
+        )
+    finally:
+        if client is not None:
+            client.logout()
+
+
+def _validate_vcs_config(
+        vcd_dict,
+        vcs,
+        msg_update_callback=NullPrinter(),
+        log_file=None,
+        log_wire=False
+):
     """Ensure that 'vcd' and vcs' section of config are correct.
 
     Checks that
@@ -374,29 +475,39 @@ def _validate_vcd_and_vcs_config(vcd_dict,
         msg_update_callback.general(
             'InsecureRequestWarning: Unverified HTTPS request is '
             'being made. Adding certificate verification is '
-            'strongly advised.')
+            'strongly advised.'
+        )
         requests.packages.urllib3.disable_warnings()
 
     client = None
     try:
-        client = Client(vcd_dict['host'],
-                        verify_ssl_certs=vcd_dict['verify'],
-                        log_file=log_file,
-                        log_requests=log_wire,
-                        log_headers=log_wire,
-                        log_bodies=log_wire)
-        client.set_credentials(BasicLoginCredentials(vcd_dict['username'],
-                                                     SYSTEM_ORG_NAME,
-                                                     vcd_dict['password']))
+        client = Client(
+            vcd_dict['host'],
+            verify_ssl_certs=vcd_dict['verify'],
+            log_file=log_file,
+            log_requests=log_wire,
+            log_headers=log_wire,
+            log_bodies=log_wire
+        )
+        client.set_credentials(
+            BasicLoginCredentials(
+                vcd_dict['username'],
+                SYSTEM_ORG_NAME,
+                vcd_dict['password']
+            )
+        )
         msg_update_callback.general(
             "Connected to vCloud Director "
-            f"({vcd_dict['host']}:{vcd_dict['port']})")
+            f"({vcd_dict['host']}:{vcd_dict['port']})"
+        )
 
         for index, vc in enumerate(vcs, 1):
             check_keys_and_value_types(
-                vc, SAMPLE_VCS_CONFIG['vcs'][0],
+                vc,
+                SAMPLE_VCS_CONFIG['vcs'][0],
                 location=f"config file 'vcs' section, vc #{index}",
-                msg_update_callback=msg_update_callback)
+                msg_update_callback=msg_update_callback
+            )
 
         # Check that all registered VCs in vCD are listed in config file
         platform = Platform(client)
@@ -404,8 +515,10 @@ def _validate_vcd_and_vcs_config(vcd_dict,
         for platform_vc in platform.list_vcenters():
             platform_vc_name = platform_vc.get('name')
             if platform_vc_name not in config_vc_names:
-                raise ValueError(f"vCenter '{platform_vc_name}' registered in "
-                                 f"vCD but not found in config file")
+                raise ValueError(
+                    f"vCenter '{platform_vc_name}' registered in "
+                    "vCD but not found in config file"
+                )
 
         # Check that all VCs listed in config file are registered in vCD
         for vc in vcs:
@@ -417,11 +530,18 @@ def _validate_vcd_and_vcs_config(vcd_dict,
             vsphere_url = urlparse(vcenter.Url.text)
             vsphere_url_port = vsphere_url.port
             if vsphere_url_port:
-                v = VSphere(vsphere_url.hostname, vc['username'],
-                            vc['password'], vsphere_url.port)
+                v = VSphere(
+                    vsphere_url.hostname,
+                    vc['username'],
+                    vc['password'],
+                    vsphere_url.port
+                )
             else:
-                v = VSphere(vsphere_url.hostname, vc['username'],
-                            vc['password'])
+                v = VSphere(
+                    vsphere_url.hostname,
+                    vc['username'],
+                    vc['password']
+                )
             v.connect()
             msg = f"Connected to vCenter Server '{vc['name']}' as " \
                 f"'{vc['username']}' ({vsphere_url.hostname}"
@@ -434,10 +554,12 @@ def _validate_vcd_and_vcs_config(vcd_dict,
             client.logout()
 
 
-def _validate_broker_config(broker_dict,
-                            legacy_mode=False,
-                            msg_update_callback=NullPrinter(),
-                            logger_debug=NULL_LOGGER):
+def _validate_broker_config(
+        broker_dict,
+        legacy_mode=False,
+        msg_update_callback=NullPrinter(),
+        logger_debug=NULL_LOGGER
+):
     """Ensure that 'broker' section of config is correct.
 
     Checks that 'broker' section of config has correct keys and value
@@ -460,13 +582,17 @@ def _validate_broker_config(broker_dict,
         'pool'
     ]
     if broker_dict['ip_allocation_mode'] not in valid_ip_allocation_modes:
-        raise ValueError(f"IP allocation mode is "
-                         f"'{broker_dict['ip_allocation_mode']}' when it "
-                         f"should be either 'dhcp' or 'pool'")
+        raise ValueError(
+            "IP allocation mode is "
+            f"'{broker_dict['ip_allocation_mode']}' when it "
+            "should be either 'dhcp' or 'pool'"
+        )
 
-    rtm = RemoteTemplateManager(remote_template_cookbook_url=broker_dict['remote_template_cookbook_url'],  # noqa: E501
-                                legacy_mode=legacy_mode,
-                                logger=logger_debug)
+    rtm = RemoteTemplateManager(
+        remote_template_cookbook_url=broker_dict['remote_template_cookbook_url'],  # noqa: E501
+        legacy_mode=legacy_mode,
+        logger=logger_debug
+    )
 
     remote_template_cookbook = rtm.get_filtered_remote_template_cookbook()
 
@@ -474,17 +600,24 @@ def _validate_broker_config(broker_dict,
         raise Exception("Remote template cookbook is invalid.")
 
 
-def _validate_pks_config_structure(pks_config,
-                                   msg_update_callback=NullPrinter()):
+def _validate_pks_config_structure(
+        pks_config,
+        msg_update_callback=NullPrinter()
+):
     sample_config = {
-        **SAMPLE_PKS_SERVERS_SECTION, **SAMPLE_PKS_ACCOUNTS_SECTION,
-        **SAMPLE_PKS_ORGS_SECTION, **SAMPLE_PKS_PVDCS_SECTION,
+        **SAMPLE_PKS_SERVERS_SECTION,
+        **SAMPLE_PKS_ACCOUNTS_SECTION,
+        **SAMPLE_PKS_ORGS_SECTION,
+        **SAMPLE_PKS_PVDCS_SECTION,
         **SAMPLE_PKS_NSXT_SERVERS_SECTION
     }
-    check_keys_and_value_types(pks_config, sample_config,
-                               location='pks config file',
-                               excluded_keys=[PKS_ORGS_SECTION_KEY],
-                               msg_update_callback=msg_update_callback)
+    check_keys_and_value_types(
+        pks_config,
+        sample_config,
+        location='pks config file',
+        excluded_keys=[PKS_ORGS_SECTION_KEY],
+        msg_update_callback=msg_update_callback
+    )
 
     pks_servers = pks_config[PKS_SERVERS_SECTION_KEY]
     for index, pks_server in enumerate(pks_servers, 1):
@@ -494,7 +627,8 @@ def _validate_pks_config_structure(pks_config,
             location=f"pks config file '{PKS_SERVERS_SECTION_KEY}' "
                      f"section, pks server #{index}",
             excluded_keys=['proxy'],
-            msg_update_callback=msg_update_callback)
+            msg_update_callback=msg_update_callback
+        )
     pks_accounts = pks_config[PKS_ACCOUNTS_SECTION_KEY]
     for index, pks_account in enumerate(pks_accounts, 1):
         check_keys_and_value_types(
@@ -502,7 +636,9 @@ def _validate_pks_config_structure(pks_config,
             SAMPLE_PKS_ACCOUNTS_SECTION[PKS_ACCOUNTS_SECTION_KEY][0],
             location=f"pks config file '{PKS_ACCOUNTS_SECTION_KEY}' "
                      f"section, pks account #{index}",
-            msg_update_callback=msg_update_callback)
+            msg_update_callback=msg_update_callback
+        )
+
     if PKS_ORGS_SECTION_KEY in pks_config.keys():
         orgs = pks_config[PKS_ORGS_SECTION_KEY]
         for index, org in enumerate(orgs, 1):
@@ -511,7 +647,9 @@ def _validate_pks_config_structure(pks_config,
                 SAMPLE_PKS_ORGS_SECTION[PKS_ORGS_SECTION_KEY][0],
                 location=f"pks config file '{PKS_ORGS_SECTION_KEY}' "
                          f"section, org #{index}",
-                msg_update_callback=msg_update_callback)
+                msg_update_callback=msg_update_callback
+            )
+
     pvdcs = pks_config[PKS_PVDCS_SECTION_KEY]
     for index, pvdc in enumerate(pvdcs, 1):
         check_keys_and_value_types(
@@ -519,7 +657,9 @@ def _validate_pks_config_structure(pks_config,
             SAMPLE_PKS_PVDCS_SECTION[PKS_PVDCS_SECTION_KEY][0],
             location=f"pks config file '{PKS_PVDCS_SECTION_KEY}' "
                      f"section, pvdc #{index}",
-            msg_update_callback=msg_update_callback)
+            msg_update_callback=msg_update_callback
+        )
+
     nsxt_servers = pks_config[PKS_NSXT_SERVERS_SECTION_KEY]
     for index, nsxt_server in enumerate(nsxt_servers, 1):
         check_keys_and_value_types(
@@ -528,13 +668,16 @@ def _validate_pks_config_structure(pks_config,
             location=f"pks config file '{PKS_NSXT_SERVERS_SECTION_KEY}' "
                      f"section, nsxt server #{index}",
             excluded_keys=['proxy'],
-            msg_update_callback=msg_update_callback)
+            msg_update_callback=msg_update_callback
+        )
 
 
-def _validate_pks_config_data_integrity(pks_config,
-                                        msg_update_callback=NullPrinter(),
-                                        logger_debug=NULL_LOGGER,
-                                        logger_wire=NULL_LOGGER):
+def _validate_pks_config_data_integrity(
+        pks_config,
+        msg_update_callback=NullPrinter(),
+        logger_debug=NULL_LOGGER,
+        logger_wire=NULL_LOGGER
+):
     all_pks_servers = \
         [entry['name'] for entry in pks_config[PKS_SERVERS_SECTION_KEY]]
     all_pks_accounts = \
@@ -544,8 +687,10 @@ def _validate_pks_config_data_integrity(pks_config,
     pks_account_info_table = {}
     for pks_account in pks_config[PKS_ACCOUNTS_SECTION_KEY]:
         pks_account_name = pks_account['pks_api_server']
-        credentials = Credentials(pks_account['username'],
-                                  pks_account['secret'])
+        credentials = Credentials(
+            pks_account['username'],
+            pks_account['secret']
+        )
 
         pks_account_info_table[pks_account_name] = credentials
 
@@ -554,14 +699,16 @@ def _validate_pks_config_data_integrity(pks_config,
     if len(duplicate_pks_server_names) != 0:
         raise ValueError(
             f"Duplicate PKS api server(s) : {duplicate_pks_server_names} found"
-            f" in Section : {PKS_SERVERS_SECTION_KEY}")
+            f" in Section : {PKS_SERVERS_SECTION_KEY}"
+        )
 
     # Check for duplicate pks account names
     duplicate_pks_account_names = get_duplicate_items_in_list(all_pks_accounts)
     if len(duplicate_pks_account_names) != 0:
         raise ValueError(
             f"Duplicate PKS account(s) : {duplicate_pks_account_names} found"
-            f" in Section : {PKS_ACCOUNTS_SECTION_KEY}")
+            f" in Section : {PKS_ACCOUNTS_SECTION_KEY}"
+        )
 
     # Check validity of all PKS api servers referenced in PKS accounts section
     for pks_account in pks_config[PKS_ACCOUNTS_SECTION_KEY]:
@@ -570,7 +717,8 @@ def _validate_pks_config_data_integrity(pks_config,
             raise ValueError(
                 f"Unknown PKS api server : {pks_server_name} referenced by "
                 f"PKS account : {pks_account.get('name')} in Section : "
-                f"{PKS_ACCOUNTS_SECTION_KEY}")
+                f"{PKS_ACCOUNTS_SECTION_KEY}"
+            )
 
     # Check validity of all PKS accounts referenced in Orgs section
     if PKS_ORGS_SECTION_KEY in pks_config.keys():
@@ -580,17 +728,21 @@ def _validate_pks_config_data_integrity(pks_config,
                 continue
             for account in referenced_accounts:
                 if account not in all_pks_accounts:
-                    raise ValueError(f"Unknown PKS account : {account} "
-                                     f"referenced by Org : {org.get('name')} "
-                                     f"in Section : {PKS_ORGS_SECTION_KEY}")
+                    raise ValueError(
+                        f"Unknown PKS account : {account} "
+                        f"referenced by Org : {org.get('name')} "
+                        f"in Section : {PKS_ORGS_SECTION_KEY}"
+                    )
 
     # Check validity of all PKS api servers referenced in PVDC section
     for pvdc in pks_config[PKS_PVDCS_SECTION_KEY]:
         pks_server_name = pvdc.get('pks_api_server')
         if pks_server_name not in all_pks_servers:
-            raise ValueError(f"Unknown PKS api server : {pks_server_name} "
-                             f"referenced by PVDC : {pvdc.get('name')} in "
-                             f"Section : {PKS_PVDCS_SECTION_KEY}")
+            raise ValueError(
+                f"Unknown PKS api server : {pks_server_name} "
+                f"referenced by PVDC : {pvdc.get('name')} in "
+                f"Section : {PKS_PVDCS_SECTION_KEY}"
+            )
 
     # Check validity of all PKS api servers referenced in the pks_api_servers
     # section
@@ -609,16 +761,19 @@ def _validate_pks_config_data_integrity(pks_config,
         pks_configuration.uaac_uri = \
             f"https://{pks_server['host']}:{pks_server['uaac_port']}"
 
-        uaa_client = UaaClient(pks_configuration.uaac_uri,
-                               pks_configuration.username,
-                               pks_configuration.secret,
-                               proxy_uri=pks_configuration.proxy)
+        uaa_client = UaaClient(
+            pks_configuration.uaac_uri,
+            pks_configuration.username,
+            pks_configuration.secret,
+            proxy_uri=pks_configuration.proxy
+        )
         token = uaa_client.getToken()
 
         if not token:
             raise ValueError(
                 "Unable to connect to PKS server : "
-                f"{pks_server.get('name')} ({pks_server.get('host')})")
+                f"{pks_server.get('name')} ({pks_server.get('host')})"
+            )
 
         pks_configuration.token = token
         client = ApiClient(configuration=pks_configuration)
@@ -626,7 +781,8 @@ def _validate_pks_config_data_integrity(pks_config,
         if client:
             msg_update_callback.general(
                 "Connected to PKS server ("
-                f"{pks_server.get('name')} : {pks_server.get('host')})")
+                f"{pks_server.get('name')} : {pks_server.get('host')})"
+            )
 
     # Check validity of all PKS api servers referenced in NSX-T section
     for nsxt_server in pks_config[PKS_NSXT_SERVERS_SECTION_KEY]:
@@ -635,7 +791,8 @@ def _validate_pks_config_data_integrity(pks_config,
             raise ValueError(
                 f"Unknown PKS api server : {pks_server_name} referenced by "
                 f"NSX-T server : {nsxt_server.get('name')} in Section : "
-                f"{PKS_NSXT_SERVERS_SECTION_KEY}")
+                f"{PKS_NSXT_SERVERS_SECTION_KEY}"
+            )
 
         # Create a NSX-T client and verify connection
         # server
@@ -647,14 +804,17 @@ def _validate_pks_config_data_integrity(pks_config,
             logger_wire=logger_wire,
             http_proxy=nsxt_server.get('proxy'),
             https_proxy=nsxt_server.get('proxy'),
-            verify_ssl=nsxt_server.get('verify'))
+            verify_ssl=nsxt_server.get('verify')
+        )
         if not nsxt_client.test_connectivity():
             raise ValueError(
                 "Unable to connect to NSX-T server : "
-                f"{nsxt_server.get('name')} ({nsxt_server.get('host')})")
+                f"{nsxt_server.get('name')} ({nsxt_server.get('host')})"
+            )
 
         msg_update_callback.general(
-            f"Connected to NSX-T server ({nsxt_server.get('host')})")
+            f"Connected to NSX-T server ({nsxt_server.get('host')})"
+        )
 
         ipset_manager = IPSetManager(nsxt_client)
         if nsxt_server.get('nodes_ip_block_ids'):

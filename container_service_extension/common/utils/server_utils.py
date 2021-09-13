@@ -61,6 +61,8 @@ def is_tkg_plus_enabled(config: dict = None):
     Check if TKG plus is enabled by the provider in the config.
 
     :param dict config: configuration provided by the user.
+
+    :return: whether TKG+ is enabled or not.
     :rtype: bool
     """
     if not config:
@@ -90,6 +92,28 @@ def should_use_mqtt_protocol(config):
     """
     return config.get('mqtt') is not None and \
         not utils.str_to_bool(config['service'].get('legacy_mode'))
+
+
+def is_tkgm_only_mode(config: dict = None):
+    """Check if TKGm only mode is enabled by the provider in the config.
+
+    :param dict config: configuration provided by the user.
+
+    :return: whether TKGm only mode is enabled or not.
+    :rtype: bool
+    """
+    if not config:
+        try:
+            config = get_server_runtime_config()
+        except Exception:
+            return False
+    service_section = config.get('service', {})
+    is_tkgm_only = service_section.get('tkgm_only_mode', False)
+    if isinstance(is_tkgm_only, bool):
+        return is_tkgm_only
+    elif isinstance(is_tkgm_only, str):
+        return utils.str_to_bool(is_tkgm_only)
+    return False
 
 
 def get_template_descriptor_keys(cookbook_version: semantic_version.Version) -> enum.EnumMeta:  # noqa: E501
