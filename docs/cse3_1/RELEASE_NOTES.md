@@ -28,8 +28,9 @@ the same will be fixed in a future CSE release.
 1. Refer to [What's new in CSE 3.1?](CSE31.html) for more details.
 2. Newer versions of native kubernetes templates are available. Refer to
 [Template Announcements](TEMPLATE_ANNOUNCEMENTS.html)
+3. Deprecation of TKGI (Enterprise PKS) - CSE Server and Kubernetes Container Clusters plug-in will soon drop support TKGI (previously known as Enterprise PKS). Consider using CSE-TKG or VCD-Tanzu for management of Kubernetes clusters with VCD.
 
-<a name="cse303"></a>   
+<a name="cse303"></a>
 ## CSE 3.0.3 GA (3.0.3)
 Release Date: 2021-06-24
 
@@ -95,11 +96,11 @@ CSE 3.1.0 beta.
 * PUT on `/api/cse/3.0/cluster/<id>` endpoint now supports cluster upgrades in addition to the resize operation.
     * `/api/cse/3.0/cluster/<id>/action/upgrade` is not supported at api_version = 36.0
 * Cluster YAML specification changes
-    * Keys of all the properties are expected to be in CamelCase. 
-    * New required field `apiVersion` in the cluster YAML specification. The 
-      value for it must be `cse.vmware.com/v2.0`, which indicates the RDE version 
+    * Keys of all the properties are expected to be in CamelCase.
+    * New required field `apiVersion` in the cluster YAML specification. The
+      value for it must be `cse.vmware.com/v2.0`, which indicates the RDE version
       of the native clusters, that CSE server uses.
-    * Sample input YAML 
+    * Sample input YAML
         * ```
           apiVersion: cse.vmware.com/v2.0
           kind: native
@@ -137,7 +138,7 @@ the issue related to runtime defined entities listed in [Known Issues](KNOWN_ISS
 
 **Known issues specific to 3.1.0-beta**:
 Resizing an empty cluster will fail for non-null values of sizingClass and storageProfile in the input yaml spec.
-Workaround: specify `storageProfile: null` and `sizingClass: null` in 
+Workaround: specify `storageProfile: null` and `sizingClass: null` in
 the `vcd cse cluster apply` specification for worker/nfs nodes.
 
 ---
@@ -198,7 +199,7 @@ the same will be fixed in a future CSE release.
 * Support for MQTT message bus for communication between VCD (10.2 and above) and CSE server
     * Improved message bus connection management (applies to MQTT as well as AMQP)
     * More details at [CSE Server Configuration File](CSE_CONFIG.html#mqtt_section)
-* Support and tools for CSE service account (vCD 10.2 and above) 
+* Support and tools for CSE service account (vCD 10.2 and above)
     * VCD System Administrator credential is no longer required to run the CSE Server
     * More details at [CSE Server Installation Prerequisites](CSE_INSTALL_PREREQUISITES.html#service_account)
 * CSE 3.0.1 can be used with the VMware Cloud Director service for Native Clusters
@@ -331,7 +332,7 @@ cse convert-cluster
 * From CSE 2.5.0 or above - To be able to upgrade the cluster.
 * From CSE older than 2.5.0 - To preserve managablilty of the clusters.
 
-This command adds new metadata to the cluster. If the cluster was deployed by 
+This command adds new metadata to the cluster. If the cluster was deployed by
 CSE version below 2.5.0, the command will also reset the admin password of all
 nodes in the cluster. If nodes in the cluster are setup with ssh keys for root
 login, those key pairings will be preserved. The command will force a
