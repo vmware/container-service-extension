@@ -34,10 +34,15 @@ CSE 3.1.1 beta.
 
 **What's New**
 * Support for importing standard TKG OVA and deploying Kubernetes clusters using them.
-  * Supported TKG OVAs : TKG 1.4, 1.3.1 - Ubuntu 20.04 Kubernetes v1.20.5 vmware.2
+  * Learn more about using [TKG OVA with CSE](TEMPLATE_MANAGEMENT.HTML#tkgm_templates)
 * Kubernetes clusters based on TKG runtime with VCD CPI and VCD CSI
   * Learn more about [VCD CPI](https://github.com/vmware/cloud-provider-for-cloud-director/blob/0.1.0-beta/README.md)
   and [VCD CSI](https://github.com/vmware/cloud-director-named-disk-csi-driver/blob/0.1.0-beta/README.md)
+
+**Supported TKG OVAs**
+* TKG 1.3.0 : Ubuntu 20.04, Kubernetes v1.20.4 vmware.1 (ubuntu-2004-kube-v1.20.4-vmware.1-tkg.0-16153464878630780629)  
+* TKG 1.3.1 : Ubuntu 20.04, Kubernetes v1.20.5 vmware.2 (ubuntu-2004-kube-v1.20.5-vmware.2-tkg.1-6700972457122900687)  
+* TKG 1.4.0 : Ubuntu 20.04, Kubernetes v1.21.2 vmware.1 (ubuntu-2004-kube-v1.21.2+vmware.1-tkg.1-7832907791984498322)
 
 **Notes to System Administrator**  
 * CSE 3.1.1.0b1 is supposed to be a fresh install only release, and

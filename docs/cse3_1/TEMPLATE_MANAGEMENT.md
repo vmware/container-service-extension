@@ -65,6 +65,7 @@ cse template install TEMPLATE_NAME TEMPLATE_REVISION
 The refreshed templates do not impact existing Kubernetes clusters in the
 environment.
 
+<a name="tkgm_templates"></a>
 ## TKG Templates
 Starting CSE 3.1.1, CSE will allow providers to import standard TKG OVA into
 VCD via CSE server cli. Once these OVAs are imported into VCD, `vcd-cli` with
@@ -75,6 +76,7 @@ list of TKG OVAs that has been tested and verified to work with CSE. Users
 can choose to use other available TKG OVAs but they may not work properly with
 CSE.
 
+<a name="import_tkgm_templates"></a>
 ### Importing TKG templates into VCD
 Before users can deploy Kubernetes clusters with TKG runtime, providers are
 required to import the TKG OVA into VCD via CSE server cli. CSE 3.1.1 has
