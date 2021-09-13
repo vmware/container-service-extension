@@ -1110,7 +1110,7 @@ Examples:
 
         # If cluster kind is not specified, let the server handle this check
         if k8_runtime:
-            def_utils.raise_error_if_unsupported_cluster_operation(cluster_kind=k8_runtime)  # noqa: E501
+            def_utils.raise_error_if_tkgm_cluster_operation(cluster_kind=k8_runtime)  # noqa: E501
 
         users_list = list(users)
         cluster = Cluster(client, k8_runtime)
@@ -1211,7 +1211,7 @@ Examples:
 
         # If cluster kind is not specified, let the server handle this check
         if k8_runtime:
-            def_utils.raise_error_if_unsupported_cluster_operation(cluster_kind=k8_runtime)  # noqa: E501
+            def_utils.raise_error_if_tkgm_cluster_operation(cluster_kind=k8_runtime)  # noqa: E501
 
         cluster = Cluster(client, k8_runtime)
         share_entries = cluster.list_share_entries(cluster_id, name, org, vdc)
@@ -1301,7 +1301,7 @@ Examples:
 
         # If cluster kind is not specified, let the server handle this check
         if k8_runtime:
-            def_utils.raise_error_if_unsupported_cluster_operation(cluster_kind=k8_runtime)  # noqa: E501
+            def_utils.raise_error_if_tkgm_cluster_operation(cluster_kind=k8_runtime)  # noqa: E501
 
         users_list = list(users)
         cluster = Cluster(client, k8_runtime)
