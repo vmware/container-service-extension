@@ -636,65 +636,65 @@ def _generate_cluster_apply_tests(test_users=None):
             test_cases.extend(
                 [
                     # Invalid Sizing policy
-                    # CLUSTER_APPLY_TEST_PARAM(
-                    #     user=user,
-                    #     password=None,
-                    #     cluster_name=f"{env.USERNAME_TO_CLUSTER_NAME[user]}-case1",
-                    #     worker_count=0,
-                    #     nfs_count=0,
-                    #     rollback=True,
-                    #     template_name=template['name'],
-                    #     template_revision=template['revision'],
-                    #     ovdc_network=None,
-                    #     sizing_class="Invalid_value",
-                    #     storage_profile=None,
-                    #     expected_phase="CREATE:FAILED"
-                    # ),
+                    CLUSTER_APPLY_TEST_PARAM(
+                        user=user,
+                        password=None,
+                        cluster_name=f"{env.USERNAME_TO_CLUSTER_NAME[user]}-case1",
+                        worker_count=0,
+                        nfs_count=0,
+                        rollback=True,
+                        template_name=template['name'],
+                        template_revision=template['revision'],
+                        ovdc_network=None,
+                        sizing_class="Invalid_value",
+                        storage_profile=None,
+                        expected_phase="CREATE:FAILED"
+                    ),
                     # Invalid Storage profile
-                    # CLUSTER_APPLY_TEST_PARAM(
-                    #     user=user,
-                    #     password=None,
-                    #     worker_count=0,
-                    #     nfs_count=0,
-                    #     rollback=True,
-                    #     template_name=template['name'],
-                    #     template_revision=template['revision'],
-                    #     ovdc_network=None,
-                    #     sizing_class=None,
-                    #     storage_profile="Invalid_value",
-                    #     cluster_name=f"{env.USERNAME_TO_CLUSTER_NAME[user]}-case2",
-                    #     expected_phase="CREATE:FAILED"
-                    # ),
+                    CLUSTER_APPLY_TEST_PARAM(
+                        user=user,
+                        password=None,
+                        worker_count=0,
+                        nfs_count=0,
+                        rollback=True,
+                        template_name=template['name'],
+                        template_revision=template['revision'],
+                        ovdc_network=None,
+                        sizing_class=None,
+                        storage_profile="Invalid_value",
+                        cluster_name=f"{env.USERNAME_TO_CLUSTER_NAME[user]}-case2",
+                        expected_phase="CREATE:FAILED"
+                    ),
                     # Invalid Network
-                    # CLUSTER_APPLY_TEST_PARAM(
-                    #     user=user,
-                    #     password=None,
-                    #     worker_count=0,
-                    #     nfs_count=0,
-                    #     rollback=True,
-                    #     template_name=template['name'],
-                    #     template_revision=template['revision'],
-                    #     ovdc_network="Invalid_value",
-                    #     sizing_class=None,
-                    #     storage_profile=None,
-                    #     cluster_name=f"{env.USERNAME_TO_CLUSTER_NAME[user]}-case3",
-                    #     expected_phase="CREATE:FAILED"
-                    # ),
+                    CLUSTER_APPLY_TEST_PARAM(
+                        user=user,
+                        password=None,
+                        worker_count=0,
+                        nfs_count=0,
+                        rollback=True,
+                        template_name=template['name'],
+                        template_revision=template['revision'],
+                        ovdc_network="Invalid_value",
+                        sizing_class=None,
+                        storage_profile=None,
+                        cluster_name=f"{env.USERNAME_TO_CLUSTER_NAME[user]}-case3",
+                        expected_phase="CREATE:FAILED"
+                    ),
                     # Invalid network with rollback
-                    # CLUSTER_APPLY_TEST_PARAM(
-                    #     user=user,
-                    #     password=None,
-                    #     worker_count=0,
-                    #     nfs_count=0,
-                    #     rollback=False,
-                    #     template_name=template['name'],
-                    #     template_revision=template['revision'],
-                    #     ovdc_network="Invalid_value",
-                    #     sizing_class=None,
-                    #     storage_profile=None,
-                    #     cluster_name=f"{env.USERNAME_TO_CLUSTER_NAME[user]}-case4",
-                    #     expected_phase="CREATE:FAILED"
-                    # ),
+                    CLUSTER_APPLY_TEST_PARAM(
+                        user=user,
+                        password=None,
+                        worker_count=0,
+                        nfs_count=0,
+                        rollback=False,
+                        template_name=template['name'],
+                        template_revision=template['revision'],
+                        ovdc_network="Invalid_value",
+                        sizing_class=None,
+                        storage_profile=None,
+                        cluster_name=f"{env.USERNAME_TO_CLUSTER_NAME[user]}-case4",
+                        expected_phase="CREATE:FAILED"
+                    ),
                     # Valid case
                     CLUSTER_APPLY_TEST_PARAM(
                         user=user,
@@ -714,20 +714,20 @@ def _generate_cluster_apply_tests(test_users=None):
                     # resize a failed deployment
                     # expected status is still CREATE:FAILED because the
                     # request wont be acknowledged by CSE server
-                    # CLUSTER_APPLY_TEST_PARAM(
-                    #     user=user,
-                    #     password=None,
-                    #     worker_count=1,
-                    #     nfs_count=0,
-                    #     rollback=False,
-                    #     template_name=template['name'],
-                    #     template_revision=template['revision'],
-                    #     ovdc_network='Invalid_value',
-                    #     sizing_class=None,
-                    #     storage_profile=None,
-                    #     cluster_name=f"{env.USERNAME_TO_CLUSTER_NAME[user]}-case4",
-                    #     expected_phase='CREATE:FAILED'
-                    # ),
+                    CLUSTER_APPLY_TEST_PARAM(
+                        user=user,
+                        password=None,
+                        worker_count=1,
+                        nfs_count=0,
+                        rollback=False,
+                        template_name=template['name'],
+                        template_revision=template['revision'],
+                        ovdc_network='Invalid_value',
+                        sizing_class=None,
+                        storage_profile=None,
+                        cluster_name=f"{env.USERNAME_TO_CLUSTER_NAME[user]}-case4",
+                        expected_phase='CREATE:FAILED'
+                    ),
                     # Resize up a valid deployment
                     CLUSTER_APPLY_TEST_PARAM(
                         user=user,
