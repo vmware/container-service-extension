@@ -1082,6 +1082,10 @@ Examples:
         with ReadOnly access with 'user1'
     """  # noqa: E501
     try:
+        # If cluster kind is not specified, let the server handle this check
+        if k8_runtime:
+            def_utils.raise_error_if_tkgm_cluster_operation(cluster_kind=k8_runtime)  # noqa: E501
+
         # Verify access level and cluster name/id arguments
         access_level_id = shared_constants.ACCESS_LEVEL_TYPE_TO_ID.get(acl.lower())  # noqa: E501
         if not access_level_id:
@@ -1107,10 +1111,6 @@ Examples:
             org = ctx.obj['profiles'].get('org_in_use')
         elif is_system_user and org is None:
             raise Exception("Need to specify cluster org since logged in user is in system org")  # noqa: E501
-
-        # If cluster kind is not specified, let the server handle this check
-        if k8_runtime:
-            def_utils.raise_error_if_tkgm_cluster_operation(cluster_kind=k8_runtime)  # noqa: E501
 
         users_list = list(users)
         cluster = Cluster(client, k8_runtime)
@@ -1189,6 +1189,10 @@ Examples:
         List shared user information for cluster with cluster ID 'urn:vcloud:entity:vmware:tkgcluster:1.0.0:71fa7b01-84dc-4a58-ae54-a1098219b057'
     """  # noqa: E501
     try:
+        # If cluster kind is not specified, let the server handle this check
+        if k8_runtime:
+            def_utils.raise_error_if_tkgm_cluster_operation(cluster_kind=k8_runtime)  # noqa: E501
+
         if not (cluster_id or name):
             raise Exception("Please specify cluster name or cluster id.")
         client_utils.cse_restore_session(ctx)
@@ -1208,10 +1212,6 @@ Examples:
             org = ctx.obj['profiles'].get('org_in_use')
         elif is_system_user and org is None:
             raise Exception("Need to specify cluster org since logged in user is in system org")  # noqa: E501
-
-        # If cluster kind is not specified, let the server handle this check
-        if k8_runtime:
-            def_utils.raise_error_if_tkgm_cluster_operation(cluster_kind=k8_runtime)  # noqa: E501
 
         cluster = Cluster(client, k8_runtime)
         share_entries = cluster.list_share_entries(cluster_id, name, org, vdc)
