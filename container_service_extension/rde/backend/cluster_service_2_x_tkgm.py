@@ -46,8 +46,12 @@ from container_service_extension.common.utils.script_utils import get_cluster_sc
 import container_service_extension.common.utils.server_utils as server_utils
 import container_service_extension.common.utils.thread_utils as thread_utils
 import container_service_extension.exception.exceptions as exceptions
+import container_service_extension.lib.oauth_client.oauth_service as oauth_service  # noqa: E501
 import container_service_extension.lib.telemetry.constants as telemetry_constants  # noqa: E501
 import container_service_extension.lib.telemetry.telemetry_handler as telemetry_handler  # noqa: E501
+from container_service_extension.lib.tokens_client.tokens_service import TokensService  # noqa: E501
+from container_service_extension.logging.logger import NULL_LOGGER
+from container_service_extension.logging.logger import SERVER_CLOUDAPI_WIRE_LOGGER  # noqa: E501
 from container_service_extension.logging.logger import SERVER_LOGGER as LOGGER
 from container_service_extension.mqi.consumer.mqtt_publisher import MQTTPublisher  # noqa: E501
 import container_service_extension.rde.acl_service as acl_service
@@ -232,7 +236,7 @@ class ClusterService(abstract_broker.AbstractBroker):
         cluster_name: Optional[str] = None
         org_name: Optional[str] = None
         ovdc_name: Optional[str] = None
-        curr_rde: Optional[Union[common_models.DefEntity, Tuple[common_models.DefEntity, dict]]] = None
+        curr_rde: Optional[Union[common_models.DefEntity, Tuple[common_models.DefEntity, dict]]] = None  # noqa: E501
         try:
             cluster_name = input_native_entity.metadata.name
             org_name = input_native_entity.metadata.org_name
@@ -707,7 +711,8 @@ class ClusterService(abstract_broker.AbstractBroker):
         expose_ip: str = ''
         network_name = ''
         client_v36 = self.context.get_client(api_version=DEFAULT_API_VERSION)
-        curr_rde: Optional[Union[common_models.DefEntity, Tuple[common_models.DefEntity, dict]]] = None
+        curr_rde: Optional[Union[common_models.DefEntity, Tuple[common_models.DefEntity, dict]]] = None  # noqa: E501
+        is_refresh_token_created = False
         try:
             cluster_name = input_native_entity.metadata.name
             vcd_host = input_native_entity.metadata.site
@@ -729,20 +734,20 @@ class ClusterService(abstract_broker.AbstractBroker):
                 input_native_entity.spec.settings is not None
                 and input_native_entity.spec.settings.network is not None
                 and input_native_entity.spec.settings.network.pods is not None
-                and input_native_entity.spec.settings.network.pods.cidr_blocks is not None
-                and len(input_native_entity.spec.settings.network.pods.cidr_blocks) > 0
+                and input_native_entity.spec.settings.network.pods.cidr_blocks is not None  # noqa: E501
+                and len(input_native_entity.spec.settings.network.pods.cidr_blocks) > 0  # noqa: E501
             ):
-                k8s_pod_cidr = input_native_entity.spec.settings.network.pods.cidr_blocks[0]
+                k8s_pod_cidr = input_native_entity.spec.settings.network.pods.cidr_blocks[0]  # noqa: E501
 
             k8s_svc_cidr = TKGM_DEFAULT_SERVICE_CIDR
             if (
                 input_native_entity.spec.settings is not None
                 and input_native_entity.spec.settings.network is not None
-                and input_native_entity.spec.settings.network.services is not None
-                and input_native_entity.spec.settings.network.services.cidr_blocks is not None
-                and len(input_native_entity.spec.settings.network.services.cidr_blocks) > 0
+                and input_native_entity.spec.settings.network.services is not None  # noqa: E501
+                and input_native_entity.spec.settings.network.services.cidr_blocks is not None  # noqa: E501
+                and len(input_native_entity.spec.settings.network.services.cidr_blocks) > 0  # noqa: E501
             ):
-                k8s_svc_cidr = input_native_entity.spec.settings.network.services.cidr_blocks[0]
+                k8s_svc_cidr = input_native_entity.spec.settings.network.services.cidr_blocks[0]  # noqa: E501
 
             org = vcd_utils.get_org(client_v36, org_name=org_name)
             vdc = vcd_utils.get_vdc(client_v36, vdc_name=ovdc_name, org=org)
@@ -788,6 +793,30 @@ class ClusterService(abstract_broker.AbstractBroker):
             task = vapp.set_multiple_metadata(tags)
             client_v36.get_task_monitor().wait_for_status(task)
 
+            # Get refresh token
+            config = server_utils.get_server_runtime_config()
+            logger_wire = NULL_LOGGER
+            if utils.str_to_bool(config['service']['log_wire']):
+                logger_wire = SERVER_CLOUDAPI_WIRE_LOGGER
+            oauth_client_name = _get_oauth_client_name_from_cluster_id(cluster_id)  # noqa: E501
+            mts = oauth_service.MachineTokenService(
+                vcd_api_client=client_v36,
+                oauth_client_name=oauth_client_name,
+                logger_debug=LOGGER,
+                logger_wire=logger_wire)
+            mts.register_oauth_client()
+            mts.create_refresh_token()
+            refresh_token = mts.refresh_token
+            is_refresh_token_created = True
+
+            # Get cluster_username
+            cloudapi_client_v36 = self.context.get_cloudapi_client(
+                api_version=DEFAULT_API_VERSION)
+            token_service = TokensService(cloudapi_client_v36)
+            token_info = token_service.get_refresh_token_by_oauth_client_name(
+                mts.oauth_client_name)
+            cluster_username = token_info['owner']['name']
+
             msg = f"Creating control plane node for cluster '{cluster_name}'" \
                   f" ({cluster_id})"
             LOGGER.debug(msg)
@@ -819,7 +848,9 @@ class ClusterService(abstract_broker.AbstractBroker):
                     sizing_class_name=control_plane_sizing_class,
                     expose=expose,
                     cluster_name=cluster_name,
-                    cluster_id=cluster_id
+                    cluster_id=cluster_id,
+                    cluster_username=cluster_username,
+                    refresh_token=refresh_token
                 )
             except Exception as err:
                 LOGGER.error(err, exc_info=True)
@@ -915,6 +946,9 @@ class ClusterService(abstract_broker.AbstractBroker):
                 exceptions.ClusterOperationError) as err:
             msg = f"Error creating cluster '{cluster_name}'"
             LOGGER.error(msg, exc_info=True)
+            # revoke refresh token if failed
+            if is_refresh_token_created:
+                self._delete_refresh_token(cluster_id)
             try:
                 self._fail_operation(
                     cluster_id, DefEntityOperation.CREATE)
@@ -977,7 +1011,7 @@ class ClusterService(abstract_broker.AbstractBroker):
                                      f"cluster '{cluster_name}' with state "
                                      f"'{curr_rde.state}'", exc_info=True)
                     else:
-                        LOGGER.error(f"Failed to delete the defined entity for "
+                        LOGGER.error("Failed to delete the defined entity for "
                                      f"cluster '{cluster_name}' with unknown "
                                      f"state", exc_info=True)
 
@@ -987,6 +1021,9 @@ class ClusterService(abstract_broker.AbstractBroker):
         except Exception as err:
             msg = f"Unknown error creating cluster '{cluster_name}: {str(err)}'"   # noqa: E501
             LOGGER.error(msg, exc_info=True)
+            # revoke refresh token if failed
+            if is_refresh_token_created:
+                self._delete_refresh_token(cluster_id)
             # TODO: Avoid many try-except block. Check if it is a good practice
             try:
                 self._fail_operation(
@@ -1381,6 +1418,9 @@ class ClusterService(abstract_broker.AbstractBroker):
                         curr_native_entity.status,
                         server_utils.get_rde_version_in_use())
 
+                # delete refresh token
+                self._delete_refresh_token(curr_rde.externalId)
+
                 # Handle deleting dnat rule if cluster is exposed
                 exposed: bool = current_spec.settings.network.expose
                 dnat_delete_success: bool = False
@@ -1689,6 +1729,22 @@ class ClusterService(abstract_broker.AbstractBroker):
             return native_entity.status.private.kube_config
         return None
 
+    def _delete_refresh_token(self, cluster_id: str):
+        cloudapi_client_v36 = self.context.get_cloudapi_client(
+            api_version=DEFAULT_API_VERSION)
+        oauth_client_name = _get_oauth_client_name_from_cluster_id(cluster_id)
+        try:
+            token_service = TokensService(cloudapi_client_v36)
+            token_service.delete_refresh_token_by_oauth_client_name(oauth_client_name)  # noqa: E501
+            LOGGER.debug(f"Successfully deleted the refresh token with name {oauth_client_name}")  # noqa: E501
+        except Exception:
+            msg = f"Failed to revoke refresh token with name {oauth_client_name}"  # noqa: E501
+            LOGGER.error(f"{msg}", exc_info=True)
+
+
+def _get_oauth_client_name_from_cluster_id(cluster_id):
+    return f"cluster-{cluster_id}"
+
 
 def _get_nodes_details(vapp):
     """Get the details of the nodes given a vapp.
@@ -1853,7 +1909,9 @@ def _add_control_plane_nodes(
         sizing_class_name=None,
         expose=False,
         cluster_name=None,
-        cluster_id=None) -> Tuple[str, List[Dict]]:
+        cluster_id=None,
+        cluster_username=None,
+        refresh_token=None) -> Tuple[str, List[Dict]]:
 
     vcd_utils.raise_error_if_user_not_from_system_org(sysadmin_client)
 
@@ -1900,6 +1958,8 @@ def _add_control_plane_nodes(
                 antrea_cni_version=ANTREA_CNI_VERSION,
                 ssh_key=ssh_key if ssh_key else '',
                 control_plane_endpoint='',
+                cluster_username=cluster_username,
+                refresh_token=refresh_token
             )
 
         task = vapp.add_vms(
@@ -1938,8 +1998,8 @@ def _add_control_plane_nodes(
                     control_plane_endpoint = expose_ip
                 except Exception as err:
                     LOGGER.error(f"Exposing cluster failed: {str(err)}", exc_info=True)  # noqa: E501
-                    # This is a deviation from native: we do not want silent failures when expose
-                    # functionality fails.
+                    # This is a deviation from native: we do not want
+                    # silent failures when expose functionality fails.
                     raise
 
             # If expose is set, control_plane_endpoint is exposed ip
@@ -1956,7 +2016,9 @@ def _add_control_plane_nodes(
                 pod_cidr=k8s_pod_cidr,
                 antrea_cni_version=ANTREA_CNI_VERSION,
                 ssh_key=ssh_key if ssh_key else '',
-                control_plane_endpoint=f"{control_plane_endpoint}:6443"
+                control_plane_endpoint=f"{control_plane_endpoint}:6443",
+                cluster_username=cluster_username,
+                refresh_token=refresh_token
             )
             task = vm.update_guest_customization_section(
                 enabled=True,
