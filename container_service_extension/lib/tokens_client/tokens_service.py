@@ -25,7 +25,7 @@ class TokensService:
         response = self._cloudapi_client.do_request(
             method=RequestMethod.GET,
             cloudapi_version=CloudApiVersion.VERSION_1_0_0.value,
-            resource_url_relative_path=f"{CloudApiResource.TOKENS.value}?{filter_string}")  # noqa: E501
+            resource_url_relative_path=f"{CloudApiResource.TOKENS.value}?filter={filter_string}")  # noqa: E501
         if len(response['values']) == 0:
             raise Exception("Cannot find refresh token for "
                             f"OAuth client {oauth_client_name}")
