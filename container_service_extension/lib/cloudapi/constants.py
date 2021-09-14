@@ -34,6 +34,7 @@ class CloudApiResource(str, Enum):
     EXTERNAL_NETWORKS = 'externalNetworks'
     USED_IP_ADDRESSES = 'usedIpAddresses'
     ORG_VDC_NETWORKS = 'orgVdcNetworks'
+    TOKENS = 'tokens'
 
 
 class ResponseKeys(str, Enum):
