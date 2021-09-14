@@ -1430,7 +1430,7 @@ class ClusterService(abstract_broker.AbstractBroker):
                         server_utils.get_rde_version_in_use())
 
                 # delete refresh token
-                self._delete_refresh_token(curr_rde.externalId)
+                self._delete_refresh_token(cluster_id)
 
                 # Handle deleting dnat rule if cluster is exposed
                 exposed: bool = current_spec.settings.network.expose
