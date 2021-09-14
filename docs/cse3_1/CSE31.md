@@ -27,7 +27,7 @@ For greenfield installations, please get started with [CSE introduction](INTRO.h
 
 * CSE 3.1 drops the support with VCD 10.0.
 
-* Deprecation of TKGI (Enterprise PKS) - CSE Server and Kubernetes Container Clusters plug-in will soon drop support TKGI (previously known as Enterprise PKS). Consider using CSE-TKG or VCD-Tanzu for management of Kubernetes clusters with VCD.
+* Deprecation of TKGI (Enterprise PKS) - CSE Server and Kubernetes Container Clusters plug-in will soon drop support for TKGI (previously known as Enterprise PKS). Consider using VMware Tanzu Kubernetes Grid or VMware Tanzu Kubernetes Grid Service for management of Kubernetes clusters with VCD.
 
 **Terminology:**
 * TKGS cluster ~ Tanzu Kubernetes Grid Service cluster ~ vSphere with Tanzu cluster
