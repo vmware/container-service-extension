@@ -17,6 +17,8 @@ class TokensService:
     def get_refresh_token_by_oauth_client_name(self, oauth_client_name: str):
         """Get refresh token information by oauth client name."""
         # NOTE: Oauth client name is uniqe to a refresh token
+        if not oauth_client_name:
+            raise ValueError(f"Invalid value supplied for oauth_client_name: {oauth_client_name}")  # noqa: E501
         filters = {
             "type": "REFRESH",
             "name": oauth_client_name
