@@ -38,7 +38,6 @@ csi_driver_path=/root/csi-driver.yaml
 csi_controller_path=/root/csi-controller.yaml
 csi_node_path=/root/csi-node.yaml
 
-username=$(echo -n "{cluster_username}" | base64)
 machineUserToken={refresh_token}
 
 # This is a simple command but its execution is crucial to kubeadm join. There are a few versions of ubuntu
@@ -154,7 +153,7 @@ vmtoolsd --cmd "info-set guestinfo.postcustomization.kubectl.apply.cni.status su
 
 vmtoolsd --cmd "info-set guestinfo.postcustomization.kubectl.cpi.install.status in_progress"
   wget -O $vcloud_basic_auth_path https://raw.githubusercontent.com/vmware/cloud-provider-for-cloud-director/0.1.0-beta/manifests/vcloud-basic-auth.yaml
-  sed -i "s/username\: \\\"\\\"/username\: \\\"$username\\\"/; s/machineUserToken\: \\\"\\\"/machineUserToken\: \\\"$refresh_token\\\"/" $vcloud_basic_auth_path
+  sed -i "s/refreshToken\: \\\"\\\"/refreshToken\: \\\"$refresh_token\\\"/" $vcloud_basic_auth_path
   kubectl apply -f $vcloud_basic_auth_path
 
   wget -O $vcloud_configmap_path https://raw.githubusercontent.com/vmware/cloud-provider-for-cloud-director/0.1.0-beta/manifests/vcloud-configmap.yaml
