@@ -1734,6 +1734,8 @@ class ClusterService(abstract_broker.AbstractBroker):
 
 
 def _get_oauth_client_name_from_cluster_id(cluster_id):
+    if not cluster_id:
+        raise ValueError(f"Invalid value supplied for cluster_id: {cluster_id}")  # noqa: E501
     return f"cluster-{cluster_id}"
 
 
@@ -2123,7 +2125,7 @@ def _add_worker_nodes(sysadmin_client, num_nodes, org, vdc, vapp,
 
         # Example format:
         # kubeadm join 192.168.7.8:6443 --token 5edbci.duu55v7k6hdv52sm \
-        #     --discovery-token-ca-cert-hash sha256:26326dcdef13e627e30ce93800e549855cba3eb03dbedcdab57c696bea17b02d
+        #     --discovery-token-ca-cert-hash sha256:26326dcdef13e627e30ce93800e549855cba3eb03dbedcdab57c696bea17b02d  # noqa: E501
         parts = control_plane_join_cmd.split()
         num_parts = 7
         if len(parts) != num_parts:

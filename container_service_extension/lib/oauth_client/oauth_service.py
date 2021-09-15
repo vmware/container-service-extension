@@ -2,6 +2,7 @@
 # Copyright (c) 2021 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 import logging
+from urllib.parse import urlparse
 
 import pyvcloud.vcd.client as vcd_client
 
@@ -19,6 +20,8 @@ GRANT_TYPE_REFRESH_TOKEN = "refresh_token"
 
 
 class MachineTokenService(cloudapi_client.CloudApiClient):
+    """API client for /oauth endpoint."""
+
     def __init__(self,
                  vcd_api_client: vcd_client.Client,
                  oauth_client_name: str,
@@ -44,10 +47,8 @@ class MachineTokenService(cloudapi_client.CloudApiClient):
         # since /oauth endpoint is not associated with /cloudapi or /api,
         # we need to format the cloudapi_url so that only https://vcd-host
         # part is retained
-        host_url_parts = cloudapi_url.split('/')[:-1]
-        scheme = host_url_parts[0]
-        vcd_host = host_url_parts[-1]
-        self._host_url = f"{scheme}//{vcd_host}"
+        url_host = urlparse(cloudapi_url)
+        self._host_url = f"{url_host.scheme}://{url_host.netloc}"
 
         self.oauth_client_id = None
         self.refresh_token = None
@@ -55,7 +56,7 @@ class MachineTokenService(cloudapi_client.CloudApiClient):
     def _get_register_oauth_client_url(self):
         register_client_url = \
             f"{self._host_url}{BASE_OAUTH_ENDPOINT_FRAGMENT}"
-        # /oauth endpoint is tenanted. Whcih means, system administrators can
+        # /oauth endpoint is tenanted. which means, system administrators can
         # access the endpoint using /oauth/provider/register while tenant users
         # can access the endpoint using /oauth/tenant/{orgId}/register
         if self.vcd_api_client.is_sysadmin():
@@ -71,7 +72,7 @@ class MachineTokenService(cloudapi_client.CloudApiClient):
     def _get_oauth_token_url(self):
         oauth_token_url = \
             f"{self._host_url}{BASE_OAUTH_ENDPOINT_FRAGMENT}"
-        # /oauth endpoint is tenanted. Whcih means, system administrators can
+        # /oauth endpoint is tenanted. which means, system administrators can
         # access the endpoint using /oauth/provider/token while tenant users
         # can access the endpoint using /oauth/tenant/{orgId}/token
         if self.vcd_api_client.is_sysadmin():
@@ -86,12 +87,15 @@ class MachineTokenService(cloudapi_client.CloudApiClient):
 
     def register_oauth_client(self):
         """Register an oauth client to get machine user tokens."""
+        register_oauth_client_url = self._get_register_oauth_client_url()
         response = self.do_request(
             method=RequestMethod.POST,
-            resource_url_absolute_path=self._get_register_oauth_client_url(),
+            resource_url_absolute_path=register_oauth_client_url,
             payload={"client_name": self.oauth_client_name},
             content_type="application/json")
 
+        if not response:
+            raise Exception(f"Obtained an empty response from {register_oauth_client_url}")  # noqa: E501
         self.oauth_client_id = response['client_id']
 
         return response
@@ -106,11 +110,15 @@ class MachineTokenService(cloudapi_client.CloudApiClient):
             "client_id": self.oauth_client_id,
             "assertion": self.vcd_api_client.get_access_token()
         }
+        oauth_token_url = self._get_oauth_token_url()
         response = self.do_request(
             method=RequestMethod.POST,
-            resource_url_absolute_path=self._get_oauth_token_url(),
+            resource_url_absolute_path=oauth_token_url,
             content_type="application/x-www-form-urlencoded",
             payload=payload)
+
+        if not response:
+            raise Exception(f"Obtained an empty response from {oauth_token_url}")  # noqa: E501
 
         self.refresh_token = response['refresh_token']
         return response
@@ -124,10 +132,14 @@ class MachineTokenService(cloudapi_client.CloudApiClient):
             "grant_type": "refresh_token",
             "refresh_token": self.refresh_token
         }
+        oauth_token_url = self._get_oauth_token_url()
         response = self.do_request(
             method=RequestMethod.POST,
-            resource_url_absolute_path=self._get_oauth_token_url(),
+            resource_url_absolute_path=oauth_token_url,
             content_type="application/x-www-form-urlencoded",
             payload=payload)
+
+        if not response:
+            raise Exception(f"Obtained an empty response from {oauth_token_url}")  # noqa: E501
 
         return response['access_token']
