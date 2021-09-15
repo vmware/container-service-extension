@@ -3,6 +3,10 @@ layout: default
 title: Enterprise PKS enablement
 ---
 
+## Deprecation Notice
+
+CSE Server and Kubernetes Container Clusters plug-in will soon drop support for TKGI (previously known as Enterprise PKS). Consider using VMware Tanzu Kubernetes Grid or VMware Tanzu Kubernetes Grid Service for management of Kubernetes clusters with VCD.
+
 # Enterprise PKS enablement
 <a name="overview"></a>
 ## Overview
@@ -203,7 +207,7 @@ Starting CSE 3.0, separate command group has been dedicated to Ent-PKS
     * Allocation model and reservation models only. Pay-as-you-go is unsupported.
      Elasticity with other models is also not supported.
 * Are Enterprise PKS based clusters visible in VCD UI?
-    * Kubernetes Clusters UI Plugin versions 2.0 and 1.0.3, both can be used 
+    * Kubernetes Clusters UI Plugin versions 2.0 and 1.0.3, both can be used
     to manage Enterprise PKS Clusters. Refer [compatibility matrix](CSE30.html#cse30-compatibility-matrix)
 * Do Enterprise PKS based clusters adhere to their parent organization-vdc compute settings?
     * Yes. Both native and Enterprise PkS clusters' combined usage is accounted towards
