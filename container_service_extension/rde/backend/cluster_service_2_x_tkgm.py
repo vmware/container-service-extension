@@ -1736,6 +1736,8 @@ class ClusterService(abstract_broker.AbstractBroker):
 
 
 def _get_oauth_client_name_from_cluster_id(cluster_id):
+    if not cluster_id:
+        raise ValueError(f"Invalid value supplied for cluster_id: {cluster_id}")  # noqa: E501
     return f"cluster-{cluster_id}"
 
 
