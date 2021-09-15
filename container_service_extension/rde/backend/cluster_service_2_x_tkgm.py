@@ -232,7 +232,7 @@ class ClusterService(abstract_broker.AbstractBroker):
         cluster_name: Optional[str] = None
         org_name: Optional[str] = None
         ovdc_name: Optional[str] = None
-        curr_rde: Optional[Union[common_models.DefEntity, Tuple[common_models.DefEntity, dict]]] = None
+        curr_rde: Optional[Union[common_models.DefEntity, Tuple[common_models.DefEntity, dict]]] = None  # noqa: E501
         try:
             cluster_name = input_native_entity.metadata.name
             org_name = input_native_entity.metadata.org_name
@@ -707,7 +707,7 @@ class ClusterService(abstract_broker.AbstractBroker):
         expose_ip: str = ''
         network_name = ''
         client_v36 = self.context.get_client(api_version=DEFAULT_API_VERSION)
-        curr_rde: Optional[Union[common_models.DefEntity, Tuple[common_models.DefEntity, dict]]] = None
+        curr_rde: Optional[Union[common_models.DefEntity, Tuple[common_models.DefEntity, dict]]] = None  # noqa: E501
         try:
             cluster_name = input_native_entity.metadata.name
             vcd_host = input_native_entity.metadata.site
@@ -729,20 +729,20 @@ class ClusterService(abstract_broker.AbstractBroker):
                 input_native_entity.spec.settings is not None
                 and input_native_entity.spec.settings.network is not None
                 and input_native_entity.spec.settings.network.pods is not None
-                and input_native_entity.spec.settings.network.pods.cidr_blocks is not None
-                and len(input_native_entity.spec.settings.network.pods.cidr_blocks) > 0
+                and input_native_entity.spec.settings.network.pods.cidr_blocks is not None  # noqa: E501
+                and len(input_native_entity.spec.settings.network.pods.cidr_blocks) > 0  # noqa: E501
             ):
-                k8s_pod_cidr = input_native_entity.spec.settings.network.pods.cidr_blocks[0]
+                k8s_pod_cidr = input_native_entity.spec.settings.network.pods.cidr_blocks[0]  # noqa: E501
 
             k8s_svc_cidr = TKGM_DEFAULT_SERVICE_CIDR
             if (
                 input_native_entity.spec.settings is not None
                 and input_native_entity.spec.settings.network is not None
-                and input_native_entity.spec.settings.network.services is not None
-                and input_native_entity.spec.settings.network.services.cidr_blocks is not None
-                and len(input_native_entity.spec.settings.network.services.cidr_blocks) > 0
+                and input_native_entity.spec.settings.network.services is not None  # noqa: E501
+                and input_native_entity.spec.settings.network.services.cidr_blocks is not None  # noqa: E501
+                and len(input_native_entity.spec.settings.network.services.cidr_blocks) > 0  # noqa: E501
             ):
-                k8s_svc_cidr = input_native_entity.spec.settings.network.services.cidr_blocks[0]
+                k8s_svc_cidr = input_native_entity.spec.settings.network.services.cidr_blocks[0]  # noqa: E501
 
             org = vcd_utils.get_org(client_v36, org_name=org_name)
             vdc = vcd_utils.get_vdc(client_v36, vdc_name=ovdc_name, org=org)
@@ -977,7 +977,7 @@ class ClusterService(abstract_broker.AbstractBroker):
                                      f"cluster '{cluster_name}' with state "
                                      f"'{curr_rde.state}'", exc_info=True)
                     else:
-                        LOGGER.error(f"Failed to delete the defined entity for "
+                        LOGGER.error(f"Failed to delete the defined entity for "  # noqa: E501
                                      f"cluster '{cluster_name}' with unknown "
                                      f"state", exc_info=True)
 
@@ -1938,7 +1938,7 @@ def _add_control_plane_nodes(
                     control_plane_endpoint = expose_ip
                 except Exception as err:
                     LOGGER.error(f"Exposing cluster failed: {str(err)}", exc_info=True)  # noqa: E501
-                    # This is a deviation from native: we do not want silent failures when expose
+                    # This is a deviation from native: we do not want silent failures when expose  # noqa: E501
                     # functionality fails.
                     raise
 
@@ -2073,7 +2073,7 @@ def _add_worker_nodes(sysadmin_client, num_nodes, org, vdc, vapp,
 
         # Example format:
         # kubeadm join 192.168.7.8:6443 --token 5edbci.duu55v7k6hdv52sm \
-        #     --discovery-token-ca-cert-hash sha256:26326dcdef13e627e30ce93800e549855cba3eb03dbedcdab57c696bea17b02d
+        #     --discovery-token-ca-cert-hash sha256:26326dcdef13e627e30ce93800e549855cba3eb03dbedcdab57c696bea17b02d  # noqa: E501
         parts = control_plane_join_cmd.split()
         num_parts = 7
         if len(parts) != num_parts:
