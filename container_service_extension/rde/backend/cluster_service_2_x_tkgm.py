@@ -820,14 +820,6 @@ class ClusterService(abstract_broker.AbstractBroker):
             refresh_token = mts.refresh_token
             is_refresh_token_created = True
 
-            # Get cluster_username
-            cloudapi_client_v36 = self.context.get_cloudapi_client(
-                api_version=DEFAULT_API_VERSION)
-            token_service = TokensService(cloudapi_client_v36)
-            token_info = token_service.get_refresh_token_by_oauth_client_name(
-                mts.oauth_client_name)
-            cluster_username = token_info['owner']['name']
-
             msg = f"Creating control plane node for cluster '{cluster_name}'" \
                   f" ({cluster_id})"
             LOGGER.debug(msg)
@@ -860,7 +852,6 @@ class ClusterService(abstract_broker.AbstractBroker):
                     expose=expose,
                     cluster_name=cluster_name,
                     cluster_id=cluster_id,
-                    cluster_username=cluster_username,
                     refresh_token=refresh_token
                 )
             except Exception as err:
@@ -1937,7 +1928,6 @@ def _add_control_plane_nodes(
         expose=False,
         cluster_name=None,
         cluster_id=None,
-        cluster_username=None,
         refresh_token=None) -> Tuple[str, List[Dict]]:
 
     vcd_utils.raise_error_if_user_not_from_system_org(sysadmin_client)
@@ -1985,7 +1975,6 @@ def _add_control_plane_nodes(
                 antrea_cni_version=ANTREA_CNI_VERSION,
                 ssh_key=ssh_key if ssh_key else '',
                 control_plane_endpoint='',
-                cluster_username=cluster_username,
                 refresh_token=refresh_token
             )
 
@@ -2044,7 +2033,6 @@ def _add_control_plane_nodes(
                 antrea_cni_version=ANTREA_CNI_VERSION,
                 ssh_key=ssh_key if ssh_key else '',
                 control_plane_endpoint=f"{control_plane_endpoint}:6443",
-                cluster_username=cluster_username,
                 refresh_token=refresh_token
             )
             task = vm.update_guest_customization_section(
