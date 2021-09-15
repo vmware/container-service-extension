@@ -548,15 +548,18 @@ class ClusterService(abstract_broker.AbstractBroker):
                 server_utils.get_rde_version_in_use())
         current_workers_count = current_spec.topology.workers.count
         desired_workers_count = input_native_entity.spec.topology.workers.count
+        current_expose_flag = current_spec.settings.network.expose
+        desired_expose_flag = input_native_entity.spec.settings.network.expose
 
-        if current_workers_count != desired_workers_count:
+        if (
+            current_workers_count != desired_workers_count
+            or current_expose_flag != desired_expose_flag
+        ):
             return self.resize_cluster(cluster_id, input_native_entity)
 
         current_template_name = current_spec.distribution.template_name
-        current_template_revision = current_spec.distribution.template_revision
         desired_template_name = input_native_entity.spec.distribution.template_name  # noqa: E501
-        desired_template_revision = input_native_entity.spec.distribution.template_revision  # noqa: E501
-        if current_template_name != desired_template_name or current_template_revision != desired_template_revision:  # noqa: E501
+        if current_template_name != desired_template_name:
             raise Exception(
                 "Upgrades not supported for TKGm in this version of CSE"
             )
@@ -1077,7 +1080,7 @@ class ClusterService(abstract_broker.AbstractBroker):
             unexpose_success: bool = False
             if unexpose:
                 org_name: str = curr_native_entity.metadata.org_name
-                ovdc_name: str = curr_native_entity.metadata.ovdc_name
+                ovdc_name: str = curr_native_entity.metadata.virtual_data_center_name
                 network_name: str = current_spec.settings.ovdc_network
                 try:
                     # We need to get the internal IP via script and not rely
@@ -1094,9 +1097,9 @@ class ClusterService(abstract_broker.AbstractBroker):
                     )
 
                     # update kubeconfig with internal ip
-                    updated_kube_config = self._replace_kubeconfig_expose_ip(
+                    updated_kube_config = self._update_control_plane_ip_value(
                         internal_ip=control_plane_internal_ip,
-                        cluster_id=cluster_id
+                        rde=curr_rde
                     )
 
                     # Delete dnat rule
@@ -1666,9 +1669,9 @@ class ClusterService(abstract_broker.AbstractBroker):
         self.mqtt_publisher.send_response(response_json)
         self.task_status = status.value
 
-    def _replace_kubeconfig_expose_ip(self, internal_ip: str, cluster_id: str):  # noqa: E501
+    def _update_control_plane_ip_value(self, internal_ip: str, rde: common_models.DefEntity):  # noqa: E501
         # Form kubeconfig with internal ip
-        kubeconfig_with_exposed_ip = self._get_kube_config_from_rde(cluster_id)
+        kubeconfig_with_exposed_ip = self._get_kube_config_from_rde(rde)
         if not kubeconfig_with_exposed_ip:
             msg = "Failed to get cluster kube-config"
             LOGGER.error(msg)
@@ -1679,8 +1682,7 @@ class ClusterService(abstract_broker.AbstractBroker):
             internal_ip=internal_ip,
         )
 
-    def _get_kube_config_from_rde(self, cluster_id: str):
-        rde = self.entity_svc.get_entity(cluster_id)
+    def _get_kube_config_from_rde(self, rde: common_models.DefEntity):
         native_entity: rde_2_x.NativeEntity = rde.entity
         if hasattr(native_entity.status,
                    shared_constants.RDEProperty.PRIVATE.value) and hasattr(
@@ -2244,7 +2246,7 @@ def _get_kube_config_from_control_plane_vm(sysadmin_client: vcd_client.Client, v
     kube_config: str = vcd_utils.get_vm_extra_config_element(control_plane_vm, KUBE_CONFIG)  # noqa: E501
     if not kube_config:
         raise exceptions.KubeconfigNotFound("kubeconfig not found in control plane extra configuration")   # noqa: E501
-    LOGGER.debug(f"Got kubeconfig from control plane:{node_names[0]} successfully")  # noqa: E501
+    LOGGER.debug(f"Got kubeconfig from control plane extra configuration successfully")  # noqa: E501
     kube_config_in_bytes: bytes = base64.b64decode(kube_config)
     return kube_config_in_bytes.decode()
 
