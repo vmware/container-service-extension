@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
 
 catch() {{
-   vmtoolsd --cmd "info-set guestinfo.post_customization_script_execution_status $?"
+  retval=$?
    error_message="$(date) $(caller): $BASH_COMMAND"
    echo "$error_message" &>> /var/log/cse/customization/error.log
    vmtoolsd --cmd "info-set guestinfo.post_customization_script_execution_failure_reason $error_message"
+   vmtoolsd --cmd "info-set guestinfo.post_customization_script_execution_status $retval"
 }}
 
 mkdir -p /var/log/cse/customization
@@ -72,7 +73,7 @@ vmtoolsd --cmd "info-set guestinfo.postcustomization.store.sshkey.status success
 vmtoolsd --cmd "info-set guestinfo.postcustomization.nameserverconfig.resolvconf.status in_progress"
   cat > /etc/systemd/resolved.conf << END
 [Resolve]
-DNS=8.8.8.8
+DNS=8.8.8.8 10.166.1.201
 END
 
   systemctl daemon-reload
