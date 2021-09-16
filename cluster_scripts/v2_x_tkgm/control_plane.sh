@@ -143,13 +143,14 @@ vmtoolsd --cmd "info-set guestinfo.postcustomization.kubectl.apply.cni.status su
 
 
 vmtoolsd --cmd "info-set guestinfo.postcustomization.kubectl.cpi.install.status in_progress"
+  base64_encoded_token=$(echo -n {refresh_token} | base64)
   cat > $vcloud_basic_auth_path << END
 ---
 apiVersion: v1
 data:
   password: ""
   username: ""
-  refreshToken: {refresh_token}
+  refreshToken: $base64_encoded_token
 kind: Secret
 metadata:
   name: vcloud-basic-auth
