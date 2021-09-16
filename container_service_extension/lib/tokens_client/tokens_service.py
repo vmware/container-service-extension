@@ -18,7 +18,7 @@ class TokensService:
         """Get refresh token information by oauth client name."""
         # NOTE: Oauth client name is uniqe to a refresh token
         if not oauth_client_name:
-            raise ValueError(f"Invalid value supplied for oauth_client_name: {oauth_client_name}")  # noqa: E501
+            raise ValueError("No oauth_client_name provided.")
         filters = {
             "type": "REFRESH",
             "name": oauth_client_name
@@ -28,6 +28,8 @@ class TokensService:
             method=RequestMethod.GET,
             cloudapi_version=CloudApiVersion.VERSION_1_0_0.value,
             resource_url_relative_path=f"{CloudApiResource.TOKENS.value}?filter={filter_string}")  # noqa: E501
+        if not response:
+            raise Exception(f"Failed to get refresh token information for client {oauth_client_name}")  # noqa: E501
         if len(response['values']) == 0:
             raise Exception("Cannot find refresh token for "
                             f"OAuth client {oauth_client_name}")
