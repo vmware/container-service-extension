@@ -8,15 +8,8 @@ import pyvcloud.vcd.client as vcd_client
 
 from container_service_extension.common.constants.shared_constants import RequestMethod  # noqa: E501
 from container_service_extension.lib.cloudapi import cloudapi_client
+import container_service_extension.lib.oauth_client.oauth_constants as oauth_constants  # noqa: E501
 from container_service_extension.logging.logger import NULL_LOGGER
-
-OAUTH_PROVIDER_URL_FRAGMENT = "/provider"
-OAUTH_TENANT_URL_FRAGMENT = "/tenant"
-BASE_OAUTH_ENDPOINT_FRAGMENT = "/oauth"
-REGISTER_CLIENT_ENDPOINT_FRAGMENT = "/register"
-OAUTH_TOKEN_ENDPOINT_FRAGMENT = "/token"
-GRANT_TYPE_JWT_BEARER = "urn:ietf:params:oauth:grant-type:jwt-bearer"
-GRANT_TYPE_REFRESH_TOKEN = "refresh_token"
 
 
 class MachineTokenService(cloudapi_client.CloudApiClient):
@@ -55,34 +48,38 @@ class MachineTokenService(cloudapi_client.CloudApiClient):
 
     def _get_register_oauth_client_url(self):
         register_client_url = \
-            f"{self._host_url}{BASE_OAUTH_ENDPOINT_FRAGMENT}"
+            f"{self._host_url}{oauth_constants.BASE_OAUTH_ENDPOINT_FRAGMENT}"
         # /oauth endpoint is tenanted. which means, system administrators can
         # access the endpoint using /oauth/provider/register while tenant users
         # can access the endpoint using /oauth/tenant/{orgId}/register
         if self.vcd_api_client.is_sysadmin():
             register_client_url += \
-                f"{OAUTH_PROVIDER_URL_FRAGMENT}{REGISTER_CLIENT_ENDPOINT_FRAGMENT}"  # noqa: E501
+                f"{oauth_constants.OAUTH_PROVIDER_URL_FRAGMENT}" \
+                f"{oauth_constants.REGISTER_CLIENT_ENDPOINT_FRAGMENT}"
         else:
             logged_in_org = self.vcd_api_client.get_org()
             org_name = logged_in_org.get('name')
             register_client_url += \
-                f"{OAUTH_TENANT_URL_FRAGMENT}/{org_name}{REGISTER_CLIENT_ENDPOINT_FRAGMENT}"  # noqa: E501
+                f"{oauth_constants.OAUTH_TENANT_URL_FRAGMENT}/{org_name}" \
+                f"{oauth_constants.REGISTER_CLIENT_ENDPOINT_FRAGMENT}"
         return register_client_url
 
     def _get_oauth_token_url(self):
         oauth_token_url = \
-            f"{self._host_url}{BASE_OAUTH_ENDPOINT_FRAGMENT}"
+            f"{self._host_url}{oauth_constants.BASE_OAUTH_ENDPOINT_FRAGMENT}"
         # /oauth endpoint is tenanted. which means, system administrators can
         # access the endpoint using /oauth/provider/token while tenant users
         # can access the endpoint using /oauth/tenant/{orgId}/token
         if self.vcd_api_client.is_sysadmin():
             oauth_token_url += \
-                f"{OAUTH_PROVIDER_URL_FRAGMENT}{OAUTH_TOKEN_ENDPOINT_FRAGMENT}"
+                f"{oauth_constants.OAUTH_PROVIDER_URL_FRAGMENT}" \
+                f"{oauth_constants.OAUTH_TOKEN_ENDPOINT_FRAGMENT}"
         else:
             logged_in_org = self.vcd_api_client.get_org()
             org_name = logged_in_org.get('name')
             oauth_token_url += \
-                f"{OAUTH_TENANT_URL_FRAGMENT}/{org_name}{OAUTH_TOKEN_ENDPOINT_FRAGMENT}"  # noqa: E501
+                f"{oauth_constants.OAUTH_TENANT_URL_FRAGMENT}/" \
+                f"{org_name}{oauth_constants.OAUTH_TOKEN_ENDPOINT_FRAGMENT}"
         return oauth_token_url
 
     def register_oauth_client(self):
@@ -96,7 +93,7 @@ class MachineTokenService(cloudapi_client.CloudApiClient):
 
         if not response:
             raise Exception(f"Obtained an empty response from {register_oauth_client_url}")  # noqa: E501
-        self.oauth_client_id = response['client_id']
+        self.oauth_client_id = response['client_id']  # noqa: E501
 
         return response
 
@@ -106,9 +103,9 @@ class MachineTokenService(cloudapi_client.CloudApiClient):
         This method can only be executed once per client.
         """
         payload = {
-            "grant_type": GRANT_TYPE_JWT_BEARER,
-            "client_id": self.oauth_client_id,
-            "assertion": self.vcd_api_client.get_access_token()
+            oauth_constants.OauthPayloadKey.GRANT_TYPE.value: oauth_constants.GrantType.JWT_BEARER.value,  # noqa: E501
+            oauth_constants.OauthPayloadKey.CLIENT_ID.value: self.oauth_client_id,  # noqa: E501
+            oauth_constants.OauthPayloadKey.ASSERTION.value: self.vcd_api_client.get_access_token()  # noqa: E501
         }
         oauth_token_url = self._get_oauth_token_url()
         response = self.do_request(
@@ -120,7 +117,7 @@ class MachineTokenService(cloudapi_client.CloudApiClient):
         if not response:
             raise Exception(f"Obtained an empty response from {oauth_token_url}")  # noqa: E501
 
-        self.refresh_token = response['refresh_token']
+        self.refresh_token = response[oauth_constants.OauthPayloadKey.REFRESH_TOKEN.value]  # noqa: E501
         return response
 
     def create_access_token(self):
@@ -129,8 +126,8 @@ class MachineTokenService(cloudapi_client.CloudApiClient):
             raise Exception("Unable to find refresh token")
 
         payload = {
-            "grant_type": "refresh_token",
-            "refresh_token": self.refresh_token
+            oauth_constants.OauthPayloadKey.GRANT_TYPE.value: oauth_constants.GrantType.REFRESH_TOKEN.value,  # noqa: E501
+            oauth_constants.OauthPayloadKey.REFRESH_TOKEN.value: self.refresh_token  # noqa: E501
         }
         oauth_token_url = self._get_oauth_token_url()
         response = self.do_request(
