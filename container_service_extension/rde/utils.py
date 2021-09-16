@@ -6,10 +6,10 @@
 import importlib
 from importlib import resources as pkg_resources
 import json
-import math
 from typing import Type
 from typing import Union
 
+from pyvcloud.vcd.vcd_api_version import VCDApiVersion
 import semantic_version
 
 from container_service_extension.common.constants.shared_constants import ClusterEntityKind # noqa: E501
@@ -29,7 +29,7 @@ def raise_error_if_def_not_supported(cloudapi_client: CloudApiClient):
 
     :param cloudapi_client CloudApiClient
     """
-    if float(cloudapi_client.get_api_version()) < \
+    if cloudapi_client.get_vcd_api_version() < \
             def_constants.DEF_API_MIN_VERSION:
         raise exceptions.DefNotSupportedException(
             "Defined entity framework is not"
@@ -67,7 +67,7 @@ def generate_entity_type_id(vendor, nss, version):
 
 
 def get_runtime_rde_version_by_vcd_api_version(vcd_api_version: str) -> str:
-    major_vcd_api_version = str(math.floor(float(vcd_api_version)) * 1.0)
+    major_vcd_api_version = VCDApiVersion(vcd_api_version).major
     val = def_constants.MAP_VCD_API_VERSION_TO_RUNTIME_RDE_VERSION.get(major_vcd_api_version)  # noqa: E501
     if not val:
         val = '0.0.0'

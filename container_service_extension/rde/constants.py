@@ -6,6 +6,8 @@
 from enum import Enum
 from enum import unique
 
+from pyvcloud.vcd.vcd_api_version import VCDApiVersion
+
 import container_service_extension.common.constants.shared_constants as shared_constants  # noqa: E501
 
 CLUSTER_ACL_LIST_FIELDS = [shared_constants.AccessControlKey.ACCESS_LEVEL_ID,
@@ -17,7 +19,7 @@ ACTION_CONTROL_ACCESS_PATH = '/action/controlAccess/'
 DEF_INTERFACE_ID_PREFIX = 'urn:vcloud:interface'
 DEF_NATIVE_ENTITY_TYPE_NSS = 'nativeCluster'
 DEF_ENTITY_TYPE_ID_PREFIX = 'urn:vcloud:type'
-DEF_API_MIN_VERSION = 35.0
+DEF_API_MIN_VERSION = VCDApiVersion('35.0')
 DEF_SCHEMA_DIRECTORY = 'cse_def_schema'
 DEF_ERROR_MESSAGE_KEY = 'message'
 DEF_RESOLVED_STATE = 'RESOLVED'
@@ -120,8 +122,8 @@ class RDEMetadataKey(str, Enum):
 # 37.0: 3.0.0 (Newly introduced RDE)
 # }
 MAP_VCD_API_VERSION_TO_RUNTIME_RDE_VERSION = {
-    '35.0': RuntimeRDEVersion.RDE_1_X.value,
-    '36.0': RuntimeRDEVersion.RDE_2_X.value
+    35: RuntimeRDEVersion.RDE_1_X.value,
+    36: RuntimeRDEVersion.RDE_2_X.value
 }
 
 # Below map answers the question - "what is the RDE version introduced by CSE

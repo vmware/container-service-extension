@@ -8,6 +8,7 @@ from dataclasses import dataclass
 from enum import Enum
 from enum import unique
 
+from pyvcloud.vcd.client import VcdApiVersionObj
 import requests
 import semantic_version
 
@@ -65,7 +66,7 @@ MQTT_EXTENSION_VENDOR = 'VMWare'
 MQTT_EXTENSION_URN = 'urn:vcloud:extension-api:' + MQTT_EXTENSION_VENDOR + ':'\
                      + CSE_SERVICE_NAME + ':' + MQTT_EXTENSION_VERSION
 MQTT_EXTENSION_PRIORITY = 100
-MQTT_MIN_API_VERSION = 35.0
+MQTT_MIN_API_VERSION = VcdApiVersionObj.VERSION_35.value
 MQTT_TOKEN_NAME = "mqttCseToken"
 TOKEN_PATH = 'tokens'
 

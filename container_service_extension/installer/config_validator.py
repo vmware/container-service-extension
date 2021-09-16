@@ -6,9 +6,10 @@ from urllib.parse import urlparse
 
 import cryptography
 import pika
-from pyvcloud.vcd.client import BasicLoginCredentials
+from pyvcloud.vcd.client import BasicLoginCredentials, VcdApiVersionObj
 from pyvcloud.vcd.client import Client
 from pyvcloud.vcd.platform import Platform
+from pyvcloud.vcd.vcd_api_version import VCDApiVersion
 from pyVmomi import vim
 import requests
 from requests.exceptions import HTTPError
@@ -58,7 +59,7 @@ from container_service_extension.security.encryption_engine import \
 from container_service_extension.server.pks.pks_cache import Credentials
 
 
-_MAX_API_VERSION_TO_RUN_CSE_WITH_AMQP_IN_NON_LEGACY_MODE = '35.0'
+_MAX_API_VERSION_TO_RUN_CSE_WITH_AMQP_IN_NON_LEGACY_MODE = VcdApiVersionObj.VERSION_35.value  # noqa: E501
 
 
 def get_validated_config(config_file_name,
@@ -252,11 +253,11 @@ def _add_additional_details_to_config(
         if is_legacy_mode:
             common_supported_api_versions = \
                 [x for x in common_supported_api_versions
-                 if float(x) < 35.0]
+                 if VCDApiVersion(x) < VcdApiVersionObj.VERSION_35.value]
         else:
             common_supported_api_versions = \
                 [x for x in common_supported_api_versions
-                 if float(x) >= 35.0]
+                 if VCDApiVersion(x) >= VcdApiVersionObj.VERSION_35.value]
         config['service']['supported_api_versions'] = \
             common_supported_api_versions
     finally:
@@ -295,8 +296,8 @@ def _raise_error_if_amqp_not_supported(is_mqtt_used, default_api_version,
     :param str default_api_version: max VCD API version used by CSE.
     :raises: AmqpError
     """
-    if not is_mqtt_used and float(default_api_version) > \
-            float(_MAX_API_VERSION_TO_RUN_CSE_WITH_AMQP_IN_NON_LEGACY_MODE):
+    if not is_mqtt_used and VCDApiVersion(default_api_version) > \
+            _MAX_API_VERSION_TO_RUN_CSE_WITH_AMQP_IN_NON_LEGACY_MODE:
         msg = f"Cannot use AMQP message bus when working with api version" \
             f" {default_api_version}. Please upgrade to MQTT."
         logger.error(msg)

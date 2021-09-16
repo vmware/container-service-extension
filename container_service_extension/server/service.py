@@ -574,7 +574,7 @@ class Service(object, metaclass=Singleton):
         msg_update_callback.general(msg)
         try:
             sysadmin_client = vcd_utils.get_sys_admin_client(api_version=None)
-            if float(sysadmin_client.get_api_version()) < compute_policy_manager.GLOBAL_PVDC_COMPUTE_POLICY_MIN_VERSION:  # noqa: E501
+            if sysadmin_client.get_vcd_api_version() < compute_policy_manager.GLOBAL_PVDC_COMPUTE_POLICY_MIN_VERSION:  # noqa: E501
                 msg = "Placement policies for kubernetes runtimes not " \
                       " supported in api version " \
                       f"{sysadmin_client.get_api_version()}"  # noqa: E501
