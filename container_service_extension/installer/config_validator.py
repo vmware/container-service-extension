@@ -1,7 +1,8 @@
 # container-service-extension
 # Copyright (c) 2017 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
-from typing import Dict
+import urllib
+from typing import Dict, Optional
 from urllib.parse import urlparse
 
 import cryptography
@@ -343,6 +344,28 @@ def _validate_amqp_config(amqp_dict, msg_update_callback=NullPrinter()):
             connection.close()
 
 
+def _validate_vcd_url(vcd_url: Optional[str]) -> None:
+    """Ensures that the 'host' parameter in the config is valid.
+
+    Checks that
+        * 'host' of the section is a valid URL
+        * there is no leading 'http', 'https' or any other scheme
+
+    :param str vcd_url: 'host' parameter of vcd section of config file as a str.
+
+    :raises ValueError: if @vcd_url is invalid
+    """
+    if not vcd_url:
+        raise ValueError("host should not be empty")
+    parsed_url = urllib.parse.urlparse(vcd_url)
+    if (
+        parsed_url.scheme is not None
+        and parsed_url.scheme != ""
+    ):
+        raise ValueError(f"host '{vcd_url}' should not have a scheme")
+    return
+
+
 def _validate_vcd_and_vcs_config(vcd_dict,
                                  vcs,
                                  msg_update_callback=NullPrinter(),
@@ -379,6 +402,7 @@ def _validate_vcd_and_vcs_config(vcd_dict,
 
     client = None
     try:
+        _validate_vcd_url(vcd_dict['host'])
         client = Client(vcd_dict['host'],
                         verify_ssl_certs=vcd_dict['verify'],
                         log_file=log_file,

@@ -28,6 +28,9 @@ pyvmomi >= 6.7.0, < 7.0.0
 # semantic-version 2.8.5
 semantic-version >= 2.8.4, < 3.0.0
 
+# validators 0.18.2
+validators ~= 0.18.2
+
 # vcd-cli 24.0.1
 vcd-cli >= 24.0.1, < 25.0.0
 
@@ -36,3 +39,15 @@ vsphere-guest-run >= 0.0.7, < 1.0.0
 
 # dataclasses-json
 dataclasses-json >= 0.5.2, < 1.0.0
+
+setuptools~=57.1.0
+six~=1.16.0
+virtualenv~=20.7.2
+wheel~=0.36.2
+requests~=2.26.0
+pytest~=6.2.4
+certifi~=2021.5.30
+urllib3~=1.26.6
+lxml~=4.6.3
+PyYAML~=5.4.1
+click~=8.0.1

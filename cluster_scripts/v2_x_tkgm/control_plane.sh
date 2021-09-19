@@ -70,18 +70,6 @@ vmtoolsd --cmd "info-set guestinfo.postcustomization.store.sshkey.status in_prog
 vmtoolsd --cmd "info-set guestinfo.postcustomization.store.sshkey.status successful"
 
 
-vmtoolsd --cmd "info-set guestinfo.postcustomization.nameserverconfig.resolvconf.status in_progress"
-  cat > /etc/systemd/resolved.conf << END
-[Resolve]
-DNS=8.8.8.8 10.166.1.201
-END
-
-  systemctl daemon-reload
-  systemctl restart systemd-resolved.service
-  ln -fs /run/systemd/resolve/resolv.conf /etc/resolv.conf
-vmtoolsd --cmd "info-set guestinfo.postcustomization.nameserverconfig.resolvconf.status successful"
-
-
 vmtoolsd --cmd "info-set guestinfo.postcustomization.kubeinit.status in_progress"
   # tag images
   coredns_image_version=""
@@ -156,7 +144,7 @@ vmtoolsd --cmd "info-set guestinfo.postcustomization.kubectl.cpi.install.status 
   kubectl apply -f $vcloud_basic_auth_path
 
   wget -O $vcloud_configmap_path https://raw.githubusercontent.com/vmware/cloud-provider-for-cloud-director/0.1.0-beta/manifests/vcloud-configmap.yaml
-  sed -i 's/VCD_HOST/"https:\/\/{vcd_host}"/' $vcloud_configmap_path
+  sed -i 's/VCD_HOST/"{vcd_host}"/' $vcloud_configmap_path
   sed -i 's/ORG/"{org}"/' $vcloud_configmap_path
   sed -i 's/OVDC/"{vdc}"/' $vcloud_configmap_path
   sed -i 's/NETWORK/"{network_name}"/' $vcloud_configmap_path

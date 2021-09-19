@@ -15,6 +15,7 @@ import pkg_resources
 import pyvcloud.vcd.client as vcd_client
 import pyvcloud.vcd.org as vcd_org
 import pyvcloud.vcd.vapp as vcd_vapp
+import validators
 from pyvcloud.vcd.vdc import VDC
 import pyvcloud.vcd.vm as vcd_vm
 
@@ -239,6 +240,12 @@ class ClusterService(abstract_broker.AbstractBroker):
             ovdc_name = input_native_entity.metadata.virtual_data_center_name
             template_name = input_native_entity.spec.distribution.template_name
             template_revision = 1  # templateRevision for TKGm is always 1
+            vcd_site = input_native_entity.metadata.site
+
+            # check that the vcd site is a valid url
+            if not _is_valid_vcd_url(vcd_site):
+                raise exceptions.CseServerError(
+                    f"Invalid site '{vcd_site}'")
 
             # check that cluster name is syntactically valid
             if not _is_valid_cluster_name(cluster_name):
@@ -1804,6 +1811,23 @@ def _is_valid_cluster_name(name):
     return re.match("^[a-zA-Z][A-Za-z0-9-]*$", name) is not None
 
 
+def _is_valid_vcd_url(vcd_site: str) -> bool:
+    if not validators.url(vcd_site):
+        return False
+    parsed_url = urllib.parse.urlparse(vcd_site)
+    # Compare with the value in CSE server config
+    server_config = server_utils.get_server_runtime_config()
+    cse_server_host = ""
+    if (
+        server_config is not None
+        and server_config['vcd'] is not None
+        and server_config['vcd']['host'] is not None
+    ):
+        cse_server_host = server_config['vcd']['host']
+    if parsed_url.netloc != cse_server_host:
+        return False
+    return True
+
 def _cluster_exists(client, cluster_name, org_name=None, ovdc_name=None):
     query_filter = f'name=={urllib.parse.quote(cluster_name)}'
     if ovdc_name is not None:
@@ -1890,7 +1914,7 @@ def _add_control_plane_nodes(
         )
         for spec in vm_specs:
             spec['cust_script'] = templated_script.format(
-                vcd_host=vcd_host,
+                vcd_host=vcd_host.replace("/", r"\/"),
                 org=org,
                 vdc=vdc,
                 network_name=network_name,
@@ -1947,7 +1971,7 @@ def _add_control_plane_nodes(
             # If expose is set, control_plane_endpoint is exposed ip
             # Else control_plane_endpoint is internal_ip
             cust_script = templated_script.format(
-                vcd_host=vcd_host,
+                vcd_host=vcd_host.replace("/", r"\/"),
                 org=org.get_name(),
                 vdc=vdc.name,
                 network_name=network_name,
@@ -2024,7 +2048,6 @@ def _add_control_plane_nodes(
                 PostCustomizationPhase.HOSTNAME_SETUP,
                 PostCustomizationPhase.NETWORK_CONFIGURATION,
                 PostCustomizationPhase.STORE_SSH_KEY,
-                PostCustomizationPhase.NAMESERVER_SETUP,
                 PostCustomizationPhase.KUBEADM_INIT,
                 PostCustomizationPhase.KUBECTL_APPLY_CNI,
                 PostCustomizationPhase.KUBEADM_TOKEN_GENERATE,
@@ -2167,7 +2190,6 @@ def _add_worker_nodes(sysadmin_client, num_nodes, org, vdc, vapp,
                 PostCustomizationPhase.HOSTNAME_SETUP,
                 PostCustomizationPhase.NETWORK_CONFIGURATION,
                 PostCustomizationPhase.STORE_SSH_KEY,
-                PostCustomizationPhase.NAMESERVER_SETUP,
                 PostCustomizationPhase.KUBEADM_NODE_JOIN,
             ]:
                 vapp.reload()

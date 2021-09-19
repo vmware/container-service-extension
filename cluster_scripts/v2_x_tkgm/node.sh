@@ -58,18 +58,6 @@ vmtoolsd --cmd "info-set guestinfo.postcustomization.store.sshkey.status in_prog
 vmtoolsd --cmd "info-set guestinfo.postcustomization.store.sshkey.status successful"
 
 
-vmtoolsd --cmd "info-set guestinfo.postcustomization.nameserverconfig.resolvconf.status in_progress"
-  cat > /etc/systemd/resolved.conf << END
-[Resolve]
-DNS=10.166.1.201 8.8.8.8
-END
-
-  systemctl daemon-reload
-  systemctl restart systemd-resolved.service
-  ln -fs /run/systemd/resolve/resolv.conf /etc/resolv.conf
-vmtoolsd --cmd "info-set guestinfo.postcustomization.nameserverconfig.resolvconf.status successful"
-
-
 vmtoolsd --cmd "info-set guestinfo.postcustomization.kubeadm.node.join.status in_progress"
   # tag images
   coredns_image_version=""
