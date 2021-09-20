@@ -15,13 +15,13 @@ GRANT_TYPE_REFRESH_TOKEN = "refresh_token"
 
 
 @unique
-class GrantType(Enum, str):
+class GrantType(str, Enum):
     JWT_BEARER = "urn:ietf:params:oauth:grant-type:jwt-bearer"
     REFRESH_TOKEN = "refresh_token"
 
 
 @unique
-class OauthPayloadKey(Enum, str):
+class OauthPayloadKey(str, Enum):
     GRANT_TYPE = "grant_type"
     CLIENT_ID = "client_id"
     ASSERTION = "assertion"
