@@ -163,7 +163,7 @@ vmtoolsd --cmd "info-set guestinfo.postcustomization.kubectl.cpi.install.status 
 
 vmtoolsd --cmd "info-set guestinfo.postcustomization.kubectl.csi.install.status in_progress"
   wget -O $vcloud_csi_configmap_path https://raw.githubusercontent.com/vmware/cloud-director-named-disk-csi-driver/0.1.0-beta/manifests/vcloud-csi-config.yaml
-  sed -i 's/VCD_HOST/"https:\/\/{vcd_host}"/' $vcloud_csi_configmap_path
+  sed -i 's/VCD_HOST/"{vcd_host}"/' $vcloud_csi_configmap_path
   sed -i 's/ORG/"{org}"/' $vcloud_csi_configmap_path
   sed -i 's/OVDC/"{vdc}"/' $vcloud_csi_configmap_path
   sed -i 's/CLUSTER_ID/"{cluster_id}"/' $vcloud_csi_configmap_path
