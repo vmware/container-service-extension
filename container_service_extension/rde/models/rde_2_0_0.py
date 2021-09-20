@@ -405,6 +405,10 @@ class NativeEntity(AbstractNativeEntity):
     def from_cluster_data(cls, cluster: dict, kind: str, **kwargs):
         """Construct rde_2.0.0 native entity from non-rde cluster.
 
+        NOTE: This method is used primarily to create RDE for legacy clusters.
+            So, only cpu/memory fields for RDE can be populated. Sizing class
+            in will be set to None.
+
         :param dict cluster: cluster metadata
         :param str kind: cluster kind
         :return: native entity
@@ -454,16 +458,16 @@ class NativeEntity(AbstractNativeEntity):
         control_plane_nodes = cluster['master_nodes']
         topology_control_plane = ControlPlane(
             count=len(control_plane_nodes),
-            storage_profile=cluster['storage_profile_name']
+            storage_profile=cluster['storage_profile_name'],
+            cpu=int(control_plane_nodes[0]['numberOfCpus']),
+            memory=int(control_plane_nodes[0]['memoryMB'])
         )
         workers = cluster.get('nodes', [])
         topology_workers = Workers(
             count=len(cluster['nodes']),
             storage_profile=cluster['storage_profile_name']
         )
-        if kind != shared_constants.ClusterEntityKind.TKG_M.value and len(workers) > 0:  # noqa: E501
-            topology_control_plane.cpu = int(control_plane_nodes[0]['numberOfCpus'])  # noqa: E501
-            topology_control_plane.memory = int(control_plane_nodes[0]['memoryMB'])  # noqa: E501
+        if len(workers) > 0:
             topology_workers.cpu = int(workers[0]['numberOfCpus'])
             topology_workers.memory = int(workers[0]['memoryMB'])
         topology = Topology(
