@@ -9,7 +9,6 @@ from vcd_cli.vcd import vcd
 import yaml
 
 import container_service_extension.system_test_framework.environment as env
-import container_service_extension.system_test_framework.utils as testutils
 
 
 def dict_to_yaml_file(dikt, filepath):
@@ -57,8 +56,9 @@ def execute_commands(cmd_list):
         result = env.CLI_RUNNER.invoke(vcd, cmd.split(), input='y',
                                        catch_exceptions=False)
         assert result.exit_code == expected_exit_code, \
-            testutils.format_command_info(
-                'vcd', cmd, result.exit_code, result.output)
+            format_command_info(
+                'vcd', cmd, result.exit_code, result.output
+            )
 
         if action.validate_output_func is not None:
             action.validate_output_func(result.output, action.test_user)
