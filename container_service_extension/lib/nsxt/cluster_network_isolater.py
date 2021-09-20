@@ -12,7 +12,7 @@ from container_service_extension.lib.nsxt.dfw_manager import DFWManager
 from container_service_extension.lib.nsxt.nsgroup_manager import NSGroupManager
 
 
-class ClusterNetworkIsolater(object):
+class ClusterNetworkIsolater:
     """Facilitate network isolation of PKS clusters."""
 
     RULE1_NAME = "Block pods to node communication"
@@ -22,7 +22,7 @@ class ClusterNetworkIsolater(object):
     def __init__(self, nsxt_client):
         """Initialize a ClusterNetworkIsolater object.
 
-        :param NSXTCLient nsxt_client: client to make NSX-T REST requests.
+        :param NSXTClient nsxt_client: client to make NSX-T REST requests.
         """
         self._nsxt_client = nsxt_client
 
@@ -71,9 +71,10 @@ class ClusterNetworkIsolater(object):
         if len(rules) != 2:
             return False
 
-        found_rule_names = set([
+        found_rule_names = {
             rules[0]['display_name'],
-            rules[1]['display_name']])
+            rules[1]['display_name']
+        }
         if self.RULE2_NAME not in found_rule_names or \
                 self.RULE3_NAME not in found_rule_names:
             return False
@@ -81,7 +82,7 @@ class ClusterNetworkIsolater(object):
         return True
 
     def remove_cluster_isolation(self, cluster_name):
-        """Revert isolatation of a PKS cluster's network.
+        """Revert isolation of a PKS cluster's network.
 
         :param str cluster_name: name of the cluster whose network isolation
             needs to be reverted.
@@ -104,11 +105,11 @@ class ClusterNetworkIsolater(object):
         nsgroup_manager.delete_nsgroup(pods_nsgroup_name, force=True)
 
     def _create_nsgroups_for_cluster(self, cluster_name, cluster_id):
-        """Create NSgroups for cluster isolateion.
+        """Create NSGroups for cluster isolation.
 
         One NSGroup to include all nodes in the cluster.
         One NSGroup to include all pods in the cluster.
-        One NSgroup to include all nodes and pods in the cluster.
+        One NSGroup to include all nodes and pods in the cluster.
 
         :param str cluster_name: name of the cluster whose network is being
             isolated.
@@ -127,7 +128,7 @@ class ClusterNetworkIsolater(object):
             cluster_name, nodes_nsgroup_id, pods_nsgroup_id)
         nodes_pods_nsgroup_id = nodes_pods_nsgroup['id']
 
-        return (nodes_nsgroup_id, pods_nsgroup_id, nodes_pods_nsgroup_id)
+        return nodes_nsgroup_id, pods_nsgroup_id, nodes_pods_nsgroup_id
 
     def _get_nodes_nsgroup_name(self, cluster_name):
         return f"{cluster_name}_nodes"
@@ -174,10 +175,11 @@ class ClusterNetworkIsolater(object):
         expression1['scope'] = "pks/cluster"
         expression1['tag'] = str(cluster_id)
 
-        expression2 = {}
-        expression2['resource_type'] = "NSGroupTagExpression"
-        expression2['target_type'] = "LogicalSwitch"
-        expression2['scope'] = "pks/floating_ip"
+        expression2 = {
+            'resource_type': "NSGroupTagExpression",
+            'target_type': "LogicalSwitch",
+            'scope': "pks/floating_ip"
+        }
 
         criteria['expressions'] = [expression1, expression2]
 
@@ -295,7 +297,7 @@ class ClusterNetworkIsolater(object):
         :param str cluster_name: name of the cluster whose network is being
             isolated.
         :param str applied_to_nsgroup_id: id of the NSGroup on which the rules
-            in this DFW SEction will apply to.
+            in this DFW Section will apply to.
         """
         section_name = self._get_firewall_section_name_for_cluster(
             cluster_name)

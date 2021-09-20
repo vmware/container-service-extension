@@ -21,7 +21,6 @@ class ClusterServiceFactory:
 
         Factory method to return the ClusterService based on the RDE version in use.
         :param rde_version_in_use (str)
-        :param op_ctx Union[OperationContext, BehaviorRequestContext]
         :param bool skip_tkgm_check: flag specifying not to use TKGm cluster service
 
         :rtype cluster_service (container_service_extension.server.abstract_broker.AbstractBroker)  # noqa: E501

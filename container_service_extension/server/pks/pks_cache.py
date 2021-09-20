@@ -5,16 +5,16 @@
 from collections import namedtuple
 
 from container_service_extension.common.constants.server_constants import PKS_CLUSTER_DOMAIN_KEY  # noqa: E501
-from container_service_extension.common.constants.server_constants import PKS_COMPUTE_PROFILE_KEY # noqa: E501
+from container_service_extension.common.constants.server_constants import PKS_COMPUTE_PROFILE_KEY  # noqa: E501
 from container_service_extension.common.constants.server_constants import PKS_PLANS_KEY  # noqa: E501
-from container_service_extension.common.utils.pyvcloud_utils import get_pvdc_id_from_pvdc_name # noqa: E501
+from container_service_extension.common.utils.pyvcloud_utils import get_pvdc_id_from_pvdc_name  # noqa: E501
 
 
 class PksCache(object):
     """Immutable in-memory cache for CSE PKS.
 
     An immutable class acting as an in-memory cache for
-    Container Service Extention(CSE) PKS.
+    Container Service Extension(CSE) PKS.
     """
 
     __slots__ = [
@@ -241,7 +241,7 @@ class PksCache(object):
         name, host, port, uaac and vc name) based on its account name,
         from the pks information obtained from configuration.
 
-        :param list pks_accounts: list of dictionaires, where each dict
+        :param list pks_accounts: list of dictionaries, where each dict
             represents a PKS account. Details include name, username, secret
             and the PKS server which owns the account.
 

@@ -10,7 +10,7 @@ import container_service_extension.common.thread_local_data as thread_local_data
 
 
 class RedactingFilter(logging.Filter):
-    """Filter class to redact sensitive infomarion in logs.
+    """Filter class to redact sensitive information in logs.
 
     This filter looks for certain sensitive keys and if a match is found, the
     value will be redacted. The value are expected to be strings. If they are
@@ -54,7 +54,7 @@ class RedactingFilter(logging.Filter):
         #      token for a dict or list
         #   6. Look for 0 or 1 instance of '
         #   7. Put everything that is not ', space or } in a group,
-        #      this group must be atleast of length 1.
+        #      this group must be at least of length 1.
         self._pattern = r"((" + pattern_key + r")(\"|')?:\s+[{\[]*'?)([^',}]+)"
 
     def filter(self, record):
@@ -96,7 +96,7 @@ class RedactingFilter(logging.Filter):
 
         is_iterable = True
         try:
-            iter(theElement)
+            iter(obj)
         except (NameError, TypeError):
             is_iterable = False
 
@@ -184,7 +184,7 @@ def _test_redaction_filter():
     msg = base_str + str(dikt)
     logger.debug(msg)
 
-    # Case 10 : Battle Royale
+    # Case 10 : Battle Royal
     dikt1 = {
         'Authorization': 'Base 64 encoded string',
         'PasswOrd': 'super secret password',
