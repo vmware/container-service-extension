@@ -94,7 +94,9 @@ class RedactingFilter(logging.Filter):
         if obj is None:
             return obj
 
-        is_iterable = True
+        # strings are iterable but we don't want to process
+        # individual characters in this method.
+        is_iterable = not isinstance(obj, str)
         try:
             iter(obj)
         except (NameError, TypeError):
