@@ -245,7 +245,8 @@ class ClusterService(abstract_broker.AbstractBroker):
             # check that the vcd site is a valid url
             if not _is_valid_vcd_url(vcd_site):
                 raise exceptions.CseServerError(
-                    f"Invalid site '{vcd_site}'")
+                    f"'{vcd_site}' should have a https scheme"
+                    f" and match CSE server config file.")
 
             # check that cluster name is syntactically valid
             if not _is_valid_cluster_name(cluster_name):

@@ -344,7 +344,7 @@ def _validate_amqp_config(amqp_dict, msg_update_callback=NullPrinter()):
             connection.close()
 
 
-def _validate_vcd_url(vcd_url: Optional[str]) -> None:
+def _validate_vcd_url_scheme(vcd_url: Optional[str]) -> None:
     """Ensures that the 'host' parameter in the config is valid.
 
     Checks that
@@ -402,7 +402,7 @@ def _validate_vcd_and_vcs_config(vcd_dict,
 
     client = None
     try:
-        _validate_vcd_url(vcd_dict['host'])
+        _validate_vcd_url_scheme(vcd_dict['host'])
         client = Client(vcd_dict['host'],
                         verify_ssl_certs=vcd_dict['verify'],
                         log_file=log_file,
