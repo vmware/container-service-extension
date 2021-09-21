@@ -259,12 +259,11 @@ def install_cse(config_file_name, config, skip_template_creation,
     client = None
     try:
         is_tkgm_only_mode = server_utils.is_tkgm_only_mode(config)
-        if is_tkgm_only_mode and not skip_template_creation:
-            msg = "Native templates can not be installed when " \
-                  "running in TKG only mode."
-            msg_update_callback.error(msg)
-            INSTALL_LOGGER.error(msg)
-            raise Exception(msg)
+        if is_tkgm_only_mode:
+            if not skip_template_creation:
+                msg = "Native templates can not be installed when " \
+                      "running in TKG only mode."
+                raise Exception(msg)
         else:
             populate_vsphere_list(config['vcs'])
 
@@ -411,17 +410,23 @@ Please create CSE K8s template(s) using the command `cse template install`."""
             store_telemetry_settings(config)
 
         # Telemetry - Record successful install action
-        record_user_action(CseOperation.SERVICE_INSTALL,
-                           telemetry_settings=config['service']['telemetry'])
+        record_user_action(
+            CseOperation.SERVICE_INSTALL,
+            telemetry_settings=config['service']['telemetry']
+        )
     except Exception:
-        msg_update_callback.error(
-            "CSE Installation Error. Check CSE install logs")
-        INSTALL_LOGGER.error("CSE Installation Error", exc_info=True)
+        msg = "CSE Installation Error. Check CSE install logs"
+        msg_update_callback.error(msg)
+        INSTALL_LOGGER.error(msg, exc_info=True)
+
         # Telemetry - Record failed install action
-        record_user_action(CseOperation.SERVICE_INSTALL,
-                           status=OperationStatus.FAILED,
-                           telemetry_settings=config['service']['telemetry'])
-        raise  # TODO() need installation relevant exceptions for rollback
+        record_user_action(
+            CseOperation.SERVICE_INSTALL,
+            status=OperationStatus.FAILED,
+            telemetry_settings=config['service']['telemetry']
+        )
+        # TODO() need installation relevant exceptions for rollback
+        raise
     finally:
         if client is not None:
             client.logout()
@@ -463,8 +468,6 @@ def install_template(template_name, template_revision, config_file_name,
         if is_tkgm_only_mode:
             msg = "Native template can not be installed when " \
                   "running in TKG only mode."
-            msg_update_callback.error(msg)
-            INSTALL_LOGGER.error(msg)
             raise Exception(msg)
         else:
             populate_vsphere_list(config['vcs'])
@@ -594,10 +597,9 @@ def install_template(template_name, template_revision, config_file_name,
                            status=OperationStatus.SUCCESS,
                            telemetry_settings=config['service']['telemetry'])  # noqa: E501
     except Exception:
-        msg_update_callback.error(
-            "Template Installation Error. Check CSE install logs"
-        )
-        INSTALL_LOGGER.error("Template Installation Error", exc_info=True)
+        msg = "Template Installation Error. Check CSE install logs"
+        msg_update_callback.error(msg)
+        INSTALL_LOGGER.error(msg, exc_info=True)
 
         # Record telemetry data on template install failure
         record_user_action(
@@ -605,6 +607,7 @@ def install_template(template_name, template_revision, config_file_name,
             status=OperationStatus.FAILED,
             telemetry_settings=config['service']['telemetry']
         )
+        raise
     finally:
         if client is not None:
             client.logout()
@@ -658,12 +661,11 @@ def upgrade_cse(config_file_name, config, skip_template_creation,
     client = None
     try:
         is_tkgm_only_mode = server_utils.is_tkgm_only_mode(config)
-        if is_tkgm_only_mode and not skip_template_creation:
-            msg = "Native templates can not be installed when " \
-                  "running in TKG only mode."
-            msg_update_callback.error(msg)
-            INSTALL_LOGGER.error(msg)
-            raise Exception(msg)
+        if is_tkgm_only_mode:
+            if not skip_template_creation:
+                msg = "Native templates can not be installed when " \
+                      "running in TKG only mode."
+                raise Exception(msg)
         else:
             populate_vsphere_list(config['vcs'])
 
@@ -676,16 +678,20 @@ def upgrade_cse(config_file_name, config, skip_template_creation,
         # get_validated_config method, we can safely use the
         # default_api_version key, it will be set to the highest api
         # version supported by VCD and CSE.
-        client = Client(config['vcd']['host'],
-                        api_version=config['service']['default_api_version'],
-                        verify_ssl_certs=config['vcd']['verify'],
-                        log_file=log_filename,
-                        log_requests=log_wire,
-                        log_headers=log_wire,
-                        log_bodies=log_wire)
-        credentials = BasicLoginCredentials(config['vcd']['username'],
-                                            shared_constants.SYSTEM_ORG_NAME,
-                                            config['vcd']['password'])
+        client = Client(
+            config['vcd']['host'],
+            api_version=config['service']['default_api_version'],
+            verify_ssl_certs=config['vcd']['verify'],
+            log_file=log_filename,
+            log_requests=log_wire,
+            log_headers=log_wire,
+            log_bodies=log_wire
+        )
+        credentials = BasicLoginCredentials(
+            config['vcd']['username'],
+            shared_constants.SYSTEM_ORG_NAME,
+            config['vcd']['password']
+        )
         client.set_credentials(credentials)
         msg = f"Connected to vCD as system administrator: " \
               f"{config['vcd']['host']}:{config['vcd']['port']}"
@@ -721,6 +727,7 @@ def upgrade_cse(config_file_name, config, skip_template_creation,
                   "CSE to 3.0."
             msg_update_callback.error(msg)
             INSTALL_LOGGER.error(msg)
+            raise Exception(msg)
         else:
             msg = "Found CSE api extension registered by CSE " \
                   f"'{ext_cse_version}' in " \
@@ -844,9 +851,10 @@ def upgrade_cse(config_file_name, config, skip_template_creation,
         msg_update_callback.general(msg)
         INSTALL_LOGGER.info(msg)
     except Exception:
-        msg_update_callback.error(
-            "Failed to upgrade CSE. Check CSE install logs")
-        INSTALL_LOGGER.error("Failed to upgrade CSE.", exc_info=True)
+        msg = "Failed to upgrade CSE. Check CSE install logs"
+        msg_update_callback.error(msg)
+        INSTALL_LOGGER.error(msg, exc_info=True)
+
         record_user_action(
             CseOperation.SERVICE_UPGRADE,
             status=OperationStatus.FAILED,
@@ -889,9 +897,9 @@ def configure_nsxt_for_cse(nsxt_servers,
                 pods_ip_block_id=nsxt_server.get('pods_ip_block_ids'),
                 ncp_boundary_firewall_section_anchor_id=nsxt_server.get('distributed_firewall_section_anchor_id'))  # noqa: E501
     except Exception:
-        msg_update_callback.error(
-            "NSXT Configuration Error. Check CSE install logs")
-        INSTALL_LOGGER.error("NSXT Configuration Error", exc_info=True)
+        msg = "NSXT Configuration Error. Check CSE install logs"
+        msg_update_callback.error(msg)
+        INSTALL_LOGGER.error(msg, exc_info=True)
         raise
 
 
@@ -1397,12 +1405,12 @@ def _register_def_schema(client: Client,
         msg = f"Error while loading defined entity schema: {str(e)}"
         msg_update_callback.error(msg)
         INSTALL_LOGGER.error(msg)
-        raise e
+        raise
     except Exception as e:
         msg = f"Error occurred while registering defined entity schema: {str(e)}"  # noqa: E501
         msg_update_callback.error(msg)
         INSTALL_LOGGER.error(msg)
-        raise e
+        raise
 
 
 def _set_acls_on_behaviors(cloudapi_client,
@@ -2394,7 +2402,7 @@ def _remove_old_cse_sizing_compute_policies(
             msg_update_callback.general(msg)
             INSTALL_LOGGER.info(msg)
         except Exception:
-            msg = f"Failed to deleted  Policy : '{policy_name}'"
+            msg = f"Failed to delete  Policy : '{policy_name}'"
             msg_update_callback.error(msg)
             INSTALL_LOGGER.error(msg)
 

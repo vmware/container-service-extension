@@ -127,13 +127,13 @@ def get_validated_config(
         f"Validating config file '{config_file_name}'"
     )
 
-    # This allows us to compare top-level config keys and value types
     is_tkgm_only_mode = server_utils.is_tkgm_only_mode(config)
 
     use_mqtt = server_utils.should_use_mqtt_protocol(config)
     sample_message_queue_config = SAMPLE_AMQP_CONFIG if not use_mqtt \
         else SAMPLE_MQTT_CONFIG
 
+    # This allows us to compare top-level config keys and value types
     sample_config = {
         **sample_message_queue_config,
         **SAMPLE_VCD_CONFIG,
