@@ -15,10 +15,9 @@ they won't be tested individually. If a bug is found in their interoperability
 with CSE, please file a github [issue](https://github.com/vmware/container-service-extension/issues),
 the same will be fixed in a future CSE release.
 
-| CSE Server | CSE CLI   | CSE UI | Cloud Director | NSX-V  | NSX-T with Avi             | Features offered              |
-|------------|-----------|--------|----------------|--------|----------------------------|-------------------------------|
-| 3.1.1.0b2  | 3.1.1.0b2 | 3.0.4* | 10.3           | 6.4.10 | NSX-T 3.1.1 and Avi 20.1.3 | Native, TKG-S and TKG         |
-| NA         | 3.1.1.0b2 | 3.0.4* | 10.3           | NA     | NA                         | TKG-S cluster management only |
+| CSE Server | CSE CLI   | CSE UI | Cloud Director | NSX-T with Avi             | Features offered |
+|------------|-----------|--------|----------------|----------------------------|------------------|
+| 3.1.1.0b2  | 3.1.1.0b2 | 3.0.4* | 10.3           | NSX-T 3.1.1 and Avi 20.1.3 | TKG              |
 
 3.0.4* -> Please download Kubernetes Container Clusters UI Plugin from [here](https://github.com/vmware/container-service-extension/raw/master/cse_ui/3.0.4/container-ui-plugin.zip)
 
@@ -86,10 +85,9 @@ they won't be tested individually. If a bug is found in their interoperability
 with CSE, please file a github [issue](https://github.com/vmware/container-service-extension/issues),
 the same will be fixed in a future CSE release.
 
-| CSE Server | CSE CLI   | CSE UI | Cloud Director | NSX-V  | NSX-T with Avi             | Features offered              |
-|------------|-----------|--------|----------------|--------|----------------------------|-------------------------------|
-| 3.1.1.0b1  | 3.1.1.0b1 | 3.0.1* | 10.3           | 6.4.10 | NSX-T 3.1.1 and Avi 20.1.3 | Native, TKG-S and TKG         |
-| NA         | 3.1.1.0b1 | 3.0.1* | 10.3           | NA     | NA                         | TKG-S cluster management only |
+| CSE Server | CSE CLI   | CSE UI | Cloud Director | NSX-T with Avi             | Features offered |
+|------------|-----------|--------|----------------|----------------------------|------------------|
+| 3.1.1.0b1  | 3.1.1.0b1 | 3.0.1* | 10.3           | NSX-T 3.1.1 and Avi 20.1.3 | TKG              |
 
 3.0.1* -> Please download Kubernetes Container Clusters UI Plugin from [here](https://github.com/vmware/container-service-extension/raw/master/cse_ui/3.0.1/container-ui-plugin.zip)
 
