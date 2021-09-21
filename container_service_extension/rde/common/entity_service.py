@@ -428,7 +428,7 @@ class DefEntityService:
         # TODO: Also include any persona having Administrator:FullControl
         #  on CSE:nativeCluster
         if (
-            vcd_api_version >= VCDApiVersion(vcd_client.ApiVersion.VERSION_36.value)
+            vcd_api_version >= VCDApiVersion(vcd_client.ApiVersion.VERSION_36.value)  # noqa: E501
             and self._cloudapi_client.is_sys_admin and not invoke_hooks
         ):
             resource_url_relative_path += f"?invokeHooks={str(invoke_hooks).lower()}"  # noqa: E501

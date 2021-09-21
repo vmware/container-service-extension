@@ -15,9 +15,9 @@ import pkg_resources
 import pyvcloud.vcd.client as vcd_client
 import pyvcloud.vcd.org as vcd_org
 import pyvcloud.vcd.vapp as vcd_vapp
-import validators
 from pyvcloud.vcd.vdc import VDC
 import pyvcloud.vcd.vm as vcd_vm
+import validators
 
 from container_service_extension.common.constants.server_constants import CLUSTER_ENTITY  # noqa: E501
 from container_service_extension.common.constants.server_constants import ClusterMetadataKey  # noqa: E501
@@ -1828,6 +1828,7 @@ def _is_valid_vcd_url(vcd_site: str) -> bool:
     if parsed_url.netloc != cse_server_host:
         return False
     return True
+
 
 def _cluster_exists(client, cluster_name, org_name=None, ovdc_name=None):
     query_filter = f'name=={urllib.parse.quote(cluster_name)}'
