@@ -175,14 +175,15 @@ def get_validated_config(
     )
 
     try:
-        _validate_vcd_config(
-            config['vcd'],
-            msg_update_callback,
-            log_file=log_wire_file,
-            log_wire=log_wire
-        )
-        if not is_tkgm_only_mode:
-            _validate_vcs_config(
+        if is_tkgm_only_mode:
+            _validate_vcd_config(
+                config['vcd'],
+                msg_update_callback,
+                log_file=log_wire_file,
+                log_wire=log_wire
+            )
+        else:
+            _validate_vcd_and_vcs_config(
                 config['vcd'],
                 config['vcs'],
                 msg_update_callback,
@@ -451,7 +452,7 @@ def _validate_vcd_config(
             client.logout()
 
 
-def _validate_vcs_config(
+def _validate_vcd_and_vcs_config(
         vcd_dict,
         vcs,
         msg_update_callback=NullPrinter(),
