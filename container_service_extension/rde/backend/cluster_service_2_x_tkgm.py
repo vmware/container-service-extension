@@ -1080,7 +1080,7 @@ class ClusterService(abstract_broker.AbstractBroker):
             unexpose_success: bool = False
             if unexpose:
                 org_name: str = curr_native_entity.metadata.org_name
-                ovdc_name: str = curr_native_entity.metadata.virtual_data_center_name
+                ovdc_name: str = curr_native_entity.metadata.virtual_data_center_name  # noqa: E501
                 network_name: str = current_spec.settings.ovdc_network
                 try:
                     # We need to get the internal IP via script and not rely
@@ -2245,8 +2245,8 @@ def _get_kube_config_from_control_plane_vm(sysadmin_client: vcd_client.Client, v
     control_plane_vm.reload()
     kube_config: str = vcd_utils.get_vm_extra_config_element(control_plane_vm, KUBE_CONFIG)  # noqa: E501
     if not kube_config:
-        raise exceptions.KubeconfigNotFound("kubeconfig not found in control plane extra configuration")   # noqa: E501
-    LOGGER.debug(f"Got kubeconfig from control plane extra configuration successfully")  # noqa: E501
+        raise exceptions.KubeconfigNotFound("kubeconfig not found in control plane extra configuration")  # noqa: E501
+    LOGGER.debug("Got kubeconfig from control plane extra configuration successfully")  # noqa: E501
     kube_config_in_bytes: bytes = base64.b64decode(kube_config)
     return kube_config_in_bytes.decode()
 
