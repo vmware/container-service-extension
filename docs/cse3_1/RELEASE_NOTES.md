@@ -5,7 +5,77 @@ title: Release Notes
 
 # Release Notes
 
-## CSE 3.1.1 Beta (3.1.1.0b1)
+## CSE 3.1.1 Beta 2 (3.1.1.0b2)
+Release Date: 2021-09-21
+
+**Supported (and tested) VCD versions**: 10.3.0 GA
+
+Note: Future update/patch releases of these VCD versions will be supported by CSE but
+they won't be tested individually. If a bug is found in their interoperability
+with CSE, please file a github [issue](https://github.com/vmware/container-service-extension/issues),
+the same will be fixed in a future CSE release.
+
+| CSE Server | CSE CLI   | CSE UI | Cloud Director | NSX-T with Avi             | Features offered |
+|------------|-----------|--------|----------------|----------------------------|------------------|
+| 3.1.1.0b2  | 3.1.1.0b2 | 3.0.4* | 10.3           | NSX-T 3.1.1 and Avi 20.1.3 | TKG              |
+
+3.0.4* -> Please download Kubernetes Container Clusters UI Plugin from [here](https://github.com/vmware/container-service-extension/raw/master/cse_ui/3.0.4/container-ui-plugin.zip)
+
+**Installation of binaries**
+```
+pip install container-service-extension==3.1.1.0b2
+```
+Note: `pip install container-service-extension` installs previous official
+version of CSE viz. 3.1.0. Specify the exact version mentioned above to install
+CSE 3.1.1 beta.
+
+**What's New**
+* Support for importing VMware Tanzu Kubernetes Grid OVA and deploying Kubernetes clusters using them.
+  * Learn more about using [VMware Tanzu Kubernetes Grid OVA with CSE](TEMPLATE_MANAGEMENT.html#tkgm_templates)
+  * Learn more about deploying a Kubernetes cluster based on VMware Tanzu Kubernetes Grid [here](CLUSTER_MANAGEMENT.html#tkgm_clusters)
+* VCD CPI and VCD CSI for Kubernetes clusters based on VMware Tanzu Kubernetes Grid
+  * Learn more about [VCD CPI](https://github.com/vmware/cloud-provider-for-cloud-director/blob/0.1.0-beta/README.md)
+  and [VCD CSI](https://github.com/vmware/cloud-director-named-disk-csi-driver/blob/0.1.0-beta/README.md)
+* Provision to deploy `Exposed` clusters from Kubernetes Container Clusters UI
+* CSE now pulls Antrea from Harbor repository instead of DockerHub
+
+**Supported VMware Tanzu Kubernetes Grid OVAs**
+* VMware Tanzu Kubernetes Grid 1.3.0 : Ubuntu 20.04, Kubernetes v1.20.4 vmware.1 (ubuntu-2004-kube-v1.20.4-vmware.1-tkg.0-16153464878630780629.ova)
+* VMware Tanzu Kubernetes Grid 1.3.1 : Ubuntu 20.04, Kubernetes v1.20.5 vmware.2 (ubuntu-2004-kube-v1.20.5-vmware.2-tkg.1-6700972457122900687.ova)
+* VMware Tanzu Kubernetes Grid 1.4.0 : Ubuntu 20.04, Kubernetes v1.21.2 vmware.1 (ubuntu-2004-kube-v1.21.2+vmware.1-tkg.1-7832907791984498322.ova)
+
+**Notes to System Administrator**
+* CSE 3.1.1.0b2 is supposed to be a fresh install only release, and
+won't support upgrades to CSE 3.1.1.
+* It is mandatory to deploy VMware Tanzu Kubernetes Grid clusters with `expose` field set to `True`.
+Read more about `expose` functionality [here](CLUSTER_MANAGEMENT.html#expose_cluster).
+Routability of external network traffic to the cluster is crucial for VCD CPI to
+work properly.
+* Users deploying VMware Tanzu Kubernetes Grid clusters should have the rights required
+to deploy `exposed` native clusters and additionally the right `Full Control: CSE:NATIVECLUSTER`.
+This right is crucial for VCD CPI to work properly. [VCD CPI](https://github.com/vmware/cloud-provider-for-cloud-director/blob/0.1.0-beta/README.md)
+and [VCD CSI](https://github.com/vmware/cloud-director-named-disk-csi-driver/blob/0.1.0-beta/README.md)
+docs list down all rights required for their proper functioning.
+* VMware Tanzu Kubernetes Grid clusters should be connected to a network that can access
+the public end point of the VCD. This network **should** have DNS setup, the same DNS server
+would be used by all cluster vms for name resolution while reaching out to internet to
+download Antrea, VCD CPI and VCD CSI.
+
+
+**Known issues**:
+Scaling down Kubernetes clusters  via `cse cluster apply` does not drain the worker nodes
+properly and can lead to loss in application data. If users wish to shrink their TKG clusters,
+they need to use `kubectl` to do it.
+  * On control plane node
+    * `kubetcl cordon [node name]`
+    * `kubectl drain [node name]`
+    * `kubectl delete [node name]` (Optional, VCD CPI will update the state of the cluster once the actual worker VM is deleted)
+  * On worker node
+    * Once the commands on control plane node have successfully completed,
+      power off the vm and delete it from VCD UI
+
+
+## CSE 3.1.1 Beta 1 (3.1.1.0b1)
 Release Date: 2021-09-13
 
 **Supported (and tested) VCD versions**: 10.3.0 GA
@@ -15,10 +85,9 @@ they won't be tested individually. If a bug is found in their interoperability
 with CSE, please file a github [issue](https://github.com/vmware/container-service-extension/issues),
 the same will be fixed in a future CSE release.
 
-| CSE Server | CSE CLI   | CSE UI | Cloud Director | NSX-V  | NSX-T with Avi             | Features offered              |
-|------------|-----------|--------|----------------|--------|----------------------------|-------------------------------|
-| 3.1.1.0b1  | 3.1.1.0b1 | 3.0.1* | 10.3           | 6.4.10 | NSX-T 3.1.1 and Avi 20.1.3 | Native, TKG-S and TKG         |
-| NA         | 3.1.1.0b1 | 3.0.1* | 10.3           | NA     | NA                         | TKG-S cluster management only |
+| CSE Server | CSE CLI   | CSE UI | Cloud Director | NSX-T with Avi             | Features offered |
+|------------|-----------|--------|----------------|----------------------------|------------------|
+| 3.1.1.0b1  | 3.1.1.0b1 | 3.0.1* | 10.3           | NSX-T 3.1.1 and Avi 20.1.3 | TKG              |
 
 3.0.1* -> Please download Kubernetes Container Clusters UI Plugin from [here](https://github.com/vmware/container-service-extension/raw/master/cse_ui/3.0.1/container-ui-plugin.zip)
 
