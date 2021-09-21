@@ -127,15 +127,26 @@ def get_validated_config(
     msg_update_callback.info(
         f"Validating config file '{config_file_name}'"
     )
+
     # This allows us to compare top-level config keys and value types
+    is_tkgm_only_mode = server_utils.is_tkgm_only_mode(config)
+
     use_mqtt = server_utils.should_use_mqtt_protocol(config)
     sample_message_queue_config = SAMPLE_AMQP_CONFIG if not use_mqtt \
         else SAMPLE_MQTT_CONFIG
+
     sample_config = {
-        **sample_message_queue_config, **SAMPLE_VCD_CONFIG,
-        **SAMPLE_VCS_CONFIG, **SAMPLE_SERVICE_CONFIG,
+        **sample_message_queue_config,
+        **SAMPLE_VCD_CONFIG,
+        **SAMPLE_SERVICE_CONFIG,
         **SAMPLE_BROKER_CONFIG
     }
+    if not is_tkgm_only_mode:
+        sample_config.update(SAMPLE_VCS_CONFIG)
+    else:
+        if 'vcs' in config:
+            del config['vcs']
+
     log_wire = str_to_bool(config.get('service', {}).get('log_wire'))
     nsxt_wire_logger = NULL_LOGGER
     if not log_wire:
@@ -163,8 +174,6 @@ def get_validated_config(
         excluded_keys=['log_wire'],
         msg_update_callback=msg_update_callback
     )
-
-    is_tkgm_only_mode = server_utils.is_tkgm_only_mode(config)
 
     try:
         _validate_vcd_config(

@@ -77,8 +77,11 @@ def get_vsphere(sys_admin_client, vapp, vm_name, logger=NULL_LOGGER):
                    cache[vm_id]['password'], cache[vm_id]['port'])
 
 
-def vgr_callback(prepend_msg='',
-                 logger=NULL_LOGGER, msg_update_callback=NullPrinter()):
+def vgr_callback(
+        prepend_msg='',
+        logger=NULL_LOGGER,
+        msg_update_callback=NullPrinter()
+):
     """Create a callback function to use for vsphere-guest-run functions.
 
     :param str prepend_msg: string to prepend to all messages received from
