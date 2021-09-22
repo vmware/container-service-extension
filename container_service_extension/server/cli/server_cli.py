@@ -3,7 +3,7 @@
 # container-service-extension
 # Copyright (c) 2019 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
-
+from copy import deepcopy
 import os
 from pathlib import Path
 import sys
@@ -1470,7 +1470,14 @@ def import_tkgm_template(
             server_constants.TKGmTemplateKey.OS_VERSION: os_version,
             server_constants.TKGmTemplateKey.REVISION: '1'
         }
-
+        cse_params = deepcopy(metadata_dict)
+        cse_params[PayloadKey.WAS_DECRYPTION_SKIPPED] = skip_config_decryption
+        cse_params[PayloadKey.WERE_TEMPLATES_FORCE_UPDATED] = force_import
+        record_user_action_details(
+            cse_operation=CseOperation.TEMPLATE_IMPORT,
+            cse_params=cse_params,
+            telemetry_settings=config['service']['telemetry']
+        )
         msg = f"Writing metadata onto catalog item {catalog_item_name}."
         INSTALL_LOGGER.info(msg)
         INSTALL_LOGGER.debug(f"{metadata_dict}")
@@ -1486,7 +1493,18 @@ def import_tkgm_template(
         msg = "Successfully imported TKGm OVA."
         INSTALL_LOGGER.debug(msg)
         console_message_printer.general(msg)
+        # Record telemetry data on template import completion status
+        record_user_action(
+            cse_operation=CseOperation.TEMPLATE_IMPORT,
+            telemetry_settings=config['service']['telemetry'])
     except Exception as err:
+        # Record telemetry data on template import completion status
+        record_user_action(
+            cse_operation=CseOperation.TEMPLATE_IMPORT,
+            status=OperationStatus.FAILED,
+            telemetry_settings=config['service']['telemetry'],
+        )
+
         SERVER_CLI_LOGGER.error(str(err), exc_info=True)
         console_message_printer.error(str(err))
     finally:
