@@ -10,8 +10,6 @@ OAUTH_TENANT_URL_FRAGMENT = "/tenant"
 BASE_OAUTH_ENDPOINT_FRAGMENT = "/oauth"
 REGISTER_CLIENT_ENDPOINT_FRAGMENT = "/register"
 OAUTH_TOKEN_ENDPOINT_FRAGMENT = "/token"
-GRANT_TYPE_JWT_BEARER = "urn:ietf:params:oauth:grant-type:jwt-bearer"
-GRANT_TYPE_REFRESH_TOKEN = "refresh_token"
 
 
 @unique
