@@ -4,12 +4,13 @@
 
 import functools
 
-from container_service_extension.common.constants.shared_constants import RequestKey  # noqa: E501
+from container_service_extension.common.constants.shared_constants import ClusterEntityKind, RequestKey  # noqa: E501
 import container_service_extension.exception.exceptions as cse_exception
 from container_service_extension.lib.cloudapi.cloudapi_client import \
     CloudApiClient
 from container_service_extension.logging.logger import SERVER_LOGGER as LOGGER
 from container_service_extension.rde.backend import cluster_service_factory
+from container_service_extension.rde.behaviors.behavior_model import BehaviorOperation  # noqa: E501
 import container_service_extension.rde.constants as rde_constants
 import container_service_extension.rde.utils as rde_utils
 import container_service_extension.rde.validators.validator_factory as rde_validator_factory  # noqa: E501
@@ -87,10 +88,17 @@ def update_cluster(behavior_ctx: RequestContext):
 
     # Validate the Input payload based on the (Operation, payload_version).
     # Get the validator based on the payload_version
+    kind = input_entity['kind']
+    is_tkgm_cluster = (kind == ClusterEntityKind.TKG_M.value)
+    sysadmin_client = behavior_ctx.sysadmin_client
     input_rde_version = rde_constants.MAP_INPUT_PAYLOAD_VERSION_TO_RDE_VERSION[payload_version]  # noqa: E501
     rde_validator_factory.get_validator(
         rde_version=input_rde_version). \
-        validate(cloudapi_client=cloudapi_client, entity=input_entity)
+        validate(cloudapi_client=cloudapi_client,
+                 sysadmin_client=sysadmin_client,
+                 operation=BehaviorOperation.UPDATE_CLUSTER,
+                 entity=input_entity,
+                 is_tkgm_cluster=is_tkgm_cluster)
 
     # Convert the input entity to runtime rde format.
     # Based on the runtime rde, call the appropriate backend method.

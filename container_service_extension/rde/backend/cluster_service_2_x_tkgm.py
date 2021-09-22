@@ -550,10 +550,26 @@ class ClusterService(abstract_broker.AbstractBroker):
         # TODO: Make use of current entity in the behavior payload
         curr_rde = self.entity_svc.get_entity(cluster_id)
         curr_native_entity: rde_2_x.NativeEntity = curr_rde.entity
+        sysadmin_client_v36 = \
+            self.context.get_sysadmin_client(DEFAULT_API_VERSION)
+        vdc: VDC = vcd_utils.get_vdc(
+            sysadmin_client_v36,
+            vdc_name=curr_native_entity.status.cloud_properties.virtual_data_center_name,  # noqa: E501
+            org_name=curr_native_entity.status.cloud_properties.org_name)
+        vdc_resource = vdc.get_resource_admin()
+        default_cp_name = vdc_resource.DefaultComputePolicy.get('name')
+        control_plane_sizing_class = curr_native_entity.status.nodes.control_plane.sizing_class  # noqa: E501
+        is_tkgm_with_default_sizing_in_control_plane = \
+            (control_plane_sizing_class == default_cp_name)
+        is_tkgm_with_default_sizing_in_workers = \
+            (len(curr_native_entity.status.nodes.workers) > 0
+                and curr_native_entity.status.nodes.workers[0].sizing_class == default_cp_name)  # noqa: E501
         current_spec: rde_2_x.ClusterSpec = \
             def_utils.construct_cluster_spec_from_entity_status(
                 curr_native_entity.status,
-                server_utils.get_rde_version_in_use())
+                server_utils.get_rde_version_in_use(),
+                is_tkgm_with_default_sizing_in_control_plane=is_tkgm_with_default_sizing_in_control_plane,  # noqa: E501
+                is_tkgm_with_default_sizing_in_workers=is_tkgm_with_default_sizing_in_workers)  # noqa: E501
         current_workers_count = current_spec.topology.workers.count
         desired_workers_count = input_native_entity.spec.topology.workers.count
         current_expose_flag = current_spec.settings.network.expose
