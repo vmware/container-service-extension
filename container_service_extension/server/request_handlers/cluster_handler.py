@@ -66,6 +66,7 @@ def cluster_create(data: dict, op_ctx: ctx.OperationContext):
     rde_validator_factory.get_validator(
         rde_version=rde_constants.MAP_INPUT_PAYLOAD_VERSION_TO_RDE_VERSION[
             payload_version]).validate(cloudapi_client=op_ctx.cloudapi_client,
+                                       sysadmin_client=op_ctx.sysadmin_client,
                                        entity=input_entity)
 
     def_entity_service = entity_service.DefEntityService(op_ctx.cloudapi_client)  # noqa: E501

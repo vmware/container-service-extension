@@ -67,7 +67,9 @@ def create_cluster(behavior_ctx: RequestContext):
     input_rde_version = rde_constants.MAP_INPUT_PAYLOAD_VERSION_TO_RDE_VERSION[payload_version]  # noqa: E501
     rde_validator_factory.get_validator(
         rde_version=input_rde_version). \
-        validate(cloudapi_client=cloudapi_client, entity=input_entity)
+        validate(cloudapi_client=cloudapi_client,
+                 sysadmin_client=behavior_ctx.op_ctx.sysadmin_client,
+                 entity=input_entity)
 
     # Convert the input entity to runtime rde format.
     # Based on the runtime rde, call the appropriate backend method.
@@ -90,13 +92,14 @@ def update_cluster(behavior_ctx: RequestContext):
     # Get the validator based on the payload_version
     kind = input_entity['kind']
     is_tkgm_cluster = (kind == ClusterEntityKind.TKG_M.value)
-    sysadmin_client = behavior_ctx.sysadmin_client
+    sysadmin_client = behavior_ctx.op_ctx.sysadmin_client
     input_rde_version = rde_constants.MAP_INPUT_PAYLOAD_VERSION_TO_RDE_VERSION[payload_version]  # noqa: E501
     rde_validator_factory.get_validator(
         rde_version=input_rde_version). \
         validate(cloudapi_client=cloudapi_client,
                  sysadmin_client=sysadmin_client,
                  operation=BehaviorOperation.UPDATE_CLUSTER,
+                 entity_id=entity_id,
                  entity=input_entity,
                  is_tkgm_cluster=is_tkgm_cluster)
 
