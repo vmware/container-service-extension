@@ -28,6 +28,7 @@ OPERATION_TO_PAYLOAD_GENERATOR = {
     CseOperation.SERVICE_RUN: payload_generator.get_payload_for_run_server,
 
     CseOperation.TEMPLATE_INSTALL: payload_generator.get_payload_for_install_template,  # noqa: E501
+    CseOperation.TEMPLATE_IMPORT: payload_generator.get_payload_for_import_template,  # noqa: E501
     CseOperation.TEMPLATE_LIST: payload_generator.get_payload_for_template_list,  # noqa: E501
 
     # vcd-cli CSE client commands
