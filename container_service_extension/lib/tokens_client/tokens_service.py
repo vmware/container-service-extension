@@ -16,7 +16,7 @@ class TokensService:
 
     def get_refresh_token_by_oauth_client_name(self, oauth_client_name: str):
         """Get refresh token information by oauth client name."""
-        # NOTE: Oauth client name is uniqe to a refresh token
+        # NOTE: Oauth client name is unique to a refresh token
         if not oauth_client_name:
             raise ValueError("No oauth_client_name provided.")
         filters = {
@@ -38,6 +38,8 @@ class TokensService:
     def delete_refresh_token_by_oauth_client_name(self, oauth_client_name: str):  # noqa: E501
         """Delete a refresh token by oauth client name."""
         refresh_token = self.get_refresh_token_by_oauth_client_name(oauth_client_name)  # noqa: E501
+        if not refresh_token.get('id'):
+            raise Exception(f"Failed to get refresh token ID for client {oauth_client_name}")  # noqa: E501
         self._cloudapi_client.do_request(
             method=RequestMethod.DELETE,
             cloudapi_version=CloudApiVersion.VERSION_1_0_0.value,
