@@ -16,7 +16,7 @@ def secure(required_rights=None):
     Only compatible with methods in AbstractBroker-derived classes.
 
     :param list required_rights: a list of rights (as str). The right name
-        shouldn't be namespaced.
+        shouldn't be namespace-ed.
 
     :return: a method reference to the decorating method.
 
@@ -38,10 +38,10 @@ def secure(required_rights=None):
 
                 missing_rights = []
                 for right_name in required_rights:
-                    namespaced_name = f'{{{CSE_SERVICE_NAMESPACE}}}' \
-                                      f':{right_name}'
-                    if namespaced_name not in user_rights:
-                        missing_rights.append(namespaced_name)
+                    right_name_with_namespace = \
+                        f"{{{CSE_SERVICE_NAMESPACE}}}:{right_name}"
+                    if right_name_with_namespace not in user_rights:
+                        missing_rights.append(right_name_with_namespace)
 
                 if len(missing_rights) > 0:
                     LOGGER.debug(f"Authorization failed for user "

@@ -112,7 +112,8 @@ SAMPLE_SERVICE_CONFIG = {
         'telemetry': {
             'enable': True
         },
-        'legacy_mode': False
+        'legacy_mode': False,
+        'tkgm_only_mode': False
     }
 }
 

@@ -304,17 +304,25 @@ class TemplateBuilder:
             self.remote_cookbook_version,
             self.template_name,
             self.template_revision,
-            TemplateScriptFile.CUST)
+            TemplateScriptFile.CUST
+        )
         cust_script = read_data_file(
-            cust_script_filepath, logger=self.logger,
-            msg_update_callback=self.msg_update_callback)
+            cust_script_filepath,
+            logger=self.logger,
+            msg_update_callback=self.msg_update_callback
+        )
 
-        vs = get_vsphere(self.sys_admin_client, vapp, vm_name,
-                         logger=self.logger)
+        vs = get_vsphere(
+            self.sys_admin_client,
+            vapp,
+            vm_name,
+            logger=self.logger
+        )
         callback = vgr_callback(
             prepend_msg='Waiting for guest tools, status: "',
             logger=self.logger,
-            msg_update_callback=self.msg_update_callback)
+            msg_update_callback=self.msg_update_callback
+        )
         wait_until_tools_ready(vapp, vm_name, vs, callback=callback)
         password_auto = vapp.get_admin_password(vm_name)
 
