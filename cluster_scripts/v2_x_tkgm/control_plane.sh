@@ -158,7 +158,7 @@ metadata:
 END
   kubectl apply -f $vcloud_basic_auth_path
 
-  wget -O $vcloud_configmap_path https://raw.githubusercontent.com/vmware/cloud-provider-for-cloud-director/0.1.0-beta/manifests/vcloud-configmap.yaml
+  wget -O $vcloud_configmap_path https://raw.githubusercontent.com/vmware/cloud-provider-for-cloud-director/main/manifests/vcloud-configmap.yaml
   sed -i 's/VCD_HOST/"{vcd_host}"/' $vcloud_configmap_path
   sed -i 's/ORG/"{org}"/' $vcloud_configmap_path
   sed -i 's/OVDC/"{vdc}"/' $vcloud_configmap_path
@@ -167,22 +167,22 @@ END
   sed -i 's/CLUSTER_ID/{cluster_id}/' $vcloud_configmap_path
   kubectl apply -f $vcloud_configmap_path
 
-  wget -O $vcloud_ccm_path https://raw.githubusercontent.com/vmware/cloud-provider-for-cloud-director/0.1.0-beta/manifests/cloud-director-ccm.yaml
+  wget -O $vcloud_ccm_path https://raw.githubusercontent.com/Anirudh9794/cloud-provider-for-cloud-director/vcda-2577-updated/manifests/cloud-director-ccm.yaml
   kubectl apply -f $vcloud_ccm_path
 vmtoolsd --cmd "info-set guestinfo.postcustomization.kubectl.cpi.install.status successful"
 
 
 vmtoolsd --cmd "info-set guestinfo.postcustomization.kubectl.csi.install.status in_progress"
-  wget -O $vcloud_csi_configmap_path https://raw.githubusercontent.com/vmware/cloud-director-named-disk-csi-driver/0.1.0-beta/manifests/vcloud-csi-config.yaml
+  wget -O $vcloud_csi_configmap_path https://raw.githubusercontent.com/vmware/cloud-director-named-disk-csi-driver/main/manifests/vcloud-csi-config.yaml
   sed -i 's/VCD_HOST/"{vcd_host}"/' $vcloud_csi_configmap_path
   sed -i 's/ORG/"{org}"/' $vcloud_csi_configmap_path
   sed -i 's/OVDC/"{vdc}"/' $vcloud_csi_configmap_path
   sed -i 's/CLUSTER_ID/"{cluster_id}"/' $vcloud_csi_configmap_path
   kubectl apply -f $vcloud_csi_configmap_path
 
-  wget -O $csi_driver_path https://raw.githubusercontent.com/vmware/cloud-director-named-disk-csi-driver/0.1.0-beta/manifests/csi-driver.yaml
-  wget -O $csi_controller_path https://raw.githubusercontent.com/vmware/cloud-director-named-disk-csi-driver/0.1.0-beta/manifests/csi-controller.yaml
-  wget -O $csi_node_path https://raw.githubusercontent.com/vmware/cloud-director-named-disk-csi-driver/0.1.0-beta/manifests/csi-node.yaml
+  wget -O $csi_driver_path https://raw.githubusercontent.com/vmware/cloud-director-named-disk-csi-driver/main/manifests/csi-driver.yaml
+  wget -O $csi_controller_path https://raw.githubusercontent.com/vmware/cloud-director-named-disk-csi-driver/main/manifests/csi-controller.yaml
+  wget -O $csi_node_path https://raw.githubusercontent.com/vmware/cloud-director-named-disk-csi-driver/main/manifests/csi-node.yaml
   kubectl apply -f $csi_driver_path
   kubectl apply -f $csi_controller_path
   kubectl apply -f $csi_node_path
