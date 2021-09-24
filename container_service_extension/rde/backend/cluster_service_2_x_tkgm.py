@@ -1643,7 +1643,7 @@ class ClusterService(abstract_broker.AbstractBroker):
         # update the cluster_rde with external_id if provided by the caller
         changes = {'entity.status': tkgm_entity_status}
         if external_id is not None:
-            changes['externalId']: external_id
+            changes['externalId'] = external_id
 
         # Update cluster rde
         return self.sysadmin_entity_svc.update_entity(
