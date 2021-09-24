@@ -167,7 +167,7 @@ END
   sed -i 's/CLUSTER_ID/{cluster_id}/' $vcloud_configmap_path
   kubectl apply -f $vcloud_configmap_path
 
-  wget -O $vcloud_ccm_path https://raw.githubusercontent.com/Anirudh9794/cloud-provider-for-cloud-director/vcda-2577-updated/manifests/cloud-director-ccm.yaml
+  wget -O $vcloud_ccm_path https://raw.githubusercontent.com/vmware/cloud-provider-for-cloud-director/main/manifests/cloud-director-ccm.yaml
   kubectl apply -f $vcloud_ccm_path
 vmtoolsd --cmd "info-set guestinfo.postcustomization.kubectl.cpi.install.status successful"
 
