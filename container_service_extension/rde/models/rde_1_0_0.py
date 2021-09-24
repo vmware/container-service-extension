@@ -399,7 +399,10 @@ class NativeEntity(AbstractNativeEntity):
         return cluster_entity
 
     @classmethod
-    def get_sample_native_cluster_specification(cls, k8_runtime: str = shared_constants.ClusterEntityKind.NATIVE.value):  # noqa: E501
+    def get_sample_native_cluster_specification(
+            cls,
+            k8_runtime: str = shared_constants.ClusterEntityKind.NATIVE.value
+    ):
         cluster_spec_field_descriptions = """# Short description of various properties used in this sample cluster configuration
 # api_version: Represents the payload version of the cluster specification. By default, empty.
 # kind: The kind of the Kubernetes cluster.
@@ -436,29 +439,35 @@ class NativeEntity(AbstractNativeEntity):
 #
 # status: Current state of the cluster in the server. This is not a required section for any of the operations.\n
 """  # noqa: E501
-        metadata = Metadata('cluster_name', 'organization_name',
-                            'org_virtual_data_center_name')
-        status = Status()
-        settings = Settings(network='ovdc_network_name', ssh_key=None)
-        k8_distribution = Distribution(
-            template_name='ubuntu-16.04_k8-1.17_weave-2.6.0',
-            template_revision=2
+        metadata = Metadata(
+            'cluster_name',
+            'organization_name',
+            'org_virtual_data_center_name'
         )
+
         control_plane = ControlPlane(
             count=1,
             sizing_class='Large_sizing_policy_name',
             storage_profile='Gold_storage_profile_name'
         )
-        workers = Workers(
-            count=2,
-            sizing_class='Medium_sizing_policy_name',
-            storage_profile='Silver_storage_profile'
+
+        k8_distribution = Distribution(
+            template_name='ubuntu-16.04_k8-1.17_weave-2.6.0',
+            template_revision=2
         )
 
         nfs = Nfs(
             count=0,
             sizing_class='Large_sizing_policy_name',
             storage_profile='Platinum_storage_profile_name'
+        )
+
+        settings = Settings(network='ovdc_network_name', ssh_key=None)
+
+        workers = Workers(
+            count=2,
+            sizing_class='Medium_sizing_policy_name',
+            storage_profile='Silver_storage_profile'
         )
 
         cluster_spec = ClusterSpec(
@@ -469,10 +478,15 @@ class NativeEntity(AbstractNativeEntity):
             nfs=nfs
         )
 
-        native_entity_dict = NativeEntity(metadata=metadata,
-                                          spec=cluster_spec,
-                                          status=status,
-                                          kind=k8_runtime).to_dict()
+        status = Status()
+
+        native_entity_dict = NativeEntity(
+            metadata=metadata,
+            spec=cluster_spec,
+            status=status,
+            kind=k8_runtime
+        ).to_dict()
+
         # remove status part of the entity dict
         del native_entity_dict['status']
 
