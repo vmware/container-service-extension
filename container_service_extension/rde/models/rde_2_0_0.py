@@ -518,7 +518,10 @@ class NativeEntity(AbstractNativeEntity):
         return cluster_entity
 
     @classmethod
-    def get_sample_native_cluster_specification(cls, k8_runtime: str = shared_constants.ClusterEntityKind.NATIVE.value):  # noqa: E501
+    def get_sample_native_cluster_specification(
+            cls,
+            k8_runtime: str = shared_constants.ClusterEntityKind.NATIVE.value
+    ):
         """Create apply command cluster specification description.
 
         :returns: ClusterSpec field description
@@ -562,14 +565,13 @@ class NativeEntity(AbstractNativeEntity):
 #
 # status: Current state of the cluster in the server. This is not a required section for any of the operations.\n
 """  # noqa: E501
-        metadata = Metadata('cluster_name', 'organization_name',
-                            'org_virtual_data_center_name', 'VCD_site')
-        status = Status()
-        settings = Settings(ovdc_network='ovdc_network_name', ssh_key=None)
-        k8_distribution = Distribution(
-            template_name='ubuntu-16.04_k8-1.17_weave-2.6.0',
-            template_revision=2
+        metadata = Metadata(
+            'cluster_name',
+            'organization_name',
+            'org_virtual_data_center_name',
+            'VCD_site'
         )
+
         control_plane = ControlPlane(
             count=1,
             sizing_class='Large_sizing_policy_name',
@@ -593,18 +595,28 @@ class NativeEntity(AbstractNativeEntity):
             nfs=nfs
         )
 
+        k8_distribution = Distribution(
+            template_name='ubuntu-16.04_k8-1.17_weave-2.6.0',
+            template_revision=2
+        )
+
+        settings = Settings(ovdc_network='ovdc_network_name', ssh_key=None)
+
         cluster_spec = ClusterSpec(
             topology=topology,
             distribution=k8_distribution,
             settings=settings,
         )
 
+        status = Status()
+
         native_entity_dict = NativeEntity(
             api_version=rde_constants.PAYLOAD_VERSION_2_0,
             metadata=metadata,
             spec=cluster_spec,
             status=status,
-            kind=k8_runtime).to_dict()
+            kind=k8_runtime
+        ).to_dict()
 
         # remove status part of the entity dict
         del native_entity_dict['status']
@@ -614,14 +626,15 @@ class NativeEntity(AbstractNativeEntity):
         # for CSE 3.1.1 to accommodate Antrea as CNI
         # Below line can be deleted post Andromeda (CSE 3.1)
         del native_entity_dict['spec']['settings']['network']['cni']
-        del native_entity_dict['spec']['settings']['network']['pods']
-        del native_entity_dict['spec']['settings']['network']['services']
 
         if k8_runtime == shared_constants.ClusterEntityKind.TKG_M.value:
-            del native_entity_dict['spec']['topology']['controlPlane']['cpu']
-            del native_entity_dict['spec']['topology']['controlPlane']['memory']  # noqa: E501
-            del native_entity_dict['spec']['topology']['workers']['cpu']
-            del native_entity_dict['spec']['topology']['workers']['memory']
+            del native_entity_dict['spec']['topology']['nfs']
+            native_entity_dict['spec']['settings']['network']['expose'] = True
+            native_entity_dict['spec']['settings']['network']['pods'] = ['100.96.0.0/11']  # noqa: E501
+            native_entity_dict['spec']['settings']['network']['services'] = ['100.64.0.0/13']  # noqa: E501
+        else:
+            del native_entity_dict['spec']['settings']['network']['pods']
+            del native_entity_dict['spec']['settings']['network']['services']
 
         sample_apply_spec = yaml.dump(native_entity_dict)
         return cluster_spec_field_descriptions + sample_apply_spec
