@@ -204,11 +204,14 @@ def cluster_update(data: dict, op_ctx: ctx.OperationContext):
     # Based on the runtime rde, call the appropriate backend method.
     def_entity_service = entity_service.DefEntityService(op_ctx.cloudapi_client)  # noqa: E501
     converted_native_entity: AbstractNativeEntity = rde_utils.convert_input_rde_to_runtime_rde_format(input_entity)  # noqa: E501
-    cluster_def_entity: common_models.DefEntity = def_entity_service.get_entity(cluster_id)  # noqa: E501
-    cluster_def_entity.entity.spec = converted_native_entity.spec
+
+    changes = {
+        'entity.spec': converted_native_entity.spec
+    }
     updated_def_entity, task_href = def_entity_service.update_entity(
-        entity_id=cluster_id, entity=cluster_def_entity,
-        invoke_hooks=True, is_request_async=True)
+        entity_id=cluster_id, invoke_hooks=True, is_request_async=True,
+        changes=changes
+    )
     updated_def_entity.entity.status.task_href = task_href
     # TODO: Response RDE must be compatible with the request RDE.
     #  Conversions may be needed especially if there is a major version

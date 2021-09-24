@@ -2549,8 +2549,6 @@ def _create_cluster_rde(client, cluster, kind, runtime_rde_version,
         native_entity_2_x.status.cloud_properties.site = site
         native_entity_2_x.metadata.site = site
 
-    def_entity.externalId = cluster['vapp_href']
-
     # update ownership of the entity
     try:
         user = client.get_user_in_org(user_name=cluster['owner_name'], org_href=cluster['org_href'])  # noqa: E501
@@ -2561,10 +2559,10 @@ def _create_cluster_rde(client, cluster, kind, runtime_rde_version,
         org_id = org_href.split("/")[-1]
         org_urn = f"urn:vcloud:org:{org_id}"
 
-        def_entity.owner = common_models.Owner(
+        owner = common_models.Owner(
             name=cluster['owner_name'],
             id=org_member_urn)
-        def_entity.org = common_models.Org(
+        org = common_models.Org(
             name=cluster['org_name'],
             id=org_urn)
     except Exception as err:
@@ -2573,7 +2571,12 @@ def _create_cluster_rde(client, cluster, kind, runtime_rde_version,
         msg_update_callback.info(msg)
         INSTALL_LOGGER.info(msg)
 
-    entity_svc.update_entity(def_entity_id, def_entity)
+    changes = {
+        'externalId': cluster['vapp_href'],
+        'owner': owner,
+        'org': org
+    }
+    entity_svc.update_entity(def_entity_id, changes=changes)
     entity_svc.resolve_entity(def_entity_id)
 
     msg = f"Generated new id for cluster '{cluster['name']}' "

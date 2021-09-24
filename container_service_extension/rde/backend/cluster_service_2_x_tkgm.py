@@ -1088,7 +1088,7 @@ class ClusterService(abstract_broker.AbstractBroker):
             unexpose_success: bool = False
             if unexpose:
                 org_name: str = curr_native_entity.metadata.org_name
-                ovdc_name: str = curr_native_entity.metadata.virtual_data_center_name
+                ovdc_name: str = curr_native_entity.metadata.virtual_data_center_name  # noqa: E501
                 network_name: str = current_spec.settings.ovdc_network
                 try:
                     # We need to get the internal IP via script and not rely
@@ -1640,18 +1640,14 @@ class ClusterService(abstract_broker.AbstractBroker):
         """
         # TODO update function to use optimistic locking feature by VCD
 
-        cluster_rde: common_models.DefEntity = \
-            self.entity_svc.get_entity(cluster_id)
-
         # update the cluster_rde with external_id if provided by the caller
+        changes = {'entity.status': tkgm_entity_status}
         if external_id is not None:
-            cluster_rde.externalId = external_id
-        # Update entity status with new values
-        cluster_rde.entity.status = tkgm_entity_status
+            changes['externalId']: external_id
 
         # Update cluster rde
         return self.sysadmin_entity_svc.update_entity(
-            cluster_id, cluster_rde, invoke_hooks=False
+            cluster_id, invoke_hooks=False, changes=changes
         )
 
     def _fail_operation(self, cluster_id: str, op: DefEntityOperation):
@@ -1828,6 +1824,7 @@ def _is_valid_vcd_url(vcd_site: str) -> bool:
     if parsed_url.netloc != cse_server_host:
         return False
     return True
+
 
 def _cluster_exists(client, cluster_name, org_name=None, ovdc_name=None):
     query_filter = f'name=={urllib.parse.quote(cluster_name)}'
@@ -2269,7 +2266,7 @@ def _get_kube_config_from_control_plane_vm(sysadmin_client: vcd_client.Client, v
     kube_config: str = vcd_utils.get_vm_extra_config_element(control_plane_vm, KUBE_CONFIG)  # noqa: E501
     if not kube_config:
         raise exceptions.KubeconfigNotFound("kubeconfig not found in control plane extra configuration")   # noqa: E501
-    LOGGER.debug(f"Got kubeconfig from control plane extra configuration successfully")  # noqa: E501
+    LOGGER.debug("Got kubeconfig from control plane extra configuration successfully")  # noqa: E501
     kube_config_in_bytes: bytes = base64.b64decode(kube_config)
     return kube_config_in_bytes.decode()
 

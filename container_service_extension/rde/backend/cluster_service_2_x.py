@@ -1215,7 +1215,7 @@ class ClusterService(abstract_broker.AbstractBroker):
             unexpose_success: bool = False
             if unexpose:
                 org_name: str = curr_native_entity.metadata.org_name
-                ovdc_name: str = curr_native_entity.metadata.virtual_data_center_name
+                ovdc_name: str = curr_native_entity.metadata.virtual_data_center_name  # noqa: E501
                 network_name: str = current_spec.settings.ovdc_network
                 try:
                     # We need to get the internal IP via script and not rely
@@ -1991,18 +1991,14 @@ class ClusterService(abstract_broker.AbstractBroker):
         """
         # TODO update function to use optimistic locking feature by VCD
 
-        cluster_rde: common_models.DefEntity = \
-            self.entity_svc.get_entity(cluster_id)
-
         # update the cluster_rde with external_id if provided by the caller
+        changes = {'entity.status': native_entity_status}
         if external_id is not None:
-            cluster_rde.externalId = external_id
-        # Update entity status with new values
-        cluster_rde.entity.status = native_entity_status
+            changes['externalId'] = external_id
 
         # Update cluster rde
         return self.sysadmin_entity_svc.update_entity(
-            cluster_id, cluster_rde, invoke_hooks=False
+            cluster_id, invoke_hooks=False, changes=changes
         )
 
     def _fail_operation(self, cluster_id: str, op: DefEntityOperation):

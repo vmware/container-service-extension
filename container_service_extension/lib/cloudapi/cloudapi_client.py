@@ -178,3 +178,11 @@ class CloudApiClient(object):
                 else:
                     return ''
         return ''
+
+    def get_last_response_etag(self) -> str:
+        last_response_headers = self.get_last_response_headers()
+        if last_response_headers and \
+                hasattr(last_response_headers, '_store') and \
+                last_response_headers._store.get('etag') is not None:
+            return last_response_headers._store['etag'][1]
+        return None

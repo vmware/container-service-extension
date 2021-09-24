@@ -9,7 +9,9 @@ from typing import List, Tuple, Union
 import pyvcloud.vcd.client as vcd_client
 from pyvcloud.vcd.vcd_api_version import VCDApiVersion
 from requests.exceptions import HTTPError
+from requests import codes
 
+import container_service_extension.common.constants.server_constants as server_constants  # noqa: E501
 import container_service_extension.common.constants.shared_constants as shared_constants  # noqa: E501
 from container_service_extension.common.constants.shared_constants import CSE_PAGINATION_DEFAULT_PAGE_SIZE, PaginationKey  # noqa: E501
 from container_service_extension.common.constants.shared_constants import CSE_PAGINATION_FIRST_PAGE_NUMBER  # noqa: E501
@@ -256,10 +258,30 @@ class DefEntityService:
         result[PaginationKey.VALUES] = entity_list
         return result
 
+    def _form_updated_entity(self, entity_id: str, changes: dict):
+        entity = self.get_entity(entity_id)
+        # get entity call updates _cloudapi_client headers to get etag
+        etag = self._cloudapi_client.get_last_response_etag()
+
+        # form updated RDE
+        for attr_str, value in changes.items():
+            curr_obj = entity
+            attrs: list = attr_str.split('.')
+            last_attr: str = attrs.pop()
+            for attr in attrs:
+                try:
+                    curr_obj = getattr(curr_obj, attr)
+                except AttributeError as err:
+                    LOGGER.error(f"missing attribute when updating RDE: {err}")
+                    raise
+            setattr(curr_obj, last_attr, value)
+        return entity, etag
+
     @handle_entity_service_exception
-    def update_entity(self, entity_id: str, entity: DefEntity,
+    def update_entity(self, entity_id: str, entity: DefEntity = None,
                       invoke_hooks=False,
-                      is_request_async=False) -> Union[DefEntity, Tuple[DefEntity, dict]]:  # noqa: E501
+                      is_request_async=False,
+                      changes: dict = None) -> Union[DefEntity, Tuple[DefEntity, dict]]:  # noqa: E501
         """Update entity instance.
 
         :param str entity_id: Id of the entity to be updated.
@@ -269,50 +291,76 @@ class DefEntityService:
         :param bool is_request_async: The request is intended to be
             asynchronous if this flag is set, href of the task is returned
             in addition to the response body
+        :param dict changes: dictionary of changes for the rde. The key
+            indicates the field updated, e.g. 'entity.status'. The value
+            indicates the value for this field.
 
         :return: Updated entity or Updated entity and response headers
         :rtype: Union[DefEntity, Tuple[DefEntity, dict]]
+
+        The 'changes' parameter takes precedence over 'entity', and at least
+        one of these fields is required. Also, 'changes' is required when
+        api version >= 36.0; this allows getting the entity so that the current
+        entity is not overwritten.
+        etag usage is only supported for api version >= 36.0.
         """
-        resource_url_relative_path = f"{CloudApiResource.ENTITIES}/{entity_id}"
+        if entity is None and changes is None:
+            raise Exception("at least 'entity' or 'changes' must not be None")
         vcd_api_version = self._cloudapi_client.get_vcd_api_version()
+        api_at_least_36: bool = vcd_api_version >= VCDApiVersion(vcd_client.ApiVersion.VERSION_36.value)  # noqa: E501
+        if api_at_least_36 and changes is None:
+            raise Exception("changes must be specified when client has api "
+                            "version >= 36.0")
+        resource_url_relative_path = f"{CloudApiResource.ENTITIES}/{entity_id}"
         # TODO Float conversions must be changed to Semantic versioning.
         # TODO: Also include any persona having Administrator:FullControl
         #  on CSE:nativeCluster
-        if vcd_api_version >= VCDApiVersion(vcd_client.ApiVersion.VERSION_36.value) and \
-                self._cloudapi_client.is_sys_admin and not invoke_hooks:  # noqa: E501
+        if api_at_least_36 and self._cloudapi_client.is_sys_admin and not invoke_hooks:  # noqa: E501
             resource_url_relative_path += f"?invokeHooks={str(invoke_hooks).lower()}"  # noqa: E501
 
-        payload: dict = entity.to_dict()
+        for _ in range(server_constants.MAX_RDE_UPDATE_ATTEMPTS):
+            # get entity
+            etag = ""
+            if changes:
+                entity, etag = self._form_updated_entity(entity_id, changes)
 
-        # Prevent users with rights <= EDIT/VIEW on CSE:NATIVECLUSTER from
-        # updating "private" property of RDE "status" section
-        # TODO: Replace sys admin check with FULL CONTROL rights check on
-        #  CSE:NATIVECLUSTER. Users with no FULL CONTROL rights cannot update
-        #  private property of entity->status.
-        if not self._cloudapi_client.is_sys_admin:
-            payload.get('entity', {}).get('status', {}).pop('private', None)
+            payload: dict = entity.to_dict()
 
-        if is_request_async:
+            # Prevent users with rights <= EDIT/VIEW on CSE:NATIVECLUSTER from
+            # updating "private" property of RDE "status" section
+            # TODO: Replace sys admin check with FULL CONTROL rights check on
+            #  CSE:NATIVECLUSTER. Users with no FULL CONTROL rights cannot
+            #  update private property of entity->status.
+            if not self._cloudapi_client.is_sys_admin:
+                payload.get('entity', {}).get('status', {}).pop('private', None)  # noqa: E501
+
             # if request is async, return the task href in
             # x_vmware_vcloud_task_location header
             # TODO: Use the Http response status code to decide which
             #   header name to use for task_href
             #   202 - location header,
             #   200 - xvcloud-task-location needs to be used
-            response_body, headers = self._cloudapi_client.do_request(
-                method=RequestMethod.PUT,
-                cloudapi_version=CloudApiVersion.VERSION_1_0_0,
-                resource_url_relative_path=resource_url_relative_path,
-                payload=payload,
-                return_response_headers=is_request_async)
-            return DefEntity(**response_body), headers[HttpResponseHeader.X_VMWARE_VCLOUD_TASK_LOCATION.value]  # noqa: E501
-        else:
-            response_body = self._cloudapi_client.do_request(
-                method=RequestMethod.PUT,
-                cloudapi_version=CloudApiVersion.VERSION_1_0_0,
-                resource_url_relative_path=resource_url_relative_path,
-                payload=payload)
-            return DefEntity(**response_body)
+            try:
+                additional_request_headers = {"If-Match": etag} if api_at_least_36 else None  # noqa: E501
+                response_body, headers = self._cloudapi_client.do_request(
+                    method=RequestMethod.PUT,
+                    cloudapi_version=CloudApiVersion.VERSION_1_0_0,
+                    resource_url_relative_path=resource_url_relative_path,
+                    payload=payload,
+                    return_response_headers=True,
+                    additional_request_headers=additional_request_headers
+                )
+
+                def_entity = DefEntity(**response_body)
+                if is_request_async:
+                    return def_entity, headers[HttpResponseHeader.X_VMWARE_VCLOUD_TASK_LOCATION.value]  # noqa: E501
+                return def_entity
+            except Exception:
+                last_cloudapi_response = self._cloudapi_client.get_last_response()  # noqa: E501
+                if last_cloudapi_response.status_code == codes.precondition_failed:  # noqa: E501
+                    continue
+                raise
+        raise Exception(f"failed to update RDE after {server_constants.MAX_RDE_UPDATE_ATTEMPTS} attempts")  # noqa: E501
 
     @handle_entity_service_exception
     def get_entity(self, entity_id: str) -> DefEntity:
@@ -428,7 +476,7 @@ class DefEntityService:
         # TODO: Also include any persona having Administrator:FullControl
         #  on CSE:nativeCluster
         if (
-            vcd_api_version >= VCDApiVersion(vcd_client.ApiVersion.VERSION_36.value)
+            vcd_api_version >= VCDApiVersion(vcd_client.ApiVersion.VERSION_36.value)  # noqa: E501
             and self._cloudapi_client.is_sys_admin and not invoke_hooks
         ):
             resource_url_relative_path += f"?invokeHooks={str(invoke_hooks).lower()}"  # noqa: E501
@@ -499,10 +547,10 @@ class DefEntityService:
         :return: DefEntity representing the upgraded defined entity
         :rtype: DefEntity
         """
-        rde = self.get_entity(entity_id)
-        rde.entity = upgraded_native_entity
 
-        # Update only the entityType property
-        rde.entityType = target_entity_type_id
-
-        return self.update_entity(entity_id, rde, invoke_hooks=False)
+        changes = {
+            'entity': upgraded_native_entity,
+            'entityType': target_entity_type_id
+        }
+        return self.update_entity(entity_id, invoke_hooks=False,
+                                  changes=changes)
