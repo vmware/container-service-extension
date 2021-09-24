@@ -18,6 +18,7 @@ Responsibility of the functions in this file:
 """
 
 import container_service_extension.common.constants.server_constants as server_constants  # noqa: E501
+from container_service_extension.common.constants.server_constants import ThreadLocalData  # noqa: E501
 from container_service_extension.common.constants.shared_constants import ClusterAclKey  # noqa: E501
 from container_service_extension.common.constants.shared_constants import CSE_PAGINATION_DEFAULT_PAGE_SIZE  # noqa: E501
 from container_service_extension.common.constants.shared_constants import CSE_PAGINATION_FIRST_PAGE_NUMBER  # noqa: E501
@@ -88,6 +89,13 @@ def cluster_create(data: dict, op_ctx: ctx.OperationContext):
     entity_id = task_resource.Owner.get('id')
     def_entity = def_entity_service.get_entity(entity_id)
     def_entity.entity.status.task_href = task_href
+    telemetry_handler.record_user_action_details(
+        cse_operation=telemetry_constants.CseOperation.V36_CLUSTER_APPLY,
+        cse_params={
+            server_constants.CLUSTER_ENTITY: def_entity,
+            telemetry_constants.PayloadKey.SOURCE_DESCRIPTION: thread_local_data.get_thread_local_data(ThreadLocalData.USER_AGENT)  # noqa: E501
+        }
+    )
     return def_entity.to_dict()
 
 
@@ -167,7 +175,16 @@ def cluster_config(data: dict, op_ctx: ctx.OperationContext):
     :return: Dict
     """
     cluster_id = data[RequestKey.CLUSTER_ID]
+    def_entity_service = entity_service.DefEntityService(op_ctx.cloudapi_client)  # noqa: E501
+    def_entity: common_models.DefEntity = def_entity_service.get_entity(cluster_id)  # noqa: E501
     behavior_svc = BehaviorService(cloudapi_client=op_ctx.cloudapi_client)
+    telemetry_handler.record_user_action_details(
+        cse_operation=telemetry_constants.CseOperation.V36_CLUSTER_CONFIG,
+        cse_params={
+            server_constants.CLUSTER_ENTITY: def_entity,
+            telemetry_constants.PayloadKey.SOURCE_DESCRIPTION: thread_local_data.get_thread_local_data(ThreadLocalData.USER_AGENT)  # noqa: E501
+        }
+    )
     config_task_href = behavior_svc.invoke_behavior(
         entity_id=cluster_id,
         behavior_interface_id=KUBE_CONFIG_BEHAVIOR_INTERFACE_ID)
@@ -210,6 +227,13 @@ def cluster_update(data: dict, op_ctx: ctx.OperationContext):
         entity_id=cluster_id, entity=cluster_def_entity,
         invoke_hooks=True, is_request_async=True)
     updated_def_entity.entity.status.task_href = task_href
+    telemetry_handler.record_user_action_details(
+        cse_operation=telemetry_constants.CseOperation.V36_CLUSTER_APPLY,
+        cse_params={
+            server_constants.CLUSTER_ENTITY: updated_def_entity,
+            telemetry_constants.PayloadKey.SOURCE_DESCRIPTION: thread_local_data.get_thread_local_data(ThreadLocalData.USER_AGENT)  # noqa: E501
+        }
+    )
     # TODO: Response RDE must be compatible with the request RDE.
     #  Conversions may be needed especially if there is a major version
     #  difference in the input RDE and runtime RDE.
@@ -243,6 +267,13 @@ def cluster_delete(data: dict, op_ctx: ctx.OperationContext):
     cluster_id = data[RequestKey.CLUSTER_ID]
     def_entity_service = entity_service.DefEntityService(op_ctx.cloudapi_client)  # noqa: E501
     def_entity: common_models.DefEntity = def_entity_service.get_entity(cluster_id)  # noqa: E501
+    telemetry_handler.record_user_action_details(
+        cse_operation=telemetry_constants.CseOperation.V36_CLUSTER_DELETE,
+        cse_params={
+            server_constants.CLUSTER_ENTITY: def_entity,
+            telemetry_constants.PayloadKey.SOURCE_DESCRIPTION: thread_local_data.get_thread_local_data(ThreadLocalData.USER_AGENT)  # noqa: E501
+        }
+    )
     _, task_href = def_entity_service.delete_entity(cluster_id, invoke_hooks=True, is_request_async=True)  # noqa: E501
     def_entity.entity.status.task_href = task_href
     return def_entity.to_dict()
