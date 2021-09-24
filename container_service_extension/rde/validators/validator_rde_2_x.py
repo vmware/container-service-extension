@@ -71,9 +71,9 @@ class Validator_2_0_0(AbstractValidator):
 
         # Need to ensure that sizing class along with cpu/memory is not
         # present in the request
-        bad_request_msg = ""
         if isinstance(input_entity, rde_2_0_0.NativeEntity):
             # cpu and mem are properties of only rde 2.0.0
+            bad_request_msg = ""
             if input_entity.spec.topology.workers.sizing_class and \
                     (input_entity.spec.topology.workers.cpu or input_entity.spec.topology.workers.memory):  # noqa: E501
                 bad_request_msg = "Cannot specify both sizing class and cpu/memory for Workers nodes."  # noqa: E501
