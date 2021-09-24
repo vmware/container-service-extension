@@ -628,10 +628,6 @@ class NativeEntity(AbstractNativeEntity):
         del native_entity_dict['spec']['settings']['network']['cni']
 
         if k8_runtime == shared_constants.ClusterEntityKind.TKG_M.value:
-            del native_entity_dict['spec']['topology']['controlPlane']['cpu']
-            del native_entity_dict['spec']['topology']['controlPlane']['memory']  # noqa: E501
-            del native_entity_dict['spec']['topology']['workers']['cpu']
-            del native_entity_dict['spec']['topology']['workers']['memory']
             del native_entity_dict['spec']['topology']['nfs']
             native_entity_dict['spec']['settings']['network']['expose'] = True
             native_entity_dict['spec']['settings']['network']['pods'] = ['100.96.0.0/11']  # noqa: E501
