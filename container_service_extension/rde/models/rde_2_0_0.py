@@ -634,8 +634,8 @@ class NativeEntity(AbstractNativeEntity):
             del native_entity_dict['spec']['topology']['workers']['memory']
             del native_entity_dict['spec']['topology']['nfs']
             native_entity_dict['spec']['settings']['network']['expose'] = True
-            native_entity_dict['spec']['settings']['network']['pods'] = ['1.1.1.1']  # noqa: E501
-            native_entity_dict['spec']['settings']['network']['services'] = ['2.2.2.2']  # noqa: E501
+            native_entity_dict['spec']['settings']['network']['pods'] = ['100.96.0.0/11']  # noqa: E501
+            native_entity_dict['spec']['settings']['network']['services'] = ['100.64.0.0/13']  # noqa: E501
         else:
             del native_entity_dict['spec']['settings']['network']['pods']
             del native_entity_dict['spec']['settings']['network']['services']
