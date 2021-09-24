@@ -19,7 +19,6 @@ from pyvcloud.vcd.vdc import VDC
 import pyvcloud.vcd.vm as vcd_vm
 import validators
 
-from container_service_extension.common.constants.server_constants import CLUSTER_ENTITY  # noqa: E501
 from container_service_extension.common.constants.server_constants import ClusterMetadataKey  # noqa: E501
 from container_service_extension.common.constants.server_constants import ClusterScriptFile  # noqa: E501
 from container_service_extension.common.constants.server_constants import DefEntityOperation  # noqa: E501
@@ -136,13 +135,6 @@ class ClusterService(abstract_broker.AbstractBroker):
         if not filters:
             filters = {}
 
-        telemetry_handler.record_user_action_details(
-            cse_operation=telemetry_constants.CseOperation.V36_CLUSTER_LIST,
-            cse_params={
-                telemetry_constants.PayloadKey.FILTER_KEYS: ','.join(filters.keys()),  # noqa: E501
-                telemetry_constants.PayloadKey.SOURCE_DESCRIPTION: thread_local_data.get_thread_local_data(ThreadLocalData.USER_AGENT)  # noqa: E501
-            }
-        )
         ent_type: common_models.DefEntityType = server_utils.get_registered_def_entity_type()  # noqa: E501
         return self.entity_svc.get_entities_per_page_by_entity_type(
             vendor=ent_type.vendor,
@@ -161,14 +153,6 @@ class ClusterService(abstract_broker.AbstractBroker):
         """
         if not filters:
             filters = {}
-
-        telemetry_handler.record_user_action_details(
-            cse_operation=telemetry_constants.CseOperation.V36_CLUSTER_LIST,
-            cse_params={
-                telemetry_constants.PayloadKey.FILTER_KEYS: ','.join(filters.keys()),  # noqa: E501
-                telemetry_constants.PayloadKey.SOURCE_DESCRIPTION: thread_local_data.get_thread_local_data(ThreadLocalData.USER_AGENT)  # noqa: E501
-            }
-        )
 
         ent_type: common_models.DefEntityType = server_utils.get_registered_def_entity_type()  # noqa: E501
 
@@ -196,14 +180,6 @@ class ClusterService(abstract_broker.AbstractBroker):
 
         msg = f"{DOWNLOAD_KUBECONFIG_OPERATION_MESSAGE} ({cluster_id})"
         self._update_task(BehaviorTaskStatus.RUNNING, message=msg)
-
-        telemetry_handler.record_user_action_details(
-            cse_operation=telemetry_constants.CseOperation.V36_CLUSTER_CONFIG,
-            cse_params={
-                CLUSTER_ENTITY: curr_rde,
-                telemetry_constants.PayloadKey.SOURCE_DESCRIPTION: thread_local_data.get_thread_local_data(ThreadLocalData.USER_AGENT)  # noqa: E501
-            }
-        )
 
         # Get kube config from RDE
         kube_config = None
@@ -273,8 +249,6 @@ class ClusterService(abstract_broker.AbstractBroker):
             # check that requested/default template is valid
             template = _get_tkgm_template(template_name)
 
-            # TODO(DEF) design and implement telemetry VCDA-1564 defined entity
-            #  based clusters
             k8_distribution = rde_2_x.Distribution(
                 template_name=template_name,
                 template_revision=1,
@@ -314,13 +288,6 @@ class ClusterService(abstract_broker.AbstractBroker):
                 msg = f"Error updating the cluster '{cluster_name}' with the status"  # noqa: E501
                 LOGGER.error(msg)
                 raise
-            telemetry_handler.record_user_action_details(
-                cse_operation=telemetry_constants.CseOperation.V36_CLUSTER_APPLY,  # noqa: E501
-                cse_params={
-                    CLUSTER_ENTITY: curr_rde,
-                    telemetry_constants.PayloadKey.SOURCE_DESCRIPTION: thread_local_data.get_thread_local_data(ThreadLocalData.USER_AGENT)  # noqa: E501
-                }
-            )
             # trigger async operation
             self.context.is_async = True
             self._create_cluster_async(entity_id, input_native_entity)
@@ -427,19 +394,6 @@ class ClusterService(abstract_broker.AbstractBroker):
                 f"Cluster {cluster_name} with id {cluster_id} is not in a "
                 f"valid state to be resized. Please contact the administrator")
 
-        # Record telemetry details
-        telemetry_data: common_models.DefEntity = common_models.DefEntity(
-            entityType=server_utils.get_registered_def_entity_type().id,
-            id=cluster_id,
-            entity=input_native_entity)
-        telemetry_handler.record_user_action_details(
-            cse_operation=telemetry_constants.CseOperation.V36_CLUSTER_APPLY,
-            cse_params={
-                CLUSTER_ENTITY: telemetry_data,
-                telemetry_constants.PayloadKey.SOURCE_DESCRIPTION: thread_local_data.get_thread_local_data(ThreadLocalData.USER_AGENT)  # noqa: E501
-            }
-        )
-
         # update the task and defined entity.
         msg = f"Resizing the cluster '{cluster_name}' ({cluster_id}) to the " \
               f"desired worker count {desired_worker_count}"
@@ -495,14 +449,6 @@ class ClusterService(abstract_broker.AbstractBroker):
             raise exceptions.CseServerError(
                 f"Cluster {cluster_name} with id {cluster_id} is not in a "
                 f"valid state to be deleted. Please contact administrator.")
-
-        telemetry_handler.record_user_action_details(
-            cse_operation=telemetry_constants.CseOperation.V36_CLUSTER_DELETE,
-            cse_params={
-                CLUSTER_ENTITY: curr_rde,
-                telemetry_constants.PayloadKey.SOURCE_DESCRIPTION: thread_local_data.get_thread_local_data(ThreadLocalData.USER_AGENT)  # noqa: E501
-            }
-        )
 
         # must _update_task here or else self.task_resource is None
         # do not logout of sys admin, or else in pyvcloud's session.request()
@@ -732,15 +678,13 @@ class ClusterService(abstract_broker.AbstractBroker):
               f"'{curr_native_entity.metadata.name}' ({cluster_id})"
         self._update_task(BehaviorTaskStatus.RUNNING, message=msg)
 
-        # TODO(DEF) design and implement telemetry VCDA-1564 defined entity
-        #  based clusters
-
         changes = {
             'entity.status.task_href': self.task_href,
             'entity.status.phase': str(
                 DefEntityPhase(DefEntityOperation.UPDATE,
                                DefEntityOperationStatus.IN_PROGRESS))
         }
+
         try:
             self._update_cluster_entity(cluster_id, changes=changes)
         except Exception as err:
