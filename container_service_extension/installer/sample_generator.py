@@ -113,7 +113,7 @@ SAMPLE_SERVICE_CONFIG = {
             'enable': True
         },
         'legacy_mode': False,
-        'tkgm_only_mode': False
+        'no_vc_communication_mode': False
     }
 }
 
