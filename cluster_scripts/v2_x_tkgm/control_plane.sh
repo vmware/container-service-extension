@@ -147,31 +147,33 @@ vmtoolsd --cmd "info-set guestinfo.postcustomization.kubectl.cpi.install.status 
   wget -O $vcloud_basic_auth_path https://raw.githubusercontent.com/vmware/cloud-provider-for-cloud-director/0.1.0-beta/manifests/vcloud-basic-auth.yaml
   kubectl apply -f $vcloud_basic_auth_path
 
-  wget -O $vcloud_configmap_path https://raw.githubusercontent.com/vmware/cloud-provider-for-cloud-director/0.1.0-beta/manifests/vcloud-configmap.yaml
+  wget -O $vcloud_configmap_path https://raw.githubusercontent.com/arunmk/cloud-provider-for-cloud-director/ak/VCDA-2922/manifests/vcloud-configmap.yaml
   sed -i 's/VCD_HOST/"{vcd_host}"/' $vcloud_configmap_path
   sed -i 's/ORG/"{org}"/' $vcloud_configmap_path
   sed -i 's/OVDC/"{vdc}"/' $vcloud_configmap_path
   sed -i 's/NETWORK/"{network_name}"/' $vcloud_configmap_path
   sed -i 's/VIP_SUBNET_CIDR/"{vip_subnet_cidr}"/' $vcloud_configmap_path
+  sed -i 's/VAPP/{cluster_name}/' $vcloud_configmap_path
   sed -i 's/CLUSTER_ID/{cluster_id}/' $vcloud_configmap_path
   kubectl apply -f $vcloud_configmap_path
 
-  wget -O $vcloud_ccm_path https://raw.githubusercontent.com/vmware/cloud-provider-for-cloud-director/0.1.0-beta/manifests/cloud-director-ccm.yaml
+  wget -O $vcloud_ccm_path https://raw.githubusercontent.com/vmware/cloud-provider-for-cloud-director/main/manifests/cloud-director-ccm.yaml
   kubectl apply -f $vcloud_ccm_path
 vmtoolsd --cmd "info-set guestinfo.postcustomization.kubectl.cpi.install.status successful"
 
 
 vmtoolsd --cmd "info-set guestinfo.postcustomization.kubectl.csi.install.status in_progress"
-  wget -O $vcloud_csi_configmap_path https://raw.githubusercontent.com/vmware/cloud-director-named-disk-csi-driver/0.1.0-beta/manifests/vcloud-csi-config.yaml
+  wget -O $vcloud_csi_configmap_path https://raw.githubusercontent.com/arunmk/cloud-director-named-disk-csi-driver/ak/VCDA-2922/manifests/vcloud-csi-config.yaml
   sed -i 's/VCD_HOST/"{vcd_host}"/' $vcloud_csi_configmap_path
   sed -i 's/ORG/"{org}"/' $vcloud_csi_configmap_path
   sed -i 's/OVDC/"{vdc}"/' $vcloud_csi_configmap_path
+  sed -i 's/VAPP/{cluster_name}/' $vcloud_csi_configmap_path
   sed -i 's/CLUSTER_ID/"{cluster_id}"/' $vcloud_csi_configmap_path
   kubectl apply -f $vcloud_csi_configmap_path
 
-  wget -O $csi_driver_path https://raw.githubusercontent.com/vmware/cloud-director-named-disk-csi-driver/0.1.0-beta/manifests/csi-driver.yaml
-  wget -O $csi_controller_path https://raw.githubusercontent.com/vmware/cloud-director-named-disk-csi-driver/0.1.0-beta/manifests/csi-controller.yaml
-  wget -O $csi_node_path https://raw.githubusercontent.com/vmware/cloud-director-named-disk-csi-driver/0.1.0-beta/manifests/csi-node.yaml
+  wget -O $csi_driver_path https://raw.githubusercontent.com/vmware/cloud-director-named-disk-csi-driver/main/manifests/csi-driver.yaml
+  wget -O $csi_controller_path https://raw.githubusercontent.com/vmware/cloud-director-named-disk-csi-driver/main/manifests/csi-controller.yaml
+  wget -O $csi_node_path https://raw.githubusercontent.com/vmware/cloud-director-named-disk-csi-driver/main/manifests/csi-node.yaml
   kubectl apply -f $csi_driver_path
   kubectl apply -f $csi_controller_path
   kubectl apply -f $csi_node_path
