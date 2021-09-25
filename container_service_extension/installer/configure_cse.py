@@ -264,8 +264,9 @@ def install_cse(
 
     client = None
     try:
-        is_tkgm_only_mode = server_utils.is_tkgm_only_mode(config)
-        if is_tkgm_only_mode:
+        is_no_vc_communication_mode = \
+            server_utils.is_no_vc_communication_mode(config)
+        if is_no_vc_communication_mode:
             if not skip_template_creation:
                 msg = "Native templates can not be installed when " \
                       "running in TKG only mode."
@@ -477,8 +478,9 @@ def install_template(
 
     client = None
     try:
-        is_tkgm_only_mode = server_utils.is_tkgm_only_mode(config)
-        if is_tkgm_only_mode:
+        is_no_vc_communication_mode = \
+            server_utils.is_no_vc_communication_mode(config)
+        if is_no_vc_communication_mode:
             msg = "Native template can not be installed when " \
                   "running in TKG only mode."
             raise Exception(msg)
@@ -678,8 +680,9 @@ def upgrade_cse(
 
     client = None
     try:
-        is_tkgm_only_mode = server_utils.is_tkgm_only_mode(config)
-        if is_tkgm_only_mode:
+        is_no_vc_communication_mode = \
+            server_utils.is_no_vc_communication_mode(config)
+        if is_no_vc_communication_mode:
             if not skip_template_creation:
                 msg = "Native templates can not be installed when " \
                       "running in TKG only mode."
