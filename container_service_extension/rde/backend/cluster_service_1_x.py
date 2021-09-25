@@ -139,7 +139,10 @@ class ClusterService(abstract_broker.AbstractBroker):
 
         telemetry_handler.record_user_action_details(
             cse_operation=telemetry_constants.CseOperation.V35_CLUSTER_LIST,
-            cse_params={telemetry_constants.PayloadKey.FILTER_KEYS: ','.join(filters.keys())}  # noqa: E501
+            cse_params={
+                telemetry_constants.PayloadKey.FILTER_KEYS: ','.join(filters.keys()),  # noqa: E501
+                telemetry_constants.PayloadKey.SOURCE_DESCRIPTION: thread_local_data.get_thread_local_data(ThreadLocalData.USER_AGENT)  # noqa: E501
+            }
         )
 
         ent_type: common_models.DefEntityType = server_utils.get_registered_def_entity_type()  # noqa: E501
