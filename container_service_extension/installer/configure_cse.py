@@ -263,7 +263,7 @@ def install_cse(config_file_name, config, skip_template_creation,
         if is_no_vc_communication_mode:
             if not skip_template_creation:
                 msg = "Native templates can not be installed when " \
-                      "running in TKG only mode."
+                      "running in `No communication with VCenter` mode."
                 raise Exception(msg)
         else:
             populate_vsphere_list(config['vcs'])
@@ -469,7 +469,7 @@ def install_template(template_name, template_revision, config_file_name,
             server_utils.is_no_vc_communication_mode(config)
         if is_no_vc_communication_mode:
             msg = "Native template can not be installed when " \
-                  "running in TKG only mode."
+                  "running in `No communication with VCenter` mode."
             raise Exception(msg)
         else:
             populate_vsphere_list(config['vcs'])
@@ -667,7 +667,7 @@ def upgrade_cse(config_file_name, config, skip_template_creation,
         if is_no_vc_communication_mode:
             if not skip_template_creation:
                 msg = "Native templates can not be installed when " \
-                      "running in TKG only mode."
+                      "running in `No communication with VCenter` mode."
                 raise Exception(msg)
         else:
             populate_vsphere_list(config['vcs'])
