@@ -147,7 +147,7 @@ vmtoolsd --cmd "info-set guestinfo.postcustomization.kubectl.cpi.install.status 
   wget -O $vcloud_basic_auth_path https://raw.githubusercontent.com/vmware/cloud-provider-for-cloud-director/0.1.0-beta/manifests/vcloud-basic-auth.yaml
   kubectl apply -f $vcloud_basic_auth_path
 
-  wget -O $vcloud_configmap_path https://raw.githubusercontent.com/arunmk/cloud-provider-for-cloud-director/ak/VCDA-2922/manifests/vcloud-configmap.yaml
+  wget -O $vcloud_configmap_path https://raw.githubusercontent.com/vmware/cloud-provider-for-cloud-director/main/manifests/vcloud-configmap.yaml
   sed -i 's/VCD_HOST/"{vcd_host}"/' $vcloud_configmap_path
   sed -i 's/ORG/"{org}"/' $vcloud_configmap_path
   sed -i 's/OVDC/"{vdc}"/' $vcloud_configmap_path
@@ -163,7 +163,7 @@ vmtoolsd --cmd "info-set guestinfo.postcustomization.kubectl.cpi.install.status 
 
 
 vmtoolsd --cmd "info-set guestinfo.postcustomization.kubectl.csi.install.status in_progress"
-  wget -O $vcloud_csi_configmap_path https://raw.githubusercontent.com/arunmk/cloud-director-named-disk-csi-driver/ak/VCDA-2922/manifests/vcloud-csi-config.yaml
+  wget -O $vcloud_csi_configmap_path https://raw.githubusercontent.com/vmware/cloud-director-named-disk-csi-driver/main/manifests/vcloud-csi-config.yaml
   sed -i 's/VCD_HOST/"{vcd_host}"/' $vcloud_csi_configmap_path
   sed -i 's/ORG/"{org}"/' $vcloud_csi_configmap_path
   sed -i 's/OVDC/"{vdc}"/' $vcloud_csi_configmap_path
