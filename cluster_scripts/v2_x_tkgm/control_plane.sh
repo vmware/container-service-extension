@@ -164,6 +164,7 @@ END
   sed -i 's/OVDC/"{vdc}"/' $vcloud_configmap_path
   sed -i 's/NETWORK/"{network_name}"/' $vcloud_configmap_path
   sed -i 's/VIP_SUBNET_CIDR/"{vip_subnet_cidr}"/' $vcloud_configmap_path
+  sed -i 's/VAPP/{cluster_name}/' $vcloud_configmap_path
   sed -i 's/CLUSTER_ID/{cluster_id}/' $vcloud_configmap_path
   kubectl apply -f $vcloud_configmap_path
 
@@ -177,6 +178,7 @@ vmtoolsd --cmd "info-set guestinfo.postcustomization.kubectl.csi.install.status 
   sed -i 's/VCD_HOST/"{vcd_host}"/' $vcloud_csi_configmap_path
   sed -i 's/ORG/"{org}"/' $vcloud_csi_configmap_path
   sed -i 's/OVDC/"{vdc}"/' $vcloud_csi_configmap_path
+  sed -i 's/VAPP/{cluster_name}/' $vcloud_csi_configmap_path
   sed -i 's/CLUSTER_ID/"{cluster_id}"/' $vcloud_csi_configmap_path
   kubectl apply -f $vcloud_csi_configmap_path
 
