@@ -93,9 +93,9 @@ class OperationContext:
         if log_wire:
             logger_wire = logger.SERVER_CLOUDAPI_WIRE_LOGGER
         _cloudapi_client = vcd_utils.get_cloudapi_client_from_vcd_client(
-            _client,
-            logger.SERVER_LOGGER,
-            logger_wire)
+            client=_client,
+            logger_debug=logger.SERVER_LOGGER,
+            logger_wire=logger_wire)
 
         _user_context = user_context.UserContext(
             client=_client, cloud_api_client=_cloudapi_client)
@@ -112,9 +112,9 @@ class OperationContext:
             logger_wire = logger.SERVER_CLOUDAPI_WIRE_LOGGER
         _sysadmin_cloudapi_client = \
             vcd_utils.get_cloudapi_client_from_vcd_client(
-                _sysadmin_client,
-                logger.SERVER_LOGGER,
-                logger_wire)
+                client=_sysadmin_client,
+                logger_debug=logger.SERVER_LOGGER,
+                logger_wire=logger_wire)
 
         _sysadmin_user_context = user_context.UserContext(
             client=_sysadmin_client,

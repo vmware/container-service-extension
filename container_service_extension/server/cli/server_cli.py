@@ -1554,9 +1554,10 @@ def _get_clients_from_config(config, log_wire_file, log_wire):
         logger_wire = SERVER_CLOUDAPI_WIRE_LOGGER
 
     cloudapi_client = vcd_utils.get_cloudapi_client_from_vcd_client(
-        client,
-        SERVER_CLI_LOGGER,
-        logger_wire)
+        client=client,
+        logger_debug=SERVER_CLI_LOGGER,
+        logger_wire=logger_wire
+    )
 
     return client, cloudapi_client
 

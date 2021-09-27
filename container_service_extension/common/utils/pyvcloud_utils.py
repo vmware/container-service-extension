@@ -522,9 +522,11 @@ def get_storage_profile_name_of_first_vm_in_vapp(vapp):
     return storage_profile_name
 
 
-def get_cloudapi_client_from_vcd_client(client: vcd_client.Client,
-                                        logger_debug=NULL_LOGGER,
-                                        logger_wire=NULL_LOGGER):
+def get_cloudapi_client_from_vcd_client(
+        client: vcd_client.Client,
+        logger_debug=NULL_LOGGER,
+        logger_wire=NULL_LOGGER
+):
     token = client.get_access_token()
     is_jwt = True
     if not token:

@@ -521,9 +521,11 @@ class Service(object, metaclass=Singleton):
                 logger_wire = logger.SERVER_CLOUDAPI_WIRE_LOGGER
 
             cloudapi_client = \
-                vcd_utils.get_cloudapi_client_from_vcd_client(sysadmin_client,
-                                                              logger.SERVER_LOGGER,  # noqa: E501
-                                                              logger_wire)
+                vcd_utils.get_cloudapi_client_from_vcd_client(
+                    client=sysadmin_client,
+                    logger_debug=logger.SERVER_LOGGER,
+                    logger_wire=logger_wire
+                )
             raise_error_if_def_not_supported(cloudapi_client)
 
             server_rde_version = server_utils.get_rde_version_in_use()

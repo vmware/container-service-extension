@@ -77,10 +77,17 @@ UNSUPPORTED_SUBCOMMAND_OPTIONS_BY_VERSION = {
             cli_constants.CommandNameKey.CREATE: ['cpu', 'memory']
         },
         cli_constants.GroupKey.OVDC: {
-            cli_constants.CommandNameKey.ENABLE: [] if str_to_bool(
-                os.getenv(cli_constants.ENV_CSE_TKG_PLUS_ENABLED)) else ['enable_tkg_plus'],  # noqa: E501
-            cli_constants.CommandNameKey.DISABLE: [] if str_to_bool(
-                os.getenv(cli_constants.ENV_CSE_TKG_PLUS_ENABLED)) else ['disable_tkg_plus']  # noqa: E501
+            cli_constants.CommandNameKey.ENABLE: []
+            if str_to_bool(
+                os.getenv(cli_constants.ENV_CSE_TKG_PLUS_ENABLED)
+            )
+            else ['enable_tkg_plus'],
+
+            cli_constants.CommandNameKey.DISABLE: []
+            if str_to_bool(
+                os.getenv(cli_constants.ENV_CSE_TKG_PLUS_ENABLED)
+            )
+            else ['disable_tkg_plus']
         }
     }
 }
