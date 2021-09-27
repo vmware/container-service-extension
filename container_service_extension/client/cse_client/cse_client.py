@@ -16,9 +16,9 @@ from container_service_extension.exception.minor_error_codes import MinorErrorCo
 from container_service_extension.logging.logger import CLIENT_WIRE_LOGGER
 from container_service_extension.logging.logger import NULL_LOGGER
 
-wire_logger = NULL_LOGGER
-if str_to_bool(os.getenv(cli_constants.ENV_CSE_CLIENT_WIRE_LOGGING)):
-    wire_logger = CLIENT_WIRE_LOGGER
+wire_logger = CLIENT_WIRE_LOGGER \
+    if str_to_bool(os.getenv(cli_constants.ENV_CSE_CLIENT_WIRE_LOGGING)) \
+    else NULL_LOGGER
 
 
 def _deserialize_response_content(response):

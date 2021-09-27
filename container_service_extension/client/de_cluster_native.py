@@ -12,6 +12,7 @@ import container_service_extension.client.constants as cli_constants
 from container_service_extension.client.cse_client.api_35.native_cluster_api import NativeClusterApi  # noqa: E501
 import container_service_extension.client.utils as client_utils
 import container_service_extension.common.constants.shared_constants as shared_constants  # noqa: E501
+import container_service_extension.common.utils.core_utils as core_utils
 import container_service_extension.common.utils.pyvcloud_utils as vcd_utils
 import container_service_extension.exception.exceptions as cse_exceptions
 import container_service_extension.logging.logger as logger
@@ -33,9 +34,11 @@ class DEClusterNative:
     """
 
     def __init__(self, client):
-        logger_wire = logger.NULL_LOGGER
-        if os.getenv(cli_constants.ENV_CSE_CLIENT_WIRE_LOGGING):
-            logger_wire = logger.CLIENT_WIRE_LOGGER
+        logger_wire = logger.CLIENT_WIRE_LOGGER \
+            if core_utils.str_to_bool(
+                os.getenv(cli_constants.ENV_CSE_CLIENT_WIRE_LOGGING)
+            ) \
+            else logger.NULL_LOGGER
         self._cloudapi_client = \
             vcd_utils.get_cloudapi_client_from_vcd_client(
                 client=client,
