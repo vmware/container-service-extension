@@ -94,7 +94,7 @@ def should_use_mqtt_protocol(config: dict) -> bool:
         not utils.str_to_bool(config['service'].get('legacy_mode'))
 
 
-def is_tkgm_only_mode(config: Optional[dict] = None) -> bool:
+def is_no_vc_communication_mode(config: Optional[dict] = None) -> bool:
     """Check if TKGm only mode is enabled by the provider in the config.
 
     :param dict config: configuration provided by the user.
@@ -108,11 +108,11 @@ def is_tkgm_only_mode(config: Optional[dict] = None) -> bool:
         except Exception:
             return False
     service_section = config.get('service', {})
-    is_tkgm_only = service_section.get('tkgm_only_mode', False)
-    if isinstance(is_tkgm_only, bool):
-        return is_tkgm_only
-    elif isinstance(is_tkgm_only, str):
-        return utils.str_to_bool(is_tkgm_only)
+    is_no_vc_comm = service_section.get('no_vc_communication_mode', False)
+    if isinstance(is_no_vc_comm, bool):
+        return is_no_vc_comm
+    elif isinstance(is_no_vc_comm, str):
+        return utils.str_to_bool(is_no_vc_comm)
     return False
 
 

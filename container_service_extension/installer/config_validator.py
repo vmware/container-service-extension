@@ -128,7 +128,8 @@ def get_validated_config(
         f"Validating config file '{config_file_name}'"
     )
 
-    is_tkgm_only_mode = server_utils.is_tkgm_only_mode(config)
+    is_no_vc_communication_mode = \
+        server_utils.is_no_vc_communication_mode(config)
 
     use_mqtt = server_utils.should_use_mqtt_protocol(config)
     sample_message_queue_config = SAMPLE_AMQP_CONFIG if not use_mqtt \
@@ -141,7 +142,7 @@ def get_validated_config(
         **SAMPLE_SERVICE_CONFIG,
         **SAMPLE_BROKER_CONFIG
     }
-    if not is_tkgm_only_mode:
+    if not is_no_vc_communication_mode:
         sample_config.update(SAMPLE_VCS_CONFIG)
     else:
         if 'vcs' in config:
@@ -176,7 +177,7 @@ def get_validated_config(
     )
 
     try:
-        if is_tkgm_only_mode:
+        if is_no_vc_communication_mode:
             _validate_vcd_config(
                 config['vcd'],
                 msg_update_callback,

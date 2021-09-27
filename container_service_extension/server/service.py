@@ -364,7 +364,7 @@ class Service(object, metaclass=Singleton):
                 if sysadmin_client:
                     sysadmin_client.logout()
 
-        if not server_utils.is_tkgm_only_mode(self.config):
+        if not server_utils.is_no_vc_communication_mode(self.config):
             populate_vsphere_list(self.config['vcs'])
 
         # Load def entity-type and interface
