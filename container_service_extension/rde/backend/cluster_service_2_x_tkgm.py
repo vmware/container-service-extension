@@ -592,7 +592,16 @@ class ClusterService(abstract_broker.AbstractBroker):
             cse_params=telemetry_params)
 
         client_v36 = self.context.get_client(api_version=DEFAULT_API_VERSION)
-        acl_svc = acl_service.ClusterACLService(cluster_id, client_v36)
+        config = server_utils.get_server_runtime_config()
+        logger_wire = NULL_LOGGER
+        if utils.str_to_bool(config['service']['log_wire']):
+            logger_wire = SERVER_CLOUDAPI_WIRE_LOGGER
+        acl_svc = acl_service.ClusterACLService(
+            cluster_id=cluster_id,
+            client=client_v36,
+            logger_debug=LOGGER,
+            logger_wire=logger_wire
+        )
         curr_rde: common_models.DefEntity = acl_svc.get_cluster_entity()
         user_id_names_dict = vcd_utils.create_org_user_id_to_name_dict(
             client=client_v36,
@@ -643,8 +652,16 @@ class ClusterService(abstract_broker.AbstractBroker):
             cse_params=telemetry_params)
 
         client_v36 = self.context.get_client(api_version=DEFAULT_API_VERSION)
-        # Get previous def entity acl
-        acl_svc = acl_service.ClusterACLService(cluster_id, client_v36)
+        config = server_utils.get_server_runtime_config()
+        logger_wire = NULL_LOGGER
+        if utils.str_to_bool(config['service']['log_wire']):
+            logger_wire = SERVER_CLOUDAPI_WIRE_LOGGER
+        acl_svc = acl_service.ClusterACLService(
+            cluster_id=cluster_id,
+            client=client_v36,
+            logger_debug=LOGGER,
+            logger_wire=logger_wire
+        )
         prev_user_id_to_acl_entry_dict: \
             Dict[str, common_models.ClusterAclEntry] = \
             acl_svc.create_user_id_to_acl_entry_dict()

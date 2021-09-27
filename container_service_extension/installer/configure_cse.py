@@ -1343,7 +1343,12 @@ def _update_user_role_with_right_bundle(
 
     # Determine the rights necessary from rights bundle
     # It is assumed that user already has "View Rights Bundle" Right
-    rbm = RightBundleManager(client, log_wire, msg_update_callback)
+    logger_wire = \
+        SERVER_CLOUDAPI_WIRE_LOGGER if log_wire else NULL_LOGGER
+    rbm = RightBundleManager(
+        sysadmin_client=client,
+        logger_debug=logger_debug,
+        logger_wire=logger_wire)
     native_def_rights = \
         rbm.get_rights_for_right_bundle(right_bundle_name)
 
@@ -1391,7 +1396,10 @@ def _register_def_schema(
     INSTALL_LOGGER.info(msg)
     logger_wire = SERVER_CLOUDAPI_WIRE_LOGGER if log_wire else NULL_LOGGER
     cloudapi_client = vcd_utils.get_cloudapi_client_from_vcd_client(
-        client=client, logger_debug=INSTALL_LOGGER, logger_wire=logger_wire)
+        client=client,
+        logger_debug=INSTALL_LOGGER,
+        logger_wire=logger_wire
+    )
     # TODO update CSE install to create client from max_vcd_api_version
     try:
         def_utils.raise_error_if_def_not_supported(cloudapi_client)
@@ -2423,7 +2431,13 @@ def _assign_placement_policy_to_vdc_and_right_bundle_to_org(
         INSTALL_LOGGER.info(msg)
         msg_update_callback.info(msg)
         try:
-            rbm = RightBundleManager(client, log_wire=log_wire, logger_debug=INSTALL_LOGGER)  # noqa: E501
+            logger_wire = \
+                SERVER_CLOUDAPI_WIRE_LOGGER if log_wire else NULL_LOGGER
+            rbm = RightBundleManager(
+                sysadmin_client=client,
+                logger_debug=INSTALL_LOGGER,
+                logger_wire=logger_wire
+            )
             cse_right_bundle = rbm.get_right_bundle_by_name(
                 def_constants.DEF_NATIVE_ENTITY_TYPE_RIGHT_BUNDLE)
             rbm.publish_cse_right_bundle_to_tenants(
@@ -2629,7 +2643,11 @@ def _process_existing_clusters(
         INSTALL_LOGGER.info(msg)
         msg_update_callback.general(msg)
         try:
-            native_entity_types = _get_native_def_entity_types(client)
+            native_entity_types = _get_native_def_entity_types(
+                client=client,
+                logger_debug=INSTALL_LOGGER,
+                logger_wire=logger_wire
+            )
             for entity_type in native_entity_types:
                 if entity_type.id != target_entity_type.id:
                     msg = f"Deleting entity type: {entity_type.id}"
@@ -2804,20 +2822,11 @@ def _print_users_in_need_of_def_rights(
         INSTALL_LOGGER.info(msg)
 
 
-def _is_def_entity_type_registered(client):
-    """Check the presence of native entity type of any version.
-
-    :param client:
-    :return: True if present else False
-    :rtype: bool
-    """
-    try:
-        return True if len(_get_native_def_entity_types(client)) > 0 else False  # noqa: E501
-    except cse_exception.DefNotSupportedException:
-        return False
-
-
-def _get_native_def_entity_types(client):
+def _get_native_def_entity_types(
+        client,
+        logger_debug=NULL_LOGGER,
+        logger_wire=NULL_LOGGER
+):
     """Get list of native entity types.
 
     :param client:
@@ -2826,7 +2835,8 @@ def _get_native_def_entity_types(client):
     """
     cloudapi_client = vcd_utils.get_cloudapi_client_from_vcd_client(
         client=client,
-        logger_debug=INSTALL_LOGGER
+        logger_debug=logger_debug,
+        logger_wire=logger_wire
     )
     schema_svc = def_schema_svc.DefSchemaService(cloudapi_client)
     return [entity_type for entity_type in schema_svc.list_entity_types()

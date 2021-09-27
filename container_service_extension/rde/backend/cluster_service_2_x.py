@@ -43,6 +43,8 @@ import container_service_extension.exception.exceptions as exceptions
 import container_service_extension.installer.templates.local_template_manager as ltm  # noqa: E501
 import container_service_extension.lib.telemetry.constants as telemetry_constants  # noqa: E501
 import container_service_extension.lib.telemetry.telemetry_handler as telemetry_handler  # noqa: E501
+from container_service_extension.logging.logger import NULL_LOGGER
+from container_service_extension.logging.logger import SERVER_CLOUDAPI_WIRE_LOGGER  # noqa: E501
 from container_service_extension.logging.logger import SERVER_LOGGER as LOGGER
 from container_service_extension.mqi.consumer.mqtt_publisher import MQTTPublisher  # noqa: E501
 import container_service_extension.rde.acl_service as acl_service
@@ -697,7 +699,16 @@ class ClusterService(abstract_broker.AbstractBroker):
             cse_params=telemetry_params)
 
         client_v36 = self.context.get_client(api_version=DEFAULT_API_VERSION)
-        acl_svc = acl_service.ClusterACLService(cluster_id, client_v36)
+        config = server_utils.get_server_runtime_config()
+        logger_wire = NULL_LOGGER
+        if utils.str_to_bool(config['service']['log_wire']):
+            logger_wire = SERVER_CLOUDAPI_WIRE_LOGGER
+        acl_svc = acl_service.ClusterACLService(
+            cluster_id=cluster_id,
+            client=client_v36,
+            logger_debug=LOGGER,
+            logger_wire=logger_wire
+        )
         curr_rde: common_models.DefEntity = acl_svc.get_cluster_entity()
         user_id_names_dict = vcd_utils.create_org_user_id_to_name_dict(
             client=client_v36,
@@ -748,8 +759,16 @@ class ClusterService(abstract_broker.AbstractBroker):
             cse_params=telemetry_params)
 
         client_v36 = self.context.get_client(api_version=DEFAULT_API_VERSION)
-        # Get previous def entity acl
-        acl_svc = acl_service.ClusterACLService(cluster_id, client_v36)
+        config = server_utils.get_server_runtime_config()
+        logger_wire = NULL_LOGGER
+        if utils.str_to_bool(config['service']['log_wire']):
+            logger_wire = SERVER_CLOUDAPI_WIRE_LOGGER
+        acl_svc = acl_service.ClusterACLService(
+            cluster_id=cluster_id,
+            client=client_v36,
+            logger_debug=LOGGER,
+            logger_wire=logger_wire
+        )
         prev_user_id_to_acl_entry_dict: \
             Dict[str, common_models.ClusterAclEntry] = \
             acl_svc.create_user_id_to_acl_entry_dict()

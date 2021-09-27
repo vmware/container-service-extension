@@ -47,8 +47,10 @@ class DECluster:
         self._client = client
         self._cloudapi_client = \
             vcd_utils.get_cloudapi_client_from_vcd_client(
-                client=client, logger_debug=logger.CLIENT_LOGGER,
-                logger_wire=logger_wire)
+                client=client,
+                logger_debug=logger.CLIENT_LOGGER,
+                logger_wire=logger_wire
+            )
         self._nativeCluster = DEClusterNative(client)
         self._tkgCluster = DEClusterTKGS(client)
         schema_svc = def_schema_svc.DefSchemaService(self._cloudapi_client)

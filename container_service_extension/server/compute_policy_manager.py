@@ -51,9 +51,11 @@ class ComputePolicyManager:
             if log_wire:
                 wire_logger = logger.SERVER_CLOUDAPI_WIRE_LOGGER
             self._cloudapi_client = \
-                vcd_utils.get_cloudapi_client_from_vcd_client(self._sysadmin_client, # noqa: E501
-                                                              logger.SERVER_LOGGER, # noqa: E501
-                                                              wire_logger)
+                vcd_utils.get_cloudapi_client_from_vcd_client(
+                    self._sysadmin_client,
+                    logger_debug=logger.SERVER_LOGGER,
+                    logger_wire=wire_logger
+                )
             self._cloudapi_version = \
                 cloudapi_constants.CloudApiVersion.VERSION_2_0_0
             if self._cloudapi_client.get_vcd_api_version() < \

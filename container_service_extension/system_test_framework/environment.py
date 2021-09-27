@@ -123,17 +123,11 @@ VIEW_PUBLISHED_CATALOG_RIGHT = 'Catalog: View Published Catalogs'
 # Location at which the cluster apply spec will be generated and used
 APPLY_SPEC_PATH = 'cluster_apply_specification.yaml'
 
-USERNAME_TO_CLUSTER_NAME = {
-    'sys_admin': SYS_ADMIN_TEST_CLUSTER_NAME,
-    'cluster_admin': CLUSTER_ADMIN_TEST_CLUSTER_NAME,
-    'cluster_author': CLUSTER_AUTHOR_TEST_CLUSTER_NAME
-}
-
 
 def _init_test_vars(config, logger=NULL_LOGGER):
     """Initialize all the environment variables that are used for test.
 
-    :param dict test_config: test section of config.yaml
+    :param dict config:
     """
     global TEMPLATE_DEFINITIONS, TEARDOWN_INSTALLATION, TEARDOWN_CLUSTERS, \
         TEST_ALL_TEMPLATES, TEST_ORG, TEST_VDC, TEST_NETWORK
@@ -174,6 +168,7 @@ def init_rde_environment(config_filepath=BASE_CONFIG_FILEPATH, logger=NULL_LOGGE
     """Set up module variables according to config dict.
 
     :param str config_filepath:
+    :param logging.Logger logger:
     """
     global CLIENT, ORG_HREF, VDC_HREF, \
         CATALOG_NAME, TEARDOWN_INSTALLATION, TEARDOWN_CLUSTERS, \
@@ -404,6 +399,7 @@ def create_cluster_admin_role(vcd_config: dict, logger=NULL_LOGGER):
     """Create cluster_admin role using pre-existing 'vapp author' role.
 
     :param dict vcd_config: server config file
+    :param logging.Logger logger:
     """
     logger.debug("Creating cluster admin role.")
     cmd = f"login {vcd_config['host']} {shared_constants.SYSTEM_ORG_NAME} " \
@@ -443,6 +439,7 @@ def create_cluster_author_role(vcd_config: dict, logger=NULL_LOGGER):
     """Create cluster_author role using pre-existing 'org admin' role.
 
     :param dict vcd_config: server config file
+    :param logging.Logger logger:
     """
     logger.debug("Creating cluster author role.")
     cmd = f"login {vcd_config['host']} {shared_constants.SYSTEM_ORG_NAME} " \
@@ -489,10 +486,11 @@ def create_user(username, password, role, logger=NULL_LOGGER):
 
     # cannot use cmd.split() here because the role name
     # "Organization Administrator" gets split into 2 arguments
-    result = CLI_RUNNER.invoke(vcd,
-                               ['user', 'create', username, password, role,
-                                '--enabled'],
-                               catch_exceptions=False)
+    CLI_RUNNER.invoke(
+        vcd,
+        ['user', 'create', username, password, role, '--enabled'],
+        catch_exceptions=False
+    )
     # no assert here because if the user exists, the exit code will be 2
 
     logger.debug(f"Successfully created user {username}")
@@ -637,10 +635,11 @@ def cleanup_rde_artifacts(logger=NULL_LOGGER):
         rde_metadata = rde_utils.get_rde_metadata(rde_version_in_use)
         cloudapi_client = pyvcloud_utils.get_cloudapi_client_from_vcd_client(
             client=CLIENT,
+            logger_debug=logger,
             logger_wire=SERVER_CLOUDAPI_WIRE_LOGGER)
         schema_svc = def_schema_svc.DefSchemaService(cloudapi_client=cloudapi_client)  # noqa: E501
         if rde_constants.RDEMetadataKey.ENTITY_TYPE in rde_metadata:
-            # delete entitytype
+            # delete entity_type
             entity_type: common_models.DefEntityType = \
                 rde_metadata[rde_constants.RDEMetadataKey.ENTITY_TYPE]
             schema_svc.delete_entity_type(entity_type.get_id())
@@ -808,11 +807,11 @@ def check_cse_registration(routing_key, exchange):
 
 def check_cse_registration_as_mqtt_extension(logger=NULL_LOGGER):
     mqtt_ext_manager = MQTTExtensionManager(CLIENT, debug_logger=logger)
-    is_cse_registered = mqtt_ext_manager.check_extension_exists(
+    is_cse_registered_bool = mqtt_ext_manager.check_extension_exists(
         server_constants.MQTT_EXTENSION_URN)
-    assert is_cse_registered, \
+    assert is_cse_registered_bool, \
         'CSE is not registered as an extension when it should be.'
-    if is_cse_registered:
+    if is_cse_registered_bool:
         assert mqtt_ext_manager.is_extension_enabled(
             server_constants.MQTT_EXTENSION_URN), "CSE is registered as an " \
             "extension but the extension is not enabled"

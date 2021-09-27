@@ -1,6 +1,7 @@
 # container-service-extension
 # Copyright (c) 2020 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
+import logging
 from typing import Dict, List, Optional
 
 import lxml
@@ -13,6 +14,7 @@ import container_service_extension.common.constants.shared_constants as shared_c
 import container_service_extension.common.utils.core_utils as utils
 import container_service_extension.common.utils.pyvcloud_utils as vcd_utils
 import container_service_extension.lib.cloudapi.constants as cloudapi_constants
+from container_service_extension.logging.logger import NULL_LOGGER
 import container_service_extension.rde.common.entity_service as def_entity_svc
 import container_service_extension.rde.constants as def_constants
 import container_service_extension.rde.models.common_models as common_models
@@ -21,11 +23,19 @@ import container_service_extension.rde.models.common_models as common_models
 class ClusterACLService:
     """Manages retrieving and setting Cluster ACL information."""
 
-    def __init__(self, cluster_id: str,
-                 client: vcd_client.Client):
+    def __init__(
+            self,
+            cluster_id: str,
+            client: vcd_client.Client,
+            logger_debug: logging.Logger = NULL_LOGGER,
+            logger_wire: logging.Logger = NULL_LOGGER
+    ):
         self._client = client
-        self._cloudapi_client = \
-            vcd_utils.get_cloudapi_client_from_vcd_client(client)
+        self._cloudapi_client = vcd_utils.get_cloudapi_client_from_vcd_client(
+            client=client,
+            logger_debug=logger_debug,
+            logger_wire=logger_wire
+        )
         self._cluster_id = cluster_id
         self._def_entity: Optional[common_models.DefEntity] = None
         self._vapp: Optional[vcd_vapp.VApp] = None

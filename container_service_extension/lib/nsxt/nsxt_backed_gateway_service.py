@@ -2,6 +2,8 @@
 # Copyright (c) 2021 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 import ipaddress
+import logging
+from typing import Optional
 
 import pyvcloud.vcd.client as vcd_client
 import pyvcloud.vcd.gateway as vcd_gateway
@@ -15,6 +17,7 @@ import container_service_extension.lib.cloudapi.constants as cloudapi_constants
 import container_service_extension.lib.nsxt.constants as nsxt_constants
 from container_service_extension.lib.nsxt.constants import \
     NsxtGatewayRequestKey, NsxtNATRuleKey
+from container_service_extension.logging.logger import NULL_LOGGER
 from container_service_extension.logging.logger import SERVER_LOGGER
 
 
@@ -85,14 +88,23 @@ def _get_available_ip_in_ip_ranges(ip_ranges: list, used_ips: set):
 class NsxtBackedGatewayService:
     """Service functions for an NSX-T backed Edge Gateway."""
 
-    def __init__(self, gateway: vcd_gateway.Gateway,
-                 client: vcd_client.Client):
+    def __init__(
+            self,
+            gateway: vcd_gateway.Gateway,
+            client: vcd_client.Client,
+            logger_debug: logging.Logger = NULL_LOGGER,
+            logger_wire: logging.Logger = NULL_LOGGER
+    ):
         assert gateway.is_nsxt_backed()
 
         self._gateway = gateway
         self._client = client
         self._cloudapi_client = \
-            pyvcloud_utils.get_cloudapi_client_from_vcd_client(client)
+            pyvcloud_utils.get_cloudapi_client_from_vcd_client(
+                client=client,
+                logger_debug=logger_debug,
+                logger_wire=logger_wire
+            )
         gateway_id = core_utils.extract_id_from_href(self._gateway.href)
         self._gateway_urn = f'{nsxt_constants.GATEWAY_URN_PREFIX}:' \
                             f'{gateway_id}'
@@ -116,8 +128,8 @@ class NsxtBackedGatewayService:
         """Add a DNAT rule for an NSX-T backed gateway.
 
         :param str name: name of the rule
-        :param str internal address: internal ip address
-        :param str external address: external ip address
+        :param str internal_address: internal ip address
+        :param str external_address: external ip address
         :param int dnat_external_port: external port
         :param str description: rule description
         :param bool logging_enabled: indicate if logging is enabled
@@ -292,7 +304,7 @@ class NsxtBackedGatewayService:
             for used_ip_value_dict in values:
                 yield used_ip_value_dict[NsxtGatewayRequestKey.IP_ADDRESS]
 
-    def get_available_ip(self) -> str:
+    def get_available_ip(self) -> Optional[str]:
         """Get an available ip.
 
         :return: available ip.
