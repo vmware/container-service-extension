@@ -12,7 +12,7 @@ from typing import Union
 from pyvcloud.vcd.vcd_api_version import VCDApiVersion
 import semantic_version
 
-from container_service_extension.common.constants.shared_constants import ClusterEntityKind # noqa: E501
+from container_service_extension.common.constants.shared_constants import ClusterEntityKind  # noqa: E501
 import container_service_extension.common.utils.core_utils as core_utils
 import container_service_extension.common.utils.server_utils as server_utils
 import container_service_extension.exception.exceptions as exceptions
@@ -83,24 +83,36 @@ def get_rde_metadata(rde_version: str) -> dict:
     return MAP_RDE_VERSION_TO_ITS_METADATA[rde_version]
 
 
-def construct_cluster_spec_from_entity_status(entity_status: Union[rde_1_0_0.Status, rde_2_0_0.Status], rde_version: str) -> Union[rde_1_0_0.ClusterSpec, rde_2_0_0.ClusterSpec]:  # noqa: E501
+def construct_cluster_spec_from_entity_status(
+        entity_status: Union[rde_1_0_0.Status, rde_2_0_0.Status],
+        rde_version: str,
+        is_tkgm_with_default_sizing_in_control_plane: bool = False,
+        is_tkgm_with_default_sizing_in_workers: bool = False) -> Union[rde_1_0_0.ClusterSpec, rde_2_0_0.ClusterSpec]:  # noqa: E501
     """Construct cluster spec of the specified rde version from the current status of the cluster.
 
     :param rde_X_X_X Status entity_status: Entity Status of rde of given version  # noqa: E501
     :param str rde_version: RDE version of the spec to be created from the status # noqa: E501
+    :param bool is_tkgm_with_default_sizing_in_control_plane: is tkgm cluster
+        with default sizing policy in control plane
+    :param bool is_tkgm_with_default_sizing_in_workers: is tkgm cluster with
+        with default sizing policy in worker nodes
     :return: Cluster Specification of respective rde_version_in_use
     :raises NotImplementedError
     """
     # TODO: Refactor this multiple if to rde_version -> handler pattern
     if rde_version == def_constants.RDEVersion.RDE_2_0_0.value:
-        return construct_2_0_0_cluster_spec_from_entity_status(entity_status)
+        return construct_2_0_0_cluster_spec_from_entity_status(
+            entity_status,
+            is_tkgm_with_default_sizing_in_control_plane=is_tkgm_with_default_sizing_in_control_plane,  # noqa: E501
+            is_tkgm_with_default_sizing_in_workers=is_tkgm_with_default_sizing_in_workers)  # noqa: E501
     # elif rde_version == def_constants.RDEVersion.RDE_2_1_0:
     #    return construct_2_1_0_cluster_spec_from_entity_status(entity_status)
     raise NotImplementedError(f"constructing cluster spec from entity status for {rde_version} is"  # noqa:
                               f" not implemented ")
 
 
-def construct_2_0_0_cluster_spec_from_entity_status(entity_status: rde_2_0_0.Status) -> rde_2_0_0.ClusterSpec:  # noqa:
+def construct_2_0_0_cluster_spec_from_entity_status(
+    entity_status: rde_2_0_0.Status, is_tkgm_with_default_sizing_in_control_plane=False, is_tkgm_with_default_sizing_in_workers=False) -> rde_2_0_0.ClusterSpec:  # noqa:
     """Construct cluster specification from entity status using rde_2_0_0 model.
 
     :param rde_2_0_0.Status entity_status: Entity Status as defined in rde_2_0_0  # noqa: E501
@@ -121,7 +133,7 @@ def construct_2_0_0_cluster_spec_from_entity_status(entity_status: rde_2_0_0.Sta
         control_plane_storage_profile = entity_status.nodes.control_plane.storage_profile  # noqa: E501
         control_plane_cpu = entity_status.nodes.control_plane.cpu
         control_plane_memory = entity_status.nodes.control_plane.memory
-        if control_plane_sizing_class:
+        if not is_tkgm_with_default_sizing_in_control_plane and control_plane_sizing_class:  # noqa: E501
             control_plane_cpu = None
             control_plane_memory = None
     control_plane = rde_2_0_0.ControlPlane(
@@ -147,7 +159,7 @@ def construct_2_0_0_cluster_spec_from_entity_status(entity_status: rde_2_0_0.Sta
             worker_storage_profile = entity_status.nodes.workers[0].storage_profile  # noqa: E501
             worker_cpu = entity_status.nodes.workers[0].cpu
             worker_memory = entity_status.nodes.workers[0].memory
-        if worker_sizing_class:
+        if not is_tkgm_with_default_sizing_in_workers and worker_sizing_class:
             worker_cpu = None
             worker_memory = None
     workers = rde_2_0_0.Workers(sizing_class=worker_sizing_class,

@@ -2,8 +2,12 @@
 # Copyright (c) 2021 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 
+from pyvcloud.vcd.client import Client
+from pyvcloud.vcd.vdc import VDC
+
 from container_service_extension.common.constants.server_constants import FlattenedClusterSpecKey2X  # noqa: E501
 from container_service_extension.common.constants.server_constants import VALID_UPDATE_FIELDS_2X  # noqa: E501
+from container_service_extension.common.utils.pyvcloud_utils import get_vdc  # noqa: E501
 from container_service_extension.exception.exceptions import BadRequestError
 from container_service_extension.lib.cloudapi.cloudapi_client import CloudApiClient  # noqa: E501
 from container_service_extension.rde.behaviors.behavior_model import BehaviorOperation  # noqa: E501
@@ -20,8 +24,8 @@ class Validator_2_0_0(AbstractValidator):
     def __init__(self):
         pass
 
-    def validate(self, cloudapi_client: CloudApiClient, entity_id: str = None,
-                 entity: dict = None, operation: BehaviorOperation = BehaviorOperation.CREATE_CLUSTER) -> bool:  # noqa: E501
+    def validate(self, cloudapi_client: CloudApiClient, sysadmin_client: Client, entity_id: str = None,  # noqa: E501
+                 entity: dict = None, operation: BehaviorOperation = BehaviorOperation.CREATE_CLUSTER, **kwargs) -> bool:  # noqa: E501
         """Validate the input request.
 
         This method performs
@@ -41,6 +45,7 @@ class Validator_2_0_0(AbstractValidator):
         :return: is validation successful or failure
         :rtype: bool
         """
+        is_tkgm_cluster = kwargs.get('is_tkgm_cluster', False)
         if not entity_id and not entity:
             raise ValueError('Either entity_id or entity is required to validate.')  # noqa: E501
         entity_svc = DefEntityService(cloudapi_client=cloudapi_client)
@@ -64,20 +69,20 @@ class Validator_2_0_0(AbstractValidator):
                 msg = f"Failed to parse request body: {err}"
                 raise BadRequestError(msg)
 
+        # Need to ensure that sizing class along with cpu/memory is not
+        # present in the request
+        if isinstance(input_entity, rde_2_0_0.NativeEntity):
+            # cpu and mem are properties of only rde 2.0.0
+            bad_request_msg = ""
+            if input_entity.spec.topology.workers.sizing_class and \
+                    (input_entity.spec.topology.workers.cpu or input_entity.spec.topology.workers.memory):  # noqa: E501
+                bad_request_msg = "Cannot specify both sizing class and cpu/memory for Workers nodes."  # noqa: E501
+            if input_entity.spec.topology.control_plane.sizing_class and (input_entity.spec.topology.control_plane.cpu or input_entity.spec.topology.control_plane.memory): # noqa: E501
+                bad_request_msg = "Cannot specify both sizing class and cpu/memory for Control Plane nodes." # noqa: E501
+            if bad_request_msg:
+                raise BadRequestError(bad_request_msg)
         # Return True if the operation is not specified.
         if operation == BehaviorOperation.CREATE_CLUSTER:
-            # Need to ensure that sizing class along with cpu/memory is not
-            # present in the request
-            bad_request_msg = ""
-            if isinstance(input_entity, rde_2_0_0.NativeEntity):
-                # cpu and mem are properties of only rde 2.0.0
-                if input_entity.spec.topology.workers.sizing_class and \
-                        (input_entity.spec.topology.workers.cpu or input_entity.spec.topology.workers.memory):  # noqa: E501
-                    bad_request_msg = "Cannot specify both sizing class and cpu/memory for Workers nodes."  # noqa: E501
-                if input_entity.spec.topology.control_plane.sizing_class and (input_entity.spec.topology.control_plane.cpu or input_entity.spec.topology.control_plane.memory): # noqa: E501
-                    bad_request_msg = "Cannot specify both sizing class and cpu/memory for Control Plane nodes." # noqa: E501
-                if bad_request_msg:
-                    raise BadRequestError(bad_request_msg)
             return True
 
         # TODO: validators for rest of the CSE operations in V36 will be
@@ -89,9 +94,34 @@ class Validator_2_0_0(AbstractValidator):
             current_entity: AbstractNativeEntity = entity_svc.get_entity(entity_id).entity  # noqa: E501
             input_entity_spec: rde_2_0_0.ClusterSpec = input_entity.spec
             current_entity_status: rde_2_0_0.Status = current_entity.status
+            is_tkgm_with_default_sizing_in_control_plane = False
+            is_tkgm_with_default_sizing_in_workers = False
+            if is_tkgm_cluster:
+                # NOTE: Since for TKGm cluster, if cluster is created without
+                # a sizing class, default sizing class is assigned by VCD,
+                # If we find the default sizing policy in the status section,
+                # validate cpu/memory and sizing policy.
+                # Also note that at this point in code, we are sure that only
+                # one of sizing class or cpu/mem will be associated with
+                # control plane and workers.
+                vdc: VDC = get_vdc(
+                    sysadmin_client,
+                    vdc_name=current_entity_status.cloud_properties.virtual_data_center_name,  # noqa: E501
+                    org_name=current_entity_status.cloud_properties.org_name)
+                vdc_resource = vdc.get_resource_admin()
+                default_cp_name = vdc_resource.DefaultComputePolicy.get('name')
+                control_plane_sizing_class = current_entity_status.nodes.control_plane.sizing_class  # noqa: E501
+                is_tkgm_with_default_sizing_in_control_plane = \
+                    (control_plane_sizing_class == default_cp_name)
+                is_tkgm_with_default_sizing_in_workers = \
+                    (len(current_entity_status.nodes.workers) > 0
+                     and current_entity_status.nodes.workers[0].sizing_class == default_cp_name)  # noqa: E501
             current_entity_spec = \
                 rde_utils.construct_cluster_spec_from_entity_status(
-                    current_entity_status, rde_constants.RDEVersion.RDE_2_0_0.value)  # noqa: E501
+                    current_entity_status,
+                    rde_constants.RDEVersion.RDE_2_0_0.value,
+                    is_tkgm_with_default_sizing_in_control_plane=is_tkgm_with_default_sizing_in_control_plane,  # noqa: E501
+                    is_tkgm_with_default_sizing_in_workers=is_tkgm_with_default_sizing_in_workers)  # noqa: E501
             return validate_cluster_update_request_and_check_cluster_upgrade(
                 input_entity_spec,
                 current_entity_spec)
@@ -101,7 +131,7 @@ class Validator_2_0_0(AbstractValidator):
 
 
 def validate_cluster_update_request_and_check_cluster_upgrade(input_spec: rde_2_0_0.ClusterSpec,  # noqa: E501
-                                                              reference_spec: rde_2_0_0.ClusterSpec) -> bool:  # noqa: E501
+                                                              reference_spec: rde_2_0_0.ClusterSpec,) -> bool:  # noqa: E501
     """Validate the desired spec with curr spec and check if upgrade operation.
 
     :param dict input_spec: input spec

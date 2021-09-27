@@ -56,7 +56,7 @@ import container_service_extension.server.service as cse_service
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 
 # Template display options
-DISPLAY_ALL = "all"
+DISPLAY_NATIVE = "native"
 DISPLAY_DIFF = "diff"
 DISPLAY_LOCAL = "local"
 DISPLAY_REMOTE = "remote"
@@ -988,9 +988,9 @@ def upgrade(ctx, config_file_path, skip_config_decryption,
     '--display',
     'display_option',
     type=click.Choice(
-        [DISPLAY_ALL, DISPLAY_DIFF, DISPLAY_LOCAL, DISPLAY_REMOTE, DISPLAY_TKGM]  # noqa: E501
+        [DISPLAY_NATIVE, DISPLAY_DIFF, DISPLAY_LOCAL, DISPLAY_REMOTE, DISPLAY_TKGM]  # noqa: E501
     ),
-    default=DISPLAY_ALL,
+    default=DISPLAY_NATIVE,
     help='Choose templates to display.')
 def list_template(ctx, config_file_path, skip_config_decryption,
                   display_option):
@@ -1066,7 +1066,7 @@ def list_template(ctx, config_file_path, skip_config_decryption,
                     client.logout()
 
         local_templates = []
-        if display_option in (DISPLAY_ALL, DISPLAY_DIFF, DISPLAY_LOCAL):
+        if display_option in (DISPLAY_NATIVE, DISPLAY_DIFF, DISPLAY_LOCAL):
             client = None
             try:
                 # Note: This will get us a client with highest supported
@@ -1111,7 +1111,7 @@ def list_template(ctx, config_file_path, skip_config_decryption,
 
         remote_templates = []
         remote_template_keys = None
-        if display_option in (DISPLAY_ALL, DISPLAY_DIFF, DISPLAY_REMOTE):
+        if display_option in (DISPLAY_NATIVE, DISPLAY_DIFF, DISPLAY_REMOTE):
             rtm = RemoteTemplateManager(
                 remote_template_cookbook_url=config_dict['broker']['remote_template_cookbook_url'],  # noqa: E501
                 legacy_mode=config_dict['service']['legacy_mode'],
@@ -1139,7 +1139,7 @@ def list_template(ctx, config_file_path, skip_config_decryption,
                 remote_templates.append(remote_template)
 
         result = []
-        if display_option is DISPLAY_ALL:
+        if display_option is DISPLAY_NATIVE:
             result = remote_templates
             # If local copy of template exists, update the remote definition
             # with relevant values, else add the local definition to the result

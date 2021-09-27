@@ -69,7 +69,11 @@ SAMPLE_TKG_CLUSTER_SPEC_HELP = """# Short description of various properties used
 """  # noqa: E501
 
 
-def get_sample_cluster_configuration(output=None, k8_runtime=None, server_rde_in_use=None):  # noqa: E501
+def get_sample_cluster_configuration(
+        output=None,
+        k8_runtime=None,
+        server_rde_in_use=None
+):
     """Generate sample cluster configuration.
 
     :param str output: full path of output file
@@ -80,7 +84,7 @@ def get_sample_cluster_configuration(output=None, k8_runtime=None, server_rde_in
     :rtype: str
     """
     if k8_runtime == shared_constants.ClusterEntityKind.TKG_S:
-        sample_cluster_config = SAMPLE_TKG_CLUSTER_SPEC_HELP + _get_sample_tkg_cluster_configuration()  # noqa: E501
+        sample_cluster_config = SAMPLE_TKG_CLUSTER_SPEC_HELP + _get_sample_tkg_s_cluster_configuration()  # noqa: E501
     else:
         if not server_rde_in_use:
             raise ValueError("CSE server API version required to generate sample config")  # noqa: E501
@@ -94,12 +98,12 @@ def get_sample_cluster_configuration(output=None, k8_runtime=None, server_rde_in
 
 
 def _get_sample_cluster_configuration_by_k8_runtime(k8_runtime, server_rde_in_use):  # noqa: E501
-    NativeEntityClass = rde_factory.get_rde_model(server_rde_in_use)
-    return NativeEntityClass.get_sample_native_cluster_specification(k8_runtime)  # noqa: E501
+    native_entity_class = rde_factory.get_rde_model(server_rde_in_use)
+    return native_entity_class.get_sample_native_cluster_specification(k8_runtime)  # noqa: E501
 
 
-def _get_sample_tkg_cluster_configuration():
-    sample_tkg_plus_config = {
+def _get_sample_tkg_s_cluster_configuration():
+    sample_tkg_s_config = {
         "kind": "TanzuKubernetesCluster",
         "spec": {
             "topology": {
@@ -124,6 +128,6 @@ def _get_sample_tkg_cluster_configuration():
             "virtualDataCenterName": "org_virtual_data_center_name"
         }
     }
-    sample_apply_spec = yaml.dump(sample_tkg_plus_config)
+    sample_apply_spec = yaml.dump(sample_tkg_s_config)
     CLIENT_LOGGER.info(sample_apply_spec)
     return sample_apply_spec

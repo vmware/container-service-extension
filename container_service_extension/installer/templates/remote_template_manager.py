@@ -242,7 +242,7 @@ class RemoteTemplateManager:
         if self.unfiltered_cookbook:
             msg = "Re-using cached copy of unfiltered template cookbook."
             self.logger.debug(msg)
-            self.msg_update_callback(msg)
+            self.msg_update_callback.general(msg)
         else:
             try:
                 template_cookbook_as_str = download_file_into_memory(self.url)
