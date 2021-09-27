@@ -287,28 +287,29 @@ class ClusterService(abstract_broker.AbstractBroker):
                 rollback_on_failure=input_native_entity.spec.settings.rollback_on_failure,  # noqa: E501
                 ssh_key=input_native_entity.spec.settings.ssh_key
             )
-            new_status: rde_2_x.Status = rde_2_x.Status(
-                phase=str(DefEntityPhase(DefEntityOperation.CREATE,
-                                         DefEntityOperationStatus.IN_PROGRESS)),  # noqa: E501
-                kubernetes=_create_k8s_software_string(
-                    template[LocalTemplateKey.KUBERNETES],
-                    template[LocalTemplateKey.KUBERNETES_VERSION]),
-                cni=_create_k8s_software_string(
-                    CNI_NAME,
-                    ANTREA_CNI_VERSION),
-                os=template[LocalTemplateKey.OS],
-                cloud_properties=cloud_properties,
-                uid=entity_id,
-            )
 
             msg = f"Creating cluster '{cluster_name}' " \
                   f"from template '{template_name}' " \
                   f"(revision {template_revision})"
             self._update_task(BehaviorTaskStatus.RUNNING, message=msg)
-            new_status.task_href = self.task_href
 
+            changes = {
+                'entity.status.phase':
+                    str(DefEntityPhase(DefEntityOperation.CREATE,
+                        DefEntityOperationStatus.IN_PROGRESS)),
+                'entity.status.kubernetes': _create_k8s_software_string(
+                    template[LocalTemplateKey.KUBERNETES],
+                    template[LocalTemplateKey.KUBERNETES_VERSION]),
+                'entity.status.cni': _create_k8s_software_string(
+                    CNI_NAME,
+                    ANTREA_CNI_VERSION),
+                'entity.status.os': template[LocalTemplateKey.OS],
+                'entity.status.cloud_properties': cloud_properties,
+                'entity.status.uid': entity_id,
+                'entity.status.task_href': self.task_href
+            }
             try:
-                curr_rde = self._update_cluster_entity(entity_id, new_status)  # noqa: E501
+                curr_rde = self._update_cluster_entity(entity_id, changes=changes)  # noqa: E501
             except Exception:
                 msg = f"Error updating the cluster '{cluster_name}' with the status"  # noqa: E501
                 LOGGER.error(msg, exc_info=True)
@@ -402,6 +403,9 @@ class ClusterService(abstract_broker.AbstractBroker):
         if desired_worker_count < 0:
             raise exceptions.CseServerError(
                 f"Worker count must be >= 0 (received {desired_worker_count})")
+        if num_workers_to_add < 0:
+            raise exceptions.CseServerError(
+                "Scaling down TKGm cluster is not supported")
 
         # Check for unexposing the cluster
         desired_expose_state: bool = \
@@ -444,14 +448,16 @@ class ClusterService(abstract_broker.AbstractBroker):
             msg += " and unexposing the cluster"
 
         self._update_task(BehaviorTaskStatus.RUNNING, message=msg)
+
         # set entity status to busy
-        new_status: rde_2_x.Status = curr_native_entity.status
-        new_status.task_href = self.task_href
-        new_status.phase = str(
-            DefEntityPhase(DefEntityOperation.UPDATE,
-                           DefEntityOperationStatus.IN_PROGRESS))
+        changes = {
+            'entity.status.task_href': self.task_href,
+            'entity.status.phase': str(
+                DefEntityPhase(DefEntityOperation.UPDATE,
+                               DefEntityOperationStatus.IN_PROGRESS))
+        }
         try:
-            self._update_cluster_entity(cluster_id, new_status)
+            self._update_cluster_entity(cluster_id, changes=changes)
         except Exception as err:
             self._update_task(BehaviorTaskStatus.ERROR,
                               message=msg,
@@ -504,14 +510,15 @@ class ClusterService(abstract_broker.AbstractBroker):
         msg = f"Deleting cluster '{cluster_name}' ({cluster_id})"
         self._update_task(BehaviorTaskStatus.RUNNING, message=msg)
 
-        new_status: rde_2_x.Status = curr_native_entity.status
-        new_status.task_href = self.task_href
-        curr_native_entity.phase = str(
-            DefEntityPhase(DefEntityOperation.DELETE,
-                           DefEntityOperationStatus.IN_PROGRESS))
         # Update defined entity of the cluster to delete in-progress state
+        changes = {
+            'entity.status.task_href': self.task_href,
+            'entity.status.phase': str(
+                DefEntityPhase(DefEntityOperation.DELETE,
+                               DefEntityOperationStatus.IN_PROGRESS))
+        }
         try:
-            self._update_cluster_entity(cluster_id, new_status)
+            self._update_cluster_entity(cluster_id, changes=changes)
         except Exception:
             msg = f"Error updating the cluster '{cluster_name}' with the status"  # noqa: E501
             LOGGER.error(msg, exc_info=True)
@@ -723,13 +730,14 @@ class ClusterService(abstract_broker.AbstractBroker):
         # TODO(DEF) design and implement telemetry VCDA-1564 defined entity
         #  based clusters
 
-        new_status: rde_2_x.Status = curr_native_entity.status
-        new_status.task_href = self.task_href
-        new_status.phase = str(
-            DefEntityPhase(DefEntityOperation.UPDATE,
-                           DefEntityOperationStatus.IN_PROGRESS))
+        changes = {
+            'entity.status.task_href': self.task_href,
+            'entity.status.phase': str(
+                DefEntityPhase(DefEntityOperation.UPDATE,
+                               DefEntityOperationStatus.IN_PROGRESS))
+        }
         try:
-            self._update_cluster_entity(cluster_id, new_status)
+            self._update_cluster_entity(cluster_id, changes=changes)
         except Exception as err:
             self._update_task(BehaviorTaskStatus.ERROR,
                               message=msg,
@@ -941,39 +949,41 @@ class ClusterService(abstract_broker.AbstractBroker):
             msg = f"Updating cluster `{cluster_name}` ({cluster_id}) defined entity"  # noqa: E501
             LOGGER.debug(msg)
             self._update_task(BehaviorTaskStatus.RUNNING, message=msg)
-            curr_rde: common_models.DefEntity = self.entity_svc.get_entity(cluster_id)  # noqa: E501
-            curr_native_entity: rde_2_x.NativeEntity = curr_rde.entity
-            new_status: rde_2_x.Status = curr_native_entity.status
-            new_status.private = rde_2_x.Private(
-                kube_token=control_plane_join_cmd,
-                kube_config=_get_kube_config_from_control_plane_vm(
-                    sysadmin_client=sysadmin_client_v36,
-                    vapp=vapp
-                )
-            )
-            new_status.uid = cluster_id
-            new_status.phase = str(
-                DefEntityPhase(
-                    DefEntityOperation.CREATE,
-                    DefEntityOperationStatus.SUCCEEDED
-                )
-            )
-            new_status.nodes = _get_nodes_details(vapp)
-            new_status.cni = _create_k8s_software_string(
-                CNI_NAME,
-                ANTREA_CNI_VERSION,
-            )
-            new_status.cloud_properties.distribution.template_revision = \
-                tags[ClusterMetadataKey.TEMPLATE_REVISION]
+
+            changes = {
+                'entity.status.private': rde_2_x.Private(
+                    kube_token=control_plane_join_cmd,
+                    kube_config=_get_kube_config_from_control_plane_vm(
+                        sysadmin_client=sysadmin_client_v36,
+                        vapp=vapp
+                    )
+                ),
+                'entity.status.uid': cluster_id,
+                'entity.status.phase': str(
+                    DefEntityPhase(
+                        DefEntityOperation.CREATE,
+                        DefEntityOperationStatus.SUCCEEDED
+                    )
+                ),
+                'entity.status.nodes': _get_nodes_details(vapp),
+                'entity.status.cni': _create_k8s_software_string(
+                    CNI_NAME,
+                    ANTREA_CNI_VERSION,
+                ),
+                'entity.status.cloud_properties.distribution.''template_name':
+                    tags[ClusterMetadataKey.TEMPLATE_NAME],
+                'entity.status.cloud_properties.distribution.''template_revision':  # noqa: E501
+                    tags[ClusterMetadataKey.TEMPLATE_REVISION]
+            }
 
             # Update status with exposed ip
             if expose_ip:
-                new_status.cloud_properties.exposed = True
-                new_status.external_ip = expose_ip
+                changes['entity.status.cloud_properties.exposed'] = True
+                changes['entity.status.external_ip'] = expose_ip
 
             self._update_cluster_entity(
                 cluster_id,
-                new_status,
+                changes=changes,
                 external_id=vapp_resource.get('href')
             )
 
@@ -1693,13 +1703,13 @@ class ClusterService(abstract_broker.AbstractBroker):
 
         curr_nodes_status = _get_nodes_details(vapp)
 
-        new_status: rde_2_x.Status = curr_rde.entity.status
+        changes = {}
         if curr_nodes_status:
-            new_status.nodes = curr_nodes_status
-        return self._update_cluster_entity(cluster_id, new_status)
+            changes['entity.status.nodes'] = curr_nodes_status
+        return self._update_cluster_entity(cluster_id, changes=changes)
 
     def _update_cluster_entity(self, cluster_id: str,
-                               tkgm_entity_status: rde_2_x.Status,
+                               changes: dict = None,
                                external_id: Optional[str] = None):
         """Update status part of the cluster rde.
 
@@ -1707,8 +1717,9 @@ class ClusterService(abstract_broker.AbstractBroker):
         optimistic locking.
 
         :param str cluster_id: ID of the defined entity.
-        :param rde_2_x.Status tkgm_entity_status: Defined entity status to be
-            updated.
+        :param dict changes: dictionary of changes for the rde. The key
+            indicates the field updated, e.g. 'entity.status'. The value
+            indicates the value for this field.
         :param str external_id: Vapp ID to update the defined entity of the
             cluster with.
         :returns: Updated defined entity
@@ -1716,26 +1727,22 @@ class ClusterService(abstract_broker.AbstractBroker):
         """
         # TODO update function to use optimistic locking feature by VCD
 
-        cluster_rde: common_models.DefEntity = \
-            self.entity_svc.get_entity(cluster_id)
-
         # update the cluster_rde with external_id if provided by the caller
+        if changes is None:
+            changes = {}
         if external_id is not None:
-            cluster_rde.externalId = external_id
-        # Update entity status with new values
-        cluster_rde.entity.status = tkgm_entity_status
+            changes['externalId'] = external_id
 
         # Update cluster rde
         return self.sysadmin_entity_svc.update_entity(
-            cluster_id, cluster_rde, invoke_hooks=False
+            cluster_id, invoke_hooks=False, changes=changes
         )
 
     def _fail_operation(self, cluster_id: str, op: DefEntityOperation):
-        curr_rde: common_models.DefEntity = self.entity_svc.get_entity(cluster_id)  # noqa: E501
-        new_status: rde_2_x.Status = curr_rde.entity.status
-        new_status.phase = \
-            str(DefEntityPhase(op, DefEntityOperationStatus.FAILED))
-        self._update_cluster_entity(curr_rde.id, new_status)
+        changes = {
+            'entity.status.phase': str(DefEntityPhase(op, DefEntityOperationStatus.FAILED))  # noqa: E501
+        }
+        self._update_cluster_entity(cluster_id, changes=changes)
 
     def _update_task(self, status, message='', error_message='', progress=None):  # noqa: E501
         if status == BehaviorTaskStatus.ERROR:
