@@ -19,6 +19,7 @@ Responsibility of the functions in this file:
 
 import container_service_extension.common.constants.server_constants as server_constants  # noqa: E501
 from container_service_extension.common.constants.shared_constants import ClusterAclKey  # noqa: E501
+from container_service_extension.common.constants.shared_constants import ClusterEntityKind  # noqa: E501
 from container_service_extension.common.constants.shared_constants import CSE_PAGINATION_DEFAULT_PAGE_SIZE  # noqa: E501
 from container_service_extension.common.constants.shared_constants import CSE_PAGINATION_FIRST_PAGE_NUMBER  # noqa: E501
 from container_service_extension.common.constants.shared_constants import PaginationKey  # noqa: E501
@@ -65,6 +66,7 @@ def cluster_create(data: dict, op_ctx: ctx.OperationContext):
     rde_validator_factory.get_validator(
         rde_version=rde_constants.MAP_INPUT_PAYLOAD_VERSION_TO_RDE_VERSION[
             payload_version]).validate(cloudapi_client=op_ctx.cloudapi_client,
+                                       sysadmin_client=op_ctx.sysadmin_client,
                                        entity=input_entity)
 
     def_entity_service = entity_service.DefEntityService(op_ctx.cloudapi_client)  # noqa: E501
@@ -193,12 +195,17 @@ def cluster_update(data: dict, op_ctx: ctx.OperationContext):
     # Validate the Input payload based on the (Operation, payload_version).
     # Get the validator based on the payload_version
     # ToDo : Don't use default cloudapi_client. Use the specific versioned one
+    kind = input_entity['kind']
+    is_tkgm_cluster = (kind == ClusterEntityKind.TKG_M.value)
+    sysadmin_client = op_ctx.sysadmin_client
     rde_validator_factory.get_validator(
         rde_version=rde_constants.MAP_INPUT_PAYLOAD_VERSION_TO_RDE_VERSION[
             payload_version]). \
-        validate(cloudapi_client=op_ctx.cloudapi_client, entity_id=cluster_id,
+        validate(cloudapi_client=op_ctx.cloudapi_client,
+                 sysadmin_client=sysadmin_client, entity_id=cluster_id,
                  entity=input_entity,
-                 operation=BehaviorOperation.UPDATE_CLUSTER)
+                 operation=BehaviorOperation.UPDATE_CLUSTER,
+                 is_tkgm_cluster=is_tkgm_cluster)
 
     # Convert the input entity to runtime rde format.
     # Based on the runtime rde, call the appropriate backend method.

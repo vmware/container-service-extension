@@ -554,10 +554,26 @@ class ClusterService(abstract_broker.AbstractBroker):
         # TODO: Make use of current entity in the behavior payload
         curr_rde = self.entity_svc.get_entity(cluster_id)
         curr_native_entity: rde_2_x.NativeEntity = curr_rde.entity
+        sysadmin_client_v36 = \
+            self.context.get_sysadmin_client(DEFAULT_API_VERSION)
+        vdc: VDC = vcd_utils.get_vdc(
+            sysadmin_client_v36,
+            vdc_name=curr_native_entity.status.cloud_properties.virtual_data_center_name,  # noqa: E501
+            org_name=curr_native_entity.status.cloud_properties.org_name)
+        vdc_resource = vdc.get_resource_admin()
+        default_cp_name = vdc_resource.DefaultComputePolicy.get('name')
+        control_plane_sizing_class = curr_native_entity.status.nodes.control_plane.sizing_class  # noqa: E501
+        is_tkgm_with_default_sizing_in_control_plane = \
+            (control_plane_sizing_class == default_cp_name)
+        is_tkgm_with_default_sizing_in_workers = \
+            (len(curr_native_entity.status.nodes.workers) > 0
+                and curr_native_entity.status.nodes.workers[0].sizing_class == default_cp_name)  # noqa: E501
         current_spec: rde_2_x.ClusterSpec = \
             def_utils.construct_cluster_spec_from_entity_status(
                 curr_native_entity.status,
-                server_utils.get_rde_version_in_use())
+                server_utils.get_rde_version_in_use(),
+                is_tkgm_with_default_sizing_in_control_plane=is_tkgm_with_default_sizing_in_control_plane,  # noqa: E501
+                is_tkgm_with_default_sizing_in_workers=is_tkgm_with_default_sizing_in_workers)  # noqa: E501
         current_workers_count = current_spec.topology.workers.count
         desired_workers_count = input_native_entity.spec.topology.workers.count
         current_expose_flag = current_spec.settings.network.expose
@@ -731,7 +747,11 @@ class ClusterService(abstract_broker.AbstractBroker):
             ovdc_name = input_native_entity.metadata.virtual_data_center_name
             num_workers = input_native_entity.spec.topology.workers.count
             control_plane_sizing_class = input_native_entity.spec.topology.control_plane.sizing_class  # noqa: E501
+            control_plane_cpu_count = input_native_entity.spec.topology.control_plane.cpu # noqa: E501
+            control_plane_memory_mb = input_native_entity.spec.topology.control_plane.memory # noqa: E501
             worker_sizing_class = input_native_entity.spec.topology.workers.sizing_class  # noqa: E501
+            worker_cpu_count = input_native_entity.spec.topology.workers.cpu
+            worker_memory_mb = input_native_entity.spec.topology.workers.memory
             control_plane_storage_profile = input_native_entity.spec.topology.control_plane.storage_profile  # noqa: E501
             worker_storage_profile = input_native_entity.spec.topology.workers.storage_profile  # noqa: E501
             network_name = input_native_entity.spec.settings.ovdc_network
@@ -849,6 +869,8 @@ class ClusterService(abstract_broker.AbstractBroker):
                     storage_profile=control_plane_storage_profile,
                     ssh_key=ssh_key,
                     sizing_class_name=control_plane_sizing_class,
+                    cpu_count=control_plane_cpu_count,
+                    memory_mb=control_plane_memory_mb,
                     expose=expose,
                     cluster_name=cluster_name,
                     cluster_id=cluster_id,
@@ -882,6 +904,8 @@ class ClusterService(abstract_broker.AbstractBroker):
                     storage_profile=worker_storage_profile,
                     ssh_key=ssh_key,
                     sizing_class_name=worker_sizing_class,
+                    cpu_count=worker_cpu_count,
+                    memory_mb=worker_memory_mb,
                     control_plane_join_cmd=control_plane_join_cmd
                 )
             except Exception as err:
@@ -1268,6 +1292,8 @@ class ClusterService(abstract_broker.AbstractBroker):
             # viz., template, storage_profile, and network among others.
             worker_storage_profile = input_native_entity.spec.topology.workers.storage_profile  # noqa: E501
             worker_sizing_class = input_native_entity.spec.topology.workers.sizing_class  # noqa: E501
+            worker_cpu_count = input_native_entity.spec.topology.workers.cpu
+            worker_memory_mb = input_native_entity.spec.topology.workers.memory
             network_name = input_native_entity.spec.settings.ovdc_network
             ssh_key = input_native_entity.spec.settings.ssh_key
             rollback = input_native_entity.spec.settings.rollback_on_failure
@@ -1319,6 +1345,8 @@ class ClusterService(abstract_broker.AbstractBroker):
                     storage_profile=worker_storage_profile,
                     ssh_key=ssh_key,
                     sizing_class_name=worker_sizing_class,
+                    cpu_count=worker_cpu_count,
+                    memory_mb=worker_memory_mb,
                     control_plane_join_cmd=control_plane_join_cmd
                 )
 
@@ -1784,18 +1812,25 @@ def _get_nodes_details(vapp):
                 policy_name = vm.ComputePolicy.VmSizingPolicy.get('name')
                 sizing_class = compute_policy_manager.\
                     get_cse_policy_display_name(policy_name)
+            vm_obj = vcd_vm.VM(vapp.client, resource=vm)
+            cpu_count = vm_obj.get_cpus()['num_cpus']
+            memory_mb = vm_obj.get_memory()
             storage_profile: Optional[str] = None
             if hasattr(vm, 'StorageProfile'):
                 storage_profile = vm.StorageProfile.get('name')
             if vm_name.startswith(NodeType.CONTROL_PLANE):
                 control_plane = rde_2_x.Node(name=vm_name, ip=ip,
                                              sizing_class=sizing_class,
-                                             storage_profile=storage_profile)
+                                             storage_profile=storage_profile,
+                                             cpu=cpu_count,
+                                             memory=memory_mb)
             elif vm_name.startswith(NodeType.WORKER):
                 workers.append(
                     rde_2_x.Node(name=vm_name, ip=ip,
                                  sizing_class=sizing_class,
-                                 storage_profile=storage_profile))
+                                 storage_profile=storage_profile,
+                                 cpu=cpu_count,
+                                 memory=memory_mb))
         return rde_2_x.Nodes(control_plane=control_plane, workers=workers)
     except Exception as err:
         LOGGER.error("Failed to retrieve the status of the nodes of the "
@@ -1928,12 +1963,19 @@ def _add_control_plane_nodes(
         storage_profile=None,
         ssh_key=None,
         sizing_class_name=None,
+        cpu_count=None,
+        memory_mb=None,
         expose=False,
         cluster_name=None,
         cluster_id=None,
         refresh_token=None) -> Tuple[str, List[Dict]]:
 
     vcd_utils.raise_error_if_user_not_from_system_org(sysadmin_client)
+
+    if (cpu_count or memory_mb) and sizing_class_name:
+        raise exceptions.BadRequestError("Cannot specify both cpu/memory and "
+                                         "sizing class for control plane "
+                                         "node creation")
 
     vm_specs = []
     expose_ip = ''
@@ -2021,6 +2063,20 @@ def _add_control_plane_nodes(
                     # This is a deviation from native: we do not want silent failures when expose  # noqa: E501
                     # functionality fails.
                     raise
+
+            # modify CPU and memory if needed
+            if cpu_count and cpu_count > 0:
+                # updating cpu count on the VM
+                task = vm.modify_cpu(cpu_count)
+                sysadmin_client.get_task_monitor().wait_for_status(
+                    task,
+                    callback=wait_for_cpu_update)
+            if memory_mb and memory_mb > 0:
+                # updating memory
+                task = vm.modify_memory(memory_mb)
+                sysadmin_client.get_task_monitor().wait_for_status(
+                    task,
+                    callback=wait_for_memory_update)
 
             # If expose is set, control_plane_endpoint is exposed ip
             # Else control_plane_endpoint is internal_ip
@@ -2140,9 +2196,14 @@ def _add_control_plane_nodes(
 def _add_worker_nodes(sysadmin_client, num_nodes, org, vdc, vapp,
                       catalog_name, template, network_name,
                       storage_profile=None, ssh_key=None,
-                      sizing_class_name=None,
+                      sizing_class_name=None, cpu_count=None, memory_mb=None,
                       control_plane_join_cmd='') -> List:
     vcd_utils.raise_error_if_user_not_from_system_org(sysadmin_client)
+
+    if (cpu_count or memory_mb) and sizing_class_name:
+        raise exceptions.BadRequestError("Cannot specify both cpu/memory and "
+                                         "sizing class for control plane "
+                                         "node creation")
 
     vm_specs = []
     if num_nodes <= 0:
@@ -2208,6 +2269,20 @@ def _add_worker_nodes(sysadmin_client, num_nodes, org, vdc, vapp,
             vm_name = spec['target_vm_name']
             vm_resource = vapp.get_vm(vm_name)
             vm = vcd_vm.VM(sysadmin_client, resource=vm_resource)
+
+            # modify CPU and memory if needed
+            if cpu_count and cpu_count > 0:
+                # updating cpu count on the VM
+                task = vm.modify_cpu(cpu_count)
+                sysadmin_client.get_task_monitor().wait_for_status(
+                    task,
+                    callback=wait_for_cpu_update)
+            if memory_mb and memory_mb > 0:
+                # updating memory
+                task = vm.modify_memory(memory_mb)
+                sysadmin_client.get_task_monitor().wait_for_status(
+                    task,
+                    callback=wait_for_memory_update)
 
             task = vm.power_on_and_force_recustomization()
             # wait_for_vm_power_on is reused for all vm creation callback
@@ -2327,6 +2402,14 @@ def _get_kube_config_from_control_plane_vm(sysadmin_client: vcd_client.Client, v
     LOGGER.debug("Got kubeconfig from control plane extra configuration successfully")  # noqa: E501
     kube_config_in_bytes: bytes = base64.b64decode(kube_config)
     return kube_config_in_bytes.decode()
+
+
+def wait_for_cpu_update(task):
+    LOGGER.debug(f"Updating CPU count, status: {task.get('status').lower()}")
+
+
+def wait_for_memory_update(task):
+    LOGGER.debug(f"Updating memory, status: {task.get('status').lower()}")
 
 
 def wait_for_update_customization(task):
