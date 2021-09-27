@@ -907,10 +907,10 @@ class ClusterService(abstract_broker.AbstractBroker):
                     CNI_NAME,
                     ANTREA_CNI_VERSION,
                 ),
-                'entity.status.cloud_properties.distribution.'
-                'template_name': tags[ClusterMetadataKey.TEMPLATE_NAME],
-                'entity.status.cloud_properties.distribution.'
-                'template_revision': tags[ClusterMetadataKey.TEMPLATE_REVISION]
+                'entity.status.cloud_properties.distribution.''template_name':
+                    tags[ClusterMetadataKey.TEMPLATE_NAME],
+                'entity.status.cloud_properties.distribution.''template_revision':  # noqa: E501
+                    tags[ClusterMetadataKey.TEMPLATE_REVISION]
             }
 
             # Update status with exposed ip
