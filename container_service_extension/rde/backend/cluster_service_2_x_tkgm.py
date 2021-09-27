@@ -399,6 +399,9 @@ class ClusterService(abstract_broker.AbstractBroker):
         if desired_worker_count < 0:
             raise exceptions.CseServerError(
                 f"Worker count must be >= 0 (received {desired_worker_count})")
+        if num_workers_to_add < 0:
+            raise exceptions.CseServerError(
+                "Scaling down TKGm cluster is not supported")
 
         # Check for unexposing the cluster
         desired_expose_state: bool = \
