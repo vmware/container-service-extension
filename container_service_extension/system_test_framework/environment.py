@@ -120,6 +120,8 @@ WAIT_INTERVAL = 30
 DUPLICATE_NAME = "DUPLICATE_NAME"
 VIEW_PUBLISHED_CATALOG_RIGHT = 'Catalog: View Published Catalogs'
 
+VCD_SITE = None
+
 # Location at which the cluster apply spec will be generated and used
 APPLY_SPEC_PATH = 'cluster_apply_specification.yaml'
 
@@ -175,7 +177,7 @@ def init_rde_environment(config_filepath=BASE_CONFIG_FILEPATH, logger=NULL_LOGGE
         TEMPLATE_DEFINITIONS, TEST_ALL_TEMPLATES, SYS_ADMIN_LOGIN_CMD, \
         CLUSTER_ADMIN_LOGIN_CMD, CLUSTER_AUTHOR_LOGIN_CMD, \
         USERNAME_TO_LOGIN_CMD, USERNAME_TO_CLUSTER_NAME, TEST_ORG_HREF, \
-        TEST_VDC_HREF, VCD_API_VERSION_TO_USE
+        TEST_VDC_HREF, VCD_API_VERSION_TO_USE, VCD_SITE
 
     logger.debug("Setting RDE environement")
     config = testutils.yaml_to_dict(config_filepath)
@@ -215,6 +217,7 @@ def init_rde_environment(config_filepath=BASE_CONFIG_FILEPATH, logger=NULL_LOGGE
     logger.debug(f"Using VCD api version: {VCD_API_VERSION_TO_USE}")
 
     CATALOG_NAME = config['broker']['catalog']
+    VCD_SITE = f"https://{config['vcd']['host']}"
 
     SYS_ADMIN_LOGIN_CMD = f"login {config['vcd']['host']} system " \
                           f"{config['vcd']['username']} " \

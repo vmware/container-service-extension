@@ -639,7 +639,7 @@ def _generate_cluster_apply_tests(test_users=None):
                     CLUSTER_APPLY_TEST_PARAM(
                         user=user,
                         password=None,
-                        cluster_name=f"{env.USERNAME_TO_CLUSTER_NAME[user]}-case1",
+                        cluster_name=f"{env.USERNAME_TO_CLUSTER_NAME[user]}-case1",  # noqa: E501
                         worker_count=0,
                         nfs_count=0,
                         rollback=True,
@@ -662,7 +662,7 @@ def _generate_cluster_apply_tests(test_users=None):
                         ovdc_network=None,
                         sizing_class=None,
                         storage_profile="Invalid_value",
-                        cluster_name=f"{env.USERNAME_TO_CLUSTER_NAME[user]}-case2",
+                        cluster_name=f"{env.USERNAME_TO_CLUSTER_NAME[user]}-case2",  # noqa: E501
                         expected_phase="CREATE:FAILED"
                     ),
                     # Invalid Network
@@ -677,7 +677,7 @@ def _generate_cluster_apply_tests(test_users=None):
                         ovdc_network="Invalid_value",
                         sizing_class=None,
                         storage_profile=None,
-                        cluster_name=f"{env.USERNAME_TO_CLUSTER_NAME[user]}-case3",
+                        cluster_name=f"{env.USERNAME_TO_CLUSTER_NAME[user]}-case3",  # noqa: E501
                         expected_phase="CREATE:FAILED"
                     ),
                     # Invalid network with rollback
@@ -692,7 +692,7 @@ def _generate_cluster_apply_tests(test_users=None):
                         ovdc_network="Invalid_value",
                         sizing_class=None,
                         storage_profile=None,
-                        cluster_name=f"{env.USERNAME_TO_CLUSTER_NAME[user]}-case4",
+                        cluster_name=f"{env.USERNAME_TO_CLUSTER_NAME[user]}-case4",  # noqa: E501
                         expected_phase="CREATE:FAILED"
                     ),
                     # Valid case
@@ -725,7 +725,7 @@ def _generate_cluster_apply_tests(test_users=None):
                         ovdc_network='Invalid_value',
                         sizing_class=None,
                         storage_profile=None,
-                        cluster_name=f"{env.USERNAME_TO_CLUSTER_NAME[user]}-case4",
+                        cluster_name=f"{env.USERNAME_TO_CLUSTER_NAME[user]}-case4",  # noqa: E501
                         expected_phase='CREATE:FAILED'
                     ),
                     # Resize up a valid deployment

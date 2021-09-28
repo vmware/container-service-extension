@@ -110,6 +110,7 @@ def _update_cluster_apply_spec_for_2_0(apply_spec, properties):
     apply_spec_rde.spec.settings.ovdc_network = env.TEST_NETWORK
     apply_spec_rde.metadata.org_name = env.TEST_ORG
     apply_spec_rde.metadata.virtual_data_center_name = env.TEST_VDC
+    apply_spec_rde.metadata.site = env.VCD_SITE
 
     # set values sent in properties parameter
     for key, value in properties.items():
