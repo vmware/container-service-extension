@@ -2401,12 +2401,29 @@ def _get_join_cmd(sysadmin_client: vcd_client.Client, vapp):
     if not node_names:
         raise exceptions.ClusterJoiningError("Join cluster failure: no control plane node found")   # noqa: E501
 
+    control_plane_internal_ip = vapp.get_primary_ip(node_names[0])
     vm_resource = vapp.get_vm(node_names[0])
     control_plane_vm = vcd_vm.VM(sysadmin_client, resource=vm_resource)
     control_plane_join_cmd: str = vcd_utils.get_vm_extra_config_element(control_plane_vm, KUBEADM_TOKEN_INFO)  # noqa: E501
     control_plane_vm.reload()
     if not control_plane_join_cmd:
         raise exceptions.ClusterJoiningError("Join cluster failure: join info not found in control plane node")   # noqa: E501
+
+    # Example format:
+    # kubeadm join 192.168.7.8:6443 --token 5edbci.duu55v7k6hdv52sm \
+    #     --discovery-token-ca-cert-hash sha256:26326dcdef13e627e30ce93800e549855cba3eb03dbedcdab57c696bea17b02d  # noqa: E501
+    parts = control_plane_join_cmd.split()
+    if len(parts) != 7:
+        raise exceptions.ClusterJoiningError(
+            f"Join cluster failure: join info [{control_plane_join_cmd}]from control plane node invalid")   # noqa: E501
+    ip_port_parts = parts[2].split(':')
+    if len(ip_port_parts) != 2:
+        raise exceptions.ClusterJoiningError(
+            f"Join cluster failure: control plane endpoint [{parts[2]}] from control plane node invalid")   # noqa: E501
+
+    parts[2] = f"{control_plane_internal_ip}:{ip_port_parts[1]}"
+    control_plane_join_cmd = " ".join(parts)
+
     return control_plane_join_cmd
 
 
