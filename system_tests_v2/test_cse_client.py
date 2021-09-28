@@ -443,7 +443,7 @@ def create_apply_spec(apply_spec_param):
     :return the dictionary containing the following
     - worker count
     - nfs count
-    - tempalte name
+    - template name
     - template revision
     - network
     - sizing class
@@ -626,8 +626,8 @@ def _generate_cluster_apply_tests(test_users=None):
         test_users = \
             [
                 env.SYS_ADMIN_NAME,
-                # env.CLUSTER_ADMIN_NAME,
-                # env.CLUSTER_AUTHOR_NAME
+                env.CLUSTER_ADMIN_NAME,
+                env.CLUSTER_AUTHOR_NAME
             ]
 
     test_cases = []
