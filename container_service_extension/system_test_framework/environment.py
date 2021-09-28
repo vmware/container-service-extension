@@ -239,6 +239,11 @@ def init_rde_environment(config_filepath=BASE_CONFIG_FILEPATH, logger=NULL_LOGGE
         CLUSTER_ADMIN_NAME: CLUSTER_ADMIN_LOGIN_CMD,
         CLUSTER_AUTHOR_NAME: CLUSTER_AUTHOR_LOGIN_CMD
     }
+    USERNAME_TO_CLUSTER_NAME = {
+        SYS_ADMIN_NAME: SYS_ADMIN_TEST_CLUSTER_NAME,
+        CLUSTER_ADMIN_NAME: ORG_ADMIN_TEST_CLUSTER_NAME,
+        CLUSTER_AUTHOR_NAME: K8_AUTHOR_TEST_CLUSTER_NAME
+    }
 
     # hrefs for Org and VDC that hosts the catalog
     org = pyvcloud_utils.get_org(CLIENT, org_name=config['broker']['org'])
