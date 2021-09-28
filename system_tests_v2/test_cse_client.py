@@ -648,7 +648,8 @@ def _generate_cluster_apply_tests(test_users=None):
                         ovdc_network=None,
                         sizing_class="Invalid_value",
                         storage_profile=None,
-                        expected_phase="CREATE:FAILED"
+                        expected_phase="CREATE:FAILED",
+                        retain_cluster=False
                     ),
                     # Invalid Storage profile
                     CLUSTER_APPLY_TEST_PARAM(
@@ -663,7 +664,8 @@ def _generate_cluster_apply_tests(test_users=None):
                         sizing_class=None,
                         storage_profile="Invalid_value",
                         cluster_name=f"{env.USERNAME_TO_CLUSTER_NAME[user]}-case2",  # noqa: E501
-                        expected_phase="CREATE:FAILED"
+                        expected_phase="CREATE:FAILED",
+                        retain_cluster=False
                     ),
                     # Invalid Network
                     CLUSTER_APPLY_TEST_PARAM(
@@ -678,7 +680,8 @@ def _generate_cluster_apply_tests(test_users=None):
                         sizing_class=None,
                         storage_profile=None,
                         cluster_name=f"{env.USERNAME_TO_CLUSTER_NAME[user]}-case3",  # noqa: E501
-                        expected_phase="CREATE:FAILED"
+                        expected_phase="CREATE:FAILED",
+                        retain_cluster=False
                     ),
                     # Invalid network with rollback
                     CLUSTER_APPLY_TEST_PARAM(
@@ -693,7 +696,8 @@ def _generate_cluster_apply_tests(test_users=None):
                         sizing_class=None,
                         storage_profile=None,
                         cluster_name=f"{env.USERNAME_TO_CLUSTER_NAME[user]}-case4",  # noqa: E501
-                        expected_phase="CREATE:FAILED"
+                        expected_phase="CREATE:FAILED",
+                        retain_cluster=False
                     ),
                     # Valid case
                     CLUSTER_APPLY_TEST_PARAM(
@@ -726,7 +730,8 @@ def _generate_cluster_apply_tests(test_users=None):
                         sizing_class=None,
                         storage_profile=None,
                         cluster_name=f"{env.USERNAME_TO_CLUSTER_NAME[user]}-case4",  # noqa: E501
-                        expected_phase='CREATE:FAILED'
+                        expected_phase='CREATE:FAILED',
+                        retain_cluster=False
                     ),
                     # Resize up a valid deployment
                     CLUSTER_APPLY_TEST_PARAM(

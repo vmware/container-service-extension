@@ -132,7 +132,13 @@ def _init_test_vars(config, logger=NULL_LOGGER):
     :param dict config:
     """
     global TEMPLATE_DEFINITIONS, TEARDOWN_INSTALLATION, TEARDOWN_CLUSTERS, \
-        TEST_ALL_TEMPLATES, TEST_ORG, TEST_VDC, TEST_NETWORK
+        TEST_ALL_TEMPLATES, TEST_ORG, TEST_VDC, TEST_NETWORK, \
+        USERNAME_TO_CLUSTER_NAME
+    USERNAME_TO_CLUSTER_NAME = {
+        SYS_ADMIN_NAME: SYS_ADMIN_TEST_CLUSTER_NAME,
+        CLUSTER_ADMIN_NAME: ORG_ADMIN_TEST_CLUSTER_NAME,
+        CLUSTER_AUTHOR_NAME: K8_AUTHOR_TEST_CLUSTER_NAME
+    }
     test_config = config['test']
     if test_config is not None:
         TEARDOWN_INSTALLATION = test_config.get('teardown_installation', True)
@@ -238,11 +244,6 @@ def init_rde_environment(config_filepath=BASE_CONFIG_FILEPATH, logger=NULL_LOGGE
         SYS_ADMIN_NAME: SYS_ADMIN_LOGIN_CMD,
         CLUSTER_ADMIN_NAME: CLUSTER_ADMIN_LOGIN_CMD,
         CLUSTER_AUTHOR_NAME: CLUSTER_AUTHOR_LOGIN_CMD
-    }
-    USERNAME_TO_CLUSTER_NAME = {
-        SYS_ADMIN_NAME: SYS_ADMIN_TEST_CLUSTER_NAME,
-        CLUSTER_ADMIN_NAME: ORG_ADMIN_TEST_CLUSTER_NAME,
-        CLUSTER_AUTHOR_NAME: K8_AUTHOR_TEST_CLUSTER_NAME
     }
 
     # hrefs for Org and VDC that hosts the catalog
@@ -599,7 +600,7 @@ def unregister_cse_in_mqtt(logger=NULL_LOGGER):
 
 def publish_right_bundle_to_deployment_org(logger=NULL_LOGGER):
     try:
-        rbm = RightBundleManager(CLIENT, logger_debug=logger, log_wire=True)
+        rbm = RightBundleManager(CLIENT, logger_debug=logger, logger_wire=logger)  # noqa: E501
         cse_right_bundle = rbm.get_right_bundle_by_name(
             rde_constants.DEF_NATIVE_ENTITY_TYPE_RIGHT_BUNDLE)
         test_org_id = TEST_ORG_HREF.split('/')[-1]
