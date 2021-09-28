@@ -20,7 +20,7 @@
                 },
                 "cpu":{
                     "type": "integer",
-                    "description": "CPU size in Ghz"
+                    "description": "Number of CPU"
                 },
                 "memory": {
                     "type": "integer",
@@ -101,7 +101,7 @@
                                 },
                                 "cpu": {
                                     "type": "integer",
-                                    "description": "CPU size in Ghz"
+                                    "description": "Number of CPU"
                                 },
                                 "memory": {
                                     "type": "integer",
@@ -133,7 +133,7 @@
                                 },
                                 "cpu": {
                                     "type": "integer",
-                                    "description": "CPU size in Ghz"
+                                    "description": "Number of CPU"
                                 },
                                 "memory": {
                                     "type": "integer",

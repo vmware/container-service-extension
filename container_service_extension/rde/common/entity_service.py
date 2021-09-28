@@ -8,8 +8,8 @@ from typing import List, Tuple, Union
 
 import pyvcloud.vcd.client as vcd_client
 from pyvcloud.vcd.vcd_api_version import VCDApiVersion
-from requests.exceptions import HTTPError
 from requests import codes
+from requests.exceptions import HTTPError
 
 import container_service_extension.common.constants.server_constants as server_constants  # noqa: E501
 import container_service_extension.common.constants.shared_constants as shared_constants  # noqa: E501
@@ -547,7 +547,6 @@ class DefEntityService:
         :return: DefEntity representing the upgraded defined entity
         :rtype: DefEntity
         """
-
         changes = {
             'entity': upgraded_native_entity,
             'entityType': target_entity_type_id

@@ -323,6 +323,7 @@ def install_cse(
         # register cse def schema on VCD
         _register_def_schema(client=client, config=config,
                              msg_update_callback=msg_update_callback,
+                             update_schema=False,
                              log_wire=log_wire)
 
         # set up placement policies for all types of clusters
@@ -834,6 +835,9 @@ def upgrade_cse(
                 upgrade_path_not_valid_msg += " TKGm runtime detected."
                 raise Exception(upgrade_path_not_valid_msg)
 
+        # update schema only if upgrading from CSE 3.1.0
+        cse_3_1_0 = semantic_version.SimpleSpec('==3.1.0')
+        update_schema = cse_3_1_0.match(ext_cse_version)
         # Convert the existing AMQP extension to MQTT extension if
         # upgrading to non legacy mode. This will ensure that when
         # the existing legacy clusters are being processed, RDE creation
@@ -861,6 +865,7 @@ def upgrade_cse(
                 skip_template_creation=skip_template_creation,
                 retain_temp_vapp=retain_temp_vapp,
                 ssh_key=ssh_key,
+                update_schema=update_schema,
                 msg_update_callback=msg_update_callback,
                 log_wire=log_wire)
 
@@ -1380,6 +1385,7 @@ def _register_def_schema(
         client: Client,
         config=None,
         msg_update_callback=utils.NullPrinter(),
+        update_schema=False,
         log_wire=False
 ):
     """Register RDE constructs.
@@ -1425,7 +1431,7 @@ def _register_def_schema(
         entity_type: common_models.DefEntityType = \
             rde_metadata[def_constants.RDEMetadataKey.ENTITY_TYPE]
         _register_native_entity_type(cloudapi_client, entity_type,
-                                     msg_update_callback)  # noqa: E501
+                                     update_schema, msg_update_callback)  # noqa: E501
 
         # Override Behavior(s)
         override_behavior_metadata: Dict[str, List[Behavior]] = \
@@ -1544,12 +1550,28 @@ def _register_behaviors(
 def _register_native_entity_type(
         cloudapi_client,
         entity_type: common_models.DefEntityType,
+        update_schema: bool,
         msg_update_callback=utils.NullPrinter()
 ):
     schema_svc = def_schema_svc.DefSchemaService(cloudapi_client)
     try:
-        schema_svc.get_entity_type(entity_type.id)
-        msg = f"Skipping creation of Native Entity Type '{entity_type.id}'. Native Entity Type already exists."  # noqa: E501
+        current_entity_type: common_models.DefEntityType2_0 = \
+            schema_svc.get_entity_type(entity_type.id)
+        if update_schema:
+            updated_native_entity_type = def_entity_svc.DefEntityType(
+                id=current_entity_type.id,
+                name=current_entity_type.name,
+                description=current_entity_type.description,
+                vendor=current_entity_type.vendor,
+                nss=current_entity_type.nss,
+                version=current_entity_type.version,
+                schema=entity_type.schema, # updated
+                interfaces=current_entity_type.interfaces,
+                readonly=current_entity_type.readonly)
+            msg = "Updating existing CSE native Defined Entity Type."
+            schema_svc.update_entity_type(updated_native_entity_type)
+        else:
+            msg = f"Skipping creation of Native Entity Type '{entity_type.id}'. Native Entity Type already exists."  # noqa: E501
     except cse_exception.DefSchemaServiceError:
         # TODO handle this part only if the entity type was not found
         native_entity_type = schema_svc.create_entity_type(entity_type)
@@ -2157,6 +2179,7 @@ def _upgrade_to_cse_3_1_non_legacy(
         skip_template_creation,
         retain_temp_vapp,
         ssh_key,
+        update_schema=False,
         msg_update_callback=utils.NullPrinter(),
         log_wire=False
 ):
@@ -2183,6 +2206,7 @@ def _upgrade_to_cse_3_1_non_legacy(
     _register_def_schema(
         client=client,
         config=config,
+        update_schema=update_schema,
         msg_update_callback=msg_update_callback,
         log_wire=log_wire
     )
