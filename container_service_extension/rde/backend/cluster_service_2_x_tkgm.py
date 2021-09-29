@@ -1165,6 +1165,7 @@ class ClusterService(abstract_broker.AbstractBroker):
             is_exposed: bool = current_spec.settings.network.expose
             unexpose: bool = is_exposed and not desired_expose_state
             unexpose_success: bool = False
+            changes: dict = {}
             if unexpose:
                 org_name: str = curr_native_entity.metadata.org_name
                 ovdc_name: str = curr_native_entity.metadata.virtual_data_center_name  # noqa: E501
@@ -1205,11 +1206,10 @@ class ClusterService(abstract_broker.AbstractBroker):
                     # would have their control plane ip overwritten to the
                     # external ip, we need to set it back to the true
                     # internal ip.
-                    curr_native_entity.status.nodes.control_plane.ip = control_plane_internal_ip  # noqa: E501
-
-                    curr_native_entity.status.cloud_properties.exposed = False
-                    curr_native_entity.status.external_ip = None
-                    curr_native_entity.status.private.kube_config = updated_kube_config  # noqa: E501
+                    changes['entity.status.nodes.control_plane.ip'] = control_plane_internal_ip  # noqa: E501
+                    changes['entity.status.cloud_properties.exposed'] = False
+                    changes['entity.status.external_ip '] = None
+                    changes['entity.status.private.kube_config '] = updated_kube_config  # noqa: E501
                     unexpose_success = True
                 except Exception as err:
                     LOGGER.error(
@@ -1228,7 +1228,7 @@ class ClusterService(abstract_broker.AbstractBroker):
                 # NOTE: Possible repetition of operation.
                 # _create_node_async() and _delete_node_async() also
                 # sets status to failed
-                curr_native_entity.status.phase = str(
+                changes['entity.status.phase'] = str(
                     DefEntityPhase(DefEntityOperation.UPDATE,
                                    DefEntityOperationStatus.FAILED))
             else:
@@ -1238,11 +1238,11 @@ class ClusterService(abstract_broker.AbstractBroker):
                     msg += " and un-exposed the cluster"
                 elif unexpose and not unexpose_success:
                     msg += " and failed to un-expose the cluster"
-                curr_native_entity.status.phase = str(
+                changes['entity.status.phase'] = str(
                     DefEntityPhase(DefEntityOperation.UPDATE,
                                    DefEntityOperationStatus.SUCCEEDED))
 
-            self._sync_def_entity(cluster_id, curr_rde)
+            self._sync_def_entity(cluster_id, changes=changes)
             if curr_task_status != BehaviorTaskStatus.ERROR.value:
                 self._update_task(BehaviorTaskStatus.SUCCESS, message=msg)
         except Exception as err:
@@ -1533,9 +1533,6 @@ class ClusterService(abstract_broker.AbstractBroker):
         """
         cluster_name = None
         try:
-            curr_rde: common_models.DefEntity = self.entity_svc.get_entity(
-                cluster_id)
-            curr_native_entity: rde_2_x.NativeEntity = curr_rde.entity
             self._delete_nodes_async(cluster_id=cluster_id,
                                      nodes_to_del=nodes_to_del)
 
@@ -1548,17 +1545,18 @@ class ClusterService(abstract_broker.AbstractBroker):
             # update the defined entity and task status.
             curr_task_status = self.task_status
             msg = ''
+            changes = {}
             if curr_task_status == BehaviorTaskStatus.ERROR.value:
-                curr_native_entity.status.phase = str(
+                changes['entity.status.phase'] = str(
                     DefEntityPhase(DefEntityOperation.UPDATE,
                                    DefEntityOperationStatus.FAILED))
             else:
                 msg = f"Deleted the {nodes_to_del} nodes  from cluster " \
                       f"'{cluster_name}' ({cluster_id}) "
-                curr_native_entity.status.phase = str(
+                changes['entity.status.phase'] = str(
                     DefEntityPhase(DefEntityOperation.UPDATE,
                                    DefEntityOperationStatus.SUCCEEDED))
-            self._sync_def_entity(cluster_id, curr_rde)
+            self._sync_def_entity(cluster_id, changes=changes)
             if curr_task_status != BehaviorTaskStatus.ERROR.value:
                 self._update_task(BehaviorTaskStatus.SUCCESS, message=msg)
 
@@ -1687,14 +1685,17 @@ class ClusterService(abstract_broker.AbstractBroker):
                               error_message=str(err))
 
     def _sync_def_entity(self, cluster_id: str,
-                         curr_rde: common_models.DefEntity = None,
-                         vapp=None):
-        """Sync the defined entity with the latest vApp status."""
+                         vapp=None,
+                         changes: dict = None):
+        """Sync the defined entity with the latest vApp status.
+
+        :param dict changes: dictionary of changes for the rde. The key
+            indicates the field updated, e.g. 'entity.status'. The value
+            indicates the value for this field.
+        """
         # NOTE: This function should not be used to update the defined entity
         # unless it is sure that the Vapp with the cluster-id exists
-        if not curr_rde:
-            curr_rde: common_models.DefEntity = \
-                self.entity_svc.get_entity(cluster_id)
+        curr_rde: common_models.DefEntity = self.entity_svc.get_entity(cluster_id)  # noqa: E501
         if not curr_rde.externalId and not vapp:
             return curr_rde
         if not vapp:
@@ -1703,7 +1704,8 @@ class ClusterService(abstract_broker.AbstractBroker):
 
         curr_nodes_status = _get_nodes_details(vapp)
 
-        changes = {}
+        if changes is None:
+            changes = {}
         if curr_nodes_status:
             changes['entity.status.nodes'] = curr_nodes_status
         return self._update_cluster_entity(cluster_id, changes=changes)
