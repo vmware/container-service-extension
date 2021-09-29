@@ -55,6 +55,7 @@ service:
   enforce_authorization: false
   processors: 5
   log_wire: false
+  no_vc_communication_mode: false
   telemetry:
     enable: false
   legacy_mode: true
