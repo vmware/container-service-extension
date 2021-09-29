@@ -151,6 +151,8 @@ class FlattenedClusterSpecKey2X(Enum):
     TEMPLATE_NAME = 'distribution.templateName'
     TEMPLATE_REVISION = 'distribution.templateRevision'
     EXPOSE = 'settings.network.expose'
+    POD_CIDR = 'settings.network.pods.cidrBlocks'
+    SVC_CIDR = 'settings.network.services.cidrBlocks'
 
 
 VALID_UPDATE_FIELDS_2X = \

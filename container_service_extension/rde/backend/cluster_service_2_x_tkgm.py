@@ -598,9 +598,14 @@ class ClusterService(abstract_broker.AbstractBroker):
             raise Exception(
                 "Upgrades not supported for TKGm in this version of CSE"
             )
-        raise exceptions.CseServerError(
-            "update not supported for the specified input specification"
-        )
+
+        nothing_to_do_payload = {
+            "status": "success",
+            "result": {
+                "resultContent": "Nothing to Update"
+            },
+        }
+        return nothing_to_do_payload
 
     def get_cluster_acl_info(self, cluster_id, page: int, page_size: int):
         """Get cluster ACL info based on the defined entity ACL."""
