@@ -42,6 +42,7 @@ def template_list(request_data, op_ctx):
     return sorted(templates, key=lambda i: (i['name'], i['revision']), reverse=True)  # noqa: E501
 
 
+@record_user_action_telemetry(cse_operation=CseOperation.TEMPLATE_LIST_CLIENT_SIDE)  # noqa: E501
 def tkgm_template_list(request_data, op_ctx):
     """Request handler for template list operation.
 

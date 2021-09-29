@@ -8,6 +8,7 @@ import pyvcloud.vcd.utils as pyvcd_utils
 
 from container_service_extension.common.constants.server_constants import CLUSTER_ENTITY  # noqa: E501
 from container_service_extension.common.constants.server_constants import LocalTemplateKey  # noqa: E501
+from container_service_extension.common.constants.server_constants import TKGmTemplateKey  # noqa: E501
 import container_service_extension.common.constants.shared_constants as shared_constants  # noqa: E501
 from container_service_extension.common.constants.shared_constants import AccessControlKey  # noqa: E501
 from container_service_extension.common.constants.shared_constants import ClusterAclKey  # noqa: E501
@@ -132,6 +133,34 @@ def get_payload_for_run_server(params):
         PayloadKey.WAS_DECRYPTION_SKIPPED: bool(params.get(PayloadKey.WAS_DECRYPTION_SKIPPED)),  # noqa: E501
         PayloadKey.WAS_PKS_CONFIG_FILE_PROVIDED: bool(params.get(PayloadKey.WAS_PKS_CONFIG_FILE_PROVIDED)),  # noqa: E501
         PayloadKey.WAS_INSTALLATION_CHECK_SKIPPED: bool(params.get(PayloadKey.WAS_INSTALLATION_CHECK_SKIPPED)),  # noqa: E501
+    }
+
+
+def get_payload_for_import_template(params):
+    """Construct telemetry payload of template import operation.
+
+    :param params: parameters provided to the operation
+
+    :return: json telemetry data for the operation
+
+    :type: dict
+    """
+    return {
+        PayloadKey.TYPE: CseOperation.TEMPLATE_IMPORT.telemetry_table,
+        PayloadKey.CNI: params.get(TKGmTemplateKey.CNI),
+        PayloadKey.CNI_VERSION: params.get(TKGmTemplateKey.CNI_VERSION),
+        PayloadKey.CONTAINER_RUNTIME: params.get(TKGmTemplateKey.CONTAINER_RUNTIME),  # noqa: E501
+        PayloadKey.CONTAINER_RUNTIME_VERSION: params.get(TKGmTemplateKey.CONTAINER_RUNTIME_VERSION),  # noqa: E501
+        PayloadKey.CSE_VERSION: str(params.get(TKGmTemplateKey.CSE_VERSION)),
+        PayloadKey.KIND: params.get(TKGmTemplateKey.KIND),
+        PayloadKey.K8S_DISTRIBUTION: params.get(TKGmTemplateKey.KUBERNETES),
+        PayloadKey.K8S_VERSION: params.get(TKGmTemplateKey.KUBERNETES_VERSION),
+        PayloadKey.TEMPLATE_NAME: params.get(TKGmTemplateKey.NAME),
+        PayloadKey.OS: params.get(TKGmTemplateKey.OS),
+        PayloadKey.OS_VERSION: params.get(TKGmTemplateKey.OS_VERSION),
+        PayloadKey.TEMPLATE_REVISION: params.get(TKGmTemplateKey.REVISION),
+        PayloadKey.WAS_DECRYPTION_SKIPPED: bool(params.get(PayloadKey.WAS_DECRYPTION_SKIPPED)),  # noqa: E501
+        PayloadKey.WERE_TEMPLATES_FORCE_UPDATED: bool(params.get(PayloadKey.WERE_TEMPLATES_FORCE_UPDATED)),  # noqa: E501
     }
 
 
