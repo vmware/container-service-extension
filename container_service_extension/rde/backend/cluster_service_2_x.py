@@ -2000,7 +2000,12 @@ class ClusterService(abstract_broker.AbstractBroker):
         new_status: rde_2_x.Status = curr_rde.entity.status
         if curr_nodes_status:
             new_status.nodes = curr_nodes_status
-        return self._update_cluster_entity(cluster_id, new_status)
+        # Update cluster entity requires flattened entity.status
+        new_status_as_flattened_dict = utils.flatten_dictionary(
+            input_dict=asdict(new_status),
+            parent_key='entity.status.'
+        )
+        return self._update_cluster_entity(cluster_id, new_status_as_flattened_dict)  # noqa: E501
 
     def _update_cluster_entity(self, cluster_id: str,
                                changes: dict = None,
