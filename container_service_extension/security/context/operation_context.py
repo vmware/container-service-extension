@@ -131,6 +131,6 @@ class OperationContext:
                     api_version = "Default api version"
                 msg = f"Failed to logout user: {sysadmin_user_context.name}" \
                     f"at api_version: {api_version}."
-                logger.SERVER_LOGGER.debug(msg)
+                logger.SERVER_LOGGER.debug(msg, exc_info=True)
         self._user_context_map.clear()
         self._sysadmin_user_context_map.clear()

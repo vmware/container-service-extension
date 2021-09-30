@@ -333,25 +333,25 @@ def create_service_role(ctx, vcd_host, skip_verify_ssl_certs):
             console_message_printer.error(msg)
             SERVER_CLI_LOGGER.error(msg)
             console_message_printer.error(str(err))
-            SERVER_CLI_LOGGER.error(str(err))
+            SERVER_CLI_LOGGER.error(str(err), exc_info=True)
         except BadRequestException as err:
             msg = "CSE Service Role already Exists"
             console_message_printer.error(msg)
             console_message_printer.error(str(err))
             SERVER_CLI_LOGGER.error(msg)
-            SERVER_CLI_LOGGER.error(str(err))
+            SERVER_CLI_LOGGER.error(str(err), exc_info=True)
     except requests.exceptions.ConnectionError as err:
         console_message_printer.error(str(err))
-        SERVER_CLI_LOGGER.error(str(err))
+        SERVER_CLI_LOGGER.error(str(err), exc_info=True)
     except VcdException as err:
         msg = f"Incorrect SystemOrg Username: {admin_username} and/or Password"
         console_message_printer.error(msg)
         console_message_printer.error(str(err))
         SERVER_CLI_LOGGER.error(msg)
-        SERVER_CLI_LOGGER.error(str(err))
+        SERVER_CLI_LOGGER.error(str(err), exc_info=True)
     except Exception as err:
         console_message_printer.error(str(err))
-        SERVER_CLI_LOGGER.error(str(err))
+        SERVER_CLI_LOGGER.error(str(err), exc_info=True)
     finally:
         if client is not None:
             client.logout()
@@ -395,7 +395,7 @@ def sample(ctx, output_file_name, pks_config, legacy_mode):
             legacy_mode=legacy_mode)
     except Exception as err:
         console_message_printer.error(str(err))
-        SERVER_CLI_LOGGER.error(str(err))
+        SERVER_CLI_LOGGER.error(str(err), exc_info=True)
         sys.exit(1)
 
     console_message_printer.general_no_color(sample_config)
@@ -487,7 +487,7 @@ def check(ctx, config_file_path, pks_config_file_path, skip_config_decryption,
                 status=OperationStatus.FAILED,
                 telemetry_settings=config_dict['service']['telemetry'])
         console_message_printer.error(str(err))
-        SERVER_CLI_LOGGER.error(str(err))
+        SERVER_CLI_LOGGER.error(str(err), exc_info=True)
         sys.exit(1)
     finally:
         # block the process to let telemetry handler to finish posting data to
@@ -527,7 +527,7 @@ def decrypt(ctx, input_file, output_file):
             raise Exception("Decryption failed: Invalid password")
     except Exception as err:
         console_message_printer.error(str(err))
-        SERVER_CLI_LOGGER.error(str(err))
+        SERVER_CLI_LOGGER.error(str(err), exc_info=True)
         sys.exit(1)
 
 
@@ -563,7 +563,7 @@ def encrypt(ctx, input_file, output_file):
             raise Exception("Encryption failed: Invalid password")
     except Exception as err:
         console_message_printer.error(str(err))
-        SERVER_CLI_LOGGER.error(str(err))
+        SERVER_CLI_LOGGER.error(str(err), exc_info=True)
         sys.exit(1)
 
 
@@ -682,7 +682,7 @@ def install(ctx, config_file_path, pks_config_file_path,
             msg_update_callback=console_message_printer)
     except Exception as err:
         SERVER_CLI_LOGGER.error(str(err))
-        console_message_printer.error(str(err))
+        console_message_printer.error(str(err), exc_info=True)
         sys.exit(1)
     finally:
         # block the process to let telemetry handler to finish posting data to
@@ -741,7 +741,7 @@ def pks_configure(ctx, pks_config_file_path, skip_config_decryption):
             raise Exception(server_constants.CONFIG_DECRYPTION_ERROR_MSG)
     except Exception as err:
         SERVER_CLI_LOGGER.error(str(err))
-        console_message_printer.error(str(err))
+        console_message_printer.error(str(err), exc_info=True)
         sys.exit(1)
 
 

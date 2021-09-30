@@ -111,7 +111,10 @@ class AMQPConsumer(object):
         try:
             self._connection.close()
         except pika.exceptions.ConnectionWrongStateError as err:
-            LOGGER.warning(f"Connection is closed or closing: ({err})")
+            LOGGER.warning(
+                f"Connection is closed or closing: ({err})",
+                exc_info=True
+            )
 
     def setup_exchange(self, exchange_name):
         LOGGER.debug(f"Declaring exchange {exchange_name}")
@@ -290,7 +293,9 @@ class AMQPConsumer(object):
             self._channel.close()
         except pika.exceptions.ConnectionWrongStateError as err:
             LOGGER.warn(
-                f"Trying to close channel with unexpected state: [{err}]")
+                f"Trying to close channel with unexpected state: [{err}]",
+                exc_info=True
+            )
 
     def run(self):
         self._connection = self.connect()

@@ -156,7 +156,9 @@ class GroupCommandFilter(click.Group):
             filtered_params = [param for param in cmd.params if param.name not in unsupported_params]  # noqa: E501
             cmd.params = filtered_params
         except Exception as e:
-            CLIENT_LOGGER.debug(f'exception while filtering {cmd_name}: {e}')
-            pass
+            CLIENT_LOGGER.debug(
+                f"exception while filtering {cmd_name}: {e}",
+                exc_info=True
+            )
 
         return click.Group.get_command(self, ctx, cmd_name)

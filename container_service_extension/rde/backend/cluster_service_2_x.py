@@ -644,7 +644,7 @@ class ClusterService(abstract_broker.AbstractBroker):
             self._update_task(BehaviorTaskStatus.ERROR,
                               message=msg,
                               error_message=str(err))
-            LOGGER.error(str(err), exc_info=True)
+            LOGGER.error(str(err))
             raise
 
         self.context.is_async = True
@@ -786,7 +786,7 @@ class ClusterService(abstract_broker.AbstractBroker):
             acl_svc.native_update_vapp_access_settings(
                 prev_user_id_to_acl_entry_dict, update_acl_entries)
         except Exception as err:
-            LOGGER.error(str(err), exc_info=True)
+            LOGGER.error(str(err))
             # Rollback defined entity
             prev_acl_entries = [acl_entry for _, acl_entry in prev_user_id_to_acl_entry_dict.items()]  # noqa: E501
             curr_user_acl_info = acl_svc.create_user_id_to_acl_entry_dict()
@@ -832,7 +832,7 @@ class ClusterService(abstract_broker.AbstractBroker):
             self._update_task(BehaviorTaskStatus.ERROR,
                               message=msg,
                               error_message=str(err))
-            LOGGER.error(str(err), exc_info=True)
+            LOGGER.error(str(err))
             raise
 
         self.context.is_async = True
@@ -969,7 +969,8 @@ class ClusterService(abstract_broker.AbstractBroker):
                         control_plane_ip = expose_ip
                 except Exception as err:
                     LOGGER.error(
-                        f"Exposing cluster failed: {str(err)}", exc_info=True
+                        f"Exposing cluster failed: {str(err)}",
+                        exc_info=True
                     )
                     expose_ip = ''
 

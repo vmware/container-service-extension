@@ -59,7 +59,10 @@ def get_vcd_ceip_id(vcd_host, verify_ssl=True, logger_debug=NULL_LOGGER):
         response = requests.get(uri, verify=verify_ssl)
         return response.headers.get(CEIP_HEADER_NAME)
     except Exception as err:
-        logger_debug.error(f"Unable to get vCD CEIP id : {str(err)}")
+        logger_debug.error(
+            f"Unable to get vCD CEIP id : {str(err)}",
+            exc_info=True
+        )
     finally:
         if response:
             response.close()

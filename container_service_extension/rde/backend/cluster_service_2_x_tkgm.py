@@ -312,7 +312,7 @@ class ClusterService(abstract_broker.AbstractBroker):
                 curr_rde = self._update_cluster_entity(entity_id, changes=changes)  # noqa: E501
             except Exception:
                 msg = f"Error updating the cluster '{cluster_name}' with the status"  # noqa: E501
-                LOGGER.error(msg, exc_info=True)
+                LOGGER.error(msg)
                 raise
             telemetry_handler.record_user_action_details(
                 cse_operation=telemetry_constants.CseOperation.V36_CLUSTER_APPLY,  # noqa: E501
@@ -462,7 +462,7 @@ class ClusterService(abstract_broker.AbstractBroker):
             self._update_task(BehaviorTaskStatus.ERROR,
                               message=msg,
                               error_message=str(err))
-            LOGGER.error(str(err), exc_info=True)
+            LOGGER.error(str(err))
             raise
         # trigger async operation
         self.context.is_async = True
@@ -521,7 +521,7 @@ class ClusterService(abstract_broker.AbstractBroker):
             self._update_cluster_entity(cluster_id, changes=changes)
         except Exception:
             msg = f"Error updating the cluster '{cluster_name}' with the status"  # noqa: E501
-            LOGGER.error(msg, exc_info=True)
+            LOGGER.error(msg)
             raise
 
         self.context.is_async = True
@@ -696,7 +696,7 @@ class ClusterService(abstract_broker.AbstractBroker):
             acl_svc.native_update_vapp_access_settings(
                 prev_user_id_to_acl_entry_dict, update_acl_entries)
         except Exception as err:
-            LOGGER.error(str(err), exc_info=True)
+            LOGGER.error(str(err))
             # Rollback defined entity
             prev_acl_entries = [acl_entry for _, acl_entry in prev_user_id_to_acl_entry_dict.items()]  # noqa: E501
             curr_user_acl_info = acl_svc.create_user_id_to_acl_entry_dict()
@@ -742,7 +742,7 @@ class ClusterService(abstract_broker.AbstractBroker):
             self._update_task(BehaviorTaskStatus.ERROR,
                               message=msg,
                               error_message=str(err))
-            LOGGER.error(str(err), exc_info=True)
+            LOGGER.error(str(err))
             raise
 
         self.context.is_async = True

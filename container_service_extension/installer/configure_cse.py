@@ -962,12 +962,12 @@ def _check_amqp_extension_installation(
         except pika.exceptions.ChannelClosed:
             msg = f"AMQP exchange '{amqp['exchange']}' does not exist"
             msg_update_callback.error(msg)
-            SERVER_CLI_LOGGER.error(msg)
+            SERVER_CLI_LOGGER.error(msg, exc_info=True)
             err_msgs.append(msg)
     except Exception:  # TODO() replace raw exception with specific
         msg = f"Could not connect to AMQP exchange '{amqp['exchange']}'"
         msg_update_callback.error(msg)
-        SERVER_CLI_LOGGER.error(msg)
+        SERVER_CLI_LOGGER.error(msg, exc_info=True)
         err_msgs.append(msg)
     finally:
         if connection is not None:
@@ -1006,7 +1006,7 @@ def _check_amqp_extension_installation(
     except MissingRecordException:
         msg = "CSE is not registered to vCD"
         msg_update_callback.error(msg)
-        SERVER_CLI_LOGGER.error(msg)
+        SERVER_CLI_LOGGER.error(msg, exc_info=True)
         err_msgs.append(msg)
 
 
@@ -1372,7 +1372,6 @@ def _update_user_role_with_right_bundle(
     except AccessForbiddenException as err:
         msg = "User doesn't have permission to edit Roles."
         msg_update_callback.error(msg)
-        msg_update_callback.error(str(err))
         raise err
 
     msg = "Updated user-role: " + str(role_name) + " with Rights-bundle: " + \
@@ -2552,7 +2551,7 @@ def _remove_old_cse_sizing_compute_policies(
         except Exception:
             msg = f"Failed to delete  Policy : '{policy_name}'"
             msg_update_callback.error(msg)
-            INSTALL_LOGGER.error(msg)
+            INSTALL_LOGGER.error(msg, exc_info=True)
 
 
 def _process_existing_clusters(
@@ -2741,7 +2740,7 @@ def _create_cluster_rde(
         INSTALL_LOGGER.debug(str(err))
         msg = f"Unable to determine current owner of cluster '{cluster['name']}'. Unable to process ownership."  # noqa: E501
         msg_update_callback.info(msg)
-        INSTALL_LOGGER.info(msg)
+        INSTALL_LOGGER.info(msg, exc_info=True)
 
     changes = {
         'externalId': cluster['vapp_href'],

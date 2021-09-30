@@ -79,7 +79,7 @@ Example
         CLIENT_LOGGER.debug(filtered_node_info)
     except Exception as e:
         stderr(e, ctx)
-        CLIENT_LOGGER.error(str(e))
+        CLIENT_LOGGER.error(str(e), exc_info=True)
 
 
 @node_group.command('create',
@@ -229,7 +229,7 @@ Example
         CLIENT_LOGGER.debug(result)
     except Exception as e:
         stderr(e, ctx)
-        CLIENT_LOGGER.error(str(e))
+        CLIENT_LOGGER.error(str(e), exc_info=True)
 
 
 @node_group.command('list',
@@ -285,7 +285,7 @@ Example
         CLIENT_LOGGER.debug(all_nodes)
     except Exception as e:
         stderr(e, ctx)
-        CLIENT_LOGGER.error(str(e))
+        CLIENT_LOGGER.error(str(e), exc_info=True)
 
 
 @node_group.command('delete',
@@ -333,4 +333,4 @@ Example
         CLIENT_LOGGER.debug(result)
     except Exception as e:
         stderr(e, ctx)
-        CLIENT_LOGGER.error(str(e))
+        CLIENT_LOGGER.error(str(e), exc_info=True)

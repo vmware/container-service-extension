@@ -669,7 +669,7 @@ class ClusterService(abstract_broker.AbstractBroker):
             self._update_task(vcd_client.TaskStatus.ERROR,
                               message=msg,
                               error_message=str(err))
-            LOGGER.error(str(err), exc_info=True)
+            LOGGER.error(str(err))
             raise
 
         self.context.is_async = True
@@ -797,7 +797,8 @@ class ClusterService(abstract_broker.AbstractBroker):
                         control_plane_ip = expose_ip
                 except Exception as err:
                     LOGGER.error(
-                        f"Exposing cluster failed: {str(err)}", exc_info=True
+                        f"Exposing cluster failed: {str(err)}",
+                        exc_info=True
                     )
                     expose_ip = ''
 

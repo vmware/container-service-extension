@@ -47,7 +47,7 @@ def system_info(ctx):
         CLIENT_LOGGER.debug(result)
     except Exception as e:
         stderr(e, ctx)
-        CLIENT_LOGGER.error(str(e))
+        CLIENT_LOGGER.error(str(e), exc_info=True)
 
 
 @system_group.command('stop', short_help='Gracefully stop CSE server')
@@ -65,7 +65,7 @@ def stop_service(ctx):
         CLIENT_LOGGER.debug(result)
     except Exception as e:
         stderr(e, ctx)
-        CLIENT_LOGGER.error(str(e))
+        CLIENT_LOGGER.error(str(e), exc_info=True)
 
 
 @system_group.command('enable', short_help='Enable CSE server')
@@ -82,7 +82,7 @@ def enable_service(ctx):
         CLIENT_LOGGER.debug(result)
     except Exception as e:
         stderr(e, ctx)
-        CLIENT_LOGGER.error(str(e))
+        CLIENT_LOGGER.error(str(e), exc_info=True)
 
 
 @system_group.command('disable', short_help='Disable CSE server')
@@ -99,4 +99,4 @@ def disable_service(ctx):
         CLIENT_LOGGER.debug(result)
     except Exception as e:
         stderr(e, ctx)
-        CLIENT_LOGGER.error(str(e))
+        CLIENT_LOGGER.error(str(e), exc_info=True)
