@@ -5,7 +5,10 @@
 from pyvcloud.vcd.client import Client
 from pyvcloud.vcd.vdc import VDC
 
-from container_service_extension.common.constants.server_constants import FlattenedClusterSpecKey2X  # noqa: E501
+from container_service_extension.common.constants.server_constants import \
+    FlattenedClusterSpecKey2X, \
+    TKGM_DEFAULT_POD_NETWORK_CIDR, \
+    TKGM_DEFAULT_SERVICE_CIDR
 from container_service_extension.common.constants.server_constants import VALID_UPDATE_FIELDS_2X  # noqa: E501
 from container_service_extension.common.utils.pyvcloud_utils import get_vdc  # noqa: E501
 from container_service_extension.exception.exceptions import BadRequestError
@@ -124,24 +127,39 @@ class Validator_2_0_0(AbstractValidator):
                     is_tkgm_with_default_sizing_in_workers=is_tkgm_with_default_sizing_in_workers)  # noqa: E501
             return validate_cluster_update_request_and_check_cluster_upgrade(
                 input_entity_spec,
-                current_entity_spec)
+                current_entity_spec,
+                is_tkgm_cluster
+            )
 
         # TODO check the reason why there was an unreachable raise statement
         raise NotImplementedError(f"Validator for {operation.name} not found")
 
 
-def validate_cluster_update_request_and_check_cluster_upgrade(input_spec: rde_2_0_0.ClusterSpec,  # noqa: E501
-                                                              reference_spec: rde_2_0_0.ClusterSpec,) -> bool:  # noqa: E501
+def validate_cluster_update_request_and_check_cluster_upgrade(
+        input_spec: rde_2_0_0.ClusterSpec,
+        reference_spec: rde_2_0_0.ClusterSpec,
+        is_tkgm_cluster: bool,
+    ) -> bool:
     """Validate the desired spec with curr spec and check if upgrade operation.
 
     :param dict input_spec: input spec
     :param dict reference_spec: reference spec to validate the desired spec
+    :param bool is_tkgm_cluster: True implies that this is a TKGm cluster
     :return: true if cluster operation is upgrade and false if operation is
         resize
     :rtype: bool
     :raises: BadRequestError for invalid payload.
     """
-    exclude_fields = []
+
+    # Since these fields are only in the spec section, and since we create
+    # the reference_spec section from a status section, we will always have
+    # null for the POD and SVC CIDRs. Hence we cannot validate it until there
+    # is a better way to get the spec details.
+    exclude_fields = [
+        FlattenedClusterSpecKey2X.POD_CIDR.value,
+        FlattenedClusterSpecKey2X.SVC_CIDR.value,
+    ]
+
     if reference_spec.topology.workers.count == 0:
         # Exclude worker nodes' sizing class and storage profile from
         # validation if worker count is 0
@@ -155,6 +173,15 @@ def validate_cluster_update_request_and_check_cluster_upgrade(input_spec: rde_2_
         exclude_fields.append(FlattenedClusterSpecKey2X.NFS_SIZING_CLASS.value)
         exclude_fields.append(FlattenedClusterSpecKey2X.NFS_STORAGE_PROFILE.value)  # noqa: E501
 
+    # Allow empty template revisions (== 0) if the value is the default
+    # for TKGm clusters only
+    if is_tkgm_cluster:
+        if (
+            reference_spec.distribution.template_revision == 1
+            and input_spec.distribution.template_revision == 0  # default value
+        ):
+            exclude_fields.append(FlattenedClusterSpecKey2X.TEMPLATE_REVISION.value)
+
     input_spec_dict = input_spec.to_dict()
     reference_spec_dict = reference_spec.to_dict()
     diff_fields = rde_utils.find_diff_fields(
@@ -162,9 +189,9 @@ def validate_cluster_update_request_and_check_cluster_upgrade(input_spec: rde_2_
         reference_spec_dict,
         exclude_fields=exclude_fields)
 
-    # Raise exception if empty diff
+    is_upgrade_operation = False
     if not diff_fields:
-        raise BadRequestError("No change in cluster specification")  # noqa: E501
+        return is_upgrade_operation
 
     keys_with_invalid_value = {}
     for k, v in diff_fields.items():
@@ -185,7 +212,6 @@ def validate_cluster_update_request_and_check_cluster_upgrade(input_spec: rde_2_
     if FlattenedClusterSpecKey2X.WORKERS_COUNT.value in diff_fields or \
             FlattenedClusterSpecKey2X.NFS_COUNT.value in diff_fields:
         is_resize_operation = True
-    is_upgrade_operation = False
 
     if FlattenedClusterSpecKey2X.TEMPLATE_NAME.value in diff_fields or \
             FlattenedClusterSpecKey2X.TEMPLATE_REVISION.value in diff_fields:
