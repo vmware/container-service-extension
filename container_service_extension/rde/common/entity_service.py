@@ -562,9 +562,12 @@ class DefEntityService:
         return def_constants.DEF_NATIVE_ENTITY_TYPE_NSS in response_body['entityType']  # noqa: E501
 
     @handle_entity_service_exception
-    def upgrade_entity(self, entity_id: str,
-                       upgraded_native_entity: AbstractNativeEntity,
-                       target_entity_type_id: str):
+    def upgrade_entity(
+            self,
+            entity_id: str,
+            upgraded_native_entity: AbstractNativeEntity,
+            target_entity_type_id: str
+    ):
         """Upgrade entity type of the entity to the specified one.
 
         :param str entity_id: ID of the entity to upgrade

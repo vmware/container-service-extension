@@ -605,15 +605,18 @@ def _validate_broker_config(
     :param dict broker_dict: 'broker' section of config file as a dict.
     :param utils.ConsoleMessagePrinter msg_update_callback: Callback object.
 
-    :raises KeyError: if @broker_dict has missing or extra properties.
+    :raises KeyError: if @broker_dict has missing properties.
     :raises TypeError: if the value type for a @broker_dict property is
         incorrect.
     :raises ValueError: if 'ip_allocation_mode' is not 'dhcp' or 'pool'. Or
         if remote_template_cookbook_url is invalid.
     """
-    check_keys_and_value_types(broker_dict, SAMPLE_BROKER_CONFIG['broker'],
-                               location="config file 'broker' section",
-                               msg_update_callback=msg_update_callback)
+    check_keys_and_value_types(
+        broker_dict,
+        SAMPLE_BROKER_CONFIG['broker'],
+        location="config file 'broker' section",
+        msg_update_callback=msg_update_callback
+    )
     valid_ip_allocation_modes = [
         'dhcp',
         'pool'

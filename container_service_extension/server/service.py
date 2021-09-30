@@ -372,9 +372,15 @@ class Service(object, metaclass=Singleton):
 
         # Read k8s catalog definition from catalog item metadata and append
         # the same to to server run-time config
-        self._load_template_definition_from_catalog(
-            msg_update_callback=msg_update_callback
-        )
+        if not server_utils.is_no_vc_communication_mode(self.config):
+            self._load_template_definition_from_catalog(
+                msg_update_callback=msg_update_callback
+            )
+        else:
+            msg = "Skipping loading k8s template definition from catalog " \
+                  "since `No communication with VCenter` mode is on."
+            logger.SERVER_LOGGER.info(msg)
+            msg_update_callback.general_no_color(msg)
 
         # Read TKGm catalog definition from catalog item metadata and append
         # the same to to server run-time config
