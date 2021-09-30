@@ -877,9 +877,9 @@ class ClusterService(abstract_broker.AbstractBroker):
             LOGGER.debug(msg)
             self._update_task(BehaviorTaskStatus.RUNNING, message=msg)
             vapp.reload()
-
+            vm_specs = []
             try:
-                expose_ip, _ = _add_control_plane_nodes(
+                vm_specs = _add_control_plane_nodes(
                     sysadmin_client_v36,
                     num_nodes=1,
                     vcd_host=vcd_host,
@@ -896,7 +896,6 @@ class ClusterService(abstract_broker.AbstractBroker):
                     sizing_class_name=control_plane_sizing_class,
                     cpu_count=control_plane_cpu_count,
                     memory_mb=control_plane_memory_mb,
-                    expose=expose,
                     cluster_name=cluster_name,
                     cluster_id=cluster_id,
                     refresh_token=refresh_token
@@ -905,6 +904,57 @@ class ClusterService(abstract_broker.AbstractBroker):
                 LOGGER.error(err, exc_info=True)
                 raise exceptions.ControlPlaneNodeCreationError(
                     f"Error adding control plane node: {err}")
+            internal_ip = ''
+            if len(vm_specs) > 0:
+                spec = vm_specs[0]
+                internal_ip = vapp.get_primary_ip(vm_name=spec[
+                    'target_vm_name'])
+
+            try:
+                for spec in vm_specs:
+                    # Handle exposing cluster
+                    control_plane_endpoint = internal_ip
+                    if expose:
+                        try:
+                            expose_ip = nw_exp_helper.expose_cluster(
+                                client=sysadmin_client_v36,
+                                org_name=org.get_name(),
+                                ovdc_name=vdc.name,
+                                network_name=network_name,
+                                cluster_name=cluster_name,
+                                cluster_id=cluster_id,
+                                internal_ip=internal_ip)
+                            control_plane_endpoint = expose_ip
+                        except Exception as err:
+                            LOGGER.error(f"Exposing cluster failed: {str(err)}", exc_info=True)  # noqa: E501
+                            # This is a deviation from native: we do not want silent failures when expose  # noqa: E501
+                            # functionality fails.
+                            raise
+                    # initialize control plane node
+                    _initialize_control_plane_node(
+                        sysadmin_client=sysadmin_client_v36,
+                        spec=spec,
+                        vcd_host=vcd_host,
+                        org=org,
+                        vdc=vdc,
+                        vapp=vapp,
+                        control_plane_endpoint=control_plane_endpoint,
+                        template=template,
+                        network_name=network_name,
+                        k8s_pod_cidr=k8s_pod_cidr,
+                        k8s_svc_cidr=k8s_svc_cidr,
+                        ssh_key=ssh_key,
+                        sizing_class_name=control_plane_sizing_class,
+                        cpu_count=control_plane_cpu_count,
+                        memory_mb=control_plane_memory_mb,
+                        cluster_name=cluster_name,
+                        cluster_id=cluster_id,
+                        refresh_token=refresh_token
+                    )
+            except Exception as err:
+                LOGGER.error(err, exc_info=True)
+                node_list = [entry.get('target_vm_name') for entry in vm_specs]
+                raise exceptions.NodeCreationError(node_list, str(err))
             vapp.reload()
 
             control_plane_join_cmd = _get_join_cmd(
@@ -1989,7 +2039,6 @@ def _add_control_plane_nodes(
         sizing_class_name=None,
         cpu_count=None,
         memory_mb=None,
-        expose=False,
         cluster_name=None,
         cluster_id=None,
         refresh_token=None) -> Tuple[str, List[Dict]]:
@@ -2002,7 +2051,6 @@ def _add_control_plane_nodes(
                                          "node creation")
 
     vm_specs = []
-    expose_ip = ''
     try:
         if num_nodes != 1:
             raise ValueError(
@@ -2033,8 +2081,8 @@ def _add_control_plane_nodes(
         for spec in vm_specs:
             spec['cust_script'] = templated_script.format(
                 vcd_host=vcd_host.replace("/", r"\/"),
-                org=org,
-                vdc=vdc,
+                org=org.get_name(),
+                vdc=vdc.name,
                 network_name=network_name,
                 vip_subnet_cidr="",
                 cluster_name=cluster_name,
@@ -2059,150 +2107,6 @@ def _add_control_plane_nodes(
             callback=wait_for_adding_control_plane_vm_to_vapp
         )
         vapp.reload()
-
-        internal_ip = ''
-        if len(vm_specs) > 0:
-            spec = vm_specs[0]
-            internal_ip = vapp.get_primary_ip(vm_name=spec['target_vm_name'])
-
-        for spec in vm_specs:
-            vm_name = spec['target_vm_name']
-            vm_resource = vapp.get_vm(vm_name)
-            vm = vcd_vm.VM(sysadmin_client, resource=vm_resource)
-            # Handle exposing cluster
-            control_plane_endpoint = internal_ip
-            if expose:
-                try:
-                    expose_ip = nw_exp_helper.expose_cluster(
-                        client=sysadmin_client,
-                        org_name=org.get_name(),
-                        ovdc_name=vdc.name,
-                        network_name=network_name,
-                        cluster_name=cluster_name,
-                        cluster_id=cluster_id,
-                        internal_ip=internal_ip)
-                    control_plane_endpoint = expose_ip
-                except Exception as err:
-                    LOGGER.error(f"Exposing cluster failed: {str(err)}", exc_info=True)  # noqa: E501
-                    # This is a deviation from native: we do not want silent failures when expose  # noqa: E501
-                    # functionality fails.
-                    raise
-
-            # modify CPU and memory if needed
-            if cpu_count and cpu_count > 0:
-                # updating cpu count on the VM
-                task = vm.modify_cpu(cpu_count)
-                sysadmin_client.get_task_monitor().wait_for_status(
-                    task,
-                    callback=wait_for_cpu_update)
-            if memory_mb and memory_mb > 0:
-                # updating memory
-                task = vm.modify_memory(memory_mb)
-                sysadmin_client.get_task_monitor().wait_for_status(
-                    task,
-                    callback=wait_for_memory_update)
-
-            # If expose is set, control_plane_endpoint is exposed ip
-            # Else control_plane_endpoint is internal_ip
-            cust_script = templated_script.format(
-                vcd_host=vcd_host.replace("/", r"\/"),
-                org=org.get_name(),
-                vdc=vdc.name,
-                network_name=network_name,
-                vip_subnet_cidr="",
-                cluster_name=cluster_name,
-                cluster_id=cluster_id,
-                vm_host_name=spec['target_vm_name'],
-                service_cidr=k8s_svc_cidr,
-                pod_cidr=k8s_pod_cidr,
-                antrea_cni_version=ANTREA_CNI_VERSION,
-                ssh_key=ssh_key if ssh_key else '',
-                control_plane_endpoint=f"{control_plane_endpoint}:6443",
-                refresh_token=refresh_token
-            )
-            task = vm.update_guest_customization_section(
-                enabled=True,
-                customization_script=cust_script)
-
-            sysadmin_client.get_task_monitor().wait_for_status(
-                task,
-                callback=wait_for_update_customization
-            )
-            vm.reload()
-            vapp.reload()
-
-            task = vm.power_on_and_force_recustomization()
-            # wait_for_vm_power_on is reused for all vm creation callback
-            sysadmin_client.get_task_monitor().wait_for_status(
-                task,
-                callback=wait_for_vm_power_on
-            )
-            vapp.reload()
-
-            # HACK: sometimes the dbus.service is not yet started by the time
-            # the ToolsDeployPkg scripts run. As a result, that script does
-            # install the post-customize service, but does not reboot the
-            # machine, which is needed in order to execute the
-            # postcustomization script where the bulk of our functionality
-            # lives. Guest customization works with the following gross steps:
-            # 1. run script with parameter "precustomization"
-            # 2. set up network
-            # 3. convert script with parameter "postcustomization" to service
-            #   a. set the 'guestinfo.gc.status' to 'Successful'.
-            # 4. check if a forked script has completed setting up hostname
-            #       (this fails sometimes)
-            # 5. Check for errors, cleanup and report.
-            # In the above steps, steps 4,5 take about 2s. Hence we wait
-            #       for 3a and then wait for 10s
-            # and then trigger the reboot ourselves.
-            #
-            # However what happens when the bug is fixed in GOSC?
-            # In that case this hack will reboot the node one more time
-            # depending on a race. That is not detrimental to functionality,
-            # but we do have a slight delay due to the second reboot.
-            vcd_utils.wait_for_completion_of_post_customization_procedure(
-                vm,
-                customization_phase=PreCustomizationPhase.POST_BOOT_CUSTOMIZATION_SERVICE_SETUP.value,  # noqa: E501
-                logger=LOGGER,
-                expected_target_status_list=[cust_status.value for cust_status in ToolsDeployPkgCustomizationStatus]  # noqa: E501
-            )
-
-            time.sleep(10)
-            try:
-                task = vm.reboot()
-                sysadmin_client.get_task_monitor().wait_for_status(
-                    task,
-                    callback=wait_for_vm_power_on
-                )
-            except Exception as err:
-                LOGGER.info(f"Reboot of [{vm_name}] failed. This implies that "
-                            f"the machine is undergoing reboot: [{err}]")
-            vm.reload()
-
-            # Note that this is an ordered list.
-            for customization_phase in [
-                PostCustomizationPhase.HOSTNAME_SETUP,
-                PostCustomizationPhase.NETWORK_CONFIGURATION,
-                PostCustomizationPhase.STORE_SSH_KEY,
-                PostCustomizationPhase.KUBEADM_INIT,
-                PostCustomizationPhase.KUBECTL_APPLY_CNI,
-                PostCustomizationPhase.KUBEADM_TOKEN_GENERATE,
-            ]:
-                vapp.reload()
-                vcd_utils.wait_for_completion_of_post_customization_procedure(
-                    vm,
-                    customization_phase=customization_phase.value,  # noqa: E501
-                    logger=LOGGER
-                )
-            vm.reload()
-
-            task = vm.add_extra_config_element(DISK_ENABLE_UUID, "1", True)  # noqa: E501
-            sysadmin_client.get_task_monitor().wait_for_status(
-                task,
-                callback=wait_for_updating_disk_enable_uuid
-            )
-            vapp.reload()
-
     except Exception as err:
         LOGGER.error(err, exc_info=True)
         node_list = [entry.get('target_vm_name') for entry in vm_specs]
@@ -2213,8 +2117,154 @@ def _add_control_plane_nodes(
                 f"OVDC not enabled for {template[LocalTemplateKey.KIND]}")  # noqa: E501
 
         raise exceptions.NodeCreationError(node_list, str(err))
+    return vm_specs
 
-    return expose_ip, vm_specs
+
+def _initialize_control_plane_node(
+        sysadmin_client,
+        spec,
+        vcd_host,
+        org,
+        vdc,
+        vapp,
+        control_plane_endpoint,
+        template,
+        network_name,
+        k8s_pod_cidr,
+        k8s_svc_cidr,
+        ssh_key=None,
+        sizing_class_name=None,
+        cpu_count=None,
+        memory_mb=None,
+        cluster_name=None,
+        cluster_id=None,
+        refresh_token=None):
+    vcd_utils.raise_error_if_user_not_from_system_org(sysadmin_client)
+    if (cpu_count or memory_mb) and sizing_class_name:
+        raise exceptions.BadRequestError("Cannot specify both cpu/memory and "
+                                         "sizing class for control plane "
+                                         "node creation")
+    # for spec in vm_specs:
+    vm_name = spec['target_vm_name']
+    vm_resource = vapp.get_vm(vm_name)
+    vm = vcd_vm.VM(sysadmin_client, resource=vm_resource)
+    # modify CPU and memory if needed
+    if cpu_count and cpu_count > 0:
+        # updating cpu count on the VM
+        task = vm.modify_cpu(cpu_count)
+        sysadmin_client.get_task_monitor().wait_for_status(
+            task,
+            callback=wait_for_cpu_update)
+    if memory_mb and memory_mb > 0:
+        # updating memory
+        task = vm.modify_memory(memory_mb)
+        sysadmin_client.get_task_monitor().wait_for_status(
+            task,
+            callback=wait_for_memory_update)
+
+    templated_script = get_cluster_script_file_contents(
+        ClusterScriptFile.CONTROL_PLANE,
+        ClusterScriptFile.VERSION_2_X_TKGM)
+    # If expose is set, control_plane_endpoint is exposed ip
+    # Else control_plane_endpoint is internal_ip
+    cust_script = templated_script.format(
+        vcd_host=vcd_host.replace("/", r"\/"),
+        org=org.get_name(),
+        vdc=vdc.name,
+        network_name=network_name,
+        vip_subnet_cidr="",
+        cluster_name=cluster_name,
+        cluster_id=cluster_id,
+        vm_host_name=spec['target_vm_name'],
+        service_cidr=k8s_svc_cidr,
+        pod_cidr=k8s_pod_cidr,
+        antrea_cni_version=ANTREA_CNI_VERSION,
+        ssh_key=ssh_key if ssh_key else '',
+        control_plane_endpoint=f"{control_plane_endpoint}:6443",
+        refresh_token=refresh_token
+    )
+    task = vm.update_guest_customization_section(
+        enabled=True,
+        customization_script=cust_script)
+
+    sysadmin_client.get_task_monitor().wait_for_status(
+        task,
+        callback=wait_for_update_customization
+    )
+    vm.reload()
+    vapp.reload()
+
+    task = vm.power_on_and_force_recustomization()
+    # wait_for_vm_power_on is reused for all vm creation callback
+    sysadmin_client.get_task_monitor().wait_for_status(
+        task,
+        callback=wait_for_vm_power_on
+    )
+    vapp.reload()
+
+    # HACK: sometimes the dbus.service is not yet started by the time
+    # the ToolsDeployPkg scripts run. As a result, that script does
+    # install the post-customize service, but does not reboot the
+    # machine, which is needed in order to execute the
+    # postcustomization script where the bulk of our functionality
+    # lives. Guest customization works with the following gross steps:
+    # 1. run script with parameter "precustomization"
+    # 2. set up network
+    # 3. convert script with parameter "postcustomization" to service
+    #   a. set the 'guestinfo.gc.status' to 'Successful'.
+    # 4. check if a forked script has completed setting up hostname
+    #       (this fails sometimes)
+    # 5. Check for errors, cleanup and report.
+    # In the above steps, steps 4,5 take about 2s. Hence we wait
+    #       for 3a and then wait for 10s
+    # and then trigger the reboot ourselves.
+    #
+    # However what happens when the bug is fixed in GOSC?
+    # In that case this hack will reboot the node one more time
+    # depending on a race. That is not detrimental to functionality,
+    # but we do have a slight delay due to the second reboot.
+    vcd_utils.wait_for_completion_of_post_customization_procedure(
+        vm,
+        customization_phase=PreCustomizationPhase.POST_BOOT_CUSTOMIZATION_SERVICE_SETUP.value,  # noqa: E501
+        logger=LOGGER,
+        expected_target_status_list=[cust_status.value for cust_status in ToolsDeployPkgCustomizationStatus]  # noqa: E501
+    )
+
+    time.sleep(10)
+    try:
+        task = vm.reboot()
+        sysadmin_client.get_task_monitor().wait_for_status(
+            task,
+            callback=wait_for_vm_power_on
+        )
+    except Exception as err:
+        LOGGER.info(f"Reboot of [{vm_name}] failed. This implies that "
+                    f"the machine is undergoing reboot: [{err}]")
+    vm.reload()
+
+    # Note that this is an ordered list.
+    for customization_phase in [
+        PostCustomizationPhase.HOSTNAME_SETUP,
+        PostCustomizationPhase.NETWORK_CONFIGURATION,
+        PostCustomizationPhase.STORE_SSH_KEY,
+        PostCustomizationPhase.KUBEADM_INIT,
+        PostCustomizationPhase.KUBECTL_APPLY_CNI,
+        PostCustomizationPhase.KUBEADM_TOKEN_GENERATE,
+    ]:
+        vapp.reload()
+        vcd_utils.wait_for_completion_of_post_customization_procedure(
+            vm,
+            customization_phase=customization_phase.value,  # noqa: E501
+            logger=LOGGER
+        )
+    vm.reload()
+
+    task = vm.add_extra_config_element(DISK_ENABLE_UUID, "1", True)  # noqa: E501
+    sysadmin_client.get_task_monitor().wait_for_status(
+        task,
+        callback=wait_for_updating_disk_enable_uuid
+    )
+    vapp.reload()
 
 
 def _add_worker_nodes(sysadmin_client, num_nodes, org, vdc, vapp,
