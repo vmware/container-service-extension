@@ -904,6 +904,9 @@ class ClusterService(abstract_broker.AbstractBroker):
                 LOGGER.error(err, exc_info=True)
                 raise exceptions.ControlPlaneNodeCreationError(
                     f"Error adding control plane node: {err}")
+            # Get internal IP to help create DNAT rule if expose cluster is
+            # true and set the correct IP address while initializing control
+            # plane node
             internal_ip = ''
             if len(vm_specs) > 0:
                 spec = vm_specs[0]
@@ -2062,8 +2065,6 @@ def _add_control_plane_nodes(
             ClusterScriptFile.CONTROL_PLANE,
             ClusterScriptFile.VERSION_2_X_TKGM)
 
-        # Get template with no expose_ip; expose_ip will be computed
-        # later when control_plane internal ip is computed below.
         vm_specs = _get_vm_specifications(
             client=sysadmin_client,
             num_nodes=num_nodes,
