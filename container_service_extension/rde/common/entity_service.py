@@ -326,6 +326,18 @@ class DefEntityService:
 
             payload: dict = entity.to_dict()
 
+            # Prevent users with rights <= EDIT/VIEW on CSE:NATIVECLUSTER from
+            # updating "private" property of RDE "status" section
+            # TODO: Replace sys admin check with FULL CONTROL rights check on
+            #  CSE:NATIVECLUSTER. Users with no FULL CONTROL rights cannot
+            #  update private property of entity->status.
+            # TODO: implement the above TODO after 3.1.1 GA since this hack
+            #  is needed for 3.1.1 GA. Please refer to VCDA-2969
+            if hasattr(entity.entity, 'kind') and \
+                    entity.entity.kind != shared_constants.ClusterEntityKind.TKG_M.value:  # noqa: E501
+                if not self._cloudapi_client.is_sys_admin:
+                    payload.get('entity', {}).get('status', {}).pop('private', None)  # noqa: E501
+
             # if request is async, return the task href in
             # x_vmware_vcloud_task_location header
             # TODO: Use the Http response status code to decide which
