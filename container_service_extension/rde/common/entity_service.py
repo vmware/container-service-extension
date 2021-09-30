@@ -8,8 +8,8 @@ from typing import List, Tuple, Union
 
 import pyvcloud.vcd.client as vcd_client
 from pyvcloud.vcd.vcd_api_version import VCDApiVersion
-from requests.exceptions import HTTPError
 from requests import codes
+from requests.exceptions import HTTPError
 
 import container_service_extension.common.constants.server_constants as server_constants  # noqa: E501
 import container_service_extension.common.constants.shared_constants as shared_constants  # noqa: E501
@@ -448,6 +448,34 @@ class DefEntityService:
             return entity
 
     @handle_entity_service_exception
+    def list_all_native_rde_by_name_and_rde_version(self,
+                                                    name: str,
+                                                    version: str,
+                                                    filters: dict = None) -> DefEntity:  # noqa: E501
+        """List all native RDE given its name and RDE version.
+
+        This function has been introduced to make it easier to iterate over
+            all the RDE with the same name.
+
+        :param str name: Name of the native cluster.
+        :param str version: RDE version
+        :param dict filters: dictionary representing filters
+        :return: List of entities
+        :rtype: Generator[DefEntity, None, None]
+        """
+        if not filters:
+            filters = {}
+        filters[def_constants.RDEFilterKey.NAME.value] = name
+        native_entity_type: DefEntityType = \
+            def_utils.get_rde_metadata(version)[def_constants.RDEMetadataKey.ENTITY_TYPE]  # noqa: E501
+        for entity in \
+            self.list_entities_by_entity_type(vendor=native_entity_type.vendor,
+                                              nss=native_entity_type.nss,
+                                              version=native_entity_type.version,  # noqa: E501
+                                              filters=filters):
+            yield entity
+
+    @handle_entity_service_exception
     def delete_entity(self, entity_id: str, invoke_hooks: bool = False, is_request_async=False) -> Union[dict, Tuple[dict, dict]]:  # noqa: E501
         """Delete the defined entity.
 
@@ -539,7 +567,6 @@ class DefEntityService:
         :return: DefEntity representing the upgraded defined entity
         :rtype: DefEntity
         """
-
         changes = {
             'entity': upgraded_native_entity,
             'entityType': target_entity_type_id

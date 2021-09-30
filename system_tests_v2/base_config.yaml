@@ -43,6 +43,7 @@ vcs:
 
 service:
   enforce_authorization: false
+  no_vc_communication_mode: false
   processors: 5
   log_wire: false
   telemetry:
