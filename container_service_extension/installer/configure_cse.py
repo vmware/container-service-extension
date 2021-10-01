@@ -2347,9 +2347,13 @@ def _get_placement_policy_name_from_template_name(template_name):
     if 'k8' in template_name:
         policy_name = \
             shared_constants.NATIVE_CLUSTER_RUNTIME_INTERNAL_NAME
-    # Some earlier TKG+ templates had just `tkg` in their name and
-    # not `tkgplus`
-    elif 'tkg' in template_name or 'tkgplus' in template_name:
+    # Some earlier TKG+ templates had just `_tkg-` in their name and
+    # not `tkgplus`. We are looking for `_tkg-` because the old TKG+ templates
+    # used to be of the format `ubuntu-16.04_tkg-1.17_weave-2.5.2` and we do
+    # not want to identify TKGm templates, which have the format
+    # ubuntu-2004-kube-v1.20.5-vmware.2-tkg.1-6700972457122900687, as a
+    # TKG+ template
+    elif '_tkg-' in template_name or 'tkgplus' in template_name:
         policy_name = \
             shared_constants.TKG_PLUS_CLUSTER_RUNTIME_INTERNAL_NAME
     else:
