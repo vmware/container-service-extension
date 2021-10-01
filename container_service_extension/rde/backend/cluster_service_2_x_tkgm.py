@@ -889,6 +889,7 @@ class ClusterService(abstract_broker.AbstractBroker):
             try:
                 expose_ip, _ = _add_control_plane_nodes(
                     sysadmin_client_v36,
+                    user_client=self.context.client,
                     num_nodes=1,
                     vcd_host=vcd_host,
                     org=org,
@@ -1982,6 +1983,7 @@ def _get_tkgm_template(name: str):
 
 def _add_control_plane_nodes(
         sysadmin_client,
+        user_client,
         num_nodes,
         vcd_host,
         org,
@@ -2082,7 +2084,7 @@ def _add_control_plane_nodes(
             if expose:
                 try:
                     expose_ip = nw_exp_helper.expose_cluster(
-                        client=sysadmin_client,
+                        client=user_client,
                         org_name=org.get_name(),
                         ovdc_name=vdc.name,
                         network_name=network_name,
