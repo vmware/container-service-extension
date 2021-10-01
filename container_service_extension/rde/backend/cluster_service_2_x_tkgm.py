@@ -765,6 +765,9 @@ class ClusterService(abstract_broker.AbstractBroker):
         client_v36 = self.context.get_client(api_version=DEFAULT_API_VERSION)
         curr_rde: Optional[Union[common_models.DefEntity, Tuple[common_models.DefEntity, dict]]] = None  # noqa: E501
         is_refresh_token_created = False
+        # by default set to True to attempt DNAT rule deletion while rolling
+        # back
+        expose: bool = True
         try:
             cluster_name = input_native_entity.metadata.name
             vcd_host = input_native_entity.metadata.site
@@ -1022,7 +1025,7 @@ class ClusterService(abstract_broker.AbstractBroker):
                     LOGGER.error(f"Failed to delete cluster '{cluster_name}'",
                                  exc_info=True)
 
-                if expose_ip:
+                if expose:
                     try:
                         nw_exp_helper.handle_delete_expose_dnat_rule(
                             client=self.context.client,
@@ -2033,8 +2036,8 @@ def _add_control_plane_nodes(
         for spec in vm_specs:
             spec['cust_script'] = templated_script.format(
                 vcd_host=vcd_host.replace("/", r"\/"),
-                org=org,
-                vdc=vdc,
+                org=org.get_name(),
+                vdc=vdc.name,
                 network_name=network_name,
                 vip_subnet_cidr="",
                 cluster_name=cluster_name,
