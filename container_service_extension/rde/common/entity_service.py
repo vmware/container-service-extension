@@ -272,7 +272,7 @@ class DefEntityService:
                 try:
                     curr_obj = getattr(curr_obj, attr)
                 except AttributeError as err:
-                    LOGGER.error(f"missing attribute when updating RDE: {err}")
+                    LOGGER.error(f"missing attribute [{attr}] in [{attr_str}] when updating RDE: {err}")   # noqa: E501
                     raise
             setattr(curr_obj, last_attr, value)
         return entity, etag
@@ -326,13 +326,22 @@ class DefEntityService:
 
             payload: dict = entity.to_dict()
 
+            entity_kind = payload.get('entity', {}).get('kind', "")
             # Prevent users with rights <= EDIT/VIEW on CSE:NATIVECLUSTER from
             # updating "private" property of RDE "status" section
             # TODO: Replace sys admin check with FULL CONTROL rights check on
             #  CSE:NATIVECLUSTER. Users with no FULL CONTROL rights cannot
             #  update private property of entity->status.
             if not self._cloudapi_client.is_sys_admin:
-                payload.get('entity', {}).get('status', {}).pop('private', None)  # noqa: E501
+                # HACK: TKGm uses the principle of least privileges and
+                # does not use a ClusterAuthor role at all. Instead it only
+                # uses a ClusterAdmin role which always has FC rights.
+                # Hence it does not escalate to sys-admin and hence fails
+                # this check. Hence skip TKGm clusters.
+                # The correct fix for this is to implement the
+                # to-do mentioned above. That is covered by VCDA-2969.
+                if entity_kind != shared_constants.ClusterEntityKind.TKG_M.value:
+                    payload.get('entity', {}).get('status', {}).pop('private', None)  # noqa: E501
 
             # if request is async, return the task href in
             # x_vmware_vcloud_task_location header
