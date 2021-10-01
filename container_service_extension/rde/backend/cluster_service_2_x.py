@@ -299,8 +299,7 @@ class ClusterService(abstract_broker.AbstractBroker):
                 'entity.status.task_href': self.task_href
             }
             try:
-
-                curr_rde = self._update_cluster_entity(entity_id, changes=changes)  # noqa: E501
+                self._update_cluster_entity(entity_id, changes=changes)  # noqa: E501
             except Exception:
                 msg = f"Error updating the cluster '{cluster_name}' with the status"  # noqa: E501
                 LOGGER.error(msg, exc_info=True)
