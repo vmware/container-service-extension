@@ -5,10 +5,7 @@
 from pyvcloud.vcd.client import Client
 from pyvcloud.vcd.vdc import VDC
 
-from container_service_extension.common.constants.server_constants import \
-    FlattenedClusterSpecKey2X, \
-    TKGM_DEFAULT_POD_NETWORK_CIDR, \
-    TKGM_DEFAULT_SERVICE_CIDR
+from container_service_extension.common.constants.server_constants import FlattenedClusterSpecKey2X  # noqa: E501
 from container_service_extension.common.constants.server_constants import VALID_UPDATE_FIELDS_2X  # noqa: E501
 from container_service_extension.common.utils.pyvcloud_utils import get_vdc  # noqa: E501
 from container_service_extension.exception.exceptions import BadRequestError
@@ -27,8 +24,15 @@ class Validator_2_0_0(AbstractValidator):
     def __init__(self):
         pass
 
-    def validate(self, cloudapi_client: CloudApiClient, sysadmin_client: Client, entity_id: str = None,  # noqa: E501
-                 entity: dict = None, operation: BehaviorOperation = BehaviorOperation.CREATE_CLUSTER, **kwargs) -> bool:  # noqa: E501
+    def validate(
+            self,
+            cloudapi_client: CloudApiClient,
+            sysadmin_client: Client,
+            entity_id: str = None,
+            entity: dict = None,
+            operation: BehaviorOperation = BehaviorOperation.CREATE_CLUSTER,
+            **kwargs
+    ) -> bool:
         """Validate the input request.
 
         This method performs
@@ -42,6 +46,7 @@ class Validator_2_0_0(AbstractValidator):
         - kubeconfig: "entity_id" is the only required parameter.
 
         :param cloudapi_client: cloud api client
+        :param sysadmin_client:
         :param dict entity: dict form of the native entity to be validated
         :param entity_id: entity id to be validated
         :param BehaviorOperation operation: CSE operation key
@@ -62,12 +67,12 @@ class Validator_2_0_0(AbstractValidator):
         # Cast the entity to the model class based on the user-specified
         # api_version. This can be considered as a basic request validation.
         # Any operation specific validation is handled further down
-        NativeEntityClass: AbstractNativeEntity = rde_factory. \
+        native_entity_class: AbstractNativeEntity = rde_factory. \
             get_rde_model(rde_version_introduced_at_api_version)
         input_entity = None
         if entity:
             try:
-                input_entity: AbstractNativeEntity = NativeEntityClass.from_dict(entity)  # noqa: E501
+                input_entity: AbstractNativeEntity = native_entity_class.from_dict(entity)  # noqa: E501
             except Exception as err:
                 msg = f"Failed to parse request body: {err}"
                 raise BadRequestError(msg)
@@ -80,8 +85,8 @@ class Validator_2_0_0(AbstractValidator):
             if input_entity.spec.topology.workers.sizing_class and \
                     (input_entity.spec.topology.workers.cpu or input_entity.spec.topology.workers.memory):  # noqa: E501
                 bad_request_msg = "Cannot specify both sizing class and cpu/memory for Workers nodes."  # noqa: E501
-            if input_entity.spec.topology.control_plane.sizing_class and (input_entity.spec.topology.control_plane.cpu or input_entity.spec.topology.control_plane.memory): # noqa: E501
-                bad_request_msg = "Cannot specify both sizing class and cpu/memory for Control Plane nodes." # noqa: E501
+            if input_entity.spec.topology.control_plane.sizing_class and (input_entity.spec.topology.control_plane.cpu or input_entity.spec.topology.control_plane.memory):  # noqa: E501
+                bad_request_msg = "Cannot specify both sizing class and cpu/memory for Control Plane nodes."  # noqa: E501
             if bad_request_msg:
                 raise BadRequestError(bad_request_msg)
         # Return True if the operation is not specified.
@@ -139,8 +144,9 @@ def validate_cluster_update_request_and_check_cluster_upgrade(
         input_spec: rde_2_0_0.ClusterSpec,
         reference_spec: rde_2_0_0.ClusterSpec,
         is_tkgm_cluster: bool,
-    ) -> bool:
-    """Validate the desired spec with curr spec and check if upgrade operation.
+) -> bool:
+    """
+    Validate the desired spec with curr spec and check if upgrade operation.
 
     :param dict input_spec: input spec
     :param dict reference_spec: reference spec to validate the desired spec
@@ -150,7 +156,6 @@ def validate_cluster_update_request_and_check_cluster_upgrade(
     :rtype: bool
     :raises: BadRequestError for invalid payload.
     """
-
     # Since these fields are only in the spec section, and since we create
     # the reference_spec section from a status section, we will always have
     # null for the POD and SVC CIDRs. Hence we cannot validate it until there
@@ -180,7 +185,9 @@ def validate_cluster_update_request_and_check_cluster_upgrade(
             reference_spec.distribution.template_revision == 1
             and input_spec.distribution.template_revision == 0  # default value
         ):
-            exclude_fields.append(FlattenedClusterSpecKey2X.TEMPLATE_REVISION.value)
+            exclude_fields.append(
+                FlattenedClusterSpecKey2X.TEMPLATE_REVISION.value
+            )
 
     input_spec_dict = input_spec.to_dict()
     reference_spec_dict = reference_spec.to_dict()

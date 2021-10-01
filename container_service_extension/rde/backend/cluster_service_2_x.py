@@ -2017,8 +2017,6 @@ class ClusterService(abstract_broker.AbstractBroker):
         optimistic locking.
 
         :param str cluster_id: ID of the defined entity.
-        :param rde_2_x.Status native_entity_status: Defined entity status to be
-            updated.
         :param dict changes: dictionary of changes for the rde. The key
             indicates the field updated, e.g. 'entity.status'. The value
             indicates the value for this field.
@@ -2069,7 +2067,7 @@ class ClusterService(abstract_broker.AbstractBroker):
         kubeconfig_with_exposed_ip = self.get_cluster_config(cluster_id)
         script = \
             nw_exp_helper.construct_script_to_update_kubeconfig_with_internal_ip(  # noqa: E501
-                kubeconfig_with_exposed_ip=kubeconfig_with_exposed_ip,
+                kubeconfig_with_exposed_ip=str(kubeconfig_with_exposed_ip),
                 internal_ip=internal_ip
             )
 

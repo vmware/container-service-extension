@@ -1628,9 +1628,16 @@ def _update_cluster_dict_with_node_info(client, cluster):
             cluster.get('nfs_nodes').append(node_info)
 
 
-def get_all_clusters(client, cluster_name=None, cluster_id=None,
-                     org_name=None, ovdc_name=None, fetch_details=False,
-                     page_number=None, page_size=None):
+def get_all_clusters(
+        client,
+        cluster_name=None,
+        cluster_id=None,
+        org_name=None,
+        ovdc_name=None,
+        fetch_details=False,
+        page_number=None,
+        page_size=None
+) -> Union[List, Dict]:
     """Get list of dictionaries containing data for each visible cluster.
 
     :param vcd_client.Client client:
