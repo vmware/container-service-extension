@@ -124,6 +124,12 @@ def _update_cluster_apply_spec_for_2_0(apply_spec, properties):
             apply_spec_rde.spec.topology.control_plane.sizing_class = value
             apply_spec_rde.spec.topology.workers.sizing_class = value
             apply_spec_rde.spec.topology.nfs.sizing_class = value
+        elif key == 'cpu':
+            apply_spec_rde.spec.topology.control_plane.cpu = value
+            apply_spec_rde.spec.topology.workers.cpu = value
+        elif key == 'memory':
+            apply_spec_rde.spec.topology.control_plane.memory = value
+            apply_spec_rde.spec.topology.workers.memory = value
         elif key == 'storage_profile':
             apply_spec_rde.spec.topology.control_plane.storage_profile = value
             apply_spec_rde.spec.topology.workers.storage_profile = value
