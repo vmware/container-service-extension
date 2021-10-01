@@ -33,6 +33,7 @@ import container_service_extension.rde.constants as rde_constants
 import container_service_extension.rde.models.common_models as common_models
 import container_service_extension.rde.schema_service as def_schema_svc
 import container_service_extension.rde.utils as rde_utils
+from container_service_extension.server.compute_policy_manager import ComputePolicyManager  # noqa: E501
 import container_service_extension.system_test_framework.utils as testutils
 
 
@@ -127,6 +128,9 @@ APPLY_SPEC_PATH = 'cluster_apply_specification.yaml'
 
 SHOULD_INSTALL_PREREQUISITES = True
 IS_CSE_SERVER_RUNNING = False
+
+SIZING_CLASS_NAME = 'sc1'
+SIZING_CLASS_DESCRIPTION = 'sizing class for cse testing'
 
 
 def _init_test_vars(config, logger=NULL_LOGGER):
@@ -273,6 +277,19 @@ def init_rde_environment(config_filepath=BASE_CONFIG_FILEPATH, logger=NULL_LOGGE
                  f"with href {TEST_ORG_HREF}")
     logger.debug(f"Using test vdc {test_vdc.name} with href {TEST_VDC_HREF}")
     if SHOULD_INSTALL_PREREQUISITES:
+        create_cluster_admin_role(config['vcd'], logger=logger)
+        create_cluster_author_role(config['vcd'], logger=logger)
+
+        # create and publish sizing class sc1 to TEST_VDC
+        cpm = ComputePolicyManager(sysadmin_client=sysadmin_client, log_wire=True)
+        created_policy = cpm.add_vdc_compute_policy(
+            SIZING_CLASS_NAME,
+            description=SIZING_CLASS_DESCRIPTION,
+            cpu_count=2,
+            memory_mb=2048)
+        cpm.add_compute_policy_to_vdc(
+            test_vdc.get_resource_admin().get('id'), created_policy['id'])
+
         create_cluster_admin_role(config['vcd'], logger=logger)
         create_cluster_author_role(config['vcd'], logger=logger)
 

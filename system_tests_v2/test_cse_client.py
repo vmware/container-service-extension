@@ -55,7 +55,7 @@ import container_service_extension.system_test_framework.utils as testutils
 OVDC_ENABLE_TEST_PARAM = collections.namedtuple("OvdcEnableParam", "user password org_name ovdc_name disable_before_test expect_failure")  # noqa: E501
 OVDC_DISABLE_TEST_PARAM = collections.namedtuple("OvdcDisableParam", "user password org_name ovdc_name enable_before_test expect_failure")  # noqa: E501
 SYSTEM_TOGGLE_TEST_PARAM = collections.namedtuple("SystemToggleTestParam", "user password cluster_name worker_count nfs_count rollback sizing_class storage_profile ovdc_network template_name template_revision expect_failure")  # noqa: E501
-CLUSTER_APPLY_TEST_PARAM = collections.namedtuple("ClusterApplyTestParam", "user password cluster_name worker_count nfs_count rollback sizing_class storage_profile ovdc_network template_name template_revision expected_phase retain_cluster")  # noqa: E501
+CLUSTER_APPLY_TEST_PARAM = collections.namedtuple("ClusterApplyTestParam", "user password cluster_name worker_count nfs_count rollback cpu memory sizing_class storage_profile ovdc_network template_name template_revision expected_phase retain_cluster")  # noqa: E501
 CLUSTER_DELETE_TEST_PARAM = collections.namedtuple("CluserDeleteTestParam", "user password cluster_name org ovdc expect_failure")  # noqa: E501
 
 
@@ -649,6 +649,8 @@ def _generate_cluster_apply_tests(test_users=None):
                         template_name=template['name'],
                         template_revision=template['revision'],
                         ovdc_network=None,
+                        cpu=None,
+                        memory=None,
                         sizing_class="Invalid_value",
                         storage_profile=None,
                         expected_phase="CREATE:FAILED",
@@ -664,6 +666,8 @@ def _generate_cluster_apply_tests(test_users=None):
                         template_name=template['name'],
                         template_revision=template['revision'],
                         ovdc_network=None,
+                        cpu=None,
+                        memory=None,
                         sizing_class=None,
                         storage_profile="Invalid_value",
                         cluster_name=f"{env.USERNAME_TO_CLUSTER_NAME[user]}-case2",  # noqa: E501
@@ -680,13 +684,15 @@ def _generate_cluster_apply_tests(test_users=None):
                         template_name=template['name'],
                         template_revision=template['revision'],
                         ovdc_network="Invalid_value",
+                        cpu=None,
+                        memory=None,
                         sizing_class=None,
                         storage_profile=None,
                         cluster_name=f"{env.USERNAME_TO_CLUSTER_NAME[user]}-case3",  # noqa: E501
                         expected_phase="CREATE:FAILED",
                         retain_cluster=False
                     ),
-                    # Invalid network with rollback
+                    # Invalid network without rollback
                     CLUSTER_APPLY_TEST_PARAM(
                         user=user,
                         password=None,
@@ -696,27 +702,13 @@ def _generate_cluster_apply_tests(test_users=None):
                         template_name=template['name'],
                         template_revision=template['revision'],
                         ovdc_network="Invalid_value",
+                        cpu=None,
+                        memory=None,
                         sizing_class=None,
                         storage_profile=None,
                         cluster_name=f"{env.USERNAME_TO_CLUSTER_NAME[user]}-case4",  # noqa: E501
                         expected_phase="CREATE:FAILED",
                         retain_cluster=False
-                    ),
-                    # Valid case
-                    CLUSTER_APPLY_TEST_PARAM(
-                        user=user,
-                        password=None,
-                        rollback=False,
-                        worker_count=0,
-                        nfs_count=0,
-                        template_name=template['name'],
-                        template_revision=template['revision'],
-                        ovdc_network=None,
-                        sizing_class=None,
-                        storage_profile=None,
-                        cluster_name=f"{env.USERNAME_TO_CLUSTER_NAME[user]}",
-                        expected_phase="CREATE:SUCCEEDED",
-                        retain_cluster=True
                     ),
                     # resize a failed deployment
                     # expected status is still CREATE:FAILED because the
@@ -730,11 +722,123 @@ def _generate_cluster_apply_tests(test_users=None):
                         template_name=template['name'],
                         template_revision=template['revision'],
                         ovdc_network='Invalid_value',
+                        cpu=None,
+                        memory=None,
                         sizing_class=None,
                         storage_profile=None,
                         cluster_name=f"{env.USERNAME_TO_CLUSTER_NAME[user]}-case4",  # noqa: E501
                         expected_phase='CREATE:FAILED',
                         retain_cluster=False
+                    ),
+                    # cpu/memory and sizing class provided
+                    CLUSTER_APPLY_TEST_PARAM(
+                        user=user,
+                        password=None,
+                        worker_count=0,
+                        nfs_count=0,
+                        rollback=False,
+                        template_name=template['name'],
+                        template_revision=template['revision'],
+                        ovdc_network=None,
+                        cpu=2,
+                        memory=2048,
+                        sizing_class=env.SIZING_CLASS_NAME,
+                        storage_profile=None,
+                        cluster_name=f"{env.USERNAME_TO_CLUSTER_NAME[user]}-case5",  # noqa: E501
+                        expected_phase="CREATE:FAILED",
+                        retain_cluster=False
+                    ),
+                    # cluster created with cpu/memory and no sizing class
+                    CLUSTER_APPLY_TEST_PARAM(
+                        user=user,
+                        password=None,
+                        worker_count=0,
+                        nfs_count=0,
+                        rollback=False,
+                        template_name=template['name'],
+                        template_revision=template['revision'],
+                        ovdc_network=None,
+                        cpu=2,
+                        memory=2048,
+                        sizing_class=None,
+                        storage_profile=None,
+                        cluster_name=f"{env.USERNAME_TO_CLUSTER_NAME[user]}-case6",  # noqa: E501
+                        expected_phase="CREATE:SUCCEEDED",
+                        retain_cluster=True
+                    ),
+                    # Resize a cluster created using cpu/memory with sizing
+                    # class
+                    CLUSTER_APPLY_TEST_PARAM(
+                        user=user,
+                        password=None,
+                        worker_count=1,
+                        nfs_count=0,
+                        rollback=False,
+                        template_name=template['name'],
+                        template_revision=template['revision'],
+                        ovdc_network=None,
+                        cpu=None,
+                        memory=None,
+                        sizing_class=env.SIZING_CLASS_NAME,
+                        storage_profile=None,
+                        cluster_name=f"{env.USERNAME_TO_CLUSTER_NAME[user]}-case6",  # noqa: E501
+                        expected_phase="UPDATE:FAILED",
+                        retain_cluster=True
+                    ),
+                    # Resize a cluster created using cpu/memory using
+                    # cpu/memory
+                    CLUSTER_APPLY_TEST_PARAM(
+                        user=user,
+                        password=None,
+                        worker_count=1,
+                        nfs_count=0,
+                        rollback=False,
+                        template_name=template['name'],
+                        template_revision=template['revision'],
+                        ovdc_network=None,
+                        cpu=2,
+                        memory=2048,
+                        sizing_class=None,
+                        storage_profile=None,
+                        cluster_name=f"{env.USERNAME_TO_CLUSTER_NAME[user]}-case6",  # noqa: E501
+                        expected_phase="UPDATE:SUCCEEDED",
+                        retain_cluster=False
+                    ),
+                    # Create cluster using sizing policy
+                    CLUSTER_APPLY_TEST_PARAM(
+                        user=user,
+                        password=None,
+                        rollback=False,
+                        worker_count=0,
+                        nfs_count=0,
+                        template_name=template['name'],
+                        template_revision=template['revision'],
+                        ovdc_network=None,
+                        cpu=None,
+                        memory=None,
+                        sizing_class=env.SIZING_CLASS_NAME,
+                        storage_profile=None,
+                        cluster_name=f"{env.USERNAME_TO_CLUSTER_NAME[user]}",
+                        expected_phase="CREATE:SUCCEEDED",
+                        retain_cluster=True
+                    ),
+                    # Resize cluster created with sizing class using cpu/mem
+                    CLUSTER_APPLY_TEST_PARAM(
+                        user=user,
+                        password=None,
+                        worker_count=1,
+                        nfs_count=1,
+                        rollback=False,
+                        template_name=template['name'],
+                        template_revision=template['revision'],
+                        ovdc_network=None,
+                        cpu=2,
+                        memory=2048,
+                        sizing_class=None,
+                        storage_profile=None,
+                        cluster_name=f"{env.USERNAME_TO_CLUSTER_NAME[user]}",
+                        expected_phase='UPDATE:FAILED',
+                        retain_cluster=True
                     ),
                     # Resize up a valid deployment
                     CLUSTER_APPLY_TEST_PARAM(
@@ -746,7 +850,9 @@ def _generate_cluster_apply_tests(test_users=None):
                         template_name=template['name'],
                         template_revision=template['revision'],
                         ovdc_network=None,
-                        sizing_class=None,
+                        cpu=None,
+                        memory=None,
+                        sizing_class=env.SIZING_CLASS_NAME,
                         storage_profile=None,
                         cluster_name=f"{env.USERNAME_TO_CLUSTER_NAME[user]}",
                         expected_phase='UPDATE:SUCCEEDED',
@@ -762,7 +868,9 @@ def _generate_cluster_apply_tests(test_users=None):
                         template_name=template['name'],
                         template_revision=template['revision'],
                         ovdc_network=None,
-                        sizing_class=None,
+                        cpu=None,
+                        memory=None,
+                        sizing_class=env.SIZING_CLASS_NAME,
                         storage_profile=None,
                         cluster_name=f"{env.USERNAME_TO_CLUSTER_NAME[user]}",
                         expected_phase='UPDATE:SUCCEEDED',
@@ -796,6 +904,8 @@ def cluster_apply_param(request):
         'template_revision': param.template_revision,
         'network': param.ovdc_network,
         'sizing_class': param.sizing_class,
+        'cpu': param.cpu,
+        'memory': param.memory,
         'storage_profile': param.storage_profile,
         'cluster_name': param.cluster_name
     }
