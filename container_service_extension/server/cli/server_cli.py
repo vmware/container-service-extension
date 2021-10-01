@@ -1011,24 +1011,35 @@ def list_template(ctx, config_file_path, skip_config_decryption,
         config_dict = _get_unvalidated_config(
             config_file_path=config_file_path,
             skip_config_decryption=skip_config_decryption,
-            msg_update_callback=console_message_printer)
+            msg_update_callback=console_message_printer
+        )
 
         # Record telemetry details
         cse_params = {
             PayloadKey.DISPLAY_OPTION: display_option,
             PayloadKey.WAS_DECRYPTION_SKIPPED: bool(skip_config_decryption)
         }
-        record_user_action_details(cse_operation=CseOperation.TEMPLATE_LIST,
-                                   cse_params=cse_params,
-                                   telemetry_settings=config_dict['service']['telemetry'])  # noqa: E501
+        record_user_action_details(
+            cse_operation=CseOperation.TEMPLATE_LIST,
+            cse_params=cse_params,
+            telemetry_settings=config_dict['service']['telemetry']
+        )
 
         log_wire_file = None
-        log_wire = utils.str_to_bool(config_dict['service'].get('log_wire'))  # noqa: E501
+        log_wire = utils.str_to_bool(config_dict.get('service', {}).get('log_wire', False))  # noqa: E501
         if log_wire:
             log_wire_file = SERVER_DEBUG_WIRELOG_FILEPATH
 
+        legacy_mode = None
+        if 'service' in config_dict:
+            if 'legacy_mode' in config_dict.get('service'):
+                legacy_mode = config_dict['service']['legacy_mode']
+        if legacy_mode is None:
+            msg = "Unable to find `legacy_mode` under " \
+                  "`service` section in config file."
+            raise Exception(msg)
+
         tkgm_templates = []
-        legacy_mode = config_dict['service']['legacy_mode']
         if display_option == DISPLAY_TKGM and not legacy_mode:
             client = None
             try:

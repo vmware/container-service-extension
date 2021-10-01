@@ -479,15 +479,6 @@ def install_template(
 
     client = None
     try:
-        is_no_vc_communication_mode = \
-            server_utils.is_no_vc_communication_mode(config)
-        if is_no_vc_communication_mode:
-            msg = "Native template can not be installed when " \
-                  "running in `No communication with VCenter` mode."
-            raise Exception(msg)
-        else:
-            populate_vsphere_list(config['vcs'])
-
         # Telemetry data construction
         cse_params = {
             PayloadKey.TEMPLATE_NAME: template_name,
@@ -502,6 +493,15 @@ def install_template(
             cse_operation=CseOperation.TEMPLATE_INSTALL,
             cse_params=cse_params,
             telemetry_settings=config['service']['telemetry'])
+
+        is_no_vc_communication_mode = \
+            server_utils.is_no_vc_communication_mode(config)
+        if is_no_vc_communication_mode:
+            msg = "Native template can not be installed when " \
+                  "running in `No communication with VCenter` mode."
+            raise Exception(msg)
+        else:
+            populate_vsphere_list(config['vcs'])
 
         log_filename = None
         log_wire = utils.str_to_bool(config['service'].get('log_wire'))
@@ -2217,6 +2217,7 @@ Please note, CSE server startup needs at least one valid template.
 Please create CSE K8s template(s) using the command `cse template install`."""
         msg_update_callback.info(msg)
         INSTALL_LOGGER.info(msg)
+
         _process_existing_templates(
             client=client,
             config=config,
