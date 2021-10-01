@@ -680,8 +680,12 @@ class ClusterService(abstract_broker.AbstractBroker):
         current_nfs_count = current_spec.topology.nfs.count
         desired_workers_count = input_native_entity.spec.topology.workers.count
         desired_nfs_count = input_native_entity.spec.topology.nfs.count
+        current_expose_flag = current_spec.settings.network.expose
+        desired_expose_flag = input_native_entity.spec.settings.network.expose
 
-        if current_workers_count != desired_workers_count or current_nfs_count != desired_nfs_count:  # noqa: E501
+        if current_workers_count != desired_workers_count \
+                or current_nfs_count != desired_nfs_count\
+                or current_expose_flag != desired_expose_flag:
             return self.resize_cluster(cluster_id, input_native_entity)
 
         current_template_name = current_spec.distribution.template_name
