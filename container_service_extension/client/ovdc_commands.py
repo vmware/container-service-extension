@@ -63,7 +63,7 @@ Example
                                             logger=CLIENT_LOGGER)
     except Exception as e:
         stderr(e, ctx)
-        CLIENT_LOGGER.error(str(e))
+        CLIENT_LOGGER.error(str(e), exc_info=True)
 
 
 @ovdc_group.command('enable',
@@ -136,7 +136,7 @@ Example
             CLIENT_LOGGER.error(msg)
     except Exception as e:
         stderr(e, ctx)
-        CLIENT_LOGGER.error(str(e))
+        CLIENT_LOGGER.error(str(e), exc_info=True)
 
 
 @ovdc_group.command('disable',
@@ -225,7 +225,7 @@ Examples
             CLIENT_LOGGER.error(msg)
     except Exception as e:
         stderr(e, ctx)
-        CLIENT_LOGGER.error(str(e))
+        CLIENT_LOGGER.error(str(e), exc_info=True)
 
 
 @ovdc_group.command('info',
@@ -267,7 +267,7 @@ Example
             CLIENT_LOGGER.error(msg)
     except Exception as e:
         stderr(e, ctx)
-        CLIENT_LOGGER.error(str(e))
+        CLIENT_LOGGER.error(str(e), exc_info=True)
 
 
 @ovdc_group.group('compute-policy',
@@ -322,7 +322,7 @@ def compute_policy_list(ctx, org_name, ovdc_name):
         CLIENT_LOGGER.debug(result)
     except Exception as e:
         stderr(e, ctx)
-        CLIENT_LOGGER.error(str(e))
+        CLIENT_LOGGER.error(str(e), exc_info=True)
 
 
 @compute_policy_group.command('add', short_help='')
@@ -360,7 +360,7 @@ def compute_policy_add(ctx, org_name, ovdc_name, compute_policy_name):
         CLIENT_LOGGER.debug(result)
     except Exception as e:
         stderr(e, ctx)
-        CLIENT_LOGGER.error(str(e))
+        CLIENT_LOGGER.error(str(e), exc_info=True)
 
 
 @compute_policy_group.command('remove', short_help='')
@@ -409,4 +409,4 @@ def compute_policy_remove(ctx, org_name, ovdc_name, compute_policy_name,
         CLIENT_LOGGER.debug(result)
     except Exception as e:
         stderr(e, ctx)
-        CLIENT_LOGGER.error(str(e))
+        CLIENT_LOGGER.error(str(e), exc_info=True)

@@ -76,7 +76,7 @@ def _get_gateway(
             cloudapi_client, network_urn_id)
     except Exception as err:
         LOGGER.error(f'Error when getting vdc network response when getting '
-                     f'gateway: {str(err)}')
+                     f'gateway: {str(err)}', exc_info=True)
         return None
     gateway_name = vdc_network_response[VdcNetworkInfoKey.VALUES][0][
         VdcNetworkInfoKey.CONNECTION][VdcNetworkInfoKey.ROUTER_REF][
@@ -222,7 +222,10 @@ def expose_cluster(client: vcd_client.Client, org_name: str, ovdc_name: str,
             internal_address=internal_ip,
             external_address=expose_ip)
     except Exception as err:
-        raise Exception(f'Unable to add dnat rule with error: {str(err)}')
+        raise Exception(
+            f"Unable to add dnat rule with error: {str(err)}",
+            exc_info=True
+        )
     return expose_ip
 
 

@@ -212,7 +212,10 @@ class NsxtBackedGatewayService:
                 resource_url_relative_path=f"{self._nat_rules_relative_path}/{nat_rule_id}")  # noqa: E501
             self._wait_for_last_cloudapi_task()
         except Exception as err:
-            SERVER_LOGGER.info(f'Failed to delete dnat rule: {str(err)}')
+            SERVER_LOGGER.info(
+                f"Failed to delete dnat rule: {str(err)}",
+                exc_info=True
+            )
 
     def _get_dnat_rule_id(self, rule_name):
         """Get dnat rule id.

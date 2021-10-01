@@ -321,7 +321,7 @@ class MQTTExtensionManager:
             return True
         except requests.exceptions.HTTPError:
             last_response = self._cloudapi_client.get_last_response()
-            self._debug_logger.debug(last_response.text)
+            self._debug_logger.debug(last_response.text, exc_info=True)
             return False
 
     def is_extension_enabled(self, ext_urn_id):

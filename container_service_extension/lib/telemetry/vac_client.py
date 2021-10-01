@@ -70,10 +70,10 @@ class VacClient(object):
             response = self._do_request(RequestMethod.POST, payload)
         except RequestException as err:
             msg = f"{err}.{SEND_FAILED_MSG}:{payload}"
-            self.LOGGER.error(msg)
+            self.LOGGER.error(msg, exc_info=True)
         except Exception as err:
             msg = f"{err}.{SEND_FAILED_MSG}:{payload}"
-            self.LOGGER.error(msg)
+            self.LOGGER.error(msg, exc_info=True)
         finally:
             if response:
                 response.close()

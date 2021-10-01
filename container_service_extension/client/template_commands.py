@@ -57,4 +57,4 @@ def list_templates(ctx, is_tkgm):
         stdout(filtered_result, ctx, sort_headers=False)
     except Exception as e:
         stderr(e, ctx)
-        CLIENT_LOGGER.error(str(e))
+        CLIENT_LOGGER.error(str(e), exc_info=True)

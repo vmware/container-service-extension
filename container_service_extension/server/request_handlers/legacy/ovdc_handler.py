@@ -368,7 +368,7 @@ def _follow_task(op_ctx: ctx.OperationContext, task_href: str, ovdc_id: str):
             task_href=task_href)
         sysadmin_client_v33.get_task_monitor().wait_for_status(t)
     except Exception as err:
-        logger.SERVER_LOGGER.error(f"{err}")
+        logger.SERVER_LOGGER.error(f"{err}", exc_info=True)
     finally:
         if sysadmin_client_v33:
             op_ctx.end()

@@ -91,7 +91,7 @@ Examples
                                             logger=CLIENT_LOGGER)
     except Exception as e:
         stderr(e, ctx)
-        CLIENT_LOGGER.error(str(e))
+        CLIENT_LOGGER.error(str(e), exc_info=True)
 
 
 @cluster_group.command('delete',
@@ -175,7 +175,7 @@ Example
         CLIENT_LOGGER.debug(result)
     except Exception as e:
         stderr(e, ctx)
-        CLIENT_LOGGER.error(str(e))
+        CLIENT_LOGGER.error(str(e), exc_info=True)
 
 
 @cluster_group.command('create', short_help='Create a Kubernetes cluster')
@@ -349,10 +349,10 @@ Examples
             minor_error_code_to_error_message.get(
                 e.minor_error_code, e.error_message)
         stderr(e, ctx)
-        CLIENT_LOGGER.error(str(e))
+        CLIENT_LOGGER.error(str(e), exc_info=True)
     except Exception as e:
         stderr(e, ctx)
-        CLIENT_LOGGER.error(str(e))
+        CLIENT_LOGGER.error(str(e), exc_info=True)
 
 
 @cluster_group.command('resize',
@@ -503,10 +503,10 @@ Examples
             minor_error_code_to_error_message.get(
                 e.minor_error_code, e.error_message)
         stderr(e, ctx)
-        CLIENT_LOGGER.error(str(e))
+        CLIENT_LOGGER.error(str(e), exc_info=True)
     except Exception as e:
         stderr(e, ctx)
-        CLIENT_LOGGER.error(str(e))
+        CLIENT_LOGGER.error(str(e), exc_info=True)
 
 
 @cluster_group.command('apply',
@@ -697,7 +697,7 @@ def delete_nfs(ctx, cluster_name, node_name, vdc, org):
         CLIENT_LOGGER.debug(result)
     except Exception as e:
         stderr(e, ctx)
-        CLIENT_LOGGER.error(str(e))
+        CLIENT_LOGGER.error(str(e), exc_info=True)
 
 
 @cluster_group.command('upgrade-plan',
@@ -773,7 +773,7 @@ Examples
         CLIENT_LOGGER.debug(result)
     except Exception as e:
         stderr(e, ctx)
-        CLIENT_LOGGER.error(str(e))
+        CLIENT_LOGGER.error(str(e), exc_info=True)
 
 
 @cluster_group.command('upgrade',
@@ -844,7 +844,7 @@ Example
         CLIENT_LOGGER.debug(result)
     except Exception as e:
         stderr(e, ctx)
-        CLIENT_LOGGER.error(str(e))
+        CLIENT_LOGGER.error(str(e), exc_info=True)
 
 
 @cluster_group.command('config',
@@ -930,7 +930,7 @@ Examples:
         CLIENT_LOGGER.debug(ret_val)
     except Exception as e:
         stderr(e, ctx)
-        CLIENT_LOGGER.error(str(e))
+        CLIENT_LOGGER.error(str(e), exc_info=True)
 
 
 @cluster_group.command('info',
@@ -1009,7 +1009,7 @@ Example
         CLIENT_LOGGER.debug(result)
     except Exception as e:
         stderr(e, ctx)
-        CLIENT_LOGGER.error(str(e))
+        CLIENT_LOGGER.error(str(e), exc_info=True)
 
 
 @cluster_group.command('share',
@@ -1119,7 +1119,7 @@ Examples:
         stdout(f'Cluster {cluster_id or name} successfully shared with: {users_list}')  # noqa: E501
     except Exception as e:
         stderr(e, ctx)
-        CLIENT_LOGGER.error(str(e))
+        CLIENT_LOGGER.error(str(e), exc_info=True)
 
 
 @cluster_group.command('share-list',
@@ -1218,7 +1218,7 @@ Examples:
         client_utils.print_paginated_result(share_entries, should_print_all)
     except Exception as e:
         stderr(e, ctx)
-        CLIENT_LOGGER.error(str(e))
+        CLIENT_LOGGER.error(str(e), exc_info=True)
 
 
 @cluster_group.command('unshare',
@@ -1310,4 +1310,4 @@ Examples:
         stdout(f'Cluster {cluster_id or name} successfully unshared with: {users_list}')  # noqa: E501
     except Exception as e:
         stderr(e, ctx)
-        CLIENT_LOGGER.error(str(e))
+        CLIENT_LOGGER.error(str(e), exc_info=True)
