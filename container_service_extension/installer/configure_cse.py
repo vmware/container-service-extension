@@ -2805,11 +2805,9 @@ def _upgrade_cluster_rde(
             vapp_href = rde_to_upgrade.externalId
             vapp = VApp(client, href=vapp_href)
 
-            nodes_to_process = [native_entity_2_x.nodes.control_plane]
-            if native_entity_2_x.nodes.workers:
-                nodes_to_process.extend(native_entity_2_x.nodes.workers)
-            if native_entity_2_x.nodes.nfs:
-                nodes_to_process.extend(native_entity_2_x.nodes.nfs)
+            nodes_to_process = [native_entity_2_x.status.nodes.control_plane]
+            if native_entity_2_x.status.nodes.workers:
+                nodes_to_process.status.extend(native_entity_2_x.nodes.workers)  # noqa: E501
 
             # Back fill cpu and memory values if we are upgrading from
             # RDE 2.0.0 of CSE 3.1.0. In CSE 3.1.0, RDE 2.0.0 didn't
