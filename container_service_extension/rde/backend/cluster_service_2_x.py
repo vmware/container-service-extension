@@ -2068,7 +2068,7 @@ class ClusterService(abstract_broker.AbstractBroker):
         kubeconfig_with_exposed_ip = self.get_cluster_config(cluster_id)
         script = \
             nw_exp_helper.construct_script_to_update_kubeconfig_with_internal_ip(  # noqa: E501
-                kubeconfig_with_exposed_ip=kubeconfig_with_exposed_ip,
+                kubeconfig_with_exposed_ip=str(kubeconfig_with_exposed_ip),
                 internal_ip=internal_ip
             )
 

@@ -2,7 +2,7 @@
 # Copyright (c) 2017 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 import json
-from typing import Dict, List, Union
+from typing import Dict, List, Optional, Union
 
 import pika
 import pyvcloud.vcd.api_extension as api_extension
@@ -18,6 +18,7 @@ from pyvcloud.vcd.role import Role
 import pyvcloud.vcd.utils as pyvcloud_vcd_utils
 from pyvcloud.vcd.vapp import VApp
 from pyvcloud.vcd.vcd_api_version import VCDApiVersion
+import pyvcloud.vcd.vm as vcd_vm
 import requests
 import semantic_version
 
@@ -1564,7 +1565,7 @@ def _register_native_entity_type(
                 vendor=current_entity_type.vendor,
                 nss=current_entity_type.nss,
                 version=current_entity_type.version,
-                schema=entity_type.schema, # updated
+                schema=entity_type.schema,  # updated
                 interfaces=current_entity_type.interfaces,
                 readonly=current_entity_type.readonly)
             msg = "Updating existing CSE native Defined Entity Type."
@@ -2031,7 +2032,8 @@ def _install_all_templates(
         remote_template_cookbook_url=config['broker']['remote_template_cookbook_url'],  # noqa: E501
         legacy_mode=LEGACY_MODE,
         logger=INSTALL_LOGGER,
-        msg_update_callback=msg_update_callback)
+        msg_update_callback=msg_update_callback
+    )
     remote_template_cookbook = rtm.get_filtered_remote_template_cookbook()
 
     # create all templates defined in cookbook
@@ -2238,7 +2240,7 @@ Please create CSE K8s template(s) using the command `cse template install`."""
     msg = "Loading all CSE clusters for processing..."
     INSTALL_LOGGER.info(msg)
     msg_update_callback.info(msg)
-    clusters = get_all_cse_clusters(client=client, fetch_details=True)
+    clusters: List = get_all_cse_clusters(client=client, fetch_details=True)
 
     # Add new vdc (placement) compute policy to ovdc with existing CSE clusters
     _assign_placement_policy_to_vdc_and_right_bundle_to_org(
@@ -2582,7 +2584,7 @@ def _process_existing_clusters(
     schema_svc = def_schema_svc.DefSchemaService(cloudapi_client)
 
     # TODO: get proper site information
-    site = config['vcd']['host']
+    site: str = config['vcd']['host']
     runtime_rde_version: str = str(config['service']['rde_version_in_use'])
     rde_metadata: dict = def_utils.get_rde_metadata(runtime_rde_version)
     entity_type_metadata = rde_metadata[def_constants.RDEMetadataKey.ENTITY_TYPE]  # noqa: E501
@@ -2595,7 +2597,7 @@ def _process_existing_clusters(
         msg_update_callback.info(msg)
 
         cluster_id = cluster['cluster_id']
-        def_entity = None
+        def_entity: Optional[common_models.DefEntity] = None
         try:
             def_entity = entity_svc.get_entity(cluster_id)
         except Exception as err:
@@ -2643,8 +2645,8 @@ def _process_existing_clusters(
             msg_update_callback.general(msg)
         else:
             found_cluster_with_rde = True
-            source_rde_version = def_entity.entityType.split(":")[-1]
-            if semantic_version.Version(source_rde_version) < semantic_version.Version(runtime_rde_version):  # noqa: E501
+            source_rde_version: str = def_entity.entityType.split(":")[-1]
+            if semantic_version.Version(source_rde_version) <= semantic_version.Version(runtime_rde_version):  # noqa: E501
                 msg = f"Updating {def_entity.name} RDE from {source_rde_version} to {runtime_rde_version}"  # noqa: E501
                 INSTALL_LOGGER.info(msg)
                 msg_update_callback.info(msg)
@@ -2652,6 +2654,7 @@ def _process_existing_clusters(
                     client=client,
                     cluster=cluster,
                     rde_to_upgrade=def_entity,
+                    source_rde_version=source_rde_version,
                     runtime_rde_version=runtime_rde_version,
                     target_entity_type=target_entity_type,
                     entity_svc=entity_svc,
@@ -2726,6 +2729,9 @@ def _create_cluster_rde(
         native_entity_2_x.metadata.site = site
 
     # update ownership of the entity
+    changes = {
+        'externalId': cluster['vapp_href'],
+    }
     try:
         user = client.get_user_in_org(user_name=cluster['owner_name'], org_href=cluster['org_href'])  # noqa: E501
         user_urn = user.get('id')
@@ -2741,17 +2747,15 @@ def _create_cluster_rde(
         org = common_models.Org(
             name=cluster['org_name'],
             id=org_urn)
+
+        changes['owner'] = owner
+        changes['org'] = org
     except Exception as err:
         INSTALL_LOGGER.debug(str(err))
         msg = f"Unable to determine current owner of cluster '{cluster['name']}'. Unable to process ownership."  # noqa: E501
         msg_update_callback.info(msg)
         INSTALL_LOGGER.info(msg, exc_info=True)
 
-    changes = {
-        'externalId': cluster['vapp_href'],
-        'owner': owner,
-        'org': org
-    }
     entity_svc.update_entity(def_entity_id, changes=changes)
     entity_svc.resolve_entity(def_entity_id)
 
@@ -2777,38 +2781,62 @@ def _create_cluster_rde(
 
 
 def _upgrade_cluster_rde(
-        client,
-        cluster,
-        rde_to_upgrade,
-        runtime_rde_version,
+        client: Client,
+        cluster: Dict,
+        rde_to_upgrade: common_models.DefEntity,
+        source_rde_version: str,
+        runtime_rde_version: str,
         target_entity_type,
         entity_svc,
-        site=None,
+        site: str = None,
         msg_update_callback=utils.NullPrinter()
-):  # noqa: E501
-    target_native_entity = get_rde_model(runtime_rde_version)
-    new_native_entity = target_native_entity.from_native_entity(rde_to_upgrade.entity)  # noqa: E501
+):
+    target_native_entity_model = get_rde_model(runtime_rde_version)
+    new_native_entity = target_native_entity_model.from_native_entity(rde_to_upgrade.entity)  # noqa: E501
 
     # Adding missing fields in RDE 2.0
     # TODO: Need to find a better approach to avoid conditional logic for
     # filling missing properties.
     if semantic_version.Version(runtime_rde_version).major == \
             semantic_version.Version(def_constants.RDEVersion.RDE_2_0_0).major:
-        # RDE upgrade possible only from RDE 1.0 or RDE 2.x
+        # RDE upgrade possible only from RDE 1.x or RDE 2.x
         native_entity_2_x: rde_2_x.NativeEntity = new_native_entity
         native_entity_2_x.status.uid = rde_to_upgrade.id
         native_entity_2_x.status.cloud_properties.site = site
         native_entity_2_x.metadata.site = site
 
-        # This heavily relies on the fact that the source RDE is v1.0.0
         try:
             vapp_href = rde_to_upgrade.externalId
             vapp = VApp(client, href=vapp_href)
-            control_plane_ip = vapp.get_primary_ip(
-                vm_name=rde_to_upgrade.entity.status.nodes.control_plane.name)
-            if rde_to_upgrade.entity.status.exposed:
-                native_entity_2_x.status.nodes.control_plane.ip = \
-                    control_plane_ip
+
+            nodes_to_process = [native_entity_2_x.status.nodes.control_plane]
+            if native_entity_2_x.status.nodes.workers:
+                nodes_to_process.extend(native_entity_2_x.status.nodes.workers)  # noqa: E501
+
+            # Back fill cpu and memory values if we are upgrading from
+            # RDE 2.0.0 of CSE 3.1.0. In CSE 3.1.0, RDE 2.0.0 didn't
+            # have cpu/memory fields in status.
+            for node in nodes_to_process:
+                name = node.name
+                try:
+                    vm_resource = vapp.get_vm(name)
+                    vm_obj = vcd_vm.VM(client, resource=vm_resource)
+                    node.cpu = vm_obj.get_cpus()['num_cpus']
+                    node.memory = vm_obj.get_memory()
+                except EntityNotFoundException as err1:
+                    INSTALL_LOGGER.error(str(err1), exc_info=True)
+
+            # In RDE 1.0.0, we overwrote the control plane ip in status section
+            # with external exposed IP. But in RDE 2.0.0, we have a separate
+            # field viz. `external_ip` to track that value, and the
+            # control_plane ip still points to the internal ip of the control
+            # plane node. The following piece of code makes sure that
+            # while upgrading an object from RDE 1.0.0 to RDE 2.0.0, we restore
+            # the correct value of status.nodes.control_plane.ip
+            if source_rde_version == "1.0.0" and rde_to_upgrade.entity.status.exposed:  # noqa: E501
+                control_plane_vm_name = rde_to_upgrade.entity.status.nodes.control_plane.name  # noqa: E501
+                control_plane_ip = vapp.get_primary_ip(vm_name=control_plane_vm_name)  # noqa: E501
+                native_entity_2_x.status.nodes.control_plane.ip = control_plane_ip  # noqa: E501
         except Exception as err:
             INSTALL_LOGGER.error(str(err), exc_info=True)
 
