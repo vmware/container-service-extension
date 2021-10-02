@@ -185,14 +185,6 @@ class ClusterService(abstract_broker.AbstractBroker):
         msg = f"{DOWNLOAD_KUBECONFIG_OPERATION_MESSAGE} ({cluster_id})"
         self._update_task(BehaviorTaskStatus.RUNNING, message=msg)
 
-        telemetry_handler.record_user_action_details(
-            cse_operation=telemetry_constants.CseOperation.V36_CLUSTER_CONFIG,
-            cse_params={
-                CLUSTER_ENTITY: curr_rde,
-                telemetry_constants.PayloadKey.SOURCE_DESCRIPTION: thread_local_data.get_thread_local_data(ThreadLocalData.USER_AGENT)  # noqa: E501
-            }
-        )
-
         if curr_rde.externalId is None:
             msg = f"Cannot find VApp href for cluster {curr_rde.name} " \
                   f"with id {cluster_id}"
@@ -307,18 +299,12 @@ class ClusterService(abstract_broker.AbstractBroker):
                 'entity.status.task_href': self.task_href
             }
             try:
-                curr_rde = self._update_cluster_entity(entity_id, changes=changes)  # noqa: E501
+                self._update_cluster_entity(entity_id, changes=changes)  # noqa: E501
             except Exception:
                 msg = f"Error updating the cluster '{cluster_name}' with the status"  # noqa: E501
                 LOGGER.error(msg, exc_info=True)
                 raise
-            telemetry_handler.record_user_action_details(
-                cse_operation=telemetry_constants.CseOperation.V36_CLUSTER_APPLY,  # noqa: E501
-                cse_params={
-                    CLUSTER_ENTITY: curr_rde,
-                    telemetry_constants.PayloadKey.SOURCE_DESCRIPTION: thread_local_data.get_thread_local_data(ThreadLocalData.USER_AGENT)  # noqa: E501
-                }
-            )
+
             # trigger async operation
             self.context.is_async = True
             self._create_cluster_async(entity_id, input_native_entity)
@@ -428,19 +414,6 @@ class ClusterService(abstract_broker.AbstractBroker):
                 f"Cluster {cluster_name} with id {cluster_id} is not in a "
                 f"valid state to be resized. Please contact the administrator")
 
-        # Record telemetry details
-        telemetry_data: common_models.DefEntity = common_models.DefEntity(
-            entityType=server_utils.get_registered_def_entity_type().id,
-            id=cluster_id,
-            entity=input_native_entity)
-        telemetry_handler.record_user_action_details(
-            cse_operation=telemetry_constants.CseOperation.V36_CLUSTER_APPLY,
-            cse_params={
-                CLUSTER_ENTITY: telemetry_data,
-                telemetry_constants.PayloadKey.SOURCE_DESCRIPTION: thread_local_data.get_thread_local_data(ThreadLocalData.USER_AGENT)  # noqa: E501
-            }
-        )
-
         # update the task and defined entity.
         msg = f"Resizing the cluster '{cluster_name}' ({cluster_id}) to the " \
               f"desired worker count {desired_worker_count} and " \
@@ -494,14 +467,6 @@ class ClusterService(abstract_broker.AbstractBroker):
             raise exceptions.CseServerError(
                 f"Cluster {cluster_name} with id {cluster_id} is not in a "
                 f"valid state to be deleted. Please contact administrator.")
-
-        telemetry_handler.record_user_action_details(
-            cse_operation=telemetry_constants.CseOperation.V36_CLUSTER_DELETE,
-            cse_params={
-                CLUSTER_ENTITY: curr_rde,
-                telemetry_constants.PayloadKey.SOURCE_DESCRIPTION: thread_local_data.get_thread_local_data(ThreadLocalData.USER_AGENT)  # noqa: E501
-            }
-        )
 
         # must _update_task here or else self.task_resource is None
         # do not logout of sys admin, or else in pyvcloud's session.request()

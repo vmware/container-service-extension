@@ -132,12 +132,14 @@ class VcdBroker(abstract_broker.AbstractBroker):
             RequestKey.OVDC_NAME: None,
         }
         validated_data = {**defaults, **data}
+        cse_params = copy.deepcopy(validated_data)
+        cse_params[PayloadKey.SOURCE_DESCRIPTION] = thread_local_data.get_thread_local_data(ThreadLocalData.USER_AGENT)  # noqa: E501
 
         if kwargs.get(KwargKey.TELEMETRY, True):
             # Record the data for telemetry
             record_user_action_details(
                 cse_operation=CseOperation.CLUSTER_LIST,
-                cse_params=copy.deepcopy(validated_data))
+                cse_params=cse_params)
 
         client_v33 = self.context.get_client(api_version=DEFAULT_API_VERSION)
         # "raw clusters" do not have well-defined cluster data keys
@@ -238,6 +240,8 @@ class VcdBroker(abstract_broker.AbstractBroker):
             cse_params = copy.deepcopy(validated_data)
             cse_params[PayloadKey.SOURCE_DESCRIPTION] = thread_local_data.get_thread_local_data(ThreadLocalData.USER_AGENT)  # noqa: E501
             cse_params[PayloadKey.CLUSTER_ID] = cluster[ClusterDetailsKey.CLUSTER_ID.value]  # noqa: E501
+            cse_params[PayloadKey.TEMPLATE_NAME] = cluster[ClusterDetailsKey.TEMPLATE_NAME]  # noqa: E501
+            cse_params[PayloadKey.TEMPLATE_REVISION] = cluster[ClusterDetailsKey.TEMPLATE_REVISION]  # noqa: E501
             record_user_action_details(
                 cse_operation=CseOperation.CLUSTER_CONFIG,
                 cse_params=cse_params)
@@ -293,6 +297,7 @@ class VcdBroker(abstract_broker.AbstractBroker):
             # Record the telemetry data
             cse_params = copy.deepcopy(validated_data)
             cse_params[PayloadKey.CLUSTER_ID] = cluster[ClusterDetailsKey.CLUSTER_ID.value]  # noqa: E501
+            cse_params[PayloadKey.SOURCE_DESCRIPTION] = thread_local_data.get_thread_local_data(ThreadLocalData.USER_AGENT)  # noqa: E501
             record_user_action_details(
                 cse_operation=CseOperation.CLUSTER_UPGRADE_PLAN,
                 cse_params=cse_params)
