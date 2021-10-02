@@ -4,6 +4,7 @@
 
 import os
 from pathlib import Path
+from sys import exec_prefix
 from typing import List
 
 from click.testing import CliRunner
@@ -15,6 +16,8 @@ from pyvcloud.vcd.exceptions import MissingRecordException
 from pyvcloud.vcd.org import Org
 from pyvcloud.vcd.role import Role
 from pyvcloud.vcd.vdc import VDC
+from requests.auth import HTTPDigestAuth
+from requests.models import HTTPError
 from system_tests_v2.pytest_logger import PYTEST_LOGGER
 from vcd_cli.vcd import vcd
 
@@ -128,6 +131,7 @@ APPLY_SPEC_PATH = 'cluster_apply_specification.yaml'
 
 SIZING_CLASS_NAME = 'sc1'
 SIZING_CLASS_DESCRIPTION = 'sizing class for cse testing'
+TEST_TEMPLATES_PRESENT = False
 
 
 def _init_test_vars(config, logger=NULL_LOGGER):
@@ -137,7 +141,7 @@ def _init_test_vars(config, logger=NULL_LOGGER):
     """
     global TEMPLATE_DEFINITIONS, TEARDOWN_INSTALLATION, TEARDOWN_CLUSTERS, \
         TEST_ALL_TEMPLATES, TEST_ORG, TEST_VDC, TEST_NETWORK, \
-        USERNAME_TO_CLUSTER_NAME
+        USERNAME_TO_CLUSTER_NAME, TEST_TEMPLATES_PRESENT
     USERNAME_TO_CLUSTER_NAME = {
         SYS_ADMIN_NAME: SYS_ADMIN_TEST_CLUSTER_NAME,
         CLUSTER_ADMIN_NAME: ORG_ADMIN_TEST_CLUSTER_NAME,
@@ -171,7 +175,7 @@ def _init_test_vars(config, logger=NULL_LOGGER):
                             specified_templates_def.append(template_def)
                             break
             TEMPLATE_DEFINITIONS = specified_templates_def
-
+    TEST_TEMPLATES_PRESENT = test_config.get('test_templates_present', False)
 
 _init_test_vars(testutils.yaml_to_dict(BASE_CONFIG_FILEPATH))
 
@@ -272,13 +276,27 @@ def init_rde_environment(config_filepath=BASE_CONFIG_FILEPATH, logger=NULL_LOGGE
 
     # create and publish sizing class sc1 to TEST_VDC
     cpm = ComputePolicyManager(sysadmin_client=sysadmin_client, log_wire=True)
-    created_policy = cpm.add_vdc_compute_policy(
-        SIZING_CLASS_NAME,
-        description=SIZING_CLASS_DESCRIPTION,
-        cpu_count=2,
-        memory_mb=2048)
-    cpm.add_compute_policy_to_vdc(
-        test_vdc.get_resource_admin().get('id'), created_policy['id'])
+    created_policy = None
+    try:
+        created_policy = cpm.add_vdc_compute_policy(
+            SIZING_CLASS_NAME,
+            description=SIZING_CLASS_DESCRIPTION,
+            cpu_count=2,
+            memory_mb=2048)
+    except HTTPError as err:
+        if 'already exists' in err.response.text:
+            logger.debug(f"Compute policy {SIZING_CLASS_NAME} already exists")
+            created_policy = cpm.get_vdc_compute_policy(SIZING_CLASS_NAME)
+        else:
+            logger.error(f"Request to create sizing policy {SIZING_CLASS_NAME} failed.")  # noqa: E501
+            raise
+
+    try:
+        cpm.add_compute_policy_to_vdc(
+            pyvcloud_utils.extract_id(test_vdc.get_resource_admin().get('id')),
+            created_policy['id'])
+    except Exception as err:
+        logger.error(f"Error here: {err}")
 
     create_cluster_admin_role(config['vcd'], logger=logger)
     create_cluster_author_role(config['vcd'], logger=logger)
