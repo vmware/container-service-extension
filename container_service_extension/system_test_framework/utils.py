@@ -218,7 +218,7 @@ def get_worker_count_from_2_0_0_entity_dict(cluster_dict):
     return len(native_entity.status.nodes.workers)
 
 
-def generate_validate_node_count_func(expected_nodes, rde_version, logger=logger.NULL_LOGGER):  # noqa: E501
+def generate_validate_node_count_func(cluster_name, expected_nodes, rde_version, logger=logger.NULL_LOGGER):  # noqa: E501
     """Generate validator function to verify number of nodes in the cluster.
 
     :param expected_nodes: Expected number of nodes in the cluster
@@ -226,7 +226,7 @@ def generate_validate_node_count_func(expected_nodes, rde_version, logger=logger
     """
     def validator(output, test_runner_username):
         cmd_list = [
-            CMD_BINDER(cmd=f"cse cluster info {env.USERNAME_TO_CLUSTER_NAME[test_runner_username]}",   # noqa
+            CMD_BINDER(cmd=f"cse cluster info {cluster_name}",   # noqa
                        exit_code=0,
                        validate_output_func=None,
                        test_user=test_runner_username)
