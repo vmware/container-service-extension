@@ -626,9 +626,9 @@ def _generate_cluster_apply_tests(test_users=None):
         # test for all the users
         test_users = \
             [
-                env.SYS_ADMIN_NAME,
+                # env.SYS_ADMIN_NAME,
                 env.CLUSTER_ADMIN_NAME,
-                env.CLUSTER_AUTHOR_NAME
+                # env.CLUSTER_AUTHOR_NAME
             ]
 
     test_cases = []
@@ -996,7 +996,7 @@ def test_0040_vcd_cse_cluster_apply(cluster_apply_param: CLUSTER_APPLY_TEST_PARA
 
 
 @pytest.mark.parametrize('test_runner_username', [env.SYS_ADMIN_NAME,
-                                                  env.CLUSTER_AUTHOR_NAME,
+                                                  env.CLUSTER_ADMIN_NAME,
                                                   env.CLUSTER_AUTHOR_NAME
                                                   ])
 def test_0060_vcd_cse_cluster_list(test_runner_username):
@@ -1019,8 +1019,8 @@ def test_0060_vcd_cse_cluster_list(test_runner_username):
 
 
 @pytest.mark.parametrize('test_runner_username', [env.SYS_ADMIN_NAME,
-                                                  #   env.CLUSTER_AUTHOR_NAME,
-                                                  #   env.CLUSTER_ADMIN_NAME
+                                                  env.CLUSTER_AUTHOR_NAME,
+                                                  env.CLUSTER_ADMIN_NAME
                                                   ])
 def test_0070_vcd_cse_cluster_info(test_runner_username):
     cmd_list = [
@@ -1042,8 +1042,8 @@ def test_0070_vcd_cse_cluster_info(test_runner_username):
 
 
 @pytest.mark.parametrize('test_runner_username', [env.SYS_ADMIN_NAME,
-                                                  #   env.CLUSTER_AUTHOR_NAME,
-                                                  #   env.CLUSTER_ADMIN_NAME
+                                                  env.CLUSTER_AUTHOR_NAME,
+                                                  env.CLUSTER_ADMIN_NAME
                                                   ])
 def test_0080_vcd_cse_cluster_config(test_runner_username):
     cmd_list = [
@@ -1155,6 +1155,8 @@ def test_0050_vcd_cse_delete_nfs(test_runner_username):
                                  org=env.TEST_ORG,
                                  ovdc=env.TEST_VDC,
                                  expect_failure=False),
+                            # TODO change back to cluster admin deleting
+                            # cluster author's cluster
                              CLUSTER_DELETE_TEST_PARAM(
                                  user=env.CLUSTER_ADMIN_NAME,
                                  password=None,
