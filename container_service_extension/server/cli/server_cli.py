@@ -682,7 +682,7 @@ def install(ctx, config_file_path, pks_config_file_path,
             msg_update_callback=console_message_printer)
     except Exception as err:
         SERVER_CLI_LOGGER.error(str(err))
-        console_message_printer.error(str(err), exc_info=True)
+        console_message_printer.error(str(err))
         sys.exit(1)
     finally:
         # block the process to let telemetry handler to finish posting data to
