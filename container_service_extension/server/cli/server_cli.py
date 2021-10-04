@@ -681,7 +681,7 @@ def install(ctx, config_file_path, pks_config_file_path,
             skip_config_decryption=skip_config_decryption,
             msg_update_callback=console_message_printer)
     except Exception as err:
-        SERVER_CLI_LOGGER.error(str(err))
+        SERVER_CLI_LOGGER.error(str(err), exc_info=True)
         console_message_printer.error(str(err))
         sys.exit(1)
     finally:
@@ -740,8 +740,8 @@ def pks_configure(ctx, pks_config_file_path, skip_config_decryption):
         except cryptography.fernet.InvalidToken:
             raise Exception(server_constants.CONFIG_DECRYPTION_ERROR_MSG)
     except Exception as err:
-        SERVER_CLI_LOGGER.error(str(err))
-        console_message_printer.error(str(err), exc_info=True)
+        SERVER_CLI_LOGGER.error(str(err), exc_info=True)
+        console_message_printer.error(str(err))
         sys.exit(1)
 
 
