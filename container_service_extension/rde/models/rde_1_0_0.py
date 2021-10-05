@@ -284,14 +284,15 @@ class NativeEntity(AbstractNativeEntity):
                     workers.append(worker_node_1_x)
 
                 nfs_nodes = []
-                for nfs_node in rde_2_x_entity.status.nodes.nfs:
-                    nfs_node_1_x = NfsNode(
-                        name=nfs_node.name,
-                        ip=nfs_node.ip,
-                        sizing_class=nfs_node.sizing_class,
-                        exports=str(nfs_node.exports)
-                    )
-                    nfs_nodes.append(nfs_node_1_x)
+                if rde_2_x_entity.status.nodes.nfs:
+                    for nfs_node in rde_2_x_entity.status.nodes.nfs:
+                        nfs_node_1_x = NfsNode(
+                            name=nfs_node.name,
+                            ip=nfs_node.ip,
+                            sizing_class=nfs_node.sizing_class,
+                            exports=str(nfs_node.exports)
+                        )
+                        nfs_nodes.append(nfs_node_1_x)
 
                 nodes = Nodes(
                     control_plane=control_plane,
