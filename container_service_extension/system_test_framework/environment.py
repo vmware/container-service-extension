@@ -4,7 +4,6 @@
 
 import os
 from pathlib import Path
-from sys import exec_prefix
 from typing import List
 
 from click.testing import CliRunner
@@ -16,7 +15,6 @@ from pyvcloud.vcd.exceptions import MissingRecordException
 from pyvcloud.vcd.org import Org
 from pyvcloud.vcd.role import Role
 from pyvcloud.vcd.vdc import VDC
-from requests.auth import HTTPDigestAuth
 from requests.models import HTTPError
 from system_tests_v2.pytest_logger import PYTEST_LOGGER
 from vcd_cli.vcd import vcd
@@ -184,6 +182,7 @@ def _init_test_vars(config, logger=NULL_LOGGER):
     IS_CSE_SERVER_RUNNING = test_config.get('is_cse_server_running', False)
 
 
+
 _init_test_vars(testutils.yaml_to_dict(BASE_CONFIG_FILEPATH))
 
 
@@ -305,7 +304,7 @@ def init_rde_environment(config_filepath=BASE_CONFIG_FILEPATH, logger=NULL_LOGGE
                 pyvcloud_utils.extract_id(test_vdc.get_resource_admin().get('id')),
                 created_policy['id'])
         except Exception as err:
-            logger.error(f"Error here: {err}")
+            logger.error(f"Error publishing sizing policy {SIZING_CLASS_NAME} to vdc {TEST_VDC}: {err}")  # noqa: E501
 
         create_cluster_admin_role(config['vcd'], logger=logger)
         create_cluster_author_role(config['vcd'], logger=logger)

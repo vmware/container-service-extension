@@ -340,7 +340,7 @@ class DefEntityService:
                 # this check. Hence skip TKGm clusters.
                 # The correct fix for this is to implement the
                 # to-do mentioned above. That is covered by VCDA-2969.
-                if entity_kind != shared_constants.ClusterEntityKind.TKG_M.value:
+                if entity_kind != shared_constants.ClusterEntityKind.TKG_M.value:  # noqa: E501
                     payload.get('entity', {}).get('status', {}).pop('private', None)  # noqa: E501
 
             # if request is async, return the task href in

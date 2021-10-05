@@ -243,3 +243,15 @@ def generate_validate_node_count_func(cluster_name, expected_nodes, rde_version,
             raise Exception("Invalid RDE version")
 
     return validator
+
+
+def validate_yaml_output():
+    """Validate if the output is a valid yaml."""
+    def validator(output, test_runner_username):
+        # Just try to safe_load the output.
+        import yaml
+        try:
+            yaml.safe_load(output)
+        except Exception:
+            return False
+        return True
