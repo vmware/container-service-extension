@@ -381,6 +381,7 @@ class Service(object, metaclass=Singleton):
                   "since `No communication with VCenter` mode is on."
             logger.SERVER_LOGGER.info(msg)
             msg_update_callback.general_no_color(msg)
+            self.config['broker']['templates'] = []
 
         # Read TKGm catalog definition from catalog item metadata and append
         # the same to to server run-time config
