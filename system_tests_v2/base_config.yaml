@@ -2,6 +2,12 @@
 # Fill in fields marked with '???'
 
 test:
+  is_cse_server_running: false                             # Affects test_cse_client.py,
+                                                           #   if true, the tests will assume that CSE server is already up and running.
+                                                           #   if false, cse server will be started up prior to running the tests.
+                                                           #   This flag helps in faster local testing.
+  should_install_prerequisites: true                       # If set to true, prerequisites like role, users and sizing policies won't be
+                                                           #    attempted to be created. This flag is to help local testing faster.
   teardown_installation: true                              # Affects test_cse_server.py.
                                                            #   if true, delete all installation entities (even on test failure).
                                                            #   if false, do not delete installation entities (even on test success).

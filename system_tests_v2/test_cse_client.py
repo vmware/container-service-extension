@@ -74,6 +74,9 @@ def cse_server():
     Teardown tasks:
     - Stop CSE server
     """
+    if env.IS_CSE_SERVER_RUNNING:
+        # CSE server is already running
+        return
     env.setup_active_config(logger=PYTEST_LOGGER)
     if env.is_cse_registered_as_mqtt_ext(logger=PYTEST_LOGGER):
         cmd = ['upgrade',
