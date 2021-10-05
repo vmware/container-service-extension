@@ -106,22 +106,21 @@ def cse_server():
                               "cse:nativeCluster: View"],
                              logger=PYTEST_LOGGER)
     # Create missing templates
-    if not env.TEST_TEMPLATES_PRESENT:
-        PYTEST_LOGGER.debug("Creating missing templates")
-        for template_config in env.TEMPLATE_DEFINITIONS:
-            cmd = f"template install {template_config['name']} " \
-                f"{template_config['revision']} " \
-                f"--config {env.ACTIVE_CONFIG_FILEPATH} " \
-                f"--ssh-key {env.SSH_KEY_FILEPATH} " \
-                f"--skip-config-decryption"
-            result = env.CLI_RUNNER.invoke(
-                cli, cmd.split(), catch_exceptions=False)
-            assert result.exit_code == 0,\
-                testutils.format_command_info('cse', cmd, result.exit_code,
-                                              result.output)
-            PYTEST_LOGGER.debug("Successfully installed template "
-                                f"{template_config['name']} at "
-                                f"revision {template_config['revision']}")
+    PYTEST_LOGGER.debug("Creating missing templates")
+    for template_config in env.TEMPLATE_DEFINITIONS:
+        cmd = f"template install {template_config['name']} " \
+            f"{template_config['revision']} " \
+            f"--config {env.ACTIVE_CONFIG_FILEPATH} " \
+            f"--ssh-key {env.SSH_KEY_FILEPATH} " \
+            f"--skip-config-decryption"
+        result = env.CLI_RUNNER.invoke(
+            cli, cmd.split(), catch_exceptions=False)
+        assert result.exit_code == 0,\
+            testutils.format_command_info('cse', cmd, result.exit_code,
+                                            result.output)
+        PYTEST_LOGGER.debug("Successfully installed template "
+                            f"{template_config['name']} at "
+                            f"revision {template_config['revision']}")
 
     # start cse server as subprocess
     cmd = f"cse run -c {env.ACTIVE_CONFIG_FILEPATH} --skip-config-decryption"

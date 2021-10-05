@@ -129,7 +129,6 @@ APPLY_SPEC_PATH = 'cluster_apply_specification.yaml'
 
 SIZING_CLASS_NAME = 'sc1'
 SIZING_CLASS_DESCRIPTION = 'sizing class for cse testing'
-TEST_TEMPLATES_PRESENT = False
 
 
 def _init_test_vars(config, logger=NULL_LOGGER):
@@ -173,7 +172,6 @@ def _init_test_vars(config, logger=NULL_LOGGER):
                             specified_templates_def.append(template_def)
                             break
             TEMPLATE_DEFINITIONS = specified_templates_def
-    TEST_TEMPLATES_PRESENT = test_config.get('test_templates_present', False)
 
 
 _init_test_vars(testutils.yaml_to_dict(BASE_CONFIG_FILEPATH))
