@@ -959,7 +959,7 @@ def cluster_apply_param(request):
     if not param.retain_cluster:
         env.delete_rde(param.cluster_name)
         env.delete_vapp(param.cluster_name, vdc_href=env.TEST_VDC_HREF)
-        PYTEST_LOGGER.error(f"Deleting cluster after test {param.cluster_name}")  # noqa: E501
+        PYTEST_LOGGER.debug(f"Deleting cluster after test {param.cluster_name}")  # noqa: E501
 
     # logout
     env.CLI_RUNNER.invoke(vcd, ['logout'])
