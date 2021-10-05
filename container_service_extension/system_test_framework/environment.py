@@ -132,7 +132,6 @@ IS_CSE_SERVER_RUNNING = False
 
 SIZING_CLASS_NAME = 'sc1'
 SIZING_CLASS_DESCRIPTION = 'sizing class for cse testing'
-TEST_TEMPLATES_PRESENT = False
 
 
 def _init_test_vars(config, logger=NULL_LOGGER):
@@ -180,7 +179,6 @@ def _init_test_vars(config, logger=NULL_LOGGER):
     SHOULD_INSTALL_PREREQUISITES = \
         test_config.get('should_install_prerequisites', True)
     IS_CSE_SERVER_RUNNING = test_config.get('is_cse_server_running', False)
-
 
 
 _init_test_vars(testutils.yaml_to_dict(BASE_CONFIG_FILEPATH))
