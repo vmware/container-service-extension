@@ -1643,6 +1643,7 @@ class ClusterService(abstract_broker.AbstractBroker):
             changes: dict = None,
     ):
         """Sync the defined entity with the latest vApp status.
+
         :param dict changes: dictionary of changes for the rde. The key
             indicates the field updated, e.g. 'entity.status'. The value
             indicates the value for this field.
@@ -1681,7 +1682,6 @@ class ClusterService(abstract_broker.AbstractBroker):
         :returns: Updated defined entity
         :rtype: common_models.DefEntity
         """
-
         # update the cluster_rde with external_id if provided by the caller
         if changes is None:
             changes = {}

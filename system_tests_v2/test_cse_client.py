@@ -118,7 +118,7 @@ def cse_server():
                 cli, cmd.split(), catch_exceptions=False)
             assert result.exit_code == 0,\
                 testutils.format_command_info('cse', cmd, result.exit_code,
-                                            result.output)
+                                              result.output)
             PYTEST_LOGGER.debug("Successfully installed template "
                                 f"{template_config['name']} at "
                                 f"revision {template_config['revision']}")
@@ -536,6 +536,33 @@ def _follow_apply_output(expect_failure=False):
     return validator
 
 
+def _follow_delete_output(expect_failure=False):
+    def validator(output, test_runner_username):
+        task_wait_command = output.split('\n')[2]
+        task_wait_command_args = task_wait_command.split()[1:]
+
+        # follow cluster apply output
+        result = env.CLI_RUNNER.invoke(
+            vcd, task_wait_command_args, catch_exceptions=True)
+        PYTEST_LOGGER.debug(f"Executing command: {task_wait_command}")
+        PYTEST_LOGGER.debug(f"Exit code: {result.exit_code}")
+        PYTEST_LOGGER.debug(f"Output: {result.output}")
+
+        if result.exit_code != 0:
+            if expect_failure:
+                PYTEST_LOGGER.debug(f"{task_wait_command} failed as expected. "
+                                    f"Exit code {result.exit_code}. "
+                                    f"Output: {result.output}")
+                return True
+            PYTEST_LOGGER.debug(f"Unexpected failure when executing "
+                                f"'{task_wait_command}'. "
+                                f"Exit code {result.exit_code}. "
+                                f"Output: {result.output}")
+            return False
+        return True
+    return validator
+
+
 @pytest.mark.parametrize(
     "system_toggle_test_case",
     [
@@ -778,7 +805,7 @@ def _generate_cluster_apply_tests(test_users=None):
                         sizing_class=env.SIZING_CLASS_NAME,
                         storage_profile=None,
                         cluster_name=f"{env.USERNAME_TO_CLUSTER_NAME[user]}-case6",  # noqa: E501
-                        expected_phase="CREATE:SUCCEEDED",  # should fail during request validation
+                        expected_phase="CREATE:SUCCEEDED", # validation failure
                         retain_cluster=True,
                         exit_code=2,   # should be 2?
                         should_rde_exist=True,
@@ -964,19 +991,19 @@ def test_0040_vcd_cse_cluster_apply(cluster_apply_param: CLUSTER_APPLY_TEST_PARA
 
     if cluster_apply_param.should_rde_exist:
         assert env.rde_exists(created_cluster_name), \
-                f"Expected RDE to be present for cluster {created_cluster_name}"  # noqa: E501
+            f"Expected RDE to be present for cluster {created_cluster_name}"
         assert _get_cluster_phase(created_cluster_name, cluster_apply_param.user) == cluster_apply_param.expected_phase, \
-                f"Expected RDE phase to be {cluster_apply_param.expected_phase}"  # noqa: E501
+            f"Expected RDE phase to be {cluster_apply_param.expected_phase}"  # noqa: E501
     else:
         assert not env.rde_exists(created_cluster_name), \
             f"Expected RDE to not exist for cluster {created_cluster_name}"
 
     if cluster_apply_param.should_vapp_exist:
         assert env.vapp_exists(created_cluster_name, vdc_href=env.TEST_VDC_HREF), \
-                f"Expected VApp to be present for cluster {created_cluster_name}"  # noqa: E501
+            f"Expected VApp to be present for cluster {created_cluster_name}"  # noqa: E501
     else:
         assert not env.vapp_exists(created_cluster_name, vdc_href=env.TEST_VDC_HREF), \
-                f"Expected VApp to not be present for cluster {created_cluster_name}"  # noqa: E501
+            f"Expected VApp to not be present for cluster {created_cluster_name}"  # noqa: E501
     if "UPDATE" in cluster_apply_param.expected_phase:
         if "SUCCEEDED" in cluster_apply_param.expected_phase:
             cmd_list = [
@@ -1046,6 +1073,8 @@ def test_0070_vcd_cse_cluster_info(test_runner_username):
                                                   env.CLUSTER_ADMIN_NAME
                                                   ])
 def test_0080_vcd_cse_cluster_config(test_runner_username):
+    # Failing for the first call with err:
+    # Error: Expecting value: line 1 column 1 (char 0)
     cmd_list = [
         testutils.CMD_BINDER(cmd=env.USERNAME_TO_LOGIN_CMD[test_runner_username],  # noqa: E501
                              exit_code=0,
@@ -1155,10 +1184,17 @@ def test_0050_vcd_cse_delete_nfs(test_runner_username):
                                  org=env.TEST_ORG,
                                  ovdc=env.TEST_VDC,
                                  expect_failure=False),
-                            # TODO change back to cluster admin deleting
-                            # cluster author's cluster
                              CLUSTER_DELETE_TEST_PARAM(
                                  user=env.CLUSTER_ADMIN_NAME,
+                                 password=None,
+                                 cluster_name=f"{env.CLUSTER_ADMIN_TEST_CLUSTER_NAME}",  # noqa: E501
+                                 org=env.TEST_ORG,
+                                 ovdc=env.TEST_VDC,
+                                 expect_failure=False),
+                             # TODO change back to cluster admin deleting
+                             # cluster author's cluster
+                             CLUSTER_DELETE_TEST_PARAM(
+                                 user=env.SYS_ADMIN_NAME,
                                  password=None,
                                  cluster_name=f"{env.CLUSTER_AUTHOR_TEST_CLUSTER_NAME}",  # noqa: E501
                                  org=env.TEST_ORG,
@@ -1175,7 +1211,7 @@ def test_0090_vcd_cse_cluster_delete(cluster_delete_param: CLUSTER_DELETE_TEST_P
     :param config: cse config file for vcd configuration
     """
     cmd_list = [
-        testutils.CMD_BINDER(cmd=env.USER_LOGOUT_CMD[cluster_delete_param.user],  # noqa: E501
+        testutils.CMD_BINDER(cmd=env.USERNAME_TO_LOGIN_CMD[cluster_delete_param.user],  # noqa: E501
                              exit_code=0,
                              validate_output_func=None,
                              test_user=cluster_delete_param.user),
@@ -1185,7 +1221,7 @@ def test_0090_vcd_cse_cluster_delete(cluster_delete_param: CLUSTER_DELETE_TEST_P
                              test_user=env.CLUSTER_ADMIN_NAME),
         testutils.CMD_BINDER(cmd=f"cse cluster delete {cluster_delete_param.cluster_name}",  # noqa: E501
                              exit_code=2 if cluster_delete_param.expect_failure else 0,  # noqa: E501
-                             validate_output_func=_follow_apply_output(expect_failure=cluster_delete_param.expect_failure),  # noqa: E501
+                             validate_output_func=_follow_delete_output(expect_failure=cluster_delete_param.expect_failure),  # noqa: E501
                              test_user=cluster_delete_param.user),
         testutils.CMD_BINDER(cmd=env.USER_LOGOUT_CMD,
                              exit_code=0,
