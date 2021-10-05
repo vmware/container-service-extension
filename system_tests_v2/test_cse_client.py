@@ -655,9 +655,9 @@ def _generate_cluster_apply_tests(test_users=None):
         # test for all the users
         test_users = \
             [
-                # env.SYS_ADMIN_NAME,
+                env.SYS_ADMIN_NAME,
                 env.CLUSTER_ADMIN_NAME,
-                # env.CLUSTER_AUTHOR_NAME
+                env.CLUSTER_AUTHOR_NAME
             ]
 
     test_cases = []
