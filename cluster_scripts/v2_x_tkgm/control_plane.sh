@@ -127,7 +127,7 @@ kubernetesVersion: $kubernetes_version
 ---
 END
 
-  kubeadm init --config $kubeadm_config_path > /root/kubeadm-init.out
+  kubeadm init --config $kubeadm_config_path --v=10 > /root/kubeadm-init.out
   export KUBECONFIG=/etc/kubernetes/admin.conf
 vmtoolsd --cmd "info-set guestinfo.kubeconfig $(cat /etc/kubernetes/admin.conf | base64 | tr -d '\n')"
 vmtoolsd --cmd "info-set guestinfo.postcustomization.kubeinit.status successful"

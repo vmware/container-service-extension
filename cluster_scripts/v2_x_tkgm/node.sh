@@ -99,7 +99,7 @@ nodeRegistration:
 ---
 END
 
-  kubeadm join --config /root/kubeadm-defaults-join.conf
+  kubeadm join --config /root/kubeadm-defaults-join.conf --v=10 > /root/kubeadm-join.out
 vmtoolsd --cmd "info-set guestinfo.postcustomization.kubeadm.node.join.status successful"
 
 echo "$(date) post customization script execution completed" &>> /var/log/cse/customization/status.log
