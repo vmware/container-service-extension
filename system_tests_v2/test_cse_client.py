@@ -58,6 +58,9 @@ SYSTEM_TOGGLE_TEST_PARAM = collections.namedtuple("SystemToggleTestParam", "user
 CLUSTER_APPLY_TEST_PARAM = collections.namedtuple("ClusterApplyTestParam", "user password cluster_name worker_count nfs_count rollback cpu memory sizing_class storage_profile ovdc_network template_name template_revision expected_phase retain_cluster exit_code should_vapp_exist should_rde_exist")  # noqa: E501
 CLUSTER_DELETE_TEST_PARAM = collections.namedtuple("CluserDeleteTestParam", "user password cluster_name org ovdc expect_failure")  # noqa: E501
 
+DEFAULT_CPU_COUNT = 2
+DEFAULT_MEMORY_MB = 2048
+
 
 @pytest.fixture(scope='module', autouse=True)
 def cse_server():
@@ -76,6 +79,7 @@ def cse_server():
     """
     if env.IS_CSE_SERVER_RUNNING:
         # CSE server is already running
+        yield
         return
     env.setup_active_config(logger=PYTEST_LOGGER)
     if env.is_cse_registered_as_mqtt_ext(logger=PYTEST_LOGGER):
@@ -543,7 +547,7 @@ def _follow_delete_output(expect_failure=False):
         task_wait_command = output.split('\n')[2]
         task_wait_command_args = task_wait_command.split()[1:]
 
-        # follow cluster apply output
+        # follow cluster delete output
         result = env.CLI_RUNNER.invoke(
             vcd, task_wait_command_args, catch_exceptions=True)
         PYTEST_LOGGER.debug(f"Executing command: {task_wait_command}")
@@ -759,8 +763,8 @@ def _generate_cluster_apply_tests(test_users=None):
                         template_name=template['name'],
                         template_revision=template['revision'],
                         ovdc_network=None,
-                        cpu=2,
-                        memory=2048,
+                        cpu=DEFAULT_CPU_COUNT,
+                        memory=DEFAULT_MEMORY_MB,
                         sizing_class=env.SIZING_CLASS_NAME,
                         storage_profile=None,
                         cluster_name=f"{env.USERNAME_TO_CLUSTER_NAME[user]}-case5",  # noqa: E501
@@ -780,8 +784,8 @@ def _generate_cluster_apply_tests(test_users=None):
                         template_name=template['name'],
                         template_revision=template['revision'],
                         ovdc_network=None,
-                        cpu=2,
-                        memory=2048,
+                        cpu=DEFAULT_CPU_COUNT,
+                        memory=DEFAULT_MEMORY_MB,
                         sizing_class=None,
                         storage_profile=None,
                         cluster_name=f"{env.USERNAME_TO_CLUSTER_NAME[user]}-case6",  # noqa: E501
@@ -824,8 +828,8 @@ def _generate_cluster_apply_tests(test_users=None):
                         template_name=template['name'],
                         template_revision=template['revision'],
                         ovdc_network=None,
-                        cpu=2,
-                        memory=2048,
+                        cpu=DEFAULT_CPU_COUNT,
+                        memory=DEFAULT_MEMORY_MB,
                         sizing_class=None,
                         storage_profile=None,
                         cluster_name=f"{env.USERNAME_TO_CLUSTER_NAME[user]}-case6",  # noqa: E501
@@ -866,8 +870,8 @@ def _generate_cluster_apply_tests(test_users=None):
                         template_name=template['name'],
                         template_revision=template['revision'],
                         ovdc_network=None,
-                        cpu=2,
-                        memory=2048,
+                        cpu=DEFAULT_CPU_COUNT,
+                        memory=DEFAULT_MEMORY_MB,
                         sizing_class=None,
                         storage_profile=None,
                         cluster_name=f"{env.USERNAME_TO_CLUSTER_NAME[user]}",

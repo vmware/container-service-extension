@@ -282,24 +282,25 @@ def init_rde_environment(config_filepath=BASE_CONFIG_FILEPATH, logger=NULL_LOGGE
         create_cluster_author_role(config['vcd'], logger=logger)
 
         # create and publish sizing class sc1 to TEST_VDC
-        cpm = ComputePolicyManager(sysadmin_client=sysadmin_client, log_wire=True)
+        cpm = ComputePolicyManager(
+            sysadmin_client=sysadmin_client, log_wire=True)
         created_policy = None
         try:
-             created_policy = cpm.add_vdc_compute_policy(
+            created_policy = cpm.add_vdc_compute_policy(
                 SIZING_CLASS_NAME,
                 description=SIZING_CLASS_DESCRIPTION,
                 cpu_count=2,
                 memory_mb=2048)
         except HTTPError as err:
             if 'already exists' in err.response.text:
-                logger.debug(f"Compute policy {SIZING_CLASS_NAME} already exists")
+                logger.debug(f"Compute policy {SIZING_CLASS_NAME} already exists")  # noqa: E501
                 created_policy = cpm.get_vdc_compute_policy(SIZING_CLASS_NAME)
             else:
                 logger.error(f"Request to create sizing policy {SIZING_CLASS_NAME} failed.")  # noqa: E501
                 raise
         try:
             cpm.add_compute_policy_to_vdc(
-                pyvcloud_utils.extract_id(test_vdc.get_resource_admin().get('id')),
+                pyvcloud_utils.extract_id(test_vdc.get_resource_admin().get('id')),  # noqa: E501
                 created_policy['id'])
         except Exception as err:
             logger.error(f"Error publishing sizing policy {SIZING_CLASS_NAME} to vdc {TEST_VDC}: {err}")  # noqa: E501

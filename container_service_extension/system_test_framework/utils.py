@@ -255,3 +255,4 @@ def validate_yaml_output():
         except Exception:
             return False
         return True
+    return validator
