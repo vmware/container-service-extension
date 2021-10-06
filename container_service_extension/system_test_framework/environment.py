@@ -125,6 +125,9 @@ VCD_SITE = None
 # Location at which the cluster apply spec will be generated and used
 APPLY_SPEC_PATH = 'cluster_apply_specification.yaml'
 
+SHOULD_INSTALL_PREREQUISITES = True
+IS_CSE_SERVER_RUNNING = False
+
 
 def _init_test_vars(config, logger=NULL_LOGGER):
     """Initialize all the environment variables that are used for test.
@@ -133,7 +136,8 @@ def _init_test_vars(config, logger=NULL_LOGGER):
     """
     global TEMPLATE_DEFINITIONS, TEARDOWN_INSTALLATION, TEARDOWN_CLUSTERS, \
         TEST_ALL_TEMPLATES, TEST_ORG, TEST_VDC, TEST_NETWORK, \
-        USERNAME_TO_CLUSTER_NAME
+        USERNAME_TO_CLUSTER_NAME, SHOULD_INSTALL_PREREQUISITES, \
+        IS_CSE_SERVER_RUNNING
     USERNAME_TO_CLUSTER_NAME = {
         SYS_ADMIN_NAME: SYS_ADMIN_TEST_CLUSTER_NAME,
         CLUSTER_ADMIN_NAME: ORG_ADMIN_TEST_CLUSTER_NAME,
@@ -167,6 +171,9 @@ def _init_test_vars(config, logger=NULL_LOGGER):
                             specified_templates_def.append(template_def)
                             break
             TEMPLATE_DEFINITIONS = specified_templates_def
+    SHOULD_INSTALL_PREREQUISITES = \
+        test_config.get('should_install_prerequisites', True)
+    IS_CSE_SERVER_RUNNING = test_config.get('is_cse_server_running', False)
 
 
 _init_test_vars(testutils.yaml_to_dict(BASE_CONFIG_FILEPATH))
@@ -265,9 +272,9 @@ def init_rde_environment(config_filepath=BASE_CONFIG_FILEPATH, logger=NULL_LOGGE
     logger.debug(f"Using test org {test_org.get_name()} "
                  f"with href {TEST_ORG_HREF}")
     logger.debug(f"Using test vdc {test_vdc.name} with href {TEST_VDC_HREF}")
-
-    create_cluster_admin_role(config['vcd'], logger=logger)
-    create_cluster_author_role(config['vcd'], logger=logger)
+    if SHOULD_INSTALL_PREREQUISITES:
+        create_cluster_admin_role(config['vcd'], logger=logger)
+        create_cluster_author_role(config['vcd'], logger=logger)
 
 
 # TODO remove after removing legacy mode

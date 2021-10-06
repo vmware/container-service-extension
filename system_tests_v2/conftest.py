@@ -59,16 +59,17 @@ def vcd_users():
     - create Cluster admin user if it doesn't exist
     - create Cluster author user if it doesn't exist
     """
-    # org_admin -> cluster_admin
-    # k8_author -> cluster_author
-    env.create_user(env.CLUSTER_ADMIN_NAME,
-                    env.CLUSTER_ADMIN_PASSWORD,
-                    env.CLUSTER_ADMIN_ROLE_NAME,
-                    logger=pytest_logger.PYTEST_LOGGER)
-    env.create_user(env.CLUSTER_AUTHOR_NAME,
-                    env.CLUSTER_AUTHOR_PASSWORD,
-                    env.CLUSTER_AUTHOR_ROLE_NAME,
-                    logger=pytest_logger.PYTEST_LOGGER)
+    if env.SHOULD_INSTALL_PREREQUISITES:
+        # org_admin -> cluster_admin
+        # k8_author -> cluster_author
+        env.create_user(env.CLUSTER_ADMIN_NAME,
+                        env.CLUSTER_ADMIN_PASSWORD,
+                        env.CLUSTER_ADMIN_ROLE_NAME,
+                        logger=pytest_logger.PYTEST_LOGGER)
+        env.create_user(env.CLUSTER_AUTHOR_NAME,
+                        env.CLUSTER_AUTHOR_PASSWORD,
+                        env.CLUSTER_AUTHOR_ROLE_NAME,
+                        logger=pytest_logger.PYTEST_LOGGER)
 
 
 @pytest.fixture
