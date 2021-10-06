@@ -120,7 +120,7 @@ def cse_server():
             cli, cmd.split(), catch_exceptions=False)
         assert result.exit_code == 0,\
             testutils.format_command_info('cse', cmd, result.exit_code,
-                                            result.output)
+                                          result.output)
         PYTEST_LOGGER.debug("Successfully installed template "
                             f"{template_config['name']} at "
                             f"revision {template_config['revision']}")
