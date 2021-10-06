@@ -55,8 +55,11 @@ import container_service_extension.system_test_framework.utils as testutils
 OVDC_ENABLE_TEST_PARAM = collections.namedtuple("OvdcEnableParam", "user password org_name ovdc_name disable_before_test expect_failure")  # noqa: E501
 OVDC_DISABLE_TEST_PARAM = collections.namedtuple("OvdcDisableParam", "user password org_name ovdc_name enable_before_test expect_failure")  # noqa: E501
 SYSTEM_TOGGLE_TEST_PARAM = collections.namedtuple("SystemToggleTestParam", "user password cluster_name worker_count nfs_count rollback sizing_class storage_profile ovdc_network template_name template_revision expect_failure")  # noqa: E501
-CLUSTER_APPLY_TEST_PARAM = collections.namedtuple("ClusterApplyTestParam", "user password cluster_name worker_count nfs_count rollback sizing_class storage_profile ovdc_network template_name template_revision expected_phase retain_cluster")  # noqa: E501
+CLUSTER_APPLY_TEST_PARAM = collections.namedtuple("ClusterApplyTestParam", "user password cluster_name worker_count nfs_count rollback cpu memory sizing_class storage_profile ovdc_network template_name template_revision expected_phase retain_cluster exit_code should_vapp_exist should_rde_exist")  # noqa: E501
 CLUSTER_DELETE_TEST_PARAM = collections.namedtuple("CluserDeleteTestParam", "user password cluster_name org ovdc expect_failure")  # noqa: E501
+
+DEFAULT_CPU_COUNT = 2
+DEFAULT_MEMORY_MB = 2048
 
 
 @pytest.fixture(scope='module', autouse=True)
@@ -76,6 +79,7 @@ def cse_server():
     """
     if env.IS_CSE_SERVER_RUNNING:
         # CSE server is already running
+        yield
         return
     env.setup_active_config(logger=PYTEST_LOGGER)
     if env.is_cse_registered_as_mqtt_ext(logger=PYTEST_LOGGER):
@@ -112,10 +116,10 @@ def cse_server():
     PYTEST_LOGGER.debug("Creating missing templates")
     for template_config in env.TEMPLATE_DEFINITIONS:
         cmd = f"template install {template_config['name']} " \
-              f"{template_config['revision']} " \
-              f"--config {env.ACTIVE_CONFIG_FILEPATH} " \
-              f"--ssh-key {env.SSH_KEY_FILEPATH} " \
-              f"--skip-config-decryption"
+            f"{template_config['revision']} " \
+            f"--config {env.ACTIVE_CONFIG_FILEPATH} " \
+            f"--ssh-key {env.SSH_KEY_FILEPATH} " \
+            f"--skip-config-decryption"
         result = env.CLI_RUNNER.invoke(
             cli, cmd.split(), catch_exceptions=False)
         assert result.exit_code == 0,\
@@ -538,6 +542,33 @@ def _follow_apply_output(expect_failure=False):
     return validator
 
 
+def _follow_delete_output(expect_failure=False):
+    def validator(output, test_runner_username):
+        task_wait_command = output.split('\n')[2]
+        task_wait_command_args = task_wait_command.split()[1:]
+
+        # follow cluster delete output
+        result = env.CLI_RUNNER.invoke(
+            vcd, task_wait_command_args, catch_exceptions=True)
+        PYTEST_LOGGER.debug(f"Executing command: {task_wait_command}")
+        PYTEST_LOGGER.debug(f"Exit code: {result.exit_code}")
+        PYTEST_LOGGER.debug(f"Output: {result.output}")
+
+        if result.exit_code != 0:
+            if expect_failure:
+                PYTEST_LOGGER.debug(f"{task_wait_command} failed as expected. "
+                                    f"Exit code {result.exit_code}. "
+                                    f"Output: {result.output}")
+                return True
+            PYTEST_LOGGER.debug(f"Unexpected failure when executing "
+                                f"'{task_wait_command}'. "
+                                f"Exit code {result.exit_code}. "
+                                f"Output: {result.output}")
+            return False
+        return True
+    return validator
+
+
 @pytest.mark.parametrize(
     "system_toggle_test_case",
     [
@@ -649,10 +680,15 @@ def _generate_cluster_apply_tests(test_users=None):
                         template_name=template['name'],
                         template_revision=template['revision'],
                         ovdc_network=None,
+                        cpu=None,
+                        memory=None,
                         sizing_class="Invalid_value",
                         storage_profile=None,
                         expected_phase="CREATE:FAILED",
-                        retain_cluster=False
+                        retain_cluster=False,
+                        exit_code=0,
+                        should_rde_exist=False,
+                        should_vapp_exist=False
                     ),
                     # Invalid Storage profile
                     CLUSTER_APPLY_TEST_PARAM(
@@ -664,11 +700,16 @@ def _generate_cluster_apply_tests(test_users=None):
                         template_name=template['name'],
                         template_revision=template['revision'],
                         ovdc_network=None,
+                        cpu=None,
+                        memory=None,
                         sizing_class=None,
                         storage_profile="Invalid_value",
                         cluster_name=f"{env.USERNAME_TO_CLUSTER_NAME[user]}-case2",  # noqa: E501
                         expected_phase="CREATE:FAILED",
-                        retain_cluster=False
+                        retain_cluster=False,
+                        exit_code=0,
+                        should_rde_exist=False,
+                        should_vapp_exist=False
                     ),
                     # Invalid Network
                     CLUSTER_APPLY_TEST_PARAM(
@@ -680,13 +721,18 @@ def _generate_cluster_apply_tests(test_users=None):
                         template_name=template['name'],
                         template_revision=template['revision'],
                         ovdc_network="Invalid_value",
+                        cpu=None,
+                        memory=None,
                         sizing_class=None,
                         storage_profile=None,
                         cluster_name=f"{env.USERNAME_TO_CLUSTER_NAME[user]}-case3",  # noqa: E501
                         expected_phase="CREATE:FAILED",
-                        retain_cluster=False
+                        retain_cluster=False,
+                        exit_code=0,
+                        should_rde_exist=False,
+                        should_vapp_exist=False
                     ),
-                    # Invalid network with rollback
+                    # Invalid network without rollback
                     CLUSTER_APPLY_TEST_PARAM(
                         user=user,
                         password=None,
@@ -696,13 +742,104 @@ def _generate_cluster_apply_tests(test_users=None):
                         template_name=template['name'],
                         template_revision=template['revision'],
                         ovdc_network="Invalid_value",
+                        cpu=None,
+                        memory=None,
                         sizing_class=None,
                         storage_profile=None,
                         cluster_name=f"{env.USERNAME_TO_CLUSTER_NAME[user]}-case4",  # noqa: E501
                         expected_phase="CREATE:FAILED",
-                        retain_cluster=False
+                        retain_cluster=False,
+                        exit_code=0,
+                        should_rde_exist=True,
+                        should_vapp_exist=False # creation of vapp will fail
                     ),
-                    # Valid case
+                    # cpu/memory and sizing class provided
+                    CLUSTER_APPLY_TEST_PARAM(
+                        user=user,
+                        password=None,
+                        worker_count=0,
+                        nfs_count=0,
+                        rollback=False,
+                        template_name=template['name'],
+                        template_revision=template['revision'],
+                        ovdc_network=None,
+                        cpu=DEFAULT_CPU_COUNT,
+                        memory=DEFAULT_MEMORY_MB,
+                        sizing_class=env.SIZING_CLASS_NAME,
+                        storage_profile=None,
+                        cluster_name=f"{env.USERNAME_TO_CLUSTER_NAME[user]}-case5",  # noqa: E501
+                        expected_phase="CREATE:FAILED",
+                        retain_cluster=False,
+                        exit_code=2,
+                        should_rde_exist=False,
+                        should_vapp_exist=False
+                    ),
+                    # cluster created with cpu/memory and no sizing class
+                    CLUSTER_APPLY_TEST_PARAM(
+                        user=user,
+                        password=None,
+                        worker_count=0,
+                        nfs_count=0,
+                        rollback=False,
+                        template_name=template['name'],
+                        template_revision=template['revision'],
+                        ovdc_network=None,
+                        cpu=DEFAULT_CPU_COUNT,
+                        memory=DEFAULT_MEMORY_MB,
+                        sizing_class=None,
+                        storage_profile=None,
+                        cluster_name=f"{env.USERNAME_TO_CLUSTER_NAME[user]}-case6",  # noqa: E501
+                        expected_phase="CREATE:SUCCEEDED",
+                        retain_cluster=True,
+                        exit_code=0,
+                        should_rde_exist=True,
+                        should_vapp_exist=True
+                    ),
+                    # Resize a cluster created using cpu/memory with sizing
+                    # class
+                    CLUSTER_APPLY_TEST_PARAM(
+                        user=user,
+                        password=None,
+                        worker_count=1,
+                        nfs_count=0,
+                        rollback=False,
+                        template_name=template['name'],
+                        template_revision=template['revision'],
+                        ovdc_network=None,
+                        cpu=None,
+                        memory=None,
+                        sizing_class=env.SIZING_CLASS_NAME,
+                        storage_profile=None,
+                        cluster_name=f"{env.USERNAME_TO_CLUSTER_NAME[user]}-case6",  # noqa: E501
+                        expected_phase="CREATE:SUCCEEDED", # validation failure
+                        retain_cluster=True,
+                        exit_code=2,   # should be 2?
+                        should_rde_exist=True,
+                        should_vapp_exist=True
+                    ),
+                    # Resize a cluster created using cpu/memory using
+                    # cpu/memory
+                    CLUSTER_APPLY_TEST_PARAM(
+                        user=user,
+                        password=None,
+                        worker_count=1,
+                        nfs_count=0,
+                        rollback=False,
+                        template_name=template['name'],
+                        template_revision=template['revision'],
+                        ovdc_network=None,
+                        cpu=DEFAULT_CPU_COUNT,
+                        memory=DEFAULT_MEMORY_MB,
+                        sizing_class=None,
+                        storage_profile=None,
+                        cluster_name=f"{env.USERNAME_TO_CLUSTER_NAME[user]}-case6",  # noqa: E501
+                        expected_phase="UPDATE:SUCCEEDED",
+                        retain_cluster=False,
+                        exit_code=0,
+                        should_rde_exist=True,
+                        should_vapp_exist=True
+                    ),
+                    # Create cluster using sizing policy
                     CLUSTER_APPLY_TEST_PARAM(
                         user=user,
                         password=None,
@@ -712,29 +849,37 @@ def _generate_cluster_apply_tests(test_users=None):
                         template_name=template['name'],
                         template_revision=template['revision'],
                         ovdc_network=None,
-                        sizing_class=None,
+                        cpu=None,
+                        memory=None,
+                        sizing_class=env.SIZING_CLASS_NAME,
                         storage_profile=None,
                         cluster_name=f"{env.USERNAME_TO_CLUSTER_NAME[user]}",
                         expected_phase="CREATE:SUCCEEDED",
-                        retain_cluster=True
+                        retain_cluster=True,
+                        exit_code=0,
+                        should_rde_exist=True,
+                        should_vapp_exist=True
                     ),
-                    # resize a failed deployment
-                    # expected status is still CREATE:FAILED because the
-                    # request wont be acknowledged by CSE server
+                    # Resize cluster created with sizing class using cpu/mem
                     CLUSTER_APPLY_TEST_PARAM(
                         user=user,
                         password=None,
                         worker_count=1,
-                        nfs_count=0,
+                        nfs_count=1,
                         rollback=False,
                         template_name=template['name'],
                         template_revision=template['revision'],
-                        ovdc_network='Invalid_value',
+                        ovdc_network=None,
+                        cpu=DEFAULT_CPU_COUNT,
+                        memory=DEFAULT_MEMORY_MB,
                         sizing_class=None,
                         storage_profile=None,
-                        cluster_name=f"{env.USERNAME_TO_CLUSTER_NAME[user]}-case4",  # noqa: E501
-                        expected_phase='CREATE:FAILED',
-                        retain_cluster=False
+                        cluster_name=f"{env.USERNAME_TO_CLUSTER_NAME[user]}",
+                        expected_phase='CREATE:SUCCEEDED',  # validation fail
+                        retain_cluster=True,
+                        exit_code=2,
+                        should_rde_exist=True,
+                        should_vapp_exist=True
                     ),
                     # Resize up a valid deployment
                     CLUSTER_APPLY_TEST_PARAM(
@@ -746,11 +891,16 @@ def _generate_cluster_apply_tests(test_users=None):
                         template_name=template['name'],
                         template_revision=template['revision'],
                         ovdc_network=None,
-                        sizing_class=None,
+                        cpu=None,
+                        memory=None,
+                        sizing_class=env.SIZING_CLASS_NAME,
                         storage_profile=None,
                         cluster_name=f"{env.USERNAME_TO_CLUSTER_NAME[user]}",
                         expected_phase='UPDATE:SUCCEEDED',
-                        retain_cluster=True
+                        retain_cluster=True,
+                        exit_code=0,
+                        should_rde_exist=True,
+                        should_vapp_exist=True
                     ),
                     # Resize down a valid deployment
                     CLUSTER_APPLY_TEST_PARAM(
@@ -762,11 +912,16 @@ def _generate_cluster_apply_tests(test_users=None):
                         template_name=template['name'],
                         template_revision=template['revision'],
                         ovdc_network=None,
-                        sizing_class=None,
+                        cpu=None,
+                        memory=None,
+                        sizing_class=env.SIZING_CLASS_NAME,
                         storage_profile=None,
                         cluster_name=f"{env.USERNAME_TO_CLUSTER_NAME[user]}",
                         expected_phase='UPDATE:SUCCEEDED',
-                        retain_cluster=True
+                        retain_cluster=True,
+                        exit_code=0,
+                        should_rde_exist=True,
+                        should_vapp_exist=True
                     )
                 ]
             )
@@ -776,17 +931,13 @@ def _generate_cluster_apply_tests(test_users=None):
 @pytest.fixture
 def cluster_apply_param(request):
     param: CLUSTER_APPLY_TEST_PARAM = request.param
-    is_update_test = "UPDATE" in param.expected_phase
-    if not is_update_test:
-        env.delete_vapp(param.cluster_name, vdc_href=env.TEST_VDC_HREF)
-        env.delete_rde(param.cluster_name)
 
     # login as the user
     login_cmd = env.USERNAME_TO_LOGIN_CMD[param.user]
     env.CLI_RUNNER.invoke(vcd, login_cmd.split(), catch_exceptions=False)
 
     PYTEST_LOGGER.debug(f"Logged in as {param.user}")
-
+    PYTEST_LOGGER.debug(f"Parameters used: {param}")
     # create apply specification
     spec_params = {
         'worker_count': param.worker_count,
@@ -796,11 +947,12 @@ def cluster_apply_param(request):
         'template_revision': param.template_revision,
         'network': param.ovdc_network,
         'sizing_class': param.sizing_class,
+        'cpu': param.cpu,
+        'memory': param.memory,
         'storage_profile': param.storage_profile,
         'cluster_name': param.cluster_name
     }
     create_apply_spec(spec_params)
-
     # enable ovdc for cluster creation
     cmd = f"cse ovdc enable --native --org {env.TEST_ORG} {env.TEST_VDC}"
     env.CLI_RUNNER.invoke(vcd, cmd.split(), catch_exceptions=True)
@@ -810,6 +962,7 @@ def cluster_apply_param(request):
     if not param.retain_cluster:
         env.delete_rde(param.cluster_name)
         env.delete_vapp(param.cluster_name, vdc_href=env.TEST_VDC_HREF)
+        PYTEST_LOGGER.debug(f"Deleting cluster after test {param.cluster_name}")  # noqa: E501
 
     # logout
     env.CLI_RUNNER.invoke(vcd, ['logout'])
@@ -829,11 +982,7 @@ def test_0040_vcd_cse_cluster_apply(cluster_apply_param: CLUSTER_APPLY_TEST_PARA
     """
     print(f"Running cluster create operation for {cluster_apply_param.user}")
 
-    exit_code = 0
-    if cluster_apply_param.expected_phase == 'UPDATE:FAILED':
-        # Validation failure during cluster update will fail the command
-        # execution before task is generated.
-        exit_code = 2
+    exit_code = cluster_apply_param.exit_code
     expect_failure = "FAILED" in cluster_apply_param.expected_phase
 
     cmd_list = [
@@ -845,50 +994,42 @@ def test_0040_vcd_cse_cluster_apply(cluster_apply_param: CLUSTER_APPLY_TEST_PARA
     testutils.execute_commands(cmd_list, logger=PYTEST_LOGGER)
 
     created_cluster_name = cluster_apply_param.cluster_name
-    rollback = cluster_apply_param.rollback
 
-    if "CREATE" in cluster_apply_param.expected_phase:
-        if "SUCCEEDED" in cluster_apply_param.expected_phase:
-            assert env.vapp_exists(created_cluster_name, vdc_href=env.TEST_VDC_HREF), \
-                f"Expected VApp to be present for cluster {created_cluster_name}"  # noqa: E501
-            assert env.rde_exists(created_cluster_name), \
-                f"Expected RDE to be present for cluster {created_cluster_name}"  # noqa: E501
-            assert _get_cluster_phase(created_cluster_name, cluster_apply_param.user) == 'CREATE:SUCCEEDED', \
-                "Expected RDE phase to be 'CREATE:SUCCEEDED'"  # noqa: E501
-        if "FAILED" in cluster_apply_param.expected_phase:
-            if rollback:
-                assert not env.vapp_exists(created_cluster_name, vdc_href=env.TEST_VDC_HREF), \
-                    f"Expected VApp to be present for cluster {created_cluster_name}"  # noqa: E501
-                assert not env.rde_exists(created_cluster_name), \
-                    f"Expected RDE to be present for cluster {created_cluster_name}"  # noqa: E501
-            else:
-                # During failure, cannot garauntee vapp creation
-                assert env.rde_exists(created_cluster_name), \
-                    f"Expected RDE for the cluster {created_cluster_name} to be present"  # noqa: E501
-                assert _get_cluster_phase(created_cluster_name, cluster_apply_param.user) == 'CREATE:FAILED', \
-                    "Expected RDE phase to be 'CREATE:FAILED'"  # noqa: E501
+    if cluster_apply_param.should_rde_exist:
+        assert env.rde_exists(created_cluster_name), \
+            f"Expected RDE to be present for cluster {created_cluster_name}"
+        assert _get_cluster_phase(created_cluster_name, cluster_apply_param.user) == cluster_apply_param.expected_phase, \
+            f"Expected RDE phase to be {cluster_apply_param.expected_phase}"  # noqa: E501
+    else:
+        assert not env.rde_exists(created_cluster_name), \
+            f"Expected RDE to not exist for cluster {created_cluster_name}"
+
+    if cluster_apply_param.should_vapp_exist:
+        assert env.vapp_exists(created_cluster_name, vdc_href=env.TEST_VDC_HREF), \
+            f"Expected VApp to be present for cluster {created_cluster_name}"  # noqa: E501
+    else:
+        assert not env.vapp_exists(created_cluster_name, vdc_href=env.TEST_VDC_HREF), \
+            f"Expected VApp to not be present for cluster {created_cluster_name}"  # noqa: E501
     if "UPDATE" in cluster_apply_param.expected_phase:
         if "SUCCEEDED" in cluster_apply_param.expected_phase:
             cmd_list = [
             testutils.CMD_BINDER(cmd=f"cse cluster info {created_cluster_name}",   # noqa
                                  exit_code=0,
                                  validate_output_func=testutils.generate_validate_node_count_func(  # noqa: E501
+                                     cluster_name=created_cluster_name,
                                      expected_nodes=cluster_apply_param.worker_count,  # noqa: E501
                                      rde_version=get_runtime_rde_version_by_vcd_api_version(env.VCD_API_VERSION_TO_USE),  # noqa: E501
                                      logger=PYTEST_LOGGER),  # noqa: E501
                                  test_user=cluster_apply_param.user)
             ]
             testutils.execute_commands(cmd_list, logger=PYTEST_LOGGER)
-        # common for both succeeded and failed conditions
-        assert _get_cluster_phase(created_cluster_name, cluster_apply_param.user) == cluster_apply_param.expected_phase, \
-            f"Expected RDE phase to be {cluster_apply_param.expected_phase}"  # noqa: E501
 
     # logout user
     env.CLI_RUNNER.invoke(vcd, env.USER_LOGOUT_CMD, catch_exceptions=False)
 
 
 @pytest.mark.parametrize('test_runner_username', [env.SYS_ADMIN_NAME,
-                                                  env.CLUSTER_AUTHOR_NAME,
+                                                  env.CLUSTER_ADMIN_NAME,
                                                   env.CLUSTER_AUTHOR_NAME
                                                   ])
 def test_0060_vcd_cse_cluster_list(test_runner_username):
@@ -911,8 +1052,8 @@ def test_0060_vcd_cse_cluster_list(test_runner_username):
 
 
 @pytest.mark.parametrize('test_runner_username', [env.SYS_ADMIN_NAME,
-                                                  #   env.CLUSTER_AUTHOR_NAME,
-                                                  #   env.CLUSTER_ADMIN_NAME
+                                                  env.CLUSTER_AUTHOR_NAME,
+                                                  env.CLUSTER_ADMIN_NAME
                                                   ])
 def test_0070_vcd_cse_cluster_info(test_runner_username):
     cmd_list = [
@@ -934,10 +1075,12 @@ def test_0070_vcd_cse_cluster_info(test_runner_username):
 
 
 @pytest.mark.parametrize('test_runner_username', [env.SYS_ADMIN_NAME,
-                                                  #   env.CLUSTER_AUTHOR_NAME,
-                                                  #   env.CLUSTER_ADMIN_NAME
+                                                  env.CLUSTER_AUTHOR_NAME,
+                                                  env.CLUSTER_ADMIN_NAME
                                                   ])
 def test_0080_vcd_cse_cluster_config(test_runner_username):
+    # Failing for the first call with err:
+    # Error: Expecting value: line 1 column 1 (char 0)
     cmd_list = [
         testutils.CMD_BINDER(cmd=env.USERNAME_TO_LOGIN_CMD[test_runner_username],  # noqa: E501
                              exit_code=0,
@@ -1050,6 +1193,15 @@ def test_0050_vcd_cse_delete_nfs(test_runner_username):
                              CLUSTER_DELETE_TEST_PARAM(
                                  user=env.CLUSTER_ADMIN_NAME,
                                  password=None,
+                                 cluster_name=f"{env.CLUSTER_ADMIN_TEST_CLUSTER_NAME}",  # noqa: E501
+                                 org=env.TEST_ORG,
+                                 ovdc=env.TEST_VDC,
+                                 expect_failure=False),
+                             # TODO change back to cluster admin deleting
+                             # cluster author's cluster
+                             CLUSTER_DELETE_TEST_PARAM(
+                                 user=env.SYS_ADMIN_NAME,
+                                 password=None,
                                  cluster_name=f"{env.CLUSTER_AUTHOR_TEST_CLUSTER_NAME}",  # noqa: E501
                                  org=env.TEST_ORG,
                                  ovdc=env.TEST_VDC,
@@ -1065,7 +1217,7 @@ def test_0090_vcd_cse_cluster_delete(cluster_delete_param: CLUSTER_DELETE_TEST_P
     :param config: cse config file for vcd configuration
     """
     cmd_list = [
-        testutils.CMD_BINDER(cmd=env.USER_LOGOUT_CMD[cluster_delete_param.user],  # noqa: E501
+        testutils.CMD_BINDER(cmd=env.USERNAME_TO_LOGIN_CMD[cluster_delete_param.user],  # noqa: E501
                              exit_code=0,
                              validate_output_func=None,
                              test_user=cluster_delete_param.user),
@@ -1075,7 +1227,7 @@ def test_0090_vcd_cse_cluster_delete(cluster_delete_param: CLUSTER_DELETE_TEST_P
                              test_user=env.CLUSTER_ADMIN_NAME),
         testutils.CMD_BINDER(cmd=f"cse cluster delete {cluster_delete_param.cluster_name}",  # noqa: E501
                              exit_code=2 if cluster_delete_param.expect_failure else 0,  # noqa: E501
-                             validate_output_func=_follow_apply_output(expect_failure=cluster_delete_param.expect_failure),  # noqa: E501
+                             validate_output_func=_follow_delete_output(expect_failure=cluster_delete_param.expect_failure),  # noqa: E501
                              test_user=cluster_delete_param.user),
         testutils.CMD_BINDER(cmd=env.USER_LOGOUT_CMD,
                              exit_code=0,

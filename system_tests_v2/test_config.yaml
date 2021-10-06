@@ -2,12 +2,7 @@
 # Fill in fields marked with '???'
 
 test:
-  is_cse_server_running: false                             # Affects test_cse_client.py,
-                                                           #   if true, the tests will assume that CSE server is already up and running.
-                                                           #   if false, cse server will be started up prior to running the tests.
-                                                           #   This flag helps in faster local testing.
-  should_install_prerequisites: true                       # If set to true, prerequisites like role, users and sizing policies won't be
-                                                           #    attempted to be created. This flag is to help local testing faster.
+  test_cluster_upgrades: false
   teardown_installation: true                              # Affects test_cse_server.py.
                                                            #   if true, delete all installation entities (even on test failure).
                                                            #   if false, do not delete installation entities (even on test success).
@@ -17,34 +12,34 @@ test:
                                                            #   if false, do not delete test cluster on test failure.
                                                            #   if this key is omitted, defaults to true.
                                                            # Successful client tests will not leave clusters up.
-  test_all_templates: false                                 # Affects test_cse_client.py.
+  test_all_templates: true                                 # Affects test_cse_client.py.
                                                            #   if true, tests cluster deployment on all templates found.
                                                            #   if false, tests cluster deployment only for first template found.
                                                            #   if this key is omitted, defaults to false.
   test_templates: "ubuntu-16.04_k8-1.21_weave-2.8.1:1"                                    # Tests will only create these templates if test_all_templates is set to false
                                                            #   format -> "template_1_name:template_1_revision,template_2_name:template_2_revision"
   upgrade_template_repo_url: '???'                         #
-  network: '???'                                           # org network within @vdc that will be used during testing
+  network: 'org1vdc_nw'                                           # org network within @vdc that will be used during testing
                                                            #   Should have outbound access to the public internet
-  org: '???'                                               # vCD org where all the test will be run
-  storage_profile: '???'                                   # name of the storage profile to use while creating clusters on this org vdc
-  vdc: '???'                                               # Org VDC powering the org
+  org: 'org1'                                               # vCD org where all the test will be run
+  storage_profile: '*'                                   # name of the storage profile to use while creating clusters on this org vdc
+  vdc: 'org1vdc'                                               # Org VDC powering the org
 
 mqtt:
   verify_ssl: false
 
 vcd:
-  host: '???'
+  host: bos1-vcloud-static-172-231.eng.vmware.com
   log: true
-  password: '???'
+  password: ca$hc0w
   port: 443
-  username: '???'
+  username: administrator
   verify: false
 
 vcs:
-- name: '???'
-  password: '???'
-  username: '???'
+- name: vc1
+  password: Welcome@123
+  username: administrator@vsphere.local
   verify: false
 
 service:
@@ -57,15 +52,16 @@ service:
   legacy_mode: false
 
 broker:
-  catalog: cse                          # public shared catalog within org where the template will be published
+  catalog: CseCatalogs                          # public shared catalog within org where the template will be published
   default_template_name: ubuntu-16.04_k8-1.21_weave-2.8.1
                                         # name of the default template to use if none is specified
   default_template_revision: 1          # revision of the default template to use if none is specified
   ip_allocation_mode: pool              # dhcp or pool
-  network: '???'                        # org network within @vdc that will be used during the install process to build the template
+  network: tenant1_ovdc                        # org network within @vdc that will be used during the install process to build the template
                                         #   Should have outbound access to the public internet
                                         #   CSE appliance doesn't need to be connected to this network
-  org: '???'                            # vCD org that contains the shared catalog where the master templates will be stored
+  org: tenant1                            # vCD org that contains the shared catalog where the master templates will be stored
   remote_template_cookbook_url: http://raw.githubusercontent.com/vmware/container-service-extension-templates/dev/template_v2.yaml
   storage_profile: '*'                  # name of the storage profile to use when creating the temporary vApp used to build the template
-  vdc: '???'                            # VDC within @org that will be used during the install process to build the template
+  vdc: tenant1_ovdc                            # VDC within @org that will be used during the install process to build the template
+

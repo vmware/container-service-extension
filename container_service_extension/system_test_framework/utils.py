@@ -124,6 +124,12 @@ def _update_cluster_apply_spec_for_2_0(apply_spec, properties):
             apply_spec_rde.spec.topology.control_plane.sizing_class = value
             apply_spec_rde.spec.topology.workers.sizing_class = value
             apply_spec_rde.spec.topology.nfs.sizing_class = value
+        elif key == 'cpu':
+            apply_spec_rde.spec.topology.control_plane.cpu = value
+            apply_spec_rde.spec.topology.workers.cpu = value
+        elif key == 'memory':
+            apply_spec_rde.spec.topology.control_plane.memory = value
+            apply_spec_rde.spec.topology.workers.memory = value
         elif key == 'storage_profile':
             apply_spec_rde.spec.topology.control_plane.storage_profile = value
             apply_spec_rde.spec.topology.workers.storage_profile = value
@@ -212,7 +218,7 @@ def get_worker_count_from_2_0_0_entity_dict(cluster_dict):
     return len(native_entity.status.nodes.workers)
 
 
-def generate_validate_node_count_func(expected_nodes, rde_version, logger=logger.NULL_LOGGER):  # noqa: E501
+def generate_validate_node_count_func(cluster_name, expected_nodes, rde_version, logger=logger.NULL_LOGGER):  # noqa: E501
     """Generate validator function to verify number of nodes in the cluster.
 
     :param expected_nodes: Expected number of nodes in the cluster
@@ -220,7 +226,7 @@ def generate_validate_node_count_func(expected_nodes, rde_version, logger=logger
     """
     def validator(output, test_runner_username):
         cmd_list = [
-            CMD_BINDER(cmd=f"cse cluster info {env.USERNAME_TO_CLUSTER_NAME[test_runner_username]}",   # noqa
+            CMD_BINDER(cmd=f"cse cluster info {cluster_name}",   # noqa
                        exit_code=0,
                        validate_output_func=None,
                        test_user=test_runner_username)
@@ -236,4 +242,17 @@ def generate_validate_node_count_func(expected_nodes, rde_version, logger=logger
         else:
             raise Exception("Invalid RDE version")
 
+    return validator
+
+
+def validate_yaml_output():
+    """Validate if the output is a valid yaml."""
+    def validator(output, test_runner_username):
+        # Just try to safe_load the output.
+        import yaml
+        try:
+            yaml.safe_load(output)
+        except Exception:
+            return False
+        return True
     return validator

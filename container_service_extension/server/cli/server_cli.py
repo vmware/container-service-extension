@@ -1430,7 +1430,6 @@ def import_tkgm_template(
             logger=INSTALL_LOGGER,
             msg_update_callback=console_message_printer
         )
-
         if not success:
             return
 

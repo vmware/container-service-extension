@@ -249,7 +249,10 @@ class ComputePolicyManager:
             resource_url_relative_path=resource_url_relative_path)
 
     def add_vdc_compute_policy(self, policy_name,
-                               description=None, pvdc_compute_policy_id=None):
+                               description=None,
+                               pvdc_compute_policy_id=None,
+                               cpu_count=None,
+                               memory_mb=None):
         """Add vdc compute policy with the given name and description.
 
         :param str policy_name: name of the vdc compute policy
@@ -275,6 +278,10 @@ class ComputePolicyManager:
             policy_info['pvdcComputePolicy'] = {
                 'id': pvdc_compute_policy_id
             }
+        if cpu_count:
+            policy_info['cpuCount'] = cpu_count
+        if memory_mb:
+            policy_info['memory'] = memory_mb
         created_policy = self._cloudapi_client.do_request(
             method=RequestMethod.POST,
             cloudapi_version=self._cloudapi_version,
