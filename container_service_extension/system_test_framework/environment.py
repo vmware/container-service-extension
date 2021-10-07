@@ -2,7 +2,6 @@
 # Copyright (c) 2019 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 
-from logging import log
 import os
 from pathlib import Path
 from typing import List
@@ -142,9 +141,11 @@ TEMPLATE_UPGRADE_PATH_LIST = []
 
 def _populate_template_upgrade_paths(config, logger=NULL_LOGGER):
     global TEMPLATE_UPGRADE_PATH_LIST
+    print(config['broker']['remote_template_cookbook_url'])
     rtm = RemoteTemplateManager(
         config['broker']['remote_template_cookbook_url'],
         legacy_mode=config['service']['legacy_mode'])
+
     # The following function call will filter out the templates based on
     # cse version as well.
     template_cookbook = rtm.get_filtered_remote_template_cookbook()
@@ -153,7 +154,7 @@ def _populate_template_upgrade_paths(config, logger=NULL_LOGGER):
     # filter out photon templates
     all_ubuntu_templates = \
         [template_definition for template_definition in all_template_definitions if 'ubuntu' in template_definition['name']]  # noqa: E501
-    print(all_ubuntu_templates)
+    print(rtm.unfiltered_cookbook)
     logger.debug(f"All template definitions: {all_ubuntu_templates}")
     RT_KEYS = get_template_descriptor_keys(rtm.cookbook_version)
 
@@ -186,6 +187,7 @@ def _populate_template_upgrade_paths(config, logger=NULL_LOGGER):
                     new_path = [t_desc] + path
                     paths_arr.append(new_path)
     logger.debug(f"Collected upgrade path list: {TEMPLATE_UPGRADE_PATH_LIST}")
+
 
 def _init_test_vars(config, logger=NULL_LOGGER):
     """Initialize all the environment variables that are used for test.
@@ -235,9 +237,9 @@ def _init_test_vars(config, logger=NULL_LOGGER):
 
         TEST_CLUSTER_UPGRADES = \
             test_config.get('test_cluster_upgrades', False)
-        print(TEST_CLUSTER_UPGRADES)
         if TEST_CLUSTER_UPGRADES:
             _populate_template_upgrade_paths(config, logger=NULL_LOGGER)
+
 
 _init_test_vars(testutils.yaml_to_dict(BASE_CONFIG_FILEPATH))
 
