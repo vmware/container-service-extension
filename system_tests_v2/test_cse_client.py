@@ -1108,7 +1108,7 @@ def get_nfs_node_for_1_0_0_cluster(cluster_dict):
 
 
 def get_nfs_node(cluster_info):
-    cluster_dict = yaml.load(cluster_info)
+    cluster_dict = yaml.safe_load(cluster_info)
     if 'apiVersion' in cluster_dict:
         return get_nfs_node_for_2_0_0_cluster(cluster_dict)
     return get_nfs_node_for_1_0_0_cluster(cluster_dict)
