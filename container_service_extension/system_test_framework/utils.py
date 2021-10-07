@@ -190,7 +190,7 @@ def modify_cluster_apply_spec(apply_spec_file_path, properties):
     with open(env.APPLY_SPEC_PATH, 'r') as f:
         # replace worker count
         content = f.read()
-        sample_apply_spec = yaml.load(content)
+        sample_apply_spec = yaml.safe_load(content)
         rde_version = get_runtime_rde_version_by_vcd_api_version(
             env.VCD_API_VERSION_TO_USE)
         if rde_version == RuntimeRDEVersion.RDE_1_X.value:
@@ -233,7 +233,7 @@ def generate_validate_node_count_func(cluster_name, expected_nodes, rde_version,
         ]
         cmd_results = execute_commands(cmd_list, logger=logger)
 
-        cluster_info_dict = yaml.load(cmd_results[0].output)
+        cluster_info_dict = yaml.safe_load(cmd_results[0].output)
 
         if rde_version == RuntimeRDEVersion.RDE_1_X.value:
             return get_worker_count_from_1_0_0_entity_dict(cluster_info_dict) == expected_nodes  # noqa: E501

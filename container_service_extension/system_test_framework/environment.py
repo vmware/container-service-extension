@@ -192,7 +192,7 @@ def init_rde_environment(config_filepath=BASE_CONFIG_FILEPATH, logger=NULL_LOGGE
     """
     global CLIENT, ORG_HREF, VDC_HREF, \
         CATALOG_NAME, TEARDOWN_INSTALLATION, TEARDOWN_CLUSTERS, \
-        TEMPLATE_DEFINITIONS, TEST_ALL_TEMPLATES, SYS_ADMIN_LOGIN_CMD, \
+        TEST_ALL_TEMPLATES, SYS_ADMIN_LOGIN_CMD, \
         CLUSTER_ADMIN_LOGIN_CMD, CLUSTER_AUTHOR_LOGIN_CMD, \
         USERNAME_TO_LOGIN_CMD, USERNAME_TO_CLUSTER_NAME, TEST_ORG_HREF, \
         TEST_VDC_HREF, VCD_API_VERSION_TO_USE, VCD_SITE
@@ -200,14 +200,6 @@ def init_rde_environment(config_filepath=BASE_CONFIG_FILEPATH, logger=NULL_LOGGE
     logger.debug("Setting RDE environement")
     config = testutils.yaml_to_dict(config_filepath)
     logger.debug(f"Config file used: {config}")
-
-    # download all remote template scripts
-    rtm = RemoteTemplateManager(
-        config['broker']['remote_template_cookbook_url'],
-        legacy_mode=config['service']['legacy_mode'])
-    template_cookbook = rtm.get_filtered_remote_template_cookbook()
-    TEMPLATE_DEFINITIONS = template_cookbook['templates']
-    rtm.download_all_template_scripts(force_overwrite=True)
 
     sysadmin_client = Client(
         config['vcd']['host'],
