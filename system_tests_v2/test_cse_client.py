@@ -118,10 +118,10 @@ def cse_server():
     PYTEST_LOGGER.debug("Creating missing templates")
     for template_config in env.TEMPLATE_DEFINITIONS:
         cmd = f"template install {template_config['name']} " \
-            f"{template_config['revision']} " \
-            f"--config {env.ACTIVE_CONFIG_FILEPATH} " \
-            f"--ssh-key {env.SSH_KEY_FILEPATH} " \
-            f"--skip-config-decryption"
+              f"{template_config['revision']} " \
+              f"--config {env.ACTIVE_CONFIG_FILEPATH} " \
+              f"--ssh-key {env.SSH_KEY_FILEPATH} " \
+              f"--skip-config-decryption"
         result = env.CLI_RUNNER.invoke(
             cli, cmd.split(), catch_exceptions=False)
         assert result.exit_code == 0,\
@@ -1249,6 +1249,7 @@ def test_0090_vcd_cse_cluster_delete(cluster_delete_param: CLUSTER_DELETE_TEST_P
 
 def generate_cluster_upgrade_tests(test_users=None):
     """Generate test cases for upgrade test.
+
     Test format:
     user, template_upgrade_path, should_expect_failure
     """
@@ -1322,6 +1323,7 @@ def cluster_upgrade_param(request):
             test_user=param.user)
     ]
     testutils.execute_commands(cmd_list, logger=PYTEST_LOGGER)
+    print(f"Created cluster {param.cluster_name}")
 
     yield param
 
@@ -1355,13 +1357,13 @@ def test_0100_cluster_upgrade(cluster_upgrade_param: CLUSTER_UPGRADE_TEST_PARAM)
     }
     for template in upgrade_path[1:]:
         # create spec
+        print(f"Upgrading cluster to {template['name']} {template['revision']}")  # noqa: E501
         spec['template_name'] = template['name']
         spec['template_revision'] = template['revision']
 
         # upgrade the cluster
         if float(env.VCD_API_VERSION_TO_USE) < \
                 float(ApiVersion.VERSION_36.value):
-            create_apply_spec(spec)
             cmd_list = [
                 testutils.CMD_BINDER(
                     cmd=f"cse cluster upgrade {spec['cluster_name']} {spec['template_name']} {spec['template_revision']}",  # noqa: E501
@@ -1369,6 +1371,7 @@ def test_0100_cluster_upgrade(cluster_upgrade_param: CLUSTER_UPGRADE_TEST_PARAM)
                     validate_output_func=None,
                     test_user=cluster_upgrade_param.user)]
         else:
+            create_apply_spec(spec)
             cmd_list = [
                 testutils.CMD_BINDER(
                     cmd=f"cse cluster apply {env.APPLY_SPEC_PATH} ",
