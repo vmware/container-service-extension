@@ -886,7 +886,7 @@ def _generate_cluster_apply_tests(test_users=None):
                         user=user,
                         password=None,
                         worker_count=1,
-                        nfs_count=1,
+                        nfs_count=0,
                         rollback=False,
                         template_name=template['name'],
                         template_revision=template['revision'],
@@ -903,6 +903,27 @@ def _generate_cluster_apply_tests(test_users=None):
                         should_vapp_exist=True
                     ),
                     # Resize down a valid deployment
+                    CLUSTER_APPLY_TEST_PARAM(
+                        user=user,
+                        password=None,
+                        worker_count=0,
+                        nfs_count=0,
+                        rollback=False,
+                        template_name=template['name'],
+                        template_revision=template['revision'],
+                        ovdc_network=None,
+                        cpu=None,
+                        memory=None,
+                        sizing_class=env.SIZING_CLASS_NAME,
+                        storage_profile=None,
+                        cluster_name=f"{env.USERNAME_TO_CLUSTER_NAME[user]}",
+                        expected_phase='UPDATE:SUCCEEDED',
+                        retain_cluster=True,
+                        exit_code=0,
+                        should_rde_exist=True,
+                        should_vapp_exist=True
+                    ),
+                    # Add nfs node
                     CLUSTER_APPLY_TEST_PARAM(
                         user=user,
                         password=None,
