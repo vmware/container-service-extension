@@ -575,7 +575,7 @@ def _follow_delete_output(expect_failure=False):
         SYSTEM_TOGGLE_TEST_PARAM(
             user=env.SYS_ADMIN_NAME,
             password=None,
-            cluster_name=f"{env.SYS_ADMIN_TEST_CLUSTER_NAME}-system-test",
+            cluster_name=f"{env.SYS_ADMIN_TEST_CLUSTER_NAME}-s1",
             worker_count=0, nfs_count=0, rollback=True,
             sizing_class=None, storage_profile=None,
             ovdc_network="Invalid_network",
