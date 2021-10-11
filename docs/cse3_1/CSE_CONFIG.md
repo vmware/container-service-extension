@@ -115,7 +115,7 @@ For more information on AMQP settings, see the [VCD API documentation on AMQP](h
 
 **Note** : When CSE 3.1 is configured in non `legacy_mode`, AMQP is not supported. MQTT must be used.
 
-<a name="mqtt_section"/>
+<a name="mqtt_section"></a>
 ### `mqtt` Section
 
 Starting CSE 3.0.1, CSE will support MQTT message buses for communication with
@@ -127,7 +127,7 @@ AMQP to MQTT, however the reverse is not permitted.
 |------------|--------------------------------------------------------------------|
 | verify_ssl | verify ssl certificates while communicating with the MQTT exchange |
 
-<a name="mqtt"/>
+<a name="mqtt"></a>
 **Note** : When CSE 3.1 is configured in `legacy_mode`, MQTT is not supported.
 Additionally, it is strongly recommended to use MQTT if working with VCD 10.3 or 10.2.
 
@@ -156,15 +156,22 @@ However if `no_vc_communication_mode` is set to `True`, the entire `vcs` section
 
 The service section contains properties that define CSE server behavior.
 
-| Property                 | Value                                                                                                                                                      |
-|--------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| listeners                | Number of threads that CSE server should use to communicate with AMQP bus and process requests (Removed in CSE 3.0.1)                                      |
-| processors               | Number of threads that CSE server should use for processing requests (Added in CSE 3.0.1)                                                                  |
-| enforce_authorization    | If True, CSE server will use role-based access control, where users without the correct CSE right will not be able to deploy clusters (Added in CSE 1.2.6) |
-| log_wire                 | If True, will log all REST calls initiated by CSE to VCD. (Added in CSE 2.5.0)                                                                             |
-| telemetry                | If enabled, will send back anonymized usage data back to VMware (Added in CSE 2.6.0)                                                                       |
-| legacy_mode              | Need to be True if CSE >= 3.1 is configured with VCD <= 10.1 (Added in CSE 3.1.0)                                                                          |
-| no_vc_communication_mode | If set to True, CSE will not communicate with vCenter servers regitered with VCD (Added in CSE 3.1.1)                                                      |
+| Property                 | Value                                                                                                                                 | Remarks              |
+|--------------------------|---------------------------------------------------------------------------------------------------------------------------------------|----------------------|
+| listeners                | Number of threads that CSE server should use to communicate with AMQP bus and process requests                                        | Removed in CSE 3.0.1 |
+| processors               | Number of threads that CSE server should use for processing requests                                                                  | Added in CSE 3.0.1   |
+| enforce_authorization    | If True, CSE server will use role-based access control, where users without the correct CSE right will not be able to deploy clusters | Added in CSE 1.2.6   |
+| log_wire                 | If True, will log all REST calls initiated by CSE to VCD.                                                                             | Added in CSE 2.5.0   |
+| telemetry                | If enabled, will send back anonymized usage data back to VMware                                                                       | Added in CSE 2.6.0   |
+| legacy_mode              | Need to be True if CSE >= 3.1 is configured with VCD <= 10.1                                                                          | Added in CSE 3.1.0   |
+| no_vc_communication_mode | If set to True, CSE will not communicate with vCenter servers regitered with VCD                                                      | Added in CSE 3.1.1   |
+
+<a name="no_vc_communication_mode"></a>
+**CSE 3.1.1 - new property - `no_vc_communication_mode`:**
+Starting CSE 3.1.1, new property `no_vc_communication_mode` has been added. This property indicates whether CSE server 
+should communicate with vCenter servers or not while managing life cycle of clusters.
+   * set the `no_vc_communication_mode` to true, if vCenter servers can't be accessed from CSE server. Such a setup can be used for TKG cluster deployments only.
+   * set the `no_vc_communication_mode` to false if CSE server has access to the vCenter servers. For native cluster deployments this is mandatory.
 
 <a name="legacy_mode"></a>
 **CSE 3.1.0 - new property - `legacy_mode`:**
@@ -174,15 +181,6 @@ needs to leverage the latest features of VCD like RDE framework, placement polic
      Native clusters are nothing but regular vApps with some Kubernetes specific metadata.
    * set the `legacy_mode` to false if CSE 3.1 is configured with VCD >= 10.2. 
      Native clusters are represented in the form of RDEs powered by vApps.
-
-<a name="no_vc_communication_mode"></a>
-**CSE 3.1.1 - new property - `no_vc_communication_mode`:**
-Starting CSE 3.1.1, new property `no_vc_communication_mode` has been added. This property indicates whether CSE server 
-should communicate with vCenter servers or not while managing life cycle of clusters.
-   * set the `no_vc_communication_mode` to true, if vCenter servers can't be accessed from CSE server.
-This also means that native clusters can't be deployed in such a setup, only TKG clusters can be deployed.
-   * set the `no_vc_communication_mode` to false if CSE server has access to the vCenter servers, and native
-cluster deployment is desired.
 
 <a name="broker"></a>
 ### `broker` Section
@@ -204,17 +202,17 @@ The following table summarizes key parameters.
 | vdc                          | Virtual data-center within `org` that will be used during the install process to build the template                                                                                                                  |
 
 <a name="template_cookbook_20"></a>
+**CSE 3.1.1 - removed fields `default_template_name` and `default_template_revision`:**
+CSE no longer requires native template(s) to be present for startup. Conversely, the concept of
+default template is no longer supported either, and every cluster deployment command from user must contain the
+template name and revision they wish to use for the deployment.
+
 **CSE 3.1.0 - new template cookbook 2.0:**
 For the `remote_template_cookbook_url` property, CSE 3.1 `config.yaml` must refer
 to `http://raw.githubusercontent.com/vmware/container-service-extension-templates/master/template_v2.yaml`. 
 CSE <= 3.0 will not work with the new template cookbook 2.0. When `legacy_mode` is set to true, 
 `remote_template_cookbook_url` of CSE 3.1 `config.yaml` must refer to old template cookbook 
 `https://raw.githubusercontent.com/vmware/container-service-extension-templates/master/template.yaml`.
-
-**CSE 3.1.1 - removed fields `default_template_name` and `default_template_revision`:**
-CSE no longer requires native template(s) to be present for startup. Conversely, the concept of
-default template is no longer supported either, and every cluster deployment command from user must contain the
-template name and revision they wish to use for the deployment.
 
 <a name="templte_rules"></a>
 ### `template_rules` Section (Added in CSE 2.5.0, Deprecated in CSE 3.0.0)

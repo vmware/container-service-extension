@@ -22,14 +22,14 @@ For greenfield installations, please get started with [CSE introduction](INTRO.h
 
 ### CSE 3.1.1
 
-* Support for importing VMware Tanzu Kubernetes Grid OVAs and deploying Kubernetes clusters using them.
+* Support for importing VMware Tanzu Kubernetes Grid OVAs and deploying Kubernetes clusters.
   * Learn more about using [VMware Tanzu Kubernetes Grid OVAs with CSE](TEMPLATE_MANAGEMENT.html#tkgm_templates)
   * Learn more about deploying a Kubernetes cluster based on VMware Tanzu Kubernetes Grid [here](CLUSTER_MANAGEMENT.html#tkgm_clusters)
-  * Antrea as CNI (note: Antrea is pulled from Harbor repository instead of DockerHub)
+  * Antrea as CNI
 * VCD CPI and VCD CSI for Kubernetes clusters based on VMware Tanzu Kubernetes Grid
   * Learn more about [VCD CPI](https://github.com/vmware/cloud-provider-for-cloud-director/blob/0.1.0-beta/README.md)
   and [VCD CSI](https://github.com/vmware/cloud-director-named-disk-csi-driver/blob/0.1.0-beta/README.md)
-* Provision to deploy `Exposed` clusters from Kubernetes Container Clusters UI
+* Deploy externally accessible TKG clusters on NSXT Routed OrgVDC Networks from Kubernetes Container Clusters UI Plugin.
 
 ### CSE 3.1.0
 
@@ -61,7 +61,7 @@ For greenfield installations, please get started with [CSE introduction](INTRO.h
 | CSE Server/CLI | UI plugin | Cloud Director | Comments               |
 |----------------|-----------|----------------|------------------------|
 | 3.1.1          | 3.1.0     | 10.3.1         | Plugin ships with VCD  |
-| 3.1.1          | 2.1.0     | 10.2.2         | Plugin ships with VCD  |
+| 3.1.1          | 2.2.0     | 10.2.2         | Plugin ships with VCD  |
 | 3.1.1          | 1.0.3     | 10.1           | Download from [here](https://github.com/vmware/container-service-extension/raw/master/cse_ui/1.0.3/container-ui-plugin.zip) |
 | 3.1.0          | 3.0.0     | 10.3.0         | Plugin ships with VCD  |
 | 3.1.0          | 2.0.0     | 10.2.0         | Plugin ships with VCD  |
@@ -103,7 +103,7 @@ For greenfield installations, please get started with [CSE introduction](INTRO.h
 | CSE CLI | UI plugin  | Cloud Director |
 |---------|------------|----------------|
 | 3.1.1   | 3.1.0      | 10.3.1         |
-| 3.1.1   | 2.1.0      | 10.2.2         |
+| 3.1.1   | 2.2.0      | 10.2.2         |
 | 3.1.0   | 3.0.0      | 10.3.0         |
 | 3.1.0   | 2.0.0      | 10.2.0         |
 
