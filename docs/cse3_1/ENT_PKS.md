@@ -3,20 +3,23 @@ layout: default
 title: Enterprise PKS enablement
 ---
 
-## Deprecation Notice
+<span style="color:red">## Deprecation Notice</span>
 
-CSE Server and Kubernetes Container Clusters plug-in will soon drop support for TKGI (previously known as Enterprise PKS). Consider using VMware Tanzu Kubernetes Grid or VMware Tanzu Kubernetes Grid Service for management of Kubernetes clusters with VCD.
+CSE Server and Kubernetes Container Clusters Plugin will soon drop support for
+TKG-I (previously known as Enterprise PKS). Consider using
+VMware Tanzu Kubernetes Grid (TKG) or VMware Tanzu Kubernetes Grid Service (TKG-S)
+for management of Kubernetes clusters with VCD.
 
 # Enterprise PKS enablement
 <a name="overview"></a>
 ## Overview
 CSE 2.0 enables orchestration of K8 cluster deployments on VMware Enterprise PKS.
 At the same time, it maintains the CSE 1.x feature set of Native K8 cluster deployments
- directly on VMware vCloud Director. As a result, the capabilities of CSE 2.0 allow
- tenants to leverage both K8 Providers, Native and Enterprise PKS, for seamless K8
- cluster deployments while ensuring clusters' isolation between tenants.
- It also offers great flexibility to administrators to onboard tenants on K8 Provider(s)
-  of their choice, be it Native and/or Enterprise PKS.
+directly on VMware Cloud Director. As a result, the capabilities of CSE 2.0 allow
+tenants to leverage both K8 Providers, Native and Enterprise PKS, for seamless K8
+cluster deployments while ensuring clusters' isolation between tenants.
+It also offers great flexibility to administrators to onboard tenants on K8 Provider(s)
+of their choice, be it Native and/or Enterprise PKS.
 
 ![conceptual-view-cse](img/ent-pks/01-conceptual.png)
 
@@ -26,26 +29,26 @@ interfaces for K8 deployments.
 
 <a name="architecture"></a>
 ## Architecture
-CSE 2.0 architecture comprises of Enterprise PKS Infrastructure stack, vCloud
+CSE 2.0 architecture comprises of Enterprise PKS Infrastructure stack, VMware Cloud
 Director Infrastructure stack, and CSE 2.0 modules. The Enterprise PKS
 Infrastructure stack is necessary only if there is an intention to leverage it
 for K8 cluster deployments. The diagram below illustrates a physical view of
-the complete infrastructure, as well as, its logical mapping in to vCloud
+the complete infrastructure, as well as, its logical mapping in to VMware Cloud
 Director hierarchy, for ease of understanding.
 
 Legend:
-* Green - Depicts vSphere infrastructure managed by vCloud Director, just as
+* Green - Depicts vSphere infrastructure managed by VMware Cloud Director, just as
 CSE 1.x, without any of Enterprise PKS.
 * Blue - Depicts the Enterprise PKS infrastructure stack managed and available
-for use in vCloud Director for K8 cluster deployments. It also illustrates
+for use in VMware Cloud Director for K8 cluster deployments. It also illustrates
 multi-tenancy for K8 cluster deployments on single Enterprise PKS infrastructure.
 * Purple - Depicts a single tenant dedicated Enterprise PKS infrastructure
-stack managed and available for use in vCloud Director for K8 cluster
+stack managed and available for use in VMware Cloud Director for K8s cluster
 deployments. It also illustrates the use-case of a tenant leveraging multiple
 instances of Enterprise PKS infrastructure stack, say, to segregate K8s cluster
 workloads.
 * K8-prov - This label depicts the K8 Provider that is enabled on a given
-tenant's Organization VDC in vCloud Director.
+tenant's Organization VDC in VMware Cloud Director.
 
 ![provider-setup](img/ent-pks/03-provider-setup-1.png)
 
@@ -207,7 +210,7 @@ Starting CSE 3.0, separate command group has been dedicated to Ent-PKS
     * Allocation model and reservation models only. Pay-as-you-go is unsupported.
      Elasticity with other models is also not supported.
 * Are Enterprise PKS based clusters visible in VCD UI?
-    * Kubernetes Clusters UI Plugin versions 2.0 and 1.0.3, both can be used
+    * Kubernetes Container Clusters UI Plugin versions 2.0 and 1.0.3, both can be used
     to manage Enterprise PKS Clusters. Refer [compatibility matrix](CSE30.html#cse30-compatibility-matrix)
 * Do Enterprise PKS based clusters adhere to their parent organization-vdc compute settings?
     * Yes. Both native and Enterprise PkS clusters' combined usage is accounted towards
@@ -233,30 +236,11 @@ Starting CSE 3.0, separate command group has been dedicated to Ent-PKS
 <a name="ent-pks"></a>
 ## Enterprise PKS Limitations
 
-* When attaching an NSX-T-backed vCenter (such as Enterprise PKS vCenter) to a
-MicrosoftSQL-backed VCD, the vCenter can fail to connect. Refer to this
-[work around](https://docs.vmware.com/en/vCloud-Director/9.7/rn/vmware-vcloud-director-for-service-providers-97-release-notes.html)
 * Once `vcd cse pks cluster resize` is run on Enterprise PKS based clusters,
 organization administrator's attempts to view and perform CRUD operations on those
 clusters will begin to fail with errors.
 * Once `vcd cse pks cluster resize` is run on Enterprise PKS based clusters, commands
 `vcd cse cluster info` and `vcd cse cluster list` on those resized clusters will begin to display
 incomplete results.
-* Once a given OrgVDC is enabled for Enterprise PKS,
-renaming that OrgVDC in VCD will cause further K8 cluster deployment
-failures in that OrgVDC.
-
-<a name="compatibility-matrix"></a>
-## Compatibility matrix
-
-|CSE        | Supported VCD Versions |Enterprise PKS| NSX-T    |
-|-----------|------------------------|--------------|----------|
-|2.0.0 Beta | 9.5, 9.7               | 1.4          | 2.3      |
-|2.0.0      | 9.5, 9.7               | 1.4          | 2.3, 2.4 |
-|2.5.0      | 9.5, 9.7, 10.0         | 1.4          | 2.3, 2.4 |
-|2.6.0 Beta | 9.5, 9.7, 10.0, 10.1   | 1.4          | 2.3, 2.4 |
-|2.6.0      | 9.5, 9.7, 10.0, 10.1   | 1.4          | 2.3, 2.4 |
-|2.6.1      | 9.5, 9.7, 10.0, 10.1   | 1.7          | 2.5.1    |
-|3.0        | 10.0, 10.1, 10.2       | 1.7          | 2.5.1    |
-
-
+* Once a given OrgVDC is enabled for Enterprise PKS, renaming that OrgVDC in VCD will cause
+further K8 cluster deployment failures in that OrgVDC.

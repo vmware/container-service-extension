@@ -257,7 +257,7 @@ of Kubernetes clusters and nodes.
 Users can interact with CSE via the Python package (container-service-extension)
 or the CSE REST API exposed via VCD.
 
-This following Python script creates a Kubernetes cluster on vCloud Director:
+This following Python script creates a Kubernetes cluster on VMware Cloud Director:
 ```python
 #!/usr/bin/env python3
 from pyvcloud.vcd.client import BasicLoginCredentials

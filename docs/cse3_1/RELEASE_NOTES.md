@@ -5,6 +5,18 @@ title: Release Notes
 
 # Release Notes
 
+## CSE 3.1.1 GA (3.1.1)
+Release Date : 2021-10-14
+
+
+**Supported VMware Tanzu Kubernetes Grid OVAs**
+* VMware Tanzu Kubernetes Grid 1.4.0 : Ubuntu 20.04, Kubernetes v1.21.2 vmware.1 (ubuntu-2004-kube-v1.21.2+vmware.1-tkg.1-7832907791984498322.ova)
+* VMware Tanzu Kubernetes Grid 1.4.0 : Ubuntu 20.04, Kubernetes v1.20.8 vmware.1 (ubuntu-2004-kube-v1.20.8+vmware.1-tkg.1-17589475007677388652.ova)
+* VMware Tanzu Kubernetes Grid 1.4.0 : Ubuntu 20.04, Kubernetes v1.19.12 vmware.1 (ubuntu-2004-kube-v1.19.12+vmware.1-tkg.1-15841320193950299489.ova)
+* VMware Tanzu Kubernetes Grid 1.3.1 : Ubuntu 20.04, Kubernetes v1.20.5 vmware.2 (ubuntu-2004-kube-v1.20.5-vmware.2-tkg.1-6700972457122900687.ova)
+* VMware Tanzu Kubernetes Grid 1.3.0 : Ubuntu 20.04, Kubernetes v1.20.4 vmware.1 (ubuntu-2004-kube-v1.20.4-vmware.1-tkg.0-16153464878630780629.ova)
+
+
 ## CSE 3.1.1 Beta 2 (3.1.1.0b2)
 Release Date: 2021-09-21
 
@@ -163,7 +175,10 @@ the same will be fixed in a future CSE release.
 1. Refer to [What's new in CSE 3.1?](CSE31.html) for more details.
 2. Newer versions of native kubernetes templates are available. Refer to
 [Template Announcements](TEMPLATE_ANNOUNCEMENTS.html)
-1. Deprecation of TKGI (Enterprise PKS) - CSE Server and Kubernetes Container Clusters plug-in will soon drop support for TKGI (previously known as Enterprise PKS). Consider using VMware Tanzu Kubernetes Grid or VMware Tanzu Kubernetes Grid Service for management of Kubernetes clusters with VCD.
+1. Deprecation of TKG-I (Enterprise PKS) - CSE Server and Kubernetes Container Clusters UI Plugin
+will soon drop support for TKG-I (previously known as Enterprise PKS). Consider using
+VMware Tanzu Kubernetes Grid (TKG) or VMware Tanzu Kubernetes Grid Service (TKG-S) for
+management of Kubernetes clusters with VCD.
 
 ## CSE 3.1.0 Beta (3.1.0.0b1)
 Release Date: 2021-04-14

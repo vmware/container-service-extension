@@ -79,8 +79,8 @@ displayed on the client console.
 ### Enablement
 
 When CSE v1.2.6 and above is installed (or upgraded from v1.2.5 and below), CSE
-registers the above mentioned rights to vCloud Director. The rights are
-automatically granted to the hidden 'System' organization in vCloud Director
+registers the above mentioned rights to VMware Cloud Director. The rights are
+automatically granted to the hidden 'System' organization in VMware Cloud Director
 and are visible to the Cloud administrator.
 
 Cloud Administrator turns on the role based access control for CSE
