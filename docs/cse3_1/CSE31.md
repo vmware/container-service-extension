@@ -195,7 +195,7 @@ CSE 3.1.0 introduces below changes in CLI
 
 For VCD 10.3.z, you must use the [Kubernetes Clusters UI Plugin 3.y.0](https://docs.vmware.com/en/VMware-Cloud-Director/10.3/VMware-Cloud-Director-Service-Provider-Admin-Portal-Guide/GUID-A1910FF9-B2CF-49DD-B031-D1245E8740AE.html
 ) that comes with VCD to manage the cluster deployments.
-For VCD 10.2, you must use the [Kubernetes Clusters UI Plugin 2.0.0](https://docs.vmware.com/en/VMware-Cloud-Director/10.2/VMware-Cloud-Director-Service-Provider-Admin-Portal-Guide/GUID-A1910FF9-B2CF-49DD-B031-D1245E8740AE.html
+For VCD 10.2.z, you must use the [Kubernetes Clusters UI Plugin 2.y.0](https://docs.vmware.com/en/VMware-Cloud-Director/10.2/VMware-Cloud-Director-Service-Provider-Admin-Portal-Guide/GUID-A1910FF9-B2CF-49DD-B031-D1245E8740AE.html
 ) that comes with VCD to manage the cluster deployments.
 
 If you are working with VCD versions prior to 10.2, you must use the [Kubernetes Clusters UI Plugin 1.0.3](CSE_UI_PLUGIN.html) to manage the cluster deployments.
