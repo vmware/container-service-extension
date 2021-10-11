@@ -189,22 +189,22 @@ The `broker` section contains properties to define resources used by
 the CSE server including org and VDC as well as template repository location.
 The following table summarizes key parameters.
 
-| Property                     | Value                                                                                                                                                                                                                |
-|------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| catalog                      | Publicly shared catalog within `org` where K8s templates will be stored                                                                                                                                              |
-| default_template_name        | Name of the default template to use if one is not specified during cluster and node operations. CSE server won't start up if this value is invalid. (Added in CSE 2.5.0, Removed in CSE 3.1.1)                       |
-| default_template_revision    | Revision of the default template to use if one is not is specified during cluster and node operations. CSE server won't start up if this value is invalid. (Added in CSE 2.5.0, Removed in CSE 3.1.1)                |
-| ip_allocation_mode           | IP allocation mode to be used during the install process to build the template. Possible values are `dhcp` or `pool`. During creation of clusters for tenants, `pool` IP allocation mode is always used              |
-| network                      | Org Network within `vdc` that will be used during the install process to build the template. It should have outbound access to the public Internet. The `CSE` appliance doesn't need to be connected to this network |
-| org                          | VCD organization that contains the shared catalog where the K8s templates will be stored                                                                                                                             |
-| remote_template_cookbook_url | URL of the template repository where all template definitions and associated script files are hosted. (Added in CSE 2.5.0)                                                                                           |
-| storage_profile              | Name of the storage profile to use when creating the temporary vApp used to build the template                                                                                                                       |
-| vdc                          | Virtual data-center within `org` that will be used during the install process to build the template                                                                                                                  |
+| Property                     | Value                                                                                                                                                                                                                 | Remarks                                  |
+|------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|------------------------------------------|
+| catalog                      | Publicly shared catalog within `org` where K8s templates will be stored.                                                                                                                                              |                                          |
+| default_template_name        | Name of the default template to use if one is not specified during cluster and node operations. CSE server won't start up if this value is invalid.                                                                   | Added in CSE 2.5.0, Removed in CSE 3.1.1 |
+| default_template_revision    | Revision of the default template to use if one is not is specified during cluster and node operations. CSE server won't start up if this value is invalid.                                                            | Added in CSE 2.5.0, Removed in CSE 3.1.1 |
+| ip_allocation_mode           | IP allocation mode to be used during the install process to build the template. Possible values are `dhcp` or `pool`. During creation of clusters for tenants, `pool` IP allocation mode is always used.              |                                          |
+| network                      | Org Network within `vdc` that will be used during the install process to build the template. It should have outbound access to the public Internet. The `CSE` appliance doesn't need to be connected to this network. |                                          |
+| org                          | VCD organization that contains the shared catalog where the K8s templates will be stored.                                                                                                                             |                                          |
+| remote_template_cookbook_url | URL of the template repository where all template definitions and associated script files are hosted.                                                                                                                 | Added in CSE 2.5.0                       |
+| storage_profile              | Name of the storage profile to use when creating the temporary vApp used to build the template.                                                                                                                       |                                          |
+| vdc                          | Virtual data-center within `org` that will be used during the install process to build the template.                                                                                                                  |                                          |
 
 <a name="template_cookbook_20"></a>
 **CSE 3.1.1 - removed fields `default_template_name` and `default_template_revision`:**
-CSE no longer requires native template(s) to be present for startup. Conversely, the concept of
-default template is no longer supported either, and every cluster deployment command from user must contain the
+CSE no longer requires native template(s) to be present for startup. As a result, every
+cluster deployment command from user must contain the
 template name and revision they wish to use for the deployment.
 
 **CSE 3.1.0 - new template cookbook 2.0:**
