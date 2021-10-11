@@ -10,14 +10,15 @@ For greenfield installations, please get started with [CSE introduction](INTRO.h
 ## 1. Overview
 
 **Terminology:**
-* TKG cluster : Clusters deployed by CSE using VMware Tanzu Kubernetes Grid OVA
-* Native cluster : Clusters deployed by CSE using upstream Kubernetes
-* TKG-S cluster : VMware Tanzu Kubernetes Grid Service cluster a.k.a vSphere with Tanzu cluster
-* TKG-I cluster : Enterprise PKS cluster a.k.a VMware Tanzu Kubernetes Grid Integrated Edition cluster
-* Defined entities : Runtime defined entities a.k.a RDE or Defined Entity Framework
+* TKG cluster : Clusters deployed by CSE using VMware Tanzu Kubernetes Grid OVA.
+* Native cluster : Clusters deployed by CSE using upstream Kubernetes.
+* TKG-S cluster : VMware Tanzu Kubernetes Grid Service cluster a.k.a vSphere with Tanzu cluster.
+* TKG-I cluster : Enterprise PKS cluster a.k.a VMware Tanzu Kubernetes Grid Integrated Edition cluster.
+* Defined entities : Runtime defined entities a.k.a RDE or Defined Entity Framework.
 * Native entities: Runtime defined entities representing Native clusters.
-* TKG-S entities: Runtime defined entities representing TKG-S clusters
+* TKG-S entities: Runtime defined entities representing TKG-S clusters.
 * Defined entity API: VCD's generic defined entity api to manage lifecycle of RDEs.
+* UI plugin : Kubernetes Clusters UI Plugin, that is used to manage Native, TKG, TKG-S, TKG-I clusters from VCD UI.
 
 ### CSE 3.1.1
 
@@ -57,14 +58,14 @@ For greenfield installations, please get started with [CSE introduction](INTRO.h
 
 **Kubernetes Clusters UI Plugin compatibility matrix**
 
-| CSE Server/CLI | CSE UI | Cloud Director | Comments               |
-|----------------|--------|----------------|------------------------|
-| 3.1.1          | 3.1.0  | 10.3.1         | Plugin ships with VCD  |
-| 3.1.1          | 2.1.0  | 10.2.2         | Plugin ships with VCD  |
-| 3.1.1          | 1.0.3  | 10.1           | Download from [here](https://github.com/vmware/container-service-extension/raw/master/cse_ui/1.0.3/container-ui-plugin.zip) |
-| 3.1.0          | 3.0.0  | 10.3.0         | Plugin ships with VCD  |
-| 3.1.0          | 2.0.0  | 10.2.0         | Plugin ships with VCD  |
-| 3.1.0          | 1.0.3  | 10.1           | Download from [here](https://github.com/vmware/container-service-extension/raw/master/cse_ui/1.0.3/container-ui-plugin.zip) |
+| CSE Server/CLI | UI plugin | Cloud Director | Comments               |
+|----------------|-----------|----------------|------------------------|
+| 3.1.1          | 3.1.0     | 10.3.1         | Plugin ships with VCD  |
+| 3.1.1          | 2.1.0     | 10.2.2         | Plugin ships with VCD  |
+| 3.1.1          | 1.0.3     | 10.1           | Download from [here](https://github.com/vmware/container-service-extension/raw/master/cse_ui/1.0.3/container-ui-plugin.zip) |
+| 3.1.0          | 3.0.0     | 10.3.0         | Plugin ships with VCD  |
+| 3.1.0          | 2.0.0     | 10.2.0         | Plugin ships with VCD  |
+| 3.1.0          | 1.0.3     | 10.1           | Download from [here](https://github.com/vmware/container-service-extension/raw/master/cse_ui/1.0.3/container-ui-plugin.zip) |
 
 **Native cluster comaptiblity matrix**
 
@@ -99,12 +100,14 @@ For greenfield installations, please get started with [CSE introduction](INTRO.h
 
 **TKG-S compatibility matrix**
 
-| CSE CLI | CSE UI  | Cloud Director |
-|---------|---------|----------------|
-| 3.1.1   | 3.1.0   | 10.3.1         |
-| 3.1.1   | 2.1.0   | 10.2.2         |
-| 3.1.0   | 3.0.0   | 10.3.0         |
-| 3.1.0   | 2.0.0   | 10.2.0         |
+| CSE CLI | UI plugin  | Cloud Director |
+|---------|------------|----------------|
+| 3.1.1   | 3.1.0      | 10.3.1         |
+| 3.1.1   | 2.1.0      | 10.2.2         |
+| 3.1.0   | 3.0.0      | 10.3.0         |
+| 3.1.0   | 2.0.0      | 10.2.0         |
+
+**Note** : TKG-S cluster management doesn't need CSE server to be running.
 
 **TKG-I compatibility matrix**
 
