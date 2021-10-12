@@ -4,40 +4,64 @@ title: Role Based Access Control
 ---
 
 # Role Based Access Control (RBAC)
-<a name="DEF-RBAC"></a>
-## CSE 3.1 with VCD 10.3, 10.2
+<a name="rde_rbac"></a>
+# CSE 3.1 with VCD 10.3, 10.2
 
 CSE 3.1, when connected to either VCD 10.3 (or) VCD 10.2, leverages the RBAC that comes with VCD's feature
 [Defined Entity framework](https://docs.vmware.com/en/VMware-Cloud-Director/10.2/VMware-Cloud-Director-Service-Provider-Admin-Portal-Guide/GUID-0749DEA0-08A2-4F32-BDD7-D16869578F96.html) 
-for Native and Tkg clusters. [RBAC for Enterprise PKS clusters](#old RBAC) remain as-is.
+for Native, TKG and TKG-S clusters. RBAC for [TKG-I clusters](#old RBAC) remain as-is.
 
 Note: The RBAC in this section refers to the roles and rights required for the tenants
- to perform the life cycle management of kubernetes clusters. It does not have 
- anything to do with the RBAC inside the kubernetes cluster itself.
+to perform the life cycle management of kubernetes clusters. It does not have
+anything to do with the RBAC inside the kubernetes cluster itself.
 
 <a name="grant-rights"></a>
-### Grant rights to the tenant users
+## Grant rights to the tenant users
 Native cluster operations are no longer gated by CSE API extension-specific 
-rights as used in CSE 2.6.x. With the introduction of defined entity 
+rights as it used to be in CSE 2.6.x. With the introduction of defined entity 
 representation for native clusters, a new right bundle `cse:nativeCluster entitlement` 
-gets created in Cloud Director during CSE Server installation, which is what 
-guards the native cluster operations in CSE >= 3.0. The same is the case for Tkg clusters. 
+gets created in VMware Cloud Director (VCD) during CSE server installation, which is what 
+guards the native cluster operations in CSE >= 3.0. Since TKG clusters reuse the
+native RDE for its representation, access to life cycle management of TKG clusters
+is also guarded by the same rights as native clusters. TKG-S clusters are guarded by
+a separate set of rights that comes pre-installed with VCD.
 
-The Provider needs to grant the Tkg cluster and Native cluster right bundles 
+* Right bundle for Native cluster → `cse:nativeCluster entitlement`
+* Right bundle for TKG cluster → `cse:nativeCluster entitlement`
+* Right bundle for TKG-S Cluster → `vmware:tkgcluster entitlement`
+
+Five rights exist in each of the above right bundles. Note that any custom 
+role created with these rights need to have at least the privileges 
+of the pre-defined role `vApp Author` in order to deploy native/TKG/TKG-S clusters.
+
+The Provider needs to grant the Native and/or TKG-S right bundles 
 to the desired organizations and then grant the admin-level defined entity type 
-rights to the Tenant Administrator role. This will enable the tenant administrator 
-to grant the relevant cluster management rights to the desired tenant users. 
-Users cannot view or deploy clusters unless they have one of the rights in the 
-below-mentioned right bundles. Refer [How to manage runtime defined entities](https://docs.vmware.com/en/VMware-Cloud-Director/10.2/VMware-Cloud-Director-Service-Provider-Admin-Portal-Guide/GUID-0749DEA0-08A2-4F32-BDD7-D16869578F96.html) for more details.
+rights to the `Tenant Administrator` role. This will enable the tenant administrator 
+to further assign the relevant cluster management rights to the desired tenant users.
+Read more about how to manage runtime defined entities, [here](https://docs.vmware.com/en/VMware-Cloud-Director/10.2/VMware-Cloud-Director-Service-Provider-Admin-Portal-Guide/GUID-0749DEA0-08A2-4F32-BDD7-D16869578F96.html).
 
-   * Right bundle for Tkg Cluster → `vmware:tkgcluster entitlement`
-   * Right bundle for Native cluster → `cse:nativeCluster entitlement`
-   * Five rights exist in each of the above right bundles. Note that any custom 
-   roles created with these rights need to at least have privileges 
-   of the pre-defined role of `vApp Author` in order to deploy native clusters.
+
+Recommended personas to manage native and TKG clusters
+
+| Persona           | Native  | TKG            |
+|-------------------|---------|----------------|
+| Cluster Org-Admin | Allowed | Allowed        |
+| Cluster Admin     | Allowed | Allowed        |
+| Cluster Author    | Allowed | Not Applicable |
+| Cluster User      | Allowed | Not Applicable |  
+
+
+Explanation of recommended roles.
+
+| Persona           | Allowance                                                                 | Formation with Role, Rights                                                                                                                                              | Notes                                                                            |
+|-------------------|---------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------|
+| Cluster Org-Admin | Create, view, update, delete all native/TKG clusters in the organization  | Clone Org Admin Role & Add Admin_FC right from cse:nativeCluster right bundle. As a result, these should get automatically added: Admin_View, Full_Control, Modify, View |                                                                                  |
+| Cluster Admin     | Create, view, update, delete the native/TKG clusters he/she has access    | Clone VAPP Author Role & Add FC right from cse:nativeCluster right bundle. As a result, these should get automatically added: Modify, View                               |                                                                                  |
+| Cluster Author    | Create, View, update the native/TKG clusters he/she has access to         | Clone VAPP Author Role & Add Modify right from cse:nativeCluster right bundle. As a result, these should get automatically added: View                                   |                                                                                  |
+| Cluster User      | View, download kubeconfig of the native/TKG clusters he/she has access to | Clone VAPP Author Role & Add View right from cse:nativeCluster right bundle                                                                                              | Cluster Sharing feature is used to share a cluster with the Persona:Cluster User |
 
 <a name="old RBAC"></a>
-## CSE 3.1 with VCD 10.1
+# CSE 3.1 with VCD 10.1
 Below content describes the role based access control
 (RBAC) mechanism through which administrators can administer restrictive
 usage of CSE connected to vCD versions < 10.2. It also explains the functioning of
@@ -45,28 +69,28 @@ usage of CSE connected to vCD versions < 10.2. It also explains the functioning 
 
 
 <a name="capability"></a>
-### Capability
+## Capability
 
 CSE 1.2.6 and above has the capability to restrict access to certain deployment
 operations. To perform these operations, a user must have a certain right in
 their assigned role. The following table lays out the right requirement for all
 the restricted operations.
 
-| Operation | Container Provider | Right | Introduced in |
-| -| -| -| -|
-| cluster create | Native(VCD) | {cse}:CSE NATIVE DEPLOY RIGHT | CSE 1.2.6 |
-| cluster delete | Native(VCD) | {cse}:CSE NATIVE DEPLOY RIGHT | CSE 1.2.6 |
-| cluster resize | Native(VCD) | {cse}:CSE NATIVE DEPLOY RIGHT | CSE 1.2.6 |
-| node create | Native(VCD) | {cse}:CSE NATIVE DEPLOY RIGHT | CSE 1.2.6 |
-| node delete | Native(VCD) | {cse}:CSE NATIVE DEPLOY RIGHT | CSE 1.2.6 |
-| cluster create | Enterprise PKS | {cse}:PKS DEPLOY RIGHT | CSE 2.0.0b1 |
-| cluster delete | Enterprise PKS | {cse}:PKS DEPLOY RIGHT | CSE 2.0.0b1 |
-| cluster resize | Enterprise PKS | {cse}:PKS DEPLOY RIGHT | CSE 2.0.0b1 |
+| Operation      | Container Provider | Right                         | Introduced in |
+|----------------|--------------------|-------------------------------|---------------|
+| cluster create | Native(VCD)        | {cse}:CSE NATIVE DEPLOY RIGHT | CSE 1.2.6     |
+| cluster delete | Native(VCD)        | {cse}:CSE NATIVE DEPLOY RIGHT | CSE 1.2.6     |
+| cluster resize | Native(VCD)        | {cse}:CSE NATIVE DEPLOY RIGHT | CSE 1.2.6     |
+| node create    | Native(VCD)        | {cse}:CSE NATIVE DEPLOY RIGHT | CSE 1.2.6     |
+| node delete    | Native(VCD)        | {cse}:CSE NATIVE DEPLOY RIGHT | CSE 1.2.6     |
+| cluster create | TKG-I              | {cse}:PKS DEPLOY RIGHT        | CSE 2.0.0b1   |
+| cluster delete | TKG-I              | {cse}:PKS DEPLOY RIGHT        | CSE 2.0.0b1   |
+| cluster resize | TKG-I              | {cse}:PKS DEPLOY RIGHT        | CSE 2.0.0b1   |
 
 Note: Role Based Access Control feature is turned off by default.
 
 <a name="functioning"></a>
-### Functioning
+## Functioning
 
 Once the feature is turned on, any invocation of the restricted CSE
 operations will cause the call to go through an authorization filter. In the
@@ -76,7 +100,7 @@ normally, else the call will fail and an appropriate error message will be
 displayed on the client console.
 
 <a name="enablement"></a>
-### Enablement
+## Enablement
 
 When CSE v1.2.6 and above is installed (or upgraded from v1.2.5 and below), CSE
 registers the above mentioned rights to VMware Cloud Director. The rights are

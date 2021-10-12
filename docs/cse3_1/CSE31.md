@@ -153,7 +153,7 @@ Refer to [CSE 3.1 upgrade command](CSE_SERVER_MANAGEMENT.html#cse31-upgrade-cmd)
 #### 2.2.3 Tenant onboarding
 The provider needs to perform below operations to enable Kubernetes cluster
 deployments in tenant organizations and tenant virtual data centers.
-1. Grant rights to the tenant users. Refer to [CSE 3.1 RBAC](RBAC.html#DEF-RBAC)
+1. Grant rights to the tenant users. Refer to [CSE 3.1 RBAC](RBAC.html#rde_rbac)
 for more details.
 2. Enable the desired organization virtual datacenter(s) for Native, TKG-S, and/or TKG-I deployments.
     * Native clusters → [Enable VDC for Native clusters](TEMPLATE_MANAGEMENT.html#restrict_templates).
