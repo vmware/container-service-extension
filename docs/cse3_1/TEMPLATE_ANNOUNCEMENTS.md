@@ -8,7 +8,7 @@ title: Template Announcements
 
 **Highlights**
 
-* Deprecation of Photon 2.0 based templates.
+* Photon OS 2.0 templates are deprecated and will be removed in an upcoming CSE release.
 
 All available templates:
 
