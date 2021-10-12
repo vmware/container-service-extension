@@ -62,7 +62,7 @@ deployments on organizational virtual datacenters (ovdcs).
 `cse:native cluster entitlement` right bundle gets created in the Cloud Director 
 and all native cluster operations are guarded by these rights.
 Invoke below API to get a detailed view of native defined entity schema - `https://<vcd-ip>/cloudapi/2.0.0/entityTypes/urn:vcloud:type:cse:nativeCluster:2.0.0`
-3. Register the CSE as API extension to VCD.
+3. Registers CSE as an API extension to VCD.
 
 The `cse install` command supports the following options:
 
@@ -242,7 +242,7 @@ cse run --config config.yaml
 nohup cse run --config config.yaml > nohup.out 2>&1 &
 ```
 
-Refer to [Log bundles](TROUBLESHOOTING.html#log-bundles) to see server-side logs
+Refer to [Log bundles](TROUBLESHOOTING.html#log-bundles) to see server-side logs.
 
 ### Running CSE Server as a Service
 
@@ -343,20 +343,23 @@ version                            3.1.1
 
 ### Uninstalling CSE Server
 
-1. Gracefully stop CSE Server
-2. As Cloud Administrator, unregister CSE from VCD:
+* Gracefully stop CSE Server
+* As Cloud Administrator, unregister CSE from VCD:
    * AMQP : `vcd system extension delete cse`
    * MQTT : Disable and remove the `cse` extension via a REST client
-3. (Optional) Delete Kubernetes templates and the CSE catalog from VCD.
 
 ```
 GET /cloudapi/extensions/api/urn:vcloud:extension-api:VMWare:cse:1.0.0
 
 # Copy the payload, and change enabled to `false`
+
 PUT /cloudapi/extensions/api/urn:vcloud:extension-api:VMWare:cse:1.0.0
 
 DELETE /cloudapi/extensions/api/urn:vcloud:extension-api:VMWare:cse:1.0.0
 ```
+
+* (Optional) Delete Kubernetes templates and the CSE catalog from VCD.
+
 ---
 
 <a name="commands_sys_admin"></a>
