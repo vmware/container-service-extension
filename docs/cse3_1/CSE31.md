@@ -89,6 +89,8 @@ For greenfield installations, please get started with [CSE introduction](INTRO.h
 
 <sub><sup>† - With NSX-V, CSE doesn't support creation of clusters on routed Org VDC networks.</sup></sub>
 
+**Note**: Ubuntu 20.04 Kubernetes OVAs from VMware Tanzu Kubernetes Grid Versions 1.4.0, 1.3.1, 1.3.0 are supported.
+
 **TKG-S compatibility matrix**
 
 | CSE CLI | UI plugin  | Cloud Director |
