@@ -26,9 +26,8 @@ For greenfield installations, please get started with [CSE introduction](INTRO.h
   * Learn more about using [VMware Tanzu Kubernetes Grid OVAs with CSE](TEMPLATE_MANAGEMENT.html#tkgm_templates)
   * Learn more about deploying a Kubernetes cluster based on VMware Tanzu Kubernetes Grid [here](CLUSTER_MANAGEMENT.html#tkgm_clusters)
   * Antrea as CNI
-* VCD CPI and VCD CSI for Kubernetes clusters based on VMware Tanzu Kubernetes Grid
-  * Learn more about [VCD CPI](https://github.com/vmware/cloud-provider-for-cloud-director/blob/0.1.0-beta/README.md)
-  and [VCD CSI](https://github.com/vmware/cloud-director-named-disk-csi-driver/blob/0.1.0-beta/README.md)
+* Kubernetes External Cloud Provider for VCD. Learn more about [CPI for VCD](https://github.com/vmware/cloud-provider-for-cloud-director/blob/0.1.0-beta/README.md)
+* Kubernetes Container Storage Interface for VCD. Learn more about [CSI for VCD](https://github.com/vmware/cloud-director-named-disk-csi-driver/blob/0.1.0-beta/README.md)
 * Deploy externally accessible TKG clusters on NSXT Routed OrgVDC Networks from Kubernetes Container Clusters UI Plugin.
 * **Deprecation of Photon OS 2.0 based native templates**, they will be removed in a future CSE release.
 
@@ -84,11 +83,9 @@ For greenfield installations, please get started with [CSE introduction](INTRO.h
 
 **TKG compatibility matrix**
 
-| CSE Server/CLI   | Cloud Director | NSX-T with Avi             | NSX-V   |
-|------------------|----------------|----------------------------|---------|
-| 3.1.1            | 10.3.1         | NSX-T 3.1.3 and Avi 21.1.1 | 6.4.10† |
-
-<sub><sup>† - With NSX-V, CSE doesn't support creation of clusters on routed Org VDC networks.</sup></sub>
+| CSE Server/CLI   | Cloud Director | NSX-T with Avi             |
+|------------------|----------------|----------------------------|
+| 3.1.1            | 10.3.1         | NSX-T 3.1.3 and Avi 21.1.1 |
 
 **Note**: Ubuntu 20.04 Kubernetes OVAs from VMware Tanzu Kubernetes Grid Versions 1.4.0, 1.3.1, 1.3.0 are supported.
 

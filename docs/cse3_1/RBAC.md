@@ -47,16 +47,16 @@ Read more about how to manage runtime defined entities, [here](https://docs.vmwa
 Apart from the basic RDE rights that are required to manage lifecyle of native/TKG clusters, the following table
 lists down other crucial rights required for properly functioning of various components of the native/TKG cluster.
 
-| Right                                             | Native   | TKG      | Remarks                                                                         |
-|---------------------------------------------------|----------|----------|---------------------------------------------------------------------------------|
-| Catalog: View Published Catalogs                  | Optional | Optional | Required by non admin tenant users to access CSE catalog                        |
-| API Tokens: Manage                                | N/A      | Required | Required by VCD-CPI to function properly                                        |
-| Organization vDC Gateway: View                    | Optional | Required | Required by VCD-CPI to function properly, Required to deploy `exposed` clusters |
-| Organization vDC Gateway: View NAT                | Optional | Required | Required by VCD-CPI to function properly, Required to deploy `exposed` clusters |
-| Organization vDC Gateway: Configure NAT           | Optional | Required | Required by VCD-CPI to function properly, Required to deploy `exposed` clusters |
-| Organization vDC Gateway: View Load Balancer      | N/A      | Required | Required by VCD-CPI to function properly                                        |
-| Organization vDC Gateway: Configure Load Balancer | N/A      | Required | Required by VCD-CPI to function properly                                        |
-| Organization vDC Shared Named Disk: Create        | N/A      | Required | Required by VCD-CSI to function properly                                        |
+| Right                                             | Native   | TKG      | Remarks                                                                             |
+|---------------------------------------------------|----------|----------|-------------------------------------------------------------------------------------|
+| Catalog: View Published Catalogs                  | Optional | Optional | Required by non admin tenant users to access CSE catalog                            |
+| API Tokens: Manage                                | N/A      | Required | Required by CPI for VCD to function properly                                        |
+| Organization vDC Gateway: View                    | Optional | Required | Required by CPI for VCD to function properly, Required to deploy `exposed` clusters |
+| Organization vDC Gateway: View NAT                | Optional | Required | Required by CPI for VCD to function properly, Required to deploy `exposed` clusters |
+| Organization vDC Gateway: Configure NAT           | Optional | Required | Required by CPI for VCD to function properly, Required to deploy `exposed` clusters |
+| Organization vDC Gateway: View Load Balancer      | N/A      | Required | Required by CPI for VCD to function properly                                        |
+| Organization vDC Gateway: Configure Load Balancer | N/A      | Required | Required by CPI for VCD to function properly                                        |
+| Organization vDC Shared Named Disk: Create        | N/A      | Required | Required by CSI for VCD to function properly                                        |
 
 
 <a name="old RBAC"></a>

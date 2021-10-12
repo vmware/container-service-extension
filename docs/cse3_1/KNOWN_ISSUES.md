@@ -8,16 +8,6 @@ title: Known Issues
 ## General Issues
 ---
 
-### Scaling down Kubernetes clusters  via `cse cluster apply` does not drain the worker nodes properly and can lead to loss in application data.
-If users wish to shrink their TKG clusters, they need to use `kubectl` to do it.
-* On control plane node
-  * `kubetcl cordon [node name]`
-  * `kubectl drain [node name]`
-  * `kubectl delete [node name]` (Optional, VCD CPI will update the state of the cluster once the actual worker VM is deleted)
-* On worker node
-  * Once the commands on control plane node have successfully completed,
-    power off the vm and delete it from VCD UI
-
 ### Output of `vcd cse cluster info` for TKG clusters has the kubeconfig of the cluster embedded in it, while output for Native clusters don't have it.
 Although both native and TKG clusters use RDE 2.0.0 for representation in VCD, they differ quite a bit in their structure.
 kubeconfig content being part of the output of `vcd cse cluster info` for TKG clusters and not native clusters is by design.
