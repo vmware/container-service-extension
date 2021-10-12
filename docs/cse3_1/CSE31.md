@@ -85,19 +85,9 @@ For greenfield installations, please get started with [CSE introduction](INTRO.h
 
 | CSE Server/CLI   | Cloud Director | NSX-T with Avi             | NSX-V   |
 |------------------|----------------|----------------------------|---------|
-| 3.1.1            | 10.3.1         | NSX-T 3.1.1 and Avi 20.1.3 | 6.4.10† |
+| 3.1.1            | 10.3.1         | NSX-T 3.1.3 and Avi 21.1.1 | 6.4.10† |
 
 <sub><sup>† - With NSX-V, CSE doesn't support creation of clusters on routed Org VDC networks.</sup></sub>
-
-**Supported TKG OVAs**
-
-| TKG version | OS           | Kubernetes                   | OVA                                                               |
-|-------------|--------------|------------------------------|-------------------------------------------------------------------|
-| 1.4.0       | Ubuntu 20.04 | Kubernetes v1.21.2 vmware.1  | ubuntu-2004-kube-v1.21.2+vmware.1-tkg.1-7832907791984498322.ova   |
-| 1.4.0       | Ubuntu 20.04 | Kubernetes v1.20.8 vmware.1  | ubuntu-2004-kube-v1.20.8+vmware.1-tkg.1-17589475007677388652.ova  |
-| 1.4.0       | Ubuntu 20.04 | Kubernetes v1.19.12 vmware.1 | ubuntu-2004-kube-v1.19.12+vmware.1-tkg.1-15841320193950299489.ova |
-| 1.3.1       | Ubuntu 20.04 | Kubernetes v1.20.5 vmware.2  | ubuntu-2004-kube-v1.20.5-vmware.2-tkg.1-6700972457122900687.ova   |
-| 1.3.0       | Ubuntu 20.04 | Kubernetes v1.20.4 vmware.1  | ubuntu-2004-kube-v1.20.4-vmware.1-tkg.0-16153464878630780629.ova  |
 
 **TKG-S compatibility matrix**
 
