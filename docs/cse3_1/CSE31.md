@@ -30,6 +30,7 @@ For greenfield installations, please get started with [CSE introduction](INTRO.h
   * Learn more about [VCD CPI](https://github.com/vmware/cloud-provider-for-cloud-director/blob/0.1.0-beta/README.md)
   and [VCD CSI](https://github.com/vmware/cloud-director-named-disk-csi-driver/blob/0.1.0-beta/README.md)
 * Deploy externally accessible TKG clusters on NSXT Routed OrgVDC Networks from Kubernetes Container Clusters UI Plugin.
+* **Deprecation of Photon OS 2.0 based native templates**, they will be removed in a future CSE release.
 
 ### CSE 3.1.0
 
@@ -44,7 +45,7 @@ For greenfield installations, please get started with [CSE introduction](INTRO.h
 * Newer versions of native Kubernetes templates are available. Refer to
   [Template announcements](TEMPLATE_ANNOUNCEMENTS.html)
 * CSE 3.1 drops the support with VCD 10.0.
-* Deprecation of TKG-I (Enterprise PKS) - CSE Server and Kubernetes Container Clusters plug-in will soon drop support for TKG-I. Consider using VMware Tanzu Kubernetes Grid or VMware Tanzu Kubernetes Grid Service for management of Kubernetes clusters with VCD.
+* **Deprecation of TKG-I (Enterprise PKS)** - CSE Server and Kubernetes Container Clusters plug-in will soon drop support for TKG-I. Consider using VMware Tanzu Kubernetes Grid (TKG) or VMware Tanzu Kubernetes Grid Service (TKG-S) for management of Kubernetes clusters with VCD.
 
 ## User Context Diagram
 
