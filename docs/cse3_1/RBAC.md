@@ -43,22 +43,14 @@ Read more about how to manage runtime defined entities, [here](https://docs.vmwa
 
 Recommended personas to manage native and TKG clusters
 
-| Persona           | Native  | TKG            |
-|-------------------|---------|----------------|
-| Cluster Org-Admin | Allowed | Allowed        |
-| Cluster Admin     | Allowed | Allowed        |
-| Cluster Author    | Allowed | Not Applicable |
-| Cluster User      | Allowed | Not Applicable |  
+| Persona           | Native  | TKG            | Formation with Role, Rights                                                                                                                                              |
+|-------------------|---------|----------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Cluster Org-Admin | Allowed | Allowed        | Clone Org Admin Role & Add Admin_FC right from cse:nativeCluster right bundle. As a result, these should get automatically added: Admin_View, Full_Control, Modify, View |
+| Cluster Admin     | Allowed | Allowed        | Clone VAPP Author Role & Add FC right from cse:nativeCluster right bundle. As a result, these should get automatically added: Modify, View                               |
+| Cluster Author    | Allowed | Not Applicable | Clone VAPP Author Role & Add Modify right from cse:nativeCluster right bundle. As a result, these should get automatically added: View                                   |
+| Cluster User      | Allowed | Not Applicable | Clone VAPP Author Role & Add View right from cse:nativeCluster right bundle                                                                                              |
 
-
-Explanation of recommended roles.
-
-| Persona           | Allowance                                                                 | Formation with Role, Rights                                                                                                                                              | Notes                                                                            |
-|-------------------|---------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------|
-| Cluster Org-Admin | Create, view, update, delete all native/TKG clusters in the organization  | Clone Org Admin Role & Add Admin_FC right from cse:nativeCluster right bundle. As a result, these should get automatically added: Admin_View, Full_Control, Modify, View |                                                                                  |
-| Cluster Admin     | Create, view, update, delete the native/TKG clusters he/she has access    | Clone VAPP Author Role & Add FC right from cse:nativeCluster right bundle. As a result, these should get automatically added: Modify, View                               |                                                                                  |
-| Cluster Author    | Create, View, update the native/TKG clusters he/she has access to         | Clone VAPP Author Role & Add Modify right from cse:nativeCluster right bundle. As a result, these should get automatically added: View                                   |                                                                                  |
-| Cluster User      | View, download kubeconfig of the native/TKG clusters he/she has access to | Clone VAPP Author Role & Add View right from cse:nativeCluster right bundle                                                                                              | Cluster Sharing feature is used to share a cluster with the Persona:Cluster User |
+**Note**: TKG cluster management requieres `Full Control` right at the minimum from the `cse:nativeCluster entitlement` rights bundle.
 
 <a name="old RBAC"></a>
 # CSE 3.1 with VCD 10.1
