@@ -40,17 +40,24 @@ rights to the `Tenant Administrator` role. This will enable the tenant administr
 to further assign the relevant cluster management rights to the desired tenant users.
 Read more about how to manage runtime defined entities, [here](https://docs.vmware.com/en/VMware-Cloud-Director/10.2/VMware-Cloud-Director-Service-Provider-Admin-Portal-Guide/GUID-0749DEA0-08A2-4F32-BDD7-D16869578F96.html).
 
+**Note**: TKG cluster management requieres `Full Control: CSE:NATIVECLUSTER` right at the minimum from the `cse:nativeCluster entitlement` rights bundle.
 
-Recommended personas to manage native and TKG clusters
+<a name="additional_rights"></a>
+## Additional required rights
+Apart from the basic RDE rights that are required to manage lifecyle of native/TKG clusters, the following table
+lists down other crucial rights required for properly functioning of various components of the native/TKG cluster.
 
-| Persona           | Native  | TKG            | Formation with Role, Rights                                                                                                                                              |
-|-------------------|---------|----------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Cluster Org-Admin | Allowed | Allowed        | Clone Org Admin Role & Add Admin_FC right from cse:nativeCluster right bundle. As a result, these should get automatically added: Admin_View, Full_Control, Modify, View |
-| Cluster Admin     | Allowed | Allowed        | Clone VAPP Author Role & Add FC right from cse:nativeCluster right bundle. As a result, these should get automatically added: Modify, View                               |
-| Cluster Author    | Allowed | Not Applicable | Clone VAPP Author Role & Add Modify right from cse:nativeCluster right bundle. As a result, these should get automatically added: View                                   |
-| Cluster User      | Allowed | Not Applicable | Clone VAPP Author Role & Add View right from cse:nativeCluster right bundle                                                                                              |
+| Right                                             | Native   | TKG      | Remarks                                                                         |
+|---------------------------------------------------|----------|----------|---------------------------------------------------------------------------------|
+| Catalog: View Published Catalogs                  | Optional | Optional | Required by non admin tenant users to access CSE catalog                        |
+| API Tokens: Manage                                | N/A      | Required | Required by VCD-CPI to function properly                                        |
+| Organization vDC Gateway: View                    | Optional | Required | Required by VCD-CPI to function properly, Required to deploy `exposed` clusters |
+| Organization vDC Gateway: View NAT                | Optional | Required | Required by VCD-CPI to function properly, Required to deploy `exposed` clusters |
+| Organization vDC Gateway: Configure NAT           | Optional | Required | Required by VCD-CPI to function properly, Required to deploy `exposed` clusters |
+| Organization vDC Gateway: View Load Balancer      | N/A      | Required | Required by VCD-CPI to function properly                                        |
+| Organization vDC Gateway: Configure Load Balancer | N/A      | Required | Required by VCD-CPI to function properly                                        |
+| Organization vDC Shared Named Disk: Create        | N/A      | Required | Required by VCD-CSI to function properly                                        |
 
-**Note**: TKG cluster management requieres `Full Control` right at the minimum from the `cse:nativeCluster entitlement` rights bundle.
 
 <a name="old RBAC"></a>
 # CSE 3.1 with VCD 10.1
