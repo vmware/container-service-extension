@@ -151,7 +151,7 @@ then CSE 3.0.z can not be upgraded to CSE 3.1.z. To enable the upgrade path, pro
 2. Disable TKG deployment on all Org VDCs via `vcd cse ovdc disable`.
 3. Stop the CSE server.
 4. Delete all TKG templates via VCD UI.
-5. Remove the compute policy `cse---tkgm` from the system via VCD UI or VCD REST api.
+5. Remove the VM Placement Policy `cse---tkgm` from the system via VCD UI or VCD REST api.
 6. Revert CSE configuration file to disable TKG.
 7. Upgrade CSE via `cse upgrade` command.
 
