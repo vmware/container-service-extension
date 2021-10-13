@@ -135,7 +135,7 @@ Refer to [CSE 3.1 installation](CSE_SERVER_MANAGEMENT.html#cse31-greenfield).
 #### 2.2.3 Brownfield upgrade
 
 **3.1.1**  
-CSE can be upgraded to 3.1.1, from CSE 3.1.0 and CSE 3.0.z product line.
+CSE can be upgraded from CSE 3.1.0 and CSE 3.0.z to 3.1.1 GA.
 Any CSE release older than CSE 3.0.0 first needs to be upgraded to
 CSE 3.0.z product line before it can be upgraded to CSE 3.1.1.
 

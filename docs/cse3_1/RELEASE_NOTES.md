@@ -18,7 +18,9 @@ the same will be fixed in a future CSE release.
 * Check out [what's new](CSE31.html) in this release.
 * Compatility matrix for CSE 3.1.1 can be found [here](CSE31.html#cse31-compatibility-matrix).
 
-**Notes to System Administrator**: Please take note of the supported upgrade paths for CSE 3.1.1 [here](CSE31.html#brown_field_upgrades).
+**Notes to System Administrator**:
+* Please take note of the supported upgrade paths for CSE 3.1.1 [here](CSE31.html#brown_field_upgrades).
+* Upgrading CSE from beta builds of CSE 3.1.1 to CSE 3.1.1 GA is not recommended nor supported.
 
 ## CSE 3.1.1 Beta 2 (3.1.1.0b2)
 Release Date: 2021-09-21
