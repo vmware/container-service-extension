@@ -1018,7 +1018,7 @@ def test_0040_vcd_cse_cluster_apply(cluster_apply_param: CLUSTER_APPLY_TEST_PARA
     print(f"Running cluster create operation for {cluster_apply_param.user}")
 
     rde_version = get_runtime_rde_version_by_vcd_api_version(
-            env.VCD_API_VERSION_TO_USE)
+        env.VCD_API_VERSION_TO_USE)
     if rde_version not in cluster_apply_param.required_rde_version:
         # Do not execute the test if not relevant to the RDE version used
         return
