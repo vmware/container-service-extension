@@ -151,7 +151,7 @@ on [CSE 3.0.z](https://github.com/vmware/container-service-extension-templates/b
 then the steps mentioned below must be followed in order to upgrade to CSE 3.1.1.
 
 1. Evaluate your environment for any stateful applications that run on TKG clusters
-powered by CSE 3.0.z. If you wish to protect these applications data, then leverage
+powered by CSE 3.0.z. If you wish to retain these application's data, then leverage
 a Kubernetes application backup/restore strategy to backup the applications data so you can restore it later.
 2. The next set of steps lead you through removal of TKG clusters from CSE 3.0.z after which you can safely upgrade to CSE 3.1.1  
   2.1. Delete all deployed TKG clusters across all tenants via `vcd-cli` or `Kubernetes Container Clusters UI plugin`.  
@@ -161,7 +161,7 @@ a Kubernetes application backup/restore strategy to backup the applications data
   2.5. Remove the VM Placement Policy `cse---tkgm` from the system via VCD UI or VCD REST api.  
   2.6. Revert CSE configuration file to disable TKG.  
 3. Upgrade CSE via `cse upgrade` command.
-4. Create new TKG clusters based off Ubuntu 20.04 TKG OVAs, using CSE 3.1.1.
+4. Create new TKG clusters from Ubuntu 20.04 TKG OVAs, using CSE 3.1.1.
 5. Restore applications on newly created TKG clusters.
 
 Refer to [CSE 3.1 upgrade command](CSE_SERVER_MANAGEMENT.html#cse31-upgrade-cmd) for details.
