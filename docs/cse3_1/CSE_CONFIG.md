@@ -201,12 +201,12 @@ The following table summarizes key parameters.
 | storage_profile              | Name of the storage profile to use when creating the temporary vApp used to build the template.                                                                                                                       |                                          |
 | vdc                          | Virtual data-center within `org` that will be used during the install process to build the template.                                                                                                                  |                                          |
 
-<a name="template_cookbook_20"></a>
 **CSE 3.1.1 - removed fields `default_template_name` and `default_template_revision`:**
 CSE no longer requires native template(s) to be present for startup. As a result, every
 cluster deployment command from user must contain the
 template name and revision they wish to use for the deployment.
 
+<a name="template_cookbook_20"></a>
 **CSE 3.1.0 - new template cookbook 2.0:**
 For the `remote_template_cookbook_url` property, CSE 3.1 `config.yaml` must refer
 to `http://raw.githubusercontent.com/vmware/container-service-extension-templates/master/template_v2.yaml`. 

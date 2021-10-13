@@ -125,7 +125,7 @@ Refer to the [sample config file](CSE_CONFIG.html)
 2. Addition of property [legacy_mode](CSE_CONFIG.html#legacy_mode)
 3. [New template cookbook 2.0](CSE_CONFIG.md#template_cookbook_20) is introduced;
    refer to the  `remote_template_cookbook_url` for the location
-4. [mqtt](CSE_CONFIG.html#mqtt) property must be enabled when CSE 3.1 is configured with VCD 10.3.
+4. [mqtt](CSE_CONFIG.html#mqtt_section) property must be enabled when CSE 3.1 is configured with VCD 10.3.
 
 #### 2.2.2 Greenfield installation
 

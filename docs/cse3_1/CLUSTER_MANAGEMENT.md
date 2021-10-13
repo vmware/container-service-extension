@@ -305,7 +305,8 @@ download Antrea, VCD CPI and VCD CSI.
     * Once the commands on control plane node have successfully completed,
       power off the vm and delete it from VCD UI
 
-* NFS based Persistent Volumes are not supported for TKG clusters. Instead, use VCD CSI for Dynamic Persistent Volumes.
+* NFS based Persistent Volumes are not supported for TKG clusters.
+Please use CSI for VCD to work with static and dynamic persistent volumes for K8s applications.
 
 * Cluster sharing is not supported for TKG clusters.
 
