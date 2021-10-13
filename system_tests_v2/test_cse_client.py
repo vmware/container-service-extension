@@ -1092,8 +1092,8 @@ def test_0060_vcd_cse_cluster_list(test_runner_username):
 
 
 @pytest.mark.parametrize('test_runner_username', [env.SYS_ADMIN_NAME,
-                                                  env.CLUSTER_AUTHOR_NAME
-                                                  #   env.CLUSTER_ADMIN_NAME
+                                                  #   env.CLUSTER_AUTHOR_NAME
+                                                  env.CLUSTER_ADMIN_NAME
                                                   ])
 def test_0070_vcd_cse_cluster_info(test_runner_username):
     cmd_list = [
@@ -1115,8 +1115,8 @@ def test_0070_vcd_cse_cluster_info(test_runner_username):
 
 
 @pytest.mark.parametrize('test_runner_username', [env.SYS_ADMIN_NAME,
-                                                  env.CLUSTER_AUTHOR_NAME
-                                                  #   env.CLUSTER_ADMIN_NAME
+                                                  #   env.CLUSTER_AUTHOR_NAME
+                                                  env.CLUSTER_ADMIN_NAME
                                                   ])
 def test_0080_vcd_cse_cluster_config(test_runner_username):
     # Failing for the first call with err:
@@ -1161,8 +1161,8 @@ def validate_if_node_not_present(node_name):
 
 
 @pytest.mark.parametrize('test_runner_username', [env.SYS_ADMIN_NAME,
-                                                  env.CLUSTER_AUTHOR_NAME
-                                                  #   env.CLUSTER_ADMIN_NAME
+                                                  #   env.CLUSTER_AUTHOR_NAME
+                                                  env.CLUSTER_ADMIN_NAME
                                                   ])
 def test_0050_vcd_cse_delete_nfs(test_runner_username):
     """Test delete nfs node command."""
