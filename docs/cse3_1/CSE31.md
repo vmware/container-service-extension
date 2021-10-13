@@ -144,6 +144,7 @@ CSE can be upgraded to 3.1.0, only from CSE 3.0.z product line.
 Any CSE release older than CSE 3.0.0 first needs to be upgraded to
 CSE 3.0.z product line before it can be upgraded to CSE 3.1.0.
 
+<a name="remove_tkgm"></a>
 **Note:** If Tanzu Kubernetes Grid (TKG) distribution is enabled
 on [CSE 3.0.z](https://github.com/vmware/container-service-extension-templates/blob/tkgm/TKG_INSTRUCTIONS.md),
 then CSE 3.0.z can not be upgraded to CSE 3.1.z. To enable the upgrade path, providers need to

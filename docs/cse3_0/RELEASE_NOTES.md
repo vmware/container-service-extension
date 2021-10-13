@@ -9,7 +9,7 @@ title: Release Notes
 Date : 2021-10-14
 
 * If Tanzu Kubernetes Grid (TKG) distribution is enabled on CSE 3.0.z, then 
-CSE can not be upgraded to CSE 3.1.z. For more details, check [this](../cse3_1/CSE31.html#brown_field_upgrades).
+CSE can not be upgraded to CSE 3.1.z. For more details, check [this](../cse3_1/CSE31.html#remove_tkgm).
 * New TKG templates will not be published for CSE 3.0.z.
 If you wish to deploy Kubernetes cluster with newer TKG versions please upgrade to [CSE 3.1.1](../cse3_1/CSE31.html)
 
