@@ -240,8 +240,7 @@ If any of the conditions mentioned above is not met, the cluster will go down
 for about a minute or more (depends on the actual upgrade process).
 
 <a name="expose_cluster"></a>
-## Creating clusters in Organizations with routed OrgVDC networks
-
+## Creating clusters in Organizations with routed OrgVDC networks backed by NSX-T
 Traditionally, CSE requires a directly connected OrgVDC network for K8s cluster deployment.
 This is to make sure that the cluster VMs are reachable from outside the scope of the
 OrgVDC network. With NSX-T, directly connected OrgVDC networks are not offered and
@@ -272,10 +271,14 @@ An exposed cluster if ever de-exposed can't be re-exposed.
 
 <a name="tkgm_clusters"></a>
 ## Creating clusters with VMware Tanzu Kubernetes Grid
-VMware Tanzu Kubernetes Grid (TKG) clusters are deployed like
-Native clusters using `vcd cse cluster apply` command. TKG cluster
+Starting CSE 3.1.1, VMware Tanzu Kubernetes Grid (TKG) clusters can be deployed
+like Native clusters using `vcd cse cluster apply` command. TKG cluster
 specification file differs from a native cluster specification file
-in the value of the fields `kind` and `template_name`.
+in the value of the fields `kind` and `template_name`. Sample file for
+TKG cluster deployment can be generated using the following command
+```
+vcd cse cluster apply --sample --tkg
+```
 
 **Please note:**
 * It is mandatory to deploy VMware Tanzu Kubernetes Grid clusters with `expose` field set to `True`.
