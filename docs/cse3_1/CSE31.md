@@ -145,16 +145,19 @@ Any CSE release older than CSE 3.0.0 first needs to be upgraded to
 CSE 3.0.z product line before it can be upgraded to CSE 3.1.0.
 
 <a name="remove_tkgm"></a>
-**Note:** If Tanzu Kubernetes Grid (TKG) distribution is enabled
+**Note** :
+If Tanzu Kubernetes Grid (TKG) distribution is enabled
 on [CSE 3.0.z](https://github.com/vmware/container-service-extension-templates/blob/tkgm/TKG_INSTRUCTIONS.md),
-then CSE 3.0.z can not be upgraded to CSE 3.1.z. To enable the upgrade path, providers need to
-1. Delete all deployed TKG clusters across all tenants.
-2. Disable TKG deployment on all Org VDCs via `vcd cse ovdc disable`.
-3. Stop the CSE server.
-4. Delete all TKG templates via VCD UI.
-5. Remove the VM Placement Policy `cse---tkgm` from the system via VCD UI or VCD REST api.
-6. Revert CSE configuration file to disable TKG.
-7. Upgrade CSE via `cse upgrade` command.
+then the steps mentioned below must be followed in order to upgrade to CSE 3.1.1.
+
+1. Use a Kubernetes application backup/restore strategy to backup native applications ahead of upgrade.
+2. Delete all deployed TKG clusters across all tenants.
+3. Disable TKG deployment on all Org VDCs via `vcd cse ovdc disable`.
+4. Stop the CSE server.
+5. Delete all TKG templates via VCD UI.
+6. Remove the VM Placement Policy `cse---tkgm` from the system via VCD UI or VCD REST api.
+7. Revert CSE configuration file to disable TKG.
+8. Upgrade CSE via `cse upgrade` command.
 
 Refer to [CSE 3.1 upgrade command](CSE_SERVER_MANAGEMENT.html#cse31-upgrade-cmd) for details.
 
