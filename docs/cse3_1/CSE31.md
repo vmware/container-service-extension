@@ -18,7 +18,7 @@ For greenfield installations, please get started with [CSE introduction](INTRO.h
 * Native entities: Runtime defined entities representing Native clusters.
 * TKG-S entities: Runtime defined entities representing TKG-S clusters.
 * Defined entity API: VCD's generic defined entity api to manage lifecycle of RDEs.
-* UI plugin : Kubernetes Container Clusters UI Plugin, that is used to manage Native, TKG, TKG-S, TKG-I clusters from VCD UI.
+* UI plugin : Kubernetes Container Clusters UI plugin, that is used to manage Native, TKG, TKG-S, TKG-I clusters from VCD UI.
 
 ### CSE 3.1.1
 
@@ -28,7 +28,8 @@ For greenfield installations, please get started with [CSE introduction](INTRO.h
   * Antrea as CNI
 * Kubernetes External Cloud Provider for VCD. Learn more about [CPI for VCD](https://github.com/vmware/cloud-provider-for-cloud-director/blob/0.1.0-beta/README.md)
 * Kubernetes Container Storage Interface for VCD. Learn more about [CSI for VCD](https://github.com/vmware/cloud-director-named-disk-csi-driver/blob/0.1.0-beta/README.md)
-* Deploy externally accessible TKG clusters on NSXT Routed OrgVDC Networks from Kubernetes Container Clusters UI Plugin.
+* Kubernetes Container Clusters plugin is updated to version 3.1.0, which includes support for Tanzu Kubernetes Grid. The plugin ships with VCD 10.3.1.
+* Deploy externally accessible TKG clusters on NSX-T based Routed OrgVDC Networks from Kubernetes Container Clusters UI plugin v3.1.0.
 * **Deprecation of Photon OS 2.0 based native templates**, they will be removed in a future CSE release.
 
 ### CSE 3.1.0
@@ -44,7 +45,7 @@ For greenfield installations, please get started with [CSE introduction](INTRO.h
 * Newer versions of native Kubernetes templates are available. Refer to
   [Template announcements](TEMPLATE_ANNOUNCEMENTS.html)
 * CSE 3.1 drops the support with VCD 10.0.
-* **Deprecation of TKG-I (Enterprise PKS)** - CSE Server and Kubernetes Container Clusters plug-in will soon drop support for TKG-I. Consider using VMware Tanzu Kubernetes Grid (TKG) or VMware Tanzu Kubernetes Grid Service (TKG-S) for management of Kubernetes clusters with VCD.
+* **Deprecation of TKG-I (Enterprise PKS)** - CSE Server and Kubernetes Container Clusters plugin will soon drop support for TKG-I. Consider using VMware Tanzu Kubernetes Grid (TKG) or VMware Tanzu Kubernetes Grid Service (TKG-S) for management of Kubernetes clusters with VCD.
 
 ## User Context Diagram
 
@@ -56,7 +57,7 @@ For greenfield installations, please get started with [CSE introduction](INTRO.h
 <a name="cse31-compatibility-matrix"></a>
 ### 2.1 Compatibility matrix and relevant features
 
-**Kubernetes Container Clusters UI Plugin compatibility matrix**
+**Kubernetes Container Clusters UI plugin compatibility matrix**
 
 | CSE Server/CLI | UI plugin | Cloud Director | Comments               |
 |----------------|-----------|----------------|------------------------|
@@ -109,7 +110,7 @@ For greenfield installations, please get started with [CSE introduction](INTRO.h
 ### 2.2 CSE Server
 
 <a name="cse31-config"></a>
-#### 2.2.0 Changes in the configuration file
+#### 2.2.1 Changes in the configuration file
 Refer to the [sample config file](CSE_CONFIG.html)
 
 ### CSE 3.1.1
@@ -126,29 +127,37 @@ Refer to the [sample config file](CSE_CONFIG.html)
    refer to the  `remote_template_cookbook_url` for the location
 4. [mqtt](CSE_CONFIG.html#mqtt) property must be enabled when CSE 3.1 is configured with VCD 10.3.
 
-#### 2.2.1 Greenfield installation
+#### 2.2.2 Greenfield installation
 
 Refer to [CSE 3.1 installation](CSE_SERVER_MANAGEMENT.html#cse31-greenfield).
 
-#### 2.2.2 Brownfield upgrade
+<a name="brown_field_upgrades"></a>
+#### 2.2.3 Brownfield upgrade
 
 **3.1.1**  
 CSE can be upgraded to 3.1.1, from CSE 3.1.0 and CSE 3.0.z product line.
 Any CSE release older than CSE 3.0.0 first needs to be upgraded to
-CSE 3.0.0 product line before it can be upgraded to CSE 3.1.1.
+CSE 3.0.z product line before it can be upgraded to CSE 3.1.1.
 
 **3.1.0**  
 CSE can be upgraded to 3.1.0, only from CSE 3.0.z product line.
 Any CSE release older than CSE 3.0.0 first needs to be upgraded to
-CSE 3.0.0 product line before it can be upgraded to CSE 3.1.0.
+CSE 3.0.z product line before it can be upgraded to CSE 3.1.0.
 
 **Note:** If Tanzu Kubernetes Grid (TKG) distribution is enabled
-on [CSE 3.0.3](https://github.com/vmware/container-service-extension-templates/blob/tkgm/TKG_INSTRUCTIONS.md),
-then CSE 3.0.3 can not be upgraded to CSE 3.1.x.
+on [CSE 3.0.z](https://github.com/vmware/container-service-extension-templates/blob/tkgm/TKG_INSTRUCTIONS.md),
+then CSE 3.0.z can not be upgraded to CSE 3.1.z. To enable the upgrade path, providers need to
+1. Delete all deployed TKG clusters across all tenants.
+2. Disable TKG deployment on all Org VDCs via `vcd cse ovdc disable`.
+3. Stop the CSE server.
+4. Delete all TKG templates from VCD UI.
+5. Remove the compute policy `cse---tkgm` from the system via VCD UI or VCD REST api.
+6. Revert CSE configuration file to disable TKG.
+7. Upgrade CSE via `cse upgrade` command.
 
 Refer to [CSE 3.1 upgrade command](CSE_SERVER_MANAGEMENT.html#cse31-upgrade-cmd) for details.
 
-#### 2.2.3 Tenant onboarding
+#### 2.2.4 Tenant onboarding
 The provider needs to perform below operations to enable Kubernetes cluster
 deployments in tenant organizations and tenant virtual data centers.
 1. Grant rights to the tenant users. Refer to [CSE 3.1 RBAC](RBAC.html#rde_rbac)
@@ -157,26 +166,26 @@ for more details.
     * Native clusters → [Enable VDC for Native clusters](TEMPLATE_MANAGEMENT.html#restrict_templates).
     * TKG-S clusters → [Publish Kubernetes policy on VDC for TKG-S Clusters](https://docs.vmware.com/en/VMware-Cloud-Director/10.3/VMware-Cloud-Director-Service-Provider-Admin-Portal-Guide/GUID-E9839D4E-3024-445E-9D08-372113CF6FE0.html)
     * TKG-I clusters → [Enable VDC for TKG-I clusters](ENT_PKS.html#cse-commands)
-3. [Publish Kubernetes Container Clusters UI Plugin](https://docs.vmware.com/en/VMware-Cloud-Director/10.3/VMware-Cloud-Director-Service-Provider-Admin-Portal-Guide/GUID-A1910FF9-B2CF-49DD-B031-D1245E8740AE.html)
+3. [Publish Kubernetes Container Clusters UI plugin](https://docs.vmware.com/en/VMware-Cloud-Director/10.3/VMware-Cloud-Director-Service-Provider-Admin-Portal-Guide/GUID-A1910FF9-B2CF-49DD-B031-D1245E8740AE.html)
 to the desired organizations.
 
-### 2.3 Kubernetes Container Clusters UI Plugin
-Kubernetes Container Clusters UI Plugin 3.1.0 is available out of the box with VCD 10.3.1.  
-Kubernetes Container Clusters UI Plugin 3.0.0 is available out of the box with VCD 10.3.0.
+### 2.3 Kubernetes Container Clusters UI plugin
+Kubernetes Container Clusters UI plugin 3.1.0 is available out of the box with VCD 10.3.1.  
+Kubernetes Container Clusters UI plugin 3.0.0 is available out of the box with VCD 10.3.0.
 
 Provider can publish it to the desired tenants to offer Kubernetes services.
-Refer to [publish Kubernetes Container Clusters UI Plugin](https://docs.vmware.com/en/VMware-Cloud-Director/10.3/VMware-Cloud-Director-Service-Provider-Admin-Portal-Guide/GUID-A1910FF9-B2CF-49DD-B031-D1245E8740AE.html).
+Refer to [publish Kubernetes Container Clusters UI plugin](https://docs.vmware.com/en/VMware-Cloud-Director/10.3/VMware-Cloud-Director-Service-Provider-Admin-Portal-Guide/GUID-A1910FF9-B2CF-49DD-B031-D1245E8740AE.html).
 For VCD 10.2.z that inter-operates with CSE 3.1.z, Provider must use the
-Kubernetes Container Clusters UI Plugin 2.y.z that comes with VCD to offer Kubernetes Services.
+Kubernetes Container Clusters UI plugin 2.y.z that comes with VCD to offer Kubernetes Services.
 For VCD versions prior to 10.2 that inter-operate with CSE 3.1.z,
-Kubernetes Container Clusters UI Plugin 1.0.3 must be installed separately by Provider and
-published to the desired tenants. Refer to [Register CSE UI Plugin 1.0.3](CSE_UI_PLUGIN.html)
+Kubernetes Container Clusters UI plugin 1.0.3 must be installed separately by Provider and
+published to the desired tenants. Refer to [Register CSE UI plugin 1.0.3](CSE_UI_PLUGIN.html)
 for more details.
 
 <a name="tenant-workflows"></a>
 ## 3. Tenant workflows
 Tenant users can manage the Kubernetes cluster deployments either through
-CSE CLI or Kubernetes Container Clusters UI Plugin
+CSE CLI or Kubernetes Container Clusters UI plugin
 
 ### 3.1 CLI for Container Extension
 CSE 3.1.0 introduces below changes in CLI
@@ -186,14 +195,11 @@ CSE 3.1.0 introduces below changes in CLI
 2. Clusters can be shared to other users using new `vcd cse cluster share` command.
    Refer to [cluster share usage](CLUSTER_MANAGEMENT.html#cse31_cluster_share)
 
-### 3.2 Kubernetes Container Clusters UI Plugin
+### 3.2 Kubernetes Container Clusters UI plugin
+For VCD 10.3.z, you must use the [Kubernetes Container Clusters UI plugin 3.y.0](https://docs.vmware.com/en/VMware-Cloud-Director/10.3/VMware-Cloud-Director-Service-Provider-Admin-Portal-Guide/GUID-A1910FF9-B2CF-49DD-B031-D1245E8740AE.html) that comes with VCD to manage the cluster deployments.
+For VCD 10.2.z, you must use the [Kubernetes Container Clusters UI plugin 2.y.0](https://docs.vmware.com/en/VMware-Cloud-Director/10.2/VMware-Cloud-Director-Service-Provider-Admin-Portal-Guide/GUID-A1910FF9-B2CF-49DD-B031-D1245E8740AE.html) that comes with VCD to manage the cluster deployments.
 
-For VCD 10.3.z, you must use the [Kubernetes Container Clusters UI Plugin 3.y.0](https://docs.vmware.com/en/VMware-Cloud-Director/10.3/VMware-Cloud-Director-Service-Provider-Admin-Portal-Guide/GUID-A1910FF9-B2CF-49DD-B031-D1245E8740AE.html
-) that comes with VCD to manage the cluster deployments.
-For VCD 10.2.z, you must use the [Kubernetes Container Clusters UI Plugin 2.y.0](https://docs.vmware.com/en/VMware-Cloud-Director/10.2/VMware-Cloud-Director-Service-Provider-Admin-Portal-Guide/GUID-A1910FF9-B2CF-49DD-B031-D1245E8740AE.html
-) that comes with VCD to manage the cluster deployments.
-
-If you are working with VCD versions prior to 10.2, you must use the [Kubernetes Container Clusters UI Plugin 1.0.3](CSE_UI_PLUGIN.html) to manage the cluster deployments.
+If you are working with VCD versions prior to 10.2, you must use the [Kubernetes Container Clusters UI plugin 1.0.3](CSE_UI_PLUGIN.html) to manage the cluster deployments.
 
 <a name="faq"></a>
 ## 4. FAQ

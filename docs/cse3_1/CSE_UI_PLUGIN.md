@@ -1,26 +1,26 @@
 ---
 layout: default
-title: Kubernetes Container Clusters UI Plugin for VCD
+title: Kubernetes Container Clusters UI plugin for VCD
 ---
 
-# Kubernetes Container Clusters UI Plugin for VCD
+# Kubernetes Container Clusters UI plugin for VCD
 
-VCD 10.3 comes with a Kubernetes Container Clusters UI Plugin 3.0 out of the box. 
+VCD 10.3 comes with a Kubernetes Container Clusters UI plugin 3.0 out of the box. 
 
 *Refer to [Compatibility Matrix](CSE31.html#cse31-compatibility-matrix) and
-[Kubernetes Container Clusters UI Plugin 3.0.0](https://docs.vmware.com/en/VMware-Cloud-Director/10.3/VMware-Cloud-Director-Service-Provider-Admin-Portal-Guide/GUID-F8F4B534-49B2-43B2-AEEE-7BAEE8CE1844.html) documentation*
+[Kubernetes Container Clusters UI plugin 3.0.0](https://docs.vmware.com/en/VMware-Cloud-Director/10.3/VMware-Cloud-Director-Service-Provider-Admin-Portal-Guide/GUID-F8F4B534-49B2-43B2-AEEE-7BAEE8CE1844.html) documentation*
 
 ## Overview
 
-For VCD versions before 10.2, Kubernetes Container Clusters UI Plugin 1.0.3 can be used with CSE 3.0 to manage Kubernetes Clusters directly from VCD UI
+For VCD versions before 10.2, Kubernetes Container Clusters UI plugin 1.0.3 can be used with CSE 3.0 to manage Kubernetes Clusters directly from VCD UI
 
-## Get Kubernetes Container Clusters UI Plugin
+## Get Kubernetes Container Clusters UI plugin
 
 The v1.0.3 plugin binary can be downloaded from [here](https://github.com/vmware/container-service-extension/raw/master/cse_ui/1.0.3/container-ui-plugin.zip).
 
 ---
 
-## Register and publish Kubernetes Container Clusters UI Plugin
+## Register and publish Kubernetes Container Clusters UI plugin
 
 **Via VCD UI portal**
 
@@ -34,17 +34,17 @@ To unregister the plugin, select the plugin in `Customize Portal` and click on
 
 ## Access Control
 
-Tenant users cannot register/unregister Kubernetes Container Clusters UI Plugin, and they can only use the plugin once access has been granted by Service Provider.
-Service Providers can enable/disable Kubernetes Container Clusters UI Plugin as well as manage access contorl to the plugin.
+Tenant users cannot register/unregister Kubernetes Container Clusters UI plugin, and they can only use the plugin once access has been granted by Service Provider.
+Service Providers can enable/disable Kubernetes Container Clusters UI plugin as well as manage access contorl to the plugin.
 
 ## Enable/Disable plugin
 
-On `Customize Portal` page, select `Container UI Plugin`, and click on the `ENABLE` or `DISABLE` button.
+On `Customize Portal` page, select `Container UI plugin`, and click on the `ENABLE` or `DISABLE` button.
 Disabling the plugin will make the plugin inaccessible for both providers and tenants
 
 ## Access control for tenants
 
-On `Customize Portal` page, select `Container UI Plugin`, and click on the `PUBLISH` button. . In the wizard, customize the scope to publish to. To remove plugin access from specific tenants, un-select them from the scope and click publish.
+On `Customize Portal` page, select `Container UI plugin`, and click on the `PUBLISH` button. . In the wizard, customize the scope to publish to. To remove plugin access from specific tenants, un-select them from the scope and click publish.
 
 ---
 
@@ -88,13 +88,13 @@ This info page contains the following functionalities:
 * Navigate back to the landing page using the top navigation bar
 * Download the cluster's kube config (to be used with `kubectl`) using the button on the right of the cluster name.
 * View cluster information. **Info** section contains cluster-specific details, while **Details** section contains VCD/CSE details.
-* Add new worker nodes to Native clusters. Removing worker nodes from native clusters is not supported in Kubernetes Container Clusters UI Plugin 1.0.3
+* Add new worker nodes to Native clusters. Removing worker nodes from native clusters is not supported in Kubernetes Container Clusters UI plugin 1.0.3
 
 ---
 
 ## Known Issues
 
-**Creating a cluster using Kubernetes Container Clusters UI Plugin as system administrator in a large-scale VCD (many orgs, org vdcs, networks, etc) will fail**
+**Creating a cluster using Kubernetes Container Clusters UI plugin as system administrator in a large-scale VCD (many orgs, org vdcs, networks, etc) will fail**
 
 When trying to create cluster as a system administrator user, datagrids in cluster create wizard will fail to load, preventing cluster creation. (Error will be an extension timeout error).
 This is because plugin 1.0.3 is not optimized to fetch VCD entities (orgs, ovdcs, networks, etc) at large scale (Tested in an environment with 80+ orgs/ovdcs/networks). The request will overload CSE Server and fail to complete.
@@ -103,7 +103,7 @@ Workaround: If system administrator must create a cluster in a large-scale VCD e
 
 ---
 
-**Re-registering Kubernetes Container Clusters UI Plugin with VCD fails**
+**Re-registering Kubernetes Container Clusters UI plugin with VCD fails**
 
 If the beta version of CSE UI plugin is already registered with VCD, trying to
 upgrade it via CSE cli or VCD UI will fail. Right now, the only way to update
@@ -113,7 +113,7 @@ the tenants that were previously given access to the CSE UI plugin.
 
 ---
 
-**Kubernetes Container Clusters UI Plugin landing page on VCD UI perpetually shows a spinning wheel**
+**Kubernetes Container Clusters UI plugin landing page on VCD UI perpetually shows a spinning wheel**
 
 If CSE server is inaccessible/down, on VCD UI's CSE landing page, user only
 sees the loading spinner instead of an error message.
@@ -127,14 +127,14 @@ Workaround: Make sure CSE server is running.
 On clicking `confirm` in cluster creation/deletion wizards/confirmation message
 boxes, user does not immediately get to know if the plugin successfully sent
 the request, or if CSE Server successfully received the same. Form validation
-and HTTP error display is not implemented in Kubernetes Container Clusters UI Plugin 1.0.3
+and HTTP error display is not implemented in Kubernetes Container Clusters UI plugin 1.0.3
 
 ---
 
 **Enterprise PKS cluster creation fails from UI**
 
 If CSE is enabled with Enterprise PKS but OrgVDCs are not enabled with
-Enterprise PKS as their k8s provider, Kubernetes Container Clusters UI Plugin 1.0.3 will allow cluster creation operation on that OrgVDC, but the operation will eventually fail. This behavior is as designed.
+Enterprise PKS as their k8s provider, Kubernetes Container Clusters UI plugin 1.0.3 will allow cluster creation operation on that OrgVDC, but the operation will eventually fail. This behavior is as designed.
 
 *Workaround:* - Enable the OrgVDC explicitly for Enterprise PKS cluster
 deployment via the following command

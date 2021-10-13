@@ -281,10 +281,9 @@ vcd cse cluster apply --sample --tkg
 ```
 
 **Please note:**
-* It is mandatory to deploy VMware Tanzu Kubernetes Grid clusters with `expose` field set to `True`.
-Read more about `expose` functionality [here](CLUSTER_MANAGEMENT.html#expose_cluster).
-Routability of external network traffic to the cluster is crucial for VCD CPI to
-work properly.
+* Routability of external network traffic to the cluster is crucial for VCD CPI to work.
+Therefore, it is mandatory to deploy TKG clusters with `expose` field set to `True`.
+Read more about expose functionality [here](CLUSTER_MANAGEMENT.html#expose_cluster).
 
 * Users deploying VMware Tanzu Kubernetes Grid clusters should have the rights required
 to deploy `exposed` native clusters and additionally the right `Full Control: CSE:NATIVECLUSTER`.
@@ -297,7 +296,7 @@ the public end point of the VCD. This network **should** have DNS setup, the sam
 would be used by all cluster vms for name resolution while reaching out to internet to
 download Antrea, VCD CPI and VCD CSI.
 
-* Scaling down TKG clusters  via `cse cluster apply` is not supported. If users wish to shrink their TKG clusters, they need to use `kubectl` to do it.
+* Scaling down TKG clusters is not supported. If users wish to shrink their TKG clusters, they need to use `kubectl` to do it.
   * On control plane node
     * `kubetcl cordon [node name]`
     * `kubectl drain [node name]`

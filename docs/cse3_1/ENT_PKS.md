@@ -5,7 +5,7 @@ title: Enterprise PKS enablement
 
 <span style="color:red">## Deprecation Notice</span>
 
-CSE Server and Kubernetes Container Clusters Plugin will soon drop support for
+CSE Server and Kubernetes Container Clusters plugin will soon drop support for
 TKG-I (previously known as Enterprise PKS). Consider using
 VMware Tanzu Kubernetes Grid (TKG) or VMware Tanzu Kubernetes Grid Service (TKG-S)
 for management of Kubernetes clusters with VCD.
