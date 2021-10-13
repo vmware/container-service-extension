@@ -8,13 +8,15 @@ title: Release Notes
 ## CSE 3.1.1 GA (3.1.1)
 Release Date : 2021-10-14
 
+**Supported (and tested) VCD versions**: 10.3.0 GA, 10.2.2 GA, 10.1.3 GA
 
-**Supported VMware Tanzu Kubernetes Grid OVAs**
-* VMware Tanzu Kubernetes Grid 1.4.0 : Ubuntu 20.04, Kubernetes v1.21.2 vmware.1 (ubuntu-2004-kube-v1.21.2+vmware.1-tkg.1-7832907791984498322.ova)
-* VMware Tanzu Kubernetes Grid 1.4.0 : Ubuntu 20.04, Kubernetes v1.20.8 vmware.1 (ubuntu-2004-kube-v1.20.8+vmware.1-tkg.1-17589475007677388652.ova)
-* VMware Tanzu Kubernetes Grid 1.4.0 : Ubuntu 20.04, Kubernetes v1.19.12 vmware.1 (ubuntu-2004-kube-v1.19.12+vmware.1-tkg.1-15841320193950299489.ova)
-* VMware Tanzu Kubernetes Grid 1.3.1 : Ubuntu 20.04, Kubernetes v1.20.5 vmware.2 (ubuntu-2004-kube-v1.20.5-vmware.2-tkg.1-6700972457122900687.ova)
-* VMware Tanzu Kubernetes Grid 1.3.0 : Ubuntu 20.04, Kubernetes v1.20.4 vmware.1 (ubuntu-2004-kube-v1.20.4-vmware.1-tkg.0-16153464878630780629.ova)
+Note: Future update/patch releases of these VCD versions will be supported by CSE but
+they won't be tested individually. If a bug is found in their interoperability
+with CSE, please file a github [issue](https://github.com/vmware/container-service-extension/issues),
+the same will be fixed in a future CSE release.
+
+* Check out [what's new](CSE31.html) in this release.
+* Compatility matrix for CSE 3.1.1 can be found [here](CSE31.html#cse31-compatibility-matrix).
 
 
 ## CSE 3.1.1 Beta 2 (3.1.1.0b2)
