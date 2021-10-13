@@ -661,8 +661,8 @@ def _generate_cluster_apply_tests(test_users=None):
         test_users = \
             [
                 env.SYS_ADMIN_NAME,
-                env.CLUSTER_ADMIN_NAME
-                # env.CLUSTER_AUTHOR_NAME
+                env.CLUSTER_ADMIN_NAME,
+                env.CLUSTER_AUTHOR_NAME
             ]
 
     test_cases = []
@@ -935,28 +935,6 @@ def _generate_cluster_apply_tests(test_users=None):
                         should_rde_exist=True,
                         should_vapp_exist=True,
                         required_rde_version=['1.0.0', '2.0.0']
-                    ),
-                    # Add nfs node
-                    CLUSTER_APPLY_TEST_PARAM(
-                        user=user,
-                        password=None,
-                        worker_count=0,
-                        nfs_count=1,
-                        rollback=False,
-                        template_name=template['name'],
-                        template_revision=template['revision'],
-                        ovdc_network=None,
-                        cpu=None,
-                        memory=None,
-                        sizing_class=env.SIZING_CLASS_NAME,
-                        storage_profile=None,
-                        cluster_name=f"{env.USERNAME_TO_CLUSTER_NAME[user]}",
-                        expected_phase='UPDATE:SUCCEEDED',
-                        retain_cluster=True,
-                        exit_code=0,
-                        should_rde_exist=True,
-                        should_vapp_exist=True,
-                        required_rde_version=['1.0.0', '2.0.0']
                     )
                 ]
             )
@@ -1069,8 +1047,8 @@ def test_0040_vcd_cse_cluster_apply(cluster_apply_param: CLUSTER_APPLY_TEST_PARA
 
 
 @pytest.mark.parametrize('test_runner_username', [env.SYS_ADMIN_NAME,
-                                                  env.CLUSTER_ADMIN_NAME
-                                                  #   env.CLUSTER_AUTHOR_NAME
+                                                  env.CLUSTER_ADMIN_NAME,
+                                                  env.CLUSTER_AUTHOR_NAME
                                                   ])
 def test_0060_vcd_cse_cluster_list(test_runner_username):
     cmd_list = [
@@ -1092,7 +1070,7 @@ def test_0060_vcd_cse_cluster_list(test_runner_username):
 
 
 @pytest.mark.parametrize('test_runner_username', [env.SYS_ADMIN_NAME,
-                                                  #   env.CLUSTER_AUTHOR_NAME
+                                                  env.CLUSTER_AUTHOR_NAME,
                                                   env.CLUSTER_ADMIN_NAME
                                                   ])
 def test_0070_vcd_cse_cluster_info(test_runner_username):
@@ -1115,7 +1093,7 @@ def test_0070_vcd_cse_cluster_info(test_runner_username):
 
 
 @pytest.mark.parametrize('test_runner_username', [env.SYS_ADMIN_NAME,
-                                                  #   env.CLUSTER_AUTHOR_NAME
+                                                  env.CLUSTER_AUTHOR_NAME,
                                                   env.CLUSTER_ADMIN_NAME
                                                   ])
 def test_0080_vcd_cse_cluster_config(test_runner_username):
@@ -1160,12 +1138,54 @@ def validate_if_node_not_present(node_name):
     return validator
 
 
-@pytest.mark.parametrize('test_runner_username', [env.SYS_ADMIN_NAME,
-                                                  #   env.CLUSTER_AUTHOR_NAME
-                                                  env.CLUSTER_ADMIN_NAME
-                                                  ])
-def test_0050_vcd_cse_delete_nfs(test_runner_username):
+@pytest.fixture
+def cluster_delete_nfs_param(request):
+    username: str = request.param
+    # login as the user
+    login_cmd = env.USERNAME_TO_LOGIN_CMD[username]
+    env.CLI_RUNNER.invoke(vcd, login_cmd.split(), catch_exceptions=False)
+
+    PYTEST_LOGGER.debug(f"Logged in as {username}")
+    # create apply specification
+    spec_params = {
+        'worker_count': 0,
+        'nfs_count': 1,
+        'rollback': False,
+        'template_name': env.TEMPLATE_DEFINITIONS[0]['name'],
+        'template_revision': env.TEMPLATE_DEFINITIONS[0]['revision'],
+        'network': None,
+        'sizing_class': env.SIZING_CLASS_NAME,
+        'cpu': None,
+        'memory': None,
+        'storage_profile': None,
+        'cluster_name': env.USERNAME_TO_CLUSTER_NAME[username]
+    }
+    create_apply_spec(spec_params)
+
+    # create nfs node
+    # TODO DELTE THIS
+    exit_code = 0
+    expect_failure = False
+    cmd = f"cse cluster apply {env.APPLY_SPEC_PATH}"
+    cmd_list = [
+        testutils.CMD_BINDER(cmd=cmd,
+                             exit_code=exit_code,
+                             validate_output_func=_follow_apply_output(expect_failure=expect_failure),  # noqa: E501
+                             test_user=username)
+    ]
+    testutils.execute_commands(cmd_list, logger=PYTEST_LOGGER)
+
+    yield username
+
+
+@pytest.mark.parametrize('cluster_delete_nfs_param',
+                         [env.SYS_ADMIN_NAME,
+                          env.CLUSTER_AUTHOR_NAME,
+                          env.CLUSTER_ADMIN_NAME],
+                         indirect=['cluster_delete_nfs_param'])
+def test_0050_vcd_cse_delete_nfs(cluster_delete_nfs_param):
     """Test delete nfs node command."""
+    test_runner_username = cluster_delete_nfs_param
     cluster_name = env.USERNAME_TO_CLUSTER_NAME[test_runner_username]
 
     cmd_list = [
@@ -1216,13 +1236,13 @@ def test_0050_vcd_cse_delete_nfs(test_runner_username):
                                  org=env.TEST_ORG,
                                  ovdc=env.TEST_VDC,
                                  expect_failure=True),
-                             #  CLUSTER_DELETE_TEST_PARAM(
-                             #      user=env.CLUSTER_AUTHOR_NAME,
-                             #      password=None,
-                             #      cluster_name=f"{env.CLUSTER_ADMIN_TEST_CLUSTER_NAME}",  # noqa: E501
-                             #      org=env.TEST_ORG,
-                             #      ovdc=env.TEST_VDC,
-                             #      expect_failure=True),
+                             CLUSTER_DELETE_TEST_PARAM(
+                                 user=env.CLUSTER_AUTHOR_NAME,
+                                 password=None,
+                                 cluster_name=f"{env.CLUSTER_ADMIN_TEST_CLUSTER_NAME}",  # noqa: E501
+                                 org=env.TEST_ORG,
+                                 ovdc=env.TEST_VDC,
+                                 expect_failure=True),
                              CLUSTER_DELETE_TEST_PARAM(
                                  user=env.SYS_ADMIN_NAME,
                                  password=None,
@@ -1239,13 +1259,13 @@ def test_0050_vcd_cse_delete_nfs(test_runner_username):
                                  expect_failure=False),
                              # TODO change back to cluster admin deleting
                              # cluster author's cluster
-                             #  CLUSTER_DELETE_TEST_PARAM(
-                             #      user=env.SYS_ADMIN_NAME,
-                             #      password=None,
-                             #      cluster_name=f"{env.CLUSTER_AUTHOR_TEST_CLUSTER_NAME}",  # noqa: E501
-                             #      org=env.TEST_ORG,
-                             #      ovdc=env.TEST_VDC,
-                             #      expect_failure=False),
+                             CLUSTER_DELETE_TEST_PARAM(
+                                 user=env.SYS_ADMIN_NAME,
+                                 password=None,
+                                 cluster_name=f"{env.CLUSTER_AUTHOR_TEST_CLUSTER_NAME}",  # noqa: E501
+                                 org=env.TEST_ORG,
+                                 ovdc=env.TEST_VDC,
+                                 expect_failure=False),
                          ])
 def test_0090_vcd_cse_cluster_delete(cluster_delete_param: CLUSTER_DELETE_TEST_PARAM):  # noqa: E501
     """Test 'vcd cse cluster delete ...' command for various cse users.
@@ -1288,7 +1308,7 @@ def test_0090_vcd_cse_cluster_delete(cluster_delete_param: CLUSTER_DELETE_TEST_P
 @pytest.mark.parametrize("ovdc_disable_test_case",
                          [OVDC_DISABLE_TEST_PARAM(user=env.SYS_ADMIN_NAME, password="", org_name=env.TEST_ORG, ovdc_name=env.TEST_VDC, enable_before_test=True, expect_failure=False),  # noqa: E501
                           OVDC_DISABLE_TEST_PARAM(user=env.CLUSTER_ADMIN_NAME, password=env.CLUSTER_ADMIN_PASSWORD, org_name=env.TEST_ORG, ovdc_name=env.TEST_VDC, enable_before_test=True, expect_failure=True),  # noqa: E501
-                          #   OVDC_DISABLE_TEST_PARAM(user=env.CLUSTER_AUTHOR_NAME, password=env.CLUSTER_AUTHOR_PASSWORD, org_name=env.TEST_ORG, ovdc_name=env.TEST_VDC, enable_before_test=True, expect_failure=True),  # noqa: E501
+                          OVDC_DISABLE_TEST_PARAM(user=env.CLUSTER_AUTHOR_NAME, password=env.CLUSTER_AUTHOR_PASSWORD, org_name=env.TEST_ORG, ovdc_name=env.TEST_VDC, enable_before_test=True, expect_failure=True),  # noqa: E501
                           OVDC_DISABLE_TEST_PARAM(user=env.SYS_ADMIN_NAME, password="", org_name=env.TEST_ORG, ovdc_name=env.TEST_VDC, enable_before_test=False, expect_failure=True)],  # noqa: E501
                          indirect=['ovdc_disable_test_case'])
 def test_0100_vcd_ovdc_disable(ovdc_disable_test_case: OVDC_DISABLE_TEST_PARAM):  # noqa: E501
