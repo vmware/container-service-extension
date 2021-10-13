@@ -1144,7 +1144,7 @@ def get_nfs_node_for_2_0_0_cluster(cluster_dict):
 
 
 def get_nfs_node_for_1_0_0_cluster(cluster_dict):
-    return
+    return cluster_dict['status']['nodes']['nfs'][0]['name']
 
 
 def get_nfs_node(cluster_info):
