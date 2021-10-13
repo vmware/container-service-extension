@@ -59,7 +59,7 @@ CLUSTER_APPLY_TEST_PARAM = collections.namedtuple("ClusterApplyTestParam", "user
 CLUSTER_DELETE_TEST_PARAM = collections.namedtuple("CluserDeleteTestParam", "user password cluster_name org ovdc expect_failure")  # noqa: E501
 
 DEFAULT_CPU_COUNT = 2
-DEFAULT_MEMORY_MB = 1024
+DEFAULT_MEMORY_MB = 2048
 
 
 @pytest.fixture(scope='module', autouse=True)
