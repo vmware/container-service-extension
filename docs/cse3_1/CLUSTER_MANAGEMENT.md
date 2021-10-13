@@ -287,8 +287,8 @@ Read more about expose functionality [here](CLUSTER_MANAGEMENT.html#expose_clust
 
 * Users deploying VMware Tanzu Kubernetes Grid clusters should have the rights required
 to deploy `exposed` native clusters and additionally the right `Full Control: CSE:NATIVECLUSTER`.
-This right is crucial for VCD CPI to work properly. [CPI for VCD](https://github.com/vmware/cloud-provider-for-cloud-director/blob/0.1.0-beta/README.md)
-and [CSI for VCD](https://github.com/vmware/cloud-director-named-disk-csi-driver/blob/0.1.0-beta/README.md)
+This right is crucial for VCD CPI to work properly. [CPI for VCD](https://github.com/vmware/cloud-provider-for-cloud-director/blob/1.0.0/README.md)
+and [CSI for VCD](https://github.com/vmware/cloud-director-named-disk-csi-driver/blob/1.0.0/README.md)
 docs list down all rights required for their proper functioning.
 
 * VMware Tanzu Kubernetes Grid clusters should be connected to a network that can access

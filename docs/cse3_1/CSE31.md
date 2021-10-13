@@ -26,8 +26,8 @@ For greenfield installations, please get started with [CSE introduction](INTRO.h
   * Learn more about using [VMware Tanzu Kubernetes Grid OVAs with CSE](TEMPLATE_MANAGEMENT.html#tkgm_templates)
   * Learn more about deploying a Kubernetes cluster based on VMware Tanzu Kubernetes Grid [here](CLUSTER_MANAGEMENT.html#tkgm_clusters)
   * Antrea as CNI
-* Kubernetes External Cloud Provider for VCD. Learn more about [CPI for VCD](https://github.com/vmware/cloud-provider-for-cloud-director/blob/0.1.0-beta/README.md)
-* Kubernetes Container Storage Interface for VCD. Learn more about [CSI for VCD](https://github.com/vmware/cloud-director-named-disk-csi-driver/blob/0.1.0-beta/README.md)
+* Kubernetes External Cloud Provider for VCD. Learn more about [CPI for VCD](https://github.com/vmware/cloud-provider-for-cloud-director/blob/1.0.0/README.md)
+* Kubernetes Container Storage Interface for VCD. Learn more about [CSI for VCD](https://github.com/vmware/cloud-director-named-disk-csi-driver/blob/1.0.0/README.md)
 * Kubernetes Container Clusters plugin is updated to version 3.1.0, which includes support for Tanzu Kubernetes Grid. The plugin ships with VCD 10.3.1.
 * Deploy externally accessible TKG clusters on NSX-T based Routed OrgVDC Networks from Kubernetes Container Clusters UI plugin v3.1.0.
 * **Deprecation of Photon OS 2.0 based native templates**, they will be removed in a future CSE release.
