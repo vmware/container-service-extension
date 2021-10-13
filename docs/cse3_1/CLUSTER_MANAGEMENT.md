@@ -11,66 +11,56 @@ This page shows basic commands that allow tenants to create, manage,
 and remove Kubernetes clusters using CSE. The primary tool for these
 operations is the `vcd cse` client command.
 
-Here is an overview of the process that a tenant administrator might
-go through to install `vcd cse` and create a cluster. It includes
-some internals of CSE so that you can understand what is happening
-behind the covers.
-
-![cse-usage](img/cse-usage-example.png)
-
-CSE Kubernetes clusters can include persistent volumes mounted on NFS.
-Procedures for creating and managing NFS nodes can be found at
-[NFS Node Management](NFS_STATIC_PV.html).
-
 <a name="useful_commands"></a>
 ## Useful Commands
-`vcd cse ...` commands are used by tenant organization administrators and users to:
-- list templates
-- get CSE server status
-- create, list, info, delete clusters/nodes
+`vcd cse ...` commands are used by tenant organization administrators and tenant users to:
+- List templates
+- Get CSE server status
+- Create, list, info, delete clusters/nodes
 
 Here is a summary of commands available to view templates and manage clusters and nodes:
 
-| Command                                                              |API version 36.0| API version 35.0 | API version <= 34.0 | Description                                                                |
-|----------------------------------------------------------------------|----------------|------------------|---------------------|----------------------------------------------------------------------------|
-| `vcd cse template list`                                              |Yes             | Yes              | Yes                 | List templates that a Kubernetes cluster can be deployed from.            |
-| `vcd cse cluster apply CLUSTER_CONFIG.YAML`                          |Yes             | Yes              | No                  | Create or update a Kubernetes cluster.                                     |
-| `vcd cse cluster create CLUSTER_NAME`                                |No              | No               | Yes                 | Create a new Kubernetes cluster.                                           |
-| `vcd cse cluster create CLUSTER_NAME --enable-nfs`                   |No              | No               | Yes                 | Create a new Kubernetes cluster with NFS Persistent Volume support.        |
-| `vcd cse cluster list`                                               |Yes             | Yes              | Yes                 | List available Kubernetes clusters.                                        |
-| `vcd cse cluster info CLUSTER_NAME`                                  |Yes             | Yes              | Yes                 | Retrieve detailed information of a Kubernetes cluster.                     |
-| `vcd cse cluster resize CLUSTER_NAME`                                |No              | No               | Yes                 | Grow a Kubernetes cluster by adding new nodes.                             |
-| `vcd cse cluster config CLUSTER_NAME`                                |Yes             | Yes              | Yes                 | Retrieve the kubectl configuration file of the Kubernetes cluster.         |
-| `vcd cse cluster upgrade-plan CLUSTER_NAME`                          |Yes             | Yes              | Yes                 | Retrieve the allowed path for upgrading Kubernetes software on the custer. |
-| `vcd cse cluster upgrade CLUSTER_NAME TEMPLATE_NAME TEMPLATE_REVISION`|No             | Yes              | Yes                 | Upgrade cluster software to specified template's software versions.        |
-| `vcd cse cluster delete CLUSTER_NAME`                                |Yes             | Yes              | Yes                 | Delete a Kubernetes cluster.                                               |
-| `vcd cse cluster delete-nfs CLUSTER_NAME NFS_NODE_NAME`              |Yes             | Yes              | No                  | Delete NFS node of a given Kubernetes cluster                              |
-| `vcd cse cluster share --name CLUSTER_NAME --acl FullControl USER1`  |Yes             | No               | No                  | Share cluster 'mycluster' with FullControl access with 'user1'             |
-| `vcd cse cluster share-list --name CLUSTER_NAME`                     |Yes             | No               | No                  | View the acl info for a cluster.                                           |
-| `vcd cse cluster unshare --name CLUSTER_NAME USER1`                  |Yes             | No               | No                  | Unshare the cluster with the user1.                                        |
-| `vcd cse node create CLUSTER_NAME --nodes n`                         |No              | No               | Yes                 | Add `n` nodes to a Kubernetes cluster.                                     |
-| `vcd cse node create CLUSTER_NAME --nodes n --enable-nfs`            |No              | No               | Yes                 | Add an NFS node to a Kubernetes cluster.                                   |
-| `vcd cse node list CLUSTER_NAME`                                     |No              | No               | Yes                 | List nodes of a cluster.                                                   |
-| `vcd cse node info CLUSTER_NAME NODE_NAME`                           |No              | No               | Yes                 | Retrieve detailed information of a node in a Kubernetes cluster.           |
-| `vcd cse node delete CLUSTER_NAME NODE_NAME`                         |No              | No               | Yes                 | Delete nodes from a cluster.                                               |
-| `vcd cse node list CLUSTER_NAME`                                     |No              | No               | Yes                 | List nodes of a cluster.                                                   |
-| `vcd cse node info CLUSTER_NAME NODE_NAME`                           |No              | No               | Yes                 | Retrieve detailed information of a node in a Kubernetes cluster.           |
-| `vcd cse node delete CLUSTER_NAME NODE_NAME`                         |No              | No               | Yes                 | Delete nodes from a cluster.                                               |
+**CSE server configured against VCD 10.3.z, 10.2.z in non legacy mode**
 
-For CSE versions < 3.0, by default, CSE Client will display the task progress until the
-task finishes or fails. The `--no-wait` flag can be used to skip waiting on the
-task. CSE client will still show the task information of console, and end user
-can choose to monitor the task progress manually.
+| Command                                                                | Description                                                                | Native | TKG |
+|------------------------------------------------------------------------|----------------------------------------------------------------------------|--------|-----|
+| `vcd cse template list`                                                | List templates that a Kubernetes cluster can be deployed from.             | Yes    | Yes |
+| `vcd cse cluster apply CLUSTER_CONFIG.YAML`                            | Create or update a Kubernetes cluster.                                     | Yes    | Yes |
+| `vcd cse cluster list`                                                 | List available Kubernetes clusters.                                        | Yes    | Yes |
+| `vcd cse cluster info CLUSTER_NAME`                                    | Retrieve detailed information of a Kubernetes cluster.                     | Yes    | Yes |
+| `vcd cse cluster config CLUSTER_NAME`                                  | Retrieve the kubectl configuration file of the Kubernetes cluster.         | Yes    | Yes |
+| `vcd cse cluster delete CLUSTER_NAME`                                  | Delete a Kubernetes cluster.                                               | Yes    | Yes |
+| `vcd cse cluster upgrade-plan CLUSTER_NAME`                            | Retrieve the allowed path for upgrading Kubernetes software on the custer. | Yes    | No  |
+| `vcd cse cluster upgrade CLUSTER_NAME TEMPLATE_NAME TEMPLATE_REVISION` | Upgrade cluster software to specified template's software versions.        | Yes    | No  |
+| `vcd cse cluster delete-nfs CLUSTER_NAME NFS_NODE_NAME`                | Delete NFS node of a given Kubernetes cluster                              | Yes    | No  |
+| `vcd cse cluster share --name CLUSTER_NAME --acl FullControl USER1`    | Share cluster 'mycluster' with FullControl access with 'user1'             | Yes    | No  |
+| `vcd cse cluster share-list --name CLUSTER_NAME`                       | View the acl info for a cluster.                                           | Yes    | No  |
+| `vcd cse cluster unshare --name CLUSTER_NAME USER1`                    | Unshare the cluster with the user1.                                        | Yes    | No  |
 
-```sh
-> vcd --no-wait cse cluster create CLUSTER_NAME --network intranet --ssh-key ~/.ssh/id_rsa.pub
 
-# displays the status and progress of the task
-> vcd task wait 377e802d-f278-44e8-9282-7ab822017cbd
+**CSE server configured against VCD 10.3.z, 10.2.z, 10.1.z in legacy mode**
 
-# lists the current running tasks in the organization
-> vcd task list running
-```
+| Command                                                                | Description                                                                |
+|------------------------------------------------------------------------|----------------------------------------------------------------------------|
+| `vcd cse template list`                                                | List templates that a Kubernetes cluster can be deployed from.             |
+| `vcd cse cluster create CLUSTER_NAME`                                  | Create a new Kubernetes cluster.                                           |
+| `vcd cse cluster create CLUSTER_NAME --enable-nfs`                     | Create a new Kubernetes cluster with NFS Persistent Volume support.        |
+| `vcd cse cluster list`                                                 | List available Kubernetes clusters.                                        |
+| `vcd cse cluster info CLUSTER_NAME`                                    | Retrieve detailed information of a Kubernetes cluster.                     |
+| `vcd cse cluster resize CLUSTER_NAME`                                  | Grow a Kubernetes cluster by adding new nodes.                             |
+| `vcd cse cluster config CLUSTER_NAME`                                  | Retrieve the kubectl configuration file of the Kubernetes cluster.         |
+| `vcd cse cluster upgrade-plan CLUSTER_NAME`                            | Retrieve the allowed path for upgrading Kubernetes software on the custer. |
+| `vcd cse cluster upgrade CLUSTER_NAME TEMPLATE_NAME TEMPLATE_REVISION` | Upgrade cluster software to specified template's software versions.        |
+| `vcd cse cluster delete CLUSTER_NAME`                                  | Delete a Kubernetes cluster.                                               |
+| `vcd cse node create CLUSTER_NAME --nodes n`                           | Add `n` nodes to a Kubernetes cluster.                                     |
+| `vcd cse node create CLUSTER_NAME --nodes n --enable-nfs`              | Add an NFS node to a Kubernetes cluster.                                   |
+| `vcd cse node list CLUSTER_NAME`                                       | List nodes of a cluster.                                                   |
+| `vcd cse node info CLUSTER_NAME NODE_NAME`                             | Retrieve detailed information of a node in a Kubernetes cluster.           |
+| `vcd cse node delete CLUSTER_NAME NODE_NAME`                           | Delete nodes from a cluster.                                               |
+| `vcd cse node list CLUSTER_NAME`                                       | List nodes of a cluster.                                                   |
+| `vcd cse node info CLUSTER_NAME NODE_NAME`                             | Retrieve detailed information of a node in a Kubernetes cluster.           |
+| `vcd cse node delete CLUSTER_NAME NODE_NAME`                           | Delete nodes from a cluster.                                               |
+
 <a name="cse31_cluster_apply"></a>
 ### CSE 3.1 `Cluster apply` command
 
@@ -204,7 +194,7 @@ The `vcd cse cluster share` command is supported for both TKG-S and native clust
    ```
       
 <a name="k8s_upgrade"></a>
-## Upgrading software installed on Kubernetes clusters
+## Upgrading software installed on Native Kubernetes clusters
 Kubernetes is a fast paced piece of software, which gets a new minor release
 every three months and numerous patch releases (including security patches) in
 between those minor releases. To keep already deployed clusters up to date, in
@@ -249,115 +239,6 @@ are met,
 If any of the conditions mentioned above is not met, the cluster will go down
 for about a minute or more (depends on the actual upgrade process).
 
-<a name="automation"></a>
-## Automation
-`vcd cse` commands can be scripted to automate the creation and operation
-of Kubernetes clusters and nodes.
-
-Users can interact with CSE via the Python package (container-service-extension)
-or the CSE REST API exposed via VCD.
-
-This following Python script creates a Kubernetes cluster on VMware Cloud Director:
-```python
-#!/usr/bin/env python3
-from pyvcloud.vcd.client import BasicLoginCredentials
-from pyvcloud.vcd.client import Client
-from container_service_extension.client.cluster import Cluster
-
-client = Client('vcd.mysp.com')
-client.set_credentials(BasicLoginCredentials('usr1', 'org1', '******'))
-
-cse = Cluster(client)
-result= cse.create_cluster('vdc1', 'net1', 'cluster1')
-task = client.get_resource(result['task_href'])
-task = client.get_task_monitor().wait_for_status(task)
-print(task.get('status'))
-
-client.logout()
-```
-
-<a name="example"></a>
-## Example Use Case
-
-Please note that several of the commands are version specific. Not all the 
-commands are applicable to all versions of CSE. Please refer to [CLI commands per CSE version](TROUBLESHOOTING.html#cmds-per-cse)
-
-```sh
-# [CSE 3.0] create the cluster
-> vcd cse cluster apply create_cluster.yaml
-
-# [CSE 3.0] resize the cluster
-> vcd cse cluster apply resize_cluster.yaml
-
-# [CSE 3.0] scale-up nfs nodes in a given cluster
-> vcd cse cluster apply scale_up_nfs.yaml
-
-# [CSE 3.0] Delete Nfs node in a given cluster
-> vcd cse cluster delete-nfs mycluster nfsd-ghyt
-
-# create cluster mycluster with one control plane and two nodes, connected to provided network
-# a public key is provided to be able to ssh into the VMs
-> vcd cse cluster create mycluster --network intranet --ssh-key ~/.ssh/id_rsa.pub
-
-# list the worker nodes of a cluster
-> vcd cse node list mycluster
-
-# create cluster mycluster with one control plane, three nodes and connected to provided network
-> vcd cse cluster create mycluster --network intranet --nodes 3 --ssh-key ~/.ssh/id_rsa.pub
-
-# create a single worker node cluster, connected to the specified network. Nodes can be added later
-> vcd cse cluster create mycluster --network intranet --nodes 0 --ssh-key ~/.ssh/id_rsa.pub
-
-# create cluster mycluster with one control plane, three worker nodes, connected to provided network
-# and one node of type NFS server
-> vcd cse cluster create mycluster --network intranet --nodes 3 --ssh-key ~/.ssh/id_rsa.pub --enable-nfs
-
-# add 2 worker nodes to a cluster with 4GB of ram and 4 CPUs each, from a photon template,
-# using the specified storage profile
-> vcd cse node create mycluster --nodes 2 --network intranet --ssh-key ~/.ssh/id_rsa.pub --memory 4096 --cpu 4 --template-name sample_photon_template --template-revision 1 --storage-profile sample_storage_profile
-
-# add 1 nfsd node to a cluster with 4GB of ram and 4 CPUs each, from a photon template,
-# using the specified storage profile
-> vcd cse node create mycluster --nodes 1 --type nfsd --network intranet --ssh-key ~/.ssh/id_rsa.pub --memory 4096 --cpu 4 --template-name sample_photon_template --template-revision 1 --storage-profile sample_storage_profile
-
-# resize the cluster to have 8 worker node. If resize fails, the cluster is returned to it's original size.
-# '--network' is only applicable for clusters using native (VCD) Kubernetes provider.
-> vcd cse cluster resize mycluster --network mynetwork --nodes 8
-
-# info on a given node. If the node is of type nfsd, it displays info about Exports.
-> vcd cse node info mycluster nfsd-dj3s
-
-# delete 2 nodes from a cluster
-> vcd cse node delete mycluster node-dj3s node-dj3s --yes
-
-# list available clusters
-> vcd cse cluster list
-
-# info on a given cluster
-> vcd cse cluster info
-
-# retrieve cluster config
-> vcd cse cluster config mycluster > ~/.kube/config
-
-# check cluster configuration
-> kubectl get nodes
-
-# deploy a sample application
-> kubectl create namespace sock-shop
-
-> kubectl apply -n sock-shop -f "https://github.com/microservices-demo/microservices-demo/blob/master/deploy/kubernetes/complete-demo.yaml?raw=true"
-
-# check that all pods are running and ready
-> kubectl get pods --namespace sock-shop
-
-# access the application
-> IP=`vcd cse cluster list|grep '\ mycluster'|cut -f 1 -d ' '`
-> open "http://${IP}:30001"
-
-# delete cluster when no longer needed
-> vcd cse cluster delete mycluster --yes
-```
-
 <a name="expose_cluster"></a>
 ## Creating clusters in Organizations with routed OrgVDC networks
 
@@ -391,12 +272,39 @@ An exposed cluster if ever de-exposed can't be re-exposed.
 
 <a name="tkgm_clusters"></a>
 ## Creating clusters with VMware Tanzu Kubernetes Grid
-VMware Tanzu Kubernetes Grid (TKG) Clusters are deployed like
+VMware Tanzu Kubernetes Grid (TKG) clusters are deployed like
 Native clusters using `vcd cse cluster apply` command. TKG cluster
 specification file differs from a native cluster specification file
 in the value of the fields `kind` and `template_name`.
+
 **Please note:**
-* NFS based Persistent Volumes are not supported for TKG clusters.
-Instead, use VCD CSI for Dynamic Persistent Volumes.
+* It is mandatory to deploy VMware Tanzu Kubernetes Grid clusters with `expose` field set to `True`.
+Read more about `expose` functionality [here](CLUSTER_MANAGEMENT.html#expose_cluster).
+Routability of external network traffic to the cluster is crucial for VCD CPI to
+work properly.
+
+* Users deploying VMware Tanzu Kubernetes Grid clusters should have the rights required
+to deploy `exposed` native clusters and additionally the right `Full Control: CSE:NATIVECLUSTER`.
+This right is crucial for VCD CPI to work properly. [CPI for VCD](https://github.com/vmware/cloud-provider-for-cloud-director/blob/0.1.0-beta/README.md)
+and [CSI for VCD](https://github.com/vmware/cloud-director-named-disk-csi-driver/blob/0.1.0-beta/README.md)
+docs list down all rights required for their proper functioning.
+
+* VMware Tanzu Kubernetes Grid clusters should be connected to a network that can access
+the public end point of the VCD. This network **should** have DNS setup, the same DNS server
+would be used by all cluster vms for name resolution while reaching out to internet to
+download Antrea, VCD CPI and VCD CSI.
+
+* Scaling down TKG clusters  via `cse cluster apply` is not supported. If users wish to shrink their TKG clusters, they need to use `kubectl` to do it.
+  * On control plane node
+    * `kubetcl cordon [node name]`
+    * `kubectl drain [node name]`
+    * `kubectl delete [node name]` (Optional, VCD CPI will update the state of the cluster once the actual worker VM is deleted)
+  * On worker node
+    * Once the commands on control plane node have successfully completed,
+      power off the vm and delete it from VCD UI
+
+* NFS based Persistent Volumes are not supported for TKG clusters. Instead, use VCD CSI for Dynamic Persistent Volumes.
+
 * Cluster sharing is not supported for TKG clusters.
+
 * Kubernetes upgrade is not supported for TKG clusters.

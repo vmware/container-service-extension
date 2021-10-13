@@ -40,7 +40,7 @@ rights to the `Tenant Administrator` role. This will enable the tenant administr
 to further assign the relevant cluster management rights to the desired tenant users.
 Read more about how to manage runtime defined entities, [here](https://docs.vmware.com/en/VMware-Cloud-Director/10.2/VMware-Cloud-Director-Service-Provider-Admin-Portal-Guide/GUID-0749DEA0-08A2-4F32-BDD7-D16869578F96.html).
 
-**Note**: TKG cluster management requieres `Full Control: CSE:NATIVECLUSTER` right at the minimum from the `cse:nativeCluster entitlement` rights bundle.
+**Note**: TKG cluster management requires `Full Control: CSE:NATIVECLUSTER` right at the minimum from the `cse:nativeCluster entitlement` rights bundle.
 
 <a name="additional_rights"></a>
 ## Additional required rights
