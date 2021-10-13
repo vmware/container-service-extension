@@ -282,7 +282,7 @@ def init_rde_environment(config_filepath=BASE_CONFIG_FILEPATH, logger=NULL_LOGGE
                 SIZING_CLASS_NAME,
                 description=SIZING_CLASS_DESCRIPTION,
                 cpu_count=2,
-                memory_mb=2048)
+                memory_mb=1024)
         except HTTPError as err:
             if 'already exists' in err.response.text:
                 logger.debug(f"Compute policy {SIZING_CLASS_NAME} already exists")  # noqa: E501
