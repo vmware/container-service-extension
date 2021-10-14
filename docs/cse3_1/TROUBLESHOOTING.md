@@ -51,5 +51,11 @@ side. Stack traces and HTTP messages specific to vcd-cli are recorded here.
 
 * Ensure that config file fields are correct
 * Ensure you're logged in using vcd-cli
-* Ensure that the AMQP exchange specified in CSE config file is unique. Do not use the exchange specified in VCD's extensibility section for CSE. As long as a uniquely-named exchange is specified in the CSE config file, CSE will create that exchange and use it to communicate with VCD. No changes needs to be made in VCD's extensibility section or in RabbitMQ.
-* If CSE installation or template creation fails, invalid VMs/clusters/templates may exist. CSE can't auto detect that those entities are invalid, so remove these entities from VCD manually.
+* Ensure that the AMQP exchange specified in CSE config file is unique.
+Do not use the exchange specified in VCD's extensibility section for CSE.
+As long as a uniquely-named exchange is specified in the CSE config file,
+CSE will create that exchange and use it to communicate with VCD.
+No changes needs to be made in VCD's extensibility section or in RabbitMQ.
+* If CSE installation or template creation fails, invalid VMs/clusters/templates
+may exist. CSE can't auto detect that those entities are invalid, so remove
+these entities from VCD manually.

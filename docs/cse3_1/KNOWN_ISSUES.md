@@ -7,6 +7,19 @@ title: Known Issues
 <a name="general"></a>
 ## General Issues
 ---
+
+### Output of `vcd cse cluster info` for TKG clusters has the kubeconfig of the cluster embedded in it, while output for Native clusters don't have it.
+Although both native and TKG clusters use RDE 2.0.0 for representation in VCD, they differ quite a bit in their structure.
+kubeconfig content being part of the output of `vcd cse cluster info` for TKG clusters and not native clusters is by design.
+
+### In CSE 3.1.1, `vcd-cli` prints the error `Error: 'NoneType' object is not subscriptable` to console on invoking CSE commands
+This error is observed when CSE tries to restore a previously expired session and/or CSE server is down or
+unreachable.
+
+**Workaround**:
+Please logout and log back in `vcd-cli` before exceuting further CSE related commands.
+
+
 <a name="templates-upgrade"></a>
 ### In CSE 3.1, pre-existing templates will not work after upgrading to CSE 3.1 (legacy_mode=true)
 After upgrade to CSE 3.1 running in legacy_mode, existing templates will not work, 
@@ -53,61 +66,6 @@ This is a bug in VCD.
 Edit the RDE by updating the `owner.name` and `owner.id` in the payload
 PUT `https://<vcd-fqdn>/cloudapi/1.0.0/entities/id?invokeHooks=false`
 
-### In CSE 3.0 users of System organization are unable to create clusters
-If a user from System org who didn't install CSE 3.0 attempts to create clusters,
-the operation fails with an error message "Access denied". The reason behind the
-failure is that, the CSE native defined entity schema is not visible to users
-of System organization, except the user who installed CSE.
-
-**Workaround**
-1. Grant all members of System organization, read-write permission to the
-    CSE native defined entity type.
-    * POST \`https://<vcd\-fqdn>/cloudapi/1.0.0/entities/urn:vcloud:type:cse:nativeCluster:1.0.0/accessControls`\
-        {\
-        "grantType" : "MembershipAccessControlGrant",\
-        "accessLevelId" : "urn:vcloud:accessLevel:ReadWrite",\
-        "memberId" : "urn:vcloud:org:[System organization uuid]"\
-        }
-
-### In CSE 3.0 `cse upgrade` fails with RDE_TYPE_ALREADY_EXISTS if the user account is switched in the configuration file
-If `cse upgrade` is run on an existing CSE 3.0 installation, and the vCD account
-details are different from what was used during the initial CSE installation, the
-upgrade process will fail with the above mentioned error message. The root cause
-and workaround for this issue is exactly the same as covered by the known issue
-above.
-
-### In CSE 3.0 configured with vCD 10.2, Cluster list operation may fail to retrieve results
-Listing clusters either by CLI (`vcd cse cluster list`) or UI will fail if any of 
-the clusters' representing defined entities are corrupted. For example, if the defined entity 
-is manually modified (using direct defined entity api) and if it 
-violates the schema rules of the corresponding defined entity type, then cluster 
-list cmd will fail to retrieve other valid entities. 
-
-**Workaround:** Update the defined entity with the correct schema (using direct defined entity api) 
-and sync the defined entity using CSE server API - GET on `https://<vcd-ip>/api/cse/3.0/clusters/<id>`
-
-### In CSE 3.0 configured with vCD 10.2, native clusters are stuck in _CREATE:IN_PROGRESS_ state.
-When native clusters are stuck in such state, it means that the cluster 
-creation has failed for unknown reason, and the representing defined entity 
-has not transitioned to the ERROR state. 
-
-**Workaround:**
-1. Delete the defined entity
-    * POST `https://<vcd-fqdn>/cloudapi/1.0.0/entities/<cluster-id>/resolve`
-    * DEL `https://<vcd-fqdn>/cloudapi/1.0.0/entities/<cluster-id>`
-2. Delete the cluster vApp. 
-    * Retrieve the vApp ID. vApp Id is same as the externalID value in the 
-    corresponding defined entity
-        * GET `https://<vcd-fqdn>/cloudapi/1.0.0/entities/<cluster-id>`
-    * Delete the corresponding cluster vApp
-
-### In CSE 3.0 configured with vCD 10.1, prevent native clusters from getting deployed in Ent-PKS enbled ovdc(s)
-As native clusters are by default allowed to be deployed on any organization 
-virtual datacenters in this set-up, native clusters can inadvertently be deployed on 
-Ent-PKS enbled ovdc(s). 
-
-**Workaround:** We can prevent that by protecting native templates using template rules. 
-Refer [CSE 2.6 template restriction](TEMPLATE_MANAGEMENT.html#restrict_templates).
 
 ### Unable to change the default storage profile for Native cluster deployments
 The default storage profile for native cluster deployments can't be changed in 
@@ -132,7 +90,6 @@ vCD follows particular order of precedence to pick the storage-profile for any V
 ### CSE service fails to start
 
 - Workaround: rebooting the VM starts the service
-
 
 ### Cluster creation fails when VCD external network has a DNS suffix and the DNS server resolves `localhost.my.suffix` to a valid IP
 
