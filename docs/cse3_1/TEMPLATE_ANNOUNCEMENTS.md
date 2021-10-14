@@ -4,6 +4,28 @@ title: Template Announcements
 ---
 # Template Announcements
 
+## October 14, 2021
+
+**Highlights**
+
+* Photon OS 2.0 templates are deprecated and will be removed in an upcoming CSE release.
+
+All available templates:
+
+| Template Name                        | Revision | Operating System  | Kubernetes  | Weave     | Docker                  |
+|--------------------------------------|----------|-------------------|-------------|-----------|-------------------------|
+| ubuntu-16.04_k8-1.21_weave-2.8.1     | 1        | Ubuntu-16.04      | 1.21.2      | 2.8.1     | Docker-ce 20.10.7       |
+| ubuntu-16.04_k8-1.20_weave-2.6.5     | 2        | Ubuntu-16.04      | 1.20.6      | 2.6.5     | Docker-ce 19.03.15      |
+| ubuntu-16.04_k8-1.19_weave-2.6.5     | 2        | Ubuntu-16.04      | 1.19.3      | 2.6.5     | Docker-ce 19.03.12      |
+| ubuntu-16.04_k8-1.18_weave-2.6.5 *   | 2        | Ubuntu-16.04      | 1.18.6      | 2.6.5     | Docker-ce 19.03.12      |
+| photon-v2_k8-1.14_weave-2.5.2 *      | 3        | Photon OS 2.0     | 1.14.10     | 2.5.2     | Docker-ce 18.06.2-6     |
+
+* New templates are highlighted
+* Updated template revisions are highlighted
+* Removed templates are striked out
+* Templates marked with '*' are deprecated and will be removed in future update.
+
+
 ## Jul 2, 2021
 
 All templates currently available:
