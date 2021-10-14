@@ -1,6 +1,94 @@
 CHANGES
 =======
 
+3.1.1
+-----
+
+* system test fixes, limit vms created and decrease vm memory size (#1243)
+* VCDA-2968: Point to 1.0.0 manifests (#1245)
+* [VCDA-2845] Update pyvcloud requirement to 23.0.3 (#1242)
+* cluster name should be less than 25 chars (#1241)
+* Add OSL for CSE 3.1.1 (#1240)
+* Address installation of multiple templates when test\_all\_templates is… (#1236)
+* VAC URL change to production (#1232)
+* set verbose level to 10 for kuadm init and join (#1233)
+* [VCDA-2805] Add cpu/memory tests and fix some breaking logic in CToT (#1227)
+* Make local testing easier by skipping creation of prerequisites (#1230)
+* Fix vcd cse template list when no\_vc\_communication\_mode is true: initialize native template to empty list (#1231)
+* [VCDA-2981] Fix cluster apply sample for tkgm (#1228)
+* Fix template rules in cse legacy mode (#1229)
+* [VCDA-2982] Check presence of NFS section before converting it (#1226)
+* Fix incorrect parameter in cse install (#1225)
+* [VCDA-2783] Fix missing source id in telemetry (#1204)
+* [VCDA-2959] Populate cpu/mem fields in status section of RDEs while upgrading from CSE 3.1.0 to CSE 3.1.1 (#1223)
+* fix unexpose network on native cluster update (#1224)
+* Fix TKGm template being identified as TKG+ during cluster upgrade (#1220)
+* VCDA-2952: Fix private section getting deleted, and other small (#1221)
+* Fix escalated privilege on NAT rule creation (#1222)
+* Improve Logging (#1219)
+* [VCDA-2944, VCDA-2946] Fix sample generation, Stop loading native templates during CSE startup if \`no\_vc\_communication\_mode\` flag is turned on (#1217)
+* Fix deletion of DNAT rule while rolling back cluster creation (#1218)
+* VCDA-2953, VCDA-2954, VCDA-2926: Exclude pod and svc cidr validation (#1215)
+* Change CPU description in schema and upgrade schema when CSE is 3.1.0 (#1212)
+* Porting [VCDA-2530] RDE cluster tests to cse\_3\_1\_updates (#1194)
+* VCDA-2951: use internal ip for kubeadm join (#1214)
+* [VCDA-2834] telemetry for import template (#1201)
+* Flattened dictionary of entity.status for updating RDE status (#1213)
+* [VCDA-2884 and VCDA-2925] Adding etag support for entity update and disallow scaling down TKGm clusters (#1205)
+* Improve logging for code paths using CloudApiClient (#1210)
+* Rename \`tkgm\_only\_mode\` to \`no\_vc\_communication\_mode\` (#1209)
+* [VCDA-2902] TKGm to make use of cpu and memory properties for cluster operations (#1202)
+* [VCDA 2849] Make cluster processing during CSE upgrade idempotent (#1207)
+* VCDA-2922: Pass VAPP from CSE to CPI/CSI (#1208)
+* [VCDA-2894, VCDA-2906] Improve sample cluster spec generation, Add support for TKGm 1.4.0 OVA (#1206)
+* Fix incorrect github path in control-plane.sh (#1203)
+* [VCDA-2847] Machine token changes in CSE (#1193)
+* [VCDA-2856] Allow CSE server to function in Only TKGm mode (#1199)
+* Rename display all to display native (#1197)
+
+3.1.1.0b2
+---------
+
+* VCDA-2670, 2706, 2895, 2931: Changes needed for beta2 (#1198)
+* [VCDA-2669] Replace float version comparisions with version object comparisons (#1180)
+* VCDA-2786: remaining CR of Aritra and Sakthi (#1195)
+* Fix flake8 errors (#1196)
+* [VCDA-2525] Disallow cluster sharing for TKGm clusters (#1183)
+
+3.1.1.0b1
+---------
+
+* VCDA-2877: Remove vmware internal nameserver (#1191)
+* VCDA-2877: Changes for Beta (#1189)
+* initial cut for non cluster client tests (#1184)
+* [VCDA-2875] fix for getting entity in cluster service factory (#1188)
+* VCDA-2776: CSI and CPI integration with TKGm (#1185)
+* [VCDA-2855] Let CSE server startup without a default native template (#1182)
+* VCDA-2776: Merge code of TKGm with immutable infra changes. (#1179)
+* [VCDA-2571] Use cpu/mem fields for native cluster operations (#1181)
+* [VCDA-2373, 2764] TKGm template listing (#1176)
+* [VCDA-2807] Revert consolidated post boot customization (#1178)
+* Address comments for addition of CSE version (#1175)
+* [VCDA-2740] Implement TKGm runtime in CSE (#1165)
+* [VCDA-2736] Get cluster config from rde (#1171)
+* Add cse version in cse run (#1170)
+* [VCDA-2737] store kube config, kubeadm token in rde (#1164)
+* [VCDA-2758] Cluster service tkgm (#1167)
+* [VCDA-2588] Set up environment for RDE based tests (#1070) (#1155)
+* [VCDA-2768] Expose TKGm template list API endpoint (#1168)
+* [VCDA-2739] Implement 'cse template import\` command (#1166)
+* replace individual scripts execution with vsphere library with consolidated control plane and worker node script for post boot customization (#1163)
+* Fix flake8 (#1154)
+*  Handle exceptions when connecting to remote template cookbook (#1144)
+* Port Fix upgrade failure when OLM pods are present to master (#1146)
+* Remove hyphenated variables in setup.cfg (#1148)
+* move VAC url back to staging (#1129) (#1130)
+
+3.1.0
+-----
+
+* Update AUTHORS and ChangeLog for CSE 3.1.0 release
+* Edits to the Andromeda docs (#1126)
 * movee to VAC production for telemetry (#1125)
 * More Andromeda doc edits (#1124)
 * Making CSE 3.1 as main page (#1123)
@@ -150,10 +238,6 @@ CHANGES
 * Port Fix repetitive expensive calls to vdcComputePolicies (#905) to master (#915)
 * [VCDA-2129] Report exception for Script execution error (#911) (#916)
 * Prevent returning response dict on server busy response (#901) (#914)
-
-3.1.0
------
-
 * [VCDA-2064, VCDA-2065] Introduce support for feature flags and \`legacy\_mode\` to protect apis (#943)
 * [VCDA-2200] Exception handler for behavior\_service.py (#942)
 * Fix-Fix-DefEntityType-object-has-no-attribute-VENDOR (#938)
