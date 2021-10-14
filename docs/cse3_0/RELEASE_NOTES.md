@@ -5,6 +5,16 @@ title: Release Notes
 
 # Release Notes
 
+## General Anouncement
+Date : 2021-10-14
+
+* If you are using VMware Tanzu Kubernetes Grid (TKG) distribution with CSE 3.0.3 or CSE 3.0.4,
+then these CSE installations can be upgraded to CSE 3.1.z with some intervention.
+For more details, please check [this guide](../cse3_1/CSE31.html#remove_tkgm).
+* We will not be publishing new or revised K8s versions in TKG templates for use with CSE 3.0.3 and CSE 3.0.4.
+Consider using CSE 3.1.1 to leverage a newer architecture of TKG with CSE.
+For more details, please read [CSE 3.1.1](../cse3_1/RELEASE_NOTES.html)
+
 ## CSE 3.0.4 GA (3.0.4)
 Release Date: 2021-07-23
 
