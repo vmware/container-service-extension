@@ -999,6 +999,7 @@ def test_0040_vcd_cse_cluster_apply(cluster_apply_param: CLUSTER_APPLY_TEST_PARA
         env.VCD_API_VERSION_TO_USE)
     if rde_version not in cluster_apply_param.required_rde_version:
         # Do not execute the test if not relevant to the RDE version used
+        print(f"Skipping the test as it is not relevant to CSE configured with RDE version {rde_version}")  # noqa: E501
         return
     exit_code = cluster_apply_param.exit_code
     expect_failure = "FAILED" in cluster_apply_param.expected_phase
@@ -1163,7 +1164,6 @@ def cluster_delete_nfs_param(request):
     create_apply_spec(spec_params)
 
     # create nfs node
-    # TODO DELTE THIS
     exit_code = 0
     expect_failure = False
     cmd = f"cse cluster apply {env.APPLY_SPEC_PATH}"
