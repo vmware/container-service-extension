@@ -55,7 +55,7 @@ import container_service_extension.system_test_framework.utils as testutils
 OVDC_ENABLE_TEST_PARAM = collections.namedtuple("OvdcEnableParam", "user password org_name ovdc_name disable_before_test expect_failure")  # noqa: E501
 OVDC_DISABLE_TEST_PARAM = collections.namedtuple("OvdcDisableParam", "user password org_name ovdc_name enable_before_test expect_failure")  # noqa: E501
 SYSTEM_TOGGLE_TEST_PARAM = collections.namedtuple("SystemToggleTestParam", "user password cluster_name worker_count nfs_count rollback sizing_class storage_profile ovdc_network template_name template_revision expect_failure")  # noqa: E501
-CLUSTER_APPLY_TEST_PARAM = collections.namedtuple("ClusterApplyTestParam", "user password cluster_name worker_count nfs_count rollback cpu memory sizing_class storage_profile ovdc_network template_name template_revision expected_phase retain_cluster exit_code should_vapp_exist should_rde_exist")  # noqa: E501
+CLUSTER_APPLY_TEST_PARAM = collections.namedtuple("ClusterApplyTestParam", "user password cluster_name worker_count nfs_count rollback cpu memory sizing_class storage_profile ovdc_network template_name template_revision expected_phase retain_cluster exit_code should_vapp_exist should_rde_exist required_rde_version")  # noqa: E501
 CLUSTER_DELETE_TEST_PARAM = collections.namedtuple("CluserDeleteTestParam", "user password cluster_name org ovdc expect_failure")  # noqa: E501
 
 DEFAULT_CPU_COUNT = 2
@@ -579,7 +579,8 @@ def _follow_delete_output(expect_failure=False):
             worker_count=0, nfs_count=0, rollback=True,
             sizing_class=None, storage_profile=None,
             ovdc_network="Invalid_network",
-            template_name=None, template_revision=None,
+            template_name=env.TEMPLATE_DEFINITIONS[0]['name'],
+            template_revision=env.TEMPLATE_DEFINITIONS[0]['revision'],
             expect_failure=False)
     ],
     indirect=['system_toggle_test_case']
@@ -688,7 +689,8 @@ def _generate_cluster_apply_tests(test_users=None):
                         retain_cluster=False,
                         exit_code=0,
                         should_rde_exist=False,
-                        should_vapp_exist=False
+                        should_vapp_exist=False,
+                        required_rde_version=['1.0.0', '2.0.0']
                     ),
                     # Invalid Storage profile
                     CLUSTER_APPLY_TEST_PARAM(
@@ -709,7 +711,8 @@ def _generate_cluster_apply_tests(test_users=None):
                         retain_cluster=False,
                         exit_code=0,
                         should_rde_exist=False,
-                        should_vapp_exist=False
+                        should_vapp_exist=False,
+                        required_rde_version=['1.0.0', '2.0.0']
                     ),
                     # Invalid Network
                     CLUSTER_APPLY_TEST_PARAM(
@@ -730,7 +733,8 @@ def _generate_cluster_apply_tests(test_users=None):
                         retain_cluster=False,
                         exit_code=0,
                         should_rde_exist=False,
-                        should_vapp_exist=False
+                        should_vapp_exist=False,
+                        required_rde_version=['1.0.0', '2.0.0']
                     ),
                     # Invalid network without rollback
                     CLUSTER_APPLY_TEST_PARAM(
@@ -751,7 +755,8 @@ def _generate_cluster_apply_tests(test_users=None):
                         retain_cluster=False,
                         exit_code=0,
                         should_rde_exist=True,
-                        should_vapp_exist=False # creation of vapp will fail
+                        should_vapp_exist=False, # creation of vapp will fail
+                        required_rde_version=['1.0.0', '2.0.0']
                     ),
                     # cpu/memory and sizing class provided
                     CLUSTER_APPLY_TEST_PARAM(
@@ -772,7 +777,8 @@ def _generate_cluster_apply_tests(test_users=None):
                         retain_cluster=False,
                         exit_code=2,
                         should_rde_exist=False,
-                        should_vapp_exist=False
+                        should_vapp_exist=False,
+                        required_rde_version=['2.0.0']
                     ),
                     # cluster created with cpu/memory and no sizing class
                     CLUSTER_APPLY_TEST_PARAM(
@@ -793,7 +799,8 @@ def _generate_cluster_apply_tests(test_users=None):
                         retain_cluster=True,
                         exit_code=0,
                         should_rde_exist=True,
-                        should_vapp_exist=True
+                        should_vapp_exist=True,
+                        required_rde_version=['2.0.0']
                     ),
                     # Resize a cluster created using cpu/memory with sizing
                     # class
@@ -815,7 +822,8 @@ def _generate_cluster_apply_tests(test_users=None):
                         retain_cluster=True,
                         exit_code=2,   # should be 2?
                         should_rde_exist=True,
-                        should_vapp_exist=True
+                        should_vapp_exist=True,
+                        required_rde_version=['2.0.0']
                     ),
                     # Resize a cluster created using cpu/memory using
                     # cpu/memory
@@ -837,7 +845,8 @@ def _generate_cluster_apply_tests(test_users=None):
                         retain_cluster=False,
                         exit_code=0,
                         should_rde_exist=True,
-                        should_vapp_exist=True
+                        should_vapp_exist=True,
+                        required_rde_version=['2.0.0']
                     ),
                     # Create cluster using sizing policy
                     CLUSTER_APPLY_TEST_PARAM(
@@ -858,7 +867,8 @@ def _generate_cluster_apply_tests(test_users=None):
                         retain_cluster=True,
                         exit_code=0,
                         should_rde_exist=True,
-                        should_vapp_exist=True
+                        should_vapp_exist=True,
+                        required_rde_version=['1.0.0', '2.0.0']
                     ),
                     # Resize cluster created with sizing class using cpu/mem
                     CLUSTER_APPLY_TEST_PARAM(
@@ -879,14 +889,15 @@ def _generate_cluster_apply_tests(test_users=None):
                         retain_cluster=True,
                         exit_code=2,
                         should_rde_exist=True,
-                        should_vapp_exist=True
+                        should_vapp_exist=True,
+                        required_rde_version=['2.0.0']
                     ),
                     # Resize up a valid deployment
                     CLUSTER_APPLY_TEST_PARAM(
                         user=user,
                         password=None,
                         worker_count=1,
-                        nfs_count=1,
+                        nfs_count=0,
                         rollback=False,
                         template_name=template['name'],
                         template_revision=template['revision'],
@@ -900,14 +911,15 @@ def _generate_cluster_apply_tests(test_users=None):
                         retain_cluster=True,
                         exit_code=0,
                         should_rde_exist=True,
-                        should_vapp_exist=True
+                        should_vapp_exist=True,
+                        required_rde_version=['1.0.0', '2.0.0']
                     ),
                     # Resize down a valid deployment
                     CLUSTER_APPLY_TEST_PARAM(
                         user=user,
                         password=None,
                         worker_count=0,
-                        nfs_count=1,
+                        nfs_count=0,
                         rollback=False,
                         template_name=template['name'],
                         template_revision=template['revision'],
@@ -921,7 +933,8 @@ def _generate_cluster_apply_tests(test_users=None):
                         retain_cluster=True,
                         exit_code=0,
                         should_rde_exist=True,
-                        should_vapp_exist=True
+                        should_vapp_exist=True,
+                        required_rde_version=['1.0.0', '2.0.0']
                     )
                 ]
             )
@@ -982,6 +995,12 @@ def test_0040_vcd_cse_cluster_apply(cluster_apply_param: CLUSTER_APPLY_TEST_PARA
     """
     print(f"Running cluster create operation for {cluster_apply_param.user}")
 
+    rde_version = get_runtime_rde_version_by_vcd_api_version(
+        env.VCD_API_VERSION_TO_USE)
+    if rde_version not in cluster_apply_param.required_rde_version:
+        # Do not execute the test if not relevant to the RDE version used
+        print(f"Skipping the test as it is not relevant to CSE configured with RDE version {rde_version}")  # noqa: E501
+        return
     exit_code = cluster_apply_param.exit_code
     expect_failure = "FAILED" in cluster_apply_param.expected_phase
 
@@ -1104,7 +1123,7 @@ def get_nfs_node_for_2_0_0_cluster(cluster_dict):
 
 
 def get_nfs_node_for_1_0_0_cluster(cluster_dict):
-    return
+    return cluster_dict['status']['nodes']['nfs'][0]['name']
 
 
 def get_nfs_node(cluster_info):
@@ -1120,12 +1139,53 @@ def validate_if_node_not_present(node_name):
     return validator
 
 
-@pytest.mark.parametrize('test_runner_username', [env.SYS_ADMIN_NAME,
-                                                  env.CLUSTER_AUTHOR_NAME,
-                                                  env.CLUSTER_ADMIN_NAME
-                                                  ])
-def test_0050_vcd_cse_delete_nfs(test_runner_username):
+@pytest.fixture
+def cluster_delete_nfs_param(request):
+    username: str = request.param
+    # login as the user
+    login_cmd = env.USERNAME_TO_LOGIN_CMD[username]
+    env.CLI_RUNNER.invoke(vcd, login_cmd.split(), catch_exceptions=False)
+
+    PYTEST_LOGGER.debug(f"Logged in as {username}")
+    # create apply specification
+    spec_params = {
+        'worker_count': 0,
+        'nfs_count': 1,
+        'rollback': False,
+        'template_name': env.TEMPLATE_DEFINITIONS[0]['name'],
+        'template_revision': env.TEMPLATE_DEFINITIONS[0]['revision'],
+        'network': None,
+        'sizing_class': env.SIZING_CLASS_NAME,
+        'cpu': None,
+        'memory': None,
+        'storage_profile': None,
+        'cluster_name': env.USERNAME_TO_CLUSTER_NAME[username]
+    }
+    create_apply_spec(spec_params)
+
+    # create nfs node
+    exit_code = 0
+    expect_failure = False
+    cmd = f"cse cluster apply {env.APPLY_SPEC_PATH}"
+    cmd_list = [
+        testutils.CMD_BINDER(cmd=cmd,
+                             exit_code=exit_code,
+                             validate_output_func=_follow_apply_output(expect_failure=expect_failure),  # noqa: E501
+                             test_user=username)
+    ]
+    testutils.execute_commands(cmd_list, logger=PYTEST_LOGGER)
+
+    yield username
+
+
+@pytest.mark.parametrize('cluster_delete_nfs_param',
+                         [env.SYS_ADMIN_NAME,
+                          env.CLUSTER_AUTHOR_NAME,
+                          env.CLUSTER_ADMIN_NAME],
+                         indirect=['cluster_delete_nfs_param'])
+def test_0050_vcd_cse_delete_nfs(cluster_delete_nfs_param):
     """Test delete nfs node command."""
+    test_runner_username = cluster_delete_nfs_param
     cluster_name = env.USERNAME_TO_CLUSTER_NAME[test_runner_username]
 
     cmd_list = [

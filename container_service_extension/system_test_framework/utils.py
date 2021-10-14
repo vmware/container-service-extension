@@ -177,7 +177,7 @@ def _update_cluster_apply_spec_for_1_0(apply_spec, properties):
             apply_spec_rde.spec.k8_distribution.template_revision = value
         elif key == 'cluster_name':
             apply_spec_rde.metadata.cluster_name = value
-        elif key == 'network':
+        elif key == 'network' and value:
             apply_spec_rde.spec.settings.network = value
 
     modified_spec = apply_spec_rde.to_dict()
