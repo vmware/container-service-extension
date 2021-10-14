@@ -42,7 +42,7 @@ $ python3 --version
 Python 3.7.4
 
 $ pip3 --version
-pip 19.2.3 from /usr/local/lib/python3.7/site-packages/pip (python 3.7)
+pip 21.2.4 from /usr/local/lib/python3.7/site-packages/pip (python 3.7)
 ```
 
 Install and verify CSE:
@@ -51,13 +51,13 @@ $ pip3 install container-service-extension
 ...
 
 $ cse version
-CSE, Container Service Extension for VMware vCloud Director, version 2.5.0
+CSE, Container Service Extension for VMware vCloud Director, version 3.1.1
 ```
 
 Alternatively, a specific version of CSE can be installed from GitHub as
 follows:
 ```sh
-> pip3 install git+https://github.com/vmware/container-service-extension.git@1.2.4
+> pip3 install git+https://github.com/vmware/container-service-extension.git@3.1.1
 ```
 
 To discover available CSE source versions on GitHub see the following URL:

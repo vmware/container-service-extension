@@ -69,10 +69,8 @@
       sublink: overview
     - name: Kubernetes Templates
       sublink: kubernetes_templates
-    - name: Restricting Kubernetes Templates for Tenants
-      sublink: restrict_templates
-    - name: Source .ova Files for Kubernetes Templates
-      sublink: template_os_source
+    - name: TKG Templates
+      sublink: tkgm_templates
   - name: "Role Based Access Control"
     link: RBAC.html
     subtoc:

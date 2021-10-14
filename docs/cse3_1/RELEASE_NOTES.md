@@ -5,6 +5,23 @@ title: Release Notes
 
 # Release Notes
 
+## CSE 3.1.1 GA (3.1.1)
+Release Date : 2021-10-14
+
+**Supported (and tested) VCD versions**: 10.3.1 GA, 10.2.2 GA, 10.1.3 GA
+
+Note: Future update/patch releases of these VCD versions will be supported by CSE but
+they won't be tested individually. If a bug is found in their interoperability
+with CSE, please file a github [issue](https://github.com/vmware/container-service-extension/issues),
+the same will be fixed in a future CSE release.
+
+* Check out [what's new](CSE31.html) in this release.
+* Compatility matrix for CSE 3.1.1 can be found [here](CSE31.html#cse31-compatibility-matrix).
+
+**Notes to System Administrator**:
+* Please take note of the supported upgrade paths for CSE 3.1.1 [here](CSE31.html#brown_field_upgrades).
+* Upgrading CSE from beta builds of CSE 3.1.1 to CSE 3.1.1 GA is not recommended nor supported.
+
 ## CSE 3.1.1 Beta 2 (3.1.1.0b2)
 Release Date: 2021-09-21
 
@@ -89,7 +106,7 @@ the same will be fixed in a future CSE release.
 |------------|-----------|--------|----------------|----------------------------|------------------|
 | 3.1.1.0b1  | 3.1.1.0b1 | 3.0.1* | 10.3           | NSX-T 3.1.1 and Avi 20.1.3 | TKG              |
 
-3.0.1* -> Please download Kubernetes Container Clusters UI Plugin from [here](https://github.com/vmware/container-service-extension/raw/master/cse_ui/3.0.1/container-ui-plugin.zip)
+3.0.1* -> Please download Kubernetes Container Clusters UI plugin from [here](https://github.com/vmware/container-service-extension/raw/master/cse_ui/3.0.1/container-ui-plugin.zip)
 
 **Installation of binaries**
 ```
@@ -158,12 +175,15 @@ the same will be fixed in a future CSE release.
 | NA         | 3.1     | 3.0*   | 10.3           | NA                 | NA     | TKG-S cluster management only                                                                         |
 | NA         | 3.1     | 2.0*   | 10.2           | NA                 | NA     | TKG-S cluster management only                                                                         |
 
-3.0*, 2.0* -> Kubernetes Container Clusters UI Plugins 3.0 and 2.0 ship with VCD 10.3 and VCD 10.2 respectively.
+3.0*, 2.0* -> Kubernetes Container Clusters UI plugin 3.0 and 2.0 ship with VCD 10.3 and VCD 10.2 respectively.
 
 1. Refer to [What's new in CSE 3.1?](CSE31.html) for more details.
 2. Newer versions of native kubernetes templates are available. Refer to
 [Template Announcements](TEMPLATE_ANNOUNCEMENTS.html)
-1. Deprecation of TKGI (Enterprise PKS) - CSE Server and Kubernetes Container Clusters plug-in will soon drop support for TKGI (previously known as Enterprise PKS). Consider using VMware Tanzu Kubernetes Grid or VMware Tanzu Kubernetes Grid Service for management of Kubernetes clusters with VCD.
+1. Deprecation of TKG-I (Enterprise PKS) - CSE Server and Kubernetes Container Clusters UI plugin
+will soon drop support for TKG-I (previously known as Enterprise PKS). Consider using
+VMware Tanzu Kubernetes Grid (TKG) or VMware Tanzu Kubernetes Grid Service (TKG-S) for
+management of Kubernetes clusters with VCD.
 
 ## CSE 3.1.0 Beta (3.1.0.0b1)
 Release Date: 2021-04-14

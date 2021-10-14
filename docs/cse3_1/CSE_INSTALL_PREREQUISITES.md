@@ -12,7 +12,9 @@ CSE successfully on VCD.
 
 * An org.
 * A VDC within the org, which
-  * has an org VDC network connected to an external network (with Internet connectivity). The external network connection is required to enable cluster VMs to download packages during configuration.
+  * has an org VDC network that has Internet connectivity. This is required to enable cluster VMs to download packages during configuration. It can be a 
+    * directly connected Org VDC network, or
+    * routed Org VDC network, with a SNAT rule allowing VMs connected to the network access to outside world.
   * can host vApps
   * has sufficient storage to create vApps and publish them as templates.
 * Users in the org with privileges necessary to perform operations like configuring AMQP, creating public catalog entries, and managing vApps.
@@ -27,7 +29,7 @@ suitable org + VDC + user from scratch.
 Use the UI or vcd-cli to create an org for CSE use.
 
 ```sh
-vcd org create --enabled cse_org_1 'Org for CSE work'
+vcd org create --enabled cse_org_1 'Org for CSE'
 ```
 
 ### Create a VDC with Attached Network

@@ -9,14 +9,14 @@ title: CSE Server Management
 ## Overview
 
 This page contains procedures to install and manage Container Service
-Extension (CSE) on vCloud Director (VCD). Users who perform these procedures
+Extension (CSE) on VMware Cloud Director (VCD). Users who perform these procedures
 are termed as `Cloud Administrators`, they must have at least the role of
 [`CSE Service Role`](CSE_INSTALL_PREREQUISITES.html#service_account) (if the role is not present then the user need to have
 `sysadmin` access) and a solid understanding of VCD server management.
 
 Procedures on this page make regular use of vcd-cli commands to
-perform administrative operations. Please refer to the [vcd-cli
-documentation](https://vmware.github.io/vcd-cli/) if necessary to familiarize
+perform administrative operations. If necessary, please refer to the
+[vcd-cli documentation](https://vmware.github.io/vcd-cli/) to familiarize
 yourself with vcd-cli.
 
 
@@ -56,13 +56,13 @@ When CSE 3.1 is connected to Cloud Director 10.3, CSE installation command
 
 1. Prepares the environment for Providers to be able to perform organization 
 virtual datacenter enablement for native clusters. Refer [how to enable ovdc(s) for native deployments](TEMPLATE_MANAGEMENT.html#cse30-restrict_templates) 
-for more details on how CSE3.0 leverages placement policies to restrict k8 
+for more details on how CSE 3.0 leverages placement policies to restrict k8 
 deployments on organizational virtual datacenters (ovdcs).
 2. Registers defined entity schema 2.0.0 and relevant behaviors for native clusters. As a side effect, 
 `cse:native cluster entitlement` right bundle gets created in the Cloud Director 
 and all native cluster operations are guarded by these rights.
 Invoke below API to get a detailed view of native defined entity schema - `https://<vcd-ip>/cloudapi/2.0.0/entityTypes/urn:vcloud:type:cse:nativeCluster:2.0.0`
-3. Register the CSE as API extension to VCD.
+3. Registers CSE as an API extension to VCD.
 
 The `cse install` command supports the following options:
 
@@ -106,7 +106,8 @@ and publish appropriate placement policies on the same.
 * Convert legacy clusters to RDE based clusters.
 * Update RDE 1.0 clusters to RDE 2.0 clusters.
 
-CSE 3.1 can only be upgraded from 3.0.X.
+CSE 3.1.1 can be upgraded from 3.1.0 or 3.0.X.
+CSE 3.1.0 can only be upgraded from 3.0.X.
 Below are the few valid upgrade paths and the resultant changes in the environment.
 
 An example on reading below upgrade paths - `CSE 3.0.X, VCD 10.2 (api_version=34.0) -> CSE 3.1, VCD 10.2 (legacy_mode=true)`:
@@ -161,12 +162,21 @@ Validate that CSE has been registered with VCD as an extension, via vcd-cli:
 # login as cloud administrator
 vcd login vcd.serviceprovider.com system <administrator user name> --password <password> -w -i
 
-# list extensions
+# list AMQP based api extensions
 vcd system extension list
 
 # get details of CSE extension
 vcd system extension info cse
 ```
+
+**Note**: For MQTT based api extensions, a REST client should be used instead, since `vcd-cli` is not capable of
+lsiting or interacting with MQTT based api extensions.
+
+```sh
+GET /cloudapi/extensions/api
+GET /cloudapi/extensions/api/urn:vcloud:extension-api:VMWare:cse:1.0.0
+```
+
 <a name="extension-timeout"></a>
 ### Setting the API Extension Timeout
 
@@ -183,15 +193,6 @@ cd /opt/vmware/vcloud-director/bin
 ./cell-management-tool manage-config -n extensibility.timeout -v 20
 ```
 
-### Manual CSE API Registration
-
-If there is a need to re-register the CSE API extension for any reason, the
-following command can be used. It might be required to delete the extension
-first for this command to work.
-
-```sh
-vcd system extension create cse cse cse vcdext '/api/cse, /api/cse/.*, /api/cse/.*/.*'
-```
 
 ### Sharing CSE catalog with non admin tenant users
 
@@ -229,10 +230,6 @@ vcd user create <new user name> <password> 'New Role' --enabled
 
 ## Server Operation
 
-The CSE Server uses threads to process requests. The number of AMQP
-listener threads can be configured in the config file using the `listeners`
-property in the `service` section. The default value is 10.
-
 ### Running CSE Server Manually
 
 To start the server manually, run the command shown below.
@@ -245,15 +242,17 @@ cse run --config config.yaml
 nohup cse run --config config.yaml > nohup.out 2>&1 &
 ```
 
-Refer to [Log bundles](CSE_SERVER_MANAGEMENT.html#log-bundles) to see server-side logs
+Refer to [Log bundles](TROUBLESHOOTING.html#log-bundles) to see server-side logs.
 
 ### Running CSE Server as a Service
 
 A sample `systemd` unit is provided by CSE. Here are instructions for
 installation.
 
-* Copy file `cse.service` from CSE installation location and move it to `/etc/systemd/system/cse.service`.
-* Copy `cse.sh` to /home/vmware.
+* Copy the file `cse.service` from CSE installation location or download it from [here](https://raw.githubusercontent.com/vmware/container-service-extension/master/cse.service)
+and move it to `/etc/systemd/system/cse.service`.
+* Copy the file `cse.sh` from CSE installation location or download it from [here](https://raw.githubusercontent.com/vmware/container-service-extension/master/cse.sh)
+to `/home/{user}`.
 
 Once installed you can start the CSE service daemon using `systemctl start cse`.
 To enable, disable, and stop the CSE service remotely, use CSE client.
@@ -304,17 +303,21 @@ Cloud Administrators can monitor CSE service status via CSE client:
 
 ```sh
 $ vcd cse system info
-property              value
---------------------  ------------------------------------------------------
-all_threads           11
-config_file           config_2_6_0.yaml
-consumer_threads      10
-description           Container Service Extension for VMware vCloud Director
-product               CSE
-python                3.7.4
-requests_in_progress  0
-status                Running
-version               2.6.0
+property                           value
+---------------------------------  ------------------------------------------------------
+all_consumer_threads               4
+all_threads                        7
+config_file                        config.yaml
+cse_server_api_version             36.0
+cse_server_running_in_legacy_mode  False
+cse_server_supported_api_versions  35.0
+                                   36.0
+description                        Container Service Extension for VMware vCloud Director
+product                            CSE
+python                             3.7.3
+requests_in_progress               1
+status                             Running
+version                            3.1.1
 ```
 ---
 
@@ -340,12 +343,22 @@ version               2.6.0
 
 ### Uninstalling CSE Server
 
-1. Gracefully stop CSE Server
-2. As Cloud Administrator, unregister CSE from VCD:
-   * `vcd system extension delete cse`
-3. Review VCD AMQP settings. Generally no modifications are necessary in AMQP.
-   * `vcd system amqp info`
-4. (Optional) Delete Kubernetes templates and the CSE catalog from VCD.
+* Gracefully stop CSE Server
+* As Cloud Administrator, unregister CSE from VCD:
+   * AMQP : `vcd system extension delete cse`
+   * MQTT : Disable and remove the `cse` extension via a REST client
+
+```
+GET /cloudapi/extensions/api/urn:vcloud:extension-api:VMWare:cse:1.0.0
+
+# Copy the payload, and change enabled to `false`
+
+PUT /cloudapi/extensions/api/urn:vcloud:extension-api:VMWare:cse:1.0.0
+
+DELETE /cloudapi/extensions/api/urn:vcloud:extension-api:VMWare:cse:1.0.0
+```
+
+* (Optional) Delete Kubernetes templates and the CSE catalog from VCD.
 
 ---
 
