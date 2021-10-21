@@ -141,7 +141,6 @@ TEMPLATE_UPGRADE_PATH_LIST = []
 
 def _populate_template_upgrade_paths(config, logger=NULL_LOGGER):
     global TEMPLATE_UPGRADE_PATH_LIST
-    print(config['broker']['remote_template_cookbook_url'])
     rtm = RemoteTemplateManager(
         config['broker']['remote_template_cookbook_url'],
         legacy_mode=config['service']['legacy_mode'])
@@ -154,7 +153,6 @@ def _populate_template_upgrade_paths(config, logger=NULL_LOGGER):
     # filter out photon templates
     all_ubuntu_templates = \
         [template_definition for template_definition in all_template_definitions if 'ubuntu' in template_definition['name']]  # noqa: E501
-    print(rtm.unfiltered_cookbook)
     logger.debug(f"All template definitions: {all_ubuntu_templates}")
     RT_KEYS = get_template_descriptor_keys(rtm.cookbook_version)
 

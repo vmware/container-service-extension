@@ -73,7 +73,7 @@ def execute_commands(cmd_list, logger=logger.NULL_LOGGER):
 
         if action.validate_output_func is not None:
             assert action.validate_output_func(result.output, action.test_user), \
-                "Command execution failed."
+                "Command execution failed."  # noqa: E501
 
         logger.debug(f"Executed command: {cmd}")
         logger.debug(f"Output: {result.output}")

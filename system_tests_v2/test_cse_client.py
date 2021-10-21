@@ -42,7 +42,8 @@ import subprocess
 import time
 
 import pytest
-from pyvcloud.vcd.client import ApiVersion
+from pyvcloud.vcd.client import VcdApiVersionObj
+from pyvcloud.vcd.vcd_api_version import VCDApiVersion
 from system_tests_v2.pytest_logger import PYTEST_LOGGER
 from vcd_cli.vcd import vcd
 import yaml
@@ -1323,7 +1324,9 @@ def cluster_upgrade_param(request):
             test_user=param.user)
     ]
     testutils.execute_commands(cmd_list, logger=PYTEST_LOGGER)
-    print(f"Created cluster {param.cluster_name}")
+    assert _get_cluster_phase(param.cluster_name, param.user) == 'CREATE:SUCCEEDED', \
+        "Expected RDE phase to be 'CREATE:SUCCEEDED'"  # noqa: E501
+    PYTEST_LOGGER.debug(f"Created cluster {param.cluster_name}")
 
     yield param
 
@@ -1357,13 +1360,13 @@ def test_0100_cluster_upgrade(cluster_upgrade_param: CLUSTER_UPGRADE_TEST_PARAM)
     }
     for template in upgrade_path[1:]:
         # create spec
-        print(f"Upgrading cluster to {template['name']} {template['revision']}")  # noqa: E501
+        PYTEST_LOGGER.debug(f"Upgrading cluster to {template['name']} {template['revision']}")  # noqa: E501
         spec['template_name'] = template['name']
         spec['template_revision'] = template['revision']
 
         # upgrade the cluster
-        if float(env.VCD_API_VERSION_TO_USE) < \
-                float(ApiVersion.VERSION_36.value):
+        if VCDApiVersion(env.VCD_API_VERSION_TO_USE) < \
+                VcdApiVersionObj.VERSION_36.value:
             cmd_list = [
                 testutils.CMD_BINDER(
                     cmd=f"cse cluster upgrade {spec['cluster_name']} {spec['template_name']} {spec['template_revision']}",  # noqa: E501
