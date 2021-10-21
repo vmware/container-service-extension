@@ -1217,7 +1217,7 @@ def test_0050_vcd_cse_delete_nfs(cluster_delete_nfs_param):
     cmd_list = [
         testutils.CMD_BINDER(cmd=f"cse cluster delete-nfs {cluster_name} {nfs_node}",  # noqa: E501
                              exit_code=0,
-                             validate_output_func=None,
+                             validate_output_func=_follow_delete_output(expect_failure=False),  # noqa: E501
                              test_user=test_runner_username),
         testutils.CMD_BINDER(cmd=f"cse cluster info {cluster_name}",
                              exit_code=0,
