@@ -42,6 +42,8 @@ import subprocess
 import time
 
 import pytest
+from pyvcloud.vcd.client import VcdApiVersionObj
+from pyvcloud.vcd.vcd_api_version import VCDApiVersion
 from system_tests_v2.pytest_logger import PYTEST_LOGGER
 from vcd_cli.vcd import vcd
 import yaml
@@ -57,6 +59,7 @@ OVDC_DISABLE_TEST_PARAM = collections.namedtuple("OvdcDisableParam", "user passw
 SYSTEM_TOGGLE_TEST_PARAM = collections.namedtuple("SystemToggleTestParam", "user password cluster_name worker_count nfs_count rollback sizing_class storage_profile ovdc_network template_name template_revision expect_failure")  # noqa: E501
 CLUSTER_APPLY_TEST_PARAM = collections.namedtuple("ClusterApplyTestParam", "user password cluster_name worker_count nfs_count rollback cpu memory sizing_class storage_profile ovdc_network template_name template_revision expected_phase retain_cluster exit_code should_vapp_exist should_rde_exist required_rde_version")  # noqa: E501
 CLUSTER_DELETE_TEST_PARAM = collections.namedtuple("CluserDeleteTestParam", "user password cluster_name org ovdc expect_failure")  # noqa: E501
+CLUSTER_UPGRADE_TEST_PARAM = collections.namedtuple("ClusterUpgradeTestParam", "user password cluster_name worker_count nfs_count rollback sizing_class storage_profile ovdc_network upgrade_path expect_failure") # noqa: E501
 
 DEFAULT_CPU_COUNT = 2
 DEFAULT_MEMORY_MB = 2048
@@ -116,10 +119,10 @@ def cse_server():
     PYTEST_LOGGER.debug("Creating missing templates")
     for template_config in env.TEMPLATE_DEFINITIONS:
         cmd = f"template install {template_config['name']} " \
-            f"{template_config['revision']} " \
-            f"--config {env.ACTIVE_CONFIG_FILEPATH} " \
-            f"--ssh-key {env.SSH_KEY_FILEPATH} " \
-            f"--skip-config-decryption"
+              f"{template_config['revision']} " \
+              f"--config {env.ACTIVE_CONFIG_FILEPATH} " \
+              f"--ssh-key {env.SSH_KEY_FILEPATH} " \
+              f"--skip-config-decryption"
         result = env.CLI_RUNNER.invoke(
             cli, cmd.split(), catch_exceptions=False)
         assert result.exit_code == 0,\
@@ -527,7 +530,7 @@ def _follow_apply_output(expect_failure=False):
         PYTEST_LOGGER.debug(f"Exit code: {result.exit_code}")
         PYTEST_LOGGER.debug(f"Output: {result.output}")
 
-        if result.exit_code != 0:
+        if "result: error" in result.output or result.exit_code != 0:
             if expect_failure:
                 PYTEST_LOGGER.debug(f"{task_wait_command} failed as expected. "
                                     f"Exit code {result.exit_code}. "
@@ -1303,6 +1306,145 @@ def test_0090_vcd_cse_cluster_delete(cluster_delete_param: CLUSTER_DELETE_TEST_P
             vdc_href=env.TEST_VDC_HREF,
             logger=PYTEST_LOGGER), \
             f"Cluster {cluster_delete_param.cluster_name} exists when it should not"  # noqa: E501
+
+
+def generate_cluster_upgrade_tests(test_users=None):
+    """Generate test cases for upgrade test.
+
+    Test format:
+    user, template_upgrade_path, should_expect_failure
+    """
+    if not test_users:
+        # test for all the users
+        test_users = \
+            [
+                env.CLUSTER_ADMIN_NAME
+            ]
+    test_cases = []
+    for user in test_users:
+        for upgrade_path in env.TEMPLATE_UPGRADE_PATH_LIST:
+            test_cases.extend([
+                CLUSTER_UPGRADE_TEST_PARAM(
+                    user=user,
+                    password=None,
+                    cluster_name=f"{env.USERNAME_TO_CLUSTER_NAME[user]}-upg",
+                    worker_count=1,
+                    nfs_count=0,
+                    rollback=True,
+                    sizing_class=None,
+                    storage_profile=None,
+                    ovdc_network=env.TEST_NETWORK,
+                    expect_failure=False,
+                    upgrade_path=upgrade_path
+                )
+            ])
+    return test_cases
+
+
+@pytest.fixture
+def cluster_upgrade_param(request):
+    param: CLUSTER_UPGRADE_TEST_PARAM = request.param
+
+    # cleanup clusters
+    env.delete_vapp(param.cluster_name, vdc_href=env.TEST_VDC_HREF)
+    env.delete_rde(param.cluster_name)
+
+    # login as the user
+    login_cmd = env.USERNAME_TO_LOGIN_CMD[param.user]
+    env.CLI_RUNNER.invoke(vcd, login_cmd.split(), catch_exceptions=False)
+
+    PYTEST_LOGGER.debug(f"Logged in as {param.user}")
+
+    # create initial cluster
+    initial_cluster_tempalte_name = param.upgrade_path[0]['name']
+    initial_cluster_template_revision = param.upgrade_path[0]['revision']
+    spec_params = {
+        'worker_count': param.worker_count,
+        'nfs_count': param.nfs_count,
+        'rollback': param.rollback,
+        'template_name': initial_cluster_tempalte_name,
+        'template_revision': initial_cluster_template_revision,
+        'network': param.ovdc_network,
+        'sizing_class': param.sizing_class,
+        'storage_profile': param.storage_profile,
+        'cluster_name': param.cluster_name
+    }
+    create_apply_spec(spec_params)
+
+    # enable ovdc for cluster creation
+    cmd = f"cse ovdc enable --native --org {env.TEST_ORG} {env.TEST_VDC}"
+    env.CLI_RUNNER.invoke(vcd, cmd.split(), catch_exceptions=False)
+
+    # create initial cluster
+    cmd_list = [
+        testutils.CMD_BINDER(
+            cmd=f"cse cluster apply {env.APPLY_SPEC_PATH} ",
+            exit_code=0,
+            validate_output_func=_follow_apply_output(expect_failure=False),  # noqa: E501
+            test_user=param.user)
+    ]
+    testutils.execute_commands(cmd_list, logger=PYTEST_LOGGER)
+    assert _get_cluster_phase(param.cluster_name, param.user) == 'CREATE:SUCCEEDED', \
+        "Expected RDE phase to be 'CREATE:SUCCEEDED'"  # noqa: E501
+    PYTEST_LOGGER.debug(f"Created cluster {param.cluster_name}")
+
+    yield param
+
+    env.delete_rde(param.cluster_name)
+    env.delete_vapp(param.cluster_name, vdc_href=env.TEST_VDC_HREF)
+
+    env.CLI_RUNNER.invoke(vcd, ['logout'])
+    PYTEST_LOGGER.debug(f"Logged out as {param.user}")
+
+
+@pytest.mark.skipif(not env.TEST_CLUSTER_UPGRADES,
+                    reason="Configuration specifies 'test_cluster_upgrades' as false")  # noqa: E501
+@pytest.mark.parametrize('cluster_upgrade_param', generate_cluster_upgrade_tests(test_users=[env.SYS_ADMIN_NAME]), indirect=["cluster_upgrade_param"])  # noqa: E501
+def test_0100_cluster_upgrade(cluster_upgrade_param: CLUSTER_UPGRADE_TEST_PARAM):  # noqa: E501
+    upgrade_path = cluster_upgrade_param.upgrade_path
+
+    # The initial cluster will be created in the fixture
+    # 'cluster_upgrade_param'
+    # The created cluster will be using the first template in
+    # `cluster_upgrade_param.upgrade_path`.
+    # The test should proceed by upgrading the initial cluster step by step
+    # to rest of the templates in the upgrade path
+    spec = {
+        'worker_count': cluster_upgrade_param.worker_count,
+        'nfs_count': cluster_upgrade_param.nfs_count,
+        'rollback': cluster_upgrade_param.rollback,
+        'network': cluster_upgrade_param.ovdc_network,
+        'sizing_class': cluster_upgrade_param.sizing_class,
+        'storage_profile': cluster_upgrade_param.storage_profile,
+        'cluster_name': cluster_upgrade_param.cluster_name
+    }
+    for template in upgrade_path[1:]:
+        # create spec
+        PYTEST_LOGGER.debug(f"Upgrading cluster to {template['name']} {template['revision']}")  # noqa: E501
+        spec['template_name'] = template['name']
+        spec['template_revision'] = template['revision']
+
+        # upgrade the cluster
+        if VCDApiVersion(env.VCD_API_VERSION_TO_USE) < \
+                VcdApiVersionObj.VERSION_36.value:
+            cmd_list = [
+                testutils.CMD_BINDER(
+                    cmd=f"cse cluster upgrade {spec['cluster_name']} {spec['template_name']} {spec['template_revision']}",  # noqa: E501
+                    exit_code=1 if not cluster_apply_param.expect_failure else 0,  # noqa: E501
+                    validate_output_func=None,
+                    test_user=cluster_upgrade_param.user)]
+        else:
+            create_apply_spec(spec)
+            cmd_list = [
+                testutils.CMD_BINDER(
+                    cmd=f"cse cluster apply {env.APPLY_SPEC_PATH} ",
+                    exit_code=0,
+                    validate_output_func=_follow_apply_output(expect_failure=cluster_upgrade_param.expect_failure),  # noqa: E501
+                    test_user=cluster_upgrade_param.user)
+            ]
+        testutils.execute_commands(cmd_list, logger=PYTEST_LOGGER)
+        assert _get_cluster_phase(spec['cluster_name'], cluster_upgrade_param.user) == 'UPGRADE:SUCCEEDED', \
+            "Expected RDE phase to be 'UPGRADE:SUCCEEDED'"  # noqa: E501
 
 
 @pytest.mark.parametrize("ovdc_disable_test_case",
