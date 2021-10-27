@@ -24,7 +24,10 @@ from container_service_extension.common.constants.server_constants import Cluste
 from container_service_extension.common.constants.server_constants import DefEntityOperation  # noqa: E501
 from container_service_extension.common.constants.server_constants import DefEntityOperationStatus  # noqa: E501
 from container_service_extension.common.constants.server_constants import DefEntityPhase  # noqa: E501
-from container_service_extension.common.constants.server_constants import DISK_ENABLE_UUID  # noqa: E501
+from container_service_extension.common.constants.server_constants import \
+    DISK_ENABLE_UUID, \
+    CLOUDINIT_GUEST_USERDATA, \
+    CLOUDINIT_GUEST_USERDATA_ENCODING
 from container_service_extension.common.constants.server_constants import KUBE_CONFIG  # noqa: E501
 from container_service_extension.common.constants.server_constants import KUBEADM_TOKEN_INFO  # noqa: E501
 from container_service_extension.common.constants.server_constants import LocalTemplateKey  # noqa: E501
@@ -852,7 +855,7 @@ class ClusterService(abstract_broker.AbstractBroker):
                     expose=expose,
                     cluster_name=cluster_name,
                     cluster_id=cluster_id,
-                    refresh_token=refresh_token
+                    refresh_token=refresh_token,
                 )
             except Exception as err:
                 LOGGER.error(err, exc_info=True)
@@ -1967,7 +1970,7 @@ def _add_control_plane_nodes(
             )
 
         templated_script = get_cluster_script_file_contents(
-            ClusterScriptFile.CONTROL_PLANE,
+            ClusterScriptFile.CLOUDINIT_CONTROL_PLANE,
             ClusterScriptFile.VERSION_2_X_TKGM)
 
         # Get template with no expose_ip; expose_ip will be computed
@@ -1986,8 +1989,10 @@ def _add_control_plane_nodes(
             sizing_class_name=sizing_class_name,
             cust_script=None,
         )
+        # encode refresh-token to base64
+        base64_refresh_token = base64.b64encode(refresh_token.encode("ascii"))
         for spec in vm_specs:
-            spec['cust_script'] = templated_script.format(
+            spec['cloud_init_spec'] = templated_script.format(
                 vcd_host=vcd_host.replace("/", r"\/"),
                 org=org.get_name(),
                 vdc=vdc.name,
@@ -2001,7 +2006,7 @@ def _add_control_plane_nodes(
                 antrea_cni_version=ANTREA_CNI_VERSION,
                 ssh_key=ssh_key if ssh_key else '',
                 control_plane_endpoint='',
-                refresh_token=refresh_token
+                base64_encoded_refresh_token=base64_refresh_token.decode("utf-8"),
             )
 
         task = vapp.add_vms(
@@ -2060,7 +2065,7 @@ def _add_control_plane_nodes(
 
             # If expose is set, control_plane_endpoint is exposed ip
             # Else control_plane_endpoint is internal_ip
-            cust_script = templated_script.format(
+            cloud_init_spec = templated_script.format(
                 vcd_host=vcd_host.replace("/", r"\/"),
                 org=org.get_name(),
                 vdc=vdc.name,
@@ -2074,66 +2079,33 @@ def _add_control_plane_nodes(
                 antrea_cni_version=ANTREA_CNI_VERSION,
                 ssh_key=ssh_key if ssh_key else '',
                 control_plane_endpoint=f"{control_plane_endpoint}:6443",
-                refresh_token=refresh_token
+                base64_encoded_refresh_token=base64_refresh_token.decode("utf-8"),
             )
-            task = vm.update_guest_customization_section(
-                enabled=True,
-                customization_script=cust_script)
-
+            # create a cloud-init spec and update the VMs with it
+            base64_encoded_cloud_init_spec = base64.b64encode(cloud_init_spec.encode("ascii"))
+            task = vm.add_extra_config_element(CLOUDINIT_GUEST_USERDATA, base64_encoded_cloud_init_spec, True)  # noqa: E501
             sysadmin_client.get_task_monitor().wait_for_status(
                 task,
-                callback=wait_for_update_customization
+                callback=wait_for_updating_cloud_init_spec,
             )
             vm.reload()
             vapp.reload()
 
-            task = vm.power_on_and_force_recustomization()
+            task = vm.add_extra_config_element(CLOUDINIT_GUEST_USERDATA_ENCODING, "base64", True)  # noqa: E501
+            sysadmin_client.get_task_monitor().wait_for_status(
+                task,
+                callback=wait_for_updating_cloud_init_spec_encoding,
+            )
+            vm.reload()
+            vapp.reload()
+
+            task = vm.power_on()
             # wait_for_vm_power_on is reused for all vm creation callback
             sysadmin_client.get_task_monitor().wait_for_status(
                 task,
                 callback=wait_for_vm_power_on
             )
             vapp.reload()
-
-            # HACK: sometimes the dbus.service is not yet started by the time
-            # the ToolsDeployPkg scripts run. As a result, that script does
-            # install the post-customize service, but does not reboot the
-            # machine, which is needed in order to execute the
-            # postcustomization script where the bulk of our functionality
-            # lives. Guest customization works with the following gross steps:
-            # 1. run script with parameter "precustomization"
-            # 2. set up network
-            # 3. convert script with parameter "postcustomization" to service
-            #   a. set the 'guestinfo.gc.status' to 'Successful'.
-            # 4. check if a forked script has completed setting up hostname
-            #       (this fails sometimes)
-            # 5. Check for errors, cleanup and report.
-            # In the above steps, steps 4,5 take about 2s. Hence we wait
-            #       for 3a and then wait for 10s
-            # and then trigger the reboot ourselves.
-            #
-            # However what happens when the bug is fixed in GOSC?
-            # In that case this hack will reboot the node one more time
-            # depending on a race. That is not detrimental to functionality,
-            # but we do have a slight delay due to the second reboot.
-            vcd_utils.wait_for_completion_of_post_customization_procedure(
-                vm,
-                customization_phase=PreCustomizationPhase.POST_BOOT_CUSTOMIZATION_SERVICE_SETUP.value,  # noqa: E501
-                logger=LOGGER,
-                expected_target_status_list=[cust_status.value for cust_status in ToolsDeployPkgCustomizationStatus]  # noqa: E501
-            )
-
-            time.sleep(10)
-            try:
-                task = vm.reboot()
-                sysadmin_client.get_task_monitor().wait_for_status(
-                    task,
-                    callback=wait_for_vm_power_on
-                )
-            except Exception as err:
-                LOGGER.info(f"Reboot of [{vm_name}] failed. This implies that "
-                            f"the machine is undergoing reboot: [{err}]")
-            vm.reload()
 
             # Note that this is an ordered list.
             for customization_phase in [
@@ -2191,7 +2163,7 @@ def _add_worker_nodes(sysadmin_client, num_nodes, org, vdc, vapp,
 
     try:
         templated_script = get_cluster_script_file_contents(
-            ClusterScriptFile.NODE, ClusterScriptFile.VERSION_2_X_TKGM)
+            ClusterScriptFile.CLOUDINIT_NODE, ClusterScriptFile.VERSION_2_X_TKGM)
 
         # Example format:
         # kubeadm join 192.168.7.8:6443 --token 5edbci.duu55v7k6hdv52sm \
@@ -2225,7 +2197,7 @@ def _add_worker_nodes(sysadmin_client, num_nodes, org, vdc, vapp,
             cust_script=None,
         )
         for spec in vm_specs:
-            spec['cust_script'] = templated_script.format(
+            spec['cloudinit_node_spec'] = templated_script.format(
                 vm_host_name=spec['target_vm_name'],
                 ssh_key=ssh_key if ssh_key else '',
                 ip_port=ip_port,
@@ -2264,35 +2236,31 @@ def _add_worker_nodes(sysadmin_client, num_nodes, org, vdc, vapp,
                     task,
                     callback=wait_for_memory_update)
 
-            task = vm.power_on_and_force_recustomization()
+            # create a cloud-init spec and update the VMs with it
+            base64_encoded_cloud_init_spec = base64.b64encode(spec['cloudinit_node_spec'].encode("ascii"))
+            task = vm.add_extra_config_element(CLOUDINIT_GUEST_USERDATA, base64_encoded_cloud_init_spec, True)  # noqa: E501
+            sysadmin_client.get_task_monitor().wait_for_status(
+                task,
+                callback=wait_for_updating_cloud_init_spec,
+            )
+            vm.reload()
+            vapp.reload()
+
+            task = vm.add_extra_config_element(CLOUDINIT_GUEST_USERDATA_ENCODING, "base64", True)  # noqa: E501
+            sysadmin_client.get_task_monitor().wait_for_status(
+                task,
+                callback=wait_for_updating_cloud_init_spec_encoding,
+            )
+            vm.reload()
+            vapp.reload()
+
+            task = vm.power_on()
             # wait_for_vm_power_on is reused for all vm creation callback
             sysadmin_client.get_task_monitor().wait_for_status(
                 task,
                 callback=wait_for_vm_power_on
             )
             vapp.reload()
-
-            # HACK: Please read the long comment in the other similar
-            # section (look for POST_BOOT_CUSTOMIZATION_SERVICE_SETUP)
-            # which explains the rationale of the hack.
-            vcd_utils.wait_for_completion_of_post_customization_procedure(
-                vm,
-                customization_phase=PreCustomizationPhase.POST_BOOT_CUSTOMIZATION_SERVICE_SETUP.value,  # noqa: E501
-                logger=LOGGER,
-                expected_target_status_list=[cust_status.value for cust_status in ToolsDeployPkgCustomizationStatus]  # noqa: E501
-            )
-
-            time.sleep(10)
-            try:
-                task = vm.reboot()
-                sysadmin_client.get_task_monitor().wait_for_status(
-                    task,
-                    callback=wait_for_vm_power_on
-                )
-            except Exception as err:
-                LOGGER.info(f"Reboot of [{vm_name}] failed. This implies that "
-                            f"the machine is undergoing reboot: [{err}]")
-            vm.reload()
 
             LOGGER.debug(f"worker {vm_name} to join cluster using:{control_plane_join_cmd}")  # noqa: E501
 
@@ -2439,6 +2407,14 @@ def _wait_for_guest_execution_callback(message, exception=None):
 
 def wait_for_updating_disk_enable_uuid(task):
     LOGGER.debug(f"enable disk uuid, status: {task.get('status').lower()}")  # noqa: E501
+
+
+def wait_for_updating_cloud_init_spec(task):
+    LOGGER.debug(f"cloud init spec, status: {task.get('status').lower()}")  # noqa: E501
+
+
+def wait_for_updating_cloud_init_spec_encoding(task):
+    LOGGER.debug(f"cloud init spec encoding, status: {task.get('status').lower()}")  # noqa: E501
 
 
 def _create_k8s_software_string(software_name: str, software_version: str) -> str:  # noqa: E501
