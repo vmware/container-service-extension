@@ -211,6 +211,9 @@ class ClusterScriptFile(str, Enum):
     CONTROL_PLANE = 'control_plane.sh'
     NODE = 'node.sh'
 
+    CLOUDINIT_CONTROL_PLANE = 'cloud_init_control_plane.yaml'
+    CLOUDINIT_NODE = 'cloud_init_node.yaml'
+
     # Note that we need _ in the version instead of dots to allow
     # python package parsing methods to work well
     VERSION_1_X = "v1_x"
@@ -800,5 +803,7 @@ DEFAULT_POST_CUSTOMIZATION_STATUS_LIST = [cust_status.value for cust_status in P
 DEFAULT_POST_CUSTOMIZATION_POLL_SEC = 5
 DEFAULT_POST_CUSTOMIZATION_TIMEOUT_SEC = 600
 DISK_ENABLE_UUID = 'disk.enableUUID'
+CLOUDINIT_GUEST_USERDATA = 'guestinfo.userdata'
+CLOUDINIT_GUEST_USERDATA_ENCODING = 'guestinfo.userdata.encoding'
 
 MAX_RDE_UPDATE_ATTEMPTS = 10
