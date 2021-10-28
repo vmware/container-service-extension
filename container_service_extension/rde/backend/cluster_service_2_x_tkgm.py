@@ -7,7 +7,6 @@ import random
 import re
 import string
 import threading
-import time
 from typing import Dict, List, Optional, Tuple, Union
 import urllib
 
@@ -19,25 +18,23 @@ from pyvcloud.vcd.vdc import VDC
 import pyvcloud.vcd.vm as vcd_vm
 import validators
 
+from container_service_extension.common.constants.server_constants import \
+    CLOUDINIT_GUEST_USERDATA, \
+    CLOUDINIT_GUEST_USERDATA_ENCODING, \
+    DISK_ENABLE_UUID
 from container_service_extension.common.constants.server_constants import ClusterMetadataKey  # noqa: E501
 from container_service_extension.common.constants.server_constants import ClusterScriptFile  # noqa: E501
 from container_service_extension.common.constants.server_constants import DefEntityOperation  # noqa: E501
 from container_service_extension.common.constants.server_constants import DefEntityOperationStatus  # noqa: E501
 from container_service_extension.common.constants.server_constants import DefEntityPhase  # noqa: E501
-from container_service_extension.common.constants.server_constants import \
-    DISK_ENABLE_UUID, \
-    CLOUDINIT_GUEST_USERDATA, \
-    CLOUDINIT_GUEST_USERDATA_ENCODING
 from container_service_extension.common.constants.server_constants import KUBE_CONFIG  # noqa: E501
 from container_service_extension.common.constants.server_constants import KUBEADM_TOKEN_INFO  # noqa: E501
 from container_service_extension.common.constants.server_constants import LocalTemplateKey  # noqa: E501
 from container_service_extension.common.constants.server_constants import NodeType  # noqa: E501
 from container_service_extension.common.constants.server_constants import PostCustomizationPhase  # noqa: E501
-from container_service_extension.common.constants.server_constants import PreCustomizationPhase  # noqa: E501
 from container_service_extension.common.constants.server_constants import ThreadLocalData  # noqa: E501
 from container_service_extension.common.constants.server_constants import TKGM_DEFAULT_POD_NETWORK_CIDR  # noqa: E501
 from container_service_extension.common.constants.server_constants import TKGM_DEFAULT_SERVICE_CIDR  # noqa: E501
-from container_service_extension.common.constants.server_constants import ToolsDeployPkgCustomizationStatus  # noqa: E501
 import container_service_extension.common.constants.shared_constants as shared_constants  # noqa: E501
 from container_service_extension.common.constants.shared_constants import \
     CSE_PAGINATION_DEFAULT_PAGE_SIZE, SYSTEM_ORG_NAME
@@ -1935,7 +1932,7 @@ def _set_cloud_init_spec(
         vapp,
         vm,
         cloud_init_spec: str) -> None:
-    base64_encoded_cloud_init_spec = base64.b64encode(cloud_init_spec.encode("ascii"))
+    base64_encoded_cloud_init_spec = base64.b64encode(cloud_init_spec.encode("ascii"))  # noqa: E501
     task = vm.add_extra_config_element(CLOUDINIT_GUEST_USERDATA, base64_encoded_cloud_init_spec, True)  # noqa: E501
     sysadmin_client.get_task_monitor().wait_for_status(
         task,
@@ -2031,7 +2028,7 @@ def _add_control_plane_nodes(
                 antrea_cni_version=ANTREA_CNI_VERSION,
                 ssh_key=ssh_key if ssh_key else '',
                 control_plane_endpoint='',
-                base64_encoded_refresh_token=base64_refresh_token.decode("utf-8"),
+                base64_encoded_refresh_token=base64_refresh_token.decode("utf-8"),  # noqa: E501
             )
 
         task = vapp.add_vms(
@@ -2104,7 +2101,7 @@ def _add_control_plane_nodes(
                 antrea_cni_version=ANTREA_CNI_VERSION,
                 ssh_key=ssh_key if ssh_key else '',
                 control_plane_endpoint=f"{control_plane_endpoint}:6443",
-                base64_encoded_refresh_token=base64_refresh_token.decode("utf-8"),
+                base64_encoded_refresh_token=base64_refresh_token.decode("utf-8"),  # noqa: E501
             )
             # create a cloud-init spec and update the VMs with it
             _set_cloud_init_spec(sysadmin_client, vapp, vm, cloud_init_spec)
@@ -2174,7 +2171,7 @@ def _add_worker_nodes(sysadmin_client, num_nodes, org, vdc, vapp,
 
     try:
         templated_script = get_cluster_script_file_contents(
-            ClusterScriptFile.CLOUDINIT_NODE, ClusterScriptFile.VERSION_2_X_TKGM)
+            ClusterScriptFile.CLOUDINIT_NODE, ClusterScriptFile.VERSION_2_X_TKGM)  # noqa: E501
 
         # Example format:
         # kubeadm join 192.168.7.8:6443 --token 5edbci.duu55v7k6hdv52sm \
@@ -2248,7 +2245,7 @@ def _add_worker_nodes(sysadmin_client, num_nodes, org, vdc, vapp,
                     callback=wait_for_memory_update)
 
             # create a cloud-init spec and update the VMs with it
-            _set_cloud_init_spec(sysadmin_client, vapp, vm, spec['cloudinit_node_spec'])
+            _set_cloud_init_spec(sysadmin_client, vapp, vm, spec['cloudinit_node_spec'])  # noqa: E501
 
             task = vm.power_on()
             # wait_for_vm_power_on is reused for all vm creation callback
