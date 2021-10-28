@@ -1930,6 +1930,31 @@ def _get_tkgm_template(name: str):
     )
 
 
+def _set_cloud_init_spec(
+        sysadmin_client,
+        vapp,
+        vm,
+        cloud_init_spec: str) -> None:
+    base64_encoded_cloud_init_spec = base64.b64encode(cloud_init_spec.encode("ascii"))
+    task = vm.add_extra_config_element(CLOUDINIT_GUEST_USERDATA, base64_encoded_cloud_init_spec, True)  # noqa: E501
+    sysadmin_client.get_task_monitor().wait_for_status(
+        task,
+        callback=wait_for_updating_cloud_init_spec,
+    )
+    vm.reload()
+    vapp.reload()
+
+    task = vm.add_extra_config_element(CLOUDINIT_GUEST_USERDATA_ENCODING, "base64", True)  # noqa: E501
+    sysadmin_client.get_task_monitor().wait_for_status(
+        task,
+        callback=wait_for_updating_cloud_init_spec_encoding,
+    )
+    vm.reload()
+    vapp.reload()
+
+    return
+
+
 def _add_control_plane_nodes(
         sysadmin_client,
         user_client,
@@ -2082,22 +2107,7 @@ def _add_control_plane_nodes(
                 base64_encoded_refresh_token=base64_refresh_token.decode("utf-8"),
             )
             # create a cloud-init spec and update the VMs with it
-            base64_encoded_cloud_init_spec = base64.b64encode(cloud_init_spec.encode("ascii"))
-            task = vm.add_extra_config_element(CLOUDINIT_GUEST_USERDATA, base64_encoded_cloud_init_spec, True)  # noqa: E501
-            sysadmin_client.get_task_monitor().wait_for_status(
-                task,
-                callback=wait_for_updating_cloud_init_spec,
-            )
-            vm.reload()
-            vapp.reload()
-
-            task = vm.add_extra_config_element(CLOUDINIT_GUEST_USERDATA_ENCODING, "base64", True)  # noqa: E501
-            sysadmin_client.get_task_monitor().wait_for_status(
-                task,
-                callback=wait_for_updating_cloud_init_spec_encoding,
-            )
-            vm.reload()
-            vapp.reload()
+            _set_cloud_init_spec(sysadmin_client, vapp, vm, cloud_init_spec)
 
             task = vm.power_on()
             # wait_for_vm_power_on is reused for all vm creation callback
@@ -2109,11 +2119,12 @@ def _add_control_plane_nodes(
 
             # Note that this is an ordered list.
             for customization_phase in [
-                PostCustomizationPhase.HOSTNAME_SETUP,
                 PostCustomizationPhase.NETWORK_CONFIGURATION,
                 PostCustomizationPhase.STORE_SSH_KEY,
                 PostCustomizationPhase.KUBEADM_INIT,
                 PostCustomizationPhase.KUBECTL_APPLY_CNI,
+                PostCustomizationPhase.KUBECTL_APPLY_CPI,
+                PostCustomizationPhase.KUBECTL_APPLY_CSI,
                 PostCustomizationPhase.KUBEADM_TOKEN_GENERATE,
             ]:
                 vapp.reload()
@@ -2237,22 +2248,7 @@ def _add_worker_nodes(sysadmin_client, num_nodes, org, vdc, vapp,
                     callback=wait_for_memory_update)
 
             # create a cloud-init spec and update the VMs with it
-            base64_encoded_cloud_init_spec = base64.b64encode(spec['cloudinit_node_spec'].encode("ascii"))
-            task = vm.add_extra_config_element(CLOUDINIT_GUEST_USERDATA, base64_encoded_cloud_init_spec, True)  # noqa: E501
-            sysadmin_client.get_task_monitor().wait_for_status(
-                task,
-                callback=wait_for_updating_cloud_init_spec,
-            )
-            vm.reload()
-            vapp.reload()
-
-            task = vm.add_extra_config_element(CLOUDINIT_GUEST_USERDATA_ENCODING, "base64", True)  # noqa: E501
-            sysadmin_client.get_task_monitor().wait_for_status(
-                task,
-                callback=wait_for_updating_cloud_init_spec_encoding,
-            )
-            vm.reload()
-            vapp.reload()
+            _set_cloud_init_spec(sysadmin_client, vapp, vm, spec['cloudinit_node_spec'])
 
             task = vm.power_on()
             # wait_for_vm_power_on is reused for all vm creation callback
@@ -2266,7 +2262,6 @@ def _add_worker_nodes(sysadmin_client, num_nodes, org, vdc, vapp,
 
             # Note that this is an ordered list.
             for customization_phase in [
-                PostCustomizationPhase.HOSTNAME_SETUP,
                 PostCustomizationPhase.NETWORK_CONFIGURATION,
                 PostCustomizationPhase.STORE_SSH_KEY,
                 PostCustomizationPhase.KUBEADM_NODE_JOIN,

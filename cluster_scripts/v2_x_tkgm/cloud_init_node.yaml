@@ -37,14 +37,6 @@ write_files:
 
     set -ex
 
-    # This is a simple command but its execution is crucial to kubeadm join. There are a few versions of ubuntu
-    # where the dbus.service is not started in a timely enough manner to set the hostname correctly. Hence
-    # this needs to be set by us.
-    vmtoolsd --cmd "info-set guestinfo.postcustomization.hostname.status in_progress"
-      hostnamectl set-hostname {vm_host_name}
-    vmtoolsd --cmd "info-set guestinfo.postcustomization.hostname.status successful"
-
-
     vmtoolsd --cmd "info-set guestinfo.postcustomization.networkconfiguration.status in_progress"
       echo 'net.ipv6.conf.all.disable_ipv6 = 1' >> /etc/sysctl.conf
       echo 'net.ipv6.conf.default.disable_ipv6 = 1' >> /etc/sysctl.conf
@@ -77,7 +69,7 @@ write_files:
         ctr -n=k8s.io image tag $image_ref $ref_path:$new_tag_version
       done
 
-      kubeadm join --config /root/kubeadm-defaults-join.conf --v=10 > /root/kubeadm-join.out
+      kubeadm join --config /root/kubeadm-defaults-join.conf --v=10 &> /root/kubeadm-join.out
     vmtoolsd --cmd "info-set guestinfo.postcustomization.kubeadm.node.join.status successful"
 
     echo "$(date) post customization script execution completed" &>> /var/log/cse/customization/status.log
@@ -87,4 +79,6 @@ runcmd:
 - bash /root/node.sh
 timezone: UTC
 disable_root: false
-final_message: "The system is finally up, after $UPTIME seconds"
+preserve_hostname: false
+hostname: {vm_host_name}
+final_message: "The system is ready after $UPTIME seconds"

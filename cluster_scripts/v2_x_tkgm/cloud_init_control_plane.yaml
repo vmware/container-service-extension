@@ -81,14 +81,6 @@ write_files:
     csi_controller_path=/root/csi-controller.yaml
     csi_node_path=/root/csi-node.yaml
 
-    # This is a simple command but its execution is crucial to kubeadm join. There are a few versions of ubuntu
-    # where the dbus.service is not started in a timely enough manner to set the hostname correctly. Hence
-    # this needs to be set by us. If already set, this is a NOP.
-    vmtoolsd --cmd "info-set guestinfo.postcustomization.hostname.status in_progress"
-      hostnamectl set-hostname {vm_host_name}
-    vmtoolsd --cmd "info-set guestinfo.postcustomization.hostname.status successful"
-
-
     vmtoolsd --cmd "info-set guestinfo.postcustomization.networkconfiguration.status in_progress"
       echo 'net.ipv6.conf.all.disable_ipv6 = 1' >> /etc/sysctl.conf
       echo 'net.ipv6.conf.default.disable_ipv6 = 1' >> /etc/sysctl.conf
@@ -133,19 +125,19 @@ write_files:
         fi
       done
 
-      kubeadm init --config $kubeadm_config_path --v=10 > /root/kubeadm-init.out
+      kubeadm init --config $kubeadm_config_path --v=10 &> /root/kubeadm-init.out
       export KUBECONFIG=/etc/kubernetes/admin.conf
     vmtoolsd --cmd "info-set guestinfo.kubeconfig $(cat /etc/kubernetes/admin.conf | base64 | tr -d '\n')"
     vmtoolsd --cmd "info-set guestinfo.postcustomization.kubeinit.status successful"
 
 
-    vmtoolsd --cmd "info-set guestinfo.postcustomization.kubectl.apply.cni.status in_progress"
+    vmtoolsd --cmd "info-set guestinfo.postcustomization.kubectl.cni.install.status in_progress"
       antrea_path=/root/antrea-{antrea_cni_version}.yaml
       wget -O $antrea_path https://github.com/vmware-tanzu/antrea/releases/download/{antrea_cni_version}/antrea.yml
       # This does not need to be done from v0.12.0 onwards inclusive
       sed -i 's/antrea\/antrea-ubuntu:{antrea_cni_version}/projects.registry.vmware.com\/antrea\/antrea-ubuntu:{antrea_cni_version}/g' $antrea_path
       kubectl apply -f $antrea_path
-    vmtoolsd --cmd "info-set guestinfo.postcustomization.kubectl.apply.cni.status successful"
+    vmtoolsd --cmd "info-set guestinfo.postcustomization.kubectl.cni.install.status successful"
 
 
     vmtoolsd --cmd "info-set guestinfo.postcustomization.kubectl.cpi.install.status in_progress"
@@ -196,4 +188,6 @@ runcmd:
 - bash /root/control_plane.sh
 timezone: UTC
 disable_root: false
-final_message: "The system is finally up, after $UPTIME seconds"
+preserve_hostname: false
+hostname: {vm_host_name}
+final_message: "The system is ready after $UPTIME seconds"
