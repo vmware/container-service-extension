@@ -181,7 +181,6 @@ write_files:
       vmtoolsd --cmd "info-set guestinfo.postcustomization.kubeadm.token.info $kubeadm_join_info"
     vmtoolsd --cmd "info-set guestinfo.postcustomization.kubeadm.token.generate.status successful"
 
-
     echo "$(date) post customization script execution completed" &>> /var/log/cse/customization/status.log
     exit 0
 runcmd:

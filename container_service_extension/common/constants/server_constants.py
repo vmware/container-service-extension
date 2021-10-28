@@ -773,18 +773,6 @@ class PostCustomizationStatus(Enum):
 
 
 @unique
-class ToolsDeployPkgCustomizationStatus(Enum):
-    NONE = None
-    IN_PROGRESS = 'Started'
-    SUCCESSFUL = 'Successful'
-
-
-@unique
-class PreCustomizationPhase(Enum):
-    POST_BOOT_CUSTOMIZATION_SERVICE_SETUP = 'guestinfo.gc.status'
-
-
-@unique
 class PostCustomizationPhase(Enum):
     NETWORK_CONFIGURATION = 'guestinfo.postcustomization.networkconfiguration.status'  # noqa: E501
     STORE_SSH_KEY = 'guestinfo.postcustomization.store.sshkey.status'
