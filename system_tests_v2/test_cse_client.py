@@ -57,7 +57,7 @@ import container_service_extension.system_test_framework.utils as testutils
 OVDC_ENABLE_TEST_PARAM = collections.namedtuple("OvdcEnableParam", "user password org_name ovdc_name disable_before_test expect_failure")  # noqa: E501
 OVDC_DISABLE_TEST_PARAM = collections.namedtuple("OvdcDisableParam", "user password org_name ovdc_name enable_before_test expect_failure")  # noqa: E501
 SYSTEM_TOGGLE_TEST_PARAM = collections.namedtuple("SystemToggleTestParam", "user password cluster_name worker_count nfs_count rollback sizing_class storage_profile ovdc_network template_name template_revision expect_failure")  # noqa: E501
-CLUSTER_APPLY_TEST_PARAM = collections.namedtuple("ClusterApplyTestParam", "user password cluster_name worker_count nfs_count rollback cpu memory sizing_class storage_profile ovdc_network template_name template_revision expected_phase retain_cluster exit_code should_vapp_exist should_rde_exist required_rde_version")  # noqa: E501
+CLUSTER_APPLY_TEST_PARAM = collections.namedtuple("ClusterApplyTestParam", "user password cluster_name worker_count nfs_count rollback cpu memory sizing_class storage_profile ovdc_network template_name template_revision expected_phase retain_cluster exit_code should_vapp_exist should_rde_exist required_rde_version expect_failure")  # noqa: E501
 CLUSTER_DELETE_TEST_PARAM = collections.namedtuple("CluserDeleteTestParam", "user password cluster_name org ovdc expect_failure")  # noqa: E501
 CLUSTER_UPGRADE_TEST_PARAM = collections.namedtuple("ClusterUpgradeTestParam", "user password cluster_name worker_count nfs_count rollback sizing_class storage_profile ovdc_network upgrade_path expect_failure") # noqa: E501
 
@@ -693,7 +693,8 @@ def _generate_cluster_apply_tests(test_users=None):
                         exit_code=0,
                         should_rde_exist=False,
                         should_vapp_exist=False,
-                        required_rde_version=['1.0.0', '2.0.0']
+                        required_rde_version=['1.0.0', '2.0.0'],
+                        expect_failure=True
                     ),
                     # Invalid Storage profile
                     CLUSTER_APPLY_TEST_PARAM(
@@ -715,7 +716,8 @@ def _generate_cluster_apply_tests(test_users=None):
                         exit_code=0,
                         should_rde_exist=False,
                         should_vapp_exist=False,
-                        required_rde_version=['1.0.0', '2.0.0']
+                        required_rde_version=['1.0.0', '2.0.0'],
+                        expect_failure=True
                     ),
                     # Invalid Network
                     CLUSTER_APPLY_TEST_PARAM(
@@ -737,7 +739,8 @@ def _generate_cluster_apply_tests(test_users=None):
                         exit_code=0,
                         should_rde_exist=False,
                         should_vapp_exist=False,
-                        required_rde_version=['1.0.0', '2.0.0']
+                        required_rde_version=['1.0.0', '2.0.0'],
+                        expect_failure=True
                     ),
                     # Invalid network without rollback
                     CLUSTER_APPLY_TEST_PARAM(
@@ -759,7 +762,8 @@ def _generate_cluster_apply_tests(test_users=None):
                         exit_code=0,
                         should_rde_exist=True,
                         should_vapp_exist=False, # creation of vapp will fail
-                        required_rde_version=['1.0.0', '2.0.0']
+                        required_rde_version=['1.0.0', '2.0.0'],
+                        expect_failure=True
                     ),
                     # cpu/memory and sizing class provided
                     CLUSTER_APPLY_TEST_PARAM(
@@ -781,7 +785,8 @@ def _generate_cluster_apply_tests(test_users=None):
                         exit_code=2,
                         should_rde_exist=False,
                         should_vapp_exist=False,
-                        required_rde_version=['2.0.0']
+                        required_rde_version=['2.0.0'],
+                        expect_failure=True
                     ),
                     # cluster created with cpu/memory and no sizing class
                     CLUSTER_APPLY_TEST_PARAM(
@@ -803,7 +808,8 @@ def _generate_cluster_apply_tests(test_users=None):
                         exit_code=0,
                         should_rde_exist=True,
                         should_vapp_exist=True,
-                        required_rde_version=['2.0.0']
+                        required_rde_version=['2.0.0'],
+                        expect_failure=False
                     ),
                     # Resize a cluster created using cpu/memory with sizing
                     # class
@@ -826,7 +832,8 @@ def _generate_cluster_apply_tests(test_users=None):
                         exit_code=2,   # should be 2?
                         should_rde_exist=True,
                         should_vapp_exist=True,
-                        required_rde_version=['2.0.0']
+                        required_rde_version=['2.0.0'],
+                        expect_failure=True
                     ),
                     # Resize a cluster created using cpu/memory using
                     # cpu/memory
@@ -849,7 +856,8 @@ def _generate_cluster_apply_tests(test_users=None):
                         exit_code=0,
                         should_rde_exist=True,
                         should_vapp_exist=True,
-                        required_rde_version=['2.0.0']
+                        required_rde_version=['2.0.0'],
+                        expect_failure=False
                     ),
                     # Create cluster using sizing policy
                     CLUSTER_APPLY_TEST_PARAM(
@@ -871,7 +879,8 @@ def _generate_cluster_apply_tests(test_users=None):
                         exit_code=0,
                         should_rde_exist=True,
                         should_vapp_exist=True,
-                        required_rde_version=['1.0.0', '2.0.0']
+                        required_rde_version=['1.0.0', '2.0.0'],
+                        expect_failure=False
                     ),
                     # Resize cluster created with sizing class using cpu/mem
                     CLUSTER_APPLY_TEST_PARAM(
@@ -893,7 +902,8 @@ def _generate_cluster_apply_tests(test_users=None):
                         exit_code=2,
                         should_rde_exist=True,
                         should_vapp_exist=True,
-                        required_rde_version=['2.0.0']
+                        required_rde_version=['2.0.0'],
+                        expect_failure=True
                     ),
                     # Resize up a valid deployment
                     CLUSTER_APPLY_TEST_PARAM(
@@ -915,7 +925,8 @@ def _generate_cluster_apply_tests(test_users=None):
                         exit_code=0,
                         should_rde_exist=True,
                         should_vapp_exist=True,
-                        required_rde_version=['1.0.0', '2.0.0']
+                        required_rde_version=['1.0.0', '2.0.0'],
+                        expect_failure=False
                     ),
                     # Resize down a valid deployment
                     CLUSTER_APPLY_TEST_PARAM(
@@ -937,7 +948,8 @@ def _generate_cluster_apply_tests(test_users=None):
                         exit_code=0,
                         should_rde_exist=True,
                         should_vapp_exist=True,
-                        required_rde_version=['1.0.0', '2.0.0']
+                        required_rde_version=['1.0.0', '2.0.0'],
+                        expect_failure=False
                     )
                 ]
             )
@@ -1005,7 +1017,7 @@ def test_0040_vcd_cse_cluster_apply(cluster_apply_param: CLUSTER_APPLY_TEST_PARA
         print(f"Skipping the test as it is not relevant to CSE configured with RDE version {rde_version}")  # noqa: E501
         return
     exit_code = cluster_apply_param.exit_code
-    expect_failure = "FAILED" in cluster_apply_param.expected_phase
+    expect_failure = cluster_apply_param.expect_failure
 
     cmd_list = [
         testutils.CMD_BINDER(cmd=f"cse cluster apply {env.APPLY_SPEC_PATH} ",
