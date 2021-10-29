@@ -172,6 +172,8 @@ If Tanzu Kubernetes Grid (TKG) distribution is enabled
 on [CSE 3.0.z](https://github.com/vmware/container-service-extension-templates/blob/tkgm/TKG_INSTRUCTIONS.md),
 then please consider upgrading to CSE 3.1.1 following these [steps](CSE31.html#remove_tkgm).
 
+Refer to [CSE 3.1 upgrade command](CSE_SERVER_MANAGEMENT.html#cse31-upgrade-cmd) for details.
+
 #### 2.2.4 Tenant onboarding
 The provider needs to perform below operations to enable Kubernetes cluster
 deployments in tenant organizations and tenant virtual data centers.
