@@ -1238,7 +1238,14 @@ def test_0050_vcd_cse_delete_nfs(cluster_delete_nfs_param):
     ]
     testutils.execute_commands(cmd_list, logger=PYTEST_LOGGER)
 
-    time.sleep(30)  # Timeout to wait for RDE update to complete
+    number_of_attempts = 100
+    # wait until the status changes to UPDATE:SUCCEEDED for 5 mins.
+    status = ""
+    while status != "UPDATE:SUCCEEDED" and number_of_attempts > 0:
+        status = _get_cluster_phase(env.USERNAME_TO_CLUSTER_NAME[test_runner_username], test_runner_username)  # noqa: E501
+        number_of_attempts -= 1
+    assert number_of_attempts > 0, "Cluster didn't reach UPDATE:SUCCEEDED phase"  # noqa: E501
+
     cmd_list = [
         testutils.CMD_BINDER(cmd=f"cse cluster info {cluster_name}",
                              exit_code=0,
