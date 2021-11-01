@@ -293,8 +293,10 @@ def test_0030_vcd_cse_cluster_create_rollback(config, vcd_org_admin,
     $ vcd cse cluster create testcluster -n NETWORK -N 1 -c 1000
         --disable-rollback
     """
+    template_name = env.TEMPLATE_DEFINITIONS[0]['name']
+    template_revision = env.TEMPLATE_DEFINITIONS[0]['revision']
     cmd = f"cse cluster create {env.SYS_ADMIN_TEST_CLUSTER_NAME} -n " \
-          f"{env.TEST_NETWORK} -N 1 -c 1000"
+          f"{env.TEST_NETWORK} -N 1 -c 1000 -t {template_name} -r {template_revision}"  # noqa: E501
     result = env.CLI_RUNNER.invoke(vcd, cmd.split(), catch_exceptions=False)
     assert result.exit_code == 0, \
         testutils.format_command_info('vcd', cmd, result.exit_code,
@@ -336,6 +338,8 @@ def test_0050_vcd_cse_system_toggle(config, test_runner_username,
     :param test_runner_username: parameterized persona to run tests with
     different users
     """
+    template_name = env.TEMPLATE_DEFINITIONS[0]['name']
+    template_revision = env.TEMPLATE_DEFINITIONS[0]['revision']
     # Batch cse commands together in a list and then execute them one by one
     cmd_binder = collections.namedtuple('UserCmdBinder',
                                         'cmd exit_code validate_output_func'
@@ -351,7 +355,8 @@ def test_0050_vcd_cse_system_toggle(config, test_runner_username,
         cmd_binder(cmd=f"org use {env.TEST_ORG}", exit_code=0,
                    validate_output_func=None, test_user=test_runner_username),
         cmd_binder(cmd=f"cse cluster create {env.SYS_ADMIN_TEST_CLUSTER_NAME} "
-                       f"-n {env.TEST_NETWORK} -N 1", exit_code=2,
+                       f"-n {env.TEST_NETWORK} -N 1 -t {template_name}"
+                       f" -r {template_revision}", exit_code=2,
                    validate_output_func=None, test_user=test_runner_username),
         cmd_binder(cmd=env.USER_LOGOUT_CMD, exit_code=0,
                    validate_output_func=None, test_user=test_runner_username),
@@ -360,8 +365,9 @@ def test_0050_vcd_cse_system_toggle(config, test_runner_username,
         cmd_binder(cmd="cse system enable", exit_code=0,
                    validate_output_func=None, test_user='sys_admin'),
         cmd_binder(cmd=f"cse cluster create {env.SYS_ADMIN_TEST_CLUSTER_NAME} "
-                       f"-n {env.TEST_NETWORK} -N 1 -c 1000 "
-                       f"--disable-rollback", exit_code=2,
+                       f"-n {env.TEST_NETWORK} -N 1 -c 1000 -t {template_name}"
+                       f" -r {template_revision} --disable-rollback",
+                   exit_code=2,
                    validate_output_func=None, test_user='sys_admin'),
         cmd_binder(cmd=env.USER_LOGOUT_CMD, exit_code=0,
                    validate_output_func=None, test_user='sys_admin')
@@ -388,6 +394,8 @@ def test_0070_vcd_cse_cluster_create(config, test_runner_username):
     :param test_runner_username: parameterized persona to run tests with
     different users
     """
+    template_name = env.TEMPLATE_DEFINITIONS[0]['name']
+    template_revision = env.TEMPLATE_DEFINITIONS[0]['revision']
     cmd_binder = collections.namedtuple('UserCmdBinder',
                                         'cmd exit_code validate_output_func '
                                         'test_user')
@@ -403,7 +411,8 @@ def test_0070_vcd_cse_cluster_create(config, test_runner_username):
                    validate_output_func=None, test_user=test_runner_username),
         cmd_binder(cmd=f"cse cluster create "
                        f"{env.USERNAME_TO_CLUSTER_NAME[test_runner_username]}"
-                       f" -n {env.TEST_NETWORK} -N 0 ", exit_code=0,
+                       f" -n {env.TEST_NETWORK} -N 0 -t {template_name}"
+                       f" -r {template_revision}", exit_code=0,
                    validate_output_func=None, test_user=test_runner_username),
         cmd_binder(cmd=env.USER_LOGOUT_CMD, exit_code=0,
                    validate_output_func=None, test_user=test_runner_username)
@@ -523,6 +532,8 @@ def generate_validate_node_count_func(expected_nodes):
 def test_0110_vcd_cse_cluster_resize(test_runner_username, config):
     """Test 'vcd cse cluster resize ...' commands."""
     node_pattern = r'(node-\S+)'
+    template_name = env.TEMPLATE_DEFINITIONS[0]['name']
+    template_revision = env.TEMPLATE_DEFINITIONS[0]['revision']
     cmd_binder = collections.namedtuple('UserCmdBinder',
                                         'cmd exit_code validate_output_func '
                                         'test_user')
@@ -549,7 +560,8 @@ def test_0110_vcd_cse_cluster_resize(test_runner_username, config):
 
     cmd_list = [
         cmd_binder(cmd=f"cse cluster resize -N {num_nodes+1} -n {env.TEST_NETWORK}"  # noqa
-                       f" {env.USERNAME_TO_CLUSTER_NAME[test_runner_username]}", # noqa: E501
+                       f" {env.USERNAME_TO_CLUSTER_NAME[test_runner_username]}"
+                       f" -t {template_name} -r {template_revision}",
                    exit_code=0, validate_output_func=generate_validate_node_count_func(num_nodes+1), # noqa
                    test_user=test_runner_username),
         cmd_binder(cmd=f"cse cluster resize -N 0 -n {env.TEST_NETWORK}" # noqa
@@ -575,6 +587,8 @@ def test_0120_vcd_cse_node_operation(test_runner_username, config):
     :param test_runner_username: parameterized persona to run tests with
     different users
     """
+    template_name = env.TEMPLATE_DEFINITIONS[0]['name']
+    template_revision = env.TEMPLATE_DEFINITIONS[0]['revision']
     node_pattern = r'(node-\S+)'
     num_nodes = 0 # last resize scaled the cluster down to 0 nodes
     cmd_binder = collections.namedtuple('UserCmdBinder',
@@ -591,7 +605,8 @@ def test_0120_vcd_cse_node_operation(test_runner_username, config):
         cmd_binder(cmd=f"vdc use {env.TEST_VDC}", exit_code=0,
                    validate_output_func=None, test_user=test_runner_username),
         cmd_binder(cmd=f"cse node create {env.USERNAME_TO_CLUSTER_NAME[test_runner_username]}"  # noqa
-                       f" -n {env.TEST_NETWORK}", exit_code=0,
+                       f" -n {env.TEST_NETWORK} -t {template_name}"
+                       f" -r {template_revision}", exit_code=0,
                    validate_output_func=None, test_user=test_runner_username)
     ]
     execute_commands(cmd_list)
