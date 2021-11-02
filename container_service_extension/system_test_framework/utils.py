@@ -70,7 +70,7 @@ def execute_commands(cmd_list, logger=logger.NULL_LOGGER):
             format_command_info(
                 'vcd', cmd, result.exit_code, result.output
             )
-
+        print(result.output)
         if action.validate_output_func is not None:
             assert action.validate_output_func(result.output, action.test_user), \
                 "Command execution failed."  # noqa: E501
