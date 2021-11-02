@@ -8,6 +8,7 @@ from dataclasses import dataclass
 from enum import Enum
 from enum import unique
 
+from pyvcloud.vcd.client import VcdApiVersionObj
 import requests
 import semantic_version
 
@@ -65,7 +66,7 @@ MQTT_EXTENSION_VENDOR = 'VMWare'
 MQTT_EXTENSION_URN = 'urn:vcloud:extension-api:' + MQTT_EXTENSION_VENDOR + ':'\
                      + CSE_SERVICE_NAME + ':' + MQTT_EXTENSION_VERSION
 MQTT_EXTENSION_PRIORITY = 100
-MQTT_MIN_API_VERSION = 35.0
+MQTT_MIN_API_VERSION = VcdApiVersionObj.VERSION_35.value
 MQTT_TOKEN_NAME = "mqttCseToken"
 TOKEN_PATH = 'tokens'
 
@@ -88,6 +89,10 @@ VCENTER_LOGIN_ERROR_MSG = "vCenter login failed (check config file for "\
 
 # Request Id format for logging
 REQUEST_ID_FORMAT = 'Request Id: %(requestId)s | '
+
+# TKGM init values
+TKGM_DEFAULT_POD_NETWORK_CIDR = '100.96.0.0/11'
+TKGM_DEFAULT_SERVICE_CIDR = '100.64.0.0/13'
 
 
 @unique
@@ -138,12 +143,16 @@ class FlattenedClusterSpecKey2X(Enum):
     WORKERS_COUNT = 'topology.workers.count'
     WORKERS_SIZING_CLASS = 'topology.workers.sizingClass'
     WORKERS_STORAGE_PROFILE = 'topology.workers.storageProfile'
+    WORKERS_CPU_COUNT = 'topology.workers.cpu'
+    WORKERS_MEMORY_MB = 'topology.workers.memory'
     NFS_COUNT = 'topology.nfs.count'
     NFS_SIZING_CLASS = 'topology.nfs.sizingClass'
     NFS_STORAGE_PROFILE = 'topology.nfs.storageProfile'
     TEMPLATE_NAME = 'distribution.templateName'
     TEMPLATE_REVISION = 'distribution.templateRevision'
     EXPOSE = 'settings.network.expose'
+    POD_CIDR = 'settings.network.pods.cidrBlocks'
+    SVC_CIDR = 'settings.network.services.cidrBlocks'
 
 
 VALID_UPDATE_FIELDS_2X = \
@@ -206,6 +215,7 @@ class ClusterScriptFile(str, Enum):
     # python package parsing methods to work well
     VERSION_1_X = "v1_x"
     VERSION_2_X = "v2_x"
+    VERSION_2_X_TKGM = "v2_x_tkgm"
 
 
 @unique
@@ -294,6 +304,42 @@ class LocalTemplateKey(str, Enum):
     UPGRADE_FROM = 'upgrade_from'
     MIN_CSE_VERSION = 'min_cse_version'
     MAX_CSE_VERSION = 'max_cse_version'
+
+
+@unique
+class TKGmTemplateKey(str, Enum):
+    """Enumerate the keys that define an imported TKGm template."""
+
+    CNI = 'cni'
+    CNI_VERSION = 'cni_version'
+    CONTAINER_RUNTIME = 'container_runtime'
+    CONTAINER_RUNTIME_VERSION = 'container_runtime_version'
+    CSE_VERSION = 'cse_version'
+    KIND = 'kind'
+    KUBERNETES = 'kubernetes'
+    KUBERNETES_VERSION = 'kubernetes_version'
+    NAME = 'name'
+    OS = 'os'
+    OS_VERSION = 'os_version'
+    REVISION = 'revision'
+
+
+@unique
+class TKGmProperty(str, Enum):
+    """Enumerate the keys in TKGm template ProductSection."""
+
+    BUILD_TIMESTAMP = 'BUILD_TIMESTAMP'
+    BUILD_DATE = 'BUILD_DATE'
+    CUSTOM_ROLE = 'CUSTOM_ROLE'
+    IMAGE_BUILDER_VERSION = 'IMAGE_BUILDER_VERSION'
+    DISTRO_NAME = 'DISTRO_NAME'
+    DISTRO_VERSION = 'DISTRO_VERSION'
+    DISTRO_ARCH = 'DISTRO_ARCH'
+    CNI_VERSION = 'CNI_VERSION'
+    CONTAINDERD_VERSION = 'CONTAINERD_VERSION'
+    KUBERNETES_SEMVER = 'KUBERNETES_SEMVER'
+    KUBERNETES_SOURCE_TYPE = 'KUBERNETES_SOURCE_TYPE'
+    VERSION = 'VERSION'
 
 
 @unique
@@ -418,6 +464,7 @@ class CseOperation(Enum):
     SYSTEM_INFO = ('get info of system', '/cse/system')
     SYSTEM_UPDATE = ('update system status', '/cse/system')
     TEMPLATE_LIST = ('list all templates', '/cse/templates')
+    TKGM_TEMPLATE_LIST = ('list TKGm templates', '/cse/templates/tkgm')
 
     V35_OVDC_LIST = ('list ovdcs for v35', '/cse/3.0/ovdcs')
     V35_ORG_VDC_LIST = ('list org VDCs', '/cse/3.0/orgvdcs')
@@ -722,8 +769,36 @@ class PostCustomizationStatus(Enum):
     SUCCESSFUL = 'successful'
 
 
-POST_CUSTOMIZATION_SCRIPT_EXECUTION_STATUS = 'post_customization_script_execution_status'  # noqa: E501
-POST_CUSTOMIZATION_SCRIPT_EXECUTION_FAILURE_REASON = 'post_customization_script_execution_failure_reason'  # noqa: E501
+@unique
+class ToolsDeployPkgCustomizationStatus(Enum):
+    NONE = None
+    IN_PROGRESS = 'Started'
+    SUCCESSFUL = 'Successful'
+
+
+@unique
+class PreCustomizationPhase(Enum):
+    POST_BOOT_CUSTOMIZATION_SERVICE_SETUP = 'guestinfo.gc.status'
+
+
+@unique
+class PostCustomizationPhase(Enum):
+    HOSTNAME_SETUP = 'guestinfo.postcustomization.hostname.status'
+    NETWORK_CONFIGURATION = 'guestinfo.postcustomization.networkconfiguration.status'  # noqa: E501
+    STORE_SSH_KEY = 'guestinfo.postcustomization.store.sshkey.status'
+    KUBEADM_INIT = 'guestinfo.postcustomization.kubeinit.status'
+    KUBECTL_APPLY_CNI = 'guestinfo.postcustomization.kubectl.apply.cni.status'  # noqa: E501
+    KUBEADM_TOKEN_GENERATE = 'guestinfo.postcustomization.kubeadm.token.generate.status'  # noqa: E501
+    KUBEADM_NODE_JOIN = 'guestinfo.postcustomization.kubeadm.node.join.status'
+
+
+KUBEADM_TOKEN_INFO = 'guestinfo.postcustomization.kubeadm.token.info'
+KUBE_CONFIG = 'guestinfo.kubeconfig'
+POST_CUSTOMIZATION_SCRIPT_EXECUTION_STATUS = 'guestinfo.post_customization_script_execution_status'  # noqa: E501
+POST_CUSTOMIZATION_SCRIPT_EXECUTION_FAILURE_REASON = 'guestinfo.post_customization_script_execution_failure_reason'  # noqa: E501
 DEFAULT_POST_CUSTOMIZATION_STATUS_LIST = [cust_status.value for cust_status in PostCustomizationStatus]  # noqa: E501
 DEFAULT_POST_CUSTOMIZATION_POLL_SEC = 5
-DEFAULT_POST_CUSTOMIZATION_TIMEOUT_SEC = 180
+DEFAULT_POST_CUSTOMIZATION_TIMEOUT_SEC = 600
+DISK_ENABLE_UUID = 'disk.enableUUID'
+
+MAX_RDE_UPDATE_ATTEMPTS = 10

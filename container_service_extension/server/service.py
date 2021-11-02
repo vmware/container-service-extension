@@ -29,6 +29,7 @@ import container_service_extension.exception.exceptions as cse_exception
 import container_service_extension.installer.configure_cse as configure_cse
 import container_service_extension.installer.templates.local_template_manager as ltm  # noqa: E501
 from container_service_extension.installer.templates.template_rule import TemplateRule  # noqa: E501
+import container_service_extension.installer.templates.tkgm_template_manager as ttm  # noqa: E501
 from container_service_extension.lib.telemetry.constants import CseOperation
 from container_service_extension.lib.telemetry.constants import PayloadKey
 from container_service_extension.lib.telemetry.telemetry_handler \
@@ -120,7 +121,7 @@ def verify_version_compatibility(
             "Please upgrade CSE and retry.")
 
     error_msg = ''
-    cse_version = server_utils.get_installed_cse_version()
+    cse_version = utils.get_installed_cse_version()
     # Trying to use newer version of CSE without running `cse upgrade`
     if cse_version > ext_cse_version:
         error_msg += \
@@ -363,30 +364,48 @@ class Service(object, metaclass=Singleton):
                 if sysadmin_client:
                     sysadmin_client.logout()
 
-        populate_vsphere_list(self.config['vcs'])
+        if not server_utils.is_no_vc_communication_mode(self.config):
+            populate_vsphere_list(self.config['vcs'])
 
         # Load def entity-type and interface
         self._load_def_schema(msg_update_callback=msg_update_callback)
 
         # Read k8s catalog definition from catalog item metadata and append
         # the same to to server run-time config
-        self._load_template_definition_from_catalog(
-            msg_update_callback=msg_update_callback)
+        if not server_utils.is_no_vc_communication_mode(self.config):
+            self._load_template_definition_from_catalog(
+                msg_update_callback=msg_update_callback
+            )
+        else:
+            msg = "Skipping loading k8s template definition from catalog " \
+                  "since `No communication with VCenter` mode is on."
+            logger.SERVER_LOGGER.info(msg)
+            msg_update_callback.general_no_color(msg)
+            self.config['broker']['templates'] = []
+
+        # Read TKGm catalog definition from catalog item metadata and append
+        # the same to to server run-time config
+        self._load_tkgm_template_definition_from_catalog(
+            msg_update_callback=msg_update_callback
+        )
 
         self._load_placement_policy_details(
-            msg_update_callback=msg_update_callback)
+            msg_update_callback=msg_update_callback
+        )
 
         if self.config['service']['legacy_mode']:
             # Read templates rules from config and update template definition
             # in server run-time config
             self._process_template_rules(
-                msg_update_callback=msg_update_callback)
+                msg_update_callback=msg_update_callback
+            )
 
             # Make sure that all vms in templates are compliant with the
             # compute policy specified in template definition (can be affected
             # by rules).
             self._process_template_compute_policy_compliance(
-                msg_update_callback=msg_update_callback)
+                msg_update_callback=msg_update_callback
+            )
         else:
             msg = "Template rules are not supported by CSE for vCD api " \
                   "version 35.0 or above. Skipping template rule processing."
@@ -509,9 +528,11 @@ class Service(object, metaclass=Singleton):
                 logger_wire = logger.SERVER_CLOUDAPI_WIRE_LOGGER
 
             cloudapi_client = \
-                vcd_utils.get_cloudapi_client_from_vcd_client(sysadmin_client,
-                                                              logger.SERVER_LOGGER,  # noqa: E501
-                                                              logger_wire)
+                vcd_utils.get_cloudapi_client_from_vcd_client(
+                    client=sysadmin_client,
+                    logger_debug=logger.SERVER_LOGGER,
+                    logger_wire=logger_wire
+                )
             raise_error_if_def_not_supported(cloudapi_client)
 
             server_rde_version = server_utils.get_rde_version_in_use()
@@ -563,7 +584,7 @@ class Service(object, metaclass=Singleton):
         msg_update_callback.general(msg)
         try:
             sysadmin_client = vcd_utils.get_sys_admin_client(api_version=None)
-            if float(sysadmin_client.get_api_version()) < compute_policy_manager.GLOBAL_PVDC_COMPUTE_POLICY_MIN_VERSION:  # noqa: E501
+            if sysadmin_client.get_vcd_api_version() < compute_policy_manager.GLOBAL_PVDC_COMPUTE_POLICY_MIN_VERSION:  # noqa: E501
                 msg = "Placement policies for kubernetes runtimes not " \
                       " supported in api version " \
                       f"{sysadmin_client.get_api_version()}"  # noqa: E501
@@ -571,8 +592,10 @@ class Service(object, metaclass=Singleton):
                 msg_update_callback.info(msg)
                 return
             placement_policy_name_to_href = {}
-            cpm = compute_policy_manager.ComputePolicyManager(sysadmin_client,
-                                                              log_wire=self.config['service'].get('log_wire'))  # noqa: E501
+            cpm = compute_policy_manager.ComputePolicyManager(
+                sysadmin_client,
+                log_wire=self.config['service'].get('log_wire')
+            )
             for runtime_policy in shared_constants.CLUSTER_RUNTIME_PLACEMENT_POLICIES:  # noqa: E501
                 k8_runtime = shared_constants.RUNTIME_INTERNAL_NAME_TO_DISPLAY_NAME_MAP[runtime_policy]  # noqa: E501
                 try:
@@ -591,7 +614,9 @@ class Service(object, metaclass=Singleton):
             raise
 
     def _load_template_definition_from_catalog(
-            self, msg_update_callback=utils.NullPrinter()):
+            self,
+            msg_update_callback=utils.NullPrinter()
+    ):
         # NOTE: If `enable_tkg_plus` in the config file is set to false,
         # CSE server will skip loading the TKG+ template this will prevent
         # users from performing TKG+ related operations.
@@ -635,34 +660,59 @@ class Service(object, metaclass=Singleton):
                 logger_debug=logger.SERVER_LOGGER,
                 msg_update_callback=msg_update_callback)
 
-            if not k8_templates:
-                msg = "No valid K8 templates were found in catalog " \
-                      f"'{catalog_name}'. Unable to start CSE server."
-                msg_update_callback.error(msg)
-                logger.SERVER_LOGGER.error(msg)
-                sys.exit(1)
-
-            # Check that default k8s template exists in vCD at the correct
-            # revision
-            default_template_name = \
-                self.config['broker']['default_template_name']
-            default_template_revision = \
-                str(self.config['broker']['default_template_revision'])
-            found_default_template = False
-            for template in k8_templates:
-                if str(template[server_constants.LocalTemplateKey.REVISION]) == default_template_revision and \
-                        template[server_constants.LocalTemplateKey.NAME] == default_template_name:  # noqa: E501
-                    found_default_template = True
-
-            if not found_default_template:
-                msg = f"Default template {default_template_name} with " \
-                      f"revision {default_template_revision} not found." \
-                      " Unable to start CSE server."
-                msg_update_callback.error(msg)
-                logger.SERVER_LOGGER.error(msg)
-                sys.exit(1)
-
             self.config['broker']['templates'] = k8_templates
+        finally:
+            if client:
+                client.logout()
+
+    def _load_tkgm_template_definition_from_catalog(
+            self,
+            msg_update_callback=utils.NullPrinter()
+    ):
+        msg = "Loading TKGm template definition from catalog"
+        logger.SERVER_LOGGER.info(msg)
+        msg_update_callback.general_no_color(msg)
+
+        client = None
+        try:
+            log_filename = None
+            log_wire = utils.str_to_bool(
+                self.config['service'].get('log_wire')
+            )
+            if log_wire:
+                log_filename = logger.SERVER_DEBUG_WIRELOG_FILEPATH
+
+            # Since the config param has been read from file by
+            # get_validated_config method, we can safely use the
+            # default_api_version key, it will be set to the highest api
+            # version supported by VCD and CSE.
+            client = Client(
+                self.config['vcd']['host'],
+                api_version=self.config['service']['default_api_version'],
+                verify_ssl_certs=self.config['vcd']['verify'],
+                log_file=log_filename,
+                log_requests=log_wire,
+                log_headers=log_wire,
+                log_bodies=log_wire
+            )
+            credentials = BasicLoginCredentials(
+                self.config['vcd']['username'],
+                shared_constants.SYSTEM_ORG_NAME,
+                self.config['vcd']['password']
+            )
+            client.set_credentials(credentials)
+
+            org_name = self.config['broker']['org']
+            catalog_name = self.config['broker']['catalog']
+            tkgm_templates = ttm.read_all_tkgm_template(
+                client=client,
+                org_name=org_name,
+                catalog_name=catalog_name,
+                logger=logger.SERVER_LOGGER,
+                msg_update_callback=msg_update_callback
+            )
+
+            self.config['broker']['tkgm_templates'] = tkgm_templates
         finally:
             if client:
                 client.logout()

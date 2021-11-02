@@ -43,6 +43,8 @@ import container_service_extension.exception.exceptions as exceptions
 import container_service_extension.installer.templates.local_template_manager as ltm  # noqa: E501
 import container_service_extension.lib.telemetry.constants as telemetry_constants  # noqa: E501
 import container_service_extension.lib.telemetry.telemetry_handler as telemetry_handler  # noqa: E501
+from container_service_extension.logging.logger import NULL_LOGGER
+from container_service_extension.logging.logger import SERVER_CLOUDAPI_WIRE_LOGGER  # noqa: E501
 from container_service_extension.logging.logger import SERVER_LOGGER as LOGGER
 import container_service_extension.rde.acl_service as acl_service
 import container_service_extension.rde.backend.common.network_expose_helper as nw_exp_helper  # noqa: E501
@@ -137,7 +139,10 @@ class ClusterService(abstract_broker.AbstractBroker):
 
         telemetry_handler.record_user_action_details(
             cse_operation=telemetry_constants.CseOperation.V35_CLUSTER_LIST,
-            cse_params={telemetry_constants.PayloadKey.FILTER_KEYS: ','.join(filters.keys())}  # noqa: E501
+            cse_params={
+                telemetry_constants.PayloadKey.FILTER_KEYS: ','.join(filters.keys()),  # noqa: E501
+                telemetry_constants.PayloadKey.SOURCE_DESCRIPTION: thread_local_data.get_thread_local_data(ThreadLocalData.USER_AGENT)  # noqa: E501
+            }
         )
 
         ent_type: common_models.DefEntityType = server_utils.get_registered_def_entity_type()  # noqa: E501
@@ -152,8 +157,8 @@ class ClusterService(abstract_broker.AbstractBroker):
         """Get the cluster's kube config contents.
 
         :param str cluster_id:
-        :return: Dictionary containing cluster config.
-        :rtype: dict
+        :return: cluster config.
+        :rtype: str
         """
         curr_entity = self.entity_svc.get_entity(cluster_id)
         if curr_entity.state != def_constants.DEF_RESOLVED_STATE:
@@ -209,11 +214,6 @@ class ClusterService(abstract_broker.AbstractBroker):
         ovdc_name = cluster_spec.metadata.ovdc_name
         template_name = cluster_spec.spec.k8_distribution.template_name
         template_revision = cluster_spec.spec.k8_distribution.template_revision
-        if not (template_name or template_revision):
-            default_dist = server_utils.get_default_k8_distribution()
-            cluster_spec.spec.k8_distribution = default_dist
-            template_name = default_dist.template_name
-            template_revision = default_dist.template_revision
 
         # check that cluster name is syntactically valid
         if not _is_valid_cluster_name(cluster_name):
@@ -559,8 +559,16 @@ class ClusterService(abstract_broker.AbstractBroker):
             cse_params=telemetry_params)
 
         client_v35 = self.context.get_client(api_version=DEFAULT_API_VERSION)
-        acl_svc = acl_service.ClusterACLService(cluster_id,
-                                                client_v35)
+        config = server_utils.get_server_runtime_config()
+        logger_wire = NULL_LOGGER
+        if utils.str_to_bool(config['service']['log_wire']):
+            logger_wire = SERVER_CLOUDAPI_WIRE_LOGGER
+        acl_svc = acl_service.ClusterACLService(
+            cluster_id=cluster_id,
+            client=client_v35,
+            logger_debug=LOGGER,
+            logger_wire=logger_wire
+        )
         curr_entity: common_models.DefEntity = acl_svc.get_cluster_entity()
         user_id_names_dict = vcd_utils.create_org_user_id_to_name_dict(
             client=client_v35,
@@ -603,7 +611,16 @@ class ClusterService(abstract_broker.AbstractBroker):
 
         # Get previous def entity acl
         client_v35 = self.context.get_client(api_version=DEFAULT_API_VERSION)
-        acl_svc = acl_service.ClusterACLService(cluster_id, client_v35)
+        config = server_utils.get_server_runtime_config()
+        logger_wire = NULL_LOGGER
+        if utils.str_to_bool(config['service']['log_wire']):
+            logger_wire = SERVER_CLOUDAPI_WIRE_LOGGER
+        acl_svc = acl_service.ClusterACLService(
+            cluster_id=cluster_id,
+            client=client_v35,
+            logger_debug=LOGGER,
+            logger_wire=logger_wire
+        )
         prev_user_id_to_acl_entry_dict: \
             Dict[str, common_models.ClusterAclEntry] = \
             acl_svc.create_user_id_to_acl_entry_dict()
@@ -655,7 +672,7 @@ class ClusterService(abstract_broker.AbstractBroker):
             self._update_task(vcd_client.TaskStatus.ERROR,
                               message=msg,
                               error_message=str(err))
-            LOGGER.error(str(err), exc_info=True)
+            LOGGER.error(str(err))
             raise
 
         self.context.is_async = True
@@ -783,7 +800,8 @@ class ClusterService(abstract_broker.AbstractBroker):
                         control_plane_ip = expose_ip
                 except Exception as err:
                     LOGGER.error(
-                        f"Exposing cluster failed: {str(err)}", exc_info=True
+                        f"Exposing cluster failed: {str(err)}",
+                        exc_info=True
                     )
                     expose_ip = ''
 
@@ -1149,7 +1167,7 @@ class ClusterService(abstract_broker.AbstractBroker):
         Do's:
         - Update the defined entity in except blocks.
         - Can set the self.task status either to Running or Error
-        Don'ts:
+        Do not:
         - Do not set the self.task status to SUCCESS. This will prevent other
         parallel threads if any to update the status. vCD interprets SUCCESS
         as a terminal state.
@@ -1646,7 +1664,7 @@ class ClusterService(abstract_broker.AbstractBroker):
         Do's:
         - Update the defined entity in except blocks.
         - Set the self.task status either to Running or Error
-        Don'ts:
+        Do not:
         - Do not set the self.task status to SUCCESS. This will prevent other
         parallel threads if any to update the status. vCD interprets SUCCESS
         as a terminal state.
@@ -1963,7 +1981,8 @@ def _drain_nodes(sysadmin_client: vcd_client.Client, vapp_href, node_names,
     script = "#!/usr/bin/env bash\n"
     for node_name in node_names:
         script += f"kubectl drain {node_name} " \
-                  f"--ignore-daemonsets --timeout=60s --delete-local-data\n"
+                  f"--force --ignore-daemonsets " \
+                  "--timeout=60s --delete-local-data\n"
 
     try:
         vapp = vcd_vapp.VApp(sysadmin_client, href=vapp_href)
@@ -2098,12 +2117,11 @@ def _cluster_exists(client, cluster_name, org_name=None, ovdc_name=None):
 
 
 def _get_template(name=None, revision=None):
-    if (name is None and revision is not None) or (name is not None and revision is None):  # noqa: E501
-        raise ValueError("If template revision is specified, then template "
-                         "name must also be specified (and vice versa).")
+    if not name or not revision:
+        raise ValueError(
+            "Template name and revision both must be specified."
+        )
     server_config = server_utils.get_server_runtime_config()
-    name = name or server_config['broker']['default_template_name']
-    revision = revision or server_config['broker']['default_template_revision']
     for template in server_config['broker']['templates']:
         if (template[LocalTemplateKey.NAME], str(template[LocalTemplateKey.REVISION])) == (name, str(revision)):  # noqa: E501
             return template
@@ -2308,7 +2326,8 @@ def _init_cluster(sysadmin_client: vcd_client.Client, vapp, cluster_kind,
     except Exception as err:
         LOGGER.error(err, exc_info=True)
         raise exceptions.ClusterInitializationError(
-            f"Couldn't initialize cluster: {str(err)}")
+            f"Could not initialize cluster: {str(err)}"
+        )
 
 
 def _join_cluster(sysadmin_client: vcd_client.Client, vapp, target_nodes=None):
@@ -2355,12 +2374,14 @@ def _join_cluster(sysadmin_client: vcd_client.Client, vapp, target_nodes=None):
         for result in worker_results:
             if result[0] != 0:
                 raise exceptions.ClusterJoiningError(
-                    f"Couldn't join cluster:\n"
-                    f"{result[2].content.decode()}")
+                    "Could not join cluster:\n"
+                    f"{result[2].content.decode()}"
+                )
     except Exception as err:
         LOGGER.error(err, exc_info=True)
         raise exceptions.ClusterJoiningError(
-            f"Couldn't join cluster: {str(err)}")
+            f"Could not join cluster: {str(err)}"
+        )
 
 
 def _wait_for_tools_ready_callback(message, exception=None):

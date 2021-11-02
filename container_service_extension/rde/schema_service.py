@@ -39,12 +39,12 @@ def handle_schema_service_exception(func):
         except HTTPError as error:
             response_dict = json.loads(error.response.text)
             error_message = response_dict.get('message')
-            LOGGER.error(error_message)
+            LOGGER.error(error_message, exc_info=True)
             raise cse_exceptions.DefSchemaServiceError(
                 error_message=error_message,
                 minor_error_code=MinorErrorCode.DEFAULT_ERROR_CODE)
         except Exception as error:
-            LOGGER.error(error)
+            LOGGER.error(str(error))
             raise error
         return result
     return exception_handler_wrapper

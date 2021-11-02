@@ -22,7 +22,7 @@ import container_service_extension.logging.logger as logger
 # cse compute policy prefix
 CSE_COMPUTE_POLICY_PREFIX = 'cse----'
 _SYSTEM_DEFAULT_COMPUTE_POLICY = 'System Default'
-GLOBAL_PVDC_COMPUTE_POLICY_MIN_VERSION = 35.0
+GLOBAL_PVDC_COMPUTE_POLICY_MIN_VERSION = vcd_client.VcdApiVersionObj.VERSION_35.value  # noqa: E501
 PVDC_VM_POLICY_NAME = "PvdcVmPolicy"
 VDC_VM_POLICY_NAME = "VdcVmPolicy"
 
@@ -51,12 +51,14 @@ class ComputePolicyManager:
             if log_wire:
                 wire_logger = logger.SERVER_CLOUDAPI_WIRE_LOGGER
             self._cloudapi_client = \
-                vcd_utils.get_cloudapi_client_from_vcd_client(self._sysadmin_client, # noqa: E501
-                                                              logger.SERVER_LOGGER, # noqa: E501
-                                                              wire_logger)
+                vcd_utils.get_cloudapi_client_from_vcd_client(
+                    self._sysadmin_client,
+                    logger_debug=logger.SERVER_LOGGER,
+                    logger_wire=wire_logger
+                )
             self._cloudapi_version = \
                 cloudapi_constants.CloudApiVersion.VERSION_2_0_0
-            if float(self._cloudapi_client.get_api_version()) < \
+            if self._cloudapi_client.get_vcd_api_version() < \
                     GLOBAL_PVDC_COMPUTE_POLICY_MIN_VERSION:
                 self._cloudapi_version = \
                     cloudapi_constants.CloudApiVersion.VERSION_1_0_0
@@ -247,7 +249,10 @@ class ComputePolicyManager:
             resource_url_relative_path=resource_url_relative_path)
 
     def add_vdc_compute_policy(self, policy_name,
-                               description=None, pvdc_compute_policy_id=None):
+                               description=None,
+                               pvdc_compute_policy_id=None,
+                               cpu_count=None,
+                               memory_mb=None):
         """Add vdc compute policy with the given name and description.
 
         :param str policy_name: name of the vdc compute policy
@@ -273,6 +278,10 @@ class ComputePolicyManager:
             policy_info['pvdcComputePolicy'] = {
                 'id': pvdc_compute_policy_id
             }
+        if cpu_count:
+            policy_info['cpuCount'] = cpu_count
+        if memory_mb:
+            policy_info['memory'] = memory_mb
         created_policy = self._cloudapi_client.do_request(
             method=RequestMethod.POST,
             cloudapi_version=self._cloudapi_version,
@@ -534,7 +543,7 @@ class ComputePolicyManager:
 
     def _raise_error_if_global_pvdc_compute_policy_not_supported(self):
         """Raise exception if higher api version is needed."""
-        api_version = float(self._cloudapi_client.get_api_version())
+        api_version = self._cloudapi_client.get_vcd_api_version()
         if api_version < GLOBAL_PVDC_COMPUTE_POLICY_MIN_VERSION: # noqa: E501
             msg = f"Recieved api version {api_version}." \
                   f" But atleast {GLOBAL_PVDC_COMPUTE_POLICY_MIN_VERSION} is required" # noqa: E501

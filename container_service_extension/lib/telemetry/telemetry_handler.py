@@ -28,6 +28,7 @@ OPERATION_TO_PAYLOAD_GENERATOR = {
     CseOperation.SERVICE_RUN: payload_generator.get_payload_for_run_server,
 
     CseOperation.TEMPLATE_INSTALL: payload_generator.get_payload_for_install_template,  # noqa: E501
+    CseOperation.TEMPLATE_IMPORT: payload_generator.get_payload_for_import_template,  # noqa: E501
     CseOperation.TEMPLATE_LIST: payload_generator.get_payload_for_template_list,  # noqa: E501
 
     # vcd-cli CSE client commands
@@ -138,7 +139,7 @@ def record_user_action(cse_operation, status=OperationStatus.SUCCESS,
         else:
             LOGGER.debug('No telemetry settings found.')
     except Exception as err:
-        LOGGER.warning(f"Error in recording user action information:{str(err)}")  # noqa: E501
+        LOGGER.warning(f"Error in recording user action information:{str(err)}", exc_info=True)  # noqa: E501
 
 
 def record_user_action_details(cse_operation, cse_params,
@@ -159,7 +160,7 @@ def record_user_action_details(cse_operation, cse_params,
             payload = OPERATION_TO_PAYLOAD_GENERATOR[cse_operation](cse_params)
             _send_data_to_telemetry_server(payload, telemetry_settings)
     except Exception as err:
-        LOGGER.warning(f"Error in recording CSE operation details :{str(err)}")  # noqa: E501
+        LOGGER.warning(f"Error in recording CSE operation details :{str(err)}", exc_info=True)  # noqa: E501
 
 
 @run_async

@@ -4,6 +4,8 @@
 
 import abc
 
+from pyvcloud.vcd.client import Client
+
 from container_service_extension.lib.cloudapi.cloudapi_client import CloudApiClient  # noqa: E501
 from container_service_extension.rde.behaviors.behavior_model import BehaviorOperation  # noqa: E501
 
@@ -13,9 +15,11 @@ class AbstractValidator(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def validate(self, cloudapi_client: CloudApiClient, entity_id: str = None,
+    def validate(self, cloudapi_client: CloudApiClient,
+                 sysadmin_client: Client,
+                 entity_id: str = None,
                  entity: dict = None,
-                 operation: BehaviorOperation = None) -> bool:
+                 operation: BehaviorOperation = None, **kwargs) -> bool:
         """Validate the entity.
 
         This method performs

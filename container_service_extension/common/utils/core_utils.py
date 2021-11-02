@@ -15,7 +15,9 @@ import urllib
 
 import click
 import pkg_resources
+from pyvcloud.vcd.vcd_api_version import VCDApiVersion
 import requests
+import semantic_version
 
 from container_service_extension.logging.logger import NULL_LOGGER
 
@@ -66,13 +68,26 @@ class ConsoleMessagePrinter(NullPrinter):
         click.secho(msg, fg='red')
 
 
+def get_cse_version():
+    return pkg_resources.require('container-service-extension')[0].version
+
+
 def get_cse_info():
     return {
         'product': 'CSE',
         'description': 'Container Service Extension for VMware vCloud Director',  # noqa: E501
-        'version': pkg_resources.require('container-service-extension')[0].version,  # noqa: E501
+        'version': get_cse_version(),
         'python': platform.python_version()
     }
+
+
+def get_installed_cse_version() -> semantic_version.Version:
+    """."""
+    cse_version_raw = get_cse_info()['version']
+    # Cleanup version string. Strip dev version string segment.
+    # e.g. convert '2.6.0.0b2.dev5' to '2.6.0'
+    tokens = cse_version_raw.split('.')[:3]
+    return semantic_version.Version('.'.join(tokens))
 
 
 def prompt_text(text, color='black', hide_input=False):
@@ -388,4 +403,4 @@ def extract_id_from_href(href):
 # without converting the strings to float.
 # e.g. 5.20 will be smaller than 5.8 if compared as float, which is wrong
 def get_max_api_version(api_versions: List[str]) -> str:
-    return str(max(float(x) for x in api_versions))
+    return str(max(VCDApiVersion(x) for x in api_versions))

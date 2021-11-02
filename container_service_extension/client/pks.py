@@ -106,7 +106,7 @@ def list_clusters(ctx, vdc, org_name):
         CLIENT_LOGGER.debug(result)
     except Exception as e:
         stderr(e, ctx)
-        CLIENT_LOGGER.error(str(e))
+        CLIENT_LOGGER.error(str(e), exc_info=True)
 
 
 @cluster_group.command('delete', short_help='Delete an Ent-PKS cluster')
@@ -153,7 +153,7 @@ def cluster_delete(ctx, cluster_name, vdc, org):
         CLIENT_LOGGER.debug(result)
     except Exception as e:
         stderr(e, ctx)
-        CLIENT_LOGGER.error(str(e))
+        CLIENT_LOGGER.error(str(e), exc_info=True)
 
 
 @cluster_group.command('create', short_help='Create an Ent-PKS cluster')
@@ -208,7 +208,7 @@ def cluster_create(ctx, cluster_name, vdc, node_count, org_name):
         CLIENT_LOGGER.debug(result)
     except Exception as e:
         stderr(e, ctx)
-        CLIENT_LOGGER.error(str(e))
+        CLIENT_LOGGER.error(str(e), exc_info=True)
 
 
 @cluster_group.command('resize',
@@ -262,7 +262,7 @@ def cluster_resize(ctx, cluster_name, node_count, org_name, vdc_name):
         CLIENT_LOGGER.debug(result)
     except Exception as e:
         stderr(e, ctx)
-        CLIENT_LOGGER.error(str(e))
+        CLIENT_LOGGER.error(str(e), exc_info=True)
 
 
 @cluster_group.command('config', short_help='Display Ent-PKS cluster configuration')  # noqa: E501
@@ -306,7 +306,7 @@ def cluster_config(ctx, cluster_name, vdc, org):
         CLIENT_LOGGER.debug(cluster_config)
     except Exception as e:
         stderr(e, ctx)
-        CLIENT_LOGGER.error(str(e))
+        CLIENT_LOGGER.error(str(e), exc_info=True)
 
 
 @cluster_group.command('info',
@@ -343,7 +343,7 @@ def cluster_info(ctx, cluster_name, org, vdc):
         CLIENT_LOGGER.debug(cluster_info)
     except Exception as e:
         stderr(e, ctx)
-        CLIENT_LOGGER.error(str(e))
+        CLIENT_LOGGER.error(str(e), exc_info=True)
 
 
 @pks_group.group('ovdc',
@@ -420,7 +420,7 @@ def list_ovdcs(ctx, list_pks_plans, should_print_all=False):
             logger=CLIENT_LOGGER)
     except Exception as e:
         stderr(e, ctx)
-        CLIENT_LOGGER.error(str(e))
+        CLIENT_LOGGER.error(str(e), exc_info=True)
 
 
 @ovdc_group.command('enable',
@@ -474,7 +474,7 @@ def ovdc_enable(ctx, ovdc_name, pks_plan,
             CLIENT_LOGGER.error(msg)
     except Exception as e:
         stderr(e, ctx)
-        CLIENT_LOGGER.error(str(e))
+        CLIENT_LOGGER.error(str(e), exc_info=True)
 
 
 @ovdc_group.command('disable',
@@ -511,7 +511,7 @@ def ovdc_disable(ctx, ovdc_name, org_name):
             CLIENT_LOGGER.error(msg)
     except Exception as e:
         stderr(e, ctx)
-        CLIENT_LOGGER.error(str(e))
+        CLIENT_LOGGER.error(str(e), exc_info=True)
 
 
 @ovdc_group.command('info',
@@ -546,4 +546,4 @@ def ovdc_info(ctx, ovdc_name, org_name):
             CLIENT_LOGGER.error(msg)
     except Exception as e:
         stderr(e, ctx)
-        CLIENT_LOGGER.error(str(e))
+        CLIENT_LOGGER.error(str(e), exc_info=True)

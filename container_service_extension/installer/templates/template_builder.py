@@ -1,6 +1,8 @@
 # container-service-extension
 # Copyright (c) 2019 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
+import pathlib
+import time
 
 from pyvcloud.vcd.client import FenceMode
 from pyvcloud.vcd.client import NetworkAdapterType
@@ -12,12 +14,7 @@ from container_service_extension.common.constants.server_constants import Templa
 from container_service_extension.common.utils.core_utils import download_file
 from container_service_extension.common.utils.core_utils import NullPrinter
 from container_service_extension.common.utils.core_utils import read_data_file
-from container_service_extension.common.utils.pyvcloud_utils import catalog_item_exists  # noqa: E501
-from container_service_extension.common.utils.pyvcloud_utils import get_org
-from container_service_extension.common.utils.pyvcloud_utils import get_vdc
-from container_service_extension.common.utils.pyvcloud_utils import upload_ova_to_catalog  # noqa: E501
-from container_service_extension.common.utils.pyvcloud_utils import \
-    wait_for_catalog_item_to_resolve
+import container_service_extension.common.utils.pyvcloud_utils as vcd_utils
 from container_service_extension.common.utils.vsphere_utils import get_vsphere
 from container_service_extension.common.utils.vsphere_utils import vgr_callback
 from container_service_extension.common.utils.vsphere_utils import wait_until_tools_ready  # noqa: E501
@@ -111,15 +108,16 @@ class TemplateBuilder:
             self.org_name = org.get_name()
         else:
             self.org_name = build_params.get(TemplateBuildKey.ORG_NAME)  # noqa: E501
-            self.org = get_org(self.client, org_name=self.org_name)
+            self.org = vcd_utils.get_org(self.client, org_name=self.org_name)
         if vdc:
             self.vdc = vdc
             self.vdc.get_resource()  # to make sure vdc.resource is populated
             self.vdc_name = vdc.name
         else:
             self.vdc_name = build_params.get(TemplateBuildKey.VDC_NAME)  # noqa: E501
-            self.vdc = get_vdc(self.client, vdc_name=self.vdc_name,
-                               org=self.org)
+            self.vdc = vcd_utils.get_vdc(
+                self.client, vdc_name=self.vdc_name, org=self.org
+            )
         self.catalog_name = build_params.get(TemplateBuildKey.CATALOG_NAME)  # noqa: E501
         self.catalog_item_name = build_params.get(TemplateBuildKey.CATALOG_ITEM_NAME)  # noqa: E501
         self.catalog_item_description = \
@@ -166,11 +164,14 @@ class TemplateBuilder:
         :param str item_name: name of the item to delete.
         """
         try:
-            self.org.delete_catalog_item(name=self.catalog_name,
-                                         item_name=item_name)
-            wait_for_catalog_item_to_resolve(
+            self.org.delete_catalog_item(
+                name=self.catalog_name,
+                item_name=item_name
+            )
+            vcd_utils.wait_for_catalog_item_to_resolve(
                 client=self.client, catalog_name=self.catalog_name,
-                catalog_item_name=item_name, org=self.org)
+                catalog_item_name=item_name, org=self.org
+            )
             self.org.reload()
 
             msg = f"Deleted '{item_name}' from catalog '{self.catalog_name}'"
@@ -198,8 +199,11 @@ class TemplateBuilder:
 
     def _upload_source_ova(self):
         """Upload the base OS ova to catalog."""
-        if catalog_item_exists(org=self.org, catalog_name=self.catalog_name,
-                               catalog_item_name=self.ova_name):
+        if vcd_utils.catalog_item_exists(
+                org=self.org,
+                catalog_name=self.catalog_name,
+                catalog_item_name=self.ova_name
+        ):
             msg = f"Found ova file '{self.ova_name}' in catalog " \
                   f"'{self.catalog_name}'"
             self.msg_update_callback.general(msg)
@@ -209,9 +213,16 @@ class TemplateBuilder:
             download_file(url=self.ova_href, filepath=ova_filepath,
                           sha256=self.ova_sha256, logger=self.logger,
                           msg_update_callback=self.msg_update_callback)
-            upload_ova_to_catalog(self.client, self.catalog_name, ova_filepath,
-                                  org=self.org, logger=self.logger,
-                                  msg_update_callback=self.msg_update_callback)
+            catalog_item_name = pathlib.Path(ova_filepath).name
+            vcd_utils.upload_ova_to_catalog(
+                client=self.client,
+                source_filepath=ova_filepath,
+                catalog_name=self.catalog_name,
+                catalog_item_name=catalog_item_name,
+                org=self.org,
+                logger=self.logger,
+                msg_update_callback=self.msg_update_callback
+            )
 
     def _get_init_script(self):
         """Read the initialization script from disk to create temp vApp.
@@ -293,21 +304,30 @@ class TemplateBuilder:
             self.remote_cookbook_version,
             self.template_name,
             self.template_revision,
-            TemplateScriptFile.CUST)
+            TemplateScriptFile.CUST
+        )
         cust_script = read_data_file(
-            cust_script_filepath, logger=self.logger,
-            msg_update_callback=self.msg_update_callback)
+            cust_script_filepath,
+            logger=self.logger,
+            msg_update_callback=self.msg_update_callback
+        )
 
-        vs = get_vsphere(self.sys_admin_client, vapp, vm_name,
-                         logger=self.logger)
+        vs = get_vsphere(
+            self.sys_admin_client,
+            vapp,
+            vm_name,
+            logger=self.logger
+        )
         callback = vgr_callback(
             prepend_msg='Waiting for guest tools, status: "',
             logger=self.logger,
-            msg_update_callback=self.msg_update_callback)
+            msg_update_callback=self.msg_update_callback
+        )
         wait_until_tools_ready(vapp, vm_name, vs, callback=callback)
         password_auto = vapp.get_admin_password(vm_name)
 
         try:
+            time.sleep(75)  # temporary hack for authentication
             result = vs.execute_script_in_guest(
                 vs.get_vm_by_moid(vapp.get_vm_moid(vm_name)),
                 'root',
@@ -451,9 +471,11 @@ class TemplateBuilder:
             raise Exception('Invalid params for building template.')
 
         if not force_recreate:
-            if catalog_item_exists(org=self.org,
-                                   catalog_name=self.catalog_name,
-                                   catalog_item_name=self.catalog_item_name):
+            if vcd_utils.catalog_item_exists(
+                    org=self.org,
+                    catalog_name=self.catalog_name,
+                    catalog_item_name=self.catalog_item_name
+            ):
                 self._tag_with_cse_placement_policy()
                 msg = f"Found template '{self.template_name}' at revision " \
                       f"{self.template_revision} in catalog " \

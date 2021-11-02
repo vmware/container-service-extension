@@ -73,7 +73,7 @@ class MQTTExtensionManager:
                  debug_logger=logger.SERVER_LOGGER, log_wire=True):
         # Ensure correct credentials and api version
         vcd_utils.raise_error_if_user_not_from_system_org(sysadmin_client)
-        client_api_version = float(sysadmin_client.get_api_version())
+        client_api_version = sysadmin_client.get_vcd_api_version()
         if client_api_version < constants.MQTT_MIN_API_VERSION:
             raise ValueError(f'API version {client_api_version} '
                              f'is less than required version '
@@ -85,9 +85,11 @@ class MQTTExtensionManager:
             wire_logger = logger.SERVER_CLOUDAPI_WIRE_LOGGER
         self._wire_logger = wire_logger
         self._debug_logger = debug_logger
-        self._cloudapi_client = \
-            vcd_utils.get_cloudapi_client_from_vcd_client(
-                self._sysadmin_client, self._debug_logger, self._wire_logger)
+        self._cloudapi_client = vcd_utils.get_cloudapi_client_from_vcd_client(
+            client=self._sysadmin_client,
+            logger_debug=self._debug_logger,
+            logger_wire=self._wire_logger
+        )
 
     def setup_extension(self, ext_name, ext_version, ext_vendor,
                         priority=constants.MQTT_EXTENSION_PRIORITY,
@@ -319,6 +321,22 @@ class MQTTExtensionManager:
             return True
         except requests.exceptions.HTTPError:
             last_response = self._cloudapi_client.get_last_response()
+            self._debug_logger.debug(last_response.text, exc_info=True)
+            return False
+
+    def is_extension_enabled(self, ext_urn_id):
+        """Check if the MQTT Extension is enabled.
+
+        :param str ext_urn_id: the extension urn id
+
+        :return: boolean indicating if extension is enabled
+        :rtype: bool
+        """
+        try:
+            mqtt_ext_obj = self.get_extension_response_body_by_urn(ext_urn_id)
+            return mqtt_ext_obj['enabled']
+        except requests.exceptions.HTTPError:
+            last_response = self._cloudapi_client.get_last_response()
             self._debug_logger.debug(last_response.text)
             return False
 
@@ -373,7 +391,7 @@ class MQTTExtensionManager:
         :param str ext_vendor: the extension vendor
 
         :return: list of token ids (str)
-        :rtype: list of strs
+        :rtype: list of strings
         :raises: HTTPError if unable to make the GET request
         """
         token_ids = []

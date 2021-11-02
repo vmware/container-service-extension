@@ -3,8 +3,9 @@
 # container-service-extension
 # Copyright (c) 2019 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
-
+from copy import deepcopy
 import os
+from pathlib import Path
 import sys
 import time
 
@@ -18,9 +19,8 @@ import requests
 from vcd_cli.utils import stdout
 import yaml
 
-from container_service_extension.common.constants.server_constants import CONFIG_DECRYPTION_ERROR_MSG, LegacyLocalTemplateKey  # noqa: E501
-from container_service_extension.common.constants.server_constants import LocalTemplateKey  # noqa: E501
-from container_service_extension.common.constants.shared_constants import SYSTEM_ORG_NAME  # noqa: E501
+import container_service_extension.common.constants.server_constants as server_constants  # noqa: E501
+import container_service_extension.common.constants.shared_constants as shared_constants  # noqa: E501
 import container_service_extension.common.utils.core_utils as utils
 import container_service_extension.common.utils.pyvcloud_utils as vcd_utils
 import container_service_extension.common.utils.server_utils as server_utils
@@ -30,6 +30,7 @@ from container_service_extension.installer.cse_service_role_mgr import create_cs
 from container_service_extension.installer.sample_generator import generate_sample_config  # noqa: E501
 import container_service_extension.installer.templates.local_template_manager as ltm  # noqa: E501
 from container_service_extension.installer.templates.remote_template_manager import RemoteTemplateManager  # noqa: E501
+import container_service_extension.installer.templates.tkgm_template_manager as ttm  # noqa: E501
 from container_service_extension.lib.telemetry.constants import CseOperation
 from container_service_extension.lib.telemetry.constants import OperationStatus
 from container_service_extension.lib.telemetry.constants import PayloadKey
@@ -55,10 +56,11 @@ import container_service_extension.server.service as cse_service
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 
 # Template display options
-DISPLAY_ALL = "all"
+DISPLAY_NATIVE = "native"
 DISPLAY_DIFF = "diff"
 DISPLAY_LOCAL = "local"
 DISPLAY_REMOTE = "remote"
+DISPLAY_TKGM = "tkg"
 
 # Prompt messages
 PASSWORD_FOR_CONFIG_ENCRYPTION_MSG = "Password for config file encryption"
@@ -181,13 +183,13 @@ def cli(ctx):
             not specified the decrypted content will be printed onto console.
             User will be prompted for the password required for decryption.
 \b
-        cse template install mytemplate 1 -c myconfig.yaml
-            Installs mytemplate at revision 1 specified in the remote template
-            repository URL specified in myconfig.yaml
+        cse template install my_template 1 -c my_config.yaml
+            Installs my_template at revision 1 specified in the remote template
+            repository URL specified in my_config.yaml
 \b
-        cse template install * * -c myconfig.yaml
+        cse template install * * -c my_config.yaml
             Installs all templates specified in the remote template
-            repository URL specified in myconfig.yaml
+            repository URL specified in my_config.yaml
 \b
     Environment Variables
         CSE_CONFIG
@@ -310,7 +312,7 @@ def create_service_role(ctx, vcd_host, skip_verify_ssl_certs):
         client = vcd_client.Client(vcd_host, verify_ssl_certs=not skip_verify_ssl_certs)  # noqa: E501
         credentials = vcd_client.BasicLoginCredentials(
             admin_username,
-            SYSTEM_ORG_NAME,
+            shared_constants.SYSTEM_ORG_NAME,
             admin_password)
         client.set_credentials(credentials)
 
@@ -331,25 +333,25 @@ def create_service_role(ctx, vcd_host, skip_verify_ssl_certs):
             console_message_printer.error(msg)
             SERVER_CLI_LOGGER.error(msg)
             console_message_printer.error(str(err))
-            SERVER_CLI_LOGGER.error(str(err))
+            SERVER_CLI_LOGGER.error(str(err), exc_info=True)
         except BadRequestException as err:
             msg = "CSE Service Role already Exists"
             console_message_printer.error(msg)
             console_message_printer.error(str(err))
             SERVER_CLI_LOGGER.error(msg)
-            SERVER_CLI_LOGGER.error(str(err))
+            SERVER_CLI_LOGGER.error(str(err), exc_info=True)
     except requests.exceptions.ConnectionError as err:
         console_message_printer.error(str(err))
-        SERVER_CLI_LOGGER.error(str(err))
+        SERVER_CLI_LOGGER.error(str(err), exc_info=True)
     except VcdException as err:
         msg = f"Incorrect SystemOrg Username: {admin_username} and/or Password"
         console_message_printer.error(msg)
         console_message_printer.error(str(err))
         SERVER_CLI_LOGGER.error(msg)
-        SERVER_CLI_LOGGER.error(str(err))
+        SERVER_CLI_LOGGER.error(str(err), exc_info=True)
     except Exception as err:
         console_message_printer.error(str(err))
-        SERVER_CLI_LOGGER.error(str(err))
+        SERVER_CLI_LOGGER.error(str(err), exc_info=True)
     finally:
         if client is not None:
             client.logout()
@@ -393,7 +395,7 @@ def sample(ctx, output_file_name, pks_config, legacy_mode):
             legacy_mode=legacy_mode)
     except Exception as err:
         console_message_printer.error(str(err))
-        SERVER_CLI_LOGGER.error(str(err))
+        SERVER_CLI_LOGGER.error(str(err), exc_info=True)
         sys.exit(1)
 
     console_message_printer.general_no_color(sample_config)
@@ -485,7 +487,7 @@ def check(ctx, config_file_path, pks_config_file_path, skip_config_decryption,
                 status=OperationStatus.FAILED,
                 telemetry_settings=config_dict['service']['telemetry'])
         console_message_printer.error(str(err))
-        SERVER_CLI_LOGGER.error(str(err))
+        SERVER_CLI_LOGGER.error(str(err), exc_info=True)
         sys.exit(1)
     finally:
         # block the process to let telemetry handler to finish posting data to
@@ -525,7 +527,7 @@ def decrypt(ctx, input_file, output_file):
             raise Exception("Decryption failed: Invalid password")
     except Exception as err:
         console_message_printer.error(str(err))
-        SERVER_CLI_LOGGER.error(str(err))
+        SERVER_CLI_LOGGER.error(str(err), exc_info=True)
         sys.exit(1)
 
 
@@ -561,7 +563,7 @@ def encrypt(ctx, input_file, output_file):
             raise Exception("Encryption failed: Invalid password")
     except Exception as err:
         console_message_printer.error(str(err))
-        SERVER_CLI_LOGGER.error(str(err))
+        SERVER_CLI_LOGGER.error(str(err), exc_info=True)
         sys.exit(1)
 
 
@@ -679,7 +681,7 @@ def install(ctx, config_file_path, pks_config_file_path,
             skip_config_decryption=skip_config_decryption,
             msg_update_callback=console_message_printer)
     except Exception as err:
-        SERVER_CLI_LOGGER.error(str(err))
+        SERVER_CLI_LOGGER.error(str(err), exc_info=True)
         console_message_printer.error(str(err))
         sys.exit(1)
     finally:
@@ -736,9 +738,9 @@ def pks_configure(ctx, pks_config_file_path, skip_config_decryption):
         except requests.exceptions.ConnectionError as err:
             raise Exception(f"Cannot connect to {err.request.url}.")
         except cryptography.fernet.InvalidToken:
-            raise Exception(CONFIG_DECRYPTION_ERROR_MSG)
+            raise Exception(server_constants.CONFIG_DECRYPTION_ERROR_MSG)
     except Exception as err:
-        SERVER_CLI_LOGGER.error(str(err))
+        SERVER_CLI_LOGGER.error(str(err), exc_info=True)
         console_message_printer.error(str(err))
         sys.exit(1)
 
@@ -790,6 +792,8 @@ def run(ctx, config_file_path, pks_config_file_path, skip_check,
     SERVER_CLI_LOGGER.debug(f"Executing command: {ctx.command_path}")
     console_message_printer = utils.ConsoleMessagePrinter()
     utils.check_python_version(console_message_printer)
+    cse_version = utils.get_cse_version()
+    console_message_printer.general_no_color(f"CSE version: {cse_version}")
 
     password = None
     if not skip_config_decryption:
@@ -817,7 +821,7 @@ def run(ctx, config_file_path, pks_config_file_path, skip_check,
         service.run(msg_update_callback=console_message_printer)
         cse_run_complete = True
     except Exception as err:
-        SERVER_CLI_LOGGER.error(str(err))
+        SERVER_CLI_LOGGER.error(str(err), exc_info=True)
         console_message_printer.error(str(err))
         console_message_printer.error("CSE Server failure. Please check the logs.")  # noqa: E501
         sys.exit(1)
@@ -984,8 +988,9 @@ def upgrade(ctx, config_file_path, skip_config_decryption,
     '--display',
     'display_option',
     type=click.Choice(
-        [DISPLAY_ALL, DISPLAY_DIFF, DISPLAY_LOCAL, DISPLAY_REMOTE]),
-    default=DISPLAY_ALL,
+        [DISPLAY_NATIVE, DISPLAY_DIFF, DISPLAY_LOCAL, DISPLAY_REMOTE, DISPLAY_TKGM]  # noqa: E501
+    ),
+    default=DISPLAY_NATIVE,
     help='Choose templates to display.')
 def list_template(ctx, config_file_path, skip_config_decryption,
                   display_option):
@@ -1006,36 +1011,86 @@ def list_template(ctx, config_file_path, skip_config_decryption,
         config_dict = _get_unvalidated_config(
             config_file_path=config_file_path,
             skip_config_decryption=skip_config_decryption,
-            msg_update_callback=console_message_printer)
+            msg_update_callback=console_message_printer
+        )
 
         # Record telemetry details
         cse_params = {
             PayloadKey.DISPLAY_OPTION: display_option,
             PayloadKey.WAS_DECRYPTION_SKIPPED: bool(skip_config_decryption)
         }
-        record_user_action_details(cse_operation=CseOperation.TEMPLATE_LIST,
-                                   cse_params=cse_params,
-                                   telemetry_settings=config_dict['service']['telemetry'])  # noqa: E501
+        record_user_action_details(
+            cse_operation=CseOperation.TEMPLATE_LIST,
+            cse_params=cse_params,
+            telemetry_settings=config_dict['service']['telemetry']
+        )
 
-        local_templates = []
-        if display_option in (DISPLAY_ALL, DISPLAY_DIFF, DISPLAY_LOCAL):
+        log_wire_file = None
+        log_wire = utils.str_to_bool(config_dict.get('service', {}).get('log_wire', False))  # noqa: E501
+        if log_wire:
+            log_wire_file = SERVER_DEBUG_WIRELOG_FILEPATH
+
+        legacy_mode = None
+        if 'service' in config_dict:
+            if 'legacy_mode' in config_dict.get('service'):
+                legacy_mode = config_dict['service']['legacy_mode']
+        if legacy_mode is None:
+            msg = "Unable to find `legacy_mode` under " \
+                  "`service` section in config file."
+            raise Exception(msg)
+
+        tkgm_templates = []
+        if display_option == DISPLAY_TKGM and not legacy_mode:
             client = None
             try:
-                log_wire_file = None
-                log_wire = utils.str_to_bool(config_dict['service'].get('log_wire'))  # noqa: E501
-                if log_wire:
-                    log_wire_file = SERVER_DEBUG_WIRELOG_FILEPATH
-
                 # Note: This will get us a client with highest supported
                 # VCD api version.
-                client, _ = _get_clients_from_config(config_dict,
-                                                     log_wire_file=log_wire_file,  # noqa: E501
-                                                     log_wire=log_wire)
+                client, _ = _get_clients_from_config(
+                    config_dict,
+                    log_wire_file=log_wire_file,
+                    log_wire=log_wire
+                )
+
+                org_name = config_dict['broker']['org']
+                catalog_name = config_dict['broker']['catalog']
+
+                tkgm_template_definitions = ttm.read_all_tkgm_template(
+                    client=client,
+                    org_name=org_name,
+                    catalog_name=catalog_name,
+                    logger=SERVER_CLI_LOGGER
+                )
+
+                for definition in tkgm_template_definitions:
+                    tkgm_template = {
+                        'name': definition[server_constants.TKGmTemplateKey.NAME],  # noqa: E501
+                        'revision': int(definition[server_constants.TKGmTemplateKey.REVISION]),  # noqa: E501
+                        'local': 'Yes',
+                        'remote': 'No',
+                        'cpu': 'n/a',
+                        'memory': 'n/a',
+                        'description': ''
+                    }
+                    tkgm_templates.append(tkgm_template)
+            finally:
+                if client:
+                    client.logout()
+
+        local_templates = []
+        if display_option in (DISPLAY_NATIVE, DISPLAY_DIFF, DISPLAY_LOCAL):
+            client = None
+            try:
+                # Note: This will get us a client with highest supported
+                # VCD api version.
+                client, _ = _get_clients_from_config(
+                    config_dict,
+                    log_wire_file=log_wire_file,
+                    log_wire=log_wire
+                )
 
                 org_name = config_dict['broker']['org']
                 catalog_name = config_dict['broker']['catalog']
                 is_tkg_plus_enabled = server_utils.is_tkg_plus_enabled(config_dict)  # noqa: E501
-                legacy_mode = config_dict['service']['legacy_mode']
 
                 local_template_definitions = \
                     ltm.get_valid_k8s_local_template_definition(
@@ -1045,31 +1100,20 @@ def list_template(ctx, config_file_path, skip_config_decryption,
                         is_tkg_plus_enabled=is_tkg_plus_enabled,
                         org_name=org_name,
                         logger_debug=SERVER_CLI_LOGGER)
-                default_template_name = \
-                    config_dict['broker']['default_template_name']
-                default_template_revision = \
-                    str(config_dict['broker']['default_template_revision'])
 
                 for definition in local_template_definitions:
                     local_template = {
-                        'name': definition[LocalTemplateKey.NAME],
-                        'revision': int(definition[LocalTemplateKey.REVISION]),
+                        'name': definition[server_constants.LocalTemplateKey.NAME],  # noqa: E501
+                        'revision': int(definition[server_constants.LocalTemplateKey.REVISION]),  # noqa: E501
                         'local': 'Yes',
                         'remote': 'No',
-                        'cpu': definition[LocalTemplateKey.CPU],
-                        'memory': definition[LocalTemplateKey.MEMORY],
-                        'description': definition[LocalTemplateKey.DESCRIPTION]
+                        'cpu': definition[server_constants.LocalTemplateKey.CPU],  # noqa: E501
+                        'memory': definition[server_constants.LocalTemplateKey.MEMORY],  # noqa: E501
+                        'description': definition[server_constants.LocalTemplateKey.DESCRIPTION]  # noqa: E501
                     }
                     if legacy_mode:
-                        local_template['compute_policy'] = \
-                            definition[LegacyLocalTemplateKey.COMPUTE_POLICY]
-                    # Any metadata read from vCD is sting due to how pyvcloud
-                    # is coded, so we need to cast it back to int.
-                    if (definition[LocalTemplateKey.NAME], str(definition[LocalTemplateKey.REVISION])) == (default_template_name, default_template_revision):  # noqa: E501
-                        local_template['default'] = 'Yes'
-                    else:
-                        local_template['default'] = 'No'
-                    local_template['deprecated'] = 'Yes' if utils.str_to_bool(definition[LocalTemplateKey.DEPRECATED]) else 'No'  # noqa: E501
+                        local_template['compute_policy'] = definition[server_constants.LegacyLocalTemplateKey.COMPUTE_POLICY]  # noqa: E501
+                    local_template['deprecated'] = 'Yes' if utils.str_to_bool(definition[server_constants.LocalTemplateKey.DEPRECATED]) else 'No'  # noqa: E501
 
                     local_templates.append(local_template)
             finally:
@@ -1077,7 +1121,8 @@ def list_template(ctx, config_file_path, skip_config_decryption,
                     client.logout()
 
         remote_templates = []
-        if display_option in (DISPLAY_ALL, DISPLAY_DIFF, DISPLAY_REMOTE):
+        remote_template_keys = None
+        if display_option in (DISPLAY_NATIVE, DISPLAY_DIFF, DISPLAY_REMOTE):
             rtm = RemoteTemplateManager(
                 remote_template_cookbook_url=config_dict['broker']['remote_template_cookbook_url'],  # noqa: E501
                 legacy_mode=config_dict['service']['legacy_mode'],
@@ -1100,14 +1145,12 @@ def list_template(ctx, config_file_path, skip_config_decryption,
                 if legacy_mode:
                     remote_template['compute_policy'] = \
                         definition[remote_template_keys.COMPUTE_POLICY]
-                if display_option is DISPLAY_ALL:
-                    remote_template['default'] = 'No'
                 remote_template['deprecated'] = 'Yes' if utils.str_to_bool(definition[remote_template_keys.DEPRECATED]) else 'No'  # noqa: E501
 
                 remote_templates.append(remote_template)
 
         result = []
-        if display_option is DISPLAY_ALL:
+        if display_option is DISPLAY_NATIVE:
             result = remote_templates
             # If local copy of template exists, update the remote definition
             # with relevant values, else add the local definition to the result
@@ -1115,12 +1158,11 @@ def list_template(ctx, config_file_path, skip_config_decryption,
             for local_template in local_templates:
                 found = False
                 for remote_template in remote_templates:
-                    if (local_template[LocalTemplateKey.NAME], local_template[LocalTemplateKey.REVISION]) == (remote_template[remote_template_keys.NAME], remote_template[remote_template_keys.REVISION]):  # noqa: E501
+                    if (local_template[server_constants.LocalTemplateKey.NAME], local_template[server_constants.LocalTemplateKey.REVISION]) == (remote_template[remote_template_keys.NAME], remote_template[remote_template_keys.REVISION]):  # noqa: E501
                         if legacy_mode:
                             remote_template['compute_policy'] = \
                                 local_template['compute_policy']
                         remote_template['local'] = local_template['local']
-                        remote_template['default'] = local_template['default']
                         found = True
                         break
                 if not found:
@@ -1129,7 +1171,7 @@ def list_template(ctx, config_file_path, skip_config_decryption,
             for remote_template in remote_templates:
                 found = False
                 for local_template in local_templates:
-                    if (local_template[LocalTemplateKey.NAME], local_template[LocalTemplateKey.REVISION]) == (remote_template[remote_template_keys.NAME], remote_template[remote_template_keys.REVISION]):  # noqa: E501
+                    if (local_template[server_constants.LocalTemplateKey.NAME], local_template[server_constants.LocalTemplateKey.REVISION]) == (remote_template[remote_template_keys.NAME], remote_template[remote_template_keys.REVISION]):  # noqa: E501
                         found = True
                         break
                 if not found:
@@ -1138,12 +1180,16 @@ def list_template(ctx, config_file_path, skip_config_decryption,
             result = local_templates
         elif display_option in DISPLAY_REMOTE:
             result = remote_templates
+        elif display_option in DISPLAY_TKGM:
+            result = tkgm_templates
 
         result = sorted(result, key=lambda t: (t['name'], t['revision']), reverse=True)  # noqa: E501
         stdout(result, ctx, sort_headers=False)
         SERVER_CLI_LOGGER.debug(result)
-        record_user_action(cse_operation=CseOperation.TEMPLATE_LIST,
-                           telemetry_settings=config_dict['service']['telemetry'])  # noqa: E501
+        record_user_action(
+            cse_operation=CseOperation.TEMPLATE_LIST,
+            telemetry_settings=config_dict['service']['telemetry']
+        )
     except Exception as err:
         SERVER_CLI_LOGGER.error(str(err))
         console_message_printer.error(str(err))
@@ -1275,6 +1321,210 @@ def install_cse_template(ctx, template_name, template_revision,
         time.sleep(3)
 
 
+@template.command(
+    'import',
+    short_help="Import TKG template from local disk into CSE catalog"
+)
+@click.pass_context
+@click.option(
+    '-c',
+    '--config',
+    'config_file_path',
+    default='config.yaml',
+    metavar='CONFIG_FILE_PATH',
+    type=click.Path(exists=True),
+    envvar='CSE_CONFIG',
+    required=True,
+    help="(Required) Filepath to CSE config file"
+)
+@click.option(
+    '-s',
+    '--skip-config-decryption',
+    is_flag=True,
+    help='Skip decryption of CSE config file'
+)
+@click.option(
+    '-F',
+    '--file',
+    'ova_file_path',
+    metavar='OVA_FILE_PATH',
+    type=click.Path(exists=True),
+    required=True,
+    help="(Required) Filepath to the TKG OVA"
+)
+@click.option(
+    '-f',
+    '--force',
+    'force_import',
+    is_flag=True,
+    help='Force import TKGm templates on vCD even if they already exist'
+)
+def import_tkgm_template(
+        ctx,
+        config_file_path,
+        skip_config_decryption,
+        ova_file_path,
+        force_import):
+    """Upload TKGm OVA to CSE catalog."""
+    SERVER_CLI_LOGGER.debug(f"Executing command: {ctx.command_path}")
+    console_message_printer = utils.ConsoleMessagePrinter()
+    utils.check_python_version(console_message_printer)
+
+    password = None
+    if not skip_config_decryption:
+        password = os.getenv('CSE_CONFIG_PASSWORD') or utils.prompt_text(
+            PASSWORD_FOR_CONFIG_DECRYPTION_MSG,
+            color='green', hide_input=True
+        )
+
+    client = None
+    try:
+        config = get_validated_config(
+            config_file_name=config_file_path,
+            skip_config_decryption=skip_config_decryption,
+            decryption_password=password,
+            log_wire_file=INSTALL_WIRELOG_FILEPATH,
+            logger_debug=INSTALL_LOGGER,
+            msg_update_callback=console_message_printer
+        )
+
+        p = Path(ova_file_path)
+        if not p.is_file():
+            raise Exception("Provided file location is not a file.")
+        ova_file_name = p.name
+        os_version_from_ova_name, kubernetes_version_from_ova_name = \
+            ttm.parse_tkgm_template_name(ova_file_name)
+
+        if not os_version_from_ova_name or not kubernetes_version_from_ova_name:  # noqa: E501
+            msg = "Provided OVA doesn't seem to be a standard TKGm OVA. " \
+                  "Do you still want to continue? [y/n]"
+            answer = utils.prompt_text(msg, color='green')
+            if answer.lower() not in ["yes", "y"]:
+                console_message_printer.general(
+                    "Aborting import of TKGm OVA."
+                )
+                return
+
+        log_filename = None
+        log_wire = utils.str_to_bool(config['service'].get('log_wire'))
+        if log_wire:
+            log_filename = INSTALL_WIRELOG_FILEPATH
+        client, _ = _get_clients_from_config(
+            config,
+            log_wire_file=log_filename,
+            log_wire=log_wire
+        )
+
+        catalog_name = config['broker']['catalog']
+        p_no_ext = p.with_suffix('')
+        ova_file_name_no_ext = p_no_ext.name
+        catalog_item_name = ova_file_name_no_ext
+        org_name = config['broker']['org']
+        success = ttm.upload_tkgm_template(
+            client=client,
+            ova_file_path=ova_file_path,
+            catalog_name=catalog_name,
+            catalog_item_name=catalog_item_name,
+            org_name=org_name,
+            force=force_import,
+            logger=INSTALL_LOGGER,
+            msg_update_callback=console_message_printer
+        )
+        if not success:
+            return
+
+        property_map = ttm.get_template_property(
+            client=client,
+            org_name=org_name,
+            catalog_name=catalog_name,
+            catalog_item_name=catalog_item_name
+        )
+        os_name_from_property_map = property_map.get(server_constants.TKGmProperty.DISTRO_NAME)  # noqa: E501
+        os_version_from_property_map = property_map.get(server_constants.TKGmProperty.DISTRO_VERSION)  # noqa: E501
+        containerd_version_from_property_map = property_map.get(server_constants.TKGmProperty.CONTAINDERD_VERSION)  # noqa: E501
+        kubernetes_version_from_property_map = property_map.get(server_constants.TKGmProperty.KUBERNETES_SEMVER)  # noqa: E501
+
+        cse_version = utils.get_installed_cse_version()
+        kind = shared_constants.ClusterEntityKind.TKG_M.value
+        kubernetes = "TKGm"
+
+        os_name = os_name_from_property_map
+        if not os_name:
+            msg = "Please enter the name of the OS in the template"
+            os_name = utils.prompt_text(msg, color='green')
+        os_version = os_version_from_property_map or os_version_from_ova_name
+        if not os_version:
+            msg = "Please enter the version of the OS in the template"
+            os_version = utils.prompt_text(msg, color='green')
+        kubernetes_version = kubernetes_version_from_property_map or kubernetes_version_from_ova_name  # noqa: E501
+        if not kubernetes_version:
+            msg = "Please enter the version of kubernetes in the template"
+            kubernetes_version = utils.prompt_text(msg, color='green')
+        containerd_version = containerd_version_from_property_map
+        if not containerd_version:
+            msg = "Please enter the version of containerd in the template"
+            containerd_version = utils.prompt_text(msg, color='green')
+
+        metadata_dict = {
+            server_constants.TKGmTemplateKey.CNI: 'antrea',
+            # ToDo: Decide on this
+            server_constants.TKGmTemplateKey.CNI_VERSION: '0.0.0',
+            server_constants.TKGmTemplateKey.CONTAINER_RUNTIME: 'containerd',
+            server_constants.TKGmTemplateKey.CONTAINER_RUNTIME_VERSION: containerd_version,  # noqa: E501
+            server_constants.TKGmTemplateKey.CSE_VERSION: cse_version,
+            server_constants.TKGmTemplateKey.KIND: kind,
+            server_constants.TKGmTemplateKey.KUBERNETES: kubernetes,
+            server_constants.TKGmTemplateKey.KUBERNETES_VERSION: kubernetes_version,  # noqa: E501
+            server_constants.TKGmTemplateKey.NAME: catalog_item_name,
+            server_constants.TKGmTemplateKey.OS: os_name,
+            server_constants.TKGmTemplateKey.OS_VERSION: os_version,
+            server_constants.TKGmTemplateKey.REVISION: '1'
+        }
+        cse_params = deepcopy(metadata_dict)
+        cse_params[PayloadKey.WAS_DECRYPTION_SKIPPED] = skip_config_decryption
+        cse_params[PayloadKey.WERE_TEMPLATES_FORCE_UPDATED] = force_import
+        record_user_action_details(
+            cse_operation=CseOperation.TEMPLATE_IMPORT,
+            cse_params=cse_params,
+            telemetry_settings=config['service']['telemetry']
+        )
+        msg = f"Writing metadata onto catalog item {catalog_item_name}."
+        INSTALL_LOGGER.info(msg)
+        INSTALL_LOGGER.debug(f"{metadata_dict}")
+        console_message_printer.info(msg)
+        ttm.save_metadata(
+            client=client,
+            org_name=org_name,
+            catalog_name=catalog_name,
+            catalog_item_name=catalog_item_name,
+            data=metadata_dict,
+            keys_to_write=metadata_dict.keys()
+        )
+        msg = "Successfully imported TKGm OVA."
+        INSTALL_LOGGER.debug(msg)
+        console_message_printer.general(msg)
+        # Record telemetry data on template import completion status
+        record_user_action(
+            cse_operation=CseOperation.TEMPLATE_IMPORT,
+            telemetry_settings=config['service']['telemetry'])
+    except Exception as err:
+        # Record telemetry data on template import completion status
+        record_user_action(
+            cse_operation=CseOperation.TEMPLATE_IMPORT,
+            status=OperationStatus.FAILED,
+            telemetry_settings=config['service']['telemetry'],
+        )
+
+        SERVER_CLI_LOGGER.error(str(err), exc_info=True)
+        console_message_printer.error(str(err))
+    finally:
+        if client:
+            client.logout()
+        # block the process to let telemetry handler to finish posting data to
+        # VAC. HACK!!!
+        time.sleep(3)
+
+
 def _get_unvalidated_config(config_file_path,
                             skip_config_decryption,
                             msg_update_callback=utils.NullPrinter()):
@@ -1310,7 +1560,7 @@ def _get_unvalidated_config(config_file_path,
 
         return config_dict
     except cryptography.fernet.InvalidToken:
-        raise Exception(CONFIG_DECRYPTION_ERROR_MSG)
+        raise Exception(server_constants.CONFIG_DECRYPTION_ERROR_MSG)
 
 
 def _get_clients_from_config(config, log_wire_file, log_wire):
@@ -1323,7 +1573,7 @@ def _get_clients_from_config(config, log_wire_file, log_wire):
         log_bodies=log_wire)
     credentials = vcd_client.BasicLoginCredentials(
         config['vcd']['username'],
-        SYSTEM_ORG_NAME,
+        shared_constants.SYSTEM_ORG_NAME,
         config['vcd']['password'])
     client.set_credentials(credentials)
 
@@ -1332,9 +1582,10 @@ def _get_clients_from_config(config, log_wire_file, log_wire):
         logger_wire = SERVER_CLOUDAPI_WIRE_LOGGER
 
     cloudapi_client = vcd_utils.get_cloudapi_client_from_vcd_client(
-        client,
-        SERVER_CLI_LOGGER,
-        logger_wire)
+        client=client,
+        logger_debug=SERVER_CLI_LOGGER,
+        logger_wire=logger_wire
+    )
 
     return client, cloudapi_client
 

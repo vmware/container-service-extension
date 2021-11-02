@@ -10,20 +10,21 @@ import container_service_extension.common.utils.pyvcloud_utils as vcd_utils
 from container_service_extension.lib.cloudapi.constants import CloudApiResource
 from container_service_extension.lib.cloudapi.constants import CloudApiVersion
 from container_service_extension.logging.logger import NULL_LOGGER
-from container_service_extension.logging.logger import SERVER_CLOUDAPI_WIRE_LOGGER  # noqa: E501
 
 
-class RightBundleManager():
-    def __init__(self, sysadmin_client: vcd_client.Client,
-                 log_wire=False, logger_debug=NULL_LOGGER):
+class RightBundleManager:
+    def __init__(
+            self,
+            sysadmin_client: vcd_client.Client,
+            logger_debug=NULL_LOGGER,
+            logger_wire=NULL_LOGGER
+    ):
         vcd_utils.raise_error_if_user_not_from_system_org(sysadmin_client)
-        self.logger_wire = SERVER_CLOUDAPI_WIRE_LOGGER \
-            if log_wire else NULL_LOGGER
-        self.logger_debug = logger_debug
         self.cloudapi_client = vcd_utils.get_cloudapi_client_from_vcd_client(
             sysadmin_client,
-            logger_debug=self.logger_debug,
-            logger_wire=self.logger_wire)
+            logger_debug=logger_debug,
+            logger_wire=logger_wire
+        )
 
     def get_right_bundle_by_name(self, right_bundle_name):
         """Get Right bundle by name.

@@ -12,6 +12,7 @@ import container_service_extension.client.constants as cli_constants
 from container_service_extension.client.cse_client.api_35.native_cluster_api import NativeClusterApi  # noqa: E501
 import container_service_extension.client.utils as client_utils
 import container_service_extension.common.constants.shared_constants as shared_constants  # noqa: E501
+import container_service_extension.common.utils.core_utils as core_utils
 import container_service_extension.common.utils.pyvcloud_utils as vcd_utils
 import container_service_extension.exception.exceptions as cse_exceptions
 import container_service_extension.logging.logger as logger
@@ -33,13 +34,17 @@ class DEClusterNative:
     """
 
     def __init__(self, client):
-        logger_wire = logger.NULL_LOGGER
-        if os.getenv(cli_constants.ENV_CSE_CLIENT_WIRE_LOGGING):
-            logger_wire = logger.CLIENT_WIRE_LOGGER
+        logger_wire = logger.CLIENT_WIRE_LOGGER \
+            if core_utils.str_to_bool(
+                os.getenv(cli_constants.ENV_CSE_CLIENT_WIRE_LOGGING)
+            ) \
+            else logger.NULL_LOGGER
         self._cloudapi_client = \
             vcd_utils.get_cloudapi_client_from_vcd_client(
-                client=client, logger_debug=logger.CLIENT_LOGGER,
-                logger_wire=logger_wire)
+                client=client,
+                logger_debug=logger.CLIENT_LOGGER,
+                logger_wire=logger_wire
+            )
         self._native_cluster_api = NativeClusterApi(client)
         self._client = client
         schema_service = def_schema_svc.DefSchemaService(self._cloudapi_client)
@@ -64,11 +69,18 @@ class DEClusterNative:
         msg = "Operation not supported; Under implementation"
         raise vcd_exceptions.OperationNotSupportedException(msg)
 
-    def get_cluster_info(self, cluster_name, cluster_id=None,
-                         org=None, vdc=None, **kwargs):
+    def get_cluster_info(
+            self,
+            cluster_name,
+            cluster_id=None,
+            org=None,
+            vdc=None,
+            **kwargs
+    ):
         """Get cluster information using DEF API.
 
         :param str cluster_name: name of the cluster
+        :param str cluster_id:
         :param str vdc: name of vdc
         :param str org: name of org
         :param kwargs: *filter (dict): keys,values for DEF API query filter
@@ -104,11 +116,17 @@ class DEClusterNative:
         logger.CLIENT_LOGGER.debug(f"Defined entity info from server: {def_entity}")  # noqa: E501
         return yaml.dump(def_entity.entity.to_dict())
 
-    def delete_cluster(self, cluster_name, cluster_id=None,
-                       org=None, vdc=None):
+    def delete_cluster(
+            self,
+            cluster_name,
+            cluster_id=None,
+            org=None,
+            vdc=None
+    ):
         """Delete DEF native cluster by name.
 
         :param str cluster_name: native cluster name
+        :param str cluster_id:
         :param str org: name of the org
         :param str vdc: name of the vdc
         :return: string containing delete operation task href
@@ -262,7 +280,7 @@ class DEClusterNative:
         return client_utils.construct_task_console_message(task_href)
 
     def _get_cluster_name_from_cluster_apply_specification(self, input_spec: dict):  # noqa: E501
-        """Derive cluster name from cluster apply specificaiton.
+        """Derive cluster name from cluster apply specification.
 
         :param dict input_spec: Input specification
         :return: cluster name
@@ -278,7 +296,9 @@ class DEClusterNative:
     def apply(self, cluster_apply_spec: dict, cluster_id: str = None, **kwargs):  # noqa: E501
         """Apply the configuration either to create or update the cluster.
 
-        :param dict cluster_config: cluster configuration information
+        :param dict cluster_apply_spec: cluster configuration information
+        :param str cluster_id:
+
         :return: dictionary containing the apply operation task
         :rtype: dict
         """
@@ -322,7 +342,7 @@ class DEClusterNative:
             cluster_id = self.get_cluster_id_by_name(cluster_name, org, vdc)
         org_href = self._client.get_org_by_name(org).get('href')
         name_to_id: dict = client_utils.create_user_name_to_id_dict(
-            self._client, users, org_href)
+            self._client, set(users), org_href)
 
         # Parse user id info
         update_acl_entries = []

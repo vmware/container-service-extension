@@ -7,7 +7,7 @@ from enum import unique
 
 # End point of Vmware telemetry staging server
 # TODO() : This URL should reflect production server during release
-VAC_URL = "https://vcsa.vmware.com/ph/api/hyper/send"
+VAC_URL = "https://vcsa.vmware.com/ph/api/hyper/send/"
 
 # Value of collector id that is required as part of HTTP request
 # to post sample data to telemetry server
@@ -49,6 +49,7 @@ class CseOperation(Enum):
     SERVICE_UPGRADE = ('upgrade server', 'SERVER', 'UPGRADE', 'CSE_SERVICE_UPGRADE')  # noqa: E501
     SERVICE_RUN = ('run server', 'SERVER', 'RUN', 'CSE_SERVICE_RUN')
     TEMPLATE_INSTALL = ('template install', 'TEMPLATE', 'INSTALL', 'CSE_TEMPLATE_INSTALL')  # noqa: E501
+    TEMPLATE_IMPORT = ('template import', 'TEMPLATE', 'IMPORT', 'CSE_TEMPLATE_IMPORT')  # noqa: E501
     TEMPLATE_LIST = ('template list', 'TEMPLATE', 'LIST', 'CSE_TEMPLATE_LIST')  # noqa: E501
 
     # vcd-cli CSE client commands
@@ -123,9 +124,13 @@ class PayloadKey(str, Enum):
     CLUSTER_KIND = 'cluster_kind'
     CNI = 'cni'
     CNI_VERSION = 'cni_version'
+    CONTAINER_RUNTIME = 'container_runtime'
+    CONTAINER_RUNTIME_VERSION = 'container_runtime_version'
     CPU = 'cpu'
+    CSE_VERSION = 'cse_version'
     DISPLAY_OPTION = 'display_option'
     FILTER_KEYS = 'filter_keys'
+    KIND = 'kind'
     K8S_DISTRIBUTION = 'k8s_distribution'
     K8S_PROVIDER = 'k8s_provider'
     K8S_VERSION = 'k8s_version',
@@ -138,8 +143,10 @@ class PayloadKey(str, Enum):
     NUMBER_OF_WORKER_NODES = 'number_of_worker_nodes'
     NUMBER_OF_NFS_NODES = 'number_of_nfs_nodes'
     OS = 'os'
+    OS_VERSION = 'os_version'
     PKS_CLUSTER_ID = 'uuid'
     PKS_VERSION = 'pks_version'
+    REVISION = 'revision'
     SOURCE_CSE_VERSION = 'source_cse_version'
     SOURCE_DESCRIPTION = 'source_description'
     SOURCE_ID = 'source_id'

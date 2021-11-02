@@ -405,6 +405,10 @@ class NativeEntity(AbstractNativeEntity):
     def from_cluster_data(cls, cluster: dict, kind: str, **kwargs):
         """Construct rde_2.0.0 native entity from non-rde cluster.
 
+        NOTE: This method is used primarily to create RDE for legacy clusters.
+            So, only cpu/memory fields for RDE can be populated. Sizing class
+            in will be set to None.
+
         :param dict cluster: cluster metadata
         :param str kind: cluster kind
         :return: native entity
@@ -413,13 +417,14 @@ class NativeEntity(AbstractNativeEntity):
         site = kwargs.get('site', '')
         worker_nodes = []
         for item in cluster['nodes']:
-            worker_nodes.append(
-                Node(
-                    name=item['name'],
-                    ip=item['ipAddress'],
-                    storage_profile=cluster['storage_profile_name']
-                )
-            )
+            # Add cpu and memory details to the node part in status section
+            node = Node(
+                name=item['name'],
+                ip=item['ipAddress'],
+                storage_profile=cluster['storage_profile_name'],
+                cpu=int(item['numberOfCpus']),
+                memory=int(item['memoryMB']))
+            worker_nodes.append(node)
         nfs_nodes = []
         for item in cluster['nfs_nodes']:
             # The item['exports'] field is a string
@@ -430,7 +435,6 @@ class NativeEntity(AbstractNativeEntity):
             exports_list_string = item['exports']
             exports_list_string.replace('[', '').replace(']', '').replace('\'', '')  # noqa: E501
             exports_list = exports_list_string.split(", ")
-
             nfs_nodes.append(
                 NfsNode(
                     name=item['name'],
@@ -451,20 +455,35 @@ class NativeEntity(AbstractNativeEntity):
             ovdc_network_name=cluster['network_name'],
             distribution=k8_distribution,
             ssh_key='')
+        control_plane_nodes = cluster['master_nodes']
+        topology_control_plane = ControlPlane(
+            count=len(control_plane_nodes),
+            storage_profile=cluster['storage_profile_name'],
+            cpu=int(control_plane_nodes[0]['numberOfCpus']),
+            memory=int(control_plane_nodes[0]['memoryMB'])
+        )
+        workers = cluster.get('nodes', [])
+        topology_workers = Workers(
+            count=len(cluster['nodes']),
+            storage_profile=cluster['storage_profile_name']
+        )
+        if len(workers) > 0:
+            topology_workers.cpu = int(workers[0]['numberOfCpus'])
+            topology_workers.memory = int(workers[0]['memoryMB'])
         topology = Topology(
-            workers=Workers(
-                count=len(cluster['nodes']),
-                storage_profile=cluster['storage_profile_name']
-            ),
-            control_plane=ControlPlane(
-                count=len(cluster['master_nodes']),
-                storage_profile=cluster['storage_profile_name']
-            ),
+            workers=topology_workers,
+            control_plane=topology_control_plane,
             nfs=Nfs(
                 count=len(cluster['nfs_nodes']),
                 storage_profile=cluster['storage_profile_name']
             )
         )
+        node_control_plane = Node(
+            name=cluster['master_nodes'][0]['name'],
+            ip=cluster['master_nodes'][0]['ipAddress'],
+            storage_profile=cluster['storage_profile_name'],
+            cpu=int(control_plane_nodes[0]['numberOfCpus']),
+            memory=int(control_plane_nodes[0]['memoryMB']))
         cluster_entity = cls(
             kind=kind,
             spec=ClusterSpec(
@@ -485,11 +504,7 @@ class NativeEntity(AbstractNativeEntity):
                 os=cluster['os'],
                 docker_version=cluster['docker_version'],
                 nodes=Nodes(
-                    control_plane=Node(
-                        name=cluster['master_nodes'][0]['name'],
-                        ip=cluster['master_nodes'][0]['ipAddress'],
-                        storage_profile=cluster['storage_profile_name']
-                    ),
+                    control_plane=node_control_plane,
                     workers=worker_nodes,
                     nfs=nfs_nodes
                 ),
@@ -507,7 +522,10 @@ class NativeEntity(AbstractNativeEntity):
         return cluster_entity
 
     @classmethod
-    def get_sample_native_cluster_specification(cls, k8_runtime: str = shared_constants.ClusterEntityKind.NATIVE.value):  # noqa: E501
+    def get_sample_native_cluster_specification(
+            cls,
+            k8_runtime: str = shared_constants.ClusterEntityKind.NATIVE.value
+    ):
         """Create apply command cluster specification description.
 
         :returns: ClusterSpec field description
@@ -551,14 +569,13 @@ class NativeEntity(AbstractNativeEntity):
 #
 # status: Current state of the cluster in the server. This is not a required section for any of the operations.\n
 """  # noqa: E501
-        metadata = Metadata('cluster_name', 'organization_name',
-                            'org_virtual_data_center_name', 'VCD_site')
-        status = Status()
-        settings = Settings(ovdc_network='ovdc_network_name', ssh_key=None)
-        k8_distribution = Distribution(
-            template_name='ubuntu-16.04_k8-1.17_weave-2.6.0',
-            template_revision=2
+        metadata = Metadata(
+            'cluster_name',
+            'organization_name',
+            'org_virtual_data_center_name',
+            'VCD_site'
         )
+
         control_plane = ControlPlane(
             count=1,
             sizing_class='Large_sizing_policy_name',
@@ -582,18 +599,28 @@ class NativeEntity(AbstractNativeEntity):
             nfs=nfs
         )
 
+        k8_distribution = Distribution(
+            template_name='ubuntu-16.04_k8-1.17_weave-2.6.0',
+            template_revision=2
+        )
+
+        settings = Settings(ovdc_network='ovdc_network_name', ssh_key=None)
+
         cluster_spec = ClusterSpec(
             topology=topology,
             distribution=k8_distribution,
             settings=settings,
         )
 
+        status = Status()
+
         native_entity_dict = NativeEntity(
             api_version=rde_constants.PAYLOAD_VERSION_2_0,
             metadata=metadata,
             spec=cluster_spec,
             status=status,
-            kind=k8_runtime).to_dict()
+            kind=k8_runtime
+        ).to_dict()
 
         # remove status part of the entity dict
         del native_entity_dict['status']
@@ -603,15 +630,15 @@ class NativeEntity(AbstractNativeEntity):
         # for CSE 3.1.1 to accommodate Antrea as CNI
         # Below line can be deleted post Andromeda (CSE 3.1)
         del native_entity_dict['spec']['settings']['network']['cni']
-        del native_entity_dict['spec']['settings']['network']['pods']
-        del native_entity_dict['spec']['settings']['network']['services']
-        # Hiding the cpu and memory properties from controlPlane and workers
-        # for Andromeda (CSE 3.1). Below lines can be deleted once cpu and
-        # memory support is added in CSE 3.1.1
-        del native_entity_dict['spec']['topology']['controlPlane']['cpu']
-        del native_entity_dict['spec']['topology']['controlPlane']['memory']
-        del native_entity_dict['spec']['topology']['workers']['cpu']
-        del native_entity_dict['spec']['topology']['workers']['memory']
+
+        if k8_runtime == shared_constants.ClusterEntityKind.TKG_M.value:
+            del native_entity_dict['spec']['topology']['nfs']
+            native_entity_dict['spec']['settings']['network']['expose'] = True
+            native_entity_dict['spec']['settings']['network']['pods'] = {'cidr_blocks': ['100.96.0.0/11']}  # noqa: E501
+            native_entity_dict['spec']['settings']['network']['services'] = {'cidr_blocks': ['100.64.0.0/13']}  # noqa: E501
+        else:
+            del native_entity_dict['spec']['settings']['network']['pods']
+            del native_entity_dict['spec']['settings']['network']['services']
 
         sample_apply_spec = yaml.dump(native_entity_dict)
         return cluster_spec_field_descriptions + sample_apply_spec

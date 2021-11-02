@@ -2,7 +2,7 @@
 # Copyright (c) 2019 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 
-from container_service_extension.common.constants.server_constants import LocalTemplateKey  # noqa: E501
+from container_service_extension.common.constants.server_constants import LegacyLocalTemplateKey  # noqa: E501
 from container_service_extension.common.utils.core_utils import NullPrinter
 from container_service_extension.logging.logger import NULL_LOGGER
 
@@ -15,7 +15,7 @@ class TemplateRule:
     only one target. Matching is driven by name and revision of the template.
     If only name is specified without the revision or vice versa, the rule will
     not be processed. And once a match is found, as an 'action' the following
-    attributes can be overriden.
+    attributes can be overridden.
         * compute_policy
         * cpu
         * memory
@@ -88,9 +88,9 @@ class TemplateRule:
         all_actions = set(self.action.keys())
         invalid_actions = list(
             all_actions - set([
-                LocalTemplateKey.COMPUTE_POLICY,
-                LocalTemplateKey.CPU,
-                LocalTemplateKey.MEMORY
+                LegacyLocalTemplateKey.COMPUTE_POLICY,
+                LegacyLocalTemplateKey.CPU,
+                LegacyLocalTemplateKey.MEMORY
             ]))
 
         if invalid_actions:
@@ -107,13 +107,13 @@ class TemplateRule:
 
         If the rule validation fails, appropriate message will be logged and
         updated via msg_update_callback. If validation goes through, an
-        in-place updation of template deifintion will occur. Unknown action
+        in-place update of template defintion will occur. Unknown action
         keys will be ignored.
 
-        :param list templates: list of local template defintions
+        :param list templates: list of local template definitions
         """
         # Arrange the k8s templates by name and revision for ease of querying.
-        # The resulting data srtucture is a 3 level dictionary, where
+        # The resulting data structure is a 3 level dictionary, where
         # first level dictionary is key-ed by the template name, while the
         # second level dictionary is keyed by the various revisions of the
         # template in question. And as value corresponding to each second level
@@ -121,8 +121,8 @@ class TemplateRule:
         # a dictionary.
         template_table = {}
         for template in templates:
-            template_name = template[LocalTemplateKey.NAME]
-            template_revision = str(template[LocalTemplateKey.REVISION])
+            template_name = template[LegacyLocalTemplateKey.NAME]
+            template_revision = str(template[LegacyLocalTemplateKey.REVISION])
             if template_name not in template_table:
                 template_table[template_name] = {}
             template_table[template_name][template_revision] = template
@@ -133,15 +133,15 @@ class TemplateRule:
         target_template = template_table[self.target['name']][str(self.target['revision'])] # noqa: E501
 
         new_compute_policy = \
-            self.action.get(LocalTemplateKey.COMPUTE_POLICY)
+            self.action.get(LegacyLocalTemplateKey.COMPUTE_POLICY)
         if new_compute_policy is not None:
-            target_template[LocalTemplateKey.COMPUTE_POLICY] = \
+            target_template[LegacyLocalTemplateKey.COMPUTE_POLICY] = \
                 new_compute_policy
 
-        new_cpu = self.action.get(LocalTemplateKey.CPU)
+        new_cpu = self.action.get(LegacyLocalTemplateKey.CPU)
         if new_cpu is not None:
-            target_template[LocalTemplateKey.CPU] = new_cpu
+            target_template[LegacyLocalTemplateKey.CPU] = new_cpu
 
-        new_memory = self.action.get(LocalTemplateKey.MEMORY)
+        new_memory = self.action.get(LegacyLocalTemplateKey.MEMORY)
         if new_memory is not None:
-            target_template[LocalTemplateKey.MEMORY] = new_memory
+            target_template[LegacyLocalTemplateKey.MEMORY] = new_memory

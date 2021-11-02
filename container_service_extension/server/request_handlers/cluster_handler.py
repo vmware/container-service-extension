@@ -18,7 +18,9 @@ Responsibility of the functions in this file:
 """
 
 import container_service_extension.common.constants.server_constants as server_constants  # noqa: E501
+from container_service_extension.common.constants.server_constants import ThreadLocalData  # noqa: E501
 from container_service_extension.common.constants.shared_constants import ClusterAclKey  # noqa: E501
+from container_service_extension.common.constants.shared_constants import ClusterEntityKind  # noqa: E501
 from container_service_extension.common.constants.shared_constants import CSE_PAGINATION_DEFAULT_PAGE_SIZE  # noqa: E501
 from container_service_extension.common.constants.shared_constants import CSE_PAGINATION_FIRST_PAGE_NUMBER  # noqa: E501
 from container_service_extension.common.constants.shared_constants import PaginationKey  # noqa: E501
@@ -65,6 +67,7 @@ def cluster_create(data: dict, op_ctx: ctx.OperationContext):
     rde_validator_factory.get_validator(
         rde_version=rde_constants.MAP_INPUT_PAYLOAD_VERSION_TO_RDE_VERSION[
             payload_version]).validate(cloudapi_client=op_ctx.cloudapi_client,
+                                       sysadmin_client=op_ctx.sysadmin_client,
                                        entity=input_entity)
 
     def_entity_service = entity_service.DefEntityService(op_ctx.cloudapi_client)  # noqa: E501
@@ -88,6 +91,13 @@ def cluster_create(data: dict, op_ctx: ctx.OperationContext):
     entity_id = task_resource.Owner.get('id')
     def_entity = def_entity_service.get_entity(entity_id)
     def_entity.entity.status.task_href = task_href
+    telemetry_handler.record_user_action_details(
+        cse_operation=telemetry_constants.CseOperation.V36_CLUSTER_APPLY,
+        cse_params={
+            server_constants.CLUSTER_ENTITY: def_entity,
+            telemetry_constants.PayloadKey.SOURCE_DESCRIPTION: thread_local_data.get_thread_local_data(ThreadLocalData.USER_AGENT)  # noqa: E501
+        }
+    )
     return def_entity.to_dict()
 
 
@@ -98,7 +108,7 @@ def native_cluster_list(data: dict, op_ctx: ctx.OperationContext):
 
     :return: List
     """
-    svc = cluster_service_factory.ClusterServiceFactory(_get_request_context(op_ctx)).get_cluster_service()  # noqa: E501
+    svc = cluster_service_factory.ClusterServiceFactory(_get_request_context(op_ctx)).get_cluster_service(skip_tkgm_check=True)  # noqa: E501
     filters = data.get(RequestKey.QUERY_PARAMS, {})
     page_number = int(filters.get(PaginationKey.PAGE_NUMBER,
                                   CSE_PAGINATION_FIRST_PAGE_NUMBER))
@@ -133,7 +143,7 @@ def cluster_list(data: dict, op_ctx: ctx.OperationContext):
 
     :return: List
     """
-    svc = cluster_service_factory.ClusterServiceFactory(_get_request_context(op_ctx)).get_cluster_service()  # noqa: E501
+    svc = cluster_service_factory.ClusterServiceFactory(_get_request_context(op_ctx)).get_cluster_service(skip_tkgm_check=True)  # noqa: E501
     # response should not be paginated
     return [def_entity.to_dict() for def_entity in
             svc.list_clusters(data.get(RequestKey.QUERY_PARAMS, {}))]
@@ -151,6 +161,7 @@ def cluster_info(data: dict, op_ctx: ctx.OperationContext):
 
     :return: Dict
     """
+    op_ctx.entity_id = data[RequestKey.CLUSTER_ID]  # hack for passing entity id  # noqa: E501
     svc = cluster_service_factory.ClusterServiceFactory(_get_request_context(op_ctx)).get_cluster_service()  # noqa: E501
     cluster_id = data[RequestKey.CLUSTER_ID]
     return svc.get_cluster_info(cluster_id).to_dict()
@@ -166,7 +177,16 @@ def cluster_config(data: dict, op_ctx: ctx.OperationContext):
     :return: Dict
     """
     cluster_id = data[RequestKey.CLUSTER_ID]
+    def_entity_service = entity_service.DefEntityService(op_ctx.cloudapi_client)  # noqa: E501
+    def_entity: common_models.DefEntity = def_entity_service.get_entity(cluster_id)  # noqa: E501
     behavior_svc = BehaviorService(cloudapi_client=op_ctx.cloudapi_client)
+    telemetry_handler.record_user_action_details(
+        cse_operation=telemetry_constants.CseOperation.V36_CLUSTER_CONFIG,
+        cse_params={
+            server_constants.CLUSTER_ENTITY: def_entity,
+            telemetry_constants.PayloadKey.SOURCE_DESCRIPTION: thread_local_data.get_thread_local_data(ThreadLocalData.USER_AGENT)  # noqa: E501
+        }
+    )
     config_task_href = behavior_svc.invoke_behavior(
         entity_id=cluster_id,
         behavior_interface_id=KUBE_CONFIG_BEHAVIOR_INTERFACE_ID)
@@ -192,23 +212,38 @@ def cluster_update(data: dict, op_ctx: ctx.OperationContext):
     # Validate the Input payload based on the (Operation, payload_version).
     # Get the validator based on the payload_version
     # ToDo : Don't use default cloudapi_client. Use the specific versioned one
+    kind = input_entity['kind']
+    is_tkgm_cluster = (kind == ClusterEntityKind.TKG_M.value)
+    sysadmin_client = op_ctx.sysadmin_client
     rde_validator_factory.get_validator(
         rde_version=rde_constants.MAP_INPUT_PAYLOAD_VERSION_TO_RDE_VERSION[
             payload_version]). \
-        validate(cloudapi_client=op_ctx.cloudapi_client, entity_id=cluster_id,
+        validate(cloudapi_client=op_ctx.cloudapi_client,
+                 sysadmin_client=sysadmin_client, entity_id=cluster_id,
                  entity=input_entity,
-                 operation=BehaviorOperation.UPDATE_CLUSTER)
+                 operation=BehaviorOperation.UPDATE_CLUSTER,
+                 is_tkgm_cluster=is_tkgm_cluster)
 
     # Convert the input entity to runtime rde format.
     # Based on the runtime rde, call the appropriate backend method.
     def_entity_service = entity_service.DefEntityService(op_ctx.cloudapi_client)  # noqa: E501
     converted_native_entity: AbstractNativeEntity = rde_utils.convert_input_rde_to_runtime_rde_format(input_entity)  # noqa: E501
-    cluster_def_entity: common_models.DefEntity = def_entity_service.get_entity(cluster_id)  # noqa: E501
-    cluster_def_entity.entity.spec = converted_native_entity.spec
+
+    changes = {
+        'entity.spec': converted_native_entity.spec
+    }
     updated_def_entity, task_href = def_entity_service.update_entity(
-        entity_id=cluster_id, entity=cluster_def_entity,
-        invoke_hooks=True, is_request_async=True)
+        entity_id=cluster_id, invoke_hooks=True, is_request_async=True,
+        changes=changes
+    )
     updated_def_entity.entity.status.task_href = task_href
+    telemetry_handler.record_user_action_details(
+        cse_operation=telemetry_constants.CseOperation.V36_CLUSTER_APPLY,
+        cse_params={
+            server_constants.CLUSTER_ENTITY: updated_def_entity,
+            telemetry_constants.PayloadKey.SOURCE_DESCRIPTION: thread_local_data.get_thread_local_data(ThreadLocalData.USER_AGENT)  # noqa: E501
+        }
+    )
     # TODO: Response RDE must be compatible with the request RDE.
     #  Conversions may be needed especially if there is a major version
     #  difference in the input RDE and runtime RDE.
@@ -222,6 +257,7 @@ def cluster_upgrade_plan(data, op_ctx: ctx.OperationContext):
 
     :return: List[Tuple(str, str)]
     """
+    op_ctx.entity_id = data[RequestKey.CLUSTER_ID]  # hack for passing entity id  # noqa: E501
     svc = cluster_service_factory.ClusterServiceFactory(_get_request_context(op_ctx)).get_cluster_service()  # noqa: E501
     return svc.get_cluster_upgrade_plan(data[RequestKey.CLUSTER_ID])
 
@@ -241,6 +277,13 @@ def cluster_delete(data: dict, op_ctx: ctx.OperationContext):
     cluster_id = data[RequestKey.CLUSTER_ID]
     def_entity_service = entity_service.DefEntityService(op_ctx.cloudapi_client)  # noqa: E501
     def_entity: common_models.DefEntity = def_entity_service.get_entity(cluster_id)  # noqa: E501
+    telemetry_handler.record_user_action_details(
+        cse_operation=telemetry_constants.CseOperation.V36_CLUSTER_DELETE,
+        cse_params={
+            server_constants.CLUSTER_ENTITY: def_entity,
+            telemetry_constants.PayloadKey.SOURCE_DESCRIPTION: thread_local_data.get_thread_local_data(ThreadLocalData.USER_AGENT)  # noqa: E501
+        }
+    )
     _, task_href = def_entity_service.delete_entity(cluster_id, invoke_hooks=True, is_request_async=True)  # noqa: E501
     def_entity.entity.status.task_href = task_href
     return def_entity.to_dict()
@@ -286,11 +329,15 @@ def nfs_node_delete(data, op_ctx: ctx.OperationContext):
 @request_utils.cluster_api_exception_handler
 def cluster_acl_info(data: dict, op_ctx: ctx.OperationContext):
     """Request handler for cluster acl list operation."""
-    svc = cluster_service_factory.ClusterServiceFactory(_get_request_context(op_ctx)).get_cluster_service()  # noqa: E501
     cluster_id = data[RequestKey.CLUSTER_ID]
+    def_entity_service = entity_service.DefEntityService(op_ctx.cloudapi_client)  # noqa: E501
+    def_entity = def_entity_service.get_entity(cluster_id)
+    rde_utils.raise_error_if_tkgm_cluster_operation(def_entity.entity.kind)  # noqa: E501
     query = data.get(RequestKey.QUERY_PARAMS, {})
     page = int(query.get(PaginationKey.PAGE_NUMBER, CSE_PAGINATION_FIRST_PAGE_NUMBER))  # noqa: E501
     page_size = int(query.get(PaginationKey.PAGE_SIZE, CSE_PAGINATION_DEFAULT_PAGE_SIZE))  # noqa: E501
+    op_ctx.entity_id = data[RequestKey.CLUSTER_ID]  # hack for passing entity id  # noqa: E501
+    svc = cluster_service_factory.ClusterServiceFactory(_get_request_context(op_ctx)).get_cluster_service()  # noqa: E501
     result: dict = svc.get_cluster_acl_info(cluster_id, page, page_size)
 
     uri = data['url']
@@ -306,8 +353,12 @@ def cluster_acl_info(data: dict, op_ctx: ctx.OperationContext):
 @request_utils.cluster_api_exception_handler
 def cluster_acl_update(data: dict, op_ctx: ctx.OperationContext):
     """Request handler for cluster acl update operation."""
-    svc = cluster_service_factory.ClusterServiceFactory(_get_request_context(op_ctx)).get_cluster_service()  # noqa: E501
     cluster_id = data[RequestKey.CLUSTER_ID]
+    def_entity_service = entity_service.DefEntityService(op_ctx.cloudapi_client)  # noqa: E501
+    def_entity = def_entity_service.get_entity(cluster_id)
+    rde_utils.raise_error_if_tkgm_cluster_operation(def_entity.entity.kind)  # noqa: E501
+    op_ctx.entity_id = data[RequestKey.CLUSTER_ID]  # hack for passing entity id  # noqa: E501
+    svc = cluster_service_factory.ClusterServiceFactory(_get_request_context(op_ctx)).get_cluster_service()  # noqa: E501
     update_acl_entries = data.get(RequestKey.INPUT_SPEC, {}).get(ClusterAclKey.ACCESS_SETTING)  # noqa: E501
     svc.update_cluster_acl(cluster_id, update_acl_entries)
 

@@ -6,6 +6,7 @@
 
 import enum
 import math
+from typing import Optional
 
 import semantic_version
 
@@ -13,15 +14,6 @@ import container_service_extension.common.constants.server_constants as server_c
 import container_service_extension.common.constants.shared_constants as shared_constants  # noqa: E501
 import container_service_extension.common.utils.core_utils as utils
 import container_service_extension.rde.models.common_models as common_models
-
-
-def get_installed_cse_version() -> semantic_version.Version:
-    """."""
-    cse_version_raw = utils.get_cse_info()['version']
-    # Cleanup version string. Strip dev version string segment.
-    # e.g. convert '2.6.0.0b2.dev5' to '2.6.0'
-    tokens = cse_version_raw.split('.')[:3]
-    return semantic_version.Version('.'.join(tokens))
 
 
 def get_server_runtime_config():
@@ -54,14 +46,6 @@ def get_registered_def_interface() -> common_models.DefInterface:
     return Service().get_kubernetes_interface()
 
 
-def get_default_k8_distribution():
-    config = get_server_runtime_config()
-    import container_service_extension.rde.models.rde_1_0_0 as rde_1_0_0
-    return rde_1_0_0.Distribution(
-        template_name=config['broker']['default_template_name'],
-        template_revision=config['broker']['default_template_revision'])
-
-
 def get_pks_cache():
     from container_service_extension.server.service import Service
     return Service().get_pks_cache()
@@ -72,12 +56,13 @@ def is_pks_enabled():
     return Service().is_pks_enabled()
 
 
-# noinspection PyBroadException
-def is_tkg_plus_enabled(config: dict = None):
+def is_tkg_plus_enabled(config: Optional[dict] = None) -> bool:
     """
     Check if TKG plus is enabled by the provider in the config.
 
     :param dict config: configuration provided by the user.
+
+    :return: whether TKG+ is enabled or not.
     :rtype: bool
     """
     if not config:
@@ -94,7 +79,7 @@ def is_tkg_plus_enabled(config: dict = None):
     return False
 
 
-def should_use_mqtt_protocol(config):
+def should_use_mqtt_protocol(config: dict) -> bool:
     """Return true if should use the mqtt protocol; false otherwise.
 
     The MQTT protocol should be used if the config file contains "mqtt" key
@@ -107,6 +92,28 @@ def should_use_mqtt_protocol(config):
     """
     return config.get('mqtt') is not None and \
         not utils.str_to_bool(config['service'].get('legacy_mode'))
+
+
+def is_no_vc_communication_mode(config: Optional[dict] = None) -> bool:
+    """Check if TKGm only mode is enabled by the provider in the config.
+
+    :param dict config: configuration provided by the user.
+
+    :return: whether TKGm only mode is enabled or not.
+    :rtype: bool
+    """
+    if not config:
+        try:
+            config = get_server_runtime_config()
+        except Exception:
+            return False
+    service_section = config.get('service', {})
+    is_no_vc_comm = service_section.get('no_vc_communication_mode', False)
+    if isinstance(is_no_vc_comm, bool):
+        return is_no_vc_comm
+    elif isinstance(is_no_vc_comm, str):
+        return utils.str_to_bool(is_no_vc_comm)
+    return False
 
 
 def get_template_descriptor_keys(cookbook_version: semantic_version.Version) -> enum.EnumMeta:  # noqa: E501
@@ -122,12 +129,15 @@ def get_template_descriptor_keys(cookbook_version: semantic_version.Version) -> 
     return cookbook_version_to_template_descriptor_keys_map[cookbook_version]
 
 
-def construct_paginated_response(values, result_total,
-                                 page_number=shared_constants.CSE_PAGINATION_FIRST_PAGE_NUMBER,  # noqa: E501
-                                 page_size=shared_constants.CSE_PAGINATION_DEFAULT_PAGE_SIZE,  # noqa: E501
-                                 page_count=None,
-                                 next_page_uri=None,
-                                 prev_page_uri=None):
+def construct_paginated_response(
+        values,
+        result_total,
+        page_number=shared_constants.CSE_PAGINATION_FIRST_PAGE_NUMBER,
+        page_size=shared_constants.CSE_PAGINATION_DEFAULT_PAGE_SIZE,
+        page_count=None,
+        next_page_uri=None,
+        prev_page_uri=None
+):
     if not page_count:
         extra_page = 1 if bool(result_total % page_size) else 0
         page_count = result_total // page_size + extra_page
@@ -156,7 +166,8 @@ def create_links_and_construct_paginated_result(
         result_total,
         page_number=shared_constants.CSE_PAGINATION_FIRST_PAGE_NUMBER,
         page_size=shared_constants.CSE_PAGINATION_DEFAULT_PAGE_SIZE,
-        query_params=None):
+        query_params=None
+):
     if query_params is None:
         query_params = {}
     next_page_uri: str = ''

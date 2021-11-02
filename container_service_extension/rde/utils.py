@@ -6,12 +6,13 @@
 import importlib
 from importlib import resources as pkg_resources
 import json
-import math
 from typing import Type
 from typing import Union
 
+from pyvcloud.vcd.vcd_api_version import VCDApiVersion
 import semantic_version
 
+from container_service_extension.common.constants.shared_constants import ClusterEntityKind  # noqa: E501
 import container_service_extension.common.utils.core_utils as core_utils
 import container_service_extension.common.utils.server_utils as server_utils
 import container_service_extension.exception.exceptions as exceptions
@@ -28,7 +29,7 @@ def raise_error_if_def_not_supported(cloudapi_client: CloudApiClient):
 
     :param cloudapi_client CloudApiClient
     """
-    if float(cloudapi_client.get_api_version()) < \
+    if cloudapi_client.get_vcd_api_version() < \
             def_constants.DEF_API_MIN_VERSION:
         raise exceptions.DefNotSupportedException(
             "Defined entity framework is not"
@@ -66,7 +67,7 @@ def generate_entity_type_id(vendor, nss, version):
 
 
 def get_runtime_rde_version_by_vcd_api_version(vcd_api_version: str) -> str:
-    major_vcd_api_version = str(math.floor(float(vcd_api_version)) * 1.0)
+    major_vcd_api_version = VCDApiVersion(vcd_api_version).major
     val = def_constants.MAP_VCD_API_VERSION_TO_RUNTIME_RDE_VERSION.get(major_vcd_api_version)  # noqa: E501
     if not val:
         val = '0.0.0'
@@ -82,55 +83,107 @@ def get_rde_metadata(rde_version: str) -> dict:
     return MAP_RDE_VERSION_TO_ITS_METADATA[rde_version]
 
 
-def construct_cluster_spec_from_entity_status(entity_status: Union[rde_1_0_0.Status, rde_2_0_0.Status], rde_version: str) -> Union[rde_1_0_0.ClusterSpec, rde_2_0_0.ClusterSpec]:  # noqa: E501
+def construct_cluster_spec_from_entity_status(
+        entity_status: Union[rde_1_0_0.Status, rde_2_0_0.Status],
+        rde_version: str,
+        is_tkgm_with_default_sizing_in_control_plane: bool = False,
+        is_tkgm_with_default_sizing_in_workers: bool = False) -> Union[rde_1_0_0.ClusterSpec, rde_2_0_0.ClusterSpec]:  # noqa: E501
     """Construct cluster spec of the specified rde version from the current status of the cluster.
 
     :param rde_X_X_X Status entity_status: Entity Status of rde of given version  # noqa: E501
     :param str rde_version: RDE version of the spec to be created from the status # noqa: E501
+    :param bool is_tkgm_with_default_sizing_in_control_plane: is tkgm cluster
+        with default sizing policy in control plane
+    :param bool is_tkgm_with_default_sizing_in_workers: is tkgm cluster with
+        with default sizing policy in worker nodes
     :return: Cluster Specification of respective rde_version_in_use
     :raises NotImplementedError
     """
     # TODO: Refactor this multiple if to rde_version -> handler pattern
     if rde_version == def_constants.RDEVersion.RDE_2_0_0.value:
-        return construct_2_0_0_cluster_spec_from_entity_status(entity_status)
+        return construct_2_0_0_cluster_spec_from_entity_status(
+            entity_status,
+            is_tkgm_with_default_sizing_in_control_plane=is_tkgm_with_default_sizing_in_control_plane,  # noqa: E501
+            is_tkgm_with_default_sizing_in_workers=is_tkgm_with_default_sizing_in_workers)  # noqa: E501
     # elif rde_version == def_constants.RDEVersion.RDE_2_1_0:
     #    return construct_2_1_0_cluster_spec_from_entity_status(entity_status)
     raise NotImplementedError(f"constructing cluster spec from entity status for {rde_version} is"  # noqa:
                               f" not implemented ")
 
 
-def construct_2_0_0_cluster_spec_from_entity_status(entity_status: rde_2_0_0.Status) -> rde_2_0_0.ClusterSpec:  # noqa:
+def construct_2_0_0_cluster_spec_from_entity_status(
+    entity_status: rde_2_0_0.Status, is_tkgm_with_default_sizing_in_control_plane=False, is_tkgm_with_default_sizing_in_workers=False) -> rde_2_0_0.ClusterSpec:  # noqa:
     """Construct cluster specification from entity status using rde_2_0_0 model.
 
     :param rde_2_0_0.Status entity_status: Entity Status as defined in rde_2_0_0  # noqa: E501
     :return: Cluster Specification as defined in rde_2_0_0 model
     """
+
     # Currently only single control-plane is supported.
+    control_plane_sizing_class = None
+    control_plane_storage_profile = None
+    control_plane_cpu = None
+    control_plane_memory = None
+    if (
+        entity_status is not None
+        and entity_status.nodes is not None
+        and entity_status.nodes.control_plane is not None
+    ):
+        control_plane_sizing_class = entity_status.nodes.control_plane.sizing_class  # noqa: E501
+        control_plane_storage_profile = entity_status.nodes.control_plane.storage_profile  # noqa: E501
+        control_plane_cpu = entity_status.nodes.control_plane.cpu
+        control_plane_memory = entity_status.nodes.control_plane.memory
+        if not is_tkgm_with_default_sizing_in_control_plane and control_plane_sizing_class:  # noqa: E501
+            control_plane_cpu = None
+            control_plane_memory = None
     control_plane = rde_2_0_0.ControlPlane(
-        sizing_class=entity_status.nodes.control_plane.sizing_class,
-        storage_profile=entity_status.nodes.control_plane.storage_profile,
+        sizing_class=control_plane_sizing_class,
+        storage_profile=control_plane_storage_profile,
+        cpu=control_plane_cpu,
+        memory=control_plane_memory,
         count=1)
 
-    workers_count = len(entity_status.nodes.workers)
-    if workers_count == 0:
-        workers = rde_2_0_0.Workers(sizing_class=None,
-                                    storage_profile=None,
-                                    count=0)
-    else:
-        workers = rde_2_0_0.Workers(
-            sizing_class=entity_status.nodes.workers[0].sizing_class,
-            storage_profile=entity_status.nodes.workers[0].storage_profile,
-            count=workers_count)
+    workers_count = 0
+    worker_sizing_class = None
+    worker_storage_profile = None
+    worker_cpu = None
+    worker_memory = None
+    if (
+        entity_status is not None
+        and entity_status.nodes is not None
+        and entity_status.nodes.workers is not None
+    ):
+        workers_count = len(entity_status.nodes.workers)
+        if workers_count > 0:
+            worker_sizing_class = entity_status.nodes.workers[0].sizing_class
+            worker_storage_profile = entity_status.nodes.workers[0].storage_profile  # noqa: E501
+            worker_cpu = entity_status.nodes.workers[0].cpu
+            worker_memory = entity_status.nodes.workers[0].memory
+        if not is_tkgm_with_default_sizing_in_workers and worker_sizing_class:
+            worker_cpu = None
+            worker_memory = None
+    workers = rde_2_0_0.Workers(sizing_class=worker_sizing_class,
+                                cpu=worker_cpu,
+                                memory=worker_memory,
+                                storage_profile=worker_storage_profile,
+                                count=workers_count)
 
-    nfs_count = len(entity_status.nodes.nfs)
-    if nfs_count == 0:
-        nfs = rde_2_0_0.Nfs(sizing_class=None, storage_profile=None,
-                            count=0)
-    else:
-        nfs = rde_2_0_0.Nfs(
-            sizing_class=entity_status.nodes.nfs[0].sizing_class,  # noqa: E501
-            storage_profile=entity_status.nodes.nfs[
-                0].storage_profile, count=nfs_count)
+    nfs_count = 0
+    nfs_sizing_class = None
+    nfs_storage_profile = None
+    if (
+        entity_status is not None
+        and entity_status.nodes is not None
+        and entity_status.nodes.nfs is not None
+    ):
+        nfs_count = len(entity_status.nodes.nfs)
+        if nfs_count > 0:
+            nfs_sizing_class = entity_status.nodes.nfs[0].sizing_class
+            nfs_storage_profile = entity_status.nodes.nfs[0].storage_profile
+    nfs = rde_2_0_0.Nfs(
+        sizing_class=nfs_sizing_class,
+        storage_profile=nfs_storage_profile,
+        count=nfs_count)
 
     k8_distribution = rde_2_0_0.Distribution(
         template_name=entity_status.cloud_properties.distribution.template_name,  # noqa: E501
@@ -193,6 +246,11 @@ def raise_error_if_unsupported_payload_version(payload_version: str):
     runtime_rde_version = server_utils.get_rde_version_in_use()
     if input_rde_version == def_constants.PayloadKey.UNKNOWN or semantic_version.Version(input_rde_version) > semantic_version.Version(runtime_rde_version):  # noqa: E501
         raise exceptions.BadRequestError(f"Unsupported payload version: {payload_version}")  # noqa: E501
+
+
+def raise_error_if_tkgm_cluster_operation(cluster_kind: str):
+    if cluster_kind and cluster_kind == ClusterEntityKind.TKG_M.value:
+        raise exceptions.BadRequestError(f"This operation is not supported for {cluster_kind} clusters")  # noqa: E501
 
 
 def convert_input_rde_to_runtime_rde_format(input_entity: dict):

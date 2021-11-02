@@ -132,12 +132,14 @@ class VcdBroker(abstract_broker.AbstractBroker):
             RequestKey.OVDC_NAME: None,
         }
         validated_data = {**defaults, **data}
+        cse_params = copy.deepcopy(validated_data)
+        cse_params[PayloadKey.SOURCE_DESCRIPTION] = thread_local_data.get_thread_local_data(ThreadLocalData.USER_AGENT)  # noqa: E501
 
         if kwargs.get(KwargKey.TELEMETRY, True):
             # Record the data for telemetry
             record_user_action_details(
                 cse_operation=CseOperation.CLUSTER_LIST,
-                cse_params=copy.deepcopy(validated_data))
+                cse_params=cse_params)
 
         client_v33 = self.context.get_client(api_version=DEFAULT_API_VERSION)
         # "raw clusters" do not have well-defined cluster data keys
@@ -238,6 +240,8 @@ class VcdBroker(abstract_broker.AbstractBroker):
             cse_params = copy.deepcopy(validated_data)
             cse_params[PayloadKey.SOURCE_DESCRIPTION] = thread_local_data.get_thread_local_data(ThreadLocalData.USER_AGENT)  # noqa: E501
             cse_params[PayloadKey.CLUSTER_ID] = cluster[ClusterDetailsKey.CLUSTER_ID.value]  # noqa: E501
+            cse_params[PayloadKey.TEMPLATE_NAME] = cluster[ClusterDetailsKey.TEMPLATE_NAME]  # noqa: E501
+            cse_params[PayloadKey.TEMPLATE_REVISION] = cluster[ClusterDetailsKey.TEMPLATE_REVISION]  # noqa: E501
             record_user_action_details(
                 cse_operation=CseOperation.CLUSTER_CONFIG,
                 cse_params=cse_params)
@@ -293,6 +297,7 @@ class VcdBroker(abstract_broker.AbstractBroker):
             # Record the telemetry data
             cse_params = copy.deepcopy(validated_data)
             cse_params[PayloadKey.CLUSTER_ID] = cluster[ClusterDetailsKey.CLUSTER_ID.value]  # noqa: E501
+            cse_params[PayloadKey.SOURCE_DESCRIPTION] = thread_local_data.get_thread_local_data(ThreadLocalData.USER_AGENT)  # noqa: E501
             record_user_action_details(
                 cse_operation=CseOperation.CLUSTER_UPGRADE_PLAN,
                 cse_params=cse_params)
@@ -1463,7 +1468,8 @@ def _drain_nodes(sysadmin_client: vcd_client.Client, vapp_href, node_names,
     script = "#!/usr/bin/env bash\n"
     for node_name in node_names:
         script += f"kubectl drain {node_name} " \
-                  f"--ignore-daemonsets --timeout=60s --delete-local-data\n"
+                  f"--force --ignore-daemonsets " \
+                  "--timeout=60s --delete-local-data\n"
 
     try:
         vapp = vcd_vapp.VApp(sysadmin_client, href=vapp_href)
@@ -1627,9 +1633,16 @@ def _update_cluster_dict_with_node_info(client, cluster):
             cluster.get('nfs_nodes').append(node_info)
 
 
-def get_all_clusters(client, cluster_name=None, cluster_id=None,
-                     org_name=None, ovdc_name=None, fetch_details=False,
-                     page_number=None, page_size=None):
+def get_all_clusters(
+        client,
+        cluster_name=None,
+        cluster_id=None,
+        org_name=None,
+        ovdc_name=None,
+        fetch_details=False,
+        page_number=None,
+        page_size=None
+) -> Union[List, Dict]:
     """Get list of dictionaries containing data for each visible cluster.
 
     :param vcd_client.Client client:
@@ -1816,12 +1829,11 @@ def _get_cluster(client, cluster_name, cluster_id=None, org_name=None,
 
 
 def _get_template(name=None, revision=None):
-    if (name is None and revision is not None) or (name is not None and revision is None):  # noqa: E501
-        raise ValueError("If template revision is specified, then template "
-                         "name must also be specified (and vice versa).")
+    if name is None or revision is None:
+        raise ValueError(
+            "Template name and revision both must be specified."
+        )
     server_config = server_utils.get_server_runtime_config()
-    name = name or server_config['broker']['default_template_name']
-    revision = revision or server_config['broker']['default_template_revision']
     for template in server_config['broker']['templates']:
         if (template[LocalTemplateKey.NAME], str(template[LocalTemplateKey.REVISION])) == (name, str(revision)):  # noqa: E501
             return template
@@ -2014,11 +2026,15 @@ def _init_cluster(sysadmin_client: vcd_client.Client, vapp, template_name,
                 f"Initialize cluster script execution failed on node "
                 f"{node_names}:{errors}")
         if result[0][0] != 0:
-            raise e.ClusterInitializationError(f"Couldn't initialize cluster:\n{result[0][2].content.decode()}")  # noqa: E501
+            raise e.ClusterInitializationError(
+                "Could not initialize cluster:\n"
+                f"{result[0][2].content.decode()}"
+            )
     except Exception as err:
         LOGGER.error(err, exc_info=True)
         raise e.ClusterInitializationError(
-            f"Couldn't initialize cluster: {str(err)}")
+            f"Could not initialize cluster: {str(err)}"
+        )
 
 
 def _join_cluster(sysadmin_client: vcd_client.Client, vapp, template_name,
@@ -2059,11 +2075,12 @@ def _join_cluster(sysadmin_client: vcd_client.Client, vapp, template_name,
                                          f" {node_names}:{errors}")
         for result in worker_results:
             if result[0] != 0:
-                raise e.ClusterJoiningError(f"Couldn't join cluster:"
-                                            f"\n{result[2].content.decode()}")
+                raise e.ClusterJoiningError(
+                    f"Could not join cluster:\n{result[2].content.decode()}"
+                )
     except Exception as err:
         LOGGER.error(err, exc_info=True)
-        raise e.ClusterJoiningError(f"Couldn't join cluster: {str(err)}")
+        raise e.ClusterJoiningError(f"Could not join cluster: {str(err)}")
 
 
 def _wait_until_ready_to_exec(vs, vm, password, tries=30):

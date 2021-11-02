@@ -3,8 +3,10 @@
 # SPDX-License-Identifier: BSD-2-Clause
 
 import json
+import os
 
 from pyvcloud.vcd.client import ApiVersion
+from pyvcloud.vcd.vcd_api_version import VCDApiVersion
 import yaml
 
 import container_service_extension.client.constants as cli_constants
@@ -55,7 +57,7 @@ class DEClusterTKGS:
 
         # api_version = self._client.get_api_version()
         # use api_version 37.0.0-alpha if VCD 10.3 is used.
-        if float(max_api_version) >= float(ApiVersion.VERSION_36.value):
+        if VCDApiVersion(max_api_version) >= VCDApiVersion(ApiVersion.VERSION_36.value):  # noqa: E501
             api_version = '37.0.0-alpha'
         self._tkg_s_client.set_default_header(cli_constants.TKGRequestHeaderKey.ACCEPT,  # noqa: E501
                                               f"application/json;version={api_version}")  # noqa: E501
@@ -413,7 +415,17 @@ class DEClusterTKGS:
             self._client, set(users), org_href)
         org_user_id_to_name_dict = vcd_utils.create_org_user_id_to_name_dict(
             self._client, org)
-        acl_svc = cluster_acl_svc.ClusterACLService(cluster_id, self._client)
+        logger_wire = logger.CLIENT_WIRE_LOGGER \
+            if utils.str_to_bool(
+                os.getenv(cli_constants.ENV_CSE_CLIENT_WIRE_LOGGING)
+            ) \
+            else logger.NULL_LOGGER
+        acl_svc = cluster_acl_svc.ClusterACLService(
+            cluster_id=cluster_id,
+            client=self._client,
+            logger_debug=logger.CLIENT_LOGGER,
+            logger_wire=logger_wire
+        )
         for acl_entry in acl_svc.list_def_entity_acl_entries():
             username = org_user_id_to_name_dict.get(acl_entry.memberId)
             if name_to_id.get(username):
@@ -442,7 +454,16 @@ class DEClusterTKGS:
         name_to_id: dict = client_utils.create_user_name_to_id_dict(
             self._client, set(users), org_href)
         users_ids: set = {user_id for _, user_id in name_to_id.items()}
-        acl_svc = cluster_acl_svc.ClusterACLService(cluster_id, self._client)
+        logger_wire = logger.CLIENT_WIRE_LOGGER \
+            if utils.str_to_bool(
+                os.getenv(cli_constants.ENV_CSE_CLIENT_WIRE_LOGGING)
+            )\
+            else logger.NULL_LOGGER
+        acl_svc = cluster_acl_svc.ClusterACLService(
+            cluster_id=cluster_id,
+            client=self._client,
+            logger_debug=logger.CLIENT_LOGGER,
+            logger_wire=logger_wire)
         delete_acl_ids = []
         for acl_entry in acl_svc.list_def_entity_acl_entries():
             if acl_entry.memberId in users_ids:
@@ -471,7 +492,17 @@ class DEClusterTKGS:
             sys_org_user_id_to_name_dict = vcd_utils.create_org_user_id_to_name_dict(  # noqa:E501
                 self._client, shared_constants.SYSTEM_ORG_NAME)
             org_user_id_to_name_dict.update(sys_org_user_id_to_name_dict)
-        acl_svc = cluster_acl_svc.ClusterACLService(cluster_id, self._client)
+
+        logger_wire = logger.CLIENT_WIRE_LOGGER \
+            if utils.str_to_bool(
+                os.getenv(cli_constants.ENV_CSE_CLIENT_WIRE_LOGGING)
+            ) \
+            else logger.NULL_LOGGER
+        acl_svc = cluster_acl_svc.ClusterACLService(
+            cluster_id=cluster_id,
+            client=self._client,
+            logger_debug=logger.CLIENT_LOGGER,
+            logger_wire=logger_wire)
         page_num = result_count = 0
         while True:
             page_num += 1

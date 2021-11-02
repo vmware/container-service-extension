@@ -77,10 +77,17 @@ UNSUPPORTED_SUBCOMMAND_OPTIONS_BY_VERSION = {
             cli_constants.CommandNameKey.CREATE: ['cpu', 'memory']
         },
         cli_constants.GroupKey.OVDC: {
-            cli_constants.CommandNameKey.ENABLE: [] if str_to_bool(
-                os.getenv(cli_constants.ENV_CSE_TKG_PLUS_ENABLED)) else ['enable_tkg_plus'],  # noqa: E501
-            cli_constants.CommandNameKey.DISABLE: [] if str_to_bool(
-                os.getenv(cli_constants.ENV_CSE_TKG_PLUS_ENABLED)) else ['disable_tkg_plus']  # noqa: E501
+            cli_constants.CommandNameKey.ENABLE: []
+            if str_to_bool(
+                os.getenv(cli_constants.ENV_CSE_TKG_PLUS_ENABLED)
+            )
+            else ['enable_tkg_plus'],
+
+            cli_constants.CommandNameKey.DISABLE: []
+            if str_to_bool(
+                os.getenv(cli_constants.ENV_CSE_TKG_PLUS_ENABLED)
+            )
+            else ['disable_tkg_plus']
         }
     }
 }
@@ -149,7 +156,9 @@ class GroupCommandFilter(click.Group):
             filtered_params = [param for param in cmd.params if param.name not in unsupported_params]  # noqa: E501
             cmd.params = filtered_params
         except Exception as e:
-            CLIENT_LOGGER.debug(f'exception while filtering {cmd_name}: {e}')
-            pass
+            CLIENT_LOGGER.debug(
+                f"exception while filtering {cmd_name}: {e}",
+                exc_info=True
+            )
 
         return click.Group.get_command(self, ctx, cmd_name)

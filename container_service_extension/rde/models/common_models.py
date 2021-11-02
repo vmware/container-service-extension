@@ -244,7 +244,8 @@ class GenericClusterEntity:
         entity_dict = entity.to_dict() if not isinstance(entity, dict) else entity  # noqa: E501
         if entity_dict['kind'] in \
                 [shared_constants.ClusterEntityKind.NATIVE.value,
-                 shared_constants.ClusterEntityKind.TKG_PLUS.value]:
+                 shared_constants.ClusterEntityKind.TKG_PLUS.value,
+                 shared_constants.ClusterEntityKind.TKG_M.value]:
             # Get the entity type version from entity type urn
             entity_type_version = self.entityType.split(":")[-1]
             # Parse the entity to the right entity class

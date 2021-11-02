@@ -30,19 +30,25 @@ Examples
 @template_group.command('list',
                         short_help='List native kubernetes runtime templates')
 @click.pass_context
-def list_templates(ctx):
-    """Display templates that can be used to deploy native clusters."""
+@click.option(
+    '-t',
+    '--tkg',
+    'is_tkgm',
+    is_flag=True,
+    help='Show TKG templates in CSE instead of native templates.'
+)
+def list_templates(ctx, is_tkgm):
+    """Display templates that can be used to deploy native/TKG clusters."""
     CLIENT_LOGGER.debug(f'Executing command: {ctx.command_path}')
     try:
         client_utils.cse_restore_session(ctx)
         client = ctx.obj['client']
         template = Template(client)
-        result = template.get_templates()
+        result = template.get_templates(is_tkgm)
         CLIENT_LOGGER.debug(result)
         value_field_to_display_field = {
             'name': 'Name',
             'revision': 'Revision',
-            'is_default': 'Default',
             'catalog': 'Catalog',
             'catalog_item': 'Catalog Item',
             'description': 'Description'
@@ -51,4 +57,4 @@ def list_templates(ctx):
         stdout(filtered_result, ctx, sort_headers=False)
     except Exception as e:
         stderr(e, ctx)
-        CLIENT_LOGGER.error(str(e))
+        CLIENT_LOGGER.error(str(e), exc_info=True)

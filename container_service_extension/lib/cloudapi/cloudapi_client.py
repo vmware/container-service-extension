@@ -7,6 +7,7 @@ import json
 import logging
 from urllib import parse
 
+from pyvcloud.vcd.vcd_api_version import VCDApiVersion
 import requests
 
 from container_service_extension.lib.cloudapi.constants import ResponseKeys
@@ -18,7 +19,7 @@ class CloudApiClient(object):
     def __init__(self,
                  base_url: str,
                  token: str,
-                 is_jwt_token: str,
+                 is_jwt_token: bool,
                  api_version: str,
                  logger_debug: logging.Logger,
                  logger_wire: logging.Logger,
@@ -42,9 +43,13 @@ class CloudApiClient(object):
         self._last_response = None
         self.is_sys_admin = is_sys_admin
         self._api_version = api_version
+        self._vcd_api_version = VCDApiVersion(api_version)
 
     def get_api_version(self):
         return self._api_version
+
+    def get_vcd_api_version(self):
+        return self._vcd_api_version
 
     def get_base_url(self):
         return self._base_url
@@ -173,3 +178,11 @@ class CloudApiClient(object):
                 else:
                     return ''
         return ''
+
+    def get_last_response_etag(self) -> str:
+        last_response_headers = self.get_last_response_headers()
+        if last_response_headers and \
+                hasattr(last_response_headers, '_store') and \
+                last_response_headers._store.get('etag') is not None:
+            return last_response_headers._store['etag'][1]
+        return None
