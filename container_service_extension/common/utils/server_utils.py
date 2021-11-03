@@ -172,9 +172,7 @@ def create_links_and_construct_paginated_result(
         query_params = {}
     next_page_uri: str = ''
     config = get_server_runtime_config()
-    host: str = config['vcd']['host']
-    if not host.startswith('http') and not host.startswith('https'):
-        host = f"https://{host}"
+    host: str = f"https://{config['vcd']['host']}"
     if 0 < page_number * page_size < result_total:
         # TODO find a way to get the initial url part
         # ideally the request details should be passed down to each of the
