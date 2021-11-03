@@ -70,7 +70,6 @@ def execute_commands(cmd_list, logger=logger.NULL_LOGGER):
             format_command_info(
                 'vcd', cmd, result.exit_code, result.output
             )
-        print(result.output)
         if action.validate_output_func is not None:
             assert action.validate_output_func(result.output, action.test_user), \
                 "Command execution failed."  # noqa: E501
@@ -84,25 +83,27 @@ def execute_commands(cmd_list, logger=logger.NULL_LOGGER):
     return cmd_results
 
 
-def list_cluster_output_validator(output, runner_username):
-    """Test cse cluster list command output.
+def list_cluster_output_validator():
+    def validator(output, runner_username):
+        """Test cse cluster list command output.
 
-    Validate cse cluster list command based on persona.
+        Validate cse cluster list command based on persona.
 
-    :param output: list of results from execution of cse commands
-    :param runner_username: persona used to run the command
-    """
-    if runner_username == 'sys_admin':
-        # sys admin can see all the clusters
-        assert len(re.findall('testcluster', output)) == 3
+        :param output: list of results from execution of cse commands
+        :param runner_username: persona used to run the command
+        """
+        if runner_username == 'sys_admin':
+            # sys admin can see all the clusters
+            assert len(re.findall('testcluster', output)) == 3
 
-    if runner_username == 'org_admin':
-        # org admin can see all the clusters belonging to the org
-        assert len(re.findall('testcluster', output)) == 3
+        if runner_username == 'org_admin':
+            # org admin can see all the clusters belonging to the org
+            assert len(re.findall('testcluster', output)) == 3
 
-    if runner_username == 'vapp_author':
-        # vapp author can only see clusters created by him
-        assert len(re.findall('testcluster', output)) == 1
+        if runner_username == 'vapp_author':
+            # vapp author can only see clusters created by him
+            assert len(re.findall('testcluster', output)) == 1
+    return validator
 
 
 def _update_cluster_apply_spec_for_2_0(apply_spec, properties):

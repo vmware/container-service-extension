@@ -441,7 +441,7 @@ def test_0080_vcd_cse_cluster_list(test_runner_username):
                    exit_code=0,
                    validate_output_func=None, test_user=test_runner_username),
         cmd_binder(cmd="cse cluster list", exit_code=0,
-                   validate_output_func=list_cluster_output_validator,
+                   validate_output_func=list_cluster_output_validator(),
                    test_user=test_runner_username),
         cmd_binder(cmd=env.USER_LOGOUT_CMD, exit_code=0,
                    validate_output_func=None, test_user=test_runner_username)
