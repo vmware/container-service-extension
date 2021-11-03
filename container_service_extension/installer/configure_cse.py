@@ -315,14 +315,14 @@ def install_cse(
         INSTALL_LOGGER.info(msg)
 
         ext_type = _get_existing_extension_type(client)
-        # if ext_type != server_constants.ExtensionType.NONE:
-        #     ext_found_msg = f"{ext_type} extension found. Use `cse upgrade` " \
-        #                     f"instead of 'cse install'."
-        #     INSTALL_LOGGER.error(ext_found_msg)
-        #     raise Exception(ext_found_msg)
+        if ext_type != server_constants.ExtensionType.NONE:
+            ext_found_msg = f"{ext_type} extension found. Use `cse upgrade` " \
+                            f"instead of 'cse install'."
+            INSTALL_LOGGER.error(ext_found_msg)
+            raise Exception(ext_found_msg)
 
         # register cse def schema on VCD
-        _register_def_schema(client=client, config=config,
+        _register_rde_schema(client=client, config=config,
                              msg_update_callback=msg_update_callback,
                              update_schema=False,
                              log_wire=log_wire)
@@ -1381,7 +1381,7 @@ def _update_user_role_with_right_bundle(
     logger_debug.info(msg)
 
 
-def _register_def_schema(
+def _register_rde_schema(
         client: Client,
         config=None,
         msg_update_callback=utils.NullPrinter(),
@@ -1419,11 +1419,12 @@ def _register_def_schema(
         schemas_to_be_registered = [runtime_rde_schema]
 
         # TODO Retrieve the register_capvcd_schema value from the config file.
-        register_capvcd_schema: bool = config['service']['register_capvcd_schema']
+        register_capvcd_schema: bool = config['service'].get('register_capvcd_schema', False)  # noqa: E501
         if register_capvcd_schema:
-            schemas_to_be_registered.append(def_utils.get_rde_metadata(def_constants.CapvcdRDEVersion.RDE_1_0_0.value))
+            capvcd_rde_version = def_constants.CapvcdRDEVersion.RDE_1_0_0.value
+            schemas_to_be_registered.append(def_utils.get_rde_metadata(capvcd_rde_version))  # noqa: E501
 
-        # Register the schema(s) : Native schema, CAPVCD schema etc
+        # Register RDE schema(s) : Native schema, CAPVCD schema etc
         for schema in schemas_to_be_registered:
             # Register Interface(s)
             interfaces: List[common_models.DefInterface] = \
@@ -1437,12 +1438,12 @@ def _register_def_schema(
             _register_behaviors(cloudapi_client, behavior_metadata,
                                 msg_update_callback)  # noqa: E501
 
-            # Register Native EntityType
+            # Register EntityType
             entity_type: common_models.DefEntityType = \
                 schema[def_constants.RDEMetadataKey.ENTITY_TYPE]
-            _register_native_entity_type(cloudapi_client, entity_type,
-                                         update_schema,
-                                         msg_update_callback)  # noqa: E501
+            _register_entity_type(cloudapi_client, entity_type,
+                                  update_schema,
+                                  msg_update_callback)  # noqa: E501
 
             # Override Behavior(s)
             override_behavior_metadata: Dict[str, List[Behavior]] = \
@@ -1564,7 +1565,7 @@ def _register_behaviors(
                 INSTALL_LOGGER.info(msg)
 
 
-def _register_native_entity_type(
+def _register_entity_type(
         cloudapi_client,
         entity_type: common_models.DefEntityType,
         update_schema: bool,
@@ -2221,7 +2222,7 @@ def _upgrade_to_cse_3_1_non_legacy(
     )
 
     # Register def schema
-    _register_def_schema(
+    _register_rde_schema(
         client=client,
         config=config,
         update_schema=update_schema,

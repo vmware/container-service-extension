@@ -183,10 +183,7 @@ can choose to monitor the task progress manually.
       
 <a name="cse31_cluster_share"></a>
 ### CSE 3.1 `Cluster share` command
-The `vcd cse cluster share` command is supported for both TKG-S and native clusters. 
-- Sharing TKG-s clusters would simply share the corresponding RDEs with the other user(s).
-- Sharing native clusters would share both the corresponding RDE and the backing vapp with the other user(s).
-  
+1. `vcd cse cluster share` command shares the cluster with other users
    ```sh
       # Share cluster 'mycluster' with FullControl access with 'user1' and 'user2'
       vcd cse cluster share --name mycluster --acl FullControl user1 user2
