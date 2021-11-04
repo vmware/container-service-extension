@@ -92,17 +92,18 @@ def list_cluster_output_validator():
         :param output: list of results from execution of cse commands
         :param runner_username: persona used to run the command
         """
-        if runner_username == 'sys_admin':
+        num_clusters = len(re.findall('testcluster', output))
+        if runner_username == env.SYS_ADMIN_NAME:
             # sys admin can see all the clusters
-            assert len(re.findall('testcluster', output)) == 3
-
-        if runner_username == 'org_admin':
+            return num_clusters == 3
+        if runner_username == env.ORG_ADMIN_NAME:
             # org admin can see all the clusters belonging to the org
-            assert len(re.findall('testcluster', output)) == 3
+            return num_clusters == 3
 
-        if runner_username == 'vapp_author':
+        if runner_username == env.K8_AUTHOR_NAME:
             # vapp author can only see clusters created by him
-            assert len(re.findall('testcluster', output)) == 1
+            return num_clusters == 1
+        return False
     return validator
 
 
