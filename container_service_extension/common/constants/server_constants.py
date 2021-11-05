@@ -211,6 +211,9 @@ class ClusterScriptFile(str, Enum):
     CONTROL_PLANE = 'control_plane.sh'
     NODE = 'node.sh'
 
+    CLOUDINIT_CONTROL_PLANE = 'cloud_init_control_plane.yaml'
+    CLOUDINIT_NODE = 'cloud_init_node.yaml'
+
     # Note that we need _ in the version instead of dots to allow
     # python package parsing methods to work well
     VERSION_1_X = "v1_x"
@@ -770,24 +773,13 @@ class PostCustomizationStatus(Enum):
 
 
 @unique
-class ToolsDeployPkgCustomizationStatus(Enum):
-    NONE = None
-    IN_PROGRESS = 'Started'
-    SUCCESSFUL = 'Successful'
-
-
-@unique
-class PreCustomizationPhase(Enum):
-    POST_BOOT_CUSTOMIZATION_SERVICE_SETUP = 'guestinfo.gc.status'
-
-
-@unique
 class PostCustomizationPhase(Enum):
-    HOSTNAME_SETUP = 'guestinfo.postcustomization.hostname.status'
     NETWORK_CONFIGURATION = 'guestinfo.postcustomization.networkconfiguration.status'  # noqa: E501
     STORE_SSH_KEY = 'guestinfo.postcustomization.store.sshkey.status'
     KUBEADM_INIT = 'guestinfo.postcustomization.kubeinit.status'
-    KUBECTL_APPLY_CNI = 'guestinfo.postcustomization.kubectl.apply.cni.status'  # noqa: E501
+    KUBECTL_APPLY_CNI = 'guestinfo.postcustomization.kubectl.cni.install.status'  # noqa: E501
+    KUBECTL_APPLY_CPI = 'guestinfo.postcustomization.kubectl.cpi.install.status'  # noqa: E501
+    KUBECTL_APPLY_CSI = 'guestinfo.postcustomization.kubectl.csi.install.status'  # noqa: E501
     KUBEADM_TOKEN_GENERATE = 'guestinfo.postcustomization.kubeadm.token.generate.status'  # noqa: E501
     KUBEADM_NODE_JOIN = 'guestinfo.postcustomization.kubeadm.node.join.status'
 
@@ -800,5 +792,7 @@ DEFAULT_POST_CUSTOMIZATION_STATUS_LIST = [cust_status.value for cust_status in P
 DEFAULT_POST_CUSTOMIZATION_POLL_SEC = 5
 DEFAULT_POST_CUSTOMIZATION_TIMEOUT_SEC = 600
 DISK_ENABLE_UUID = 'disk.enableUUID'
+CLOUDINIT_GUEST_USERDATA = 'guestinfo.userdata'
+CLOUDINIT_GUEST_USERDATA_ENCODING = 'guestinfo.userdata.encoding'
 
 MAX_RDE_UPDATE_ATTEMPTS = 10
