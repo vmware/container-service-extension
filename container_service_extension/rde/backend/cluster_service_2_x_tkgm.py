@@ -1932,7 +1932,7 @@ def _set_cloud_init_spec(
         vapp,
         vm,
         cloud_init_spec: str) -> None:
-    base64_encoded_cloud_init_spec = base64.b64encode(cloud_init_spec.encode("ascii"))  # noqa: E501
+    base64_encoded_cloud_init_spec = base64.b64encode(cloud_init_spec.encode("utf-8"))  # noqa: E501
     task = vm.add_extra_config_element(CLOUDINIT_GUEST_USERDATA, base64_encoded_cloud_init_spec, True)  # noqa: E501
     sysadmin_client.get_task_monitor().wait_for_status(
         task,
@@ -2012,7 +2012,7 @@ def _add_control_plane_nodes(
             cust_script=None,
         )
         # encode refresh-token to base64
-        base64_refresh_token = base64.b64encode(refresh_token.encode("ascii"))
+        base64_refresh_token = base64.b64encode(refresh_token.encode("utf-8"))
         for spec in vm_specs:
             spec['cloud_init_spec'] = templated_script.format(
                 vcd_host=vcd_host.replace("/", r"\/"),
