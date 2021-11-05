@@ -171,18 +171,20 @@ def create_links_and_construct_paginated_result(
     if query_params is None:
         query_params = {}
     next_page_uri: str = ''
+    config = get_server_runtime_config()
+    host: str = f"https://{config['vcd']['host']}"
     if 0 < page_number * page_size < result_total:
         # TODO find a way to get the initial url part
         # ideally the request details should be passed down to each of the
         # handler functions as request context
-        next_page_uri = f"{base_uri}?page={page_number+1}&pageSize={page_size}"
+        next_page_uri = f"{host}{base_uri}?page={page_number+1}&pageSize={page_size}"  # noqa: E501
         for q in query_params.keys():
             next_page_uri += f"&{q}={query_params[q]}"
 
     page_count = math.ceil(result_total / page_size)
     prev_page_uri: str = ''
     if page_count >= page_number > 1:
-        prev_page_uri = f"{base_uri}?page={page_number-1}&pageSize={page_size}"
+        prev_page_uri = f"{host}{base_uri}?page={page_number-1}&pageSize={page_size}"  # noqa: E501
 
     # add the rest of the query parameters
     for q in query_params.keys():
