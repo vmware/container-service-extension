@@ -264,7 +264,8 @@ def native_cluster_list(data: dict, op_ctx: ctx.OperationContext):
     result = svc.get_clusters_by_page(filters=filters)
     clusters = [def_entity.to_dict() for def_entity in result[PaginationKey.VALUES]]  # noqa: E501
 
-    uri = data['url']
+    # remove duplicate /api path while forming the endpoint url
+    uri = f"{op_ctx.client.get_api_uri().strip('/api')}{data['url']}"
     return server_utils.create_links_and_construct_paginated_result(
         uri,
         clusters,
