@@ -13,8 +13,8 @@ import container_service_extension.common.constants.server_constants as server_c
 from container_service_extension.rde import utils as def_utils
 from container_service_extension.rde.behaviors.behavior_model import BehaviorAcl, BehaviorOperation  # noqa: E501
 from container_service_extension.rde.constants import \
-    DEF_ENTITY_TYPE_ID_PREFIX, DEF_INTERFACE_ID_PREFIX, Nss, RDEMetadataKey, \
-    RDEVersion, RuntimeRDEVersion, SchemaFile, Vendor
+    CapvcdRDEVersion, DEF_ENTITY_TYPE_ID_PREFIX, DEF_INTERFACE_ID_PREFIX, \
+    Nss, RDEMetadataKey, RDEVersion, RuntimeRDEVersion, SchemaFile, Vendor
 from container_service_extension.rde.models.abstractNativeEntity import AbstractNativeEntity  # noqa: E501
 from container_service_extension.rde.models.rde_factory import get_rde_model
 from container_service_extension.rde.utils import load_rde_schema
@@ -353,6 +353,14 @@ class EntityType(Enum):
                                           vendor=Vendor.VMWARE.value,
                                           nss=Nss.TKG.value,
                                           description='')
+    CAPVCD_ENTITY_TYPE_1_0_0 = DefEntityType(name='CAPVCD Cluster',
+                                          id=f"{DEF_ENTITY_TYPE_ID_PREFIX}:{Vendor.VMWARE.value}:{Nss.CAPVCD}:1.0.0",  # noqa: E501
+                                          schema=load_rde_schema(SchemaFile.CAPVCD_1_0_0),
+                                          interfaces=[K8Interface.VCD_INTERFACE.value.id],  # noqa: E501
+                                          version='1.0.0',
+                                          vendor=Vendor.VMWARE.value,
+                                          nss=Nss.CAPVCD.value,
+                                          description='')
 
 
 # Key: Represents the Runtime RDE version used by CSE server for any given environment.  # noqa: E501
@@ -388,5 +396,10 @@ MAP_RDE_VERSION_TO_ITS_METADATA = {
                  BehaviorAcl.KUBE_CONFIG_ACL.value,
                  BehaviorAcl.DELETE_NFS_NODE_ACL.value]
         }
-    }
+    },
+
+    CapvcdRDEVersion.RDE_1_0_0: {
+        RDEMetadataKey.INTERFACES: [K8Interface.VCD_INTERFACE.value],
+        RDEMetadataKey.ENTITY_TYPE: EntityType.CAPVCD_ENTITY_TYPE_1_0_0.value,
+    },
 }

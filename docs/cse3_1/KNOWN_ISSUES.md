@@ -162,4 +162,3 @@ to
 
 Kubernetes version has to be specified within the configuration file itself,
 since `--kubernetes-version` and `--config` are incompatible.
-

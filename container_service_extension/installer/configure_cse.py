@@ -322,7 +322,7 @@ def install_cse(
             raise Exception(ext_found_msg)
 
         # register cse def schema on VCD
-        _register_def_schema(client=client, config=config,
+        _register_rde_schema(client=client, config=config,
                              msg_update_callback=msg_update_callback,
                              update_schema=False,
                              log_wire=log_wire)
@@ -1381,7 +1381,7 @@ def _update_user_role_with_right_bundle(
     logger_debug.info(msg)
 
 
-def _register_def_schema(
+def _register_rde_schema(
         client: Client,
         config=None,
         msg_update_callback=utils.NullPrinter(),
@@ -1415,33 +1415,51 @@ def _register_def_schema(
         rde_version: str = str(config['service']['rde_version_in_use'])
         msg_update_callback.general(f"Using RDE version: {str(rde_version)}")
         # Obtain RDE metadata needed to initialize CSE
-        rde_metadata: dict = def_utils.get_rde_metadata(rde_version)
+        runtime_rde_schema: dict = def_utils.get_rde_metadata(rde_version)
+        schemas_to_be_registered = [runtime_rde_schema]
 
-        # Register Interface(s)
-        interfaces: List[common_models.DefInterface] = \
-            rde_metadata[def_constants.RDEMetadataKey.INTERFACES]
-        _register_interfaces(cloudapi_client, interfaces, msg_update_callback)
+        # TODO Retrieve the register_capvcd_schema value from the config file.
+        register_capvcd_schema: bool = config['service'].get('register_capvcd_schema', False)  # noqa: E501
+        if register_capvcd_schema:
+            capvcd_rde_version = def_constants.CapvcdRDEVersion.RDE_1_0_0.value
+            schemas_to_be_registered.append(def_utils.get_rde_metadata(capvcd_rde_version))  # noqa: E501
 
-        # Register Behavior(s)
-        behavior_metadata: Dict[str, List[Behavior]] = rde_metadata.get(
-            def_constants.RDEMetadataKey.INTERFACE_TO_BEHAVIORS_MAP, {})
-        _register_behaviors(cloudapi_client, behavior_metadata, msg_update_callback)  # noqa: E501
+        # Register RDE schema(s) : Native schema, CAPVCD schema etc
+        for schema in schemas_to_be_registered:
+            # Register Interface(s)
+            interfaces: List[common_models.DefInterface] = \
+                schema[def_constants.RDEMetadataKey.INTERFACES]
+            _register_interfaces(cloudapi_client, interfaces,
+                                 msg_update_callback)
 
-        # Register Native EntityType
-        entity_type: common_models.DefEntityType = \
-            rde_metadata[def_constants.RDEMetadataKey.ENTITY_TYPE]
-        _register_native_entity_type(cloudapi_client, entity_type,
-                                     update_schema, msg_update_callback)  # noqa: E501
+            # Register Behavior(s)
+            behavior_metadata: Dict[str, List[Behavior]] = schema.get(
+                def_constants.RDEMetadataKey.INTERFACE_TO_BEHAVIORS_MAP, {})
+            _register_behaviors(cloudapi_client, behavior_metadata,
+                                msg_update_callback)  # noqa: E501
 
-        # Override Behavior(s)
-        override_behavior_metadata: Dict[str, List[Behavior]] = \
-            rde_metadata.get(def_constants.RDEMetadataKey.ENTITY_TYPE_TO_OVERRIDABLE_BEHAVIORS_MAP, {})  # noqa: E501
-        _override_behaviors(cloudapi_client, override_behavior_metadata, msg_update_callback)  # noqa: E501
+            # Register EntityType
+            entity_type: common_models.DefEntityType = \
+                schema[def_constants.RDEMetadataKey.ENTITY_TYPE]
+            _register_entity_type(cloudapi_client, entity_type,
+                                  update_schema,
+                                  msg_update_callback)  # noqa: E501
 
-        # Set ACL(s) for all the behavior(s)
-        behavior_acl_metadata: Dict[str, List[BehaviorAclEntry]] = \
-            rde_metadata.get(def_constants.RDEMetadataKey.BEHAVIOR_TO_ACL_MAP, {})  # noqa: E501
-        _set_acls_on_behaviors(cloudapi_client, behavior_acl_metadata, msg_update_callback)  # noqa: E501
+            # Override Behavior(s)
+            override_behavior_metadata: Dict[str, List[Behavior]] = \
+                schema.get(
+                    def_constants.RDEMetadataKey.ENTITY_TYPE_TO_OVERRIDABLE_BEHAVIORS_MAP,
+                    {})  # noqa: E501
+            _override_behaviors(cloudapi_client, override_behavior_metadata,
+                                msg_update_callback)  # noqa: E501
+
+            # Set ACL(s) for all the behavior(s)
+            behavior_acl_metadata: Dict[str, List[BehaviorAclEntry]] = \
+                schema.get(
+                    def_constants.RDEMetadataKey.BEHAVIOR_TO_ACL_MAP,
+                    {})  # noqa: E501
+            _set_acls_on_behaviors(cloudapi_client, behavior_acl_metadata,
+                                   msg_update_callback)  # noqa: E501
 
         # Update user's role with right bundle associated with native defined
         # entity
@@ -1547,7 +1565,7 @@ def _register_behaviors(
                 INSTALL_LOGGER.info(msg)
 
 
-def _register_native_entity_type(
+def _register_entity_type(
         cloudapi_client,
         entity_type: common_models.DefEntityType,
         update_schema: bool,
@@ -1568,22 +1586,22 @@ def _register_native_entity_type(
                 schema=entity_type.schema,  # updated
                 interfaces=current_entity_type.interfaces,
                 readonly=current_entity_type.readonly)
-            msg = "Updating existing CSE native Defined Entity Type."
+            msg = f"Updating existing Entity Type '{entity_type.id}'"
             schema_svc.update_entity_type(updated_native_entity_type)
         else:
-            msg = f"Skipping creation of Native Entity Type '{entity_type.id}'. Native Entity Type already exists."  # noqa: E501
+            msg = f"Skipping creation of Entity Type '{entity_type.id}'. Entity Type already exists."  # noqa: E501
     except cse_exception.DefSchemaServiceError:
         # TODO handle this part only if the entity type was not found
         native_entity_type = schema_svc.create_entity_type(entity_type)
-        msg = f"Successfully registered Native entity type '{native_entity_type.id}'\n"  # noqa: E501
+        msg = f"Successfully registered Entity type '{native_entity_type.id}'\n"  # noqa: E501
         entity_svc = def_entity_svc.DefEntityService(cloudapi_client)
         entity_svc.create_acl_for_entity(
             native_entity_type.get_id(),
             grant_type=server_constants.AclGrantType.MembershipACLGrant,
             access_level_id=server_constants.AclAccessLevelId.AccessLevelReadWrite,  # noqa: E501
             member_id=server_constants.AclMemberId.SystemOrgId)
-        msg += "Successfully " \
-               "added ReadWrite ACL for native defined entity to System Org"  # noqa: E501
+        msg += f"Successfully " \
+               "added ReadWrite ACL for defined entity '{entity_type.id}' to System Org"  # noqa: E501
     msg_update_callback.general(msg)
     INSTALL_LOGGER.info(msg)
 
@@ -2204,7 +2222,7 @@ def _upgrade_to_cse_3_1_non_legacy(
     )
 
     # Register def schema
-    _register_def_schema(
+    _register_rde_schema(
         client=client,
         config=config,
         update_schema=update_schema,
