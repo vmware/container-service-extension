@@ -341,7 +341,7 @@ def cluster_acl_info(data: dict, op_ctx: ctx.OperationContext):
     svc = cluster_service_factory.ClusterServiceFactory(_get_request_context(op_ctx)).get_cluster_service()  # noqa: E501
     result: dict = svc.get_cluster_acl_info(cluster_id, page, page_size)
 
-    uri = data['url']
+    uri = f"{op_ctx.client.get_api_uri().strip('/api')}{data['url']}"
     return server_utils.create_links_and_construct_paginated_result(
         base_uri=uri,
         values=result.get(PaginationKey.VALUES, []),
