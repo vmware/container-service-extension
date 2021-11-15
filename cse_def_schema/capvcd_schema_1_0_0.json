@@ -42,8 +42,8 @@
                             "properties":{
                                 "count":{
                                     "type":"integer",
-                                    "description":"Single control plane node is supported; More than single control plane node is not yet supported.",
-                                    "maximum":1,
+                                    "description":"Multi control plane is supported.",
+                                    "maximum":100,
                                     "minimum":1
                                 },
                                 "sizingClass":{
