@@ -73,7 +73,8 @@ def org_vdc_list(data, operation_context: ctx.OperationContext):
     result = ovdc_service.list_org_vdcs(operation_context,
                                         page_number=page_number,
                                         page_size=page_size)
-    base_uri = data['url']
+    # remove duplicate /api path while forming the endpoint url
+    base_uri = f"{operation_context.client.get_api_uri().strip('/api')}{data['url']}"  # noqa: E501
     return server_utils.create_links_and_construct_paginated_result(
         base_uri,
         result[PaginationKey.VALUES],

@@ -39,12 +39,14 @@ class Nss(str, Enum):
     KUBERNETES = 'k8s'
     NATIVE_CLUSTER = 'nativeCluster'
     TKG = 'tkgcluster'
+    CAPVCD = 'capvcd'
 
 
 @unique
 class SchemaFile(str, Enum):
     SCHEMA_1_0_0 = 'schema_1_0_0.json'
     SCHEMA_2_0_0 = 'schema_2_0_0.json'
+    CAPVCD_1_0_0 = 'capvcd_schema_1_0_0.json'
 
 
 DEF_NATIVE_ENTITY_TYPE_RIGHT_BUNDLE = \
@@ -67,6 +69,10 @@ DEF_NATIVE_ENTITY_TYPE_RIGHT_BUNDLE = \
 class RuntimeRDEVersion(str, Enum):
     RDE_1_X = '1.0.0'
     RDE_2_X = '2.0.0'
+
+@unique
+class CapvcdRDEVersion(str, Enum):
+    RDE_1_0_0 = 'capvcd_1.0.0'
 
 
 @unique

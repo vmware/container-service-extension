@@ -159,7 +159,6 @@ def native_cluster_list(request_data, op_ctx: ctx.OperationContext):
     """
     vcd_broker = VcdBroker(op_ctx)
 
-    base_url = request_data['url']
     query_params = request_data.get(RequestKey.QUERY_PARAMS, {})
     page_number = int(query_params.get(PaginationKey.PAGE_NUMBER, CSE_PAGINATION_FIRST_PAGE_NUMBER))  # noqa: E501
     page_size = int(query_params.get(PaginationKey.PAGE_SIZE, CSE_PAGINATION_DEFAULT_PAGE_SIZE))  # noqa: E501 =
@@ -185,7 +184,9 @@ def native_cluster_list(request_data, op_ctx: ctx.OperationContext):
     clusters = vcd_clusters_info[PaginationKey.VALUES]
     result = _retain_cluster_list_common_properties(clusters,
                                                     properties_to_retain)
-
+    # remove duplicate /api path while forming the endpoint url
+    base_url = f"{op_ctx.client.get_api_uri().strip('/api')}" \
+        f"{request_data['url']}"
     return server_utils.create_links_and_construct_paginated_result(
         base_url,
         result,
