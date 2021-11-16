@@ -1,34 +1,5 @@
 {
     "definitions":{
-        "node":{
-            "type":"object",
-            "required":[
-                "name"
-            ],
-            "properties":{
-                "name":{
-                    "type":"string"
-                },
-                "ip":{
-                    "type":"string"
-                },
-                "sizingClass":{
-                    "type":"string"
-                },
-                "storageProfile":{
-                    "type":"string"
-                },
-                "cpu":{
-                    "type": "integer",
-                    "description": "Number of CPU"
-                },
-                "memory": {
-                    "type": "integer",
-                    "description": "Memory in Mb"
-                }
-            },
-            "additionalProperties":true
-        },
         "distribution":{
             "type":"object",
             "required":[
@@ -52,10 +23,7 @@
     "properties":{
         "kind":{
             "enum":[
-                "native",
-                "TanzuKubernetesCluster",
-                "TKG+",
-                "TKGm"
+                "CAPVCDCluster"
             ],
             "type":"string",
             "description":"The kind of the Kubernetes cluster."
@@ -63,45 +31,24 @@
         "spec":{
             "type":"object",
             "description":"The user specification of the desired state of the cluster.",
-            "required":[
-                "settings"
-            ],
             "properties":{
                 "topology":{
                     "type":"object",
                     "description":"Topology of the kubernetes cluster",
-                    "required":[
-                        "controlPlane"
-                    ],
                     "properties":{
                         "controlPlane":{
                             "type":"object",
                             "description":"The desired control-plane state of the cluster. The properties \"sizingClass\" and \"storageProfile\" can be specified only during the cluster creation phase. These properties will no longer be modifiable in further update operations like \"resize\" and \"upgrade\".\n ",
-                            "required":[
-                                "count"
-                            ],
                             "properties":{
                                 "count":{
                                     "type":"integer",
-                                    "description":"Single control plane node is supported; More than single control plane node is not yet supported.",
-                                    "maximum":1,
+                                    "description":"Multi control plane is supported.",
+                                    "maximum":100,
                                     "minimum":1
                                 },
                                 "sizingClass":{
                                     "type":"string",
                                     "description":"The compute sizing policy with which control-plane node needs to be provisioned in a given \"ovdc\". The specified sizing policy is expected to be pre-published to the given ovdc."
-                                },
-                                "storageProfile":{
-                                    "type":"string",
-                                    "description":"The storage-profile with which control-plane needs to be provisioned in a given \"ovdc\". The specified storage-profile is expected to be available on the given ovdc."
-                                },
-                                "cpu": {
-                                    "type": "integer",
-                                    "description": "Number of CPU"
-                                },
-                                "memory": {
-                                    "type": "integer",
-                                    "description": "Memory in Mb"
                                 }
                             },
                             "additionalProperties":true
@@ -109,9 +56,6 @@
                         "workers":{
                             "type":"object",
                             "description":"The desired worker state of the cluster. The properties \"sizingClass\" and \"storageProfile\" can be specified only during the cluster creation phase. These properties will no longer be modifiable in further update operations like \"resize\" and \"upgrade\". Non uniform worker nodes in the clusters is not yet supported.",
-                            "required":[
-                                "count"
-                            ],
                             "properties":{
                                 "count":{
                                     "type":"integer",
@@ -122,18 +66,6 @@
                                 "sizingClass":{
                                     "type":"string",
                                     "description":"The compute sizing policy with which worker nodes need to be provisioned in a given \"ovdc\". The specified sizing policy is expected to be pre-published to the given ovdc."
-                                },
-                                "storageProfile":{
-                                    "type":"string",
-                                    "description":"The storage-profile with which worker nodes need to be provisioned in a given \"ovdc\". The specified storage-profile is expected to be available on the given ovdc."
-                                },
-                                "cpu": {
-                                    "type": "integer",
-                                    "description": "Number of CPU"
-                                },
-                                "memory": {
-                                    "type": "integer",
-                                    "description": "Memory in Mb"
                                 }
                             },
                             "additionalProperties":true
@@ -142,9 +74,6 @@
                 },
                 "settings":{
                     "type":"object",
-                    "required":[
-                        "ovdcNetwork"
-                    ],
                     "properties":{
                         "ovdcNetwork":{
                             "type":"string",
@@ -192,10 +121,6 @@
                                             }
                                         }
                                     }
-                                },
-                                "expose": {
-                                    "type":"boolean",
-                                    "description":"Exposes a cluster beyond routed Organization VDC network scope."
                                 }
                             }
                         }
@@ -212,10 +137,6 @@
             "type":"object",
             "x-vcloud-restricted" : "protected",
             "description":"The current status of the cluster.",
-            "required":[
-                "nodes",
-                "uid"
-            ],
             "properties":{
                 "phase":{
                     "type":"string"
@@ -226,46 +147,36 @@
                 "cni":{
                     "type":"string"
                 },
-                "os":{
-                    "type":"string"
-                },
-                "dockerVersion":{
-                    "type":"string"
-                },
-                "external_ip": {
-                    "type": "string",
-                    "description": "External IP of the cluster if it is exposed."
-                },
-                "nodes":{
-                    "type":"object",
-                    "required":[
-                        "controlPlane"
-                    ],
-                    "properties":{
-                        "controlPlane":{
-                            "type":"array",
-                            "items":{
-                                "$ref":"#/definitions/node"
-                            },
-                            "default":[
-
-                            ]
-                        },
-                        "workers":{
-                            "type":"array",
-                            "items":{
-                                "$ref":"#/definitions/node"
-                            },
-                            "default":[
-
-                            ]
-                        }
-                    },
-                    "additionalProperties":true
-                },
                 "uid":{
                     "type":"string",
                     "description":"unique ID of the cluster"
+                },
+                "clusterApiStatus": {
+                    "type":"object",
+                    "properties": {
+                        "phase": {
+                            "type": "string",
+                            "description": "The phase describing the control plane infrastructure deployment."
+                        },
+                        "apiEndpoints": {
+                            "type": "array",
+                            "description": "Control Plane load balancer endpoints",
+                            "items": {
+                                "host": {
+                                    "type": "string"
+                                },
+                                "port": {
+                                    "type": "integer"
+                                }
+                            }
+                        }
+                    }
+                },
+                "nodeStatus": {
+                    "additionalProperties": {
+                        "type": "string",
+                        "properties": {}
+                    }
                 },
                 "cloudProperties":{
                     "type":"object",
@@ -293,35 +204,9 @@
                         "site":{
                             "type":"string",
                             "description":"Fully Qualified Domain Name of the VCD site in which the cluster is deployed"
-                        },
-                        "exposed": {
-                            "type":"boolean",
-                            "description":"Set to True, if a cluster is exposed beyond routed Organization VDC network scope."
                         }
                     },
                     "additionalProperties":true
-                },
-                "private": {
-                    "type": "object",
-                    "x-vcloud-restricted" : "private",
-                    "description": "Placeholder for the properties invisible to non-admin users.",
-                    "properties": {
-                        "kubeConfig": {
-                            "type": "string",
-                            "description": "Admin kube config to access the Kubernetes cluster."
-                        },
-                        "kubeToken": {
-                            "type": "string",
-                            "description": "Kube token to join the nodes to the Kubernetes cluster."
-                        },
-                        "certificates": {
-                            "type": "array",
-                            "description": "Kubernetes certificates.",
-                            "items": {
-                                "type": "string"
-                            }
-                        }
-                    }
                 },
                 "persistentVolumes": {
                     "type": "array",
