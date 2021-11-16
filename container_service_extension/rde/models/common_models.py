@@ -312,55 +312,72 @@ class TKGEntity:
 
 @unique
 class K8Interface(Enum):
-    VCD_INTERFACE = DefInterface(name='Kubernetes', vendor=Vendor.VMWARE.value,
-                                 nss=Nss.KUBERNETES.value, version='1.0.0',
-                                 id=f"{DEF_INTERFACE_ID_PREFIX}:{Vendor.VMWARE.value}:{Nss.KUBERNETES.value}:1.0.0")  # noqa: E501
-    CSE_INTERFACE = DefInterface(name='CSE_K8s_interface', vendor=Vendor.CSE.value,  # noqa: E501
-                                 nss=Nss.KUBERNETES.value, version='1.0.0',
-                                 id=f"{DEF_INTERFACE_ID_PREFIX}:{Vendor.CSE.value}:{Nss.KUBERNETES.value}:1.0.0")  # noqa: E501
+    VCD_INTERFACE = DefInterface(
+        name='Kubernetes',
+        vendor=Vendor.VMWARE.value,
+        nss=Nss.KUBERNETES.value,
+        version='1.0.0',
+        id=f"{DEF_INTERFACE_ID_PREFIX}:{Vendor.VMWARE.value}:{Nss.KUBERNETES.value}:1.0.0"  # noqa: E501
+    )
+    CSE_INTERFACE = DefInterface(
+        name='CSE_K8s_interface',
+        vendor=Vendor.CSE.value,
+        nss=Nss.KUBERNETES.value,
+        version='1.0.0',
+        id=f"{DEF_INTERFACE_ID_PREFIX}:{Vendor.CSE.value}:{Nss.KUBERNETES.value}:1.0.0"  # noqa: E501
+    )
 
 
 @unique
 class EntityType(Enum):
-    NATIVE_ENTITY_TYPE_1_0_0 = DefEntityType(name='nativeClusterEntityType',
-                                             id=f"{DEF_ENTITY_TYPE_ID_PREFIX}:{Vendor.CSE.value}:{Nss.NATIVE_CLUSTER}:1.0.0",  # noqa: E501
-                                             schema=load_rde_schema(SchemaFile.SCHEMA_1_0_0),  # noqa: E501
-                                             interfaces=[K8Interface.VCD_INTERFACE.value.id],  # noqa: E501
-                                             version='1.0.0',
-                                             vendor=Vendor.CSE.value,
-                                             nss=Nss.NATIVE_CLUSTER.value,
-                                             description='')
-    NATIVE_ENTITY_TYPE_2_0_0 = DefEntityType2_0(name='nativeClusterEntityType',
-                                                id=f"{DEF_ENTITY_TYPE_ID_PREFIX}:{Vendor.CSE.value}:{Nss.NATIVE_CLUSTER}:2.0.0",  # noqa: E501
-                                                schema=load_rde_schema(SchemaFile.SCHEMA_2_0_0),  # noqa: E501
-                                                interfaces=[
-                                                    K8Interface.VCD_INTERFACE.value.id,  # noqa: E501
-                                                    K8Interface.CSE_INTERFACE.value.id],  # noqa: E501
-                                                version='2.0.0',
-                                                vendor=Vendor.CSE.value,
-                                                nss=Nss.NATIVE_CLUSTER.value,
-                                                description='',
-                                                hooks={
-                                                    'PostCreate': BehaviorOperation.CREATE_CLUSTER.value.id,  # noqa: E501
-                                                    'PostUpdate': BehaviorOperation.UPDATE_CLUSTER.value.id,  # noqa: E501
-                                                    'PreDelete': BehaviorOperation.DELETE_CLUSTER.value.id}  # noqa: E501
-                                                )
-    TKG_ENTITY_TYPE_1_0_0 = DefEntityType(name='TKG Cluster',
-                                          id=f"{DEF_ENTITY_TYPE_ID_PREFIX}:{Vendor.VMWARE.value}:{Nss.TKG}:1.0.0",  # noqa: E501
-                                          schema={},
-                                          interfaces=[K8Interface.VCD_INTERFACE.value.id],  # noqa: E501
-                                          version='1.0.0',
-                                          vendor=Vendor.VMWARE.value,
-                                          nss=Nss.TKG.value,
-                                          description='')
-    CAPVCD_ENTITY_TYPE_1_0_0 = DefEntityType(name='CAPVCD Cluster',
-                                          id=f"{DEF_ENTITY_TYPE_ID_PREFIX}:{Vendor.VMWARE.value}:{Nss.CAPVCD}:1.0.0",  # noqa: E501
-                                          schema=load_rde_schema(SchemaFile.CAPVCD_1_0_0),
-                                          interfaces=[K8Interface.VCD_INTERFACE.value.id],  # noqa: E501
-                                          version='1.0.0',
-                                          vendor=Vendor.VMWARE.value,
-                                          nss=Nss.CAPVCD.value,
-                                          description='')
+    NATIVE_ENTITY_TYPE_1_0_0 = DefEntityType(
+        name='nativeClusterEntityType',
+        id=f"{DEF_ENTITY_TYPE_ID_PREFIX}:{Vendor.CSE.value}:{Nss.NATIVE_CLUSTER}:1.0.0",  # noqa: E501
+        schema=load_rde_schema(SchemaFile.SCHEMA_1_0_0),
+        interfaces=[K8Interface.VCD_INTERFACE.value.id],
+        version='1.0.0',
+        vendor=Vendor.CSE.value,
+        nss=Nss.NATIVE_CLUSTER.value,
+        description=''
+    )
+    NATIVE_ENTITY_TYPE_2_0_0 = DefEntityType2_0(
+        name='nativeClusterEntityType',
+        id=f"{DEF_ENTITY_TYPE_ID_PREFIX}:{Vendor.CSE.value}:{Nss.NATIVE_CLUSTER}:2.0.0",  # noqa: E501
+        schema=load_rde_schema(SchemaFile.SCHEMA_2_0_0),
+        interfaces=[
+            K8Interface.VCD_INTERFACE.value.id,
+            K8Interface.CSE_INTERFACE.value.id
+        ],
+        version='2.0.0',
+        vendor=Vendor.CSE.value,
+        nss=Nss.NATIVE_CLUSTER.value,
+        description='',
+        hooks={
+            'PostCreate': BehaviorOperation.CREATE_CLUSTER.value.id,
+            'PostUpdate': BehaviorOperation.UPDATE_CLUSTER.value.id,
+            'PreDelete': BehaviorOperation.DELETE_CLUSTER.value.id
+        }
+    )
+    TKG_ENTITY_TYPE_1_0_0 = DefEntityType(
+        name='TKG Cluster',
+        id=f"{DEF_ENTITY_TYPE_ID_PREFIX}:{Vendor.VMWARE.value}:{Nss.TKG}:1.0.0",  # noqa: E501
+        schema={},
+        interfaces=[K8Interface.VCD_INTERFACE.value.id],  # noqa: E501
+        version='1.0.0',
+        vendor=Vendor.VMWARE.value,
+        nss=Nss.TKG.value,
+        description=''
+    )
+    CAPVCD_ENTITY_TYPE_1_0_0 = DefEntityType(
+        name='CAPVCD Cluster',
+        id=f"{DEF_ENTITY_TYPE_ID_PREFIX}:{Vendor.VMWARE.value}:{Nss.CAPVCD}:1.0.0",  # noqa: E501
+        schema=load_rde_schema(SchemaFile.CAPVCD_1_0_0),
+        interfaces=[K8Interface.VCD_INTERFACE.value.id],
+        version='1.0.0',
+        vendor=Vendor.VMWARE.value,
+        nss=Nss.CAPVCD.value,
+        description=''
+    )
 
 
 # Key: Represents the Runtime RDE version used by CSE server for any given environment.  # noqa: E501

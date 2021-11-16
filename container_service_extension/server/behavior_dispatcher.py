@@ -52,19 +52,21 @@ def process_behavior_request(msg_json, mqtt_publisher: MQTTPublisher):
     arguments: dict = payload['arguments']
 
     # Initializing Behavior operation context
-    op_ctx = OperationContext(auth_token=auth_token, is_jwt=True, request_id=request_id)  # noqa: E501
-    behavior_ctx = RequestContext(behavior_id=behavior_id,
-                                  task_id=task_id,
-                                  entity_id=entity_id,
-                                  payload=payload,
-                                  api_version=float(api_version),
-                                  entity=entity,
-                                  user_context=usr_ctx,
-                                  entity_type_id=entity_type_id,
-                                  request_id=request_id,
-                                  op_ctx=op_ctx,
-                                  mqtt_publisher=mqtt_publisher,
-                                  arguments=arguments)
+    op_ctx = OperationContext(auth_token=auth_token, request_id=request_id)  # noqa: E501
+    behavior_ctx = RequestContext(
+        behavior_id=behavior_id,
+        task_id=task_id,
+        entity_id=entity_id,
+        payload=payload,
+        api_version=float(api_version),
+        entity=entity,
+        user_context=usr_ctx,
+        entity_type_id=entity_type_id,
+        request_id=request_id,
+        op_ctx=op_ctx,
+        mqtt_publisher=mqtt_publisher,
+        arguments=arguments
+    )
 
     # Invoke the handler method and return the response in the string format.
     try:

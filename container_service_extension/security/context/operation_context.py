@@ -11,9 +11,13 @@ import container_service_extension.security.context.user_context as user_context
 
 
 class OperationContext:
-    def __init__(self, auth_token: str, is_jwt: bool = True, request_id: Optional[str] = None, mqtt_publisher=None):  # noqa: E501
+    def __init__(
+            self,
+            auth_token: str,
+            request_id: Optional[str] = None,
+            mqtt_publisher=None
+    ):
         self._auth_token: str = auth_token
-        self._is_jwt: bool = is_jwt
         # Request ID; may be None if OperationContext is initialized outside of
         # request_dispatcher.py
         self.request_id: Optional[str] = request_id
@@ -84,8 +88,8 @@ class OperationContext:
     def _update_user_context_map(self, api_version: Optional[str]):
         _client = vcd_utils.connect_vcd_user_via_token(
             tenant_auth_token=self._auth_token,
-            is_jwt_token=self._is_jwt,
-            api_version=api_version)
+            api_version=api_version
+        )
 
         log_wire = server_utils.get_server_runtime_config() \
             .get('service', {}).get('log_wire', False)  # noqa: E501

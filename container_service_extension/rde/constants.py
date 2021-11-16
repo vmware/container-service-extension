@@ -70,6 +70,7 @@ class RuntimeRDEVersion(str, Enum):
     RDE_1_X = '1.0.0'
     RDE_2_X = '2.0.0'
 
+
 @unique
 class CapvcdRDEVersion(str, Enum):
     RDE_1_0_0 = 'capvcd_1.0.0'

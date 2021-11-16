@@ -27,7 +27,6 @@ class MachineTokenService(cloudapi_client.CloudApiClient):
         super().__init__(
             base_url=cloudapi_url,
             token=vcd_api_client.get_access_token(),
-            is_jwt_token=True,
             api_version=vcd_api_client.get_api_version(),
             logger_debug=logger_debug,
             logger_wire=logger_wire,
