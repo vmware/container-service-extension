@@ -252,8 +252,7 @@ class ClusterACLService:
         org_name = self.def_entity.org.name
         extra_vapp_headers = {
             server_constants.TENANT_CONTEXT_HEADER: org_id,
-            server_constants.AUTH_CONTEXT_HEADER: org_name,
-            server_constants.VCLOUD_AUTHORIZATION_HEADER: org_name
+            server_constants.AUTH_CONTEXT_HEADER: org_name
         }
         self._client.post_resource(
             uri=f'{self.vapp.href}{def_constants.ACTION_CONTROL_ACCESS_PATH}',

@@ -85,7 +85,9 @@ def cse_restore_session(ctx) -> None:
             log_headers=profiles.get('log_header'),
             log_bodies=profiles.get('log_body'))
         client.rehydrate_from_token(
-            profiles.get('token'), profiles.get('is_jwt_token'))
+            token=profiles.get('token'),
+            is_jwt_token=profiles.get('is_jwt_token')
+        )
 
         ctx.obj = {'client': client}
     else:
@@ -181,7 +183,10 @@ def _override_client(ctx) -> None:
         log_requests=profiles.get('log_request'),
         log_headers=profiles.get('log_header'),
         log_bodies=profiles.get('log_body'))
-    client.rehydrate_from_token(profiles.get('token'), profiles.get('is_jwt_token'))  # noqa: E501
+    client.rehydrate_from_token(
+        token=profiles.get('token'),
+        is_jwt_token=profiles.get('is_jwt_token')
+    )
     ctx.obj['client'] = client
     ctx.obj['profiles'] = profiles
 

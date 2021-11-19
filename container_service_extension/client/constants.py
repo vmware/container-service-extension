@@ -92,6 +92,5 @@ class TKGRequestHeaderKey(str, Enum):
     """Header keys for tkgCluster requests."""
 
     AUTHORIZATION = 'Authorization'
-    X_VCLOUD_AUTHORIZATION = 'x-vcloud-authorization'
     ACCEPT = 'Accept'
     X_VMWARE_VCLOUD_TENANT_CONTEXT = "x-vmware-vcloud-tenant-context"

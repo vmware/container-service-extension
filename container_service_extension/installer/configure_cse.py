@@ -1429,37 +1429,54 @@ def _register_rde_schema(
             # Register Interface(s)
             interfaces: List[common_models.DefInterface] = \
                 schema[def_constants.RDEMetadataKey.INTERFACES]
-            _register_interfaces(cloudapi_client, interfaces,
-                                 msg_update_callback)
+            _register_interfaces(
+                cloudapi_client,
+                interfaces,
+                msg_update_callback
+            )
 
             # Register Behavior(s)
             behavior_metadata: Dict[str, List[Behavior]] = schema.get(
-                def_constants.RDEMetadataKey.INTERFACE_TO_BEHAVIORS_MAP, {})
-            _register_behaviors(cloudapi_client, behavior_metadata,
-                                msg_update_callback)  # noqa: E501
+                def_constants.RDEMetadataKey.INTERFACE_TO_BEHAVIORS_MAP,
+                {}
+            )
+            _register_behaviors(
+                cloudapi_client,
+                behavior_metadata,
+                msg_update_callback
+            )
 
             # Register EntityType
             entity_type: common_models.DefEntityType = \
                 schema[def_constants.RDEMetadataKey.ENTITY_TYPE]
-            _register_entity_type(cloudapi_client, entity_type,
-                                  update_schema,
-                                  msg_update_callback)  # noqa: E501
+            _register_entity_type(
+                cloudapi_client,
+                entity_type,
+                update_schema,
+                msg_update_callback
+            )
 
             # Override Behavior(s)
-            override_behavior_metadata: Dict[str, List[Behavior]] = \
-                schema.get(
-                    def_constants.RDEMetadataKey.ENTITY_TYPE_TO_OVERRIDABLE_BEHAVIORS_MAP,
-                    {})  # noqa: E501
-            _override_behaviors(cloudapi_client, override_behavior_metadata,
-                                msg_update_callback)  # noqa: E501
+            override_behavior_metadata: Dict[str, List[Behavior]] = schema.get(  # noqa: E501
+                def_constants.RDEMetadataKey.ENTITY_TYPE_TO_OVERRIDABLE_BEHAVIORS_MAP,  # noqa: E501
+                {}
+            )
+            _override_behaviors(
+                cloudapi_client,
+                override_behavior_metadata,
+                msg_update_callback
+            )
 
             # Set ACL(s) for all the behavior(s)
-            behavior_acl_metadata: Dict[str, List[BehaviorAclEntry]] = \
-                schema.get(
-                    def_constants.RDEMetadataKey.BEHAVIOR_TO_ACL_MAP,
-                    {})  # noqa: E501
-            _set_acls_on_behaviors(cloudapi_client, behavior_acl_metadata,
-                                   msg_update_callback)  # noqa: E501
+            behavior_acl_metadata: Dict[str, List[BehaviorAclEntry]] = schema.get(  # noqa: E501
+                def_constants.RDEMetadataKey.BEHAVIOR_TO_ACL_MAP,
+                {}
+            )
+            _set_acls_on_behaviors(
+                cloudapi_client,
+                behavior_acl_metadata,
+                msg_update_callback
+            )
 
         # Update user's role with right bundle associated with native defined
         # entity
@@ -1599,9 +1616,9 @@ def _register_entity_type(
             native_entity_type.get_id(),
             grant_type=server_constants.AclGrantType.MembershipACLGrant,
             access_level_id=server_constants.AclAccessLevelId.AccessLevelReadWrite,  # noqa: E501
-            member_id=server_constants.AclMemberId.SystemOrgId)
-        msg += f"Successfully " \
-               "added ReadWrite ACL for defined entity '{entity_type.id}' to System Org"  # noqa: E501
+            member_id=server_constants.AclMemberId.SystemOrgId
+        )
+        msg += f"Successfully added ReadWrite ACL for defined entity '{entity_type.id}' to System Org"  # noqa: E501
     msg_update_callback.general(msg)
     INSTALL_LOGGER.info(msg)
 

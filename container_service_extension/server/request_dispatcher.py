@@ -987,18 +987,21 @@ def process_request(message, mqtt_publisher=None):
     request_data['url'] = url
 
     # extract out the authorization token
-    tenant_auth_token = message['headers'].get('x-vcloud-authorization')
-    is_jwt_token = False
+    tenant_auth_token = ""
     auth_header = message['headers'].get('Authorization')
     if auth_header:
         tokens = auth_header.split(" ")
         if len(tokens) == 2 and tokens[0].lower() == 'bearer':
             tenant_auth_token = tokens[1]
-            is_jwt_token = True
+    if not tenant_auth_token:
+        LOGGER.debug("Invalid authorization token.")
 
     # create operation context
     operation_ctx = ctx.OperationContext(
-        tenant_auth_token, is_jwt=is_jwt_token, request_id=message['id'], mqtt_publisher=mqtt_publisher)  # noqa: E501
+        tenant_auth_token,
+        request_id=message['id'],
+        mqtt_publisher=mqtt_publisher
+    )
 
     try:
         body_content = handler_method(request_data, operation_ctx)

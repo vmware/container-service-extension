@@ -47,7 +47,6 @@ def raise_error_if_user_not_from_system_org(client: vcd_client.Client):
 
 def connect_vcd_user_via_token(
         tenant_auth_token: str,
-        is_jwt_token: bool,
         api_version: Optional[str]):
     server_config = get_server_runtime_config()
     if not api_version:
@@ -68,7 +67,10 @@ def connect_vcd_user_via_token(
         log_requests=log_wire,
         log_headers=log_wire,
         log_bodies=log_wire)
-    client_tenant.rehydrate_from_token(tenant_auth_token, is_jwt_token)
+    client_tenant.rehydrate_from_token(
+        token=tenant_auth_token,
+        is_jwt_token=True
+    )
     return client_tenant
 
 
@@ -528,19 +530,15 @@ def get_cloudapi_client_from_vcd_client(
         logger_wire=NULL_LOGGER
 ):
     token = client.get_access_token()
-    is_jwt = True
-    if not token:
-        token = client.get_xvcloud_authorization_token()
-        is_jwt = False
     return cloud_api_client.CloudApiClient(
         base_url=client.get_cloudapi_uri(),
         token=token,
-        is_jwt_token=is_jwt,
         api_version=client.get_api_version(),
         logger_debug=logger_debug,
         logger_wire=logger_wire,
         verify_ssl=client._verify_ssl_certs,
-        is_sys_admin=client.is_sysadmin())
+        is_sys_admin=client.is_sysadmin()
+    )
 
 
 def get_all_ovdcs(client: vcd_client.Client):

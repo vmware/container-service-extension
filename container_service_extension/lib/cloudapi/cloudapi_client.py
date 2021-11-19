@@ -5,10 +5,12 @@
 from copy import deepcopy
 import json
 import logging
+from typing import Optional
 from urllib import parse
 
 from pyvcloud.vcd.vcd_api_version import VCDApiVersion
 import requests
+import requests.utils as requests_utils
 
 from container_service_extension.lib.cloudapi.constants import ResponseKeys
 
@@ -16,26 +18,25 @@ from container_service_extension.lib.cloudapi.constants import ResponseKeys
 class CloudApiClient(object):
     """REST based client for cloudapi server."""
 
-    def __init__(self,
-                 base_url: str,
-                 token: str,
-                 is_jwt_token: bool,
-                 api_version: str,
-                 logger_debug: logging.Logger,
-                 logger_wire: logging.Logger,
-                 verify_ssl: bool = True,
-                 is_sys_admin: bool = False):
+    def __init__(
+            self,
+            base_url: str,
+            token: str,
+            api_version: str,
+            logger_debug: logging.Logger,
+            logger_wire: logging.Logger,
+            verify_ssl: bool = True,
+            is_sys_admin: bool = False
+    ):
         if not base_url.endswith('/'):
             base_url += '/'
         self._base_url = base_url
 
-        self._headers = {}
-        if is_jwt_token:
-            self._headers["Authorization"] = f"Bearer {token}"
-        else:
-            self._headers["x-vcloud-authorization"] = token
-        self._headers["Accept"] = f"application/json;version={api_version}"
-        self._headers["Content-Type"] = "application/json"
+        self._headers = {
+            "Authorization": f"Bearer {token}",
+            "Accept": f"application/json;version={api_version}",
+            "Content-Type": "application/json"
+        }
 
         self._verify_ssl = verify_ssl
         self.LOGGER = logger_debug
@@ -161,7 +162,7 @@ class CloudApiClient(object):
 
         # Find link corresponding to the next page
         unparsed_links = last_response_headers[ResponseKeys.LINK]
-        parsed_links = requests.utils.parse_header_links(unparsed_links)
+        parsed_links = requests_utils.parse_header_links(unparsed_links)
         for link in parsed_links:
             if link[ResponseKeys.REL] == 'nextPage':
                 # Parse cursor param
@@ -179,10 +180,9 @@ class CloudApiClient(object):
                     return ''
         return ''
 
-    def get_last_response_etag(self) -> str:
+    def get_last_response_etag(self) -> Optional[str]:
         last_response_headers = self.get_last_response_headers()
         if last_response_headers and \
                 hasattr(last_response_headers, '_store') and \
                 last_response_headers._store.get('etag') is not None:
             return last_response_headers._store['etag'][1]
-        return None
