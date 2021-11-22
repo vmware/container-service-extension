@@ -765,7 +765,7 @@ def wait_for_completion_of_post_customization_procedure(
         if script_execution_status and int(script_execution_status) != 0:
             script_execution_failure_reason = get_vm_extra_config_element(vm, server_constants.POST_CUSTOMIZATION_SCRIPT_EXECUTION_FAILURE_REASON)  # noqa: E501
             logger.error(f"VM Post guest customization script failed with error:{script_execution_failure_reason}")  # noqa: E501
-            raise exceptions.ScriptExecutionError
+            raise exceptions.ScriptExecutionError(error_message=script_execution_failure_reason)  # noqa: E501
 
         if datetime.now() - start_time > timedelta(seconds=timeout):
             break

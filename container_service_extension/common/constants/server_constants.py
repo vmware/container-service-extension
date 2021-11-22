@@ -765,6 +765,13 @@ AUTH_CONTEXT_HEADER = 'X-VMWARE-VCLOUD-AUTH-CONTEXT'
 VCLOUD_AUTHORIZATION_HEADER = 'X-vCloud-Authorization'
 
 
+# tkgm proxy key in CSE server config -> actual key as in http-proxy.config
+class TKGmProxyKey(Enum):
+    tkgm_http_proxy = 'http_proxy'
+    tkgm_https_proxy = 'https_proxy'
+    tkgm_no_proxy = 'no_proxy'
+
+
 @unique
 class PostCustomizationStatus(Enum):
     NONE = None
@@ -782,6 +789,7 @@ class PostCustomizationPhase(Enum):
     KUBECTL_APPLY_CSI = 'guestinfo.postcustomization.kubectl.csi.install.status'  # noqa: E501
     KUBEADM_TOKEN_GENERATE = 'guestinfo.postcustomization.kubeadm.token.generate.status'  # noqa: E501
     KUBEADM_NODE_JOIN = 'guestinfo.postcustomization.kubeadm.node.join.status'
+    PROXY_SETTING = 'guestinfo.postcustomization.proxy.setting.status'
 
 
 KUBEADM_TOKEN_INFO = 'guestinfo.postcustomization.kubeadm.token.info'
