@@ -1928,7 +1928,7 @@ def _get_tkgm_template(name: str):
     )
 
 
-def _get_proxy_config() -> dict:
+def _get_tkgm_proxy_config() -> dict:
     server_config = server_utils.get_server_runtime_config()
     extra_options: dict = server_config.get('extra_options', {})
     return {
@@ -2023,7 +2023,7 @@ def _add_control_plane_nodes(
         )
         # encode refresh-token to base64
         base64_refresh_token = base64.b64encode(refresh_token.encode("utf-8"))
-        proxy_config = _get_proxy_config()
+        proxy_config = _get_tkgm_proxy_config()
         for spec in vm_specs:
             spec['cloud_init_spec'] = templated_script.format(
                 vcd_host=vcd_host.replace("/", r"\/"),
@@ -2200,7 +2200,7 @@ def _add_worker_nodes(sysadmin_client, num_nodes, org, vdc, vapp,
         ip_port = parts[2]
         token = parts[4]
         discovery_token_ca_cert_hash = parts[6]
-        proxy_config = _get_proxy_config()
+        proxy_config = _get_tkgm_proxy_config()
 
         # The cust_script needs the vm host name which is computed in the
         # _get_vm_specifications function, so the specs are obtained and

@@ -184,8 +184,8 @@ COMMENTED_EXTRA_OPTIONS_SECTION = """# [Optional] Extra options section
 # Example 'extra_options' section:
 #extra_options:
 #   tkgm_http_proxy: http://192.168.7.10:3128
-#   tkgm_https_proxy: http://192.168.7.10:3128
-#   tkgm_no_proxy: localhost,192.168.7.0/24
+#   tkgm_https_proxy: https://192.168.7.10:3128
+#   tkgm_no_proxy: localhost,127.0.0.1,192.168.7.0/24
 """
 
 
