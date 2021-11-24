@@ -103,12 +103,12 @@ write_files:
     vmtoolsd --cmd "info-set guestinfo.postcustomization.store.sshkey.status successful"
 
     vmtoolsd --cmd "info-set guestinfo.postcustomization.proxy.setting.status in_progress"
-    export HTTP_PROXY={http_proxy}
-    export HTTPS_PROXY={https_proxy}
-    export http_proxy={http_proxy}
-    export https_proxy={https_proxy}
-    export NO_PROXY={no_proxy}
-    export no_proxy={no_proxy}
+    export HTTP_PROXY="{http_proxy}"
+    export HTTPS_PROXY="{https_proxy}"
+    export http_proxy="{http_proxy}"
+    export https_proxy="{https_proxy}"
+    export NO_PROXY="{no_proxy}"
+    export no_proxy="{no_proxy}"
 
     mkdir -p /etc/systemd/system/containerd.service.d
     cat <<END > /etc/systemd/system/containerd.service.d/http-proxy.conf
