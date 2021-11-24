@@ -58,6 +58,27 @@ write_files:
       fi
     vmtoolsd --cmd "info-set guestinfo.postcustomization.store.sshkey.status successful"
 
+    vmtoolsd --cmd "info-set guestinfo.postcustomization.proxy.setting.status in_progress"
+    export HTTP_PROXY="{http_proxy}"
+    export HTTPS_PROXY="{https_proxy}"
+    export http_proxy="{http_proxy}"
+    export https_proxy="{https_proxy}"
+    export NO_PROXY="{no_proxy}"
+    export no_proxy="{no_proxy}"
+
+    mkdir -p /etc/systemd/system/containerd.service.d
+    cat <<END > /etc/systemd/system/containerd.service.d/http-proxy.conf
+    [Service]
+    Environment="HTTP_PROXY={http_proxy}"
+    Environment="HTTPS_PROXY={https_proxy}"
+    Environment="http_proxy={http_proxy}"
+    Environment="https_proxy={https_proxy}"
+    Environment="no_proxy={no_proxy}"
+    Environment="NO_PROXY={no_proxy}"
+    END
+    systemctl daemon-reload
+    systemctl restart containerd
+    vmtoolsd --cmd "info-set guestinfo.postcustomization.proxy.setting.status successful"
 
     vmtoolsd --cmd "info-set guestinfo.postcustomization.kubeadm.node.join.status in_progress"
       # tag images

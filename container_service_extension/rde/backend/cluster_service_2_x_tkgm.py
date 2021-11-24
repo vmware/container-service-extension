@@ -35,6 +35,7 @@ from container_service_extension.common.constants.server_constants import PostCu
 from container_service_extension.common.constants.server_constants import ThreadLocalData  # noqa: E501
 from container_service_extension.common.constants.server_constants import TKGM_DEFAULT_POD_NETWORK_CIDR  # noqa: E501
 from container_service_extension.common.constants.server_constants import TKGM_DEFAULT_SERVICE_CIDR  # noqa: E501
+from container_service_extension.common.constants.server_constants import TKGmProxyKey  # noqa: E501
 import container_service_extension.common.constants.shared_constants as shared_constants  # noqa: E501
 from container_service_extension.common.constants.shared_constants import \
     CSE_PAGINATION_DEFAULT_PAGE_SIZE, SYSTEM_ORG_NAME
@@ -1927,6 +1928,15 @@ def _get_tkgm_template(name: str):
     )
 
 
+def _get_tkgm_proxy_config() -> dict:
+    server_config = server_utils.get_server_runtime_config()
+    extra_options: dict = server_config.get('extra_options', {})
+    return {
+        proxy_key.value: extra_options.get(proxy_key.name, '')
+        for proxy_key in TKGmProxyKey
+    }
+
+
 def _set_cloud_init_spec(
         sysadmin_client,
         vapp,
@@ -2013,6 +2023,7 @@ def _add_control_plane_nodes(
         )
         # encode refresh-token to base64
         base64_refresh_token = base64.b64encode(refresh_token.encode("utf-8"))
+        proxy_config = _get_tkgm_proxy_config()
         for spec in vm_specs:
             spec['cloud_init_spec'] = templated_script.format(
                 vcd_host=vcd_host.replace("/", r"\/"),
@@ -2029,6 +2040,7 @@ def _add_control_plane_nodes(
                 ssh_key=ssh_key if ssh_key else '',
                 control_plane_endpoint='',
                 base64_encoded_refresh_token=base64_refresh_token.decode("utf-8"),  # noqa: E501
+                **proxy_config
             )
 
         task = vapp.add_vms(
@@ -2102,6 +2114,7 @@ def _add_control_plane_nodes(
                 ssh_key=ssh_key if ssh_key else '',
                 control_plane_endpoint=f"{control_plane_endpoint}:6443",
                 base64_encoded_refresh_token=base64_refresh_token.decode("utf-8"),  # noqa: E501
+                **proxy_config
             )
             # create a cloud-init spec and update the VMs with it
             _set_cloud_init_spec(sysadmin_client, vapp, vm, cloud_init_spec)
@@ -2118,6 +2131,7 @@ def _add_control_plane_nodes(
             for customization_phase in [
                 PostCustomizationPhase.NETWORK_CONFIGURATION,
                 PostCustomizationPhase.STORE_SSH_KEY,
+                PostCustomizationPhase.PROXY_SETTING,
                 PostCustomizationPhase.KUBEADM_INIT,
                 PostCustomizationPhase.KUBECTL_APPLY_CNI,
                 PostCustomizationPhase.KUBECTL_APPLY_CPI,
@@ -2186,6 +2200,7 @@ def _add_worker_nodes(sysadmin_client, num_nodes, org, vdc, vapp,
         ip_port = parts[2]
         token = parts[4]
         discovery_token_ca_cert_hash = parts[6]
+        proxy_config = _get_tkgm_proxy_config()
 
         # The cust_script needs the vm host name which is computed in the
         # _get_vm_specifications function, so the specs are obtained and
@@ -2211,6 +2226,7 @@ def _add_worker_nodes(sysadmin_client, num_nodes, org, vdc, vapp,
                 ip_port=ip_port,
                 token=token,
                 discovery_token_ca_cert_hash=discovery_token_ca_cert_hash,
+                **proxy_config
             )
 
         task = vapp.add_vms(
@@ -2261,6 +2277,7 @@ def _add_worker_nodes(sysadmin_client, num_nodes, org, vdc, vapp,
             for customization_phase in [
                 PostCustomizationPhase.NETWORK_CONFIGURATION,
                 PostCustomizationPhase.STORE_SSH_KEY,
+                PostCustomizationPhase.PROXY_SETTING,
                 PostCustomizationPhase.KUBEADM_NODE_JOIN,
             ]:
                 vapp.reload()
