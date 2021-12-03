@@ -1,263 +1,274 @@
 {
-    "definitions":{
-        "distribution":{
-            "type":"object",
-            "required":[
-                "templateName"
-            ],
-            "properties":{
-                "templateName":{
-                    "type":"string"
-                }
-            },
-            "additionalProperties":true
+  "definitions": {
+    "distribution": {
+      "type": "object",
+      "required": [
+        "templateName"
+      ],
+      "properties": {
+        "templateName": {
+          "type": "string"
         }
+      },
+      "additionalProperties": true
     },
-    "type":"object",
-    "required":[
-        "kind",
-        "spec",
-        "metadata",
-        "apiVersion"
-    ],
-    "properties":{
-        "kind":{
-            "enum":[
-                "CAPVCDCluster"
-            ],
-            "type":"string",
-            "description":"The kind of the Kubernetes cluster."
+    "network": {
+      "type": "object",
+      "description": "The network-related settings for the cluster.",
+      "properties": {
+        "cni": {
+          "type": "object",
+          "description": "The CNI to use.",
+          "properties": {
+            "name": {
+              "type": "string"
+            }
+          }
         },
-        "spec":{
-            "type":"object",
-            "description":"The user specification of the desired state of the cluster.",
-            "properties":{
-                "topology":{
-                    "type":"object",
-                    "description":"Topology of the kubernetes cluster",
-                    "properties":{
-                        "controlPlane":{
-                            "type":"object",
-                            "description":"The desired control-plane state of the cluster. The properties \"sizingClass\" and \"storageProfile\" can be specified only during the cluster creation phase. These properties will no longer be modifiable in further update operations like \"resize\" and \"upgrade\".\n ",
-                            "properties":{
-                                "count":{
-                                    "type":"integer",
-                                    "description":"Multi control plane is supported.",
-                                    "maximum":100,
-                                    "minimum":1
-                                },
-                                "sizingClass":{
-                                    "type":"string",
-                                    "description":"The compute sizing policy with which control-plane node needs to be provisioned in a given \"ovdc\". The specified sizing policy is expected to be pre-published to the given ovdc."
-                                }
-                            },
-                            "additionalProperties":true
-                        },
-                        "workers":{
-                            "type":"object",
-                            "description":"The desired worker state of the cluster. The properties \"sizingClass\" and \"storageProfile\" can be specified only during the cluster creation phase. These properties will no longer be modifiable in further update operations like \"resize\" and \"upgrade\". Non uniform worker nodes in the clusters is not yet supported.",
-                            "properties":{
-                                "count":{
-                                    "type":"integer",
-                                    "description":"Worker nodes can be scaled up and down.",
-                                    "maximum":200,
-                                    "minimum":0
-                                },
-                                "sizingClass":{
-                                    "type":"string",
-                                    "description":"The compute sizing policy with which worker nodes need to be provisioned in a given \"ovdc\". The specified sizing policy is expected to be pre-published to the given ovdc."
-                                }
-                            },
-                            "additionalProperties":true
-                        }
-                    }
-                },
-                "settings":{
-                    "type":"object",
-                    "properties":{
-                        "ovdcNetwork":{
-                            "type":"string",
-                            "description":"Name of the Organization's virtual data center network"
-                        },
-                        "sshKey":{
-                            "type":"string",
-                            "description":"The ssh key that users can use to log into the node VMs without explicitly providing passwords."
-                        },
-                        "network": {
-                            "type": "object",
-                            "description": "The network-related settings for the cluster.",
-                            "properties": {
-                                "cni": {
-                                    "type": "object",
-                                    "description": "The CNI to use.",
-                                    "properties": {
-                                        "name": {
-                                            "type": "string"
-                                        }
-                                    }
-                                },
-                                "pods": {
-                                    "type": "object",
-                                    "description": "The network settings for Kubernetes pods.",
-                                    "properties": {
-                                        "cidrBlocks": {
-                                            "type": "array",
-                                            "description": "Specifies a range of IP addresses to use for Kubernetes pods.",
-                                            "items": {
-                                                "type": "string"
-                                            }
-                                        }
-                                    }
-                                },
-                                "services": {
-                                    "type": "object",
-                                    "description": "The network settings for Kubernetes services",
-                                    "properties": {
-                                        "cidrBlocks": {
-                                            "type": "array",
-                                            "description": "The range of IP addresses to use for Kubernetes services",
-                                            "items": {
-                                                "type": "string"
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    },
-                    "additionalProperties":true
-                },
-                "distribution":{
-                    "$ref":"#/definitions/distribution"
-                }
-            },
-            "additionalProperties":true
+        "pods": {
+          "type": "object",
+          "description": "The network settings for Kubernetes pods.",
+          "properties": {
+            "cidrBlocks": {
+              "type": "array",
+              "description": "Specifies a range of IP addresses to use for Kubernetes pods.",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
         },
-        "status":{
-            "type":"object",
-            "x-vcloud-restricted" : "protected",
-            "description":"The current status of the cluster.",
-            "properties":{
-                "phase":{
-                    "type":"string"
-                },
-                "kubernetes":{
-                    "type":"string"
-                },
-                "cni":{
-                    "type":"string"
-                },
-                "uid":{
-                    "type":"string",
-                    "description":"unique ID of the cluster"
-                },
-                "clusterApiStatus": {
-                    "type":"object",
-                    "properties": {
-                        "phase": {
-                            "type": "string",
-                            "description": "The phase describing the control plane infrastructure deployment."
-                        },
-                        "apiEndpoints": {
-                            "type": "array",
-                            "description": "Control Plane load balancer endpoints",
-                            "items": {
-                                "host": {
-                                    "type": "string"
-                                },
-                                "port": {
-                                    "type": "integer"
-                                }
-                            }
-                        }
-                    }
-                },
-                "nodeStatus": {
-                    "additionalProperties": {
-                        "type": "string",
-                        "properties": {}
-                    }
-                },
-                "cloudProperties":{
-                    "type":"object",
-                    "description":"The details specific to Cloud Director in which the cluster is hosted.",
-                    "properties":{
-                        "orgName":{
-                            "type":"string",
-                            "description":"The name of the Organization in which cluster needs to be created or managed."
-                        },
-                        "virtualDataCenterName":{
-                            "type":"string",
-                            "description":"The name of the Organization Virtual data center in which the cluster need to be created or managed."
-                        },
-                        "ovdcNetworkName":{
-                            "type":"string",
-                            "description":"The name of the Organization Virtual data center network to which cluster is connected."
-                        },
-                        "distribution":{
-                            "$ref":"#/definitions/distribution"
-                        },
-                        "sshKey":{
-                            "type":"string",
-                            "description":"The ssh key that users can use to log into the node VMs without explicitly providing passwords."
-                        },
-                        "site":{
-                            "type":"string",
-                            "description":"Fully Qualified Domain Name of the VCD site in which the cluster is deployed"
-                        }
-                    },
-                    "additionalProperties":true
-                },
-                "persistentVolumes": {
-                    "type": "array",
-                    "description": "VCD references to the list of persistent volumes.",
-                    "items": {
-                        "type": "string"
-                    }
-                },
-                "virtualIPs": {
-                    "type": "array",
-                    "description": "Array of virtual IPs consumed by the cluster.",
-                    "items": {
-                        "type": "string"
-                    }
-                }
-            },
-            "additionalProperties":true
-        },
-        "metadata":{
-            "type":"object",
-            "required":[
-                "orgName",
-                "virtualDataCenterName",
-                "name",
-                "site"
-            ],
-            "properties":{
-                "orgName":{
-                    "type":"string",
-                    "description":"The name of the Organization in which cluster needs to be created or managed."
-                },
-                "virtualDataCenterName":{
-                    "type":"string",
-                    "description":"The name of the Organization Virtual data center in which the cluster need to be created or managed."
-                },
-                "name":{
-                    "type":"string",
-                    "description":"The name of the cluster."
-                },
-                "site":{
-                    "type":"string",
-                    "description":"Fully Qualified Domain Name of the VCD site in which the cluster is deployed"
-                }
-            },
-            "additionalProperties":true
-        },
-        "apiVersion":{
-            "type":"string",
-            "default":"capvcd.vmware.com/v1.0",
-            "description":"The version of the payload format"
+        "services": {
+          "type": "object",
+          "description": "The network settings for Kubernetes services",
+          "properties": {
+            "cidrBlocks": {
+              "type": "array",
+              "description": "The range of IP addresses to use for Kubernetes services",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
         }
+      }
+    }
+  },
+  "type": "object",
+  "required": [
+    "kind",
+    "spec",
+    "metadata",
+    "apiVersion"
+  ],
+  "properties": {
+    "kind": {
+      "enum": [
+        "CAPVCDCluster"
+      ],
+      "type": "string",
+      "description": "The kind of the Kubernetes cluster."
     },
-    "additionalProperties":true
+    "spec": {
+      "type": "object",
+      "description": "The user specification of the desired state of the cluster.",
+      "properties": {
+        "topology": {
+          "type": "object",
+          "description": "Topology of the kubernetes cluster",
+          "properties": {
+            "controlPlane": {
+              "type": "array",
+              "description": "The desired control-plane state of the cluster. The properties \"sizingClass\" and \"storageProfile\" can be specified only during the cluster creation phase. These properties will no longer be modifiable in further update operations like \"resize\" and \"upgrade\".\n ",
+              "items": {
+                "count": {
+                  "type": "integer",
+                  "description": "Multi control plane is supported.",
+                  "maximum": 100,
+                  "minimum": 1
+                },
+                "sizingClass": {
+                  "type": "string",
+                  "description": "The compute sizing policy with which control-plane node needs to be provisioned in a given \"ovdc\". The specified sizing policy is expected to be pre-published to the given ovdc."
+                }
+              },
+              "additionalProperties": true
+            },
+            "workers": {
+              "type": "array",
+              "description": "The desired worker state of the cluster. The properties \"sizingClass\" and \"storageProfile\" can be specified only during the cluster creation phase. These properties will no longer be modifiable in further update operations like \"resize\" and \"upgrade\". Non uniform worker nodes in the clusters is not yet supported.",
+              "items": {
+                "count": {
+                  "type": "integer",
+                  "description": "Worker nodes can be scaled up and down.",
+                  "maximum": 200,
+                  "minimum": 0
+                },
+                "sizingClass": {
+                  "type": "string",
+                  "description": "The compute sizing policy with which worker nodes need to be provisioned in a given \"ovdc\". The specified sizing policy is expected to be pre-published to the given ovdc."
+                }
+              },
+              "additionalProperties": true
+            }
+          }
+        },
+        "settings": {
+          "type": "object",
+          "properties": {
+            "ovdcNetwork": {
+              "type": "string",
+              "description": "Name of the Organization's virtual data center network"
+            },
+            "sshKey": {
+              "type": "string",
+              "description": "The ssh key that users can use to log into the node VMs without explicitly providing passwords."
+            },
+            "network": {
+              "$ref": "#/definitions/network"
+            }
+          },
+          "additionalProperties": true
+        },
+        "distribution": {
+          "$ref": "#/definitions/distribution"
+        }
+      },
+      "additionalProperties": true
+    },
+    "status": {
+      "type": "object",
+      "x-vcloud-restricted": "protected",
+      "description": "The current status of the cluster.",
+      "properties": {
+        "phase": {
+          "type": "string"
+        },
+        "kubernetes": {
+          "type": "string"
+        },
+        "network": {
+          "$ref": "#/definitions/network"
+        },
+        "uid": {
+          "type": "string",
+          "description": "unique ID of the cluster"
+        },
+        "parentUid": {
+          "type": "string",
+          "description": "unique ID of the parent management cluster"
+        },
+        "isManagementCluster": {
+          "type": "boolean",
+          "description": "Does this RDE represent a management cluster?"
+        },
+        "clusterApiStatus": {
+          "type": "object",
+          "properties": {
+            "phase": {
+              "type": "string",
+              "description": "The phase describing the control plane infrastructure deployment."
+            },
+            "apiEndpoints": {
+              "type": "array",
+              "description": "Control Plane load balancer endpoints",
+              "items": {
+                "host": {
+                  "type": "string"
+                },
+                "port": {
+                  "type": "integer"
+                }
+              }
+            }
+          }
+        },
+        "nodeStatus": {
+          "additionalProperties": {
+            "type": "string",
+            "properties": {}
+          }
+        },
+        "cloudProperties": {
+          "type": "object",
+          "description": "The details specific to Cloud Director in which the cluster is hosted.",
+          "properties": {
+            "orgName": {
+              "type": "string",
+              "description": "The name of the Organization in which cluster needs to be created or managed."
+            },
+            "virtualDataCenterName": {
+              "type": "string",
+              "description": "The name of the Organization Virtual data center in which the cluster need to be created or managed."
+            },
+            "ovdcNetworkName": {
+              "type": "string",
+              "description": "The name of the Organization Virtual data center network to which cluster is connected."
+            },
+            "distribution": {
+              "$ref": "#/definitions/distribution"
+            },
+            "sshKey": {
+              "type": "string",
+              "description": "The ssh key that users can use to log into the node VMs without explicitly providing passwords."
+            },
+            "site": {
+              "type": "string",
+              "description": "Fully Qualified Domain Name of the VCD site in which the cluster is deployed"
+            }
+          },
+          "additionalProperties": true
+        },
+        "persistentVolumes": {
+          "type": "array",
+          "description": "VCD references to the list of persistent volumes.",
+          "items": {
+            "type": "string"
+          }
+        },
+        "virtualIPs": {
+          "type": "array",
+          "description": "Array of virtual IPs consumed by the cluster.",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": true
+    },
+    "metadata": {
+      "type": "object",
+      "required": [
+        "orgName",
+        "virtualDataCenterName",
+        "name",
+        "site"
+      ],
+      "properties": {
+        "orgName": {
+          "type": "string",
+          "description": "The name of the Organization in which cluster needs to be created or managed."
+        },
+        "virtualDataCenterName": {
+          "type": "string",
+          "description": "The name of the Organization Virtual data center in which the cluster need to be created or managed."
+        },
+        "name": {
+          "type": "string",
+          "description": "The name of the cluster."
+        },
+        "site": {
+          "type": "string",
+          "description": "Fully Qualified Domain Name of the VCD site in which the cluster is deployed"
+        }
+      },
+      "additionalProperties": true
+    },
+    "apiVersion": {
+      "type": "string",
+      "default": "capvcd.vmware.com/v1.0",
+      "description": "The version of the payload format"
+    }
+  },
+  "additionalProperties": true
 }
