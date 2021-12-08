@@ -1933,6 +1933,7 @@ def _get_tkgm_template(name: str):
 def _get_tkgm_proxy_config() -> dict:
     server_config = server_utils.get_server_runtime_config()
     extra_options: dict = server_config.get('extra_options', {})
+    extra_options = extra_options if isinstance(extra_options, dict) else {}
     return {
         proxy_key.value: extra_options.get(proxy_key.name, '')
         for proxy_key in TKGmProxyKey
