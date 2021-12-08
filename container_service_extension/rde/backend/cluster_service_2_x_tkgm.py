@@ -73,6 +73,8 @@ DEFAULT_API_VERSION = vcd_client.ApiVersion.VERSION_36.value
 # Hardcode the Antrea CNI version until there's a better way to retrieve it
 CNI_NAME = "antrea"
 ANTREA_CNI_VERSION = 'v0.11.3'
+CPI_VERSION = '1.0.x'
+CSI_VERSION = '1.0.0'
 
 CLUSTER_CREATE_OPERATION_MESSAGE = 'Cluster create'
 CLUSTER_RESIZE_OPERATION_MESSAGE = 'Cluster resize'
@@ -2037,6 +2039,8 @@ def _add_control_plane_nodes(
                 service_cidr=k8s_svc_cidr,
                 pod_cidr=k8s_pod_cidr,
                 antrea_cni_version=ANTREA_CNI_VERSION,
+                cpi_version=CPI_VERSION,
+                csi_version=CSI_VERSION,
                 ssh_key=ssh_key if ssh_key else '',
                 control_plane_endpoint='',
                 base64_encoded_refresh_token=base64_refresh_token.decode("utf-8"),  # noqa: E501
@@ -2111,6 +2115,8 @@ def _add_control_plane_nodes(
                 service_cidr=k8s_svc_cidr,
                 pod_cidr=k8s_pod_cidr,
                 antrea_cni_version=ANTREA_CNI_VERSION,
+                cpi_version=CPI_VERSION,
+                csi_version=CSI_VERSION,
                 ssh_key=ssh_key if ssh_key else '',
                 control_plane_endpoint=f"{control_plane_endpoint}:6443",
                 base64_encoded_refresh_token=base64_refresh_token.decode("utf-8"),  # noqa: E501
