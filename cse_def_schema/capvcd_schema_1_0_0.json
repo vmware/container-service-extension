@@ -233,7 +233,7 @@
          },
          "capvcdVersion": {
            "type": "string",
-           "description": "version of the CAPVCD used to deploy the cluster"
+           "description": "CAPVCD version used to deploy the workload cluster."
          },
          "cloudProperties": {
            "type": "object",
