@@ -5,6 +5,11 @@ title: Release Notes
 
 # Release Notes
 
+## Announcement
+Date : 2021-12-15
+
+CSE is not impacted by the Apache Log4j open source component vulnerability.
+
 ## CSE 3.1.1 GA (3.1.1)
 Release Date : 2021-10-14
 
