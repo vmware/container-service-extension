@@ -39,7 +39,7 @@ class Nss(str, Enum):
     KUBERNETES = 'k8s'
     NATIVE_CLUSTER = 'nativeCluster'
     TKG = 'tkgcluster'
-    CAPVCD = 'capvcd'
+    CAPVCD = 'capvcdCluster'
 
 
 @unique
