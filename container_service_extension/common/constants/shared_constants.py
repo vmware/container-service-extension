@@ -27,6 +27,7 @@ RESPONSE_MESSAGE_KEY = "message"
 CSE_SERVER_API_VERSION = "cse_server_api_version"
 CSE_SERVER_SUPPORTED_API_VERSIONS = "cse_server_supported_api_versions"
 CSE_SERVER_LEGACY_MODE = "cse_server_running_in_legacy_mode"
+CAPVCD_CLUSTER_FILTER = 'entityType!=urn:vcloud:type:vmware:capvcd:1.0.0'
 
 
 class ClusterEntityKind(Enum):

@@ -238,6 +238,13 @@ class DefEntityService:
         :rtype: Generator[List, None, None]
         """
         filter_string = utils.construct_filter_string(filters)
+        # TODO(): This CAPVCD filter is temporary and should be removed after
+        #  CAPVCDCluster kind adoption in CSE
+        if filter_string:
+            filter_string += f";{shared_constants.CAPVCD_CLUSTER_FILTER}"
+        else:
+            filter_string = shared_constants.CAPVCD_CLUSTER_FILTER
+
         query_string = f"page={page_number}&pageSize={page_size}"
         if filter_string:
             query_string = f"filter={filter_string}&{query_string}"

@@ -374,9 +374,7 @@ def construct_filter_string(filters: dict):
     """
     filter_string = ""
     if filters:
-        # TODO(): This CAPVCD filter is temporary and should be removed after
-        #  CAPVCDCluster kind adoption in CSE
-        filter_expressions = ['entityType!=urn:vcloud:type:vmware:capvcd:1.0.0']  # noqa: E501
+        filter_expressions = []
         for (key, value) in filters.items():
             if key and value:
                 filter_exp = f"{key}=={urllib.parse.quote(escape_query_filter_expression_value(value))}"  # noqa: E501
