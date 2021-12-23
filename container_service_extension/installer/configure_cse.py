@@ -2226,12 +2226,6 @@ def _upgrade_to_cse_3_1_non_legacy(
         log_wire=log_wire
     )
 
-    msg = """Skipping creation of templates.
-Please note, CSE server startup needs at least one valid template.
-Please create CSE K8s template(s) using the command `cse template install`."""
-    msg_update_callback.info(msg)
-    INSTALL_LOGGER.info(msg)
-
     _process_existing_templates(
         client=client,
         config=config,
