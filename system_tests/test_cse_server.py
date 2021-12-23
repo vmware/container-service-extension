@@ -249,26 +249,21 @@ def test_0070_check_invalid_installation(config):
         pass
 
 
-def test_0080_install_skip_template_creation(config,
-                                             unregister_cse_before_test):
+def test_0080_install(config, unregister_cse_before_test):
     """Test install.
 
-    Installation options: '--ssh-key', '--skip-template-creation',
-    '--skip-config-decryption'
+    Installation options: '--skip-config-decryption'
 
     Tests that installation:
-    - registers CSE, without installing the templates
+    - registers CSE
 
     command: cse install --config cse_test_config.yaml
-        --ssh-key ~/.ssh/id_rsa.pub --skip-config-decryption
-        --skip-create-templates
-    required files: ~/.ssh/id_rsa.pub, cse_test_config.yaml,
-    expected: cse registered, catalog exists, source OVAs do not exist,
-        temp vapps do not exist, k8s templates do not exist.
+        --skip-config-decryption
+    required files: cse_test_config.yaml,
+    expected: cse registered, catalog exists.
     """
-    cmd = f"install --config {env.ACTIVE_CONFIG_FILEPATH} --ssh-key " \
-          f"{env.SSH_KEY_FILEPATH} --skip-template-creation " \
-          f"--skip-config-decryption"
+    cmd = f"install --config {env.ACTIVE_CONFIG_FILEPATH} " \
+          "--skip-config-decryption"
     result = env.CLI_RUNNER.invoke(cli, cmd.split(), catch_exceptions=False)
     assert result.exit_code == 0,\
         testutils.format_command_info('cse', cmd, result.exit_code,
@@ -278,83 +273,8 @@ def test_0080_install_skip_template_creation(config,
     env.check_cse_registration(config['amqp']['routing_key'],
                                config['amqp']['exchange'])
 
-    for template_config in env.TEMPLATE_DEFINITIONS:
-        # check that source ova file does not exist in catalog
-        assert not env.catalog_item_exists(
-            template_config['source_ova_name']), \
-            'Source ova file exists when it should not.'
 
-        # check that k8s templates does not exist
-        catalog_item_name = ltm.get_revisioned_template_name(
-            template_config['name'], template_config['revision'])
-        assert not env.catalog_item_exists(catalog_item_name), \
-            'k8s templates exist when they should not.'
-
-        # check that temp vapp does not exists
-        temp_vapp_name = testutils.get_temp_vapp_name(template_config['name'])
-        assert not env.vapp_exists(temp_vapp_name, vdc_href=env.VDC_HREF), \
-            'vApp exists when it should not.'
-
-
-@pytest.mark.skipif(not env.TEST_ALL_TEMPLATES,
-                    reason="Configuration specifies 'test_all_templates' as False")  # noqa: E501
-def test_0090_install_all_templates(config, unregister_cse_before_test):
-    """Test install.
-
-    Installation options: '--ssh-key', '--retain-temp-vapp',
-        '--skip-config-decryption'.
-
-    Tests that installation:
-    - downloads/uploads ova file,
-    - creates photon temp vapp,
-    - creates k8s templates
-    - skips deleting the temp vapp
-    - checks that proper packages are installed in the vm in temp vApp
-
-    command: cse install --config cse_test_config.yaml --retain-temp-vapp
-        --skip-config-decryption --ssh-key ~/.ssh/id_rsa.pub
-    required files: ~/.ssh/id_rsa.pub, cse_test_config.yaml
-    expected: cse registered, catalog exists, source OVAs exist,
-        temp vapps exist, k8s templates exist.
-    """
-    cmd = f"install --config {env.ACTIVE_CONFIG_FILEPATH} --ssh-key " \
-          f"{env.SSH_KEY_FILEPATH} --retain-temp-vapp --skip-config-decryption"
-    result = env.CLI_RUNNER.invoke(cli, cmd.split(),
-                                   catch_exceptions=False)
-    assert result.exit_code == 0,\
-        testutils.format_command_info('cse', cmd, result.exit_code,
-                                      result.output)
-
-    # check that cse was registered correctly
-    env.check_cse_registration(config['amqp']['routing_key'],
-                               config['amqp']['exchange'])
-
-    vdc = VDC(env.CLIENT, href=env.VDC_HREF)
-    for template_config in env.TEMPLATE_DEFINITIONS:
-        # check that source ova file exists in catalog
-        assert env.catalog_item_exists(
-            template_config['source_ova_name']), \
-            'Source ova file does not exist when it should.'
-
-        # check that k8s templates exist
-        catalog_item_name = ltm.get_revisioned_template_name(
-            template_config['name'], template_config['revision'])
-        assert env.catalog_item_exists(catalog_item_name), \
-            'k8s template does not exist when it should.'
-
-        # check that temp vapp exists
-        temp_vapp_name = testutils.get_temp_vapp_name(
-            template_config['name'])
-        try:
-            vdc.reload()
-            vdc.get_vapp(temp_vapp_name)
-        except EntityNotFoundException:
-            assert False, 'vApp does not exist when it should.'
-
-
-@pytest.mark.skipif(env.TEST_ALL_TEMPLATES,
-                    reason="Configuration specifies 'test_all_templates' as True")  # noqa: E501
-def test_0100_install_select_templates(config, unregister_cse_before_test):
+def test_0100_install_select_templates(config):
     """Tests template installation.
 
     Tests that selected template installation is done correctly
@@ -367,14 +287,6 @@ def test_0100_install_select_templates(config, unregister_cse_before_test):
     expected: cse registered, source OVAs exist, k8s templates exist and
         temp vapps exist.
     """
-    cmd = f"install --config {env.ACTIVE_CONFIG_FILEPATH} --ssh-key " \
-          f"{env.SSH_KEY_FILEPATH} --skip-template-creation " \
-          f"--skip-config-decryption"
-    result = env.CLI_RUNNER.invoke(cli, cmd.split(), catch_exceptions=False)
-    assert result.exit_code == 0,\
-        testutils.format_command_info('cse', cmd, result.exit_code,
-                                      result.output)
-
     # check that cse was registered correctly
     env.check_cse_registration(config['amqp']['routing_key'],
                                config['amqp']['exchange'])

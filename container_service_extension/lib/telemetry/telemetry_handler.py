@@ -156,7 +156,7 @@ def record_user_action_details(cse_operation, cse_params,
         if not telemetry_settings:
             telemetry_settings = get_server_runtime_config()['service']['telemetry']  # noqa: E501
 
-        if telemetry_settings['enable']:
+        if telemetry_settings.get('enable', False):
             payload = OPERATION_TO_PAYLOAD_GENERATOR[cse_operation](cse_params)
             _send_data_to_telemetry_server(payload, telemetry_settings)
     except Exception as err:
@@ -170,9 +170,11 @@ def _send_data_to_telemetry_server(payload, telemetry_settings):
     :param dict payload: json metadata about CSE operation
     :param dict telemetry_settings: telemetry section of config->service
     """
-    vac_client = VacClient(base_url=telemetry_settings['vac_url'],
-                           collector_id=telemetry_settings['collector_id'],
-                           instance_id=telemetry_settings['instance_id'],
-                           vcd_ceip_id=telemetry_settings['vcd_ceip_id'],
-                           logger_debug=LOGGER)
+    vac_client = VacClient(
+        base_url=telemetry_settings['vac_url'],
+        collector_id=telemetry_settings['collector_id'],
+        instance_id=telemetry_settings['instance_id'],
+        vcd_ceip_id=telemetry_settings['vcd_ceip_id'],
+        logger_debug=LOGGER
+    )
     vac_client.send_data(payload)
