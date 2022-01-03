@@ -221,7 +221,8 @@ class DefEntityService:
     def get_all_entities_per_page_by_interface(self, vendor: str, nss: str, version: str,  # noqa: E501
                                                filters: dict = None,
                                                page_number: int = CSE_PAGINATION_FIRST_PAGE_NUMBER,  # noqa: E501
-                                               page_size: int = CSE_PAGINATION_DEFAULT_PAGE_SIZE):  # noqa: E501
+                                               page_size: int = CSE_PAGINATION_DEFAULT_PAGE_SIZE, # noqa: E501
+                                               exclude_entity_type_filter: str = None):  # noqa: E501
         """Get a page of entities belonging to an interface.
 
         An interface is uniquely identified by properties vendor, nss and
@@ -233,17 +234,16 @@ class DefEntityService:
         :param dict filters:
         :param int page_number:
         :param int page_size:
+        :param str exclude_entity_type_filter: exclude entity type filter
 
         :return: Generator of entities of that interface type
         :rtype: Generator[List, None, None]
         """
         filter_string = utils.construct_filter_string(filters)
-        # TODO(): This CAPVCD filter is temporary and should be removed after
-        #  CAPVCDCluster kind adoption in CSE
         if filter_string:
-            filter_string += f";{shared_constants.CAPVCD_CLUSTER_FILTER}"
+            filter_string += f";{exclude_entity_type_filter}"
         else:
-            filter_string = shared_constants.CAPVCD_CLUSTER_FILTER
+            filter_string = exclude_entity_type_filter
 
         query_string = f"page={page_number}&pageSize={page_size}"
         if filter_string:

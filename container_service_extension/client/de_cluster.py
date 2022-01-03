@@ -14,6 +14,7 @@ from container_service_extension.client.de_cluster_native import DEClusterNative
 from container_service_extension.client.de_cluster_tkg_s import DEClusterTKGS
 import container_service_extension.client.tkgclient.rest as tkg_rest
 import container_service_extension.client.utils as client_utils
+from container_service_extension.common.constants.shared_constants import CAPVCD_CLUSTER_FILTER  # noqa: E501
 from container_service_extension.common.constants.shared_constants import CSE_PAGINATION_DEFAULT_PAGE_SIZE, PaginationKey  # noqa: E501
 from container_service_extension.common.constants.shared_constants import CSE_PAGINATION_FIRST_PAGE_NUMBER  # noqa: E501
 import container_service_extension.common.utils.core_utils as core_utils
@@ -100,7 +101,9 @@ class DECluster:
                         version=common_models.K8Interface.VCD_INTERFACE.value.version,  # noqa: E501
                         filters=filters,
                         page_number=page_number,
-                        page_size=page_size)
+                        page_size=page_size,
+                        exclude_entity_type_filter=CAPVCD_CLUSTER_FILTER
+                    )
                     # Get the list of cluster defined entities
                     entities: List[common_models.GenericClusterEntity] = clusters_page_results[PaginationKey.VALUES]  # noqa: E501
                     clusters = []
