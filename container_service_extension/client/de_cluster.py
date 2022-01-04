@@ -16,6 +16,7 @@ import container_service_extension.client.tkgclient.rest as tkg_rest
 import container_service_extension.client.utils as client_utils
 from container_service_extension.common.constants.shared_constants import CSE_PAGINATION_DEFAULT_PAGE_SIZE, PaginationKey  # noqa: E501
 from container_service_extension.common.constants.shared_constants import CSE_PAGINATION_FIRST_PAGE_NUMBER  # noqa: E501
+from container_service_extension.common.constants.shared_constants import EntityTypeId  # noqa: E501
 import container_service_extension.common.utils.core_utils as core_utils
 import container_service_extension.common.utils.pyvcloud_utils as vcd_utils
 import container_service_extension.exception.exceptions as cse_exceptions
@@ -100,7 +101,9 @@ class DECluster:
                         version=common_models.K8Interface.VCD_INTERFACE.value.version,  # noqa: E501
                         filters=filters,
                         page_number=page_number,
-                        page_size=page_size)
+                        page_size=page_size,
+                        exclude_entity_type_ids=[EntityTypeId.CAPVCD_1_0_0.value]  # noqa: E501
+                    )
                     # Get the list of cluster defined entities
                     entities: List[common_models.GenericClusterEntity] = clusters_page_results[PaginationKey.VALUES]  # noqa: E501
                     clusters = []

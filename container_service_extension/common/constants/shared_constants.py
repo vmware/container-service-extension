@@ -29,6 +29,10 @@ CSE_SERVER_SUPPORTED_API_VERSIONS = "cse_server_supported_api_versions"
 CSE_SERVER_LEGACY_MODE = "cse_server_running_in_legacy_mode"
 
 
+class EntityTypeId(Enum):
+    CAPVCD_1_0_0 = 'urn:vcloud:type:vmware:capvcd:1.0.0'
+
+
 class ClusterEntityKind(Enum):
     NATIVE = 'native'
     TKG_S = 'TanzuKubernetesCluster'
