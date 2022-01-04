@@ -804,5 +804,6 @@ CLOUDINIT_GUEST_USERDATA_ENCODING = 'guestinfo.userdata.encoding'
 
 MAX_RDE_UPDATE_ATTEMPTS = 10
 
-RESULT_MESSAGE_KEY = "result"
-RESULT_CONTENT_MESSAGE_KEY = "resultContent"
+# keys of the Behavior task response that gets sent to VCD
+BEHAVIOR_TASK_RESPONSE_RESULT_MESSAGE_KEY = "result"
+BEHAVIOR_TASK_RESPONSE_RESULT_CONTENT_MESSAGE_KEY = "resultContent"
