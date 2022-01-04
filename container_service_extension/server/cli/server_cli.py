@@ -592,31 +592,9 @@ def encrypt(ctx, input_file, output_file):
     '--skip-config-decryption',
     is_flag=True,
     help='Skip decryption of CSE/PKS config file')
-@click.option(
-    '-t',
-    '--skip-template-creation',
-    'skip_template_creation',
-    is_flag=True,
-    help='Skips creating CSE k8s template during installation')
-@click.option(
-    '-d',
-    '--retain-temp-vapp',
-    'retain_temp_vapp',
-    is_flag=True,
-    help='Retain the temporary vApp after the template has been captured'
-         ' --ssh-key option is required if this flag is used')
-@click.option(
-    '-k',
-    '--ssh-key',
-    'ssh_key_file',
-    required=False,
-    default=None,
-    type=click.File('r'),
-    help='Filepath of SSH public key to add to vApp template')
 def install(ctx, config_file_path, pks_config_file_path,
-            skip_config_decryption, skip_template_creation,
-            retain_temp_vapp, ssh_key_file):
-    """Install CSE on vCloud Director.
+            skip_config_decryption):
+    """Install CSE on Cloud Director.
 
 \b
     - legacy_mode is config property that is used to configure CSE with
@@ -632,34 +610,18 @@ def install(ctx, config_file_path, pks_config_file_path,
     - When legacy_mode=true, supported template information are based on
       remote-template-cookbook version "1.0.0".
     - When legacy_mode=false, supported template information are based on
-      remote-template-cookbook version "2.0.0", min_cse_version and
-      max_cse_version.
+      remote-template-cookbook version "2.0.0".
     """
-    # NOTE: For CSE 3.0, if `enable_tkg_plus` in config file is set to false
-    # and if `cse install` is invoked without skipping template creation,
-    # an Exception will be thrown if TKG+ template is present in the
-    # remote_template_cookbook.
     SERVER_CLI_LOGGER.debug(f"Executing command: {ctx.command_path}")
     console_message_printer = utils.ConsoleMessagePrinter()
     utils.check_python_version(console_message_printer)
-
-    if retain_temp_vapp and not ssh_key_file:
-        msg = "Must provide ssh-key file (using --ssh-key OR -k) if " \
-              "--retain-temp-vapp is provided, or else temporary vm will be " \
-              "inaccessible"
-        console_message_printer.error(msg)
-        SERVER_CLI_LOGGER.error(msg)
-        sys.exit(1)
-
-    ssh_key = None
-    if ssh_key_file is not None:
-        ssh_key = ssh_key_file.read()
 
     password = None
     if not skip_config_decryption:
         password = os.getenv('CSE_CONFIG_PASSWORD') or utils.prompt_text(
             PASSWORD_FOR_CONFIG_DECRYPTION_MSG,
-            color='green', hide_input=True)
+            color='green', hide_input=True
+        )
 
     try:
         config = get_validated_config(
@@ -669,17 +631,16 @@ def install(ctx, config_file_path, pks_config_file_path,
             decryption_password=password,
             log_wire_file=INSTALL_WIRELOG_FILEPATH,
             logger_debug=INSTALL_LOGGER,
-            msg_update_callback=console_message_printer)
+            msg_update_callback=console_message_printer
+        )
 
         configure_cse.install_cse(
             config_file_name=config_file_path,
             config=config,
             pks_config_file_name=pks_config_file_path,
-            skip_template_creation=skip_template_creation,
-            ssh_key=ssh_key,
-            retain_temp_vapp=retain_temp_vapp,
             skip_config_decryption=skip_config_decryption,
-            msg_update_callback=console_message_printer)
+            msg_update_callback=console_message_printer
+        )
     except Exception as err:
         SERVER_CLI_LOGGER.error(str(err), exc_info=True)
         console_message_printer.error(str(err))
@@ -855,45 +816,21 @@ def run(ctx, config_file_path, pks_config_file_path, skip_check,
     'skip_config_decryption',
     is_flag=True,
     help='Skip decryption of CSE config file')
-@click.option(
-    '-t',
-    '--skip-template-creation',
-    'skip_template_creation',
-    is_flag=True,
-    help='Skip creating CSE k8s templates during upgrade')
-@click.option(
-    '-d',
-    '--retain-temp-vapp',
-    'retain_temp_vapp',
-    is_flag=True,
-    help='Retain the temporary vApp after the CSE k8s template has been captured'  # noqa: E501
-         ' --ssh-key option is required if this flag is used')
-@click.option(
-    '-k',
-    '--ssh-key',
-    'ssh_key_file',
-    required=False,
-    default=None,
-    type=click.File('r'),
-    help='Filepath of SSH public key to add to CSE k8s template vms')
-def upgrade(ctx, config_file_path, skip_config_decryption,
-            skip_template_creation, retain_temp_vapp,
-            ssh_key_file):
-    """Upgrade existing CSE installation/entities to match CSE 3.1.0.
+def upgrade(ctx, config_file_path, skip_config_decryption):
+    """Upgrade existing CSE installation/entities to match CSE 3.1.1.
 
 \b
     - Add CSE, RDE version, Legacy mode info to VCD's extension data for CSE
     - Register defined entities schema of CSE k8s clusters with VCD
     - Create placement compute policies used by CSE
     - Remove old sizing compute policies created by CSE 2.6 and below
-    - Install all templates from template repository linked in config file
     - Currently installed templates that are no longer compliant with
       new CSE template cookbook will not be recognized by CSE 3.1. Admins can
       safely delete them once new templates are installed and the existing
       clusters are upgraded to newer template revisions.
     - Update existing CSE k8s cluster's to match CSE 3.1 k8s clusters.
     - Upgrading legacy clusters would require new template creation supported
-      by CSE 3.1.0
+      by CSE 3.1.1
     - legacy_mode is config property that is used to configure CSE with
       desired version of VCD.
     - Set legacy_mode=true if CSE 3.1 is configured with VCD whose maximum
@@ -907,8 +844,7 @@ def upgrade(ctx, config_file_path, skip_config_decryption,
     - When legacy_mode=true, supported template information are based on
       remote-template-cookbook version "1.0.0".
     - When legacy_mode=false, supported template information are based on
-      remote-template-cookbook version "2.0.0", min_cse_version and
-      max_cse_version.
+      remote-template-cookbook version "2.0.0".
     """
     # NOTE: For CSE 3.0, if `enable_tkg_plus` in the config is set to false,
     # an exception is thrown if
@@ -918,23 +854,13 @@ def upgrade(ctx, config_file_path, skip_config_decryption,
     console_message_printer = utils.ConsoleMessagePrinter()
     utils.check_python_version(console_message_printer)
 
-    if retain_temp_vapp and not ssh_key_file:
-        msg = "Must provide ssh-key file (using --ssh-key OR -k) if " \
-              "--retain-temp-vapp is provided, or else temporary vm will be " \
-              "inaccessible"
-        console_message_printer.error(msg)
-        INSTALL_LOGGER.error(msg)
-        sys.exit(1)
-
-    ssh_key = None
-    if ssh_key_file is not None:
-        ssh_key = ssh_key_file.read()
-
     password = None
     if not skip_config_decryption:
         password = os.getenv('CSE_CONFIG_PASSWORD') or utils.prompt_text(
             PASSWORD_FOR_CONFIG_DECRYPTION_MSG,
-            color='green', hide_input=True)
+            color='green',
+            hide_input=True
+        )
 
     try:
         config = get_validated_config(
@@ -944,16 +870,14 @@ def upgrade(ctx, config_file_path, skip_config_decryption,
             decryption_password=password,
             log_wire_file=INSTALL_WIRELOG_FILEPATH,
             logger_debug=INSTALL_LOGGER,
-            msg_update_callback=console_message_printer)
+            msg_update_callback=console_message_printer
+        )
 
         configure_cse.upgrade_cse(
             config_file_name=config_file_path,
             config=config,
-            skip_template_creation=skip_template_creation,
-            ssh_key=ssh_key,
-            retain_temp_vapp=retain_temp_vapp,
-            msg_update_callback=console_message_printer)
-
+            msg_update_callback=console_message_printer
+        )
     except Exception as err:
         SERVER_CLI_LOGGER.error(str(err))
         console_message_printer.error(str(err))
@@ -1364,7 +1288,8 @@ def import_tkgm_template(
         config_file_path,
         skip_config_decryption,
         ova_file_path,
-        force_import):
+        force_import
+):
     """Upload TKGm OVA to CSE catalog."""
     SERVER_CLI_LOGGER.debug(f"Executing command: {ctx.command_path}")
     console_message_printer = utils.ConsoleMessagePrinter()
@@ -1378,6 +1303,7 @@ def import_tkgm_template(
         )
 
     client = None
+    config = {}
     try:
         config = get_validated_config(
             config_file_name=config_file_path,
@@ -1506,14 +1432,16 @@ def import_tkgm_template(
         # Record telemetry data on template import completion status
         record_user_action(
             cse_operation=CseOperation.TEMPLATE_IMPORT,
-            telemetry_settings=config['service']['telemetry'])
+            telemetry_settings=config['service']['telemetry']
+        )
     except Exception as err:
         # Record telemetry data on template import completion status
-        record_user_action(
-            cse_operation=CseOperation.TEMPLATE_IMPORT,
-            status=OperationStatus.FAILED,
-            telemetry_settings=config['service']['telemetry'],
-        )
+        if config:
+            record_user_action(
+                cse_operation=CseOperation.TEMPLATE_IMPORT,
+                status=OperationStatus.FAILED,
+                telemetry_settings=config['service']['telemetry'],
+            )
 
         SERVER_CLI_LOGGER.error(str(err), exc_info=True)
         console_message_printer.error(str(err))

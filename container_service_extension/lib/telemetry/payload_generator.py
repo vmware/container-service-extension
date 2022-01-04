@@ -4,7 +4,7 @@
 
 import json
 
-import pyvcloud.vcd.utils as pyvcd_utils
+from pyvcloud.vcd.utils import extract_id
 
 from container_service_extension.common.constants.server_constants import CLUSTER_ENTITY  # noqa: E501
 from container_service_extension.common.constants.server_constants import LocalTemplateKey  # noqa: E501
@@ -91,10 +91,7 @@ def get_payload_for_install_server(params):
     return {
         PayloadKey.TYPE: CseOperation.SERVICE_INSTALL.telemetry_table,
         PayloadKey.WAS_DECRYPTION_SKIPPED: bool(params.get(PayloadKey.WAS_DECRYPTION_SKIPPED)),  # noqa: E501
-        PayloadKey.WAS_PKS_CONFIG_FILE_PROVIDED: bool(params.get(PayloadKey.WAS_PKS_CONFIG_FILE_PROVIDED)),  # noqa: E501
-        PayloadKey.WERE_TEMPLATES_SKIPPED: bool(params.get(PayloadKey.WERE_TEMPLATES_SKIPPED)),  # noqa: E501
-        PayloadKey.WAS_TEMP_VAPP_RETAINED: bool(params.get(PayloadKey.WAS_TEMP_VAPP_RETAINED)),  # noqa: E501
-        PayloadKey.WAS_SSH_KEY_SPECIFIED: bool(params.get(PayloadKey.WAS_SSH_KEY_SPECIFIED))  # noqa: E501
+        PayloadKey.WAS_PKS_CONFIG_FILE_PROVIDED: bool(params.get(PayloadKey.WAS_PKS_CONFIG_FILE_PROVIDED))  # noqa: E501
     }
 
 
@@ -110,12 +107,7 @@ def get_payload_for_upgrade_server(params):
     return {
         PayloadKey.TYPE: CseOperation.SERVICE_UPGRADE.telemetry_table,
         PayloadKey.SOURCE_CSE_VERSION: params.get(PayloadKey.SOURCE_CSE_VERSION),  # noqa: E501
-        PayloadKey.SOURCE_VCD_API_VERSION: params.get(PayloadKey.SOURCE_VCD_API_VERSION),  # noqa: E501
         PayloadKey.TARGET_CSE_VERSION: params.get(PayloadKey.TARGET_CSE_VERSION),  # noqa: E501
-        PayloadKey.TARGET_VCD_API_VERSION: params.get(PayloadKey.TARGET_VCD_API_VERSION),  # noqa: E501
-        PayloadKey.WERE_TEMPLATES_SKIPPED: bool(params.get(PayloadKey.WERE_TEMPLATES_SKIPPED)),  # noqa: E501
-        PayloadKey.WAS_TEMP_VAPP_RETAINED: bool(params.get(PayloadKey.WAS_TEMP_VAPP_RETAINED)),  # noqa: E501
-        PayloadKey.WAS_SSH_KEY_SPECIFIED: bool(params.get(PayloadKey.WAS_SSH_KEY_SPECIFIED))  # noqa: E501
     }
 
 
@@ -590,7 +582,7 @@ def get_payload_for_v35_cluster_info(params):
     """
     return {
         PayloadKey.TYPE: CseOperation.V35_CLUSTER_INFO.telemetry_table,
-        PayloadKey.CLUSTER_ID: uuid_hash(pyvcd_utils.extract_id(params.get(PayloadKey.CLUSTER_ID))),  # noqa: E501
+        PayloadKey.CLUSTER_ID: uuid_hash(extract_id(params.get(PayloadKey.CLUSTER_ID))),  # noqa: E501
         PayloadKey.SOURCE_ID: SourceMap.get_source_id(params.get(PayloadKey.SOURCE_DESCRIPTION)),  # noqa: E501
         PayloadKey.SOURCE_DESCRIPTION: params.get(PayloadKey.SOURCE_DESCRIPTION)  # noqa: E501
     }
@@ -608,7 +600,7 @@ def get_payload_for_v35_cluster_config(params):
     def_entity = params.get(CLUSTER_ENTITY)
     return {
         PayloadKey.TYPE: CseOperation.V35_CLUSTER_CONFIG.telemetry_table,
-        PayloadKey.CLUSTER_ID: uuid_hash(pyvcd_utils.extract_id(def_entity.id)),  # noqa: E501
+        PayloadKey.CLUSTER_ID: uuid_hash(extract_id(def_entity.id)),
         PayloadKey.CLUSTER_KIND: def_entity.entity.kind,
         PayloadKey.TEMPLATE_NAME: def_entity.entity.spec.k8_distribution.template_name,  # noqa: E501
         PayloadKey.TEMPLATE_REVISION: def_entity.entity.spec.k8_distribution.template_revision,  # noqa: E501
@@ -629,7 +621,7 @@ def get_payload_for_v35_cluster_apply(params):
     def_entity = params.get(CLUSTER_ENTITY)
     return {
         PayloadKey.TYPE: CseOperation.V35_CLUSTER_APPLY.telemetry_table,
-        PayloadKey.CLUSTER_ID: uuid_hash(pyvcd_utils.extract_id(def_entity.id)),  # noqa: E501
+        PayloadKey.CLUSTER_ID: uuid_hash(extract_id(def_entity.id)),
         PayloadKey.CLUSTER_KIND: def_entity.entity.kind,
         PayloadKey.TEMPLATE_NAME: def_entity.entity.spec.k8_distribution.template_name,  # noqa: E501
         PayloadKey.TEMPLATE_REVISION: def_entity.entity.spec.k8_distribution.template_revision,  # noqa: E501
@@ -655,7 +647,7 @@ def get_payload_for_v35_cluster_delete(params):
     def_entity = params.get(CLUSTER_ENTITY)
     return {
         PayloadKey.TYPE: CseOperation.V35_CLUSTER_DELETE.telemetry_table,
-        PayloadKey.CLUSTER_ID: uuid_hash(pyvcd_utils.extract_id(def_entity.id)),  # noqa: E501
+        PayloadKey.CLUSTER_ID: uuid_hash(extract_id(def_entity.id)),
         PayloadKey.CLUSTER_KIND: def_entity.entity.kind,
         PayloadKey.SOURCE_ID: SourceMap.get_source_id(params.get(PayloadKey.SOURCE_DESCRIPTION)),  # noqa: E501
         PayloadKey.SOURCE_DESCRIPTION: params.get(PayloadKey.SOURCE_DESCRIPTION)  # noqa: E501
@@ -674,7 +666,7 @@ def get_payload_for_v35_cluster_upgrade_plan(params):
     def_entity = params.get(CLUSTER_ENTITY)
     return {
         PayloadKey.TYPE: CseOperation.V35_CLUSTER_UPGRADE_PLAN.telemetry_table,
-        PayloadKey.CLUSTER_ID: uuid_hash(pyvcd_utils.extract_id(def_entity.id)),  # noqa: E501
+        PayloadKey.CLUSTER_ID: uuid_hash(extract_id(def_entity.id)),
         PayloadKey.CLUSTER_KIND: def_entity.entity.kind,
         PayloadKey.SOURCE_ID: SourceMap.get_source_id(params.get(PayloadKey.SOURCE_DESCRIPTION)),  # noqa: E501
         PayloadKey.SOURCE_DESCRIPTION: params.get(PayloadKey.SOURCE_DESCRIPTION)  # noqa: E501
@@ -693,7 +685,7 @@ def get_payload_for_v35_cluster_upgrade(params):
     def_entity = params.get(CLUSTER_ENTITY)
     return {
         PayloadKey.TYPE: CseOperation.V35_CLUSTER_UPGRADE.telemetry_table,
-        PayloadKey.CLUSTER_ID: uuid_hash(pyvcd_utils.extract_id(def_entity.id)),  # noqa: E501
+        PayloadKey.CLUSTER_ID: uuid_hash(extract_id(def_entity.id)),
         PayloadKey.CLUSTER_KIND: def_entity.entity.kind,
         PayloadKey.TEMPLATE_NAME: def_entity.entity.spec.k8_distribution.template_name,  # noqa: E501
         PayloadKey.TEMPLATE_REVISION: def_entity.entity.spec.k8_distribution.template_revision,  # noqa: E501
@@ -713,7 +705,7 @@ def get_payload_for_v35_node_delete(params):
     """
     return {
         PayloadKey.TYPE: CseOperation.V35_NODE_DELETE.telemetry_table,
-        PayloadKey.CLUSTER_ID: uuid_hash(pyvcd_utils.extract_id(params.get(PayloadKey.CLUSTER_ID))),  # noqa: E501
+        PayloadKey.CLUSTER_ID: uuid_hash(extract_id(params.get(PayloadKey.CLUSTER_ID))),  # noqa: E501
         PayloadKey.NODE_NAME: params.get(PayloadKey.NODE_NAME),
         PayloadKey.SOURCE_ID: SourceMap.get_source_id(params.get(PayloadKey.SOURCE_DESCRIPTION)),  # noqa: E501
         PayloadKey.SOURCE_DESCRIPTION: params.get(PayloadKey.SOURCE_DESCRIPTION)  # noqa: E501
@@ -748,7 +740,7 @@ def get_payload_for_v36_cluster_info(params):
     """
     return {
         PayloadKey.TYPE: CseOperation.V36_CLUSTER_INFO.telemetry_table,
-        PayloadKey.CLUSTER_ID: uuid_hash(pyvcd_utils.extract_id(params.get(PayloadKey.CLUSTER_ID))),  # noqa: E501
+        PayloadKey.CLUSTER_ID: uuid_hash(extract_id(params.get(PayloadKey.CLUSTER_ID))),  # noqa: E501
         PayloadKey.SOURCE_ID: SourceMap.get_source_id(params.get(PayloadKey.SOURCE_DESCRIPTION)),  # noqa: E501
         PayloadKey.SOURCE_DESCRIPTION: params.get(PayloadKey.SOURCE_DESCRIPTION)  # noqa: E501
     }
@@ -767,7 +759,7 @@ def get_payload_for_v36_cluster_config(params):
     native_entity: rde_2_x.NativeEntity = def_entity.entity
     return {
         PayloadKey.TYPE: CseOperation.V36_CLUSTER_CONFIG.telemetry_table,
-        PayloadKey.CLUSTER_ID: uuid_hash(pyvcd_utils.extract_id(def_entity.id)),  # noqa: E501
+        PayloadKey.CLUSTER_ID: uuid_hash(extract_id(def_entity.id)),  # noqa: E501
         PayloadKey.CLUSTER_KIND: native_entity.kind,
         PayloadKey.TEMPLATE_NAME: native_entity.spec.distribution.template_name,  # noqa: E501
         PayloadKey.TEMPLATE_REVISION: native_entity.spec.distribution.template_revision,  # noqa: E501
@@ -789,7 +781,7 @@ def get_payload_for_v36_cluster_apply(params):
     native_entity: rde_2_x.NativeEntity = def_entity.entity
     return {
         PayloadKey.TYPE: CseOperation.V36_CLUSTER_APPLY.telemetry_table,
-        PayloadKey.CLUSTER_ID: uuid_hash(pyvcd_utils.extract_id(def_entity.id)),  # noqa: E501
+        PayloadKey.CLUSTER_ID: uuid_hash(extract_id(def_entity.id)),
         PayloadKey.CLUSTER_KIND: native_entity.kind,
         PayloadKey.TEMPLATE_NAME: native_entity.spec.distribution.template_name,  # noqa: E501
         PayloadKey.TEMPLATE_REVISION: native_entity.spec.distribution.template_revision,  # noqa: E501
@@ -816,7 +808,7 @@ def get_payload_for_v36_cluster_delete(params):
     native_entity: rde_2_x.NativeEntity = def_entity.entity
     return {
         PayloadKey.TYPE: CseOperation.V36_CLUSTER_DELETE.telemetry_table,
-        PayloadKey.CLUSTER_ID: uuid_hash(pyvcd_utils.extract_id(def_entity.id)),  # noqa: E501
+        PayloadKey.CLUSTER_ID: uuid_hash(extract_id(def_entity.id)),
         PayloadKey.CLUSTER_KIND: native_entity.kind,
         PayloadKey.SOURCE_ID: SourceMap.get_source_id(params.get(PayloadKey.SOURCE_DESCRIPTION)),  # noqa: E501
         PayloadKey.SOURCE_DESCRIPTION: params.get(PayloadKey.SOURCE_DESCRIPTION)  # noqa: E501
@@ -836,7 +828,7 @@ def get_payload_for_v36_cluster_upgrade_plan(params):
     native_entity: rde_2_x.NativeEntity = def_entity.entity
     return {
         PayloadKey.TYPE: CseOperation.V36_CLUSTER_UPGRADE_PLAN.telemetry_table,
-        PayloadKey.CLUSTER_ID: uuid_hash(pyvcd_utils.extract_id(def_entity.id)),  # noqa: E501
+        PayloadKey.CLUSTER_ID: uuid_hash(extract_id(def_entity.id)),
         PayloadKey.CLUSTER_KIND: native_entity.kind,
         PayloadKey.SOURCE_ID: SourceMap.get_source_id(params.get(PayloadKey.SOURCE_DESCRIPTION)),  # noqa: E501
         PayloadKey.SOURCE_DESCRIPTION: params.get(PayloadKey.SOURCE_DESCRIPTION)  # noqa: E501
@@ -856,7 +848,7 @@ def get_payload_for_v36_cluster_upgrade(params):
     native_entity: rde_2_x.NativeEntity = def_entity.entity
     return {
         PayloadKey.TYPE: CseOperation.V36_CLUSTER_UPGRADE.telemetry_table,
-        PayloadKey.CLUSTER_ID: uuid_hash(pyvcd_utils.extract_id(def_entity.id)),  # noqa: E501
+        PayloadKey.CLUSTER_ID: uuid_hash(extract_id(def_entity.id)),
         PayloadKey.CLUSTER_KIND: native_entity.kind,
         PayloadKey.TEMPLATE_NAME: native_entity.spec.distribution.template_name,  # noqa: E501
         PayloadKey.TEMPLATE_REVISION: native_entity.spec.distribution.template_revision,  # noqa: E501
@@ -876,7 +868,7 @@ def get_payload_for_v36_node_delete(params):
     """
     return {
         PayloadKey.TYPE: CseOperation.V36_NODE_DELETE.telemetry_table,
-        PayloadKey.CLUSTER_ID: uuid_hash(pyvcd_utils.extract_id(params.get(PayloadKey.CLUSTER_ID))),  # noqa: E501
+        PayloadKey.CLUSTER_ID: uuid_hash(extract_id(params.get(PayloadKey.CLUSTER_ID))),  # noqa: E501
         PayloadKey.NODE_NAME: params.get(PayloadKey.NODE_NAME),
         PayloadKey.SOURCE_ID: SourceMap.get_source_id(params.get(PayloadKey.SOURCE_DESCRIPTION)),  # noqa: E501
         PayloadKey.SOURCE_DESCRIPTION: params.get(PayloadKey.SOURCE_DESCRIPTION)  # noqa: E501

@@ -56,13 +56,13 @@ from container_service_extension.mqi.mqtt_extension_manager import \
     MQTTExtensionManager
 from container_service_extension.rde.behaviors.behavior_model import Behavior, BehaviorAclEntry  # noqa: E501
 from container_service_extension.rde.behaviors.behavior_service import BehaviorService  # noqa: E501
-import container_service_extension.rde.common.entity_service as def_entity_svc
-import container_service_extension.rde.constants as def_constants
+import container_service_extension.rde.common.entity_service as rde_entity_svc
+import container_service_extension.rde.constants as rde_constants
 import container_service_extension.rde.models.common_models as common_models
 import container_service_extension.rde.models.rde_2_0_0 as rde_2_x
 from container_service_extension.rde.models.rde_factory import get_rde_model
-import container_service_extension.rde.schema_service as def_schema_svc
-import container_service_extension.rde.utils as def_utils
+import container_service_extension.rde.schema_service as rde_schema_svc
+import container_service_extension.rde.utils as rde_utils
 import container_service_extension.server.compute_policy_manager as compute_policy_manager  # noqa: E501
 from container_service_extension.server.vcdbroker import get_all_clusters as get_all_cse_clusters  # noqa: E501
 
@@ -93,7 +93,8 @@ def check_cse_installation(config, msg_update_callback=utils.NullPrinter()):
         exist.
     """
     msg_update_callback.info(
-        "Validating CSE installation according to config file")
+        "Validating CSE installation according to config file"
+    )
     err_msgs = []
     client = None
     try:
@@ -106,24 +107,35 @@ def check_cse_installation(config, msg_update_callback=utils.NullPrinter()):
         # get_validated_config method, we can safely use the
         # default_api_version key, it will be set to the highest api
         # version supported by VCD and CSE.
-        client = Client(config['vcd']['host'],
-                        api_version=config['service']['default_api_version'],
-                        verify_ssl_certs=config['vcd']['verify'],
-                        log_file=log_filename,
-                        log_requests=log_wire,
-                        log_headers=log_wire,
-                        log_bodies=log_wire)
-        credentials = BasicLoginCredentials(config['vcd']['username'],
-                                            shared_constants.SYSTEM_ORG_NAME,
-                                            config['vcd']['password'])
+        client = Client(
+            config['vcd']['host'],
+            api_version=config['service']['default_api_version'],
+            verify_ssl_certs=config['vcd']['verify'],
+            log_file=log_filename,
+            log_requests=log_wire,
+            log_headers=log_wire,
+            log_bodies=log_wire
+        )
+        credentials = BasicLoginCredentials(
+            config['vcd']['username'],
+            shared_constants.SYSTEM_ORG_NAME,
+            config['vcd']['password']
+        )
         client.set_credentials(credentials)
 
         if server_utils.should_use_mqtt_protocol(config):
-            _check_mqtt_extension_installation(client, msg_update_callback,
-                                               err_msgs)
+            _check_mqtt_extension_installation(
+                client,
+                msg_update_callback,
+                err_msgs
+            )
         else:
-            _check_amqp_extension_installation(client, config,
-                                               msg_update_callback, err_msgs)
+            _check_amqp_extension_installation(
+                client,
+                config,
+                msg_update_callback,
+                err_msgs
+            )
 
         # check that catalog exists in vCD
         org_name = config['broker']['org']
@@ -224,9 +236,6 @@ def parse_cse_extension_description(description: str):
 def install_cse(
         config_file_name,
         config,
-        skip_template_creation,
-        ssh_key,
-        retain_temp_vapp,
         pks_config_file_name=None,
         skip_config_decryption=False,
         msg_update_callback=utils.NullPrinter()
@@ -241,10 +250,6 @@ def install_cse(
 
     :param str config_file_name: config file name.
     :param dict config: content of the CSE config file.
-    :param bool skip_template_creation: If True, skip creating the templates.
-    :param str ssh_key: public ssh key to place into template vApp(s).
-    :param bool retain_temp_vapp: if True, temporary vApp will not destroyed,
-        so the user can ssh into and debug the vm.
     :param str pks_config_file_name: pks config file name.
     :param bool skip_config_decryption: do not decrypt the config file.
     :param core_utils.ConsoleMessagePrinter msg_update_callback: Callback object.  # noqa: E501
@@ -265,29 +270,21 @@ def install_cse(
 
     client = None
     try:
-        is_no_vc_communication_mode = \
-            server_utils.is_no_vc_communication_mode(config)
-        if is_no_vc_communication_mode:
-            if not skip_template_creation:
-                msg = "Native templates can not be installed when " \
-                      "running in `No communication with VCenter` mode."
-                raise Exception(msg)
-        else:
+        if not server_utils.is_no_vc_communication_mode(config):
             populate_vsphere_list(config['vcs'])
 
         # Telemetry - Construct telemetry data
         telemetry_data = {
             PayloadKey.WAS_DECRYPTION_SKIPPED: bool(skip_config_decryption),  # noqa: E501
-            PayloadKey.WAS_PKS_CONFIG_FILE_PROVIDED: bool(pks_config_file_name),  # noqa: E501
-            PayloadKey.WERE_TEMPLATES_SKIPPED: bool(skip_template_creation),  # noqa: E501
-            PayloadKey.WAS_TEMP_VAPP_RETAINED: bool(retain_temp_vapp),  # noqa: E501
-            PayloadKey.WAS_SSH_KEY_SPECIFIED: bool(ssh_key)  # noqa: E501
+            PayloadKey.WAS_PKS_CONFIG_FILE_PROVIDED: bool(pks_config_file_name)  # noqa: E501
         }
 
         # Telemetry - Record detailed telemetry data on install
-        record_user_action_details(CseOperation.SERVICE_INSTALL,
-                                   telemetry_data,
-                                   telemetry_settings=config['service']['telemetry'])  # noqa: E501
+        record_user_action_details(
+            CseOperation.SERVICE_INSTALL,
+            telemetry_data,
+            telemetry_settings=config['service']['telemetry']
+        )
 
         log_filename = None
         log_wire = utils.str_to_bool(config['service'].get('log_wire'))
@@ -298,16 +295,20 @@ def install_cse(
         # get_validated_config method, we can safely use the
         # default_api_version key, it will be set to the highest api
         # version supported by VCD and CSE.
-        client = Client(config['vcd']['host'],
-                        api_version=config['service']['default_api_version'],
-                        verify_ssl_certs=config['vcd']['verify'],
-                        log_file=log_filename,
-                        log_requests=log_wire,
-                        log_headers=log_wire,
-                        log_bodies=log_wire)
-        credentials = BasicLoginCredentials(config['vcd']['username'],
-                                            shared_constants.SYSTEM_ORG_NAME,
-                                            config['vcd']['password'])
+        client = Client(
+            config['vcd']['host'],
+            api_version=config['service']['default_api_version'],
+            verify_ssl_certs=config['vcd']['verify'],
+            log_file=log_filename,
+            log_requests=log_wire,
+            log_headers=log_wire,
+            log_bodies=log_wire
+        )
+        credentials = BasicLoginCredentials(
+            config['vcd']['username'],
+            shared_constants.SYSTEM_ORG_NAME,
+            config['vcd']['password']
+        )
         client.set_credentials(credentials)
         msg = f"Connected to vCD as system administrator: " \
               f"{config['vcd']['host']}:{config['vcd']['port']}"
@@ -322,10 +323,13 @@ def install_cse(
             raise Exception(ext_found_msg)
 
         # register cse def schema on VCD
-        _register_rde_schema(client=client, config=config,
-                             msg_update_callback=msg_update_callback,
-                             update_schema=False,
-                             log_wire=log_wire)
+        _register_rde_schema(
+            client=client,
+            config=config,
+            msg_update_callback=msg_update_callback,
+            update_schema=False,
+            log_wire=log_wire
+        )
 
         # set up placement policies for all types of clusters
         is_tkg_plus_enabled = server_utils.is_tkg_plus_enabled(config=config)
@@ -334,29 +338,18 @@ def install_cse(
             policy_list=shared_constants.CLUSTER_RUNTIME_PLACEMENT_POLICIES,
             is_tkg_plus_enabled=is_tkg_plus_enabled,
             msg_update_callback=msg_update_callback,
-            log_wire=log_wire)
+            log_wire=log_wire
+        )
 
         # set up cse catalog
         org = vcd_utils.get_org(client, org_name=config['broker']['org'])
         vcd_utils.create_and_share_catalog(
-            org, config['broker']['catalog'], catalog_desc='CSE templates',
-            logger=INSTALL_LOGGER, msg_update_callback=msg_update_callback)
-
-        if skip_template_creation:
-            msg = """Skipping creation of templates.
-Please note, CSE server startup needs at least one valid template.
-Please create CSE K8s template(s) using the command `cse template install`."""
-            msg_update_callback.info(msg)
-            INSTALL_LOGGER.info(msg)
-        else:
-            # install all templates
-            _install_all_templates(
-                client=client,
-                config=config,
-                force_create=False,
-                retain_temp_vapp=retain_temp_vapp,
-                ssh_key=retain_temp_vapp,
-                msg_update_callback=msg_update_callback)
+            org,
+            config['broker']['catalog'],
+            catalog_desc='CSE templates',
+            logger=INSTALL_LOGGER,
+            msg_update_callback=msg_update_callback
+        )
 
         # if it's a PKS setup, setup NSX-T constructs
         if config.get('pks_config'):
@@ -379,10 +372,15 @@ Please create CSE K8s template(s) using the command `cse template install`."""
         else:
             # create amqp exchange if it doesn't exist
             amqp = config['amqp']
-            _create_amqp_exchange(amqp['exchange'], amqp['host'], amqp['port'],
-                                  amqp['vhost'], amqp['username'],
-                                  amqp['password'],
-                                  msg_update_callback=msg_update_callback)
+            _create_amqp_exchange(
+                amqp['exchange'],
+                amqp['host'],
+                amqp['port'],
+                amqp['vhost'],
+                amqp['username'],
+                amqp['password'],
+                msg_update_callback=msg_update_callback
+            )
 
             # register cse as an api extension to vCD
             _register_cse_as_amqp_extension(
@@ -390,22 +388,27 @@ Please create CSE K8s template(s) using the command `cse template install`."""
                 routing_key=amqp['routing_key'],
                 exchange=amqp['exchange'],
                 rde_version_in_use=config['service']['rde_version_in_use'],
-                msg_update_callback=msg_update_callback)
+                msg_update_callback=msg_update_callback
+            )
 
             # register rights to vCD
             # TODO() should also remove rights when unregistering CSE
-            _register_right(client,
-                            right_name=server_constants.CSE_NATIVE_DEPLOY_RIGHT_NAME,  # noqa: E501
-                            description=server_constants.CSE_NATIVE_DEPLOY_RIGHT_DESCRIPTION,  # noqa: E501
-                            category=server_constants.CSE_NATIVE_DEPLOY_RIGHT_CATEGORY,  # noqa: E501
-                            bundle_key=server_constants.CSE_NATIVE_DEPLOY_RIGHT_BUNDLE_KEY,  # noqa: E501
-                            msg_update_callback=msg_update_callback)
-            _register_right(client,
-                            right_name=server_constants.CSE_PKS_DEPLOY_RIGHT_NAME,  # noqa: E501
-                            description=server_constants.CSE_PKS_DEPLOY_RIGHT_DESCRIPTION,  # noqa: E501
-                            category=server_constants.CSE_PKS_DEPLOY_RIGHT_CATEGORY,  # noqa: E501
-                            bundle_key=server_constants.CSE_PKS_DEPLOY_RIGHT_BUNDLE_KEY,  # noqa: E501
-                            msg_update_callback=msg_update_callback)
+            _register_right(
+                client,
+                right_name=server_constants.CSE_NATIVE_DEPLOY_RIGHT_NAME,
+                description=server_constants.CSE_NATIVE_DEPLOY_RIGHT_DESCRIPTION,  # noqa: E501
+                category=server_constants.CSE_NATIVE_DEPLOY_RIGHT_CATEGORY,
+                bundle_key=server_constants.CSE_NATIVE_DEPLOY_RIGHT_BUNDLE_KEY,  # noqa: E501
+                msg_update_callback=msg_update_callback
+            )
+            _register_right(
+                client,
+                right_name=server_constants.CSE_PKS_DEPLOY_RIGHT_NAME,
+                description=server_constants.CSE_PKS_DEPLOY_RIGHT_DESCRIPTION,  # noqa: E501
+                category=server_constants.CSE_PKS_DEPLOY_RIGHT_CATEGORY,
+                bundle_key=server_constants.CSE_PKS_DEPLOY_RIGHT_BUNDLE_KEY,  # noqa: E501
+                msg_update_callback=msg_update_callback
+            )
 
         msg = "Installed CSE successfully."
         msg_update_callback.general(msg)
@@ -650,9 +653,6 @@ def install_template(
 def upgrade_cse(
         config_file_name,
         config,
-        skip_template_creation,
-        ssh_key,
-        retain_temp_vapp,
         msg_update_callback=utils.NullPrinter()
 ):
     """Handle logistics for upgrading CSE to 3.1.
@@ -665,10 +665,6 @@ def upgrade_cse(
 
     :param str config_file_name: config file name.
     :param dict config: content of the CSE config file.
-    :param bool skip_template_creation: If True, skip creating the templates.
-    :param str ssh_key: public ssh key to place into template vApp(s).
-    :param bool retain_temp_vapp: if True, temporary vApp will not destroyed,
-        so the user can ssh into and debug the vm.
     :param core_utils.ConsoleMessagePrinter msg_update_callback: Callback object.  # noqa: E501
     """
     msg = f"Upgrading CSE on vCloud Director using config file " \
@@ -682,14 +678,7 @@ def upgrade_cse(
 
     client = None
     try:
-        is_no_vc_communication_mode = \
-            server_utils.is_no_vc_communication_mode(config)
-        if is_no_vc_communication_mode:
-            if not skip_template_creation:
-                msg = "Native templates can not be installed when " \
-                      "running in `No communication with VCenter` mode."
-                raise Exception(msg)
-        else:
+        if not server_utils.is_no_vc_communication_mode(config):
             populate_vsphere_list(config['vcs'])
 
         log_filename = None
@@ -764,18 +753,15 @@ def upgrade_cse(
         # ToDo: Record 'rde version' in use flag
         telemetry_data = {
             PayloadKey.SOURCE_CSE_VERSION: str(ext_cse_version),
-            PayloadKey.SOURCE_VCD_API_VERSION: "",
             PayloadKey.TARGET_CSE_VERSION: str(target_cse_version),
-            PayloadKey.TARGET_VCD_API_VERSION: "",
-            PayloadKey.WERE_TEMPLATES_SKIPPED: bool(skip_template_creation),  # noqa: E501
-            PayloadKey.WAS_TEMP_VAPP_RETAINED: bool(retain_temp_vapp),
-            PayloadKey.WAS_SSH_KEY_SPECIFIED: bool(ssh_key)
         }
 
         # Telemetry - Record detailed telemetry data on upgrade
-        record_user_action_details(CseOperation.SERVICE_UPGRADE,
-                                   telemetry_data,
-                                   telemetry_settings=config['service']['telemetry'])  # noqa: E501
+        record_user_action_details(
+            CseOperation.SERVICE_UPGRADE,
+            telemetry_data,
+            telemetry_settings=config['service']['telemetry']
+        )
 
         # Handle various upgrade scenarios
         # Post CSE 3.0.0 only the following upgrades should be allowed
@@ -855,20 +841,16 @@ def upgrade_cse(
             _upgrade_to_cse_3_1_legacy(
                 client=client,
                 config=config,
-                skip_template_creation=skip_template_creation,
-                retain_temp_vapp=retain_temp_vapp,
-                ssh_key=ssh_key,
-                msg_update_callback=msg_update_callback)
+                msg_update_callback=msg_update_callback
+            )
         else:
             _upgrade_to_cse_3_1_non_legacy(
                 client=client,
                 config=config,
-                skip_template_creation=skip_template_creation,
-                retain_temp_vapp=retain_temp_vapp,
-                ssh_key=ssh_key,
                 update_schema=update_schema,
                 msg_update_callback=msg_update_callback,
-                log_wire=log_wire)
+                log_wire=log_wire
+            )
 
         record_user_action(CseOperation.SERVICE_UPGRADE,
                            status=OperationStatus.SUCCESS,
@@ -1358,12 +1340,12 @@ def _update_user_role_with_right_bundle(
         sysadmin_client=client,
         logger_debug=logger_debug,
         logger_wire=logger_wire)
-    native_def_rights = \
+    native_rde_rights = \
         rbm.get_rights_for_right_bundle(right_bundle_name)
 
     # Get rights as a list of right-name strings
     rights = []
-    for right_record in native_def_rights.get("values"):
+    for right_record in native_rde_rights.get("values"):
         rights.append(right_record["name"])
 
     try:
@@ -1411,24 +1393,24 @@ def _register_rde_schema(
     )
     # TODO update CSE install to create client from max_vcd_api_version
     try:
-        def_utils.raise_error_if_def_not_supported(cloudapi_client)
+        rde_utils.raise_error_if_def_not_supported(cloudapi_client)
         rde_version: str = str(config['service']['rde_version_in_use'])
         msg_update_callback.general(f"Using RDE version: {str(rde_version)}")
         # Obtain RDE metadata needed to initialize CSE
-        runtime_rde_schema: dict = def_utils.get_rde_metadata(rde_version)
+        runtime_rde_schema: dict = rde_utils.get_rde_metadata(rde_version)
         schemas_to_be_registered = [runtime_rde_schema]
 
         # TODO Retrieve the register_capvcd_schema value from the config file.
         register_capvcd_schema: bool = config['service'].get('register_capvcd_schema', False)  # noqa: E501
         if register_capvcd_schema:
-            capvcd_rde_version = def_constants.CapvcdRDEVersion.RDE_1_0_0.value
-            schemas_to_be_registered.append(def_utils.get_rde_metadata(capvcd_rde_version))  # noqa: E501
+            capvcd_rde_version = rde_constants.CapvcdRDEVersion.RDE_1_0_0.value
+            schemas_to_be_registered.append(rde_utils.get_rde_metadata(capvcd_rde_version))  # noqa: E501
 
         # Register RDE schema(s) : Native schema, CAPVCD schema etc
         for schema in schemas_to_be_registered:
             # Register Interface(s)
             interfaces: List[common_models.DefInterface] = \
-                schema[def_constants.RDEMetadataKey.INTERFACES]
+                schema[rde_constants.RDEMetadataKey.INTERFACES]
             _register_interfaces(
                 cloudapi_client,
                 interfaces,
@@ -1437,7 +1419,7 @@ def _register_rde_schema(
 
             # Register Behavior(s)
             behavior_metadata: Dict[str, List[Behavior]] = schema.get(
-                def_constants.RDEMetadataKey.INTERFACE_TO_BEHAVIORS_MAP,
+                rde_constants.RDEMetadataKey.INTERFACE_TO_BEHAVIORS_MAP,
                 {}
             )
             _register_behaviors(
@@ -1448,7 +1430,7 @@ def _register_rde_schema(
 
             # Register EntityType
             entity_type: common_models.DefEntityType = \
-                schema[def_constants.RDEMetadataKey.ENTITY_TYPE]
+                schema[rde_constants.RDEMetadataKey.ENTITY_TYPE]
             _register_entity_type(
                 cloudapi_client,
                 entity_type,
@@ -1458,7 +1440,7 @@ def _register_rde_schema(
 
             # Override Behavior(s)
             override_behavior_metadata: Dict[str, List[Behavior]] = schema.get(  # noqa: E501
-                def_constants.RDEMetadataKey.ENTITY_TYPE_TO_OVERRIDABLE_BEHAVIORS_MAP,  # noqa: E501
+                rde_constants.RDEMetadataKey.ENTITY_TYPE_TO_OVERRIDABLE_BEHAVIORS_MAP,  # noqa: E501
                 {}
             )
             _override_behaviors(
@@ -1469,7 +1451,7 @@ def _register_rde_schema(
 
             # Set ACL(s) for all the behavior(s)
             behavior_acl_metadata: Dict[str, List[BehaviorAclEntry]] = schema.get(  # noqa: E501
-                def_constants.RDEMetadataKey.BEHAVIOR_TO_ACL_MAP,
+                rde_constants.RDEMetadataKey.BEHAVIOR_TO_ACL_MAP,
                 {}
             )
             _set_acls_on_behaviors(
@@ -1481,7 +1463,7 @@ def _register_rde_schema(
         # Update user's role with right bundle associated with native defined
         # entity
         _update_user_role_with_right_bundle(
-            def_constants.DEF_NATIVE_ENTITY_TYPE_RIGHT_BUNDLE,
+            rde_constants.DEF_NATIVE_ENTITY_TYPE_RIGHT_BUNDLE,
             client=client,
             msg_update_callback=msg_update_callback,
             logger_debug=INSTALL_LOGGER,
@@ -1588,12 +1570,12 @@ def _register_entity_type(
         update_schema: bool,
         msg_update_callback=utils.NullPrinter()
 ):
-    schema_svc = def_schema_svc.DefSchemaService(cloudapi_client)
+    schema_svc = rde_schema_svc.DefSchemaService(cloudapi_client)
     try:
         current_entity_type: common_models.DefEntityType2_0 = \
             schema_svc.get_entity_type(entity_type.id)
         if update_schema:
-            updated_native_entity_type = def_entity_svc.DefEntityType(
+            updated_native_entity_type = rde_entity_svc.DefEntityType(
                 id=current_entity_type.id,
                 name=current_entity_type.name,
                 description=current_entity_type.description,
@@ -1611,7 +1593,7 @@ def _register_entity_type(
         # TODO handle this part only if the entity type was not found
         native_entity_type = schema_svc.create_entity_type(entity_type)
         msg = f"Successfully registered Entity type '{native_entity_type.id}'\n"  # noqa: E501
-        entity_svc = def_entity_svc.DefEntityService(cloudapi_client)
+        entity_svc = rde_entity_svc.DefEntityService(cloudapi_client)
         entity_svc.create_acl_for_entity(
             native_entity_type.get_id(),
             grant_type=server_constants.AclGrantType.MembershipACLGrant,
@@ -1628,7 +1610,7 @@ def _register_interfaces(
         interfaces: List[common_models.DefInterface],
         msg_update_callback
 ):
-    schema_svc = def_schema_svc.DefSchemaService(cloudapi_client)
+    schema_svc = rde_schema_svc.DefSchemaService(cloudapi_client)
     for interface in interfaces:
         try:
             schema_svc.get_interface(interface.id)
@@ -2212,9 +2194,6 @@ def _install_single_template(
 def _upgrade_to_cse_3_1_non_legacy(
         client,
         config,
-        skip_template_creation,
-        retain_temp_vapp,
-        ssh_key,
         update_schema=False,
         msg_update_callback=utils.NullPrinter(),
         log_wire=False
@@ -2247,30 +2226,13 @@ def _upgrade_to_cse_3_1_non_legacy(
         log_wire=log_wire
     )
 
-    if skip_template_creation:
-        msg = """Skipping creation of templates.
-Please note, CSE server startup needs at least one valid template.
-Please create CSE K8s template(s) using the command `cse template install`."""
-        msg_update_callback.info(msg)
-        INSTALL_LOGGER.info(msg)
-
-        _process_existing_templates(
-            client=client,
-            config=config,
-            is_tkg_plus_enabled=is_tkg_plus_enabled,
-            log_wire=utils.str_to_bool(config['service'].get('log_wire')),
-            msg_update_callback=msg_update_callback
-        )
-    else:
-        # Recreate all supported templates
-        _install_all_templates(
-            client=client,
-            config=config,
-            force_create=True,
-            retain_temp_vapp=retain_temp_vapp,
-            ssh_key=ssh_key,
-            msg_update_callback=msg_update_callback
-        )
+    _process_existing_templates(
+        client=client,
+        config=config,
+        is_tkg_plus_enabled=is_tkg_plus_enabled,
+        log_wire=utils.str_to_bool(config['service'].get('log_wire')),
+        msg_update_callback=msg_update_callback
+    )
 
     msg = "Loading all CSE clusters for processing..."
     INSTALL_LOGGER.info(msg)
@@ -2311,7 +2273,7 @@ Please create CSE K8s template(s) using the command `cse template install`."""
 
     # Print list of users categorized by org, who currently owns CSE clusters
     # and will need DEF entity rights.
-    _print_users_in_need_of_def_rights(
+    _print_users_in_need_of_rde_rights(
         cse_clusters=clusters,
         msg_update_callback=msg_update_callback
     )
@@ -2330,9 +2292,6 @@ Please create CSE K8s template(s) using the command `cse template install`."""
 def _upgrade_to_cse_3_1_legacy(
         client,
         config,
-        skip_template_creation,
-        retain_temp_vapp,
-        ssh_key,
         msg_update_callback=utils.NullPrinter()
 ):
     """Handle upgrade when no support from VCD for RDE.
@@ -2340,25 +2299,6 @@ def _upgrade_to_cse_3_1_legacy(
     :raises cse_exception.AmqpError: (when using AMQP) if AMQP exchange
         could not be created.
     """
-    if skip_template_creation:
-        # TODO : Template scripts file might be directly under ~/.cse-scripts
-        # they need to be moved under ~/.cse-scripts/1.0.0
-        msg = """Skipping creation of new templates and special processing of existing templates.
-Please note, CSE server startup needs at least one valid template.
-Please create CSE K8s template(s) using the command `cse template install`."""  # noqa: E501
-        msg_update_callback.info(msg)
-        INSTALL_LOGGER.info(msg)
-    else:
-        # Recreate all supported templates
-        _install_all_templates(
-            client=client,
-            config=config,
-            force_create=True,
-            retain_temp_vapp=retain_temp_vapp,
-            ssh_key=ssh_key,
-            msg_update_callback=msg_update_callback
-        )
-
     # Update amqp exchange (idempotent)
     _create_amqp_exchange(
         exchange_name=config['amqp']['exchange'],
@@ -2507,7 +2447,7 @@ def _assign_placement_policy_to_vdc_and_right_bundle_to_org(
                 logger_wire=logger_wire
             )
             cse_right_bundle = rbm.get_right_bundle_by_name(
-                def_constants.DEF_NATIVE_ENTITY_TYPE_RIGHT_BUNDLE)
+                rde_constants.DEF_NATIVE_ENTITY_TYPE_RIGHT_BUNDLE)
             rbm.publish_cse_right_bundle_to_tenants(
                 right_bundle_id=cse_right_bundle['id'],
                 org_ids=list(org_ids))
@@ -2615,14 +2555,14 @@ def _process_existing_clusters(
         logger_wire=logger_wire
     )
 
-    entity_svc = def_entity_svc.DefEntityService(cloudapi_client)
-    schema_svc = def_schema_svc.DefSchemaService(cloudapi_client)
+    entity_svc = rde_entity_svc.DefEntityService(cloudapi_client)
+    schema_svc = rde_schema_svc.DefSchemaService(cloudapi_client)
 
     # TODO: get proper site information
     site: str = config['vcd']['host']
     runtime_rde_version: str = str(config['service']['rde_version_in_use'])
-    rde_metadata: dict = def_utils.get_rde_metadata(runtime_rde_version)
-    entity_type_metadata = rde_metadata[def_constants.RDEMetadataKey.ENTITY_TYPE]  # noqa: E501
+    rde_metadata: dict = rde_utils.get_rde_metadata(runtime_rde_version)
+    entity_type_metadata = rde_metadata[rde_constants.RDEMetadataKey.ENTITY_TYPE]  # noqa: E501
     target_entity_type = schema_svc.get_entity_type(entity_type_metadata.get_id())  # noqa: E501
 
     found_cluster_with_rde = False
@@ -2756,7 +2696,7 @@ def _create_cluster_rde(
     # TODO: Need to find a better approach to avoid conditional logic for
     #   filling missing properties.
     if semantic_version.Version(runtime_rde_version).major == \
-            semantic_version.Version(def_constants.RDEVersion.RDE_2_0_0).major:
+            semantic_version.Version(rde_constants.RDEVersion.RDE_2_0_0).major:
         # Update with the correct cluster id
         native_entity_2_x: rde_2_x.NativeEntity = def_entity.entity
         native_entity_2_x.status.uid = def_entity_id
@@ -2833,7 +2773,7 @@ def _upgrade_cluster_rde(
     # TODO: Need to find a better approach to avoid conditional logic for
     # filling missing properties.
     if semantic_version.Version(runtime_rde_version).major == \
-            semantic_version.Version(def_constants.RDEVersion.RDE_2_0_0).major:
+            semantic_version.Version(rde_constants.RDEVersion.RDE_2_0_0).major:
         # RDE upgrade possible only from RDE 1.x or RDE 2.x
         native_entity_2_x: rde_2_x.NativeEntity = new_native_entity
         native_entity_2_x.status.uid = rde_to_upgrade.id
@@ -2896,7 +2836,7 @@ def _upgrade_cluster_rde(
     msg_update_callback.general(msg)
 
 
-def _print_users_in_need_of_def_rights(
+def _print_users_in_need_of_rde_rights(
         cse_clusters,
         msg_update_callback=utils.NullPrinter()
 ):
@@ -2935,6 +2875,6 @@ def _get_native_def_entity_types(
         logger_debug=logger_debug,
         logger_wire=logger_wire
     )
-    schema_svc = def_schema_svc.DefSchemaService(cloudapi_client)
+    schema_svc = rde_schema_svc.DefSchemaService(cloudapi_client)
     return [entity_type for entity_type in schema_svc.list_entity_types()
-            if entity_type.nss == def_constants.Nss.NATIVE_CLUSTER.value]
+            if entity_type.nss == rde_constants.Nss.NATIVE_CLUSTER.value]
