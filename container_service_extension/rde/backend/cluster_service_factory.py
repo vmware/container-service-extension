@@ -10,10 +10,11 @@ from container_service_extension.rde.backend.cluster_service_1_x import ClusterS
 from container_service_extension.rde.backend.cluster_service_2_x import ClusterService as ClusterService2X  # noqa: E501
 from container_service_extension.rde.backend.cluster_service_2_x_tkgm import ClusterService as ClusterService2XTKGm  # noqa: E501
 import container_service_extension.rde.common.entity_service as entity_service
+import container_service_extension.security.context.behavior_request_context as behavior_ctx  # noqa: E501
 
 
 class ClusterServiceFactory:
-    def __init__(self, req_ctx):  # noqa: E501
+    def __init__(self, req_ctx: behavior_ctx.RequestContext):
         self.req_ctx = req_ctx
 
     def get_cluster_service(self, rde_version_in_use=None, skip_tkgm_check=False):  # noqa: E501
