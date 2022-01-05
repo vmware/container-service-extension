@@ -33,7 +33,6 @@ import container_service_extension.lib.telemetry.telemetry_handler as telemetry_
 import container_service_extension.rde.backend.cluster_service_factory as cluster_service_factory  # noqa: E501
 from container_service_extension.rde.behaviors.behavior_model import BehaviorOperation  # noqa: E501
 from container_service_extension.rde.behaviors.behavior_model import DELETE_NFS_NODE_BEHAVIOR_ID  # noqa: E501
-from container_service_extension.rde.behaviors.behavior_model import KUBE_CONFIG_BEHAVIOR_INTERFACE_ID  # noqa: E501
 from container_service_extension.rde.behaviors.behavior_service import BehaviorService  # noqa: E501
 import container_service_extension.rde.common.entity_service as entity_service
 import container_service_extension.rde.constants as rde_constants
@@ -180,7 +179,6 @@ def cluster_config(data: dict, op_ctx: ctx.OperationContext):
     cluster_id = data[RequestKey.CLUSTER_ID]
     def_entity_service = entity_service.DefEntityService(op_ctx.cloudapi_client)  # noqa: E501
     def_entity: common_models.DefEntity = def_entity_service.get_entity(cluster_id)  # noqa: E501
-    behavior_svc = BehaviorService(cloudapi_client=op_ctx.cloudapi_client)
     telemetry_handler.record_user_action_details(
         cse_operation=telemetry_constants.CseOperation.V36_CLUSTER_CONFIG,
         cse_params={
@@ -188,13 +186,16 @@ def cluster_config(data: dict, op_ctx: ctx.OperationContext):
             telemetry_constants.PayloadKey.SOURCE_DESCRIPTION: thread_local_data.get_thread_local_data(ThreadLocalData.USER_AGENT)  # noqa: E501
         }
     )
-    config_task_href = behavior_svc.invoke_behavior(
-        entity_id=cluster_id,
-        behavior_interface_id=KUBE_CONFIG_BEHAVIOR_INTERFACE_ID)
-    config_task = op_ctx.client.get_resource(config_task_href)
-    op_ctx.client.get_task_monitor().wait_for_success(config_task)
-    config_task = op_ctx.client.get_resource(config_task_href)
-    return config_task.Result.ResultContent.text
+
+    op_ctx.entity_id = cluster_id  # hack for passing entity id
+    svc = cluster_service_factory.ClusterServiceFactory(_get_request_context(op_ctx)).get_cluster_service()  # noqa: E501
+    config_dict = svc.get_cluster_config(cluster_id)
+
+    config: str = config_dict.get(server_constants.BEHAVIOR_TASK_RESPONSE_RESULT_MESSAGE_KEY, {}).get(server_constants.BEHAVIOR_TASK_RESPONSE_RESULT_CONTENT_MESSAGE_KEY)  # noqa: E501
+    return_dict = {
+        "message": config
+    }
+    return return_dict
 
 
 @telemetry_handler.record_user_action_telemetry(cse_operation=telemetry_constants.CseOperation.V36_CLUSTER_APPLY)  # noqa: E501

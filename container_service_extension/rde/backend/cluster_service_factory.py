@@ -13,7 +13,7 @@ import container_service_extension.rde.common.entity_service as entity_service
 
 
 class ClusterServiceFactory:
-    def __init__(self, req_ctx):  # noqa: E501
+    def __init__(self, req_ctx):
         self.req_ctx = req_ctx
 
     def get_cluster_service(self, rde_version_in_use=None, skip_tkgm_check=False):  # noqa: E501
