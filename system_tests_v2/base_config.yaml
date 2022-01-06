@@ -48,7 +48,6 @@ vcs:
   verify: false
 
 service:
-  test_mode: true
   enforce_authorization: false
   no_vc_communication_mode: false
   processors: 5

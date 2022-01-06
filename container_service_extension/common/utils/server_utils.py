@@ -129,12 +129,8 @@ def is_test_mode(config: Optional[dict] = None) -> bool:
             config = get_server_runtime_config()
         except Exception:
             return False
-    service_section = config.get('service', {})
-    is_test_mode = service_section.get('test_mode', False)
-    if isinstance(is_test_mode, bool):
-        return is_test_mode
-    elif isinstance(is_test_mode, str):
-        return utils.str_to_bool(is_test_mode)
+    if config.get('test'):
+        return True
     return False
 
 
