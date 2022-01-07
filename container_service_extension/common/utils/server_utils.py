@@ -116,6 +116,24 @@ def is_no_vc_communication_mode(config: Optional[dict] = None) -> bool:
     return False
 
 
+def is_test_mode(config: Optional[dict] = None) -> bool:
+    """Check if test mode is enabled in the config.
+
+    :param dict config: configuration provided by the user.
+
+    :return: boolean indicating if test mode is enabled.
+    :rtype: bool
+    """
+    if not config:
+        try:
+            config = get_server_runtime_config()
+        except Exception:
+            return False
+    if config.get('test'):
+        return True
+    return False
+
+
 def get_template_descriptor_keys(cookbook_version: semantic_version.Version) -> enum.EnumMeta:  # noqa: E501
     """Get template descriptor keys using the cookbook version."""
     # if cookbook version is None, use version 1.0

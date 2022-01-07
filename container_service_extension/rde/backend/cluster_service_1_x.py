@@ -805,6 +805,10 @@ class ClusterService(abstract_broker.AbstractBroker):
                     )
                     expose_ip = ''
 
+            if server_utils.is_test_mode():
+                # wait for a minute before proceeding to make sure the password
+                # is set in the VM by guest customization
+                time.sleep(60)
             _init_cluster(sysadmin_client_v35,
                           vapp,
                           template[LocalTemplateKey.KIND],
@@ -842,6 +846,10 @@ class ClusterService(abstract_broker.AbstractBroker):
             LOGGER.debug(msg)
             self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
             vapp.reload()
+            if server_utils.is_test_mode():
+                # wait for a minute before proceeding to make sure the password
+                # is set in the VM by guest customization
+                time.sleep(60)
             _join_cluster(sysadmin_client_v35, vapp)
 
             if nfs_count > 0:
@@ -1245,6 +1253,10 @@ class ClusterService(abstract_broker.AbstractBroker):
                 for spec in worker_nodes['specs']:
                     target_nodes.append(spec['target_vm_name'])
                 vapp.reload()
+                if server_utils.is_test_mode():
+                    # wait for a minute before proceeding to make sure the
+                    # password is set in the VM by guest customization
+                    time.sleep(60)
                 _join_cluster(sysadmin_client_v35,
                               vapp,
                               target_nodes)
@@ -2237,6 +2249,10 @@ def _add_nodes(sysadmin_client, num_nodes, node_type, org, vdc, vapp,
                         template[LocalTemplateKey.REVISION],
                         TemplateScriptFile.NFSD)
                     script = utils.read_data_file(script_filepath, logger=LOGGER)  # noqa: E501
+                    if server_utils.is_test_mode():
+                        # wait for a minute before proceeding to make sure the
+                        # password is set in the VM by guest customization
+                        time.sleep(60)
                     exec_results = _execute_script_in_nodes(
                         sysadmin_client, vapp=vapp, node_names=[vm_name],
                         script=script)
