@@ -430,3 +430,24 @@ class DECluster:
         else:
             self._tkgCluster.unshare_cluster(cluster_id, cluster_name, users,
                                              org, vdc)
+
+    def force_delete_cluster(self, cluster_name, cluster_id=None, org=None, vdc=None):  # noqa: E501
+        """Force delete DEF cluster by name.
+
+        :param str cluster_name: name of the cluster
+        :param str cluster_id:
+        :param str org: name of the org
+        :param str vdc: name of the vdc
+
+        :return: deleted cluster info
+        :rtype: str
+        :raises ClusterNotFoundError, CseDuplicateClusterError
+        """
+        if cluster_id:
+            return self.delete_cluster_by_id(cluster_id)
+        cluster, entity_properties, is_native_cluster = \
+            self._get_tkg_s_and_native_clusters_by_name(cluster_name,
+                                                        org=org, vdc=vdc)
+        if is_native_cluster:
+            return self._nativeCluster.force_delete_cluster_by_id(cluster.id)
+        return self._tkgCluster.delete_cluster_by_id(cluster_id=entity_properties.get('id'))  # noqa: E501

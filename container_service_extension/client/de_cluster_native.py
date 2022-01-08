@@ -149,6 +149,17 @@ class DEClusterNative:
         task_href = cluster_entity.entity.status.task_href
         return client_utils.construct_task_console_message(task_href)  # noqa: E501
 
+    def force_delete_cluster_by_id(self, cluster_id, **kwargs):
+        """Delete the existing Kubernetes cluster by id.
+
+        :param str cluster_id: native cluster entity id
+        :return: string containing the task for delete operation
+        :rtype: str
+        """
+        response = \
+            self._native_cluster_api.force_delete_cluster_by_cluster_id(cluster_id)  # noqa: E501
+        return client_utils.construct_task_console_message(response['task_href'])  # noqa: E501
+
     def delete_nfs_node(self, cluster_name, node_name, org=None, vdc=None):
         """Delete nfs node given the cluster name and node name.
 

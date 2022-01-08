@@ -595,6 +595,20 @@ CLUSTER_HANDLERS = [
         },
     },
     {
+        'url': f"cse/3.0/cluster/${RequestKey.CLUSTER_ID}/action/force-delete",
+        RequestMethod.POST: {
+            ('36.0',): {
+                'allowed_params': [],
+                'required_params': [],
+                'verify_payload': False,
+                'payload_type': '*',
+                'operation': CseOperation.V36_CLUSTER_FORCE_DELETE,
+                'handler': cluster_handler.cluster_force_delete,
+                'feature_flags': ['non_legacy_api']
+            }
+        },
+    },
+    {
         'url': f"cse/3.0/cluster/${RequestKey.CLUSTER_ID}/nfs/${RequestKey.NODE_NAME}",  # noqa: E501
         RequestMethod.DELETE: {
             ('35.0',): {

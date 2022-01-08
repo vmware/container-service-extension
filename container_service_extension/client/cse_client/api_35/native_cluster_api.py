@@ -63,6 +63,15 @@ class NativeClusterApi(CseClient):
 
         return common_models.DefEntity(**self.process_response(response))
 
+    def force_delete_cluster_by_cluster_id(self, cluster_id):
+        uri = f'{self._uri}/cluster/{cluster_id}/action/force-delete'
+        response = self.do_request(
+            uri=uri,
+            method=shared_constants.RequestMethod.POST,
+            accept_type='application/json')
+
+        return self.process_response(response)
+
     def delete_nfs_node_by_node_name(self, cluster_id: str, node_name: str):
         uri = f"{self._cluster_uri}/{cluster_id}/nfs/{node_name}"
         response = self.do_request(

@@ -453,6 +453,7 @@ class CseOperation(Enum):
     V36_CLUSTER_CONFIG = ('get config of DEF V36 cluster', '/cse/3.0/cluster/%s/config')  # noqa: E501
     V36_CLUSTER_UPDATE = ('update DEF V36 cluster', '/cse/3.0/cluster/%s', requests.codes.accepted)  # noqa: E501
     V36_CLUSTER_DELETE = ('delete DEF V36 cluster', '/cse/3.0/cluster/%s', requests.codes.accepted)  # noqa: E501
+    V36_CLUSTER_FORCE_DELETE = ('force delete DEF cluster', '/cse/3.0/cluster/%s/action/force-delete', requests.codes.accepted)  # noqa: E501
     V36_CLUSTER_UPGRADE_PLAN = ('get supported V36 DEF cluster upgrade paths', '/cse/3.0/cluster/%s/upgrade-plan')  # noqa: E501
     V36_NODE_DELETE = ('delete V36 DEF node', '/cse/3.0/cluster/%s/nfs/%s', requests.codes.accepted)  # noqa: E501
     V36_CLUSTER_ACL_LIST = ('list V36 cluster acl', '/cse/3.0/cluster/%s/acl')
