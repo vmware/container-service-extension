@@ -48,8 +48,8 @@ def _get_gateway(
             resource_url_relative_path=base_path + f'{page}',
             return_response_headers=True)
         for entry in response['values']:
-            is_target_network = entry['name'] == network_name and \
-                entry['orgRef']['name'] == org_name and \
+            # only routed networks allowed
+            is_target_network = entry['orgRef']['name'] == org_name and \
                 entry['networkType'] == 'NAT_ROUTED'
             if is_target_network:
                 if gateway_name is not None:
