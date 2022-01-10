@@ -1305,18 +1305,27 @@ def import_tkgm_template(
     """Upload TKGm OVA to CSE catalog.
 
     \b
-    Supported Extra Options:
+    Essential supported Extra Options:
         broker.catalog: String: Name of the catalog where the OVA will be
-            imported
+            imported.
         broker.org: String: Name of the Organization where the OVA will be
-            imported
-        service.log_wire: Boolean: If True, log wire communication to VCD
+            imported.
+        vcd.host: String: FQDN of VCD host.
+        vcd.password: String: Password of CSE service account.
+        vcd.username: String: Username of CSE service account.
+        vcd.verify: Boolean: Verify SSL while connecting to VCD.
+
+    Non-essential supported Extra Options:
+        mqtt.verify_ssl: Boolean: Verify SSL while connecting to MQTT bus.
+        service.legacy_mode: Boolean: If True, the command will assume that
+            CSE is running in legacy mode.
+        service.log_wire: Boolean: If True, log wire communication to VCD.
         service.telemetry.enable: Boolean : If True, telemetry will be
-            recorded
-        vcd.host: String: FQDN of VCD host
-        vcd.password: String: Password of CSE service account
-        vcd.username: String: Username of CSE service account
-        vcd.verify: Boolean: Verify SSL while connecting to VCD
+            recorded.
+
+    Note: Arbitrary key value pair can be provided using -x option but there
+    is no guarantee that they will be processed or honored.
+
     """
     SERVER_CLI_LOGGER.debug(f"Executing command: {ctx.command_path}")
     console_message_printer = utils.ConsoleMessagePrinter()
@@ -1395,6 +1404,11 @@ def import_tkgm_template(
                     not config['vcd'].get('verify'):
                 requests.packages.urllib3.disable_warnings()
 
+            log_wire_file = None
+            log_wire = utils.str_to_bool(config.get('service', {}).get('log_wire', False))  # noqa: E501
+            if log_wire:
+                log_wire_file = SERVER_DEBUG_WIRELOG_FILEPATH
+
             config = config_validator.add_additional_details_to_config(
                 config=config,
                 vcd_host=config['vcd']['host'],
@@ -1404,9 +1418,7 @@ def import_tkgm_template(
                 is_legacy_mode=config['service']['legacy_mode'],
                 is_mqtt_exchange=server_utils.should_use_mqtt_protocol(config),
                 log_wire=config['service']['log_wire'],
-                # since log wire is false, we don't have to specify
-                # a wire log file name
-                log_wire_file=None
+                log_wire_file=log_wire_file
             )
 
         p = Path(ova_file_path)
@@ -1553,10 +1565,35 @@ def _construct_config_from_extra_options(
         required_options: Dict,
         default_option_values: Dict
 ):
+    """Construct a config dictionary from user provided key-value pairs.
+
+    :param List[Tuple[str, str]] extra_options: A list of tuple containing
+        key-value pair provided by user
+    :param Dict required_options: Dictionary containing keys like "a.b.c"
+        and values being another dictionary with the following keys
+        ["prompt", "type", "hidden_field"]
+    :param Dict default_option_values:
+
+    Input like "a.b.c : val" is converted to
+    {
+        'a' : {
+            'b': {
+                'c': val
+            }
+        }
+    }
+
+    If user input doesn't cover entire required options, then user
+    will be prompted to provide the value
+
+    :rtype: Dict
+
+    return: config dictionary constructed from user provided input
+    """
     user_input = {}
+    # sanitize user input to correct type
     for k, v in extra_options:
         if k in required_options and required_options[k]["type"] != str:
-            # sanitize user input to correct type
             if required_options[k]["type"] == bool:
                 user_input[k] = utils.str_to_bool(v)
             else:
@@ -1564,6 +1601,7 @@ def _construct_config_from_extra_options(
         else:
             user_input[k] = v
 
+    # Prompt user for missing required options
     for k, option in required_options.items():
         if k in user_input:
             continue
@@ -1575,11 +1613,13 @@ def _construct_config_from_extra_options(
         )
         user_input[k] = val
 
+    # Augment with default value for missing non-esential options
     for k, v in default_option_values.items():
         if k not in user_input:
             user_input[k] = v
 
     config = {}
+    # Expand dot-notation keys into nested dictionary
     for key, value in user_input.items():
         tokens = key.split(".")
         current_dict = config
