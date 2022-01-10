@@ -37,7 +37,7 @@ def _get_gateway(
         logger_wire=logger_wire
     )
 
-    gateway_name, gateway_href = None, None
+    gateway_name, gateway_href, gateway_exists = None, None, False
     page, pageCount = 1, 1
     base_path = f'{cloudapi_constants.CloudApiResource.ORG_VDC_NETWORKS}?filter=name=={network_name};_context==includeAccessible&pageSize=1&page='  # noqa: E501
 
@@ -52,15 +52,16 @@ def _get_gateway(
             is_target_network = entry['orgRef']['name'] == org_name and \
                 entry['networkType'] == 'NAT_ROUTED'
             if is_target_network:
-                if gateway_name is not None:
+                if gateway_exists:
                     raise MultipleRecordsException(f"Multiple routed networks named {network_name} found. CSE Server expects unique network names.")  # noqa: E501
+                gateway_exists = True
                 gateway_name = entry['connection']['routerRef']['name']
                 gateway_id = entry['connection']['routerRef']['id'].split(':').pop()  # noqa: E501
                 gateway_href = headers['Content-Location'].split('cloudapi')[0] + f'api/admin/edgeGateway/{gateway_id}'  # noqa: E501
         page += 1
         pageCount = response['pageCount']
 
-    if gateway_name is None:
+    if not gateway_exists:
         raise EntityNotFoundException(f"No routed networks named {network_name} found.")  # noqa: E501
 
     gateway = vcd_gateway.Gateway(client, name=gateway_name, href=gateway_href)
