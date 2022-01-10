@@ -1346,17 +1346,17 @@ def import_tkgm_template(
             required_options = {
                 "vcd.host": {
                     "type": str,
-                    "prompt": "Enter VCD hostname",
+                    "prompt": "Please enter VCD hostname",
                     "hidden_field": False
                 },
                 "vcd.username": {
                     "type": str,
-                    "prompt": "Enter username for connecting to VCD",
+                    "prompt": "Please enter username for connecting to VCD",
                     "hidden_field": False
                 },
                 "vcd.password": {
                     "type": str,
-                    "prompt": "Enter password of the user for connecting to VCD",  # noqa: E501
+                    "prompt": "Please enter password of the user for connecting to VCD",  # noqa: E501
                     "hidden_field": True
                 },
                 "vcd.verify": {
@@ -1366,12 +1366,12 @@ def import_tkgm_template(
                 },
                 "broker.org": {
                     "type": str,
-                    "prompt": "Enter the name of the org where you want to import the OVA",  # noqa: E501
+                    "prompt": "Please enter the name of the org where you want to import the OVA",  # noqa: E501
                     "hidden_field": False
                 },
                 "broker.catalog": {
                     "type": str,
-                    "prompt": "Enter the name of the catalog where you want to import the OVA",  # noqa: E501
+                    "prompt": "Please enter the name of the catalog where you want to import the OVA",  # noqa: E501
                     "hidden_field": False
                 }
             }
@@ -1388,6 +1388,13 @@ def import_tkgm_template(
                 required_options,
                 default_option_values
             )
+
+            # To suppress the warning message that pyvcloud prints if
+            # ssl_cert verification is skipped.
+            if config and config.get('vcd') and \
+                    not config['vcd'].get('verify'):
+                requests.packages.urllib3.disable_warnings()
+
             config = config_validator.add_additional_details_to_config(
                 config=config,
                 vcd_host=config['vcd']['host'],

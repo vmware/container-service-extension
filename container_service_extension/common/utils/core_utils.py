@@ -196,7 +196,7 @@ def str_to_bool(s):
 
     :param s: input string
 
-    :return: True if val is ['true' or 'yes' or 'Y'] otherwise False
+    :return: True if val is ['true' or 'yes' or 'y'] otherwise False
     """
     return str(s).lower() in ('true', 'yes', 'y')
 
