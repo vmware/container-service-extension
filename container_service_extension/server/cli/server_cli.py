@@ -8,6 +8,7 @@ import os
 from pathlib import Path
 import sys
 import time
+from typing import Dict, List, Tuple
 
 import click
 import cryptography
@@ -24,7 +25,7 @@ import container_service_extension.common.constants.shared_constants as shared_c
 import container_service_extension.common.utils.core_utils as utils
 import container_service_extension.common.utils.pyvcloud_utils as vcd_utils
 import container_service_extension.common.utils.server_utils as server_utils
-from container_service_extension.installer.config_validator import get_validated_config  # noqa: E501
+import container_service_extension.installer.config_validator as config_validator  # noqa: E501
 import container_service_extension.installer.configure_cse as configure_cse
 from container_service_extension.installer.cse_service_role_mgr import create_cse_service_role  # noqa : E501
 from container_service_extension.installer.sample_generator import generate_sample_config  # noqa: E501
@@ -39,7 +40,7 @@ from container_service_extension.lib.telemetry.telemetry_handler \
 from container_service_extension.lib.telemetry.telemetry_handler import \
     record_user_action_details
 from container_service_extension.lib.telemetry.telemetry_utils \
-    import store_telemetry_settings
+    import update_with_telemetry_settings
 from container_service_extension.logging.logger import INSTALL_LOGGER
 from container_service_extension.logging.logger import INSTALL_WIRELOG_FILEPATH
 from container_service_extension.logging.logger import NULL_LOGGER
@@ -445,7 +446,7 @@ def check(ctx, config_file_path, pks_config_file_path, skip_config_decryption,
 
     config_dict = None
     try:
-        config_dict = get_validated_config(
+        config_dict = config_validator.get_validated_config(
             config_file_name=config_file_path,
             pks_config_file_name=pks_config_file_path,
             skip_config_decryption=skip_config_decryption,
@@ -624,7 +625,7 @@ def install(ctx, config_file_path, pks_config_file_path,
         )
 
     try:
-        config = get_validated_config(
+        config = config_validator.get_validated_config(
             config_file_name=config_file_path,
             pks_config_file_name=pks_config_file_path,
             skip_config_decryption=skip_config_decryption,
@@ -765,7 +766,7 @@ def run(ctx, config_file_path, pks_config_file_path, skip_check,
     config = None
     cse_run_complete = False
     try:
-        config = get_validated_config(
+        config = config_validator.get_validated_config(
             config_file_name=config_file_path,
             pks_config_file_name=pks_config_file_path,
             skip_config_decryption=skip_config_decryption,
@@ -863,7 +864,7 @@ def upgrade(ctx, config_file_path, skip_config_decryption):
         )
 
     try:
-        config = get_validated_config(
+        config = config_validator.get_validated_config(
             config_file_name=config_file_path,
             pks_config_file_name='',
             skip_config_decryption=skip_config_decryption,
@@ -1217,13 +1218,14 @@ def install_cse_template(ctx, template_name, template_revision,
         ssh_key = ssh_key_file.read()
 
     try:
-        config = get_validated_config(
+        config = config_validator.get_validated_config(
             config_file_name=config_file_path,
             skip_config_decryption=skip_config_decryption,
             decryption_password=password,
             log_wire_file=INSTALL_WIRELOG_FILEPATH,
             logger_debug=INSTALL_LOGGER,
-            msg_update_callback=console_message_printer)
+            msg_update_callback=console_message_printer
+        )
 
         configure_cse.install_template(
             template_name=template_name,
@@ -1234,7 +1236,8 @@ def install_cse_template(ctx, template_name, template_revision,
             retain_temp_vapp=retain_temp_vapp,
             ssh_key=ssh_key,
             skip_config_decryption=skip_config_decryption,
-            msg_update_callback=console_message_printer)
+            msg_update_callback=console_message_printer
+        )
     except Exception as err:
         SERVER_CLI_LOGGER.error(str(err))
         console_message_printer.error(str(err))
@@ -1254,12 +1257,10 @@ def install_cse_template(ctx, template_name, template_revision,
     '-c',
     '--config',
     'config_file_path',
-    default='config.yaml',
     metavar='CONFIG_FILE_PATH',
     type=click.Path(exists=True),
     envvar='CSE_CONFIG',
-    required=True,
-    help="(Required) Filepath to CSE config file"
+    help="Filepath to CSE config file"
 )
 @click.option(
     '-s',
@@ -1274,7 +1275,7 @@ def install_cse_template(ctx, template_name, template_revision,
     metavar='OVA_FILE_PATH',
     type=click.Path(exists=True),
     required=True,
-    help="(Required) Filepath to the TKG OVA"
+    help="Filepath to the TKG OVA"
 )
 @click.option(
     '-f',
@@ -1283,36 +1284,123 @@ def install_cse_template(ctx, template_name, template_revision,
     is_flag=True,
     help='Force import TKGm templates on vCD even if they already exist'
 )
+@click.option(
+    '-x',
+    '--extra-options',
+    'extra_options',
+    metavar='EXTRA_OPTIONS',
+    nargs=2,
+    type=(str, str),
+    multiple=True,
+    help='Extra options passed as -x key value'
+)
 def import_tkgm_template(
         ctx,
         config_file_path,
         skip_config_decryption,
         ova_file_path,
-        force_import
+        force_import,
+        extra_options
 ):
-    """Upload TKGm OVA to CSE catalog."""
+    """Upload TKGm OVA to CSE catalog.
+
+    \b
+    Supported Extra Options:
+        broker.catalog: String: Name of the catalog where the OVA will be
+            imported
+        broker.org: String: Name of the Organization where the OVA will be
+            imported
+        service.log_wire: Boolean: If True, log wire communication to VCD
+        service.telemetry.enable: Boolean : If True, telemetry will be
+            recorded
+        vcd.host: String: FQDN of VCD host
+        vcd.password: String: Password of CSE service account
+        vcd.username: String: Username of CSE service account
+        vcd.verify: Boolean: Verify SSL while connecting to VCD
+    """
     SERVER_CLI_LOGGER.debug(f"Executing command: {ctx.command_path}")
     console_message_printer = utils.ConsoleMessagePrinter()
     utils.check_python_version(console_message_printer)
 
-    password = None
-    if not skip_config_decryption:
-        password = os.getenv('CSE_CONFIG_PASSWORD') or utils.prompt_text(
-            PASSWORD_FOR_CONFIG_DECRYPTION_MSG,
-            color='green', hide_input=True
-        )
-
     client = None
     config = {}
     try:
-        config = get_validated_config(
-            config_file_name=config_file_path,
-            skip_config_decryption=skip_config_decryption,
-            decryption_password=password,
-            log_wire_file=INSTALL_WIRELOG_FILEPATH,
-            logger_debug=INSTALL_LOGGER,
-            msg_update_callback=console_message_printer
-        )
+        if config_file_path:
+            password = None
+            if not skip_config_decryption:
+                password = os.getenv('CSE_CONFIG_PASSWORD') or utils.prompt_text(  # noqa: E501
+                    PASSWORD_FOR_CONFIG_DECRYPTION_MSG,
+                    color='green',
+                    hide_input=True
+                )
+
+            config = config_validator.get_validated_config(
+                config_file_name=config_file_path,
+                skip_config_decryption=skip_config_decryption,
+                decryption_password=password,
+                log_wire_file=INSTALL_WIRELOG_FILEPATH,
+                logger_debug=INSTALL_LOGGER,
+                msg_update_callback=console_message_printer
+            )
+        else:
+            required_options = {
+                "vcd.host": {
+                    "type": str,
+                    "prompt": "Enter VCD hostname",
+                    "hidden_field": False
+                },
+                "vcd.username": {
+                    "type": str,
+                    "prompt": "Enter username for connecting to VCD",
+                    "hidden_field": False
+                },
+                "vcd.password": {
+                    "type": str,
+                    "prompt": "Enter password of the user for connecting to VCD",  # noqa: E501
+                    "hidden_field": True
+                },
+                "vcd.verify": {
+                    "type": bool,
+                    "prompt": "Enable SSL verification while connecting to VCD (Y/n)",  # noqa: E501
+                    "hidden_field": False
+                },
+                "broker.org": {
+                    "type": str,
+                    "prompt": "Enter the name of the org where you want to import the OVA",  # noqa: E501
+                    "hidden_field": False
+                },
+                "broker.catalog": {
+                    "type": str,
+                    "prompt": "Enter the name of the catalog where you want to import the OVA",  # noqa: E501
+                    "hidden_field": False
+                }
+            }
+
+            default_option_values = {
+                "mqtt.verify_ssl": False,
+                "service.legacy_mode": False,
+                "service.log_wire": False,
+                "service.telemetry.enable": True
+            }
+
+            config = _construct_config_from_extra_options(
+                extra_options,
+                required_options,
+                default_option_values
+            )
+            config = config_validator.add_additional_details_to_config(
+                config=config,
+                vcd_host=config['vcd']['host'],
+                vcd_username=config['vcd']['username'],
+                vcd_password=config['vcd']['password'],
+                verify_ssl=config['vcd']['verify'],
+                is_legacy_mode=config['service']['legacy_mode'],
+                is_mqtt_exchange=server_utils.should_use_mqtt_protocol(config),
+                log_wire=config['service']['log_wire'],
+                # since log wire is false, we don't have to specify
+                # a wire log file name
+                log_wire_file=None
+            )
 
         p = Path(ova_file_path)
         if not p.is_file():
@@ -1453,9 +1541,63 @@ def import_tkgm_template(
         time.sleep(3)
 
 
-def _get_unvalidated_config(config_file_path,
-                            skip_config_decryption,
-                            msg_update_callback=utils.NullPrinter()):
+def _construct_config_from_extra_options(
+        extra_options: List[Tuple[str, str]],
+        required_options: Dict,
+        default_option_values: Dict
+):
+    user_input = {}
+    for k, v in extra_options:
+        if k in required_options and required_options[k]["type"] != str:
+            # sanitize user input to correct type
+            if required_options[k]["type"] == bool:
+                user_input[k] = utils.str_to_bool(v)
+            else:
+                user_input[k] = required_options[k]["type"](v)
+        else:
+            user_input[k] = v
+
+    for k, option in required_options.items():
+        if k in user_input:
+            continue
+        val = utils.prompt_text(
+            text=option["prompt"],
+            color='green',
+            hide_input=option["hidden_field"],
+            type=option["type"]
+        )
+        user_input[k] = val
+
+    for k, v in default_option_values.items():
+        if k not in user_input:
+            user_input[k] = v
+
+    config = {}
+    for key, value in user_input.items():
+        tokens = key.split(".")
+        current_dict = config
+        for i in range(len(tokens)):
+            if i == len(tokens) - 1:
+                current_dict[tokens[i]] = value
+            else:
+                if tokens[i] not in current_dict:
+                    current_dict[tokens[i]] = {}
+                if not isinstance(current_dict[tokens[i]], dict):
+                    raise Exception(
+                        "Expecting dictionary in config node "
+                        f"'{'.'.join(tokens[0:i+1])}' "
+                        f"but found 'f{type(current_dict[tokens[i]])}'"
+                    )
+                current_dict = current_dict[tokens[i]]
+
+    return config
+
+
+def _get_unvalidated_config(
+        config_file_path,
+        skip_config_decryption,
+        msg_update_callback=utils.NullPrinter()
+):
     password = None
     if not skip_config_decryption:
         password = os.getenv('CSE_CONFIG_PASSWORD') or utils.prompt_text(
@@ -1467,13 +1609,16 @@ def _get_unvalidated_config(config_file_path,
             with open(config_file_path) as config_file:
                 config_dict = yaml.safe_load(config_file) or {}
         else:
-            msg_update_callback.info(
-                f"Decrypting '{config_file_path}'")
+            msg_update_callback.info(f"Decrypting '{config_file_path}'")
             config_dict = yaml.safe_load(
                 get_decrypted_file_contents(
-                    config_file_path, password)) or {}
-        msg_update_callback.general(f"Retrieved config from "
-                                    f"'{config_file_path}'")
+                    config_file_path,
+                    password
+                )
+            ) or {}
+        msg_update_callback.general(
+            f"Retrieved config from '{config_file_path}'"
+        )
 
         # To suppress the warning message that pyvcloud prints if
         # ssl_cert verification is skipped.
@@ -1484,7 +1629,14 @@ def _get_unvalidated_config(config_file_path,
         # Store telemetry instance id, url and collector id in config
         # This step should be done after suppressing the cert validation
         # warnings
-        store_telemetry_settings(config_dict)
+        update_with_telemetry_settings(
+            config_dict=config_dict,
+            vcd_host=config_dict['vcd']['host'],
+            vcd_username=config_dict['vcd']['username'],
+            vcd_password=config_dict['vcd']['password'],
+            verify_ssl=config_dict['vcd']['verify'],
+            is_mqtt_exchange=server_utils.should_use_mqtt_protocol(config_dict)
+        )
 
         return config_dict
     except cryptography.fernet.InvalidToken:

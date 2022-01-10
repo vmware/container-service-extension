@@ -44,7 +44,7 @@ from container_service_extension.lib.telemetry.telemetry_handler \
 from container_service_extension.lib.telemetry.telemetry_handler import \
     record_user_action_details
 from container_service_extension.lib.telemetry.telemetry_utils import \
-    store_telemetry_settings
+    update_with_telemetry_settings
 from container_service_extension.logging.logger import INSTALL_LOGGER
 from container_service_extension.logging.logger import INSTALL_WIRELOG_FILEPATH
 from container_service_extension.logging.logger import NULL_LOGGER
@@ -419,7 +419,14 @@ def install_cse(
         # been registered as an extension, we should update the telemetry
         # config with the correct instance_id
         if config['service']['telemetry']['enable']:
-            store_telemetry_settings(config)
+            update_with_telemetry_settings(
+                config_dict=config,
+                vcd_host=config['vcd']['host'],
+                vcd_username=config['vcd']['username'],
+                vcd_password=config['vcd']['password'],
+                verify_ssl=config['vcd']['verify'],
+                is_mqtt_exchange=server_utils.should_use_mqtt_protocol(config)
+            )
 
         # Telemetry - Record successful install action
         record_user_action(

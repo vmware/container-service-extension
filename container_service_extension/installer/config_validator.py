@@ -50,7 +50,7 @@ from container_service_extension.lib.nsxt.nsxt_client import NSXTClient
 from container_service_extension.lib.pksclient.api_client import ApiClient
 from container_service_extension.lib.pksclient.configuration import Configuration  # noqa: E501
 from container_service_extension.lib.telemetry.telemetry_utils import \
-    store_telemetry_settings
+    update_with_telemetry_settings
 from container_service_extension.lib.uaaclient.uaaclient import UaaClient
 from container_service_extension.logging.logger import NULL_LOGGER
 from container_service_extension.logging.logger import SERVER_NSXT_WIRE_LOGGER
@@ -213,8 +213,14 @@ def get_validated_config(
         logger_debug=logger_debug
     )
 
-    config = _add_additional_details_to_config(
+    config = add_additional_details_to_config(
         config=config,
+        vcd_host=config['vcd']['host'],
+        vcd_username=config['vcd']['username'],
+        vcd_password=config['vcd']['password'],
+        verify_ssl=config['vcd']['verify'],
+        is_legacy_mode=config['service']['legacy_mode'],
+        is_mqtt_exchange=server_utils.should_use_mqtt_protocol(config),
         log_wire=log_wire,
         log_wire_file=log_wire_file
     )
@@ -260,36 +266,50 @@ def get_validated_config(
     return config
 
 
-def _add_additional_details_to_config(
-        config: Dict,
-        log_wire: bool,
-        log_wire_file: str
+def add_additional_details_to_config(
+    config: Dict,
+    vcd_host: str,
+    vcd_username: str,
+    vcd_password: str,
+    verify_ssl: bool,
+    is_legacy_mode: bool,
+    is_mqtt_exchange: bool,
+    log_wire: bool,
+    log_wire_file: str
 ):
     """Update config dict with computed key-value pairs.
 
     :param dict config:
+    :param str vcd_host:
+    :param str vcd_username:
+    :param str vcd_password:
+    :param bool verify_ssl:
+    :param bool is_legacy_mode:
+    :param bool is_mqtt_exchange:
     :param bool log_wire:
     :param str log_wire_file:
 
     :return: the updated config file
     :rtype: dict
     """
-    is_legacy_mode = config['service']['legacy_mode']
-
     # Compute common supported api versions by the CSE server and vCD
     sysadmin_client = None
     try:
         sysadmin_client = Client(
-            config['vcd']['host'],
-            verify_ssl_certs=config['vcd']['verify'],
+            vcd_host,
+            verify_ssl_certs=verify_ssl,
             log_file=log_wire_file,
             log_requests=log_wire,
             log_headers=log_wire,
-            log_bodies=log_wire)
-        sysadmin_client.set_credentials(BasicLoginCredentials(
-            config['vcd']['username'],
-            SYSTEM_ORG_NAME,
-            config['vcd']['password']))
+            log_bodies=log_wire
+        )
+        sysadmin_client.set_credentials(
+            BasicLoginCredentials(
+                vcd_username,
+                SYSTEM_ORG_NAME,
+                vcd_password
+            )
+        )
 
         vcd_supported_api_versions = \
             set(sysadmin_client.get_supported_versions_list())
@@ -326,10 +346,19 @@ def _add_additional_details_to_config(
     config['service']['default_api_version'] = max_vcd_api_version_supported
     config['service']['rde_version_in_use'] = semantic_version.Version(
         rde_utils.get_runtime_rde_version_by_vcd_api_version(
-            max_vcd_api_version_supported))
+            max_vcd_api_version_supported
+        )
+    )
 
     # Update the config dict with telemetry specific key value pairs
-    store_telemetry_settings(config)
+    update_with_telemetry_settings(
+        config_dict=config,
+        vcd_host=vcd_host,
+        vcd_username=vcd_username,
+        vcd_password=vcd_password,
+        verify_ssl=verify_ssl,
+        is_mqtt_exchange=is_mqtt_exchange
+    )
 
     return config
 
