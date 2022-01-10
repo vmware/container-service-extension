@@ -5,16 +5,12 @@
 import re
 
 import pyvcloud.vcd.client as vcd_client
-from pyvcloud.vcd.exceptions import EntityNotFoundException
+from pyvcloud.vcd.exceptions import EntityNotFoundException, MultipleRecordsException  # noqa: E501
 import pyvcloud.vcd.gateway as vcd_gateway
-from pyvcloud.vcd.vdc import VDC
-import pyvcloud.vcd.vdc_network as vdc_network
 
 from container_service_extension.common.constants.server_constants import CSE_CLUSTER_KUBECONFIG_PATH  # noqa: E501
 from container_service_extension.common.constants.server_constants import EXPOSE_CLUSTER_NAME_FRAGMENT  # noqa: E501
 from container_service_extension.common.constants.server_constants import IP_PORT_REGEX  # noqa: E501
-from container_service_extension.common.constants.server_constants import NETWORK_URN_PREFIX  # noqa: E501
-from container_service_extension.common.constants.server_constants import VdcNetworkInfoKey  # noqa: E501
 from container_service_extension.common.constants.shared_constants import RequestMethod  # noqa: E501
 import container_service_extension.common.utils.core_utils as utils
 import container_service_extension.common.utils.pyvcloud_utils as vcd_utils
@@ -26,28 +22,9 @@ from container_service_extension.logging.logger import SERVER_CLOUDAPI_WIRE_LOGG
 from container_service_extension.logging.logger import SERVER_LOGGER as LOGGER
 
 
-def _get_vdc_network_response(cloudapi_client, network_urn_id: str):
-    relative_path = f'{cloudapi_constants.CloudApiResource.ORG_VDC_NETWORKS}' \
-                    f'?filter=id=={network_urn_id}'
-    response = cloudapi_client.do_request(
-        method=RequestMethod.GET,
-        cloudapi_version=cloudapi_constants.CloudApiVersion.VERSION_1_0_0,
-        resource_url_relative_path=relative_path)
-    return response
-
-
-def _get_gateway_href(vdc: VDC, gateway_name):
-    edge_gateways = vdc.list_edge_gateways()
-    for gateway_dict in edge_gateways:
-        if gateway_dict['name'] == gateway_name:
-            return gateway_dict['href']
-    return None
-
-
 def _get_gateway(
         client: vcd_client.Client,
         org_name: str,
-        ovdc_name: str,
         network_name: str,
 ):
     config = server_utils.get_server_runtime_config()
@@ -59,40 +36,44 @@ def _get_gateway(
         logger_debug=LOGGER,
         logger_wire=logger_wire
     )
-    ovdc = vcd_utils.get_vdc(client, org_name=org_name, vdc_name=ovdc_name)
-    # Check if routed org vdc network
-    try:
-        routed_network_resource = ovdc.get_routed_orgvdc_network(network_name)
-    except EntityNotFoundException:
-        raise Exception(f'No routed network found named: {network_name} '
-                        f'in ovdc {ovdc_name} and org {org_name}')
-    routed_vdc_network = vdc_network.VdcNetwork(
-        client=client,
-        resource=routed_network_resource)
-    network_id = utils.extract_id_from_href(routed_vdc_network.href)
-    network_urn_id = f'{NETWORK_URN_PREFIX}:{network_id}'
-    try:
-        vdc_network_response = _get_vdc_network_response(
-            cloudapi_client, network_urn_id)
-    except Exception as err:
-        LOGGER.error(f'Error when getting vdc network response when getting '
-                     f'gateway: {str(err)}', exc_info=True)
-        return None
-    gateway_name = vdc_network_response[VdcNetworkInfoKey.VALUES][0][
-        VdcNetworkInfoKey.CONNECTION][VdcNetworkInfoKey.ROUTER_REF][
-        VdcNetworkInfoKey.NAME]
-    gateway_href = _get_gateway_href(ovdc, gateway_name)
+
+    gateway_name, gateway_href, gateway_exists = None, None, False
+    page, pageCount = 1, 1
+    base_path = f'{cloudapi_constants.CloudApiResource.ORG_VDC_NETWORKS}?filter=name=={network_name};_context==includeAccessible&pageSize=1&page='  # noqa: E501
+
+    while page <= pageCount:
+        response, headers = cloudapi_client.do_request(
+            method=RequestMethod.GET,
+            cloudapi_version=cloudapi_constants.CloudApiVersion.VERSION_1_0_0,
+            resource_url_relative_path=base_path + f'{page}',
+            return_response_headers=True)
+        for entry in response['values']:
+            # only routed networks allowed
+            is_target_network = entry['orgRef']['name'] == org_name and \
+                entry['networkType'] == 'NAT_ROUTED'
+            if is_target_network:
+                if gateway_exists:
+                    raise MultipleRecordsException(f"Multiple routed networks named {network_name} found. CSE Server expects unique network names.")  # noqa: E501
+                gateway_exists = True
+                gateway_name = entry['connection']['routerRef']['name']
+                gateway_id = entry['connection']['routerRef']['id'].split(':').pop()  # noqa: E501
+                gateway_href = headers['Content-Location'].split('cloudapi')[0] + f'api/admin/edgeGateway/{gateway_id}'  # noqa: E501
+        page += 1
+        pageCount = response['pageCount']
+
+    if not gateway_exists:
+        raise EntityNotFoundException(f"No routed networks named {network_name} found.")  # noqa: E501
+
     gateway = vcd_gateway.Gateway(client, name=gateway_name, href=gateway_href)
     return gateway
 
 
 def _get_nsxt_backed_gateway_service(client: vcd_client.Client, org_name: str,
-                                     ovdc_name: str, network_name: str):
+                                     network_name: str):
     # Check if NSX-T backed gateway
     gateway: vcd_gateway.Gateway = _get_gateway(
         client=client,
         org_name=org_name,
-        ovdc_name=ovdc_name,
         network_name=network_name)
     if not gateway:
         raise Exception(f'No gateway found for network: {network_name}')
@@ -185,7 +166,7 @@ def get_updated_kubeconfig_with_internal_ip(
     )
 
 
-def expose_cluster(client: vcd_client.Client, org_name: str, ovdc_name: str,
+def expose_cluster(client: vcd_client.Client, org_name: str,
                    network_name: str, cluster_name: str, cluster_id: str,
                    internal_ip: str):
     """Create DNAT rule to expose a cluster.
@@ -209,7 +190,7 @@ def expose_cluster(client: vcd_client.Client, org_name: str, ovdc_name: str,
     """
     # Auto reserve ip and add dnat rule
     nsxt_gateway_svc = _get_nsxt_backed_gateway_service(
-        client, org_name, ovdc_name, network_name)
+        client, org_name, network_name)
     expose_ip = nsxt_gateway_svc.get_available_ip()
     if not expose_ip:
         raise Exception(f'No available ips found for cluster {cluster_name} ({cluster_id})')  # noqa: E501
@@ -231,7 +212,6 @@ def expose_cluster(client: vcd_client.Client, org_name: str, ovdc_name: str,
 
 def handle_delete_expose_dnat_rule(client: vcd_client.Client,
                                    org_name: str,
-                                   ovdc_name: str,
                                    network_name: str,
                                    cluster_name: str,
                                    cluster_id: str):
@@ -247,7 +227,7 @@ def handle_delete_expose_dnat_rule(client: vcd_client.Client,
     :returns: Nothing
     """
     nsxt_gateway_svc = _get_nsxt_backed_gateway_service(
-        client, org_name, ovdc_name, network_name
+        client, org_name, network_name
     )
     expose_dnat_rule_name = construct_expose_dnat_rule_name(
         cluster_name, cluster_id

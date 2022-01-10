@@ -933,7 +933,6 @@ class ClusterService(abstract_broker.AbstractBroker):
                     expose_ip = nw_exp_helper.expose_cluster(
                         client=self.context.client,
                         org_name=org_name,
-                        ovdc_name=ovdc_name,
                         network_name=network_name,
                         cluster_name=cluster_name,
                         cluster_id=cluster_id,
@@ -1083,7 +1082,6 @@ class ClusterService(abstract_broker.AbstractBroker):
                         nw_exp_helper.handle_delete_expose_dnat_rule(
                             client=self.context.client,
                             org_name=org_name,
-                            ovdc_name=ovdc_name,
                             network_name=network_name,
                             cluster_name=cluster_name,
                             cluster_id=cluster_id)
@@ -1246,7 +1244,6 @@ class ClusterService(abstract_broker.AbstractBroker):
                     nw_exp_helper.handle_delete_expose_dnat_rule(
                         client=self.context.client,
                         org_name=org_name,
-                        ovdc_name=ovdc_name,
                         network_name=network_name,
                         cluster_name=cluster_name,
                         cluster_id=cluster_id)
@@ -1555,7 +1552,6 @@ class ClusterService(abstract_broker.AbstractBroker):
                         nw_exp_helper.handle_delete_expose_dnat_rule(
                             client=self.context.client,
                             org_name=org_name,
-                            ovdc_name=ovdc_name,
                             network_name=network_name,
                             cluster_name=cluster_name,
                             cluster_id=cluster_id)
