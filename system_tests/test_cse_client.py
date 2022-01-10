@@ -75,8 +75,8 @@ def cse_server():
 
     Setup tasks:
     - If templates do not exist, install CSE using `--upgrade`
-    - Run `cse install` to ensure that CSE is registered and AMQP
-        exchange exists.
+    - Run `cse install` to ensure that CSE is registered and
+        message exchange exists.
     - Run CSE server as a subprocess
 
     Teardown tasks:
@@ -84,21 +84,22 @@ def cse_server():
     """
     env.setup_active_config()
     if env.is_cse_registered():
-        cmd = ['upgrade',
-               '--config', env.ACTIVE_CONFIG_FILEPATH,
-               '--ssh-key', env.SSH_KEY_FILEPATH,
-               '--skip-config-decryption',
-               '--skip-template-creation']
+        cmd = [
+            'upgrade',
+            '--config', env.ACTIVE_CONFIG_FILEPATH,
+            '--skip-config-decryption'
+        ]
     else:
-        cmd = ['install',
-               '--config', env.ACTIVE_CONFIG_FILEPATH,
-               '--ssh-key', env.SSH_KEY_FILEPATH,
-               '--skip-config-decryption',
-               '--skip-template-creation']
+        cmd = [
+            'install',
+            '--config', env.ACTIVE_CONFIG_FILEPATH,
+            '--skip-config-decryption'
+        ]
     result = env.CLI_RUNNER.invoke(cli, cmd, input='y', catch_exceptions=False)
     assert result.exit_code == 0,\
-        testutils.format_command_info('cse', cmd, result.exit_code,
-                                      result.output)
+        testutils.format_command_info(
+            'cse', cmd, result.exit_code, result.output
+        )
 
     # Create missing templates
     for template_config in env.TEMPLATE_DEFINITIONS:
