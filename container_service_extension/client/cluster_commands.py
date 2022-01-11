@@ -101,6 +101,7 @@ Examples
 @click.confirmation_option(prompt='Are you sure you want to delete the '
                                   'cluster?')
 @click.option(
+    '-f',
     '--force',
     'force',
     is_flag=True,
