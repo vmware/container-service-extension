@@ -684,6 +684,18 @@ CSE_SERVICE_ROLE_RIGHTS = [
     "vmware:tkgcluster: View"
 ]
 
+CSE_NATIVE_CLUSTER_FULL_ACCESS_RIGHTS = {
+    'cse:nativeCluster: Modify',
+    'cse:nativeCluster: Full Access',
+    'cse:nativeCluster: View'
+}
+
+CSE_NATIVE_CLUSTER_ADMINISTRATOR_FULL_ACCESS_RIGHTS = {
+    'cse:nativeCluster: Modify',
+    'cse:nativeCluster: Administrator Full access',
+    'cse:nativeCluster: View'
+}
+
 
 @dataclass
 class DefEntityPhase:

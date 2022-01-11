@@ -10,7 +10,9 @@ import urllib
 
 import pyvcloud.vcd.client as vcd_client
 from pyvcloud.vcd.exceptions import EntityNotFoundException
+from pyvcloud.vcd.exceptions import OperationNotSupportedException
 import pyvcloud.vcd.org as vcd_org
+import pyvcloud.vcd.role as vcd_role
 from pyvcloud.vcd.utils import extract_id
 from pyvcloud.vcd.utils import get_admin_href
 from pyvcloud.vcd.utils import to_dict
@@ -770,3 +772,45 @@ def wait_for_completion_of_post_customization_procedure(
         time.sleep(poll_frequency)
     logger.error(f"VM Post guest customization failed due to timeout({timeout} sec)")  # noqa: E501
     raise exceptions.PostCustomizationTimeoutError
+
+
+def has_full_access_to_native_cluster(
+        client: vcd_client.Client,
+        check_admin_full_access=False,
+        logger=NULL_LOGGER) -> bool:
+    """Check the logged-in user has role with full access to native cluster.
+
+    :param vcd_client.Client client: current client
+    :param bool check_admin_full_access: check for admin full access
+    :param logging.Logger logger: logger to record errors.
+    :return: True if the role has full access to native cluster else False
+    :rtype: bool
+    :raises: OperationNotSupportedException
+    :raises: Exception for any unexpected errors
+    """
+    try:
+        role_name = get_user_role_name(client)
+        logger.debug(f"org name:{client.get_org()}")
+        org_obj = vcd_org.Org(client, resource=client.get_org())
+        role_obj = vcd_role.Role(client, resource=org_obj.get_role_resource(role_name))  # noqa: E501
+        logger.debug(f"role_name:{role_name}")
+        rights = []
+        for right_dict in role_obj.list_rights():
+            rights.extend(right_dict.values())
+
+        logger.debug(f"rights of role:{role_name}--{rights}")
+
+        if check_admin_full_access:
+            if server_constants.CSE_NATIVE_CLUSTER_ADMINISTRATOR_FULL_ACCESS_RIGHTS <= set(rights):  # noqa: E501
+                return True
+        else:
+            if server_constants.CSE_NATIVE_CLUSTER_FULL_ACCESS_RIGHTS <= set(rights):  # noqa: E501
+                return True
+    except OperationNotSupportedException as err:
+        logger.warning(f"Cannot determine the rights associated with role:{role_name} {err}")  # noqa: E501
+        raise
+    except Exception as err:
+        logger.warning(f"Cannot determine the rights associated with role:{role_name} {err}")  # noqa: E501
+        raise
+
+    return False
