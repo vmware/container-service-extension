@@ -170,11 +170,14 @@ def _send_data_to_telemetry_server(payload, telemetry_settings):
     :param dict payload: json metadata about CSE operation
     :param dict telemetry_settings: telemetry section of config->service
     """
-    vac_client = VacClient(
-        base_url=telemetry_settings['vac_url'],
-        collector_id=telemetry_settings['collector_id'],
-        instance_id=telemetry_settings['instance_id'],
-        vcd_ceip_id=telemetry_settings['vcd_ceip_id'],
-        logger_debug=LOGGER
-    )
-    vac_client.send_data(payload)
+    try:
+        vac_client = VacClient(
+            base_url=telemetry_settings['vac_url'],
+            collector_id=telemetry_settings['collector_id'],
+            instance_id=telemetry_settings['instance_id'],
+            vcd_ceip_id=telemetry_settings['vcd_ceip_id'],
+            logger_debug=LOGGER
+        )
+        vac_client.send_data(payload)
+    except Exception as err:
+        LOGGER.warning(f"Error in sending data to VAC :{str(err)}", exc_info=True)  # noqa: E501

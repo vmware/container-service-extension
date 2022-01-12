@@ -115,12 +115,6 @@ def cli(ctx):
             Install CSE, and if the templates already exist in vCD, create
             them again.
 \b
-        cse install -c config.yaml --retain-temp-vapp --ssh-key ~/.ssh/id_rsa.pub
-            Install CSE, retain the temporary vApp after the templates have
-            been captured. Copy specified SSH key into all template VMs so
-            users with the corresponding private key have access (--ssh-key is
-            required when --retain-temp-vapp is used).
-\b
         cse upgrade --config config.yaml --skip-config-decryption
             Upgrade CSE using configuration specified in 'config.yaml'.
 \b
@@ -128,12 +122,6 @@ def cli(ctx):
             Upgrade CSE using configuration specified in
             'encrypted-config.yaml'. The configuration file will be decrypted
             in memory using a password (user will be prompted for the password).
-\b
-        cse upgrade -c config.yaml --retain-temp-vapp --ssh-key ~/.ssh/id_rsa.pub
-            Upgrade CSE, retain the temporary vApp after the templates have
-            been captured. Copy specified SSH key into all template VMs so
-            users with the corresponding private key have access (--ssh-key is
-            required when --retain-temp-vapp is used).
 \b
         cse pks-configure --skip-config-decryption pks_config.yaml
             Configure CSE for PKS using pks_config.yaml. Skip decryption of
@@ -191,6 +179,13 @@ def cli(ctx):
         cse template install * * -c my_config.yaml
             Installs all templates specified in the remote template
             repository URL specified in my_config.yaml
+\b
+        cse template import -F my_tkg_ova -c my_config.yaml
+            Imports TKG ova into VCD catalog specified in config file
+\b
+        cse template import -F my_tkg_ova -x vcd_host HOST -x username USERNAME -x vcd_verify Yes -x org_name MY_ORG -x catalog_name MY_CATALOG
+            Imports TKG ova into VCD catalog specified by the extra options.
+
 \b
     Environment Variables
         CSE_CONFIG
@@ -263,6 +258,12 @@ def template(ctx):
             Install all templates defined in remote template repository. Templates
             already present in the local catalog that match with one in the remote
             repository will be recreated from scratch.
+\b
+        cse template import -F my_tkg_ova -c my_config.yaml
+            Imports TKG ova into VCD catalog specified in config file
+\b
+        cse template import -F my_tkg_ova -x vcd_host HOST -x username USERNAME -x vcd_verify Yes -x org_name MY_ORG -x catalog_name MY_CATALOG
+            Imports TKG ova into VCD catalog specified by the extra options.
     """  # noqa: E501
     pass
 
@@ -1286,13 +1287,13 @@ def install_cse_template(ctx, template_name, template_revision,
 )
 @click.option(
     '-x',
-    '--extra-options',
+    '--extra-option',
     'extra_options',
-    metavar='EXTRA_OPTIONS',
+    metavar='EXTRA_OPTION',
     nargs=2,
     type=(str, str),
     multiple=True,
-    help='Extra options passed as -x key value'
+    help='Allows avoiding prompts if --config is omitted'
 )
 def import_tkgm_template(
         ctx,
@@ -1304,28 +1305,31 @@ def import_tkgm_template(
 ):
     """Upload TKGm OVA to CSE catalog.
 
-    \b
+\b
+    If --config option is not provided, the command will prompt for required
+    information. However the prompts can be avoided by specifying the values
+    using -x/--extra-option.
+\b
     Essential supported Extra Options:
-        broker.catalog: String: Name of the catalog where the OVA will be
+        catalog_name: String: Name of the catalog where the OVA will be
             imported.
-        broker.org: String: Name of the Organization where the OVA will be
+        org_name: String: Name of the Organization where the OVA will be
             imported.
-        vcd.host: String: FQDN of VCD host.
-        vcd.password: String: Password of CSE service account.
-        vcd.username: String: Username of CSE service account.
-        vcd.verify: Boolean: Verify SSL while connecting to VCD.
-
+        password: String: Password of CSE service account.
+        username: String: Username of CSE service account.
+        vcd_host: String: FQDN of VCD host.
+\b
     Non-essential supported Extra Options:
-        mqtt.verify_ssl: Boolean: Verify SSL while connecting to MQTT bus.
-        service.legacy_mode: Boolean: If True, the command will assume that
-            CSE is running in legacy mode.
-        service.log_wire: Boolean: If True, log wire communication to VCD.
-        service.telemetry.enable: Boolean : If True, telemetry will be
+        enable_telemetry: Boolean : If True, telemetry data will be
             recorded.
-
+        legacy_mode: Boolean: If True, the command will assume that
+            CSE is running in legacy mode.
+        log_wire: Boolean: If True, log wire communication to VCD.
+        mqtt_verify: Boolean: Verify SSL while connecting to MQTT bus.
+        vcd_verify: Boolean: Verify SSL while connecting to VCD.
+\b
     Note: Arbitrary key value pair can be provided using -x option but there
     is no guarantee that they will be processed or honored.
-
     """
     SERVER_CLI_LOGGER.debug(f"Executing command: {ctx.command_path}")
     console_message_printer = utils.ConsoleMessagePrinter()
@@ -1352,60 +1356,119 @@ def import_tkgm_template(
                 msg_update_callback=console_message_printer
             )
         else:
-            required_options = {
-                "vcd.host": {
-                    "type": str,
-                    "prompt": "Please enter VCD hostname",
-                    "hidden_field": False
-                },
-                "vcd.username": {
-                    "type": str,
-                    "prompt": "Please enter username for connecting to VCD",
-                    "hidden_field": False
-                },
-                "vcd.password": {
-                    "type": str,
-                    "prompt": "Please enter password of the user for connecting to VCD",  # noqa: E501
-                    "hidden_field": True
-                },
-                "vcd.verify": {
-                    "type": bool,
-                    "prompt": "Enable SSL verification while connecting to VCD (Y/n)",  # noqa: E501
-                    "hidden_field": False
-                },
-                "broker.org": {
-                    "type": str,
-                    "prompt": "Please enter the name of the org where you want to import the OVA",  # noqa: E501
-                    "hidden_field": False
-                },
-                "broker.catalog": {
+            known_extra_options = {
+                # Essential
+                "catalog_name": {
+                    "config_key": "broker.catalog",
                     "type": str,
                     "prompt": "Please enter the name of the catalog where you want to import the OVA",  # noqa: E501
-                    "hidden_field": False
+                    "hidden_field": False,
+                    "default_value": None
+                },
+                "org_name": {
+                    "config_key": "broker.org",
+                    "type": str,
+                    "prompt": "Please enter the name of the org where you want to import the OVA",  # noqa: E501
+                    "hidden_field": False,
+                    "default_value": None
+                },
+                "password": {
+                    "config_key": "vcd.password",
+                    "type": str,
+                    "prompt": "Please enter password of the user for connecting to VCD",  # noqa: E501
+                    "hidden_field": True,
+                    "default_value": None
+                },
+                "username": {
+                    "config_key": "vcd.username",
+                    "type": str,
+                    "prompt": "Please enter username for connecting to VCD",
+                    "hidden_field": False,
+                    "default_value": None
+                },
+                "vcd_host": {
+                    "config_key": "vcd.host",
+                    "type": str,
+                    "prompt": "Please enter VCD hostname",
+                    "hidden_field": False,
+                    "default_value": None
+                },
+                # Non-essential
+                "vcd_verify": {
+                    "config_key": "vcd.verify",
+                    "type": bool,
+                    "prompt": "Enable SSL verification while connecting to VCD (Y/n)",  # noqa: E501
+                    "hidden_field": False,
+                    "default_value": True
+                },
+                "enable_telemetry": {
+                    "config_key": "service.telemetry.enable",
+                    "type": bool,
+                    "prompt": "",
+                    "hidden_field": False,
+                    "default_value": True
+                },
+                "legacy_mode": {
+                    "config_key": "service.legacy_mode",
+                    "type": bool,
+                    "prompt": "",
+                    "hidden_field": False,
+                    "default_value": False
+                },
+                "log_wire": {
+                    "config_key": "service.log_wire",
+                    "type": bool,
+                    "prompt": "",
+                    "hidden_field": False,
+                    "default_value": False
+                },
+                "mqtt_verify": {
+                    "config_key": "mqtt.verify_ssl",
+                    "type": bool,
+                    "prompt": "",
+                    "hidden_field": False,
+                    "default_value": True
                 }
             }
 
-            default_option_values = {
-                "mqtt.verify_ssl": False,
-                "service.legacy_mode": False,
-                "service.log_wire": False,
-                "service.telemetry.enable": True
-            }
+            required_options = [
+                "vcd_host",
+                "username",
+                "password",
+                "org_name",
+                "catalog_name"
+            ]
+
+            sanitized_extra_options = _sanitize_typing(
+                user_input=extra_options,
+                known_extra_options=known_extra_options
+            )
+
+            additional_user_input = _prompt_for_missing_required_extra_options(
+                user_input=sanitized_extra_options,
+                known_extra_options=known_extra_options,
+                required_options=required_options
+            )
+
+            sanitized_extra_options.update(additional_user_input)
+
+            # Augment with default value for missing non-essential options
+            for k, v in known_extra_options.items():
+                if k not in sanitized_extra_options:
+                    sanitized_extra_options[k] = v['default_value']
 
             config = _construct_config_from_extra_options(
-                extra_options,
-                required_options,
-                default_option_values
+                user_input=sanitized_extra_options,
+                known_extra_options=known_extra_options
             )
 
             # To suppress the warning message that pyvcloud prints if
             # ssl_cert verification is skipped.
-            if config and config.get('vcd') and \
-                    not config['vcd'].get('verify'):
+            if not config['vcd']['verify']:
                 requests.packages.urllib3.disable_warnings()
 
             log_wire_file = None
-            log_wire = utils.str_to_bool(config.get('service', {}).get('log_wire', False))  # noqa: E501
+            log_wire = utils.str_to_bool(config['service']['log_wire'])
             if log_wire:
                 log_wire_file = SERVER_DEBUG_WIRELOG_FILEPATH
 
@@ -1560,19 +1623,48 @@ def import_tkgm_template(
         time.sleep(3)
 
 
+def _sanitize_typing(
+    user_input: List[Tuple[str, str]],
+    known_extra_options: Dict
+):
+    sanitized_user_input = {}
+    # sanitize user input to correct type
+    for k, v in user_input:
+        if k in known_extra_options:
+            if known_extra_options[k]["type"] == bool:
+                sanitized_user_input[k] = utils.str_to_bool(v)
+            else:
+                sanitized_user_input[k] = known_extra_options[k]["type"](v)
+        else:
+            sanitized_user_input[k] = v
+    return sanitized_user_input
+
+
+def _prompt_for_missing_required_extra_options(
+    user_input: Dict,
+    known_extra_options: Dict,
+    required_options: List[str]
+
+):
+    # Prompt user for missing required options
+    for k in required_options:
+        if k in user_input:
+            continue
+        val = utils.prompt_text(
+            text=known_extra_options[k]["prompt"],
+            color='green',
+            hide_input=known_extra_options[k]["hidden_field"],
+            type=known_extra_options[k]["type"]
+        )
+        user_input[k] = val
+    return user_input
+
+
 def _construct_config_from_extra_options(
-        extra_options: List[Tuple[str, str]],
-        required_options: Dict,
-        default_option_values: Dict
+        user_input: Dict,
+        known_extra_options: Dict
 ):
     """Construct a config dictionary from user provided key-value pairs.
-
-    :param List[Tuple[str, str]] extra_options: A list of tuple containing
-        key-value pair provided by user
-    :param Dict required_options: Dictionary containing keys like "a.b.c"
-        and values being another dictionary with the following keys
-        ["prompt", "type", "hidden_field"]
-    :param Dict default_option_values:
 
     Input like "a.b.c : val" is converted to
     {
@@ -1583,44 +1675,20 @@ def _construct_config_from_extra_options(
         }
     }
 
-    If user input doesn't cover entire required options, then user
-    will be prompted to provide the value
-
     :rtype: Dict
 
     return: config dictionary constructed from user provided input
     """
-    user_input = {}
-    # sanitize user input to correct type
-    for k, v in extra_options:
-        if k in required_options and required_options[k]["type"] != str:
-            if required_options[k]["type"] == bool:
-                user_input[k] = utils.str_to_bool(v)
-            else:
-                user_input[k] = required_options[k]["type"](v)
+    condensed_config_dict = {}
+    for k, v in user_input.items():
+        if k in known_extra_options:
+            condensed_config_dict[known_extra_options[k]['config_key']] = v
         else:
-            user_input[k] = v
-
-    # Prompt user for missing required options
-    for k, option in required_options.items():
-        if k in user_input:
-            continue
-        val = utils.prompt_text(
-            text=option["prompt"],
-            color='green',
-            hide_input=option["hidden_field"],
-            type=option["type"]
-        )
-        user_input[k] = val
-
-    # Augment with default value for missing non-esential options
-    for k, v in default_option_values.items():
-        if k not in user_input:
-            user_input[k] = v
+            condensed_config_dict[k] = v
 
     config = {}
     # Expand dot-notation keys into nested dictionary
-    for key, value in user_input.items():
+    for key, value in condensed_config_dict.items():
         tokens = key.split(".")
         current_dict = config
         for i in range(len(tokens)):
