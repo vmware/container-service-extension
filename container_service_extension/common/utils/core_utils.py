@@ -90,9 +90,9 @@ def get_installed_cse_version() -> semantic_version.Version:
     return semantic_version.Version('.'.join(tokens))
 
 
-def prompt_text(text, color='black', hide_input=False):
+def prompt_text(text, color='black', hide_input=False, type=str):
     click_text = click.style(str(text), fg=color)
-    return click.prompt(click_text, hide_input=hide_input, type=str)
+    return click.prompt(click_text, hide_input=hide_input, type=type)
 
 
 def is_environment_variable_enabled(env_var_name):
@@ -196,9 +196,9 @@ def str_to_bool(s):
 
     :param s: input string
 
-    :return: True if val is 'true' otherwise False
+    :return: True if val is ['true' or 'yes' or 'y'] otherwise False
     """
-    return str(s).lower() == 'true'
+    return str(s).lower() in ('true', 'yes', 'y')
 
 
 def get_sha256(filepath):
