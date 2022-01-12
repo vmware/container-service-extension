@@ -70,7 +70,7 @@ class NativeClusterApi(CseClient):
             method=shared_constants.RequestMethod.POST,
             accept_type='application/json')
 
-        return self.process_response(response)
+        return common_models.DefEntity(**self.process_response(response))
 
     def delete_nfs_node_by_node_name(self, cluster_id: str, node_name: str):
         uri = f"{self._cluster_uri}/{cluster_id}/nfs/{node_name}"

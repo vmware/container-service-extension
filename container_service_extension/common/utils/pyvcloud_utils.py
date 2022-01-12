@@ -774,38 +774,40 @@ def wait_for_completion_of_post_customization_procedure(
     raise exceptions.PostCustomizationTimeoutError
 
 
-def has_full_access_to_native_cluster(
+def get_missing_delete_cluster_rights(
         client: vcd_client.Client,
-        check_admin_full_access=False,
-        logger=NULL_LOGGER) -> bool:
-    """Check the logged-in user has role with full access to native cluster.
+        is_cluster_owner=False,
+        logger=NULL_LOGGER) -> set:
+    """
+    Find the missing rights for force-deleting the cluster.
 
     :param vcd_client.Client client: current client
-    :param bool check_admin_full_access: check for admin full access
-    :param logging.Logger logger: logger to record errors.
-    :return: True if the role has full access to native cluster else False
-    :rtype: bool
+    :param bool is_cluster_owner: true if the client is cluster owner
+    :param logging.Logger logger: ogger to record errors.
+    :return: all missing rights
+    :rtype: set
     :raises: OperationNotSupportedException
     :raises: Exception for any unexpected errors
     """
+    missing_rights = set()
     try:
         role_name = get_user_role_name(client)
-        logger.debug(f"org name:{client.get_org()}")
         org_obj = vcd_org.Org(client, resource=client.get_org())
         role_obj = vcd_role.Role(client, resource=org_obj.get_role_resource(role_name))  # noqa: E501
         logger.debug(f"role_name:{role_name}")
-        rights = []
+        role_rights = []
+
         for right_dict in role_obj.list_rights():
-            rights.extend(right_dict.values())
+            role_rights.extend(right_dict.values())
 
-        logger.debug(f"rights of role:{role_name}--{rights}")
+        logger.debug(f"rights of role:{role_name}--{role_rights}")
 
-        if check_admin_full_access:
-            if server_constants.CSE_NATIVE_CLUSTER_ADMINISTRATOR_FULL_ACCESS_RIGHTS <= set(rights):  # noqa: E501
-                return True
-        else:
-            if server_constants.CSE_NATIVE_CLUSTER_FULL_ACCESS_RIGHTS <= set(rights):  # noqa: E501
-                return True
+        delete_rights = server_constants.CSE_NATIVE_CLUSTER_ADMINISTRATOR_FULL_ACCESS_RIGHTS | server_constants.VAPP_DELETE_RIGHTS | server_constants.DNAT_DELETE_RIGHTS  # noqa: E501
+        cse_native_full_rights = server_constants.CSE_NATIVE_CLUSTER_ADMINISTRATOR_FULL_ACCESS_RIGHTS | server_constants.CSE_NATIVE_CLUSTER_FULL_ACCESS_RIGHTS  # noqa: E501
+        missing_rights: set = delete_rights - set(role_rights)
+
+        if is_cluster_owner and len(cse_native_full_rights & set(role_rights)) > 0:  # noqa: E501
+            missing_rights = missing_rights - cse_native_full_rights
     except OperationNotSupportedException as err:
         logger.warning(f"Cannot determine the rights associated with role:{role_name} {err}")  # noqa: E501
         raise
@@ -813,4 +815,4 @@ def has_full_access_to_native_cluster(
         logger.warning(f"Cannot determine the rights associated with role:{role_name} {err}")  # noqa: E501
         raise
 
-    return False
+    return missing_rights

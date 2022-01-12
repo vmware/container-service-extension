@@ -107,7 +107,9 @@ Examples
     is_flag=True,
     required=False,
     default=False,
-    help='Force delete the cluster regardless of the state')
+    help='Force delete the native entity type cluster regardless of the '
+         'cluster state. User needs special rights and ACL on entity type. '
+         'Please see the online documentation.')
 @click.option(
     '-v',
     '--vdc',
@@ -152,7 +154,7 @@ Example
         '--vdc' option can be used for faster command execution.
 \b
     vcd cse cluster delete mycluster --force
-        Force delete the cluster regardless of the state of the cluster
+        Force delete the native entity type cluster regardless of the state of the cluster
 \b
     vcd cse cluster delete --id urn:vcloud:entity:cse:nativeCluster:1.0.0:0632c7c7-a613-427c-b4fc-9f1247da5561
         Delete cluster with cluster ID 'urn:vcloud:entity:cse:nativeCluster:1.0.0:0632c7c7-a613-427c-b4fc-9f1247da5561'.

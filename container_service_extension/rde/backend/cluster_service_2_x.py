@@ -23,8 +23,6 @@ from container_service_extension.common.constants.server_constants import CLUSTE
 from container_service_extension.common.constants.server_constants import ClusterMetadataKey  # noqa: E501
 from container_service_extension.common.constants.server_constants import ClusterScriptFile, TemplateScriptFile  # noqa: E501
 from container_service_extension.common.constants.server_constants import CSE_CLUSTER_KUBECONFIG_PATH  # noqa: E501
-from container_service_extension.common.constants.server_constants import CSE_NATIVE_CLUSTER_ADMINISTRATOR_FULL_ACCESS_RIGHTS  # noqa: E501
-from container_service_extension.common.constants.server_constants import CSE_NATIVE_CLUSTER_FULL_ACCESS_RIGHTS  # noqa: E501
 from container_service_extension.common.constants.server_constants import DefEntityOperation  # noqa: E501
 from container_service_extension.common.constants.server_constants import DefEntityOperationStatus  # noqa: E501
 from container_service_extension.common.constants.server_constants import DefEntityPhase  # noqa: E501
@@ -517,7 +515,7 @@ class ClusterService(abstract_broker.AbstractBroker):
             vcd_client.TaskStatus.RUNNING,
             message=msg
         )
-
+        time.sleep(10)
         self.context.is_async = True
         self._force_delete_cluster_async(
             cluster_name=cluster_name,
@@ -1991,33 +1989,23 @@ class ClusterService(abstract_broker.AbstractBroker):
         try:
             user_client = self.context.get_client(api_version=DEFAULT_API_VERSION)  # noqa: E501
             missing_rights_msg: str = 'Missing rights:'
-            if curr_rde.owner.name == self.context.user.name:
-                has_full_access = vcd_utils.has_full_access_to_native_cluster(
-                    user_client,
-                    logger=LOGGER
-                )
-                missing_rights = f"{CSE_NATIVE_CLUSTER_FULL_ACCESS_RIGHTS}"
-            else:
-                has_full_access = vcd_utils.has_full_access_to_native_cluster(
-                    user_client,
-                    check_admin_full_access=True
-                )
-                missing_rights = f"{CSE_NATIVE_CLUSTER_ADMINISTRATOR_FULL_ACCESS_RIGHTS}"  # noqa: E501
-
-            if not has_full_access:
+            is_cluster_owner = (curr_rde.owner.name == self.context.user.name)  # noqa: E501
+            missing_rights = vcd_utils.get_missing_delete_cluster_rights(
+                user_client,
+                is_cluster_owner=is_cluster_owner,
+                logger=LOGGER
+            )  # noqa: E501
+            if len(missing_rights) > 0:
                 missing_rights_msg += f"{missing_rights}"
+                self._update_task_with_no_behavior(vcd_client.TaskStatus.RUNNING, message=missing_rights_msg)  # noqa: E501
                 raise Exception(missing_rights_msg)
-
-            self._update_task_with_no_behavior(vcd_client.TaskStatus.RUNNING, message=missing_rights_msg)  # noqa: E501
-            msg = f"client has full access native cluster:{has_full_access}"
-            self._update_task_with_no_behavior(vcd_client.TaskStatus.RUNNING, message=msg)  # noqa: E501
             time.sleep(10)
             msg = f"Deleted cluster '{cluster_name}'"
             self._update_task_with_no_behavior(vcd_client.TaskStatus.SUCCESS, message=msg)  # noqa: E501
         except Exception as err:
             msg = f"Force delete failed:{err}"
             self._update_task_with_no_behavior(
-                BehaviorTaskStatus.ERROR,
+                vcd_client.TaskStatus.ERROR,
                 message=msg,
                 error_message=str(err)
             )

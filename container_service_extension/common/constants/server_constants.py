@@ -684,16 +684,21 @@ CSE_SERVICE_ROLE_RIGHTS = [
     "vmware:tkgcluster: View"
 ]
 
-CSE_NATIVE_CLUSTER_FULL_ACCESS_RIGHTS = {
-    'cse:nativeCluster: Modify',
-    'cse:nativeCluster: Full Access',
-    'cse:nativeCluster: View'
+CSE_NATIVE_CLUSTER_ADMINISTRATOR_FULL_ACCESS_RIGHTS = {
+    'cse:nativeCluster: Administrator Full access'
 }
 
-CSE_NATIVE_CLUSTER_ADMINISTRATOR_FULL_ACCESS_RIGHTS = {
-    'cse:nativeCluster: Modify',
-    'cse:nativeCluster: Administrator Full access',
-    'cse:nativeCluster: View'
+CSE_NATIVE_CLUSTER_FULL_ACCESS_RIGHTS = {
+    'cse:nativeCluster: Full Access'
+}
+
+VAPP_DELETE_RIGHTS = {
+    'vApp: Delete'
+}
+
+DNAT_DELETE_RIGHTS = {
+    'Organization vDC Gateway: Configure NAT',
+    'Organization vDC Gateway: View'
 }
 
 

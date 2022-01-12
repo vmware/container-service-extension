@@ -337,6 +337,22 @@ class DECluster:
             return self._nativeCluster.delete_cluster_by_id(cluster_id)
         return self._tkgCluster.delete_cluster_by_id(cluster_id, org=org)
 
+    def force_delete_cluster_by_id(self, cluster_id, org=None):
+        """Delete cluster using cluster id.
+
+        :param str cluster_id: id of the cluster to be deleted
+        :param str org:
+
+        :return: deleted cluster information
+        :rtype: str
+
+        :raises: ClusterNotFoundError
+        """
+        entity_svc = def_entity_svc.DefEntityService(self._cloudapi_client)
+        if entity_svc.is_native_entity(cluster_id):
+            return self._nativeCluster.force_delete_cluster_by_id(cluster_id)
+        return self._tkgCluster.delete_cluster_by_id(cluster_id, org=org)
+
     def get_upgrade_plan(self, cluster_name, org=None, vdc=None):
         """Get the upgrade plan for the given cluster name.
 
@@ -444,7 +460,7 @@ class DECluster:
         :raises ClusterNotFoundError, CseDuplicateClusterError
         """
         if cluster_id:
-            return self.delete_cluster_by_id(cluster_id)
+            return self.force_delete_cluster_by_id(cluster_id)
         cluster, entity_properties, is_native_cluster = \
             self._get_tkg_s_and_native_clusters_by_name(cluster_name,
                                                         org=org, vdc=vdc)
