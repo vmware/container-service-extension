@@ -29,7 +29,7 @@ TODO() by priority
 - tests/fixtures to test command accessibility for various
     users/roles (vcd_cluster_admin() fixture should be replaced with
     a minimum rights user fixture)
-- test `vcd cse cluster config testcluster --save` option (currently does
+- test `vcd cse cluster config test_cluster --save` option (currently does
     not work)
 - test nfs functionality
 - test accessing cluster via kubectl (may be unnecessary)
@@ -58,8 +58,8 @@ OVDC_ENABLE_TEST_PARAM = collections.namedtuple("OvdcEnableParam", "user passwor
 OVDC_DISABLE_TEST_PARAM = collections.namedtuple("OvdcDisableParam", "user password org_name ovdc_name enable_before_test expect_failure")  # noqa: E501
 SYSTEM_TOGGLE_TEST_PARAM = collections.namedtuple("SystemToggleTestParam", "user password cluster_name worker_count nfs_count rollback sizing_class storage_profile ovdc_network template_name template_revision expect_failure")  # noqa: E501
 CLUSTER_APPLY_TEST_PARAM = collections.namedtuple("ClusterApplyTestParam", "user password cluster_name worker_count nfs_count rollback cpu memory sizing_class storage_profile ovdc_network template_name template_revision expected_phase retain_cluster exit_code should_vapp_exist should_rde_exist required_rde_version expect_failure")  # noqa: E501
-CLUSTER_DELETE_TEST_PARAM = collections.namedtuple("CluserDeleteTestParam", "user password cluster_name org ovdc expect_failure")  # noqa: E501
-CLUSTER_UPGRADE_TEST_PARAM = collections.namedtuple("ClusterUpgradeTestParam", "user password cluster_name worker_count nfs_count rollback sizing_class storage_profile ovdc_network upgrade_path expect_failure") # noqa: E501
+CLUSTER_DELETE_TEST_PARAM = collections.namedtuple("ClusterDeleteTestParam", "user password cluster_name org ovdc expect_failure")  # noqa: E501
+CLUSTER_UPGRADE_TEST_PARAM = collections.namedtuple("ClusterUpgradeTestParam", "user password cluster_name worker_count nfs_count rollback sizing_class storage_profile ovdc_network upgrade_path expect_failure")  # noqa: E501
 
 DEFAULT_CPU_COUNT = 2
 DEFAULT_MEMORY_MB = 2048
@@ -86,17 +86,17 @@ def cse_server():
         return
     env.setup_active_config(logger=PYTEST_LOGGER)
     if env.is_cse_registered_as_mqtt_ext(logger=PYTEST_LOGGER):
-        cmd = ['upgrade',
-               '--config', env.ACTIVE_CONFIG_FILEPATH,
-               '--ssh-key', env.SSH_KEY_FILEPATH,
-               '--skip-config-decryption',
-               '--skip-template-creation']
+        cmd = [
+            'upgrade',
+            '--config', env.ACTIVE_CONFIG_FILEPATH,
+            '--skip-config-decryption'
+        ]
     else:
-        cmd = ['install',
-               '--config', env.ACTIVE_CONFIG_FILEPATH,
-               '--ssh-key', env.SSH_KEY_FILEPATH,
-               '--skip-config-decryption',
-               '--skip-template-creation']
+        cmd = [
+            'install',
+            '--config', env.ACTIVE_CONFIG_FILEPATH,
+            '--skip-config-decryption'
+        ]
     result = env.CLI_RUNNER.invoke(cli, cmd, input='y', catch_exceptions=False)
     assert result.exit_code == 0,\
         testutils.format_command_info('cse', cmd, result.exit_code,
@@ -134,7 +134,6 @@ def cse_server():
 
     # start cse server as subprocess
     cmd = f"cse run -c {env.ACTIVE_CONFIG_FILEPATH} --skip-config-decryption"
-    p = None
     if os.name == 'nt':
         p = subprocess.Popen(cmd, shell=True)
     else:
@@ -195,7 +194,7 @@ def vcd_sys_admin():
     PYTEST_LOGGER.debug("Logged in as sys admin")
     yield
 
-    result = env.CLI_RUNNER.invoke(vcd, ['logout'])
+    env.CLI_RUNNER.invoke(vcd, ['logout'])
     PYTEST_LOGGER.debug("Logged out as sys admin")
 
 
@@ -230,7 +229,7 @@ def vcd_cluster_admin():
 
     yield
 
-    result = env.CLI_RUNNER.invoke(vcd, ['logout'])
+    env.CLI_RUNNER.invoke(vcd, ['logout'])
     PYTEST_LOGGER.debug(f"Logged out as {env.CLUSTER_ADMIN_NAME}")
 
 
@@ -265,7 +264,7 @@ def vcd_cluster_author():
 
     yield
 
-    result = env.CLI_RUNNER.invoke(vcd, ['logout'])
+    env.CLI_RUNNER.invoke(vcd, ['logout'])
     PYTEST_LOGGER.debug(f"Logged out as {env.CLUSTER_AUTHOR_NAME}")
 
 
@@ -446,7 +445,7 @@ def ovdc_disable_test_case(request):
 
 
 def create_apply_spec(apply_spec_param):
-    """Create apply specification throught cse cluster apply --sample command.
+    """Create apply specification through cse cluster apply --sample command.
 
     :param dict apply_spec_param: Dictionary containing the information
         that need to be modified in the initial sample command
@@ -459,7 +458,7 @@ def create_apply_spec(apply_spec_param):
     - sizing class
     - storage profile
     """
-    # run cse sample to generate apply sepecification
+    # run cse sample to generate apply specification
     cmd = f"cse cluster apply --sample --native -o {env.APPLY_SPEC_PATH}"
     result = env.CLI_RUNNER.invoke(vcd, cmd.split(), catch_exceptions=False)
     assert result.exit_code == 0, \
@@ -478,8 +477,6 @@ def system_toggle_test_case(request):
 
     # login as sysadmin
     config = testutils.yaml_to_dict(env.BASE_CONFIG_FILEPATH)
-    user = param.user
-
     user = config['vcd']['username']
     pwd = config['vcd']['password']
     org_name = 'system'
@@ -527,6 +524,7 @@ def _follow_apply_output(expect_failure=False):
         result = env.CLI_RUNNER.invoke(
             vcd, task_wait_command_args, catch_exceptions=True)
         PYTEST_LOGGER.debug(f"Executing command: {task_wait_command}")
+        PYTEST_LOGGER.debug(f"User: {test_runner_username}")
         PYTEST_LOGGER.debug(f"Exit code: {result.exit_code}")
         PYTEST_LOGGER.debug(f"Output: {result.output}")
 
@@ -554,6 +552,7 @@ def _follow_delete_output(expect_failure=False):
         result = env.CLI_RUNNER.invoke(
             vcd, task_wait_command_args, catch_exceptions=True)
         PYTEST_LOGGER.debug(f"Executing command: {task_wait_command}")
+        PYTEST_LOGGER.debug(f"User: {test_runner_username}")
         PYTEST_LOGGER.debug(f"Exit code: {result.exit_code}")
         PYTEST_LOGGER.debug(f"Output: {result.output}")
 
@@ -599,9 +598,6 @@ def test_0030_vcd_cse_system_toggle(system_toggle_test_case: SYSTEM_TOGGLE_TEST_
     cases such as running the system disable test, and then running the
     cluster operations test, which would fail due to CSE server being
     disabled).
-    :param config: cse config file for vcd configuration
-    :param test_runner_username: parameterized persona to run tests with
-    different users
     """
     cmd_list = [
         testutils.CMD_BINDER(cmd="cse system disable",
@@ -761,7 +757,7 @@ def _generate_cluster_apply_tests(test_users=None):
                         retain_cluster=False,
                         exit_code=0,
                         should_rde_exist=True,
-                        should_vapp_exist=False, # creation of vapp will fail
+                        should_vapp_exist=False,  # creation of vapp will fail
                         required_rde_version=['1.0.0', '2.0.0'],
                         expect_failure=True
                     ),
@@ -827,7 +823,7 @@ def _generate_cluster_apply_tests(test_users=None):
                         sizing_class=env.SIZING_CLASS_NAME,
                         storage_profile=None,
                         cluster_name=f"{env.USERNAME_TO_CLUSTER_NAME[user]}-case6",  # noqa: E501
-                        expected_phase="CREATE:SUCCEEDED", # validation failure
+                        expected_phase="CREATE:SUCCEEDED",  # validation failure  # noqa: E501
                         retain_cluster=True,
                         exit_code=2,   # should be 2?
                         should_rde_exist=True,
@@ -1004,9 +1000,6 @@ def test_0040_vcd_cse_cluster_apply(cluster_apply_param: CLUSTER_APPLY_TEST_PARA
     Test cluster creation from different persona's- sys_admin, org_admin
     and k8_author. Created clusters will remain in the system for further
     command tests - list, resize and delete.
-    :param config: cse config file for vcd configuration
-    :param test_runner_username: parameterized persona to run tests with
-    different users
     """
     print(f"Running cluster create operation for {cluster_apply_param.user}")
 
@@ -1032,7 +1025,8 @@ def test_0040_vcd_cse_cluster_apply(cluster_apply_param: CLUSTER_APPLY_TEST_PARA
     if cluster_apply_param.should_rde_exist:
         assert env.rde_exists(created_cluster_name), \
             f"Expected RDE to be present for cluster {created_cluster_name}"
-        assert _get_cluster_phase(created_cluster_name, cluster_apply_param.user) == cluster_apply_param.expected_phase, \
+        assert \
+            _get_cluster_phase(created_cluster_name, cluster_apply_param.user) == cluster_apply_param.expected_phase, \
             f"Expected RDE phase to be {cluster_apply_param.expected_phase}"  # noqa: E501
     else:
         assert not env.rde_exists(created_cluster_name), \
@@ -1219,7 +1213,7 @@ def test_0050_vcd_cse_delete_nfs(cluster_delete_nfs_param):
     ]
     testutils.execute_commands(cmd_list, logger=PYTEST_LOGGER)
 
-    time.sleep(30) # Timeout to wait for RDE update to complete
+    time.sleep(30)  # Timeout to wait for RDE update to complete
     cmd_list = [
         testutils.CMD_BINDER(cmd=f"cse cluster info {env.USERNAME_TO_CLUSTER_NAME[test_runner_username]}",   # noqa: E501
                              exit_code=0,
@@ -1239,8 +1233,8 @@ def test_0050_vcd_cse_delete_nfs(cluster_delete_nfs_param):
     testutils.execute_commands(cmd_list, logger=PYTEST_LOGGER)
 
     number_of_attempts = 10
-    # wait until the status changes to UPDATE:SUCCEEDED for 5 mins (10 attempts
-    # with 30s wait each)
+    # wait until the status changes to UPDATE:SUCCEEDED for 5 minutes
+    # (10 attempts with 30s wait each)
     status = ""
     while status != "UPDATE:SUCCEEDED" and number_of_attempts > 0:
         status = _get_cluster_phase(env.USERNAME_TO_CLUSTER_NAME[test_runner_username], test_runner_username)  # noqa: E501
@@ -1303,8 +1297,6 @@ def test_0090_vcd_cse_cluster_delete(cluster_delete_param: CLUSTER_DELETE_TEST_P
     Cluster delete operation on the above create clusters operations-
     cluster Author can only delete self created clusters.
     cluster admin can delete all cluster in the organization.
-
-    :param config: cse config file for vcd configuration
     """
     cmd_list = [
         testutils.CMD_BINDER(cmd=env.USERNAME_TO_LOGIN_CMD[cluster_delete_param.user],  # noqa: E501
@@ -1383,13 +1375,13 @@ def cluster_upgrade_param(request):
     PYTEST_LOGGER.debug(f"Logged in as {param.user}")
 
     # create initial cluster
-    initial_cluster_tempalte_name = param.upgrade_path[0]['name']
+    initial_cluster_template_name = param.upgrade_path[0]['name']
     initial_cluster_template_revision = param.upgrade_path[0]['revision']
     spec_params = {
         'worker_count': param.worker_count,
         'nfs_count': param.nfs_count,
         'rollback': param.rollback,
-        'template_name': initial_cluster_tempalte_name,
+        'template_name': initial_cluster_template_name,
         'template_revision': initial_cluster_template_revision,
         'network': param.ovdc_network,
         'sizing_class': param.sizing_class,
