@@ -546,6 +546,35 @@ class DefEntityService:
         return response
 
     @handle_entity_service_exception
+    def force_delete_entity(self, entity_id: str, is_request_async=False) -> Union[dict, Tuple[dict, dict]]:  # noqa: E501
+        """Delete the defined entity without invoking hooks.
+
+        :param str entity_id: Id of the entity.
+        :param bool is_request_async: The request is intended to be
+            asynchronous if this flag is set, href of the task is returned
+            in addition to the response body
+
+        :return: response body or response body and response headers
+        :rtype: Union[dict, Tuple[dict, dict]]
+        """
+        # response will be a tuple (response_body, response_header) if
+        # is_request_async is true. Else, it will be just response_body
+        vcd_api_version = self._cloudapi_client.get_vcd_api_version()
+        resource_url_relative_path = f"{CloudApiResource.ENTITIES}/{entity_id}"
+
+        if vcd_api_version >= VCDApiVersion(vcd_client.ApiVersion.VERSION_36.value):  # noqa: E501
+            resource_url_relative_path += "?invokeHooks=false"
+
+        response = self._cloudapi_client.do_request(
+            method=RequestMethod.DELETE,
+            cloudapi_version=CloudApiVersion.VERSION_1_0_0,
+            resource_url_relative_path=resource_url_relative_path,  # noqa: E501
+            return_response_headers=is_request_async)
+        if is_request_async:
+            return response[0], response[1][HttpResponseHeader.LOCATION.value]
+        return response
+
+    @handle_entity_service_exception
     def resolve_entity(self, entity_id: str, entity_type_id: str = None) -> DefEntity:  # noqa: E501
         """Resolve the entity.
 

@@ -302,13 +302,13 @@ def cluster_force_delete(data: dict, op_ctx: ctx.OperationContext):
     :return: Dict
     """
     cluster_id = data[RequestKey.CLUSTER_ID]
+    def_entity_service = entity_service.DefEntityService(op_ctx.cloudapi_client)  # noqa: E501
+    def_entity: common_models.DefEntity = def_entity_service.get_entity(cluster_id)  # noqa: E501
     op_ctx.entity_id = cluster_id
     svc = cluster_service_factory.ClusterServiceFactory(_get_request_context(op_ctx)).get_cluster_service()  # noqa: E501
     task_href = svc.force_delete_cluster(cluster_id)
-    return_dict = {
-        "task_href": task_href
-    }
-    return return_dict
+    def_entity.entity.status.task_href = task_href
+    return def_entity.to_dict()
 
 
 @telemetry_handler.record_user_action_telemetry(cse_operation=telemetry_constants.CseOperation.V36_NODE_DELETE)  # noqa: E501
