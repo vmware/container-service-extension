@@ -1070,7 +1070,6 @@ class ClusterService(abstract_broker.AbstractBroker):
             unexpose_success: bool = False
             if unexpose:
                 org_name: str = curr_entity.entity.metadata.org_name
-                ovdc_name: str = curr_entity.entity.metadata.ovdc_name
                 network_name: str = curr_entity.entity.spec.settings.network
                 try:
                     # Get internal ip

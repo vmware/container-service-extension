@@ -712,7 +712,6 @@ class ClusterService(abstract_broker.AbstractBroker):
         org_name = ''
         ovdc_name = ''
         vapp = None
-        expose_ip: str = ''
         network_name = ''
         client_v36 = self.context.get_client(api_version=DEFAULT_API_VERSION)
         curr_rde: Optional[Union[common_models.DefEntity, Tuple[common_models.DefEntity, dict]]] = None  # noqa: E501
@@ -727,8 +726,8 @@ class ClusterService(abstract_broker.AbstractBroker):
             ovdc_name = input_native_entity.metadata.virtual_data_center_name
             num_workers = input_native_entity.spec.topology.workers.count
             control_plane_sizing_class = input_native_entity.spec.topology.control_plane.sizing_class  # noqa: E501
-            control_plane_cpu_count = input_native_entity.spec.topology.control_plane.cpu # noqa: E501
-            control_plane_memory_mb = input_native_entity.spec.topology.control_plane.memory # noqa: E501
+            control_plane_cpu_count = input_native_entity.spec.topology.control_plane.cpu  # noqa: E501
+            control_plane_memory_mb = input_native_entity.spec.topology.control_plane.memory  # noqa: E501
             worker_sizing_class = input_native_entity.spec.topology.workers.sizing_class  # noqa: E501
             worker_cpu_count = input_native_entity.spec.topology.workers.cpu
             worker_memory_mb = input_native_entity.spec.topology.workers.memory
@@ -1123,7 +1122,6 @@ class ClusterService(abstract_broker.AbstractBroker):
             changes: dict = {}
             if unexpose:
                 org_name: str = curr_native_entity.metadata.org_name
-                ovdc_name: str = curr_native_entity.metadata.virtual_data_center_name  # noqa: E501
                 network_name: str = current_spec.settings.ovdc_network
                 try:
                     # We need to get the internal IP via script and not rely

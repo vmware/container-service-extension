@@ -1218,7 +1218,6 @@ class ClusterService(abstract_broker.AbstractBroker):
             changes: dict = {}
             if unexpose:
                 org_name: str = curr_native_entity.metadata.org_name
-                ovdc_name: str = curr_native_entity.metadata.virtual_data_center_name  # noqa: E501
                 network_name: str = current_spec.settings.ovdc_network
                 try:
                     # We need to get the internal IP via script and not rely
