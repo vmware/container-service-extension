@@ -1805,13 +1805,15 @@ class ClusterService(abstract_broker.AbstractBroker):
             # Checking ACL requires privileged client
             entity_type_acl_svc = acl_service.EntityTypeACLService(
                 entity_type_id=rde_entity.entityType,
-                client=self.context.get_sysadmin_client(api_version=DEFAULT_API_VERSION)  # noqa: E501
+                client=self.context.get_sysadmin_client(api_version=DEFAULT_API_VERSION),  # noqa: E501
+                logger_debug=LOGGER
             )
-            has_force_delete_acl = entity_type_acl_svc.has_acl_set_for_force_delete([org_urn, user_urn])  # noqa: E501
+            member_ids_for_acl_check = [org_urn, user_urn]
+            has_force_delete_acl = entity_type_acl_svc.has_acl_set_for_force_delete(member_ids_for_acl_check)  # noqa: E501
 
             if not has_force_delete_acl:
                 missing_rights_msg += f"Entity Type ACL required for  " \
-                    f"one of {set([org_urn, user_urn])};"
+                    f"one of {set(member_ids_for_acl_check)};"
 
             if len(missing_rights) > 0:
                 missing_rights_msg += f"{missing_rights}"
