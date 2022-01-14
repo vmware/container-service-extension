@@ -1897,8 +1897,7 @@ class ClusterService(abstract_broker.AbstractBroker):
             stack_trace=''):
         """Update task or create it if it does not exist.
 
-        This function should only be used in the x_async functions, or in the
-        6 common broker functions to create the required task.
+        This function should only be used in the x_async functions.
         When this function is used, it logs in the sys admin client if it is
         not already logged in, but it does not log out. This is because many
         _update_task() calls are used in sequence until the task succeeds or

@@ -783,7 +783,7 @@ def get_missing_delete_cluster_rights(
 
     :param vcd_client.Client client: current client
     :param bool is_cluster_owner: true if the client is cluster owner
-    :param logging.Logger logger: ogger to record errors.
+    :param logging.Logger logger: logger to record errors.
     :return: all missing rights
     :rtype: set
     :raises: OperationNotSupportedException
@@ -806,6 +806,7 @@ def get_missing_delete_cluster_rights(
         cse_native_full_rights = server_constants.CSE_NATIVE_CLUSTER_ADMINISTRATOR_FULL_ACCESS_RIGHTS | server_constants.CSE_NATIVE_CLUSTER_FULL_ACCESS_RIGHTS  # noqa: E501
         missing_rights: set = delete_rights - set(role_rights)
 
+        # Either of full control or admin full control check of cluster owner
         if is_cluster_owner and len(cse_native_full_rights & set(role_rights)) > 0:  # noqa: E501
             missing_rights = missing_rights - cse_native_full_rights
     except OperationNotSupportedException as err:
@@ -814,5 +815,5 @@ def get_missing_delete_cluster_rights(
     except Exception as err:
         logger.warning(f"Cannot determine the rights associated with role:{role_name} {err}")  # noqa: E501
         raise
-
+    logger.debug(f"missing rights of role:{role_name}--{missing_rights}")
     return missing_rights

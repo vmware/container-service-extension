@@ -2173,8 +2173,8 @@ class ClusterService(abstract_broker.AbstractBroker):
             stack_trace=''):
         """Update task or create it if it does not exist.
 
-        This function should only be used in the x_async functions, or in the
-        6 common broker functions to create the required task.
+        This function should only be used in the x_async functions.
+
         When this function is used, it logs in the sys admin client if it is
         not already logged in, but it does not log out. This is because many
         _update_task() calls are used in sequence until the task succeeds or
@@ -2520,7 +2520,6 @@ def _get_template(name=None, revision=None):
             "Template name and revision both must be specified."
         )
     server_config = server_utils.get_server_runtime_config()
-    print(server_config['broker']['templates'])
     for template in server_config['broker']['templates']:
         if (template[LocalTemplateKey.NAME], str(template[LocalTemplateKey.REVISION])) == (name, str(revision)):  # noqa: E501
             return template
