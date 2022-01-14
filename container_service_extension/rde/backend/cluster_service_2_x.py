@@ -1986,15 +1986,31 @@ class ClusterService(abstract_broker.AbstractBroker):
         entity_id = rde_entity.id
         try:
             user_client = self.context.get_client(api_version=DEFAULT_API_VERSION)  # noqa: E501
-            missing_rights_msg: str = 'Missing rights:'
+            org = user_client.get_org()
+            org_urn = org.attrib['id']
+            user_urn = self.context.user.id
+            missing_rights_msg: str = 'Missing role-rights, ACL: '
             is_cluster_owner = (rde_entity.owner.name == self.context.user.name)  # noqa: E501
             missing_rights = vcd_utils.get_missing_delete_cluster_rights(
                 user_client,
                 is_cluster_owner=is_cluster_owner,
                 logger=LOGGER
             )
+            # Checking ACL requires privileged client
+            entity_type_acl_svc = acl_service.EntityTypeACLService(
+                entity_type_id=rde_entity.entityType,
+                client=self.context.get_sysadmin_client(api_version=DEFAULT_API_VERSION)  # noqa: E501
+            )
+            has_force_delete_acl = entity_type_acl_svc.has_acl_set_for_force_delete([org_urn, user_urn])  # noqa: E501
+
+            if not has_force_delete_acl:
+                missing_rights_msg += f"Entity Type ACL required for  " \
+                    f"one of {set([org_urn, user_urn])};"
+
             if len(missing_rights) > 0:
                 missing_rights_msg += f"{missing_rights}"
+
+            if len(missing_rights) > 0 or not has_force_delete_acl:
                 self._update_task_with_no_behavior(vcd_client.TaskStatus.RUNNING, message=missing_rights_msg)  # noqa: E501
                 raise Exception(missing_rights_msg)
 

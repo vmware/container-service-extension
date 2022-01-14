@@ -209,6 +209,29 @@ class ClusterAclEntry:
         return filtered_dict
 
 
+@dataclass_json(undefined=Undefined.EXCLUDE)
+@dataclass(frozen=False)
+class EntityTypeAclEntry:
+    accessLevelId: Optional[server_constants.AclAccessLevelId] = None
+    memberId: Optional[str] = None
+    id: Optional[str] = None
+    grantType: Optional[str] = None
+    objectId: Optional[str] = None
+    tenant: Optional[Tenant] = None
+    rightId: Optional[str] = None
+
+    def construct_filtered_dict(self, include=None):
+        if include is None:
+            include = []
+        orig_dict = self.to_dict()
+        include_set = set(include)
+        filtered_dict = {}
+        for key, value in orig_dict.items():
+            if key in include_set:
+                filtered_dict[key] = value
+        return filtered_dict
+
+
 # NOTE: Only used for cluster list operation to get entities by interface
 # include the following properties:
 @dataclass()

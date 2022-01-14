@@ -264,6 +264,79 @@ class ClusterACLService:
         return self.def_entity
 
 
+class EntityTypeACLService:
+    """Manages EntityType ACL information."""
+
+    def __init__(
+            self,
+            entity_type_id: str,
+            client: vcd_client.Client,
+            logger_debug: logging.Logger = NULL_LOGGER,
+            logger_wire: logging.Logger = NULL_LOGGER
+    ):
+        self._client = client
+        self._cloudapi_client = vcd_utils.get_cloudapi_client_from_vcd_client(
+            client=client,
+            logger_debug=logger_debug,
+            logger_wire=logger_wire
+        )
+        self._entity_type_id = entity_type_id
+        self._logger_debug = logger_debug
+        self._logger_wire = logger_wire
+
+    def get_entity_type_acl_response(self, page, page_size):
+        response = self._cloudapi_client.do_request(
+            method=shared_constants.RequestMethod.GET,
+            cloudapi_version=cloudapi_constants.CloudApiVersion.VERSION_1_0_0,
+            resource_url_relative_path=f"{cloudapi_constants.CloudApiResource.ENTITY_TYPES}/"  # noqa: E501
+            f"{self._entity_type_id}/"
+            f"{cloudapi_constants.CloudApiResource.ACL}"
+            f'?{shared_constants.PaginationKey.PAGE_NUMBER}={page}&'
+            f'{shared_constants.PaginationKey.PAGE_SIZE}={page_size}'
+        )
+        return response
+
+    def list_acl(self):
+        """List acl of given entity type.
+
+        :return: Generator of cluster acl entries
+        :rtype: Generator[EntityTypeAclEntry]
+        """
+        page_num = 0
+        while True:
+            page_num += 1
+            response_body = self.get_entity_type_acl_response(
+                page=page_num,
+                page_size=shared_constants.CSE_PAGINATION_DEFAULT_PAGE_SIZE
+            )
+            values = response_body[shared_constants.PaginationKey.VALUES]
+            if len(values) == 0:
+                break
+            for acl_entry in values:
+                yield common_models.EntityTypeAclEntry(**acl_entry)
+        return
+
+    def has_acl_set_for_force_delete(self, member_ids: list) -> bool:
+        """Check entity type rights for input member id(s).
+
+        This is exclusively used to check the necessary access controls
+        that are required to force delete rde by the member_id.
+
+        :param list[str] member_ids: list of members
+        :return: True or False
+        :rtype: bool
+        """
+        member_acl = [acl_entry for acl_entry in self.list_acl()
+                      if all([acl_entry.memberId in member_ids,
+                              acl_entry.accessLevelId == shared_constants.FULL_CONTROL_ACCESS_LEVEL_ID, # noqa: E501
+                              acl_entry.grantType == shared_constants.MEMBERSHIP_GRANT_TYPE  # noqa: E501
+                              ]
+                             )
+                      ]
+        self._logger_debug.debug(f"members having full control access level:{member_acl}")  # noqa: E501
+        return len(member_acl) > 0
+
+
 def form_vapp_access_setting_entry(access_level, name, href, user_id):
     vapp_access_setting = {
         shared_constants.AccessControlKey.ACCESS_LEVEL: access_level,
