@@ -802,13 +802,13 @@ def get_missing_delete_cluster_rights(
 
         logger.debug(f"rights of role:{role_name}--{role_rights}")
 
-        delete_rights = server_constants.CSE_NATIVE_CLUSTER_ADMINISTRATOR_FULL_ACCESS_RIGHTS | server_constants.VAPP_DELETE_RIGHTS | server_constants.DNAT_DELETE_RIGHTS  # noqa: E501
-        cse_native_full_rights = server_constants.CSE_NATIVE_CLUSTER_ADMINISTRATOR_FULL_ACCESS_RIGHTS | server_constants.CSE_NATIVE_CLUSTER_FULL_ACCESS_RIGHTS  # noqa: E501
+        delete_rights: set = server_constants.CSE_NATIVE_CLUSTER_ADMINISTRATOR_FULL_ACCESS_RIGHTS | server_constants.VAPP_DELETE_RIGHTS | server_constants.DNAT_DELETE_RIGHTS  # noqa: E501
+        cse_native_full_rights: set = server_constants.CSE_NATIVE_CLUSTER_ADMINISTRATOR_FULL_ACCESS_RIGHTS | server_constants.CSE_NATIVE_CLUSTER_FULL_ACCESS_RIGHTS  # noqa: E501
         missing_rights: set = delete_rights - set(role_rights)
 
         # Either of full control or admin full control check of cluster owner
         if is_cluster_owner and len(cse_native_full_rights & set(role_rights)) > 0:  # noqa: E501
-            missing_rights = missing_rights - cse_native_full_rights
+            missing_rights: set = missing_rights - cse_native_full_rights
     except OperationNotSupportedException as err:
         logger.warning(f"Cannot determine the rights associated with role:{role_name} {err}")  # noqa: E501
         raise
