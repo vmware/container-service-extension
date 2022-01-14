@@ -503,7 +503,7 @@ class ClusterService(abstract_broker.AbstractBroker):
             status=BehaviorTaskStatus.RUNNING.value, progress=5)
 
     def force_delete_cluster(self, cluster_id):
-        """Start the delete cluster operation."""
+        """Force the cluster delete operation."""
         rde_entity: common_models.DefEntity = self.entity_svc.get_entity(
             cluster_id)
         curr_native_entity: rde_2_x.NativeEntity = rde_entity.entity
