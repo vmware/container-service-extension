@@ -12,11 +12,12 @@ from typing import Union
 from pyvcloud.vcd.vcd_api_version import VCDApiVersion
 import semantic_version
 
-from container_service_extension.common.constants.shared_constants import ClusterEntityKind  # noqa: E501
+import container_service_extension.common.constants.shared_constants as shared_constants  # noqa: E501
 import container_service_extension.common.utils.core_utils as core_utils
 import container_service_extension.common.utils.server_utils as server_utils
 import container_service_extension.exception.exceptions as exceptions
 from container_service_extension.lib.cloudapi.cloudapi_client import CloudApiClient  # noqa: E501
+from container_service_extension.logging.logger import NULL_LOGGER
 import container_service_extension.rde.constants as def_constants
 from container_service_extension.rde.models.abstractNativeEntity import AbstractNativeEntity  # noqa: E501
 import container_service_extension.rde.models.rde_1_0_0 as rde_1_0_0
@@ -249,7 +250,7 @@ def raise_error_if_unsupported_payload_version(payload_version: str):
 
 
 def raise_error_if_tkgm_cluster_operation(cluster_kind: str):
-    if cluster_kind and cluster_kind == ClusterEntityKind.TKG_M.value:
+    if cluster_kind and cluster_kind == shared_constants.ClusterEntityKind.TKG_M.value:  # noqa: E501
         raise exceptions.BadRequestError(f"This operation is not supported for {cluster_kind} clusters")  # noqa: E501
 
 
@@ -276,3 +277,33 @@ def convert_runtime_rde_to_input_rde_version_format(runtime_rde: AbstractNativeE
     InputNativeEntityClass: Type[AbstractNativeEntity] = rde_factory.get_rde_model(input_rde_version)  # noqa: E501
     output_entity = InputNativeEntityClass.from_native_entity(runtime_rde)
     return output_entity
+
+
+def has_acl_set_for_force_delete(entity_type_id, client, member_ids: list, logger=NULL_LOGGER) -> bool:  # noqa: E501
+    """Check entity type rights for input member id(s).
+
+    This is exclusively used to check the necessary access controls
+    that are required to force delete rde by the member_id.
+
+    :param str entity_type_id: entity type id
+    :param vcd_client.Client client: vcd client
+    :param list[str] member_ids: list of members
+    :param logging.Logger logger: logger
+    :return: True or False
+    :rtype: bool
+    """
+    from container_service_extension.rde.acl_service import EntityTypeACLService  # noqa: E501
+    entity_type_acl_svc = EntityTypeACLService(
+        entity_type_id=entity_type_id,
+        client=client,
+        logger_debug=logger
+    )
+    member_acl = [acl_entry for acl_entry in entity_type_acl_svc.list_acl()
+                  if all([acl_entry.memberId in member_ids,
+                          acl_entry.accessLevelId == shared_constants.FULL_CONTROL_ACCESS_LEVEL_ID, # noqa: E501
+                          acl_entry.grantType == shared_constants.MEMBERSHIP_GRANT_TYPE  # noqa: E501
+                          ]
+                         )
+                  ]
+    logger.debug(f"members having full control access level:{member_acl}")  # noqa: E501
+    return len(member_acl) > 0

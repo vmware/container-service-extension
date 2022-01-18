@@ -64,7 +64,7 @@ UNSUPPORTED_SUBCOMMAND_OPTIONS_BY_VERSION = {
     vcd_client.ApiVersion.VERSION_34.value: {
         cli_constants.GroupKey.CLUSTER: {
             cli_constants.CommandNameKey.CREATE: ['sizing_class'],
-            cli_constants.CommandNameKey.DELETE: ['k8_runtime', 'cluster_id'],
+            cli_constants.CommandNameKey.DELETE: ['k8_runtime', 'cluster_id', 'force'],  # noqa: E501
             cli_constants.CommandNameKey.INFO: ['k8_runtime', 'cluster_id'],
             cli_constants.CommandNameKey.UPGRADE: ['k8_runtime'],
             cli_constants.CommandNameKey.UPGRADE_PLAN: ['k8_runtime'],

@@ -774,7 +774,7 @@ def wait_for_completion_of_post_customization_procedure(
     raise exceptions.PostCustomizationTimeoutError
 
 
-def get_missing_delete_cluster_rights(
+def get_missing_rights_for_cluster_force_delete(
         client: vcd_client.Client,
         is_cluster_owner=False,
         logger=NULL_LOGGER) -> set:
@@ -790,6 +790,7 @@ def get_missing_delete_cluster_rights(
     :raises: Exception for any unexpected errors
     """
     missing_rights = set()
+    role_name = ''
     try:
         role_name = get_user_role_name(client)
         org_obj = vcd_org.Org(client, resource=client.get_org())
@@ -801,14 +802,17 @@ def get_missing_delete_cluster_rights(
             role_rights.update(right_dict.values())
 
         logger.debug(f"rights of role:{role_name}--{role_rights}")
-
-        delete_rights: set = server_constants.CSE_NATIVE_CLUSTER_ADMINISTRATOR_FULL_ACCESS_RIGHTS | server_constants.VAPP_DELETE_RIGHTS | server_constants.DNAT_DELETE_RIGHTS  # noqa: E501
-        missing_rights: set = delete_rights - role_rights
-
-        # Either of full control or admin full control check of cluster owner
-        cse_native_full_rights: set = server_constants.CSE_NATIVE_CLUSTER_ADMINISTRATOR_FULL_ACCESS_RIGHTS | server_constants.CSE_NATIVE_CLUSTER_FULL_ACCESS_RIGHTS  # noqa: E501
-        if is_cluster_owner and len(cse_native_full_rights & role_rights) > 0:  # noqa: E501
-            missing_rights: set = missing_rights - cse_native_full_rights
+        missing_rights = set()
+        if not server_constants.VAPP_DELETE_RIGHTS.issubset(role_rights):
+            missing_rights.update(server_constants.VAPP_DELETE_RIGHTS)
+        if not server_constants.DNAT_DELETE_RIGHTS.issubset(role_rights):
+            missing_rights.update(server_constants.DNAT_DELETE_RIGHTS)
+        if is_cluster_owner:
+            if not server_constants.CSE_NATIVE_CLUSTER_FULL_ACCESS_RIGHTS.issubset(role_rights) and not server_constants.CSE_NATIVE_CLUSTER_ADMINISTRATOR_FULL_ACCESS_RIGHTS.issubset(role_rights):  # noqa: E501
+                missing_rights.update(server_constants.CSE_NATIVE_CLUSTER_FULL_ACCESS_RIGHTS)  # noqa: E501
+        else:
+            if not server_constants.CSE_NATIVE_CLUSTER_ADMINISTRATOR_FULL_ACCESS_RIGHTS.issubset(role_rights):  # noqa: E501
+                missing_rights.update(server_constants.CSE_NATIVE_CLUSTER_ADMINISTRATOR_FULL_ACCESS_RIGHTS)  # noqa: E501
     except OperationNotSupportedException as err:
         logger.warning(f"Cannot determine the rights associated with role:{role_name} {err}")  # noqa: E501
         raise

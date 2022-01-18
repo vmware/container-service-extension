@@ -316,26 +316,6 @@ class EntityTypeACLService:
                 yield common_models.EntityTypeAclEntry(**acl_entry)
         return
 
-    def has_acl_set_for_force_delete(self, member_ids: list) -> bool:
-        """Check entity type rights for input member id(s).
-
-        This is exclusively used to check the necessary access controls
-        that are required to force delete rde by the member_id.
-
-        :param list[str] member_ids: list of members
-        :return: True or False
-        :rtype: bool
-        """
-        member_acl = [acl_entry for acl_entry in self.list_acl()
-                      if all([acl_entry.memberId in member_ids,
-                              acl_entry.accessLevelId == shared_constants.FULL_CONTROL_ACCESS_LEVEL_ID, # noqa: E501
-                              acl_entry.grantType == shared_constants.MEMBERSHIP_GRANT_TYPE  # noqa: E501
-                              ]
-                             )
-                      ]
-        self._logger_debug.debug(f"members having full control access level:{member_acl}")  # noqa: E501
-        return len(member_acl) > 0
-
 
 def form_vapp_access_setting_entry(access_level, name, href, user_id):
     vapp_access_setting = {

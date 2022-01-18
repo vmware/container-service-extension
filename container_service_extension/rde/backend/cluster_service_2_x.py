@@ -1991,23 +1991,22 @@ class ClusterService(abstract_broker.AbstractBroker):
             user_urn = self.context.user.id
             missing_rights_msg: str = 'Missing role-rights, ACL: '
             is_cluster_owner = (rde_entity.owner.name == self.context.user.name)  # noqa: E501
-            missing_rights = vcd_utils.get_missing_delete_cluster_rights(
+            missing_rights = vcd_utils.get_missing_rights_for_cluster_force_delete(  # noqa: E501
                 user_client,
                 is_cluster_owner=is_cluster_owner,
                 logger=LOGGER
             )
-            # Checking ACL requires privileged client
-            entity_type_acl_svc = acl_service.EntityTypeACLService(
+
+            member_ids_for_acl_check = [org_urn, user_urn]
+            has_force_delete_acl = def_utils.has_acl_set_for_force_delete(  # noqa: E501
                 entity_type_id=rde_entity.entityType,
                 client=self.context.get_sysadmin_client(api_version=DEFAULT_API_VERSION),  # noqa: E501
-                logger_debug=LOGGER
-            )
-            member_ids_for_acl_check = [org_urn, user_urn]
-            has_force_delete_acl = entity_type_acl_svc.has_acl_set_for_force_delete(member_ids_for_acl_check)  # noqa: E501
+                member_ids=member_ids_for_acl_check)
 
             if not has_force_delete_acl:
-                missing_rights_msg += f"Entity Type ACL required for  " \
-                    f"one of {set(member_ids_for_acl_check)};"
+                missing_rights_msg += "To force delete cluster, Full" \
+                    " Access ACL for entity cse:nativeCluster:2.0.0 must be" \
+                    " granted to either the user or the org."
 
             if len(missing_rights) > 0:
                 missing_rights_msg += f"{missing_rights}"
