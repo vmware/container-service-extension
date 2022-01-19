@@ -13,6 +13,7 @@ import urllib
 import pkg_resources
 import pyvcloud.vcd.client as vcd_client
 import pyvcloud.vcd.org as vcd_org
+import pyvcloud.vcd.task as vcd_task
 import pyvcloud.vcd.vapp as vcd_vapp
 from pyvcloud.vcd.vdc import VDC
 import pyvcloud.vcd.vm as vcd_vm
@@ -78,7 +79,9 @@ class ClusterService(abstract_broker.AbstractBroker):
         super().__init__(ctx.op_ctx)
 
         # TODO find an elegant way to dynamically pick the module rde_2_x
-
+        self.task = None
+        self.task_resource = None
+        self.task_update_lock = threading.Lock()
         self.task_id = ctx.task_id
         client_v36 = self.context.get_client(api_version=DEFAULT_API_VERSION)
         self.task_href = client_v36.get_api_uri() + f"/task/{self.task_id}"
@@ -498,6 +501,28 @@ class ClusterService(abstract_broker.AbstractBroker):
         return self.mqtt_publisher.construct_behavior_payload(
             message=f"{CLUSTER_DELETE_OPERATION_MESSAGE} ({cluster_id})",
             status=BehaviorTaskStatus.RUNNING.value, progress=5)
+
+    def force_delete_cluster(self, cluster_id):
+        """Force the cluster delete operation."""
+        rde_entity: common_models.DefEntity = self.entity_svc.get_entity(
+            cluster_id)
+        curr_native_entity: rde_2_x.NativeEntity = rde_entity.entity
+        cluster_name: str = rde_entity.name
+        org_name: str = curr_native_entity.metadata.org_name
+        ovdc_name: str = curr_native_entity.metadata.virtual_data_center_name
+        msg = f"Deleting cluster '{cluster_name}' ({cluster_id})"
+        self._update_task_with_no_behavior(
+            vcd_client.TaskStatus.RUNNING,
+            message=msg
+        )
+        self.context.is_async = True
+        self._force_delete_cluster_async(
+            cluster_name=cluster_name,
+            org_name=org_name,
+            ovdc_name=ovdc_name,
+            rde_entity=rde_entity
+        )
+        return self.task_resource.get('href')
 
     def get_cluster_upgrade_plan(self, cluster_id: str):
         """Get the template names/revisions that the cluster can upgrade to.
@@ -1952,6 +1977,120 @@ class ClusterService(abstract_broker.AbstractBroker):
                               message=msg,
                               error_message=str(err))
 
+    @thread_utils.run_async
+    def _force_delete_cluster_async(
+            self,
+            cluster_name: str,
+            org_name: str,
+            ovdc_name: str,
+            rde_entity: common_models.DefEntity):
+        """Force Delete the cluster asynchronously.
+
+        :param cluster_name: Name of the cluster to be deleted.
+        :param org_name: Name of the org where the cluster resides.
+        :param ovdc_name: Name of the ovdc where the cluster resides.
+        """
+        entity_id = rde_entity.id
+        try:
+            user_client = self.context.get_client(api_version=DEFAULT_API_VERSION)  # noqa: E501
+            org = user_client.get_org()
+            org_urn = org.attrib['id']
+            user_urn = self.context.user.id
+            missing_rights_msg: str = 'Missing role-rights, ACL: '
+            is_cluster_owner = (rde_entity.owner.name == self.context.user.name)  # noqa: E501
+            missing_rights = vcd_utils.get_missing_rights_for_cluster_force_delete(  # noqa: E501
+                user_client,
+                is_cluster_owner=is_cluster_owner,
+                logger=LOGGER
+            )
+
+            member_ids_for_acl_check = [org_urn, user_urn]
+            has_force_delete_acl = def_utils.has_acl_set_for_force_delete(  # noqa: E501
+                entity_type_id=rde_entity.entityType,
+                client=self.context.get_sysadmin_client(api_version=DEFAULT_API_VERSION),  # noqa: E501
+                member_ids=member_ids_for_acl_check)
+
+            if not has_force_delete_acl:
+                missing_rights_msg += "To force delete cluster, Full" \
+                    " Access ACL for entity cse:nativeCluster:2.0.0 must be" \
+                    " granted to either the user or the org."
+
+            if len(missing_rights) > 0:
+                missing_rights_msg += f"{missing_rights}"
+
+            if len(missing_rights) > 0 or not has_force_delete_acl:
+                self._update_task_with_no_behavior(vcd_client.TaskStatus.RUNNING, message=missing_rights_msg)  # noqa: E501
+                raise Exception(missing_rights_msg)
+
+            msg = f"Deleting vApp '{cluster_name}'"
+            self._update_task_with_no_behavior(vcd_client.TaskStatus.RUNNING, message=msg)  # noqa: E501
+            try:
+                _delete_vapp(user_client, org_name, ovdc_name, cluster_name)
+            except Exception as err:
+                msg = f"vApp delete status:{err}"
+                self._update_task_with_no_behavior(vcd_client.TaskStatus.RUNNING, message=msg)  # noqa: E501
+                LOGGER.info(msg)
+            else:
+                msg = "vApp delete status:success"
+                self._update_task_with_no_behavior(vcd_client.TaskStatus.RUNNING, message=msg)  # noqa: E501
+                LOGGER.info(msg)
+
+            native_entity: rde_2_x.NativeEntity = rde_entity.entity
+            cluster_spec = native_entity.spec
+            exposed: bool = native_entity.status.cloud_properties.exposed
+
+            if exposed:
+                msg = f"Deleting dnat rule of '{cluster_name}'"
+                self._update_task_with_no_behavior(vcd_client.TaskStatus.RUNNING, message=msg)  # noqa: E501
+                network_name: str = cluster_spec.settings.ovdc_network
+                try:
+                    nw_exp_helper.handle_delete_expose_dnat_rule(
+                        client=user_client,
+                        org_name=org_name,
+                        ovdc_name=ovdc_name,
+                        network_name=network_name,
+                        cluster_name=cluster_name,
+                        cluster_id=entity_id)
+                except Exception as err:
+                    msg = f"Delete dnat rule of of cluster '{cluster_name}' status:{err}"  # noqa: E501
+                    LOGGER.error(msg, exc_info=True)
+                    self._update_task_with_no_behavior(vcd_client.TaskStatus.RUNNING, message=msg)  # noqa: E501
+                else:
+                    msg = f"Delete dnat rule of cluster '{cluster_name}' status:success "  # noqa: E501
+                    LOGGER.info(msg)
+                    self._update_task_with_no_behavior(vcd_client.TaskStatus.RUNNING, message=msg)  # noqa: E501
+
+            try:
+                msg = f"Deleting rde of '{cluster_name}'"
+                self._update_task_with_no_behavior(vcd_client.TaskStatus.RUNNING, message=msg)  # noqa: E501
+                self.entity_svc.resolve_entity(entity_id=entity_id)
+                self.entity_svc.force_delete_entity(entity_id)  # noqa: E501
+            except Exception as err:
+                msg = f"Delete rde of {cluster_name} ({entity_id}) status: {err}"  # noqa: E501
+                self._update_task_with_no_behavior(
+                    vcd_client.TaskStatus.ERROR,
+                    message=msg,
+                    error_message=str(err)
+                )
+                LOGGER.error(msg, exc_info=True)
+            else:
+                msg = f"Deleting rde of '{cluster_name} status: success'"
+                self._update_task_with_no_behavior(vcd_client.TaskStatus.RUNNING, message=msg)  # noqa: E501
+                LOGGER.info(msg)
+
+            msg = f"Completed force deletion of '{cluster_name}'"
+            self._update_task_with_no_behavior(vcd_client.TaskStatus.SUCCESS, message=msg)  # noqa: E501
+
+        except Exception as err:
+            msg = f"Force delete failed:{err}"
+            self._update_task_with_no_behavior(
+                vcd_client.TaskStatus.ERROR,
+                message=msg,
+                error_message=str(err)
+            )
+        finally:
+            self.context.end()
+
     def _sync_def_entity(self, cluster_id: str,
                          vapp=None,
                          changes: dict = None):
@@ -2033,6 +2172,65 @@ class ClusterService(abstract_broker.AbstractBroker):
         LOGGER.debug(f"Sending behavior response:{response_json}")
         self.mqtt_publisher.send_response(response_json)
         self.task_status = status.value
+
+    def _update_task_with_no_behavior(
+            self,
+            status,
+            message='',
+            error_message=None,
+            stack_trace=''):
+        """Update task or create it if it does not exist.
+
+        This function should only be used in the x_async functions.
+
+        When this function is used, it logs in the sys admin client if it is
+        not already logged in, but it does not log out. This is because many
+        _update_task() calls are used in sequence until the task succeeds or
+        fails. Once the task is updated to a success or failure state, then
+        the sys admin client should be logged out.
+
+        Another reason for decoupling sys admin logout and this function is
+        because if any unknown errors occur during an operation, there should
+        be a finally clause that takes care of logging out.
+        """
+        user_context_v36 = self.context.get_user_context(
+            api_version=DEFAULT_API_VERSION)
+        client_v36 = user_context_v36.client
+        if not client_v36.is_sysadmin():
+            stack_trace = ''
+        sysadmin_client_v36 = self.context.get_sysadmin_client(
+            api_version=DEFAULT_API_VERSION)
+        if self.task is None:
+            self.task = vcd_task.Task(sysadmin_client_v36)
+
+        org = vcd_utils.get_org(client_v36, user_context_v36.org_name)
+        user_href = org.get_user(user_context_v36.name).get('href')
+
+        task_href = None
+        if self.task_resource is not None:
+            task_href = self.task_resource.get('href')
+            curr_task_status = self.task_resource.get('status')
+            if curr_task_status == vcd_client.TaskStatus.SUCCESS.value or \
+                    curr_task_status == vcd_client.TaskStatus.ERROR.value:
+                # TODO Log the message here.
+                return
+        self.task_resource = self.task.update(
+            status=status.value,
+            namespace='vcloud.cse',
+            operation=message,
+            operation_name='cluster operation',
+            details='',
+            progress=None,
+            owner_href=user_context_v36.org_href,
+            owner_name=user_context_v36.org_name,
+            owner_type='application/vnd.vmware.vcloud.org+xml',
+            user_href=user_href,
+            user_name=user_context_v36.name,
+            org_href=user_context_v36.org_href,
+            task_href=task_href,
+            error_message=error_message,
+            stack_trace=stack_trace
+        )
 
     def _replace_kubeconfig_expose_ip(self, internal_ip: str, cluster_id: str,
                                       vapp: vcd_vapp.VApp):

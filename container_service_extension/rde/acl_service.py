@@ -264,6 +264,59 @@ class ClusterACLService:
         return self.def_entity
 
 
+class EntityTypeACLService:
+    """Manages EntityType ACL information."""
+
+    def __init__(
+            self,
+            entity_type_id: str,
+            client: vcd_client.Client,
+            logger_debug: logging.Logger = NULL_LOGGER,
+            logger_wire: logging.Logger = NULL_LOGGER
+    ):
+        self._client = client
+        self._cloudapi_client = vcd_utils.get_cloudapi_client_from_vcd_client(
+            client=client,
+            logger_debug=logger_debug,
+            logger_wire=logger_wire
+        )
+        self._entity_type_id = entity_type_id
+        self._logger_debug = logger_debug
+        self._logger_wire = logger_wire
+
+    def get_entity_type_acl_response(self, page, page_size):
+        response = self._cloudapi_client.do_request(
+            method=shared_constants.RequestMethod.GET,
+            cloudapi_version=cloudapi_constants.CloudApiVersion.VERSION_1_0_0,
+            resource_url_relative_path=f"{cloudapi_constants.CloudApiResource.ENTITY_TYPES}/"  # noqa: E501
+            f"{self._entity_type_id}/"
+            f"{cloudapi_constants.CloudApiResource.ACL}"
+            f'?{shared_constants.PaginationKey.PAGE_NUMBER}={page}&'
+            f'{shared_constants.PaginationKey.PAGE_SIZE}={page_size}'
+        )
+        return response
+
+    def list_acl(self):
+        """List acl of given entity type.
+
+        :return: Generator of cluster acl entries
+        :rtype: Generator[EntityTypeAclEntry]
+        """
+        page_num = 0
+        while True:
+            page_num += 1
+            response_body = self.get_entity_type_acl_response(
+                page=page_num,
+                page_size=shared_constants.CSE_PAGINATION_DEFAULT_PAGE_SIZE
+            )
+            values = response_body[shared_constants.PaginationKey.VALUES]
+            if len(values) == 0:
+                break
+            for acl_entry in values:
+                yield common_models.EntityTypeAclEntry(**acl_entry)
+        return
+
+
 def form_vapp_access_setting_entry(access_level, name, href, user_id):
     vapp_access_setting = {
         shared_constants.AccessControlKey.ACCESS_LEVEL: access_level,

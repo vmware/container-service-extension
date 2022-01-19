@@ -10,7 +10,9 @@ import urllib
 
 import pyvcloud.vcd.client as vcd_client
 from pyvcloud.vcd.exceptions import EntityNotFoundException
+from pyvcloud.vcd.exceptions import OperationNotSupportedException
 import pyvcloud.vcd.org as vcd_org
+import pyvcloud.vcd.role as vcd_role
 from pyvcloud.vcd.utils import extract_id
 from pyvcloud.vcd.utils import get_admin_href
 from pyvcloud.vcd.utils import to_dict
@@ -770,3 +772,52 @@ def wait_for_completion_of_post_customization_procedure(
         time.sleep(poll_frequency)
     logger.error(f"VM Post guest customization failed due to timeout({timeout} sec)")  # noqa: E501
     raise exceptions.PostCustomizationTimeoutError
+
+
+def get_missing_rights_for_cluster_force_delete(
+        client: vcd_client.Client,
+        is_cluster_owner=False,
+        logger=NULL_LOGGER) -> set:
+    """
+    Find the missing rights for force-deleting the cluster.
+
+    :param vcd_client.Client client: current client
+    :param bool is_cluster_owner: true if the client is cluster owner
+    :param logging.Logger logger: logger to record errors.
+    :return: all missing rights
+    :rtype: set
+    :raises: OperationNotSupportedException
+    :raises: Exception for any unexpected errors
+    """
+    missing_rights = set()
+    role_name = ''
+    try:
+        role_name = get_user_role_name(client)
+        org_obj = vcd_org.Org(client, resource=client.get_org())
+        role_obj = vcd_role.Role(client, resource=org_obj.get_role_resource(role_name))  # noqa: E501
+        logger.debug(f"role_name:{role_name}")
+        role_rights = set()
+
+        for right_dict in role_obj.list_rights():
+            role_rights.update(right_dict.values())
+
+        logger.debug(f"rights of role:{role_name}--{role_rights}")
+        missing_rights = set()
+        if not server_constants.VAPP_DELETE_RIGHTS.issubset(role_rights):
+            missing_rights.update(server_constants.VAPP_DELETE_RIGHTS)
+        if not server_constants.DNAT_DELETE_RIGHTS.issubset(role_rights):
+            missing_rights.update(server_constants.DNAT_DELETE_RIGHTS)
+        if is_cluster_owner:
+            if not server_constants.CSE_NATIVE_CLUSTER_FULL_ACCESS_RIGHTS.issubset(role_rights) and not server_constants.CSE_NATIVE_CLUSTER_ADMINISTRATOR_FULL_ACCESS_RIGHTS.issubset(role_rights):  # noqa: E501
+                missing_rights.update(server_constants.CSE_NATIVE_CLUSTER_FULL_ACCESS_RIGHTS)  # noqa: E501
+        else:
+            if not server_constants.CSE_NATIVE_CLUSTER_ADMINISTRATOR_FULL_ACCESS_RIGHTS.issubset(role_rights):  # noqa: E501
+                missing_rights.update(server_constants.CSE_NATIVE_CLUSTER_ADMINISTRATOR_FULL_ACCESS_RIGHTS)  # noqa: E501
+    except OperationNotSupportedException as err:
+        logger.warning(f"Cannot determine the rights associated with role:{role_name} {err}")  # noqa: E501
+        raise
+    except Exception as err:
+        logger.warning(f"Cannot determine the rights associated with role:{role_name} {err}")  # noqa: E501
+        raise
+    logger.debug(f"missing rights of role:{role_name}--{missing_rights}")
+    return missing_rights

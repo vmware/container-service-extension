@@ -291,6 +291,26 @@ def cluster_delete(data: dict, op_ctx: ctx.OperationContext):
     return def_entity.to_dict()
 
 
+def cluster_force_delete(data: dict, op_ctx: ctx.OperationContext):
+    """Request handler for force cluster delete operation.
+
+    Required data: cluster_name
+    Optional data and default values: org_name=None, ovdc_name=None
+
+    (data validation handled in broker)
+
+    :return: Dict
+    """
+    cluster_id = data[RequestKey.CLUSTER_ID]
+    def_entity_service = entity_service.DefEntityService(op_ctx.cloudapi_client)  # noqa: E501
+    def_entity: common_models.DefEntity = def_entity_service.get_entity(cluster_id)  # noqa: E501
+    op_ctx.entity_id = cluster_id
+    svc = cluster_service_factory.ClusterServiceFactory(_get_request_context(op_ctx)).get_cluster_service()  # noqa: E501
+    task_href = svc.force_delete_cluster(cluster_id)
+    def_entity.entity.status.task_href = task_href
+    return def_entity.to_dict()
+
+
 @telemetry_handler.record_user_action_telemetry(cse_operation=telemetry_constants.CseOperation.V36_NODE_DELETE)  # noqa: E501
 @request_utils.cluster_api_exception_handler
 def nfs_node_delete(data, op_ctx: ctx.OperationContext):

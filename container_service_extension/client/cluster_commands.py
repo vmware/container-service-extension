@@ -101,6 +101,17 @@ Examples
 @click.confirmation_option(prompt='Are you sure you want to delete the '
                                   'cluster?')
 @click.option(
+    '-f',
+    '--force',
+    'force',
+    is_flag=True,
+    required=False,
+    default=False,
+    help='Force delete the native entity type cluster regardless of the '
+         'cluster state. Removes Runtime Defined Entity, vApp and DNAT rule, '
+         'if any, that represents the cluster. Also, user needs special rights'
+         ' and ACL on entity type. Please see the online documentation.')
+@click.option(
     '-v',
     '--vdc',
     'vdc',
@@ -134,7 +145,7 @@ Examples
     help="ID of the cluster which needs to be deleted;"
          "Supported only for CSE api version >= 35."
          "ID gets precedence over cluster name.")
-def cluster_delete(ctx, name, vdc, org, k8_runtime=None, cluster_id=None):
+def cluster_delete(ctx, name, force, vdc, org, k8_runtime=None, cluster_id=None):  # noqa: E501
     """Delete a Kubernetes cluster.
 
 \b
@@ -142,6 +153,10 @@ Example
     vcd cse cluster delete mycluster --yes
         Delete cluster 'mycluster' without prompting.
         '--vdc' option can be used for faster command execution.
+\b
+    vcd cse cluster delete mycluster --force
+        Force delete the native entity type cluster regardless of the state of the cluster. Force delete removes
+        Runtime Defined Entity, vApp and DNAT rule, if any, that represents the cluster.
 \b
     vcd cse cluster delete --id urn:vcloud:entity:cse:nativeCluster:1.0.0:0632c7c7-a613-427c-b4fc-9f1247da5561
         Delete cluster with cluster ID 'urn:vcloud:entity:cse:nativeCluster:1.0.0:0632c7c7-a613-427c-b4fc-9f1247da5561'.
@@ -164,8 +179,15 @@ Example
         cluster = Cluster(client, k8_runtime=k8_runtime)
         if not client.is_sysadmin() and org is None:
             org = ctx.obj['profiles'].get('org_in_use')
-        result = cluster.delete_cluster(name, cluster_id=cluster_id,
-                                        org=org, vdc=vdc)
+        if force:
+            result = cluster.force_delete_cluster(
+                name,
+                cluster_id=cluster_id,
+                org=org, vdc=vdc
+            )
+        else:
+            result = cluster.delete_cluster(
+                name, cluster_id=cluster_id, org=org, vdc=vdc)
         if len(result) == 0:
             # TODO(CLI): Update message to use vcd task wait instead
             click.secho(f"Delete cluster operation has been initiated on "
