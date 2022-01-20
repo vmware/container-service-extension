@@ -244,7 +244,6 @@ def test_0050_config_invalid_value_types(config):
         except TypeError as e:
             PYTEST_LOGGER.debug("Validation failed as expected due "
                                 f"to invalid value: {e}")
-            pass
 
 
 def test_0060_config_valid(config):
@@ -371,9 +370,7 @@ def test_0110_cse_check_valid_installation(config):
     """
     try:
         cmd = f"check {env.ACTIVE_CONFIG_FILEPATH} --skip-config-decryption --check-install"  # noqa: E501
-        result = env.CLI_RUNNER.invoke(cli,
-                                       cmd.split(),
-                                       catch_exceptions=False)
+        result = env.CLI_RUNNER.invoke(cli, cmd.split(), catch_exceptions=False)  # noqa: E501
         PYTEST_LOGGER.debug(f"Executing command: {cmd}")
         PYTEST_LOGGER.debug(f"Exit code: {result.exit_code}")
         PYTEST_LOGGER.debug(f"Output: {result.output}")
@@ -411,8 +408,8 @@ def test_0120_cse_run(config):
             PYTEST_LOGGER.debug(f"Executing command: {cmd}")
             PYTEST_LOGGER.debug(msg)
             assert False, msg
-        except subprocess.TimeoutExpired:
-            pass
+        except subprocess.TimeoutExpired as e:
+            PYTEST_LOGGER.debug(f"CSE run command execution timedout: {e}")
         finally:
             try:
                 if p:
@@ -420,8 +417,8 @@ def test_0120_cse_run(config):
                         subprocess.run(f"taskkill /f /pid {p.pid} /t")
                     else:
                         p.terminate()
-            except OSError:
-                pass
+            except OSError as e:
+                PYTEST_LOGGER.debug(f"Operating System exception occurred: {e}")  # noqa: E501
 
 
 def test_0130_cse_encrypt_decrypt_with_password_from_stdin(config):
