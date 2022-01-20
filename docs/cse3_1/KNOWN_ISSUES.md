@@ -37,10 +37,25 @@ Delete operation on a cluster that is in an error state (`RDE.state = RESOLUTION
 may fail with Bad request (400).
 
 **Workaround**:
+
+VCD 10.3:
+
+Login as the user who installed CSE (the user provided in CSE configuration file during `cse install`).
+
+1. RDE resolution : Perform `POST https://<vcd-fqdn>/cloudapi/1.0.0/entities/{cluster-id}/resolve`
+2. RDE deletion: Perform `DELETE https://<vcd-fqdn>/cloudapi/1.0.0/entities/{cluster-id}?invokeHooks=false`
+3. vApp deletion: Delete the corresponding vApp from UI (or) via API call.
+    - API call: Perform `GET https://<vcd-fqdn>/cloudapi/1.0.0/entities/{cluster-id}` to retrieve the
+      vApp Id, which is same as the `externalID` property in the corresponding RDE. Invoke Delete vApp API.
+    - UI: Identify the vApp with the same name as the cluster in the same Organization virtual datacenter and delete it.
+
+VCD 10.2:
+
 Login as System administrator (or) user with ADMIN_FC right on `cse:nativeCluster` entitlement
 
-1. RDE deletion: Perform `DELETE https://<vcd-fqdn>/cloudapi/1.0.0/entities/id?invokeHooks=false`
-2. vApp deletion: Delete the corresponding vApp from UI (or) via API call.
+1. RDE resolution : Perform `POST https://<vcd-fqdn>/cloudapi/1.0.0/entities/{cluster-id}/resolve`
+2. RDE deletion: Perform `DELETE https://<vcd-fqdn>/cloudapi/1.0.0/entities/{id}`
+3. vApp deletion: Delete the corresponding vApp from UI (or) via API call.
     - API call: Perform `GET https://<vcd-fqdn>/cloudapi/1.0.0/entities/<cluster-id>` to retrieve the
       vApp Id, which is same as the `externalID` property in the corresponding RDE. Invoke Delete vApp API.
     - UI: Identify the vApp with the same name as the cluster in the same Organization virtual datacenter and delete it.

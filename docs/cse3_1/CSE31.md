@@ -139,11 +139,6 @@ CSE can be upgraded from CSE 3.1.0 and CSE 3.0.z to 3.1.1 GA.
 Any CSE release older than CSE 3.0.0 first needs to be upgraded to
 CSE 3.0.z product line before it can be upgraded to CSE 3.1.1.
 
-**3.1.0**  
-CSE can be upgraded to 3.1.0, only from CSE 3.0.z product line.
-Any CSE release older than CSE 3.0.0 first needs to be upgraded to
-CSE 3.0.z product line before it can be upgraded to CSE 3.1.0.
-
 <a name="remove_tkgm"></a>
 **Note** :
 If Tanzu Kubernetes Grid (TKG) distribution is enabled
@@ -163,6 +158,19 @@ a Kubernetes application backup/restore strategy to backup the applications data
 3. Upgrade CSE via `cse upgrade` command.
 4. Create new TKG clusters from Ubuntu 20.04 TKG OVAs, using CSE 3.1.1.
 5. Restore applications on newly created TKG clusters.
+
+Refer to [CSE 3.1 upgrade command](CSE_SERVER_MANAGEMENT.html#cse31-upgrade-cmd) for details.
+
+**3.1.0**
+CSE can be upgraded to 3.1.0, only from CSE 3.0.z product line.
+Any CSE release older than CSE 3.0.0 first needs to be upgraded to
+CSE 3.0.z product line before it can be upgraded to CSE 3.1.0.
+
+<a name="remove_tkgm_310"></a>
+**Note** :
+If Tanzu Kubernetes Grid (TKG) distribution is enabled
+on [CSE 3.0.z](https://github.com/vmware/container-service-extension-templates/blob/tkgm/TKG_INSTRUCTIONS.md),
+then please consider upgrading to CSE 3.1.1 following these [steps](CSE31.html#remove_tkgm).
 
 Refer to [CSE 3.1 upgrade command](CSE_SERVER_MANAGEMENT.html#cse31-upgrade-cmd) for details.
 
