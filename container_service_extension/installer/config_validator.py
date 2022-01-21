@@ -18,6 +18,14 @@ import semantic_version
 from vsphere_guest_run.vsphere import VSphere
 import yaml
 
+from container_service_extension.common.constants.config_constants import \
+    PKS_ACCOUNTS_SECTION_KEY, PKS_NSXT_SERVERS_SECTION_KEY, \
+    PKS_ORGS_SECTION_KEY, PKS_PVDCS_SECTION_KEY, PKS_SERVERS_SECTION_KEY, \
+    SAMPLE_AMQP_CONFIG, SAMPLE_BROKER_CONFIG, SAMPLE_MQTT_CONFIG, \
+    SAMPLE_PKS_ACCOUNTS_SECTION, SAMPLE_PKS_NSXT_SERVERS_SECTION, \
+    SAMPLE_PKS_ORGS_SECTION, SAMPLE_PKS_PVDCS_SECTION, \
+    SAMPLE_PKS_SERVERS_SECTION, SAMPLE_SERVICE_CONFIG, SAMPLE_VCD_CONFIG, \
+    SAMPLE_VCS_CONFIG
 from container_service_extension.common.constants.server_constants import \
     CONFIG_DECRYPTION_ERROR_MSG
 from container_service_extension.common.constants.server_constants import \
@@ -34,14 +42,6 @@ from container_service_extension.common.utils.core_utils import str_to_bool
 import container_service_extension.common.utils.server_utils as server_utils
 from container_service_extension.exception.exceptions import AmqpConnectionError  # noqa: E501
 from container_service_extension.exception.exceptions import AmqpError
-from container_service_extension.installer.sample_generator import \
-    PKS_ACCOUNTS_SECTION_KEY, PKS_NSXT_SERVERS_SECTION_KEY, \
-    PKS_ORGS_SECTION_KEY, PKS_PVDCS_SECTION_KEY, PKS_SERVERS_SECTION_KEY, \
-    SAMPLE_AMQP_CONFIG, SAMPLE_BROKER_CONFIG, SAMPLE_MQTT_CONFIG, \
-    SAMPLE_PKS_ACCOUNTS_SECTION, SAMPLE_PKS_NSXT_SERVERS_SECTION, \
-    SAMPLE_PKS_ORGS_SECTION, SAMPLE_PKS_PVDCS_SECTION, \
-    SAMPLE_PKS_SERVERS_SECTION, SAMPLE_SERVICE_CONFIG, SAMPLE_VCD_CONFIG, \
-    SAMPLE_VCS_CONFIG
 from container_service_extension.installer.templates.remote_template_manager \
     import RemoteTemplateManager
 from container_service_extension.lib.nsxt.dfw_manager import DFWManager
