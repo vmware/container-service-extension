@@ -128,7 +128,7 @@ SAMPLE_BROKER_CONFIG = {
 
 SAMPLE_EXTRA_OPTIONS_CONFIG = {
     'extra_options': {
-        'dummy_key': 'dummy_value'
+        'my_key': 'my_value'
     }
 }
 

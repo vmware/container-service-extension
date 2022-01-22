@@ -98,6 +98,9 @@ def cli(ctx):
             Generate sample PKS configuration, and write it to the file
             'pks-config.yaml'
 \b
+        cse sample -x vcd_host HOST -x username USERNAME -x vcd_verify Yes -x org_name MY_ORG -x catalog_name MY_CATALOG
+            Generate a sample with custom user provided data
+\b
         cse install --config config.yaml --skip-config-decryption
             Install CSE using configuration specified in 'config.yaml'.
 \b
@@ -391,7 +394,7 @@ def create_service_role(ctx, vcd_host, skip_verify_ssl_certs):
     nargs=2,
     type=(str, str),
     multiple=True,
-    help='Allows avoiding prompts if --config is omitted'
+    help='Override values in the generated configuration file'
 )
 def sample(
     ctx,
@@ -400,7 +403,31 @@ def sample(
     legacy_mode,
     extra_options
 ):
-    """Display sample CSE config file contents."""
+    """Display sample CSE config file contents.
+
+\b
+    Supported Extra Options:
+        catalog_name: String: Name of the catalog where the OVA will be
+            imported.
+        enable_telemetry: Boolean : If True, telemetry data will be
+            recorded.
+        legacy_mode: Boolean: If True, the command will assume that
+            CSE is running in legacy mode.
+        log_wire: Boolean: If True, log wire communication to VCD.
+        org_name: String: Name of the Organization where the OVA will be
+            imported.
+        mqtt_verify: Boolean: Verify SSL while connecting to MQTT bus.
+        password: String: Password of CSE service account.
+        username: String: Username of CSE service account.
+        vcd_host: String: FQDN of VCD host.
+        vcd_verify: Boolean: Verify SSL while connecting to VCD.
+\b
+    Note: Arbitrary key value pair can be provided using -x option, as long
+    as they fall in one of the primary five sections viz. amqp|mqtt, vcd,
+    service, broker, extra_options, they will be added to the generated
+    sample config. The key needs to be in the format a.b.c..., which implies
+    that in section `a', sub-section 'b' add a key 'c' with the value.
+    """
     SERVER_CLI_LOGGER.debug(f"Executing command: {ctx.command_path}")
     console_message_printer = utils.ConsoleMessagePrinter()
     # The console_message_printer is not being passed to the python version
