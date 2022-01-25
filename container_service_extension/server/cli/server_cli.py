@@ -8,7 +8,6 @@ import os
 from pathlib import Path
 import sys
 import time
-from typing import Dict, List, Tuple
 
 import click
 import cryptography
@@ -20,15 +19,17 @@ import requests
 from vcd_cli.utils import stdout
 import yaml
 
+from container_service_extension.common.constants.config_constants import KNOWN_EXTRA_OPTIONS  # noqa: E501
 import container_service_extension.common.constants.server_constants as server_constants  # noqa: E501
 import container_service_extension.common.constants.shared_constants as shared_constants  # noqa: E501
+import container_service_extension.common.utils.config_utils as config_utils
 import container_service_extension.common.utils.core_utils as utils
 import container_service_extension.common.utils.pyvcloud_utils as vcd_utils
 import container_service_extension.common.utils.server_utils as server_utils
 import container_service_extension.installer.config_validator as config_validator  # noqa: E501
 import container_service_extension.installer.configure_cse as configure_cse
 from container_service_extension.installer.cse_service_role_mgr import create_cse_service_role  # noqa : E501
-from container_service_extension.installer.sample_generator import generate_sample_config  # noqa: E501
+import container_service_extension.installer.sample_generator as sample_generator  # noqa: E501
 import container_service_extension.installer.templates.local_template_manager as ltm  # noqa: E501
 from container_service_extension.installer.templates.remote_template_manager import RemoteTemplateManager  # noqa: E501
 import container_service_extension.installer.templates.tkgm_template_manager as ttm  # noqa: E501
@@ -96,6 +97,9 @@ def cli(ctx):
         cse sample --pks-config --output pks-config.yaml
             Generate sample PKS configuration, and write it to the file
             'pks-config.yaml'
+\b
+        cse sample -x vcd_host HOST -x username USERNAME -x vcd_verify Yes -x org_name MY_ORG -x catalog_name MY_CATALOG
+            Generate a sample with custom user provided data
 \b
         cse install --config config.yaml --skip-config-decryption
             Install CSE using configuration specified in 'config.yaml'.
@@ -372,6 +376,7 @@ def create_service_role(ctx, vcd_host, skip_verify_ssl_certs):
 @click.option(
     '-p',
     '--pks-config',
+    'generate_pks_config',
     is_flag=True,
     help='Generate only sample PKS config')
 @click.option(
@@ -380,9 +385,49 @@ def create_service_role(ctx, vcd_host, skip_verify_ssl_certs):
     'legacy_mode',
     required=False,
     is_flag=True,
-    help="Generate sample config for legacy type")  # noqa: E501
-def sample(ctx, output_file_name, pks_config, legacy_mode):
-    """Display sample CSE config file contents."""
+    help="Generate sample config for legacy type")
+@click.option(
+    '-x',
+    '--extra-option',
+    'extra_options',
+    metavar='EXTRA_OPTION',
+    nargs=2,
+    type=(str, str),
+    multiple=True,
+    help='Override values in the generated configuration file'
+)
+def sample(
+    ctx,
+    output_file_name,
+    generate_pks_config,
+    legacy_mode,
+    extra_options
+):
+    """Display sample CSE config file contents.
+
+\b
+    Supported Extra Options:
+        catalog_name: String: Name of the catalog where the OVA will be
+            imported.
+        enable_telemetry: Boolean : If True, telemetry data will be
+            recorded.
+        legacy_mode: Boolean: If True, the command will assume that
+            CSE is running in legacy mode.
+        log_wire: Boolean: If True, log wire communication to VCD.
+        org_name: String: Name of the Organization where the OVA will be
+            imported.
+        mqtt_verify: Boolean: Verify SSL while connecting to MQTT bus.
+        password: String: Password of CSE service account.
+        username: String: Username of CSE service account.
+        vcd_host: String: FQDN of VCD host.
+        vcd_verify: Boolean: Verify SSL while connecting to VCD.
+\b
+    Note: Arbitrary key value pair can be provided using -x option, as long
+    as they fall in one of the primary five sections viz. amqp|mqtt, vcd,
+    service, broker, extra_options, they will be added to the generated
+    sample config. The key needs to be in the format a.b.c..., which implies
+    that in section `a', sub-section 'b' add a key 'c' with the value.
+    """
     SERVER_CLI_LOGGER.debug(f"Executing command: {ctx.command_path}")
     console_message_printer = utils.ConsoleMessagePrinter()
     # The console_message_printer is not being passed to the python version
@@ -391,17 +436,36 @@ def sample(ctx, output_file_name, pks_config, legacy_mode):
     utils.check_python_version()
 
     try:
-        sample_config = generate_sample_config(
+        sample_config = sample_generator.generate_sample_cse_config(
+            legacy_mode=legacy_mode
+        )
+
+        sanitized_user_input = config_utils.sanitize_typing(
+            user_input=extra_options,
+            known_extra_options=KNOWN_EXTRA_OPTIONS
+        )
+        user_input_config = config_utils.construct_config_from_extra_options(
+            user_input=sanitized_user_input,
+            known_extra_options=KNOWN_EXTRA_OPTIONS
+        )
+        sample_config = config_utils.merge_dict_recursive(
+            sample_config,
+            user_input_config
+        )
+
+        sample_config_text = sample_generator.generate_sample_config_text(
+            sample_config=sample_config,
             output_file_name=output_file_name,
-            generate_pks_config=pks_config,
-            legacy_mode=legacy_mode)
+            generate_pks_config=generate_pks_config,
+            legacy_mode=legacy_mode
+        )
     except Exception as err:
         console_message_printer.error(str(err))
         SERVER_CLI_LOGGER.error(str(err), exc_info=True)
         sys.exit(1)
 
-    console_message_printer.general_no_color(sample_config)
-    SERVER_CLI_LOGGER.debug(sample_config)
+    console_message_printer.general_no_color(sample_config_text)
+    SERVER_CLI_LOGGER.debug(sample_config_text)
 
 
 @cli.command(short_help="Checks that CSE/PKS config file is valid. Can "
@@ -1356,81 +1420,6 @@ def import_tkgm_template(
                 msg_update_callback=console_message_printer
             )
         else:
-            known_extra_options = {
-                # Essential
-                "catalog_name": {
-                    "config_key": "broker.catalog",
-                    "type": str,
-                    "prompt": "Please enter the name of the catalog where you want to import the OVA",  # noqa: E501
-                    "hidden_field": False,
-                    "default_value": None
-                },
-                "org_name": {
-                    "config_key": "broker.org",
-                    "type": str,
-                    "prompt": "Please enter the name of the org where you want to import the OVA",  # noqa: E501
-                    "hidden_field": False,
-                    "default_value": None
-                },
-                "password": {
-                    "config_key": "vcd.password",
-                    "type": str,
-                    "prompt": "Please enter password of the user for connecting to VCD",  # noqa: E501
-                    "hidden_field": True,
-                    "default_value": None
-                },
-                "username": {
-                    "config_key": "vcd.username",
-                    "type": str,
-                    "prompt": "Please enter username for connecting to VCD",
-                    "hidden_field": False,
-                    "default_value": None
-                },
-                "vcd_host": {
-                    "config_key": "vcd.host",
-                    "type": str,
-                    "prompt": "Please enter VCD hostname",
-                    "hidden_field": False,
-                    "default_value": None
-                },
-                # Non-essential
-                "vcd_verify": {
-                    "config_key": "vcd.verify",
-                    "type": bool,
-                    "prompt": "Enable SSL verification while connecting to VCD (Y/n)",  # noqa: E501
-                    "hidden_field": False,
-                    "default_value": True
-                },
-                "enable_telemetry": {
-                    "config_key": "service.telemetry.enable",
-                    "type": bool,
-                    "prompt": "",
-                    "hidden_field": False,
-                    "default_value": True
-                },
-                "legacy_mode": {
-                    "config_key": "service.legacy_mode",
-                    "type": bool,
-                    "prompt": "",
-                    "hidden_field": False,
-                    "default_value": False
-                },
-                "log_wire": {
-                    "config_key": "service.log_wire",
-                    "type": bool,
-                    "prompt": "",
-                    "hidden_field": False,
-                    "default_value": False
-                },
-                "mqtt_verify": {
-                    "config_key": "mqtt.verify_ssl",
-                    "type": bool,
-                    "prompt": "",
-                    "hidden_field": False,
-                    "default_value": True
-                }
-            }
-
             required_options = [
                 "vcd_host",
                 "username",
@@ -1439,27 +1428,28 @@ def import_tkgm_template(
                 "catalog_name"
             ]
 
-            sanitized_extra_options = _sanitize_typing(
+            sanitized_extra_options = config_utils.sanitize_typing(
                 user_input=extra_options,
-                known_extra_options=known_extra_options
+                known_extra_options=KNOWN_EXTRA_OPTIONS
             )
 
-            additional_user_input = _prompt_for_missing_required_extra_options(
-                user_input=sanitized_extra_options,
-                known_extra_options=known_extra_options,
-                required_options=required_options
-            )
+            additional_user_input = \
+                config_utils.prompt_for_missing_required_extra_options(
+                    user_input=sanitized_extra_options,
+                    known_extra_options=KNOWN_EXTRA_OPTIONS,
+                    required_options=required_options
+                )
 
             sanitized_extra_options.update(additional_user_input)
 
             # Augment with default value for missing non-essential options
-            for k, v in known_extra_options.items():
+            for k, v in KNOWN_EXTRA_OPTIONS.items():
                 if k not in sanitized_extra_options:
                     sanitized_extra_options[k] = v['default_value']
 
-            config = _construct_config_from_extra_options(
+            config = config_utils.construct_config_from_extra_options(
                 user_input=sanitized_extra_options,
-                known_extra_options=known_extra_options
+                known_extra_options=KNOWN_EXTRA_OPTIONS
             )
 
             # To suppress the warning message that pyvcloud prints if
@@ -1621,91 +1611,6 @@ def import_tkgm_template(
         # block the process to let telemetry handler to finish posting data to
         # VAC. HACK!!!
         time.sleep(3)
-
-
-def _sanitize_typing(
-    user_input: List[Tuple[str, str]],
-    known_extra_options: Dict
-):
-    sanitized_user_input = {}
-    # sanitize user input to correct type
-    for k, v in user_input:
-        if k in known_extra_options:
-            if known_extra_options[k]["type"] == bool:
-                sanitized_user_input[k] = utils.str_to_bool(v)
-            else:
-                sanitized_user_input[k] = known_extra_options[k]["type"](v)
-        else:
-            sanitized_user_input[k] = v
-    return sanitized_user_input
-
-
-def _prompt_for_missing_required_extra_options(
-    user_input: Dict,
-    known_extra_options: Dict,
-    required_options: List[str]
-
-):
-    # Prompt user for missing required options
-    for k in required_options:
-        if k in user_input:
-            continue
-        val = utils.prompt_text(
-            text=known_extra_options[k]["prompt"],
-            color='green',
-            hide_input=known_extra_options[k]["hidden_field"],
-            type=known_extra_options[k]["type"]
-        )
-        user_input[k] = val
-    return user_input
-
-
-def _construct_config_from_extra_options(
-        user_input: Dict,
-        known_extra_options: Dict
-):
-    """Construct a config dictionary from user provided key-value pairs.
-
-    Input like "a.b.c : val" is converted to
-    {
-        'a' : {
-            'b': {
-                'c': val
-            }
-        }
-    }
-
-    :rtype: Dict
-
-    return: config dictionary constructed from user provided input
-    """
-    condensed_config_dict = {}
-    for k, v in user_input.items():
-        if k in known_extra_options:
-            condensed_config_dict[known_extra_options[k]['config_key']] = v
-        else:
-            condensed_config_dict[k] = v
-
-    config = {}
-    # Expand dot-notation keys into nested dictionary
-    for key, value in condensed_config_dict.items():
-        tokens = key.split(".")
-        current_dict = config
-        for i in range(len(tokens)):
-            if i == len(tokens) - 1:
-                current_dict[tokens[i]] = value
-            else:
-                if tokens[i] not in current_dict:
-                    current_dict[tokens[i]] = {}
-                if not isinstance(current_dict[tokens[i]], dict):
-                    raise Exception(
-                        "Expecting dictionary in config node "
-                        f"'{'.'.join(tokens[0:i+1])}' "
-                        f"but found 'f{type(current_dict[tokens[i]])}'"
-                    )
-                current_dict = current_dict[tokens[i]]
-
-    return config
 
 
 def _get_unvalidated_config(
