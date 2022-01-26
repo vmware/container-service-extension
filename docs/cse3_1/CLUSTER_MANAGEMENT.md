@@ -30,6 +30,7 @@ Here is a summary of commands available to view templates and manage clusters an
 | `vcd cse cluster info CLUSTER_NAME`                                    | Retrieve detailed information of a Kubernetes cluster.                     | Yes    | Yes |
 | `vcd cse cluster config CLUSTER_NAME`                                  | Retrieve the kubectl configuration file of the Kubernetes cluster.         | Yes    | Yes |
 | `vcd cse cluster delete CLUSTER_NAME`                                  | Delete a Kubernetes cluster.                                               | Yes    | Yes |
+| `vcd cse cluster delete CLUSTER_NAME --force`                          | Delete a Kubernetes cluster even if they are in an unrecoverable state.    | Yes    | Yes |
 | `vcd cse cluster upgrade-plan CLUSTER_NAME`                            | Retrieve the allowed path for upgrading Kubernetes software on the custer. | Yes    | No  |
 | `vcd cse cluster upgrade CLUSTER_NAME TEMPLATE_NAME TEMPLATE_REVISION` | Upgrade cluster software to specified template's software versions.        | Yes    | No  |
 | `vcd cse cluster delete-nfs CLUSTER_NAME NFS_NODE_NAME`                | Delete NFS node of a given Kubernetes cluster                              | Yes    | No  |

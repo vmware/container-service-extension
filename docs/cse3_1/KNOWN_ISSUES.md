@@ -49,6 +49,8 @@ Login as the user who installed CSE (the user provided in CSE configuration file
       vApp Id, which is same as the `externalID` property in the corresponding RDE. Invoke Delete vApp API.
     - UI: Identify the vApp with the same name as the cluster in the same Organization virtual datacenter and delete it.
 
+Update: For VCD 10.3, please use `vcd cse cluster delete --force` to delete clusters that can't be deleted normally.
+
 VCD 10.2:
 
 Login as System administrator (or) user with ADMIN_FC right on `cse:nativeCluster` entitlement
@@ -59,6 +61,7 @@ Login as System administrator (or) user with ADMIN_FC right on `cse:nativeCluste
     - API call: Perform `GET https://<vcd-fqdn>/cloudapi/1.0.0/entities/<cluster-id>` to retrieve the
       vApp Id, which is same as the `externalID` property in the corresponding RDE. Invoke Delete vApp API.
     - UI: Identify the vApp with the same name as the cluster in the same Organization virtual datacenter and delete it.
+
     
 ### In CSE 3.1, pending tasks are visible in the VCD UI right after `cse upgrade`
 After upgrading to CSE 3.1 using `cse upgrade` command, you may notice pending 

@@ -69,18 +69,28 @@ service:
 
 broker:
   catalog: cse
-# default_template_name: my_template
-# default_template_revision: 0
   ip_allocation_mode: pool
   network: my_network
   org: my_org
   remote_template_cookbook_url: https://raw.githubusercontent.com/vmware/container-service-extension-templates/master/template_v2.yaml
   storage_profile: '*'
   vdc: my_org_vdc
+
+# [Optional] Extra options section
+# Support for proxy server for TKGm only.
+# Use case: container runtime needs to pull images from external repos
+# through a proxy.
+# Creates http-proxy.conf in cluster vms with the proxy relevant environment
+# variables with the provided values in this section.
+# Example 'extra_options' section:
+#extra_options:
+#   tkgm_http_proxy: http://192.168.7.10:3128
+#   tkgm_https_proxy: https://192.168.7.10:3128
+#   tkgm_no_proxy: localhost,127.0.0.1,192.168.7.0/24
 ```
 
-The config file has 4 mandatory sections ( [`amqp` | `mqtt`], `vcd`,
-`service`, and, `broker`) and 2 optional section(`vcs`, `template_rules`). The
+The config file has 4 mandatory sections ( [`amqp` | `mqtt`], `vcd`, `service`, and, `broker`)
+and 3 optional section(`vcs`, `template_rules` and `extra_options`). The
 following sub-sections explain the configuration properties for each section
 as well as how they are used.
 
@@ -237,6 +247,20 @@ Each rule comprises of the following attributes
 
 Please refer to [Restricting Kubernetes templates](TEMPLATE_MANAGEMENT.html#restrict_templates)
 for further details on compute policies.
+
+<a name="extra_options"></a>
+### `extra_options` Section (Added in CSE 3.1.2)
+
+This section has been added in CSE 3.1.2. Currently, this section is being used to let
+Providers enter proxy details, that will be later injected into TKG clusters.
+The proxy would allow the TKG clusters connected to network(s) with restricted
+internet access, to reach out to internet and download required packages.
+
+| Property         | Value                                                                          | Remarks |
+|------------------|--------------------------------------------------------------------------------|---------|
+| tkgm_http_proxy  | URL of the http proxy server                                                   |         |
+| tkgm_https_proxy | URL of the https proxy server                                                  |         |
+| tkgm_no_proxy    | List of IP addresses, while connecting to these, proxy server will not be used |         |
 
 <a name="ent_pks_config"></a>
 ## Enterprise PKS Configuration File for CSE

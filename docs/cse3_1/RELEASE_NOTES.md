@@ -5,6 +5,22 @@ title: Release Notes
 
 # Release Notes
 
+## CSE 3.1.2 GA (3.1.2)
+Release Date : 2022-01-27
+
+**Supported (and tested) VCD versions**: 10.3.2 GA, 10.3.1 GA, 10.2.2 GA, 10.1.3 GA
+
+Note: Future update/patch releases of these VCD versions will be supported by CSE but
+they won't be tested individually. If a bug is found in their interoperability
+with CSE, please file a github [issue](https://github.com/vmware/container-service-extension/issues),
+the same will be fixed in a future CSE release.
+
+* Check out [what's new](CSE31.html) in this release.
+* Compatility matrix for CSE 3.1.2 can be found [here](CSE31.html#cse31-compatibility-matrix).
+
+**Notes to System Administrator**:
+* Please take note of the supported upgrade paths for CSE 3.1.2 [here](CSE31.html#brown_field_upgrades).
+
 ## Announcement
 Date : 2021-12-15
 
