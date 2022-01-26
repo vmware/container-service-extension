@@ -27,7 +27,7 @@ For greenfield installations, please get started with [CSE introduction](INTRO.h
 * Kubernetes Container Storage Interface for VCD updated to v1.1.0. Learn more about [CSI for VCD](https://github.com/vmware/cloud-director-named-disk-csi-driver/blob/1.1.0/README.md)
 * Kubernetes Container Clusters plugin is updated to version 3.2.0. The plugin ships with VCD 10.3.2.
 * Support for injecting proxy information into TKG clusters. Learn more about the feature, [here](CSE_CONFIG.html#extra_options).
-* New command option to Force Delete clusters that have failed to deploy and are in unremovable state. Learn more, [here](CLUSTER_MANAGEMENT.html#useful_commands).
+* New command option to Force Delete clusters that have failed to deploy and are in unremovable state. Learn more, [here](CLUSTER_MANAGEMENT.html#force_delete).
 
 ### CSE 3.1.1
 
@@ -86,7 +86,7 @@ For greenfield installations, please get started with [CSE introduction](INTRO.h
 
 | CSE Server/CLI | Cloud Director | NSX-T | NSX-V   | Comments                            |
 |----------------|----------------|-------|---------|-------------------------------------|
-| 3.1.2          | 10.3.2         | TODO  | 6.4.10† | Cluster representation as RDE 2.0.0 |
+| 3.1.2          | 10.3.2         | 3.1.1 | 6.4.10† | Cluster representation as RDE 2.0.0 |
 | 3.1.2          | 10.3.1         | 3.1.1 | 6.4.10† | Cluster representation as RDE 2.0.0 |
 | 3.1.2          | 10.2.2         | 3.1.1 | 6.4.10† | Cluster representation as RDE 1.0.0 |
 | 3.1.2          | 10.1           | n/a   | 6.4.8†  | Cluster representation as vApp      |
@@ -103,7 +103,7 @@ For greenfield installations, please get started with [CSE introduction](INTRO.h
 
 | CSE Server/CLI   | Cloud Director | NSX-T with Avi             |
 |------------------|----------------|----------------------------|
-| 3.1.2            | 10.3.2         | TODO                       |
+| 3.1.2            | 10.3.2         | NSX-T 3.1.3 and Avi 21.1.1 |
 | 3.1.2            | 10.3.1         | NSX-T 3.1.3 and Avi 21.1.1 |
 | 3.1.1            | 10.3.1         | NSX-T 3.1.3 and Avi 21.1.1 |
 

@@ -312,3 +312,26 @@ Please use CSI for VCD to work with static and dynamic persistent volumes for K8
 * Cluster sharing is not supported for TKG clusters.
 
 * Kubernetes upgrade is not supported for TKG clusters.
+
+<a name="force_delete"></a>
+## Force deleting clusters
+If cluster deployment fails on CSE 3.1.1+ and VCD 10.3.1+, it is possible for the cluster to end up
+in state, where users are unable to delete them from UI/CLI. The issue and a workaround has been
+mentioned [here](KNOWN_ISSUES.html#fail_cluster_delete). In CSE 3.1.2, we have added a new param
+to the command `vcd cse cluster delete`, viz. `-f/--force`. This param if specified automates the
+workaround and deletes the cluster and its associated resources forcefully. It should be noted that
+to be able to use this option, the user must have the following rights
+```
+Full Control: CSE:NATIVECLUSTER (Administrator Full Control if not owner)
+vApp: Delete
+Organization vDC Gateway: Configure NAT
+Organization vDC Gateway: View
+```
+and a `FullControl` access control on the RDE type `cse:nativeCluster:2.0.0`.
+```
+{
+    "grantType": "MembershipAccessControlGrant",
+    "accessLevelId": "urn:vcloud:accessLevel:FullControl",
+    "memberId": "urn:vcloud:user:uuid"
+}
+```
