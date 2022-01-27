@@ -74,8 +74,8 @@ DEFAULT_API_VERSION = vcd_client.ApiVersion.VERSION_36.value
 # Hardcode the Antrea CNI version until there's a better way to retrieve it
 CNI_NAME = "antrea"
 ANTREA_CNI_VERSION = 'v0.11.3'
-CPI_VERSION = '1.0.x'
-CSI_VERSION = '1.0.0'
+CPI_VERSION = '1.1.0'
+CSI_VERSION = '1.1.0'
 
 CLUSTER_CREATE_OPERATION_MESSAGE = 'Cluster create'
 CLUSTER_RESIZE_OPERATION_MESSAGE = 'Cluster resize'
