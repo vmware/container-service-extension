@@ -28,7 +28,7 @@ For greenfield installations, please get started with [CSE introduction](INTRO.h
 * Kubernetes Container Clusters plugin has been updated to version 3.2.0. The plugin ships with VCD 10.3.2. Download it from [here](https://customerconnect.vmware.com/en/downloads/info/slug/datacenter_cloud_infrastructure/vmware_cloud_director/10_3#drivers_tools)
 * Support for injecting proxy information into TKG clusters created by CSE. Learn more about the feature, [here](CSE_CONFIG.html#extra_options).
 * New command option to forcefully delete clusters that were not fully created and were left in unremovable state. Learn more, [here](CLUSTER_MANAGEMENT.html#force_delete).
-* Support for VMware Tanzu Add-ons - Harbor, FluentBit, Prometheus, Grafana, in TKG clusters.
+* Support for VMware Tanzu packages - Harbor, FluentBit, Prometheus, Grafana in TKG clusters.
 
 ### CSE 3.1.1
 
