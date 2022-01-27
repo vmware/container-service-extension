@@ -322,7 +322,7 @@ to the command `vcd cse cluster delete`, viz. `-f/--force`. This param if specif
 workaround and deletes the cluster and its associated resources forcefully. It should be noted that
 to be able to use this option, the user must have the following rights
 ```
-Full Control: CSE:NATIVECLUSTER (Administrator Full Control if not owner)
+cse:nativeCluster: Full Access (Administrator Full Control if not owner)
 vApp: Delete
 Organization vDC Gateway: Configure NAT
 Organization vDC Gateway: View

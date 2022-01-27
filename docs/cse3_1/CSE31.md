@@ -22,7 +22,7 @@ For greenfield installations, please get started with [CSE introduction](INTRO.h
 
 ### CSE 3.1.2
 
-* Kubernetes Container Cluster API for VCD. Learn more about [CAPI for VCD](link to do)
+* Kubernetes Container Cluster API Provider for Cloud Director. Learn more about [CAPI for VCD](link todo)
 * Kubernetes External Cloud Provider for VCD updated to v1.1.0. Learn more about [CPI for VCD](https://github.com/vmware/cloud-provider-for-cloud-director/blob/1.1.0/README.md)
 * Kubernetes Container Storage Interface for VCD updated to v1.1.0. Learn more about [CSI for VCD](https://github.com/vmware/cloud-director-named-disk-csi-driver/blob/1.1.0/README.md)
 * Kubernetes Container Clusters plugin is updated to version 3.2.0. The plugin ships with VCD 10.3.2.
