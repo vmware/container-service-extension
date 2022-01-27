@@ -320,15 +320,14 @@ in state, where users are unable to delete them from UI/CLI. The issue and a wor
 mentioned [here](KNOWN_ISSUES.html#fail_cluster_delete). In CSE 3.1.2, a new option `-f/--force`
 has been added to the command `vcd cse cluster delete`. This option if specified deletes
 those clusters (and its associated resources) that were not fully created and were left in
-unremovable state. It should be noted that to be able to use this option, the user must have
-the following rights
+unremovable state. User must have following rights to use this option,
 ```
 cse:nativeCluster: Full Access (Administrator Full Control if not owner)
 vApp: Delete
 Organization vDC Gateway: Configure NAT
 Organization vDC Gateway: View
 ```
-and a `FullControl` access control on the RDE type `cse:nativeCluster:2.0.0`.
+and a `FullControl` access level on the RDE type `cse:nativeCluster:2.0.0`.
 ```
 {
     "grantType": "MembershipAccessControlGrant",
