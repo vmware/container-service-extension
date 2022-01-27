@@ -1,6 +1,40 @@
 CHANGES
 =======
 
+3.1.2
+-----
+
+* [VCDA-3178] updated csi and cpi to 1.1.0 (#1290)
+* Update \`cse sample\` to generate cleaner \`extra\_options\` section (#1292)
+* Disable \`delete nfs\` test
+* [VCDA-3147] Force delete cluster (#1287)
+* Fix flake8 warnings (#1285)
+* Fix failing v2 system test on CToT (#1282)
+* [VCDA-3192] Remove dependency on config file from the commands \`cse template import\` (#1281)
+* [VCDA-3162] Update gateway fetching to allow for datacenter group networks (#1279)
+* Fix client tests for failing CToTs (#1278)
+* [VCDA-3083, VCDA-3102] Add wait before cluster creation when creating clusters from CTOTs (#1277)
+* [VCDA-3206] Avoid waiting on behavior task in the Native API kubeconfig handler (#1276)
+* [VCDA-3183] Fix broken CSE cluster commands (#1272)
+* [VCDA-3191, VCDA-3204] Remove option to install templates during CSE install/upgrade (#1274)
+* Change NSS for Capvcd entity type (#1261)
+* Update CAPVCD schema (#1268)
+* Handle empty extra\_options section (#1267)
+* update cpi and csi versions (#1266)
+* [VCDA-3129] Support upgrade path for cse version 3.1.2 (#1265)
+* [VCDA-3072] Server-Config-Proxy-Support (#1260)
+* [VCDA-3087, VCDA-3088] Remove usage of x-vcloud-authorization from CSE codebase (#1259)
+* Trimmed down schema of CAPVCD (#1257)
+* [VCDA-3070] Fixed the regression that caused the pagination defect on cluster list (#1256)
+* Let CSE register CAPVCD schema (#1251)
+* [Vcda-3033] Fix for 10.1.3 CToT (#1253)
+* [VCDA-3034] Fix for 10.3.1 CToT (#1254)
+* [VCDA-3070] Pagination fix for list clusters and list ovdcs (#1252)
+* VCDA-3021: Use cloud-init for VM setup (#1248)
+* [VCDA-3034] Changes to follow delete nfs output and including timeouts (#1247)
+* Cluster upgrade tests 3 1 updates (#1237)
+* Update authors and changelog for cse 3.1.1
+
 3.1.1
 -----
 
