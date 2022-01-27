@@ -176,16 +176,10 @@ COMMENTED_AMQP_SECTION = """\
 """
 
 COMMENTED_EXTRA_OPTIONS_SECTION = """# [Optional] Extra options section
-# Support for proxy server for TKGm only.
-# Use case: container runtime needs to pull images from external repos
-# through a proxy.
-# Creates http-proxy.conf in cluster vms with the proxy relevant environment
-# variables with the provided values in this section.
-# Example 'extra_options' section:
 #extra_options:
-#   tkgm_http_proxy: http://192.168.7.10:3128
-#   tkgm_https_proxy: https://192.168.7.10:3128
-#   tkgm_no_proxy: localhost,127.0.0.1,192.168.7.0/24
+#  tkgm_http_proxy: [http proxy url with port]
+#  tkgm_https_proxy: [https proxy url with port]
+#  tkgm_no_proxy: [comma separated list of IP addresses]
 """
 
 
