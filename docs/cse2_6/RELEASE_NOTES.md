@@ -3,6 +3,12 @@ layout: default
 title: Release Notes
 ---
 
+# General Announcement
+**Date : 2022-01-27**  
+Container Service Extension 2.6.x reaches end of support on April 9, 2022.  
+Container Service Extension 2.5.x has reached end of support on October 3, 2021.  
+Container Service Extension 2.0.x has reached end of support on May 24, 2021.
+
 # Release Notes
 
 ## CSE 2.6.1 GA(2.6.1)

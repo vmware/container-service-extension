@@ -3,6 +3,13 @@ layout: default
 title: Release Notes
 ---
 
+# General Announcement
+**Date : 2022-01-27**  
+Container Service Extension 3.1.x reaches end of support on July 15, 2023.
+
+**Date : 2021-12-15**  
+CSE is not impacted by the Apache Log4j open source component vulnerability.
+
 # Release Notes
 
 ## CSE 3.1.2 GA (3.1.2)
@@ -13,18 +20,13 @@ Release Date : 2022-01-27
 Note: Future update/patch releases of these VCD versions will be supported by CSE but
 they won't be tested individually. If a bug is found in their interoperability
 with CSE, please file a github [issue](https://github.com/vmware/container-service-extension/issues),
-the same will be fixed in a future CSE release.
+the same will be fixed in a future CSEs release.
 
 * Check out [what's new](CSE31.html) in this release.
 * Compatility matrix for CSE 3.1.2 can be found [here](CSE31.html#cse31-compatibility-matrix).
 
 **Notes to System Administrator**:
 * Please take note of the supported upgrade paths for CSE 3.1.2 [here](CSE31.html#brown_field_upgrades).
-
-## Announcement
-Date : 2021-12-15
-
-CSE is not impacted by the Apache Log4j open source component vulnerability.
 
 ## CSE 3.1.1 GA (3.1.1)
 Release Date : 2021-10-14

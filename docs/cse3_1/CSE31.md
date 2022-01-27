@@ -22,12 +22,13 @@ For greenfield installations, please get started with [CSE introduction](INTRO.h
 
 ### CSE 3.1.2
 
-* Cluster API Provider for Cloud Director. Learn more about [CAPI for VCD](https://github.com/vmware/cluster-api-provider-cloud-director/blob/0.5.x/README.md)
-* Kubernetes External Cloud Provider for VCD updated to v1.1.0. Learn more about [CPI for VCD](https://github.com/vmware/cloud-provider-for-cloud-director/blob/1.1.0/README.md)
-* Kubernetes Container Storage Interface for VCD updated to v1.1.0. Learn more about [CSI for VCD](https://github.com/vmware/cloud-director-named-disk-csi-driver/blob/1.1.0/README.md)
-* Kubernetes Container Clusters plugin is updated to version 3.2.0. The plugin ships with VCD 10.3.2.
-* Support for injecting proxy information into TKG clusters. Learn more about the feature, [here](CSE_CONFIG.html#extra_options).
+* Cluster API Provider for Cloud Director that offers multi-control plane clusters and cluster upgrades using declarative, Kubernetes-style APIs. Learn more about [CAPI for VCD](https://github.com/vmware/cluster-api-provider-cloud-director/blob/0.5.x/README.md)
+* Kubernetes External Cloud Provider for VCD has been updated to v1.1.0. Learn more about [CPI for VCD](https://github.com/vmware/cloud-provider-for-cloud-director/blob/1.1.0/README.md)
+* Kubernetes Container Storage Interface for VCD has been updated to v1.1.0. Learn more about [CSI for VCD](https://github.com/vmware/cloud-director-named-disk-csi-driver/blob/1.1.0/README.md)
+* Kubernetes Container Clusters plugin has been updated to version 3.2.0. The plugin ships with VCD 10.3.2.
+* Support for injecting proxy information into TKG clusters created by CSE. Learn more about the feature, [here](CSE_CONFIG.html#extra_options).
 * New command option to forcefully delete clusters that were not fully created and were left in unremovable state. Learn more, [here](CLUSTER_MANAGEMENT.html#force_delete).
+* Support for VMware Tanzu Add-ons - Harbor, FluentBit, Prometheus, Grafana, in TKG clusters.
 
 ### CSE 3.1.1
 
