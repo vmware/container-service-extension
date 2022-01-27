@@ -5,7 +5,7 @@ title: Release Notes
 
 # General Announcement
 **Date : 2022-01-27**  
-Container Service Extension 3.0.x reaches end of support on October 15, 2022.
+Container Service Extension 3.0.x reaches end of support on October 15, 2022.  
 Tanzu Kubernetes Grid Integrated Edition (TKG-I) is no longer supported.
 
 **Date : 2021-10-14**  
