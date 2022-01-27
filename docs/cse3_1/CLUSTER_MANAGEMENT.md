@@ -317,10 +317,11 @@ Please use CSI for VCD to work with static and dynamic persistent volumes for K8
 ## Force deleting clusters
 If cluster deployment fails on CSE 3.1.1+ and VCD 10.3.1+, it is possible for the cluster to end up
 in state, where users are unable to delete them from UI/CLI. The issue and a workaround has been
-mentioned [here](KNOWN_ISSUES.html#fail_cluster_delete). In CSE 3.1.2, we have added a new param
-to the command `vcd cse cluster delete`, viz. `-f/--force`. This param if specified automates the
-workaround and deletes the cluster and its associated resources forcefully. It should be noted that
-to be able to use this option, the user must have the following rights
+mentioned [here](KNOWN_ISSUES.html#fail_cluster_delete). In CSE 3.1.2, a new option `-f/--force`
+has been added to the command `vcd cse cluster delete`. This option if specified deletes
+those clusters (and its associated resources) that were not fully created and were left in
+unremovable state. It should be noted that to be able to use this option, the user must have
+the following rights
 ```
 cse:nativeCluster: Full Access (Administrator Full Control if not owner)
 vApp: Delete
