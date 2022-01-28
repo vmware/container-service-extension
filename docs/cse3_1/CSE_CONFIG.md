@@ -69,18 +69,22 @@ service:
 
 broker:
   catalog: cse
-# default_template_name: my_template
-# default_template_revision: 0
   ip_allocation_mode: pool
   network: my_network
   org: my_org
   remote_template_cookbook_url: https://raw.githubusercontent.com/vmware/container-service-extension-templates/master/template_v2.yaml
   storage_profile: '*'
   vdc: my_org_vdc
+
+# [Optional] Extra options section
+#extra_options:
+#  tkgm_http_proxy: [http proxy url with port]
+#  tkgm_https_proxy: [https proxy url with port]
+#  tkgm_no_proxy: [comma separated list of IP addresses]
 ```
 
-The config file has 4 mandatory sections ( [`amqp` | `mqtt`], `vcd`,
-`service`, and, `broker`) and 2 optional section(`vcs`, `template_rules`). The
+The config file has 4 mandatory sections ( [`amqp` | `mqtt`], `vcd`, `service`, and, `broker`)
+and 3 optional section(`vcs`, `template_rules` and `extra_options`). The
 following sub-sections explain the configuration properties for each section
 as well as how they are used.
 
@@ -237,6 +241,28 @@ Each rule comprises of the following attributes
 
 Please refer to [Restricting Kubernetes templates](TEMPLATE_MANAGEMENT.html#restrict_templates)
 for further details on compute policies.
+
+<a name="extra_options"></a>
+### `extra_options` Section (Added in CSE 3.1.2)
+
+It allows providers to specify proxy details that will be injected into TKG Clusters.
+The proxy enables TKG clusters to reach out to the internet to download packages, such as Cloud Provider for Cloud Director.
+
+| Property         | Value                                                                                               | Remarks |
+|------------------|-----------------------------------------------------------------------------------------------------|---------|
+| tkgm_http_proxy  | URL of the http proxy server                                                                        |         |
+| tkgm_https_proxy | URL of the https proxy server                                                                       |         |
+| tkgm_no_proxy    | Comma separated list of IP addresses. Network traffic to these destinations will not use the proxy. |         |
+
+Note: Proxy injection is supported for only TKG clusters. CSE injects the value of these variables into `http-proxy.conf` file on each node of the cluster.
+
+Example:
+```
+extra_options:
+  tkgm_http_proxy: http://192.168.7.10:3128
+  tkgm_https_proxy: https://192.168.7.10:3128
+  tkgm_no_proxy: localhost,127.0.0.1,192.168.7.0/24
+```
 
 <a name="ent_pks_config"></a>
 ## Enterprise PKS Configuration File for CSE

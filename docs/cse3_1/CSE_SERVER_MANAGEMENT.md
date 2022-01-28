@@ -42,7 +42,7 @@ Next, CSE server setup should be invoked via the `cse install` command.
 The example below shows a typical invocation.
 
 ```sh
-cse install -c config.yaml --ssh-key ~/.ssh/id_rsa.pub
+cse install -c config.yaml
 ```
 
 Please find more details on how to generate sample config file and populate it correctly, [here](CSE_CONFIG.html).
@@ -66,24 +66,25 @@ Invoke below API to get a detailed view of native defined entity schema - `https
 
 The `cse install` command supports the following options:
 
-| Option                    | Short | Argument(s)                        | Description                                                                                                      | Default Value |
-|---------------------------|-------|------------------------------------|------------------------------------------------------------------------------------------------------------------|---------------|
-| \--config                 | -c    | path to config file                | Filepath of CSE config file to use for installation                                                              | config.yaml   |
-| \--pks-config-file        | -p    | path to Enterprise PKS config file | Filepath of Enterprise PKS config file to use for installation                                                   | -             |
-| \--retain-temp-vapp       | -d    | n/a                                | Retain the temporary vApp after the template has been captured --ssh-key option is required if this flag is used | False         |
-| \--skip-config-decryption | -s    | n/a                                | Skips decrypting the configuration file and pks configuration file, and assumes them to be plain text            | -             |
-| \--skip-template-creation | -t    | n/a                                | Skips creating CSE k8s template during installation                                                              | False         |
-| \--ssh-key                | -k    | path to public ssh key file        | ssh-key file to use for VM access (root password ssh access is disabled for security reasons)                    | -             |
+| Option                    | Short | Argument(s)                        | Description                                                                                                      | Default Value | Notes                |
+|---------------------------|-------|------------------------------------|------------------------------------------------------------------------------------------------------------------|---------------|----------------------|
+| \--config                 | -c    | path to config file                | Filepath of CSE config file to use for installation                                                              | config.yaml   |                      |
+| \--pks-config-file        | -p    | path to Enterprise PKS config file | Filepath of Enterprise PKS config file to use for installation                                                   | -             |                      |
+| \--retain-temp-vapp       | -d    | n/a                                | Retain the temporary vApp after the template has been captured --ssh-key option is required if this flag is used | False         | Removed in CSE 3.1.2 |
+| \--skip-config-decryption | -s    | n/a                                | Skips decrypting the configuration file and pks configuration file, and assumes them to be plain text            | -             |                      |
+| \--skip-template-creation | -t    | n/a                                | Skips creating CSE k8s template during installation                                                              | False         | Removed in CSE 3.1.2 |
+| \--ssh-key                | -k    | path to public ssh key file        | ssh-key file to use for VM access (root password ssh access is disabled for security reasons)                    | -             | Removed in CSE 3.1.2 |
 
-To monitor the vApp customization process, we can ssh into the temporary vApp.
-In the temporary vApp, the output of the customization script is captured in
-`/tmp/FILENAME.out` as well as `/tmp/FILENAME.err`:
+For CSE 3.1.0 and CSE 3.1.1, during template creation, to monitor the vApp customization process,
+we can ssh into the temporary vApp. In the temporary vApp, the output of the customization script
+is captured in `/tmp/FILENAME.out` as well as `/tmp/FILENAME.err`:
 
 ```sh
 # print out file contents as it's being written to
 tail -f /tmp/FILENAME.out
 tail -f /tmp/FILENAME.err
 ```
+
 <a name="cse31-upgrade-cmd"></a>
 ### CSE 3.1 Upgrade Command
 
@@ -97,7 +98,7 @@ organization virtual data center(s), delete the old compute policies. Note
 that this clean-up is done only on CSE-created compute policies.
 * Prepare the environment to be able to perform organization virtual datacenter 
 enablement for native clusters. 
-* Auto-install templates of the latest revision unless specified otherwise.
+* Auto-install templates of the latest revision unless specified otherwise. (Not  applicable for CSE 3.1.2)
 * Identify existing organization virtual datacenter(s) with existing clusters 
 and publish appropriate placement policies on the same.
 * Make pre-existing clusters forward compatible.
@@ -106,6 +107,7 @@ and publish appropriate placement policies on the same.
 * Convert legacy clusters to RDE based clusters.
 * Update RDE 1.0 clusters to RDE 2.0 clusters.
 
+CSE 3.1.2 can be upgraded from 3.1.0, 3.1.1 or 3.0.X.
 CSE 3.1.1 can be upgraded from 3.1.0 or 3.0.X.
 CSE 3.1.0 can only be upgraded from 3.0.X.
 Below are the few valid upgrade paths and the resultant changes in the environment.
@@ -126,7 +128,7 @@ can be upgraded to environment CSE 3.1, configured with VCD 10.2, running with `
    - Native clusters will have a new representation  in the form of 
      RDE `urn:vcloud:type:cse:nativeCluster:2.0.0` entities.
 4. CSE 3.0.X, VCD 10.2 (api_version=35.0) -> CSE 3.1, VCD 10.3 (legacy_mode=false)
-   - Native clusters will be updated from `urn:vcloud:type:cse:nativeCluster:1.0.0`
+   - Native clusters will be updated froms `urn:vcloud:type:cse:nativeCluster:1.0.0`
      to `urn:vcloud:type:cse:nativeCluster:2.0.0` entities.
     
 Note the below recommendation when the target combination is CSE 3.1 (legacy_mode=false):
@@ -335,7 +337,7 @@ version                            3.1.1
    the relevant values from the previous config file.
 5. If the previously generated templates are no longer supported by the new version,
    delete the old templates (from VCD UI / vcd-cli) and generate new ones via
-   * `cse install -c myconfig.yaml` (or) `cse upgrade`
+   * `cse template install -c myconfig.yaml`
    Check [here](TEMPLATE_ANNOUNCEMENTS.html) for available templates.
 6. Run `cse upgrade` command to make the environment forward compatible. Refer [CSE 3.0 upgrade command](CSE_SERVER_MANAGEMENT.html#cse30-upgrade-cmd)
 7. If CSE is being run as a service, start the new version of the service with
