@@ -5,46 +5,9 @@ title: Kubernetes Container Clusters UI plugin for VCD
 
 # Kubernetes Container Clusters UI plugin for VCD
 
-VCD 10.3 comes with a Kubernetes Container Clusters UI plugin 3.0 out of the box. 
-
+VCD 10.3.x comes with a Kubernetes Container Clusters UI plugin 3.x.0 out of the box. 
 *Refer to [Compatibility Matrix](CSE31.html#cse31-compatibility-matrix) and
-[Kubernetes Container Clusters UI plugin 3.0.0](https://docs.vmware.com/en/VMware-Cloud-Director/10.3/VMware-Cloud-Director-Service-Provider-Admin-Portal-Guide/GUID-F8F4B534-49B2-43B2-AEEE-7BAEE8CE1844.html) documentation*
-
-## Overview
-
-For VCD versions before 10.2, Kubernetes Container Clusters UI plugin 1.0.3 can be used with CSE 3.0 to manage Kubernetes Clusters directly from VCD UI
-
-## Get Kubernetes Container Clusters UI plugin
-
-The v1.0.3 plugin binary can be downloaded from [here](https://github.com/vmware/container-service-extension/raw/master/cse_ui/1.0.3/container-ui-plugin.zip).
-
----
-
-## Register and publish Kubernetes Container Clusters UI plugin
-
-**Via VCD UI portal**
-
-To register the plugin, upload `container-ui-plugin.zip` to VCD through `Customize Portal`
-option in the navigation menu of VCD Service Provider view. Then follow the
-standard steps of publishing an UI plugin. After registration, refresh the page.
-There should be a `Kubernetes Container Clusters` option in the navigation menu.
-
-To unregister the plugin, select the plugin in `Customize Portal` and click on
-`DELETE` button.
-
-## Access Control
-
-Tenant users cannot register/unregister Kubernetes Container Clusters UI plugin, and they can only use the plugin once access has been granted by Service Provider.
-Service Providers can enable/disable Kubernetes Container Clusters UI plugin as well as manage access contorl to the plugin.
-
-## Enable/Disable plugin
-
-On `Customize Portal` page, select `Container UI plugin`, and click on the `ENABLE` or `DISABLE` button.
-Disabling the plugin will make the plugin inaccessible for both providers and tenants
-
-## Access control for tenants
-
-On `Customize Portal` page, select `Container UI plugin`, and click on the `PUBLISH` button. . In the wizard, customize the scope to publish to. To remove plugin access from specific tenants, un-select them from the scope and click publish.
+[VMware Cloud Director Service Provider Admin Portal Guide](https://docs.vmware.com/en/VMware-Cloud-Director/10.3/VMware-Cloud-Director-Service-Provider-Admin-Portal-Guide/GUID-F8F4B534-49B2-43B2-AEEE-7BAEE8CE1844.html) documentation*
 
 ---
 

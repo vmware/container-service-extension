@@ -30,6 +30,7 @@ Here is a summary of commands available to view templates and manage clusters an
 | `vcd cse cluster info CLUSTER_NAME`                                    | Retrieve detailed information of a Kubernetes cluster.                     | Yes    | Yes |
 | `vcd cse cluster config CLUSTER_NAME`                                  | Retrieve the kubectl configuration file of the Kubernetes cluster.         | Yes    | Yes |
 | `vcd cse cluster delete CLUSTER_NAME`                                  | Delete a Kubernetes cluster.                                               | Yes    | Yes |
+| `vcd cse cluster delete CLUSTER_NAME --force`                          | Delete a Kubernetes cluster even if they are in an unrecoverable state.    | Yes    | Yes |
 | `vcd cse cluster upgrade-plan CLUSTER_NAME`                            | Retrieve the allowed path for upgrading Kubernetes software on the custer. | Yes    | No  |
 | `vcd cse cluster upgrade CLUSTER_NAME TEMPLATE_NAME TEMPLATE_REVISION` | Upgrade cluster software to specified template's software versions.        | Yes    | No  |
 | `vcd cse cluster delete-nfs CLUSTER_NAME NFS_NODE_NAME`                | Delete NFS node of a given Kubernetes cluster                              | Yes    | No  |
@@ -311,3 +312,26 @@ Please use CSI for VCD to work with static and dynamic persistent volumes for K8
 * Cluster sharing is not supported for TKG clusters.
 
 * Kubernetes upgrade is not supported for TKG clusters.
+
+<a name="force_delete"></a>
+## Force deleting clusters
+If cluster deployment fails on CSE 3.1.1+ and VCD 10.3.1+, it is possible for the cluster to end up
+in state, where users are unable to delete them from UI/CLI. The issue and a workaround has been
+mentioned [here](KNOWN_ISSUES.html#fail_cluster_delete). In CSE 3.1.2, a new option `-f/--force`
+has been added to the command `vcd cse cluster delete`. This option if specified deletes
+those clusters (and its associated resources) that were not fully created and were left in
+unremovable state. User must have following rights to use this option,
+```
+cse:nativeCluster: Full Access (Administrator Full Control if not owner)
+vApp: Delete
+Organization vDC Gateway: Configure NAT
+Organization vDC Gateway: View
+```
+and a `FullControl` access level on the RDE type `cse:nativeCluster:2.0.0`.
+```
+{
+    "grantType": "MembershipAccessControlGrant",
+    "accessLevelId": "urn:vcloud:accessLevel:FullControl",
+    "memberId": "urn:vcloud:user:uuid"
+}
+```
