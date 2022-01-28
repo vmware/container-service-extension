@@ -6,7 +6,7 @@ title: Release Notes
 # General Announcement
 **Date : 2022-01-27**  
 * Container Service Extension 3.1.x reaches end of support on July 15, 2023.  
-* Tanzu Kubernetes Grid Integrated Edition (TKG-I) reaches end of support on Feb 24, 2022.
+* Tanzu Kubernetes Grid Integrated Edition (TKGi) integration with CSE reaches end of support on Feb 24, 2022.
 
 **Date : 2021-12-15**  
 CSE is not impacted by the Apache Log4j open source component vulnerability.
@@ -191,22 +191,22 @@ they won't be tested individually. If a bug is found in their interoperability
 with CSE, please file a github [issue](https://github.com/vmware/container-service-extension/issues),
 the same will be fixed in a future CSE release.
 
-| CSE Server | CSE CLI | CSE UI | Cloud Director | Ent-PKS with NSX-T | NSX-V  | Features offered                                                                                    |
-|------------|---------|--------|----------------|--------------------|--------|-----------------------------------------------------------------------------------------------------|
-| 3.1        | 3.1     | 3.0*   | 10.3           | 1.7 with 2.5.1     | 6.4.10 | Native, TKG-S, and Ent-PKS Cluster management;                                                      |
-| 3.1        | 3.1     | 2.0*   | 10.2           | 1.7 with 2.5.1     | 6.4.10 | Native, TKG-S, and Ent-PKS Cluster management; Defined entity representation for both native and tkg. |
-| 3.1        | 3.1     | 1.0.3  | 10.1           | 1.7 with 2.5.1     | 6.4.8  | Native and Ent-PKS cluster management                                                               |
-| NA         | 3.1     | 3.0*   | 10.3           | NA                 | NA     | TKG-S cluster management only                                                                         |
-| NA         | 3.1     | 2.0*   | 10.2           | NA                 | NA     | TKG-S cluster management only                                                                         |
+| CSE Server | CSE CLI | CSE UI | Cloud Director | TKGi with NSX-T | NSX-V  | Features offered                                                                                  |
+|------------|---------|--------|----------------|-----------------|--------|---------------------------------------------------------------------------------------------------|
+| 3.1        | 3.1     | 3.0*   | 10.3           | 1.7 with 2.5.1  | 6.4.10 | Native, TKGs, and TKGi Cluster management;                                                        |
+| 3.1        | 3.1     | 2.0*   | 10.2           | 1.7 with 2.5.1  | 6.4.10 | Native, TKGs, and TKGi Cluster management; Defined entity representation for both native and TKG. |
+| 3.1        | 3.1     | 1.0.3  | 10.1           | 1.7 with 2.5.1  | 6.4.8  | Native and TKGi cluster management                                                             |
+| NA         | 3.1     | 3.0*   | 10.3           | NA              | NA     | TKGs cluster management only                                                                      |
+| NA         | 3.1     | 2.0*   | 10.2           | NA              | NA     | TKGs cluster management only                                                                      |
 
 3.0*, 2.0* -> Kubernetes Container Clusters UI plugin 3.0 and 2.0 ship with VCD 10.3 and VCD 10.2 respectively.
 
 1. Refer to [What's new in CSE 3.1?](CSE31.html) for more details.
 2. Newer versions of native kubernetes templates are available. Refer to
 [Template Announcements](TEMPLATE_ANNOUNCEMENTS.html)
-1. Deprecation of TKG-I (Enterprise PKS) - CSE Server and Kubernetes Container Clusters UI plugin
-will soon drop support for TKG-I (previously known as Enterprise PKS). Consider using
-VMware Tanzu Kubernetes Grid (TKG) or VMware Tanzu Kubernetes Grid Service (TKG-S) for
+1. Deprecation of TKGi (Enterprise PKS) - CSE Server and Kubernetes Container Clusters UI plugin
+will soon drop support for TKGi (previously known as Enterprise PKS). Consider using
+VMware Tanzu Kubernetes Grid (TKG) or VMware Tanzu Kubernetes Grid Service (TKGs) for
 management of Kubernetes clusters with VCD.
 
 ## CSE 3.1.0 Beta (3.1.0.0b1)
@@ -214,11 +214,11 @@ Release Date: 2021-04-14
 
 Supported VCD versions: 10.3.0-Beta, 10.2.2, 10.1.3, 10.0.0.3
 
-| CSE Server | CSE CLI | CSE UI  | Cloud Director       | Cloud Director NSX-T | Ent-PKS with NSX-T | Features offered                                                                                    |
-|------------|---------|---------|----------------------|----------------------|--------------------|-----------------------------------------------------------------------------------------------------|
-| 3.1.0      | 3.1.0   | 3.0.2** | 10.3.0-beta, 10.2.2  | 3.0.2, 3.1.2         | 1.7 with 2.5.1     | Native, Tkg, and Ent-PKS Cluster management; Defined entity representation for both native and tkg. |
-| 3.1.0      | 3.1.0   | 1.0.3   | 10.1, 10.0           | NA                   | 1.7 with 2.5.1     | Native and Ent-PKS cluster management                                                               |
-| NA         | 3.1.0   | 3.0.2** | 10.3.0-beta, 10.2.2  | NA                   | NA                 | Tkg cluster management only                                                                         |
+| CSE Server | CSE CLI | CSE UI  | Cloud Director       | Cloud Director NSX-T | TKGi with NSX-T | Features offered                                                                                  |
+|------------|---------|---------|----------------------|----------------------|-----------------|---------------------------------------------------------------------------------------------------|
+| 3.1.0      | 3.1.0   | 3.0.2** | 10.3.0-beta, 10.2.2  | 3.0.2, 3.1.2         | 1.7 with 2.5.1  | Native, TKGs, and TKGi Cluster management; Defined entity representation for both native and TKG. |
+| 3.1.0      | 3.1.0   | 1.0.3   | 10.1, 10.0           | NA                   | 1.7 with 2.5.1  | Native and TKGi cluster management                                                                |
+| NA         | 3.1.0   | 3.0.2** | 10.3.0-beta, 10.2.2  | NA                   | NA              | TKGs cluster management only                                                                      |
 
 
 **Installation of binaries**

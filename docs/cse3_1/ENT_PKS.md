@@ -6,8 +6,8 @@ title: Enterprise PKS enablement
 <span style="color:red">## Deprecation Notice</span>
 
 CSE Server and Kubernetes Container Clusters plugin will soon drop support for
-TKG-I (previously known as Enterprise PKS). Consider using
-VMware Tanzu Kubernetes Grid (TKG) or VMware Tanzu Kubernetes Grid Service (TKG-S)
+TKGi (previously known as Enterprise PKS). Consider using
+VMware Tanzu Kubernetes Grid (TKG) or VMware Tanzu Kubernetes Grid Service (TKGs)
 for management of Kubernetes clusters with VCD.
 
 # Enterprise PKS enablement
@@ -116,7 +116,7 @@ CSE's default behavior i.e., all ovdc-s are open for native K8s cluster deployme
 Do not choose Pay-as-you-go model for ovdc(s). Refer [FAQ](#faq) for more details.
 2. Use these [CSE commands](#cse-commands) to grant K8 deployment rights to chosen tenants and tenant-users. Refer
 [RBAC feature](RBAC.html) for more details
-3. Use [CSE command](#cse-commands) to enable organization vdc(s) with a chosen K8-provider (native (or) ent-pks).
+3. Use [CSE command](#cse-commands) to enable organization vdc(s) with a chosen K8-provider (native (or) TKGi).
 
 Below diagram illustrates a time sequence view of setting up the infrastructure for CSE 2.0,
  followed by the on boarding of tenants. The expected steps are executed by Cloud providers
@@ -171,15 +171,15 @@ Below steps of granting rights are required only if [RBAC feature](RBAC.html) is
 * vcd user create 'power-user' 'password' 'Omni K8 Author'
 ```
 
-**Enabling ovdc(s) for Ent-PKS deployments:**
-Starting CSE 3.0, separate command group has been dedicated to Ent-PKS
+**Enabling ovdc(s) for TKGi deployments:**
+Starting CSE 3.0, separate command group has been dedicated to TKGi (Enterprise PKS)
 ```sh
 * vcd cse pks ovdc list
 * vcd cse pks ovdc enable ovdc2 -o tenant1 -k ent-pks --pks-plan "gold" --pks-cluster-domain "tenant1.com"
 ```
 
 ### Cluster management commands
-Starting CSE 3.0, separate command group has been dedicated to Ent-PKS
+Starting CSE 3.0, separate command group has been dedicated to TKGi (Enterprise PKS)
 ```sh
 * vcd cse pks cluster list
 * vcd cse pks cluster create
@@ -220,7 +220,7 @@ Starting CSE 3.0, separate command group has been dedicated to Ent-PKS
 * Do Enterprise PKS based clusters adhere to its parent organization-vdc storage limits?
     * This functionality is not available yet. As of today, organization-vdc storage limits apply
     only for native K8 clusters.
-* Can native K8 clusters be deployed in organization-vdc(s) dedicated for Ent-PKS?
+* Can native K8 clusters be deployed in organization-vdc(s) dedicated for TKGi?
     * This functionality is not available yet.
 * Can tenant get a dedicated storage for their Enterprise PKS based clusters?
     * This functionality is not available yet.

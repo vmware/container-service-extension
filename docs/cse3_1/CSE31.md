@@ -12,13 +12,13 @@ For greenfield installations, please get started with [CSE introduction](INTRO.h
 **Terminology:**
 * TKG cluster : Clusters deployed by CSE using VMware Tanzu Kubernetes Grid OVA.
 * Native cluster : Clusters deployed by CSE using upstream Kubernetes.
-* TKG-S cluster : VMware Tanzu Kubernetes Grid Service cluster a.k.a vSphere with Tanzu cluster.
-* TKG-I cluster : Enterprise PKS cluster a.k.a VMware Tanzu Kubernetes Grid Integrated Edition cluster.
+* TKGs cluster : VMware Tanzu Kubernetes Grid Service cluster a.k.a vSphere with Tanzu cluster.
+* TKGi cluster : Enterprise PKS cluster a.k.a VMware Tanzu Kubernetes Grid Integrated Edition cluster.
 * Defined entities : Runtime defined entities a.k.a RDE or Defined Entity Framework.
 * Native entities: Runtime defined entities representing Native clusters.
-* TKG-S entities: Runtime defined entities representing TKG-S clusters.
+* TKGs entities: Runtime defined entities representing TKGs clusters.
 * Defined entity API: VCD's generic defined entity api to manage lifecycle of RDEs.
-* UI plugin : Kubernetes Container Clusters UI plugin, that is used to manage Native, TKG, TKG-S, TKG-I clusters from VCD UI.
+* UI plugin : Kubernetes Container Clusters UI plugin, that is used to manage Native, TKG, TKGs, TKGi clusters from VCD UI.
 
 ### CSE 3.1.2
 
@@ -55,7 +55,7 @@ For greenfield installations, please get started with [CSE introduction](INTRO.h
 * Newer versions of native Kubernetes templates are available. Refer to
   [Template announcements](TEMPLATE_ANNOUNCEMENTS.html)
 * CSE 3.1 drops the support with VCD 10.0.
-* **Deprecation of TKG-I (Enterprise PKS)** - CSE Server and Kubernetes Container Clusters plugin will soon drop support for TKG-I. Consider using VMware Tanzu Kubernetes Grid (TKG) or VMware Tanzu Kubernetes Grid Service (TKG-S) for management of Kubernetes clusters with VCD.
+* **Deprecation of TKGi (Enterprise PKS)** - CSE Server and Kubernetes Container Clusters plugin will soon drop support for TKGi. Consider using VMware Tanzu Kubernetes Grid (TKG) or VMware Tanzu Kubernetes Grid Service (TKGs) for management of Kubernetes clusters with VCD.
 
 ## User Context Diagram
 
@@ -110,7 +110,7 @@ For greenfield installations, please get started with [CSE introduction](INTRO.h
 
 **Note**: Ubuntu 20.04 Kubernetes OVAs from VMware Tanzu Kubernetes Grid Versions 1.4.0, 1.3.1, 1.3.0 are supported.
 
-**TKG-S compatibility matrix**
+**TKGs compatibility matrix**
 
 | CSE CLI | UI plugin  | Cloud Director |
 |---------|------------|----------------|
@@ -122,13 +122,13 @@ For greenfield installations, please get started with [CSE introduction](INTRO.h
 | 3.1.0   | 3.0.0      | 10.3.0         |
 | 3.1.0   | 2.0.0      | 10.2.0         |
 
-**Note** : TKG-S cluster management doesn't need CSE server to be running.
+**Note** : TKGs cluster management doesn't need CSE server to be running.
 
-**TKG-I compatibility matrix**
+**TKGi compatibility matrix**
 
-| CSE Server          | Cloud Director       | Ent-PKS | NSX-T |
-|---------------------|----------------------|---------|-------|
-| 3.1.2, 3.1.1, 3.1.0 | 10.3.1, 10.2.2, 10.1 | 1.7     | 2.5.1 |
+| CSE Server          | Cloud Director       | TKGi | NSX-T |
+|---------------------|----------------------|------|-------|
+| 3.1.2, 3.1.1, 3.1.0 | 10.3.1, 10.2.2, 10.1 | 1.7  | 2.5.1 |
 
 ### 2.2 CSE Server
 
@@ -220,10 +220,10 @@ The provider needs to perform below operations to enable Kubernetes cluster
 deployments in tenant organizations and tenant virtual data centers.
 1. Grant rights to the tenant users. Refer to [CSE 3.1 RBAC](RBAC.html#rde_rbac)
 for more details.
-2. Enable the desired organization virtual datacenter(s) for Native, TKG-S, and/or TKG-I deployments.
+2. Enable the desired organization virtual datacenter(s) for Native, TKGs, and/or TKGi deployments.
     * Native clusters → [Enable VDC for Native clusters](TEMPLATE_MANAGEMENT.html#restrict_templates).
-    * TKG-S clusters → [Publish Kubernetes policy on VDC for TKG-S Clusters](https://docs.vmware.com/en/VMware-Cloud-Director/10.3/VMware-Cloud-Director-Service-Provider-Admin-Portal-Guide/GUID-E9839D4E-3024-445E-9D08-372113CF6FE0.html)
-    * TKG-I clusters → [Enable VDC for TKG-I clusters](ENT_PKS.html#cse-commands)
+    * TKGs clusters → [Publish Kubernetes policy on VDC for TKGs Clusters](https://docs.vmware.com/en/VMware-Cloud-Director/10.3/VMware-Cloud-Director-Service-Provider-Admin-Portal-Guide/GUID-E9839D4E-3024-445E-9D08-372113CF6FE0.html)
+    * TKGi clusters → [Enable VDC for TKGi clusters](ENT_PKS.html#cse-commands)
 3. [Publish Kubernetes Container Clusters UI plugin](https://docs.vmware.com/en/VMware-Cloud-Director/10.3/VMware-Cloud-Director-Service-Provider-Admin-Portal-Guide/GUID-A1910FF9-B2CF-49DD-B031-D1245E8740AE.html)
 to the desired organizations.
 

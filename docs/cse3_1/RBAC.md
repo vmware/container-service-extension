@@ -9,7 +9,7 @@ title: Role Based Access Control
 
 CSE 3.1, when connected to either VCD 10.3 (or) VCD 10.2, leverages the RBAC that comes with VCD's feature
 [Defined Entity framework](https://docs.vmware.com/en/VMware-Cloud-Director/10.2/VMware-Cloud-Director-Service-Provider-Admin-Portal-Guide/GUID-0749DEA0-08A2-4F32-BDD7-D16869578F96.html) 
-for Native, TKG and TKG-S clusters. RBAC for [TKG-I clusters](#old RBAC) remain as-is.
+for Native, TKG and TKGs clusters. RBAC for [TKGi clusters](#old RBAC) remain as-is.
 
 Note: The RBAC in this section refers to the roles and rights required for the tenants
 to perform the life cycle management of kubernetes clusters. It does not have
@@ -23,18 +23,18 @@ representation for native clusters, a new right bundle `cse:nativeCluster entitl
 gets created in VMware Cloud Director (VCD) during CSE server installation, which is what 
 guards the native cluster operations in CSE >= 3.0. Since TKG clusters reuse the
 native RDE for its representation, access to life cycle management of TKG clusters
-is also guarded by the same rights as native clusters. TKG-S clusters are guarded by
+is also guarded by the same rights as native clusters. TKGs clusters are guarded by
 a separate set of rights that comes pre-installed with VCD.
 
 * Right bundle for Native cluster → `cse:nativeCluster entitlement`
 * Right bundle for TKG cluster → `cse:nativeCluster entitlement`
-* Right bundle for TKG-S Cluster → `vmware:tkgcluster entitlement`
+* Right bundle for TKGs Cluster → `vmware:tkgcluster entitlement`
 
 Five rights exist in each of the above right bundles. Note that any custom 
 role created with these rights need to have at least the privileges 
-of the pre-defined role `vApp Author` in order to deploy native/TKG/TKG-S clusters.
+of the pre-defined role `vApp Author` in order to deploy native/TKG/TKGs clusters.
 
-The Provider needs to grant the Native and/or TKG-S right bundles 
+The Provider needs to grant the Native and/or TKGs right bundles 
 to the desired organizations and then grant the admin-level defined entity type 
 rights to the `Tenant Administrator` role. This will enable the tenant administrator 
 to further assign the relevant cluster management rights to the desired tenant users.
@@ -82,9 +82,9 @@ the restricted operations.
 | cluster resize | Native(VCD)        | {cse}:CSE NATIVE DEPLOY RIGHT | CSE 1.2.6     |
 | node create    | Native(VCD)        | {cse}:CSE NATIVE DEPLOY RIGHT | CSE 1.2.6     |
 | node delete    | Native(VCD)        | {cse}:CSE NATIVE DEPLOY RIGHT | CSE 1.2.6     |
-| cluster create | TKG-I              | {cse}:PKS DEPLOY RIGHT        | CSE 2.0.0b1   |
-| cluster delete | TKG-I              | {cse}:PKS DEPLOY RIGHT        | CSE 2.0.0b1   |
-| cluster resize | TKG-I              | {cse}:PKS DEPLOY RIGHT        | CSE 2.0.0b1   |
+| cluster create | TKGi               | {cse}:PKS DEPLOY RIGHT        | CSE 2.0.0b1   |
+| cluster delete | TKGi               | {cse}:PKS DEPLOY RIGHT        | CSE 2.0.0b1   |
+| cluster resize | TKGi               | {cse}:PKS DEPLOY RIGHT        | CSE 2.0.0b1   |
 
 Note: Role Based Access Control feature is turned off by default.
 
