@@ -5,8 +5,8 @@ title: Release Notes
 
 # General Announcement
 **Date : 2022-01-27**  
-Container Service Extension 3.1.x reaches end of support on July 15, 2023.  
-Tanzu Kubernetes Grid Integrated Edition (TKG-I) is no longer supported.
+* Container Service Extension 3.1.x reaches end of support on July 15, 2023.  
+* Tanzu Kubernetes Grid Integrated Edition (TKG-I) reaches end of support on Feb 24, 2022.
 
 **Date : 2021-12-15**  
 CSE is not impacted by the Apache Log4j open source component vulnerability.
