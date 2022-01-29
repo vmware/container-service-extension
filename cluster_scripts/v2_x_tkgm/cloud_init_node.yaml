@@ -97,6 +97,8 @@ write_files:
 
     exit 0
 runcmd:
+- '[ ! -f /root/kubeadm-defaults-join.conf ] && cloud-init clean && sudo reboot'
+- '[ ! -f /root/node.sh ] && cloud-init clean && sudo reboot'
 - bash /root/node.sh
 timezone: UTC
 disable_root: false
