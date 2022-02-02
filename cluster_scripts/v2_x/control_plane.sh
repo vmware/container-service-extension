@@ -10,7 +10,13 @@ while [ `systemctl is-active docker` != 'active' ]; do echo 'waiting for docker'
 if [ "$input_kind" == "$tkg_plus_kind" ]; then
     kubeadm init --config=$kubeadm_config_path > /root/kubeadm-init.out
 else
-    kubeadm init --kubernetes-version=v{k8s_version} > /root/kubeadm-init.out
+    lsb_release -a | grep -q 20.04
+    if [ $? == 0 ]; then
+        # if os is ubuntu 20.04, then use containerd cri-socket
+        kubeadm init --kubernetes-version=v{k8s_version} --cri-socket=/run/containerd/containerd.sock > /root/kubeadm-init.out
+    else
+        kubeadm init --kubernetes-version=v{k8s_version} > /root/kubeadm-init.out
+    fi
 fi
 
 mkdir -p /root/.kube
