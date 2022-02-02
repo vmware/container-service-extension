@@ -164,7 +164,7 @@ TEMPLATE_RULE_NOTE = """# [Optional] Template rule section
 #    mem: 1024
 """  # noqa: E501
 
-COMMENTED_EXTRA_OPTIONS_SECTION =  """# [Optional] Extra options section
+COMMENTED_EXTRA_OPTIONS_SECTION = """# [Optional] Extra options section
 #extra_options:
 #  tkgm_http_proxy: [http proxy url with port]
 #  tkgm_https_proxy: [https proxy url with port]
