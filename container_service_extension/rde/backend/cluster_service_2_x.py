@@ -2760,7 +2760,7 @@ def _join_cluster(sysadmin_client: vcd_client.Client, vapp, target_nodes=None):
 
         script = """
                  #!/usr/bin/env bash
-                 kubeadm token create --print-join-command
+                 kubeadm token create --print-join-command --ttl 0
             """
 
         node_names = _get_node_names(vapp, NodeType.CONTROL_PLANE)
