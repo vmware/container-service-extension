@@ -14,10 +14,6 @@ Starting CSE 3.0 and VCD 10.2, Kubernetes Clusters UI Plugin 2.0 is available ou
 
 For VCD versions before 10.2, Kubernetes Clusters UI Plugin 1.0.3 can be used with CSE 3.0 to manage Kubernetes Clusters directly from VCD UI
 
-## Get Kubernetes Clusters UI Plugin
-
-The v1.0.3 plugin binary can be downloaded from [here](https://github.com/vmware/container-service-extension/raw/master/cse_ui/1.0.3/container-ui-plugin.zip).
-
 ---
 
 ## Register and publish Kubernetes Clusters UI Plugin

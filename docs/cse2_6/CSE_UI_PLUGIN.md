@@ -9,10 +9,6 @@ title: Container UI Plugin for VCD
 
 From CSE 2.6.0 onwards, CSE users can use this plugin to interact with CSE Kubernetes clusters directly from VCD UI.
 
-## Get Container UI Plugin
-
-The v1.0.3 plugin binary can be downloaded from [here](https://github.com/vmware/container-service-extension/raw/master/cse_ui/1.0.3/container-ui-plugin.zip).
-
 ---
 
 ## Register and publish Container Ui Plugin

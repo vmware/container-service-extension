@@ -74,13 +74,13 @@ For greenfield installations, please get started with [CSE introduction](INTRO.h
 | 3.1.2          | 3.2.0     | 10.3.2         | Plugin ships with VCD. Download from [here](https://customerconnect.vmware.com/en/downloads/info/slug/datacenter_cloud_infrastructure/vmware_cloud_director/10_3#drivers_tools)  |
 | 3.1.2          | 3.1.0     | 10.3.1         | Plugin ships with VCD  |
 | 3.1.2          | 2.2.0     | 10.2.2         | Plugin ships with VCD  |
-| 3.1.2          | 1.0.3     | 10.1           | Download from [here](https://github.com/vmware/container-service-extension/raw/master/cse_ui/1.0.3/container-ui-plugin.zip) |
+| 3.1.2          | 1.0.3     | 10.1           |  |
 | 3.1.1          | 3.1.0     | 10.3.1         | Plugin ships with VCD  |
 | 3.1.1          | 2.2.0     | 10.2.2         | Plugin ships with VCD  |
-| 3.1.1          | 1.0.3     | 10.1           | Download from [here](https://github.com/vmware/container-service-extension/raw/master/cse_ui/1.0.3/container-ui-plugin.zip) |
+| 3.1.1          | 1.0.3     | 10.1           |  |
 | 3.1.0          | 3.0.0     | 10.3.0         | Plugin ships with VCD  |
 | 3.1.0          | 2.0.0     | 10.2.0         | Plugin ships with VCD  |
-| 3.1.0          | 1.0.3     | 10.1           | Download from [here](https://github.com/vmware/container-service-extension/raw/master/cse_ui/1.0.3/container-ui-plugin.zip) |
+| 3.1.0          | 1.0.3     | 10.1           |  |
 
 
 **Native cluster comaptiblity matrix**
@@ -161,7 +161,7 @@ Refer to [CSE 3.1 installation](CSE_SERVER_MANAGEMENT.html#cse31-greenfield).
 <a name="brown_field_upgrades"></a>
 #### 2.2.3 Brownfield upgrade
 
-**3.1.2**  
+**3.1.2**
 CSE can be upgraded from version 3.1.1, 3.1.0 and 3.0.z to version 3.1.2 GA.
 Any CSE release older than CSE 3.0.0 first needs to be upgraded to
 CSE 3.0.z product line before it can be upgraded to CSE 3.1.2.
@@ -175,13 +175,13 @@ then the steps mentioned below must be followed in order to upgrade to CSE 3.1.2
 1. Evaluate your environment for any stateful applications that run on TKG clusters
 powered by CSE 3.0.z. If you wish to retain these application's data, then leverage
 a Kubernetes application backup/restore strategy to backup the applications data so you can restore it later.
-2. The next set of steps lead you through removal of TKG clusters from CSE 3.0.z after which you can safely upgrade to CSE 3.1.2  
-  2.1. Delete all deployed TKG clusters across all tenants via `vcd-cli` or `Kubernetes Container Clusters UI plugin`.  
-  2.2. Disable TKG deployment on all Org VDCs via `vcd cse ovdc disable`.  
-  2.3. Stop the CSE server.  
-  2.4. Delete all TKG templates via VCD UI.  
-  2.5. Remove the VM Placement Policy `cse---tkgm` from the system via VCD UI or VCD REST api.  
-  2.6. Revert CSE configuration file to disable TKG.  
+2. The next set of steps lead you through removal of TKG clusters from CSE 3.0.z after which you can safely upgrade to CSE 3.1.2
+  2.1. Delete all deployed TKG clusters across all tenants via `vcd-cli` or `Kubernetes Container Clusters UI plugin`.
+  2.2. Disable TKG deployment on all Org VDCs via `vcd cse ovdc disable`.
+  2.3. Stop the CSE server.
+  2.4. Delete all TKG templates via VCD UI.
+  2.5. Remove the VM Placement Policy `cse---tkgm` from the system via VCD UI or VCD REST api.
+  2.6. Revert CSE configuration file to disable TKG.
 3. Upgrade CSE via `cse upgrade` command.
 4. Create new TKG clusters from Ubuntu 20.04 TKG OVAs, using CSE 3.1.2.
 5. Restore applications on newly created TKG clusters.
@@ -189,7 +189,7 @@ a Kubernetes application backup/restore strategy to backup the applications data
 Refer to [CSE 3.1 upgrade command](CSE_SERVER_MANAGEMENT.html#cse31-upgrade-cmd) for details.
 
 
-**3.1.1**  
+**3.1.1**
 CSE can be upgraded from CSE 3.1.0 and CSE 3.0.z to 3.1.1 GA.
 Any CSE release older than CSE 3.0.0 first needs to be upgraded to
 CSE 3.0.z product line before it can be upgraded to CSE 3.1.1.
@@ -228,8 +228,8 @@ for more details.
 to the desired organizations.
 
 ### 2.3 Kubernetes Container Clusters UI plugin
-Kubernetes Container Clusters UI plugin 3.2.0 is available out of the box with VCD 10.3.2.  
-Kubernetes Container Clusters UI plugin 3.1.0 is available out of the box with VCD 10.3.1.  
+Kubernetes Container Clusters UI plugin 3.2.0 is available out of the box with VCD 10.3.2.
+Kubernetes Container Clusters UI plugin 3.1.0 is available out of the box with VCD 10.3.1.
 Kubernetes Container Clusters UI plugin 3.0.0 is available out of the box with VCD 10.3.0.
 
 Provider can publish it to the desired tenants to offer Kubernetes services.
