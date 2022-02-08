@@ -7,11 +7,7 @@ title: Container UI Plugin for VCD
 
 ## Overview
 
-From CSE 2.6.0 onwards, CSE users can use this plugin to interact with CSE Kubernetes clusters directly from VCD UI.
-
-## Get Container UI Plugin
-
-The v1.0.3 plugin binary can be downloaded from [here](https://github.com/vmware/container-service-extension/raw/master/cse_ui/1.0.3/container-ui-plugin.zip).
+For CSE 2.6, CSE users can use Plugin 1.0.3 to interact with CSE Kubernetes clusters directly from VCD UI.
 
 ---
 
@@ -88,10 +84,10 @@ current vCloud Director.
 
 For Tenants, it shows clusters created in current organization.
 
-* Organization Administrator - can view all clusters in the current organization.
-* Catalog author, vApp user and console access only roles - can view clusters
+- Organization Administrator - can view all clusters in the current organization.
+- Catalog author, vApp user and console access only roles - can view clusters
   created by catalog authors.
-* vApp author - can view only self owned clusters.
+- vApp author - can view only self owned clusters.
 
 All columns can be sorted and filtered. Upon clicking on the cluster name, users
 can view the details page of the corresponding cluster.
@@ -114,11 +110,11 @@ Details page shows more specific information based on the Kubernetes provider
 (either native or Enterprise PKS) of the cluster, which provides following
 functionalities:
 
-* Navigate back to landing page from the top navigation bar.
-* Download `kubectl` configuration from the button to the right of cluster title.
-* View General information of Enterprise PKS clusters.
-* View General and Nodes information of native clusters. Info and Details are sub-sections containing cluster-centric and VCD/CSE related attributes.
-* Add new worker nodes to native clusters. Removing worker nodes from native clusters is currently not supported via UI.
+- Navigate back to landing page from the top navigation bar.
+- Download `kubectl` configuration from the button to the right of cluster title.
+- View General information of Enterprise PKS clusters.
+- View General and Nodes information of native clusters. Info and Details are sub-sections containing cluster-centric and VCD/CSE related attributes.
+- Add new worker nodes to native clusters. Removing worker nodes from native clusters is currently not supported via UI.
 
 ---
 
@@ -143,8 +139,8 @@ Affected UI versions: 1.0.0, 1.0.1
 
 Fixed in 1.0.2 by manually encoding the affected URLs before making the vcd api call
 
-* Fix bug where plugin could not display networks from ovdcs with space(s) in the name
-* Fix clarity bug where datagrids that have several items in them got their height set to 0
+- Fix bug where plugin could not display networks from ovdcs with space(s) in the name
+- Fix clarity bug where datagrids that have several items in them got their height set to 0
 
 ---
 
@@ -182,7 +178,7 @@ Enterprise PKS as their k8s provider, UI will allow cluster creation operation
 on that OrgVDC, but the operation will eventually fail. This behavior is as
 designed.
 
-*Workaround:* - Enable the OrgVDC explicitly for Enterprise PKS cluster
+_Workaround:_ - Enable the OrgVDC explicitly for Enterprise PKS cluster
 deployment via the following command
 
 ```sh

@@ -4,11 +4,11 @@ title: Release Notes
 ---
 
 # General Announcement
-**Date : 2022-01-27**  
-* Container Service Extension 3.1.x reaches end of support on July 15, 2023.  
+**Date : 2022-01-27**
+* Container Service Extension 3.1.x reaches end of support on July 15, 2023.
 * Tanzu Kubernetes Grid Integrated Edition (TKGi) integration with CSE reaches end of support on Feb 24, 2022.
 
-**Date : 2021-12-15**  
+**Date : 2021-12-15**
 CSE is not impacted by the Apache Log4j open source component vulnerability.
 
 # Release Notes
@@ -58,9 +58,7 @@ the same will be fixed in a future CSE release.
 
 | CSE Server | CSE CLI   | CSE UI | Cloud Director | NSX-T with Avi             | Features offered |
 |------------|-----------|--------|----------------|----------------------------|------------------|
-| 3.1.1.0b2  | 3.1.1.0b2 | 3.0.4* | 10.3           | NSX-T 3.1.1 and Avi 20.1.3 | TKG              |
-
-3.0.4* -> Please download Kubernetes Container Clusters UI Plugin from [here](https://github.com/vmware/container-service-extension/raw/master/cse_ui/3.0.4/container-ui-plugin.zip)
+| 3.1.1.0b2  | 3.1.1.0b2 | 3.0.4  | 10.3           | NSX-T 3.1.1 and Avi 20.1.3 | TKG              |
 
 **Installation of binaries**
 ```
@@ -129,8 +127,6 @@ the same will be fixed in a future CSE release.
 | CSE Server | CSE CLI   | CSE UI | Cloud Director | NSX-T with Avi             | Features offered |
 |------------|-----------|--------|----------------|----------------------------|------------------|
 | 3.1.1.0b1  | 3.1.1.0b1 | 3.0.1* | 10.3           | NSX-T 3.1.1 and Avi 20.1.3 | TKG              |
-
-3.0.1* -> Please download Kubernetes Container Clusters UI plugin from [here](https://github.com/vmware/container-service-extension/raw/master/cse_ui/3.0.1/container-ui-plugin.zip)
 
 **Installation of binaries**
 ```
