@@ -10,7 +10,7 @@ import threading
 from threading import Thread
 import time
 import traceback
-from typing import List, Optional
+from typing import List, Optional, Dict
 
 import click
 from pyvcloud.vcd.client import BasicLoginCredentials
@@ -223,16 +223,16 @@ class Service(object, metaclass=Singleton):
         self.consumer_thread = None
         self._consumer_watchdog = None
 
-    def get_service_config(self):
+    def get_service_config(self) -> ServerConfig:
         return self.config
 
-    def get_pks_cache(self):
+    def get_pks_cache(self) -> PksCache:
         return self.pks_cache
 
-    def is_pks_enabled(self):
+    def is_pks_enabled(self) -> bool:
         return bool(self.pks_cache)
 
-    def active_requests_count(self):
+    def active_requests_count(self) -> int:
         # ToDo: (request_count) Add support for PksBroker - VCDA-938
         if self.consumer is None:
             return 0
@@ -242,15 +242,14 @@ class Service(object, metaclass=Singleton):
     def get_status(self):
         return self._state.value
 
-    def is_running(self):
+    def is_running(self) -> bool:
         return self._state == ServerState.RUNNING
 
-    def info(self, get_sysadmin_info=False):
+    def info(self, get_sysadmin_info=False) -> Dict:
         result = utils.get_cse_info()
-        server_config = server_utils.get_server_runtime_config()
-        result[shared_constants.CSE_SERVER_API_VERSION] = server_config['service']['default_api_version']  # noqa: E501
-        result[shared_constants.CSE_SERVER_SUPPORTED_API_VERSIONS] = server_config['service']['supported_api_versions']  # noqa: E501
-        result[shared_constants.CSE_SERVER_LEGACY_MODE] = server_config['service']['legacy_mode']  # noqa: E501
+        result[shared_constants.CSE_SERVER_API_VERSION] = self.config.get_value_at('service.default_api_version')  # noqa: E501
+        result[shared_constants.CSE_SERVER_SUPPORTED_API_VERSIONS] = self.config.get_value_at('service.supported_api_versions')  # noqa: E501
+        result[shared_constants.CSE_SERVER_LEGACY_MODE] = self.config.get_value_at('service.legacy_mode')  # noqa: E501
         if get_sysadmin_info:
             result['all_consumer_threads'] = 0 if self.consumer is None else \
                 self.consumer.get_num_total_threads()
@@ -261,10 +260,6 @@ class Service(object, metaclass=Singleton):
         else:
             del result['python']
         return result
-
-    def get_kubernetes_interface(self) -> common_models.DefInterface:
-        """Get the built-in kubernetes interface from vCD."""
-        return self._kubernetesInterface
 
     def get_native_cluster_entity_type(self) -> common_models.DefEntityType:
         return self._nativeEntityType
@@ -785,8 +780,8 @@ class Service(object, metaclass=Singleton):
             )
 
             for template in self.config.get_value_at('broker.templates'):
-                policy_name = template[server_constants.LegacyLocalTemplateKey.COMPUTE_POLICY]  # noqa: E501
-                catalog_item_name = template[server_constants.LegacyLocalTemplateKey.CATALOG_ITEM_NAME]  # noqa: E501
+                policy_name = template[server_constants.LegacyLocalTemplateKey.COMPUTE_POLICY.value]  # noqa: E501
+                catalog_item_name = template[server_constants.LegacyLocalTemplateKey.CATALOG_ITEM_NAME.value]  # noqa: E501
                 # if policy name is not empty, stamp it on the template
                 if policy_name:
                     try:

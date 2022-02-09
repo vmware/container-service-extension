@@ -40,6 +40,7 @@ from container_service_extension.common.utils.core_utils import get_max_api_vers
 from container_service_extension.common.utils.core_utils import NullPrinter
 from container_service_extension.common.utils.core_utils import str_to_bool
 import container_service_extension.common.utils.server_utils as server_utils
+from container_service_extension.config.server_config import ServerConfig
 from container_service_extension.exception.exceptions import AmqpConnectionError  # noqa: E501
 from container_service_extension.exception.exceptions import AmqpError
 from container_service_extension.installer.templates.remote_template_manager \
@@ -129,9 +130,9 @@ def get_validated_config(
     )
 
     is_no_vc_communication_mode = \
-        server_utils.is_no_vc_communication_mode(config)
+        server_utils.is_no_vc_communication_mode(ServerConfig(config))
 
-    use_mqtt = server_utils.should_use_mqtt_protocol(config)
+    use_mqtt = server_utils.should_use_mqtt_protocol(ServerConfig(config))
     sample_message_queue_config = SAMPLE_AMQP_CONFIG if not use_mqtt \
         else SAMPLE_MQTT_CONFIG
 
@@ -220,7 +221,7 @@ def get_validated_config(
         vcd_password=config['vcd']['password'],
         verify_ssl=config['vcd']['verify'],
         is_legacy_mode=config['service']['legacy_mode'],
-        is_mqtt_exchange=server_utils.should_use_mqtt_protocol(config),
+        is_mqtt_exchange=server_utils.should_use_mqtt_protocol(ServerConfig(config)),
         log_wire=log_wire,
         log_wire_file=log_wire_file
     )

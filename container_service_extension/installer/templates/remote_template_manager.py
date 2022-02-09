@@ -1,10 +1,10 @@
 # container-service-extension
 # Copyright (c) 2019 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
-
+import logging
 import os
 import stat
-from typing import Optional
+from typing import Optional, Union
 
 import requests
 import semantic_version
@@ -43,9 +43,13 @@ class RemoteTemplateManager:
     Exposes methods to download template cookbook and associated scripts.
     """
 
-    def __init__(self, remote_template_cookbook_url, legacy_mode: bool = False,
-                 cookbook_version=None, logger=NULL_LOGGER,
-                 msg_update_callback=utils.NullPrinter()):
+    def __init__(
+            self,
+            remote_template_cookbook_url,
+            legacy_mode: bool = False,
+            cookbook_version=None,
+            logger: logging.Logger = NULL_LOGGER,
+            msg_update_callback: Union[utils.NullPrinter, utils.ConsoleMessagePrinter] = utils.NullPrinter()):
         """.
 
         :param str remote_template_cookbook_url:

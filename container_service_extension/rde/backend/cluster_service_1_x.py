@@ -248,18 +248,24 @@ class ClusterService(abstract_broker.AbstractBroker):
             DefEntityPhase(DefEntityOperation.CREATE,
                            DefEntityOperationStatus.IN_PROGRESS))
         def_entity.entity.status.kubernetes = \
-            _create_k8s_software_string(template[LocalTemplateKey.KUBERNETES],
-                                        template[LocalTemplateKey.KUBERNETES_VERSION])  # noqa: E501
+            _create_k8s_software_string(
+                template[LocalTemplateKey.KUBERNETES.value],
+                template[LocalTemplateKey.KUBERNETES_VERSION.value]
+            )
         def_entity.entity.status.cni = \
-            _create_k8s_software_string(template[LocalTemplateKey.CNI],
-                                        template[LocalTemplateKey.CNI_VERSION])
-        def_entity.entity.status.docker_version = template[LocalTemplateKey.DOCKER_VERSION]  # noqa: E501
-        def_entity.entity.status.os = template[LocalTemplateKey.OS]
+            _create_k8s_software_string(
+                template[LocalTemplateKey.CNI.value],
+                template[LocalTemplateKey.CNI_VERSION.value]
+            )
+        def_entity.entity.status.docker_version = template[LocalTemplateKey.DOCKER_VERSION.value]  # noqa: E501
+        def_entity.entity.status.os = template[LocalTemplateKey.OS.value]
         # No need to set org context for non sysadmin users
         org_context = None
         if client_v35.is_sysadmin():
-            org_resource = vcd_utils.get_org(client_v35,
-                                             org_name=def_entity.entity.metadata.org_name)  # noqa: E501
+            org_resource = vcd_utils.get_org(
+                client_v35,
+                org_name=def_entity.entity.metadata.org_name
+            )
             org_context = org_resource.href.split('/')[-1]
         msg = f"Creating cluster '{cluster_name}' " \
               f"from template '{template_name}' (revision {template_revision})"
@@ -561,7 +567,7 @@ class ClusterService(abstract_broker.AbstractBroker):
         client_v35 = self.context.get_client(api_version=DEFAULT_API_VERSION)
         config = server_utils.get_server_runtime_config()
         logger_wire = NULL_LOGGER
-        if utils.str_to_bool(config['service']['log_wire']):
+        if utils.str_to_bool(config.get_value_at('service.log_wire')):
             logger_wire = SERVER_CLOUDAPI_WIRE_LOGGER
         acl_svc = acl_service.ClusterACLService(
             cluster_id=cluster_id,
@@ -613,7 +619,7 @@ class ClusterService(abstract_broker.AbstractBroker):
         client_v35 = self.context.get_client(api_version=DEFAULT_API_VERSION)
         config = server_utils.get_server_runtime_config()
         logger_wire = NULL_LOGGER
-        if utils.str_to_bool(config['service']['log_wire']):
+        if utils.str_to_bool(config.get_value_at('service.log_wire')):
             logger_wire = SERVER_CLOUDAPI_WIRE_LOGGER
         acl_svc = acl_service.ClusterACLService(
             cluster_id=cluster_id,
@@ -736,14 +742,14 @@ class ClusterService(abstract_broker.AbstractBroker):
             tags = {
                 ClusterMetadataKey.CLUSTER_ID: cluster_id,
                 ClusterMetadataKey.CSE_VERSION: pkg_resources.require('container-service-extension')[0].version,  # noqa: E501
-                ClusterMetadataKey.TEMPLATE_NAME: template[LocalTemplateKey.NAME],  # noqa: E501
-                ClusterMetadataKey.TEMPLATE_REVISION: template[LocalTemplateKey.REVISION],  # noqa: E501
-                ClusterMetadataKey.OS: template[LocalTemplateKey.OS],
-                ClusterMetadataKey.DOCKER_VERSION: template[LocalTemplateKey.DOCKER_VERSION],  # noqa: E501
-                ClusterMetadataKey.KUBERNETES: template[LocalTemplateKey.KUBERNETES],  # noqa: E501
-                ClusterMetadataKey.KUBERNETES_VERSION: template[LocalTemplateKey.KUBERNETES_VERSION],  # noqa: E501
-                ClusterMetadataKey.CNI: template[LocalTemplateKey.CNI],
-                ClusterMetadataKey.CNI_VERSION: template[LocalTemplateKey.CNI_VERSION]  # noqa: E501
+                ClusterMetadataKey.TEMPLATE_NAME: template[LocalTemplateKey.NAME.value],  # noqa: E501
+                ClusterMetadataKey.TEMPLATE_REVISION: template[LocalTemplateKey.REVISION.value],  # noqa: E501
+                ClusterMetadataKey.OS: template[LocalTemplateKey.OS.value],
+                ClusterMetadataKey.DOCKER_VERSION: template[LocalTemplateKey.DOCKER_VERSION.value],  # noqa: E501
+                ClusterMetadataKey.KUBERNETES: template[LocalTemplateKey.KUBERNETES.value],  # noqa: E501
+                ClusterMetadataKey.KUBERNETES_VERSION: template[LocalTemplateKey.KUBERNETES_VERSION.value],  # noqa: E501
+                ClusterMetadataKey.CNI: template[LocalTemplateKey.CNI.value],
+                ClusterMetadataKey.CNI_VERSION: template[LocalTemplateKey.CNI_VERSION.value]  # noqa: E501
             }
             vapp = vcd_vapp.VApp(client_v35, href=vapp_resource.get('href'))
             task = vapp.set_multiple_metadata(tags)
@@ -755,7 +761,7 @@ class ClusterService(abstract_broker.AbstractBroker):
             self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
             vapp.reload()
             server_config = server_utils.get_server_runtime_config()
-            catalog_name = server_config['broker']['catalog']
+            catalog_name = server_config.get_value_at('broker.catalog')
 
             sysadmin_client_v35 = self.context.get_sysadmin_client(
                 api_version=DEFAULT_API_VERSION)
@@ -1217,7 +1223,7 @@ class ClusterService(abstract_broker.AbstractBroker):
             num_nfs_to_add = desired_nfs_count - curr_nfs_count
 
             server_config = server_utils.get_server_runtime_config()
-            catalog_name = server_config['broker']['catalog']
+            catalog_name = server_config.get_value_at('broker.catalog')
 
             org = vcd_utils.get_org(client_v35, org_name=org_name)
             ovdc = vcd_utils.get_vdc(client_v35, vdc_name=ovdc_name, org=org)  # noqa: E501
@@ -1885,10 +1891,10 @@ def _get_cluster_upgrade_target_templates(
     """
     upgrades = []
     config = server_utils.get_server_runtime_config()
-    for t in config['broker']['templates']:
-        if source_template_name in t[LocalTemplateKey.UPGRADE_FROM]:
-            if t[LocalTemplateKey.NAME] == source_template_name and \
-                    int(t[LocalTemplateKey.REVISION]) <= int(source_template_revision):  # noqa: E501
+    for t in config.get_value_at('broker.templates'):
+        if source_template_name in t[LocalTemplateKey.UPGRADE_FROM.value]:
+            if t[LocalTemplateKey.NAME.value] == source_template_name and \
+                    int(t[LocalTemplateKey.REVISION.value]) <= int(source_template_revision):  # noqa: E501
                 continue
             upgrades.append(t)
 
@@ -2129,7 +2135,7 @@ def _get_template(name=None, revision=None):
             "Template name and revision both must be specified."
         )
     server_config = server_utils.get_server_runtime_config()
-    for template in server_config['broker']['templates']:
+    for template in server_config.get_value_at('broker.templates'):
         if (template[LocalTemplateKey.NAME], str(template[LocalTemplateKey.REVISION])) == (name, str(revision)):  # noqa: E501
             return template
     raise Exception(f"Template '{name}' at revision {revision} not found.")
@@ -2167,8 +2173,10 @@ def _add_nodes(sysadmin_client, num_nodes, node_type, org, vdc, vapp,
                 storage_profile = vdc.get_storage_profile(storage_profile)
 
             config = server_utils.get_server_runtime_config()
-            cpm = compute_policy_manager.ComputePolicyManager(sysadmin_client,
-                                                              log_wire=utils.str_to_bool(config['service']['log_wire']))  # noqa: E501
+            cpm = compute_policy_manager.ComputePolicyManager(
+                sysadmin_client,
+                log_wire=utils.str_to_bool(config.get_value_at('service.log_wire'))
+            )
             sizing_class_href = None
             if sizing_class_name:
                 vdc_resource = vdc.get_resource()
@@ -2216,7 +2224,7 @@ def _add_nodes(sysadmin_client, num_nodes, node_type, org, vdc, vapp,
                 }
                 if sizing_class_href:
                     spec['sizing_policy_href'] = sizing_class_href
-                    spec['placement_policy_href'] = config['placement_policy_hrefs'][template[LocalTemplateKey.KIND]]  # noqa: E501
+                    spec['placement_policy_href'] = config.get_value_at(f'placement_policy_hrefs.{template[LocalTemplateKey.KIND]}')  # noqa: E501
                 if cust_script is not None:
                     spec['cust_script'] = cust_script
                 if storage_profile is not None:

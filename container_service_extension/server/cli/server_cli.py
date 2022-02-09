@@ -705,7 +705,7 @@ def install(ctx, config_file_path, pks_config_file_path,
 
         configure_cse.install_cse(
             config_file_name=config_file_path,
-            config=config,
+            config=ServerConfig(config),
             pks_config_file_name=pks_config_file_path,
             skip_config_decryption=skip_config_decryption,
             msg_update_callback=console_message_printer
@@ -944,7 +944,7 @@ def upgrade(ctx, config_file_path, skip_config_decryption):
 
         configure_cse.upgrade_cse(
             config_file_name=config_file_path,
-            config=config,
+            config=ServerConfig(config),
             msg_update_callback=console_message_printer
         )
     except Exception as err:
@@ -1083,7 +1083,7 @@ def list_template(ctx, config_file_path, skip_config_decryption,
 
                 org_name = config_dict['broker']['org']
                 catalog_name = config_dict['broker']['catalog']
-                is_tkg_plus_enabled = server_utils.is_tkg_plus_enabled(config_dict)  # noqa: E501
+                is_tkg_plus_enabled = server_utils.is_tkg_plus_enabled(ServerConfig(config_dict))  # noqa: E501
 
                 local_template_definitions = \
                     ltm.get_valid_k8s_local_template_definition(
@@ -1299,7 +1299,7 @@ def install_cse_template(ctx, template_name, template_revision,
             template_name=template_name,
             template_revision=template_revision,
             config_file_name=config_file_path,
-            config=config,
+            config=ServerConfig(config),
             force_create=force_create,
             retain_temp_vapp=retain_temp_vapp,
             ssh_key=ssh_key,
@@ -1472,7 +1472,7 @@ def import_tkgm_template(
                 vcd_password=config['vcd']['password'],
                 verify_ssl=config['vcd']['verify'],
                 is_legacy_mode=config['service']['legacy_mode'],
-                is_mqtt_exchange=server_utils.should_use_mqtt_protocol(config),
+                is_mqtt_exchange=server_utils.should_use_mqtt_protocol(ServerConfig(config)),
                 log_wire=config['service']['log_wire'],
                 log_wire_file=log_wire_file
             )
@@ -1658,7 +1658,9 @@ def _get_unvalidated_config(
             vcd_username=config_dict['vcd']['username'],
             vcd_password=config_dict['vcd']['password'],
             verify_ssl=config_dict['vcd']['verify'],
-            is_mqtt_exchange=server_utils.should_use_mqtt_protocol(config_dict)
+            is_mqtt_exchange=server_utils.should_use_mqtt_protocol(
+                ServerConfig(config_dict)
+            )
         )
 
         return config_dict

@@ -15,9 +15,10 @@ import container_service_extension.common.constants.shared_constants as shared_c
 import container_service_extension.common.utils.core_utils as utils
 from container_service_extension.config.server_config import ServerConfig
 import container_service_extension.rde.models.common_models as common_models
+from container_service_extension.server.pks.pks_cache import PksCache
 
 
-def get_server_runtime_config():
+def get_server_runtime_config() -> ServerConfig:
     import container_service_extension.server.service as cse_service
     return cse_service.Service().get_service_config()
 
@@ -41,18 +42,12 @@ def get_registered_def_entity_type() -> common_models.DefEntityType:
     return Service().get_native_cluster_entity_type()
 
 
-def get_registered_def_interface() -> common_models.DefInterface:
-    """Fetch the native cluster interface loaded during server startup."""
-    from container_service_extension.server.service import Service
-    return Service().get_kubernetes_interface()
-
-
-def get_pks_cache():
+def get_pks_cache() -> PksCache:
     from container_service_extension.server.service import Service
     return Service().get_pks_cache()
 
 
-def is_pks_enabled():
+def is_pks_enabled() -> bool:
     from container_service_extension.server.service import Service
     return Service().is_pks_enabled()
 

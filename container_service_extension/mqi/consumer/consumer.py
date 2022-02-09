@@ -4,7 +4,7 @@
 
 import container_service_extension.common.constants.server_constants as server_constants  # noqa: E501
 from container_service_extension.common.constants.server_constants import MQTTExtKey, MQTTExtTokenKey  # noqa: E501
-from container_service_extension.common.utils.server_utils import should_use_mqtt_protocol  # noqa: E501
+import container_service_extension.common.utils.server_utils as server_utils
 from container_service_extension.config.server_config import ServerConfig
 from container_service_extension.mqi.consumer.amqp_consumer import AMQPConsumer
 from container_service_extension.mqi.consumer.mqtt_consumer import MQTTConsumer
@@ -22,7 +22,7 @@ class MessageConsumer:
 
         :return: instance of appropriate message protocol consumer
         """
-        if should_use_mqtt_protocol(config):
+        if server_utils.should_use_mqtt_protocol(config):
             return MQTTConsumer(
                 url=config.get_value_at('vcd.host'),
                 listen_topic=config.get_value_at(f'mqtt.{MQTTExtKey.EXT_LISTEN_TOPIC}'),
