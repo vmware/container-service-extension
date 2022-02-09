@@ -13,6 +13,7 @@ import semantic_version
 import container_service_extension.common.constants.server_constants as server_constants  # noqa: E501
 import container_service_extension.common.constants.shared_constants as shared_constants  # noqa: E501
 import container_service_extension.common.utils.core_utils as utils
+from container_service_extension.config.server_config import ServerConfig
 import container_service_extension.rde.models.common_models as common_models
 
 
@@ -31,7 +32,7 @@ def get_rde_version_in_use() -> str:
     #  return type is string. This should be changed to return semantic version
     #  with all dependencies changed as well.
     config = get_server_runtime_config()
-    return str(config['service']['rde_version_in_use'])
+    return str(config.get_value_at('service.rde_version_in_use'))
 
 
 def get_registered_def_entity_type() -> common_models.DefEntityType:
@@ -56,11 +57,11 @@ def is_pks_enabled():
     return Service().is_pks_enabled()
 
 
-def is_tkg_plus_enabled(config: Optional[dict] = None) -> bool:
+def is_tkg_plus_enabled(config: Optional[ServerConfig] = None) -> bool:
     """
     Check if TKG plus is enabled by the provider in the config.
 
-    :param dict config: configuration provided by the user.
+    :param ServerConfig config: configuration provided by the user.
 
     :return: whether TKG+ is enabled or not.
     :rtype: bool
@@ -70,8 +71,10 @@ def is_tkg_plus_enabled(config: Optional[dict] = None) -> bool:
             config = get_server_runtime_config()
         except Exception:
             return False
-    service_section = config.get('service', {})
-    tkg_plus_enabled = service_section.get('enable_tkg_plus', False)
+    try:
+        tkg_plus_enabled = config.get_value_at('service.enable_tkg_plus')
+    except KeyError:
+        return False
     if isinstance(tkg_plus_enabled, bool):
         return tkg_plus_enabled
     elif isinstance(tkg_plus_enabled, str):
@@ -79,7 +82,7 @@ def is_tkg_plus_enabled(config: Optional[dict] = None) -> bool:
     return False
 
 
-def should_use_mqtt_protocol(config: dict) -> bool:
+def should_use_mqtt_protocol(config: ServerConfig) -> bool:
     """Return true if should use the mqtt protocol; false otherwise.
 
     The MQTT protocol should be used if the config file contains "mqtt" key
@@ -90,14 +93,14 @@ def should_use_mqtt_protocol(config: dict) -> bool:
     :return: whether to use the mqtt protocol
     :rtype: bool
     """
-    return config.get('mqtt') is not None and \
-        not utils.str_to_bool(config['service'].get('legacy_mode'))
+    return config.get_value_at('mqtt') is not None and \
+        not utils.str_to_bool(config.get_value_at('service.legacy_mode'))
 
 
-def is_no_vc_communication_mode(config: Optional[dict] = None) -> bool:
+def is_no_vc_communication_mode(config: Optional[ServerConfig] = None) -> bool:  # noqa: E501
     """Check if TKGm only mode is enabled by the provider in the config.
 
-    :param dict config: configuration provided by the user.
+    :param ServerConfig config: configuration provided by the user.
 
     :return: whether TKGm only mode is enabled or not.
     :rtype: bool
@@ -107,8 +110,11 @@ def is_no_vc_communication_mode(config: Optional[dict] = None) -> bool:
             config = get_server_runtime_config()
         except Exception:
             return False
-    service_section = config.get('service', {})
-    is_no_vc_comm = service_section.get('no_vc_communication_mode', False)
+    try:
+        is_no_vc_comm = config.get_value_at('service.no_vc_communication_mode')
+    except KeyError:
+        return False
+
     if isinstance(is_no_vc_comm, bool):
         return is_no_vc_comm
     elif isinstance(is_no_vc_comm, str):
@@ -116,7 +122,7 @@ def is_no_vc_communication_mode(config: Optional[dict] = None) -> bool:
     return False
 
 
-def is_test_mode(config: Optional[dict] = None) -> bool:
+def is_test_mode(config: Optional[ServerConfig] = None) -> bool:
     """Check if test mode is enabled in the config.
 
     :param dict config: configuration provided by the user.
@@ -129,9 +135,11 @@ def is_test_mode(config: Optional[dict] = None) -> bool:
             config = get_server_runtime_config()
         except Exception:
             return False
-    if config.get('test'):
+    try:
+        config.get_value_at('test')
         return True
-    return False
+    except KeyError:
+        return False
 
 
 def get_template_descriptor_keys(cookbook_version: semantic_version.Version) -> enum.EnumMeta:  # noqa: E501

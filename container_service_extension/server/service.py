@@ -25,6 +25,7 @@ import container_service_extension.common.utils.core_utils as utils
 import container_service_extension.common.utils.pyvcloud_utils as vcd_utils
 import container_service_extension.common.utils.server_utils as server_utils
 from container_service_extension.common.utils.vsphere_utils import populate_vsphere_list  # noqa: E501
+from container_service_extension.config.server_config import ServerConfig
 import container_service_extension.exception.exceptions as cse_exception
 import container_service_extension.installer.configure_cse as configure_cse
 import container_service_extension.installer.templates.local_template_manager as ltm  # noqa: E501
@@ -210,7 +211,7 @@ class Service(object, metaclass=Singleton):
                  should_check_config=True,
                  skip_config_decryption=False):
         self.config_file = config_file
-        self.config = config
+        self.config = ServerConfig(config)
         self.pks_config_file = pks_config_file
         self.should_check_config = should_check_config
         self.skip_config_decryption = skip_config_decryption
@@ -317,7 +318,7 @@ class Service(object, metaclass=Singleton):
             sysadmin_client = vcd_utils.get_sys_admin_client(api_version=None)
             verify_version_compatibility(
                 sysadmin_client,
-                should_cse_run_in_legacy_mode=self.config['service']['legacy_mode'],  # noqa: E501
+                should_cse_run_in_legacy_mode=self.config.get_value_at('service.legacy_mode'),  # noqa: E501
                 is_mqtt_extension=server_utils.should_use_mqtt_protocol(self.config))  # noqa: E501
         except Exception as err:
             logger.SERVER_LOGGER.info(err)
@@ -352,10 +353,11 @@ class Service(object, metaclass=Singleton):
                     ext_vendor=server_constants.MQTT_EXTENSION_VENDOR,
                     ext_urn_id=ext_urn_id)
 
-                self.config['mqtt'].update(ext_info)
-                self.config['mqtt'].update(token_info)
-                self.config['mqtt'][server_constants.MQTTExtKey.EXT_UUID] = \
-                    ext_uuid
+                for key, value in ext_info.items():
+                    self.config.set_value_at(f"mqtt.{key}", value)
+                for key, value in token_info.items():
+                    self.config.set_value_at(f"mqtt.{key}", value)
+                self.config.set_value_at(f"mqtt.{server_constants.MQTTExtKey.EXT_UUID}", ext_uuid)
             except Exception as err:
                 msg = f'MQTT extension setup error: {err}'
                 logger.SERVER_LOGGER.error(msg)
@@ -365,7 +367,7 @@ class Service(object, metaclass=Singleton):
                     sysadmin_client.logout()
 
         if not server_utils.is_no_vc_communication_mode(self.config):
-            populate_vsphere_list(self.config['vcs'])
+            populate_vsphere_list(self.config.get_value_at('vcs'))
 
         # Load def entity-type and interface
         self._load_def_schema(msg_update_callback=msg_update_callback)
@@ -381,7 +383,7 @@ class Service(object, metaclass=Singleton):
                   "since `No communication with VCenter` mode is on."
             logger.SERVER_LOGGER.info(msg)
             msg_update_callback.general_no_color(msg)
-            self.config['broker']['templates'] = []
+            self.config.set_value_at('broker.templates', [])
 
         # Read TKGm catalog definition from catalog item metadata and append
         # the same to to server run-time config
@@ -393,7 +395,7 @@ class Service(object, metaclass=Singleton):
             msg_update_callback=msg_update_callback
         )
 
-        if self.config['service']['legacy_mode']:
+        if self.config.get_value_at('service.legacy_mode'):
             # Read templates rules from config and update template definition
             # in server run-time config
             self._process_template_rules(
