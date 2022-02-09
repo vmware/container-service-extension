@@ -29,6 +29,7 @@ import container_service_extension.common.utils.pyvcloud_utils as vcd_utils
 import container_service_extension.common.utils.server_utils as server_utils
 from container_service_extension.common.utils.vsphere_utils import populate_vsphere_list  # noqa: E501
 import container_service_extension.exception.exceptions as cse_exception
+from container_service_extension.config.server_config import ServerConfig
 from container_service_extension.installer.right_bundle_manager import RightBundleManager  # noqa: E501
 import container_service_extension.installer.templates.local_template_manager as ltm  # noqa: E501
 from container_service_extension.installer.templates.remote_template_manager import RemoteTemplateManager  # noqa: E501
@@ -77,7 +78,7 @@ API_FILTER_PATTERNS = [
 LEGACY_MODE = False
 
 
-def check_cse_installation(config, msg_update_callback=utils.NullPrinter()):
+def check_cse_installation(config: ServerConfig, msg_update_callback=utils.NullPrinter()):
     """Ensure that CSE is installed on vCD according to the config file.
 
     Checks,

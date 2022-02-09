@@ -357,7 +357,9 @@ class Service(object, metaclass=Singleton):
                     self.config.set_value_at(f"mqtt.{key}", value)
                 for key, value in token_info.items():
                     self.config.set_value_at(f"mqtt.{key}", value)
-                self.config.set_value_at(f"mqtt.{server_constants.MQTTExtKey.EXT_UUID}", ext_uuid)
+                self.config.set_value_at(
+                    f"mqtt.{server_constants.MQTTExtKey.EXT_UUID}", ext_uuid
+                )
             except Exception as err:
                 msg = f'MQTT extension setup error: {err}'
                 logger.SERVER_LOGGER.error(msg)
@@ -419,16 +421,18 @@ class Service(object, metaclass=Singleton):
                 self.config,
                 msg_update_callback=msg_update_callback)
 
-        if self.config.get('pks_config'):
-            pks_config = self.config.get('pks_config')
+        try:
+            pks_config = self.config.get_value_at('pks_config')
             self.pks_cache = PksCache(
                 pks_servers=pks_config.get('pks_api_servers', []),
                 pks_accounts=pks_config.get('pks_accounts', []),
                 pvdcs=pks_config.get('pvdcs', []),
                 orgs=pks_config.get('orgs', []),
                 nsxt_servers=pks_config.get('nsxt_servers', []))
+        except KeyError:
+            pass
 
-        num_processors = self.config['service']['processors']
+        num_processors = self.config.get_value_at('service.processors')
         name = server_constants.MESSAGE_CONSUMER_THREAD
         try:
             self.consumer = MessageConsumer(self.config, num_processors)
@@ -525,9 +529,13 @@ class Service(object, metaclass=Singleton):
         sysadmin_client = None
         try:
             sysadmin_client = vcd_utils.get_sys_admin_client(api_version=None)
-            logger_wire = logger.NULL_LOGGER
-            if utils.str_to_bool(utils.str_to_bool(self.config['service'].get('log_wire', False))):  # noqa: E501
-                logger_wire = logger.SERVER_CLOUDAPI_WIRE_LOGGER
+            try:
+                if utils.str_to_bool(str(self.config.get_value_at('service.log_wire'))):
+                    logger_wire = logger.SERVER_CLOUDAPI_WIRE_LOGGER
+                else:
+                    logger_wire = logger.NULL_LOGGER
+            except KeyError:
+                logger_wire = logger.NULL_LOGGER
 
             cloudapi_client = \
                 vcd_utils.get_cloudapi_client_from_vcd_client(
@@ -593,22 +601,27 @@ class Service(object, metaclass=Singleton):
                 logger.SERVER_LOGGER.debug(msg)
                 msg_update_callback.info(msg)
                 return
-            placement_policy_name_to_href = {}
+
+            self.config.set_value_at('placement_policy_hrefs', {})
             cpm = compute_policy_manager.ComputePolicyManager(
                 sysadmin_client,
-                log_wire=self.config['service'].get('log_wire')
+                log_wire=self.config.get_value_at('service.log_wire')
             )
             for runtime_policy in shared_constants.CLUSTER_RUNTIME_PLACEMENT_POLICIES:  # noqa: E501
                 k8_runtime = shared_constants.RUNTIME_INTERNAL_NAME_TO_DISPLAY_NAME_MAP[runtime_policy]  # noqa: E501
                 try:
-                    placement_policy_name_to_href[k8_runtime] = \
+                    placement_policy_href = \
                         compute_policy_manager.get_cse_vdc_compute_policy(
                             cpm,
                             runtime_policy,
-                            is_placement_policy=True)['href']
+                            is_placement_policy=True
+                        )['href']
+                    self.config.set_value_at(
+                        f'placement_policy_hrefs.{k8_runtime}',
+                        placement_policy_href
+                    )
                 except EntityNotFoundException:
                     pass
-            self.config['placement_policy_hrefs'] = placement_policy_name_to_href  # noqa: E501
         except Exception as e:
             msg = f"Failed to load placement policies to server runtime configuration: {str(e)}"  # noqa: E501
             msg_update_callback.error(msg)
@@ -630,7 +643,7 @@ class Service(object, metaclass=Singleton):
         try:
             log_filename = None
             log_wire = \
-                utils.str_to_bool(self.config['service'].get('log_wire'))
+                utils.str_to_bool(self.config.get_value_at('service.log_wire'))
             if log_wire:
                 log_filename = logger.SERVER_DEBUG_WIRELOG_FILEPATH
 
@@ -639,22 +652,25 @@ class Service(object, metaclass=Singleton):
             # default_api_version key, it will be set to the highest api
             # version supported by VCD and CSE.
             client = Client(
-                self.config['vcd']['host'],
-                api_version=self.config['service']['default_api_version'],
-                verify_ssl_certs=self.config['vcd']['verify'],
+                self.config.get_value_at('vcd.host'),
+                api_version=self.config.get_value_at('service.default_api_version'),
+                verify_ssl_certs=self.config.get_value_at('vcd.verify'),
                 log_file=log_filename,
                 log_requests=log_wire,
                 log_headers=log_wire,
-                log_bodies=log_wire)
-            credentials = BasicLoginCredentials(self.config['vcd']['username'],
-                                                shared_constants.SYSTEM_ORG_NAME,  # noqa: E501
-                                                self.config['vcd']['password'])
+                log_bodies=log_wire
+            )
+            credentials = BasicLoginCredentials(
+                self.config.get_value_at('vcd.username'),
+                shared_constants.SYSTEM_ORG_NAME,
+                self.config.get_value_at('vcd.password')
+            )
             client.set_credentials(credentials)
 
             is_tkg_plus_enabled = server_utils.is_tkg_plus_enabled(self.config)
-            legacy_mode = self.config['service']['legacy_mode']
-            org_name = self.config['broker']['org']
-            catalog_name = self.config['broker']['catalog']
+            legacy_mode = self.config.get_value_at('service.legacy_mode')
+            org_name = self.config.get_value_at('broker.org')
+            catalog_name = self.config.get_value_at('broker.catalog')
             k8_templates = ltm.get_valid_k8s_local_template_definition(
                 client=client, catalog_name=catalog_name, org_name=org_name,
                 legacy_mode=legacy_mode,
@@ -662,7 +678,7 @@ class Service(object, metaclass=Singleton):
                 logger_debug=logger.SERVER_LOGGER,
                 msg_update_callback=msg_update_callback)
 
-            self.config['broker']['templates'] = k8_templates
+            self.config.set_value_at('broker.templates', k8_templates)
         finally:
             if client:
                 client.logout()
@@ -679,7 +695,7 @@ class Service(object, metaclass=Singleton):
         try:
             log_filename = None
             log_wire = utils.str_to_bool(
-                self.config['service'].get('log_wire')
+                self.config.get_value_at('service.log_wire')
             )
             if log_wire:
                 log_filename = logger.SERVER_DEBUG_WIRELOG_FILEPATH
@@ -689,23 +705,23 @@ class Service(object, metaclass=Singleton):
             # default_api_version key, it will be set to the highest api
             # version supported by VCD and CSE.
             client = Client(
-                self.config['vcd']['host'],
-                api_version=self.config['service']['default_api_version'],
-                verify_ssl_certs=self.config['vcd']['verify'],
+                self.config.get_value_at('vcd.host'),
+                api_version=self.config.get_value_at('service.default_api_version'),
+                verify_ssl_certs=self.config.get_value_at('vcd.verify'),
                 log_file=log_filename,
                 log_requests=log_wire,
                 log_headers=log_wire,
                 log_bodies=log_wire
             )
             credentials = BasicLoginCredentials(
-                self.config['vcd']['username'],
+                self.config.get_value_at('vcd.username'),
                 shared_constants.SYSTEM_ORG_NAME,
-                self.config['vcd']['password']
+                self.config.get_value_at('vcd.password')
             )
             client.set_credentials(credentials)
 
-            org_name = self.config['broker']['org']
-            catalog_name = self.config['broker']['catalog']
+            org_name = self.config.get_value_at('broker.org')
+            catalog_name = self.config.get_value_at('broker.catalog')
             tkgm_templates = ttm.read_all_tkgm_template(
                 client=client,
                 org_name=org_name,
@@ -714,19 +730,20 @@ class Service(object, metaclass=Singleton):
                 msg_update_callback=msg_update_callback
             )
 
-            self.config['broker']['tkgm_templates'] = tkgm_templates
+            self.config.set_value_at('broker.tkgm_templates', tkgm_templates)
         finally:
             if client:
                 client.logout()
 
     def _process_template_rules(self, msg_update_callback=utils.NullPrinter()):
-        if 'template_rules' not in self.config:
-            return
-        rules = self.config['template_rules']
-        if not rules:
+        try:
+            rules = self.config.get_value_at('template_rules')
+            if not rules:
+                return
+        except KeyError:
             return
 
-        templates = self.config['broker']['templates']
+        templates = self.config.get_value_at('broker.templates')
 
         # process rules
         msg = "Processing template rules."
@@ -757,15 +774,17 @@ class Service(object, metaclass=Singleton):
         logger.SERVER_LOGGER.info(msg)
         msg_update_callback.general_no_color(msg)
 
-        org_name = self.config['broker']['org']
-        catalog_name = self.config['broker']['catalog']
+        org_name = self.config.get_value_at('broker.org')
+        catalog_name = self.config.get_value_at('broker.catalog')
         sysadmin_client = None
         try:
             sysadmin_client = vcd_utils.get_sys_admin_client(api_version=None)
-            cpm = compute_policy_manager.ComputePolicyManager(sysadmin_client,
-                                                              log_wire=self.config['service'].get('log_wire'))  # noqa: E501
+            cpm = compute_policy_manager.ComputePolicyManager(
+                sysadmin_client,
+                log_wire=self.config.get_value_at('service.log_wire')
+            )
 
-            for template in self.config['broker']['templates']:
+            for template in self.config.get_value_at('broker.templates'):
                 policy_name = template[server_constants.LegacyLocalTemplateKey.COMPUTE_POLICY]  # noqa: E501
                 catalog_item_name = template[server_constants.LegacyLocalTemplateKey.CATALOG_ITEM_NAME]  # noqa: E501
                 # if policy name is not empty, stamp it on the template

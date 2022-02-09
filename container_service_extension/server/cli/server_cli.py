@@ -28,6 +28,7 @@ import container_service_extension.common.utils.pyvcloud_utils as vcd_utils
 import container_service_extension.common.utils.server_utils as server_utils
 import container_service_extension.installer.config_validator as config_validator  # noqa: E501
 import container_service_extension.installer.configure_cse as configure_cse
+from container_service_extension.config.server_config import ServerConfig
 from container_service_extension.installer.cse_service_role_mgr import create_cse_service_role  # noqa : E501
 import container_service_extension.installer.sample_generator as sample_generator  # noqa: E501
 import container_service_extension.installer.templates.local_template_manager as ltm  # noqa: E501
@@ -523,7 +524,9 @@ def check(ctx, config_file_path, pks_config_file_path, skip_config_decryption,
         if check_install:
             try:
                 configure_cse.check_cse_installation(
-                    config_dict, msg_update_callback=console_message_printer)
+                    ServerConfig(config_dict),
+                    msg_update_callback=console_message_printer
+                )
             except Exception as err:
                 msg = f"Error : {err}\nCSE installation is invalid"
                 SERVER_CLI_LOGGER.error(msg)
