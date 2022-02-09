@@ -110,6 +110,17 @@ SERVER_CLOUDAPI_WIRE_LOGGER = logging.getLogger(SERVER_CLOUDAPI_WIRE_LOGGER_NAME
 # NullLogger doesn't perform logging.
 NULL_LOGGER = logging.getLogger('container_service_extension.null-logger')
 
+# For each local server log file assign corresponding remote Syslog facility
+# At Syslog server end, configure a separate log file for each facility
+LOCAL_LOG_FILE_TO_SYSLOG_FILE = {
+    SERVER_INFO_LOG_FILEPATH: logging.handlers.SysLogHandler.LOG_LOCAL0,
+    SERVER_DEBUG_LOG_FILEPATH: logging.handlers.SysLogHandler.LOG_LOCAL1,
+    SERVER_DEBUG_WIRELOG_FILEPATH: logging.handlers.SysLogHandler.LOG_LOCAL2,
+    SERVER_CLOUDAPI_LOG_FILEPATH: logging.handlers.SysLogHandler.LOG_LOCAL3,
+    SERVER_NSXT_WIRE_LOG_FILEPATH: logging.handlers.SysLogHandler.LOG_LOCAL4
+}
+logger_configs = []
+
 
 @run_once
 def setup_log_file_directory():
@@ -120,10 +131,11 @@ def setup_log_file_directory():
 @run_once
 def configure_all_file_loggers():
     """Configure all loggers if not configured."""
+    global logger_configs
     setup_log_file_directory()
     LoggerConfig = namedtuple('LoggerConfig', 'name filepath formatter logger')
-    configs = [
-        LoggerConfig(INSTALL_LOG_FILEPATH, INSTALL_LOG_FILEPATH,
+    logger_configs = [
+        LoggerConfig(INSTALL_LOGGER_NAME, INSTALL_LOG_FILEPATH,
                      DEBUG_LOG_FORMATTER, INSTALL_LOGGER),
         LoggerConfig(CLIENT_LOGGER_NAME, CLIENT_INFO_LOG_FILEPATH,
                      INFO_LOG_FORMATTER, CLIENT_LOGGER),
@@ -145,7 +157,7 @@ def configure_all_file_loggers():
                      DEBUG_LOG_FORMATTER, SERVER_CLOUDAPI_WIRE_LOGGER)
     ]
 
-    for logger_config in configs:
+    for logger_config in logger_configs:
         file_handler = RotatingFileHandler(logger_config.filepath,
                                            maxBytes=_MAX_BYTES,
                                            backupCount=_BACKUP_COUNT,
@@ -167,3 +179,19 @@ def configure_null_logger():
     """Configure null logger if it is not configured."""
     nullhandler = logging.NullHandler()
     NULL_LOGGER.addHandler(nullhandler)
+
+
+@run_once
+def configure_loggers_for_syslog(syslog_host, syslog_port):
+    address = (syslog_host, syslog_port if syslog_port else logging.handlers.SYSLOG_UDP_PORT)   # noqa: E501
+    for logger_config in logger_configs:
+        syslog_facility = LOCAL_LOG_FILE_TO_SYSLOG_FILE.get(logger_config.filepath)   # noqa: E501
+        if syslog_facility:
+            syslog_handler = logging.handlers.SysLogHandler(address, facility=syslog_facility)   # noqa: E501
+            if logger_config.formatter == INFO_LOG_FORMATTER:
+                syslog_handler.setFormatter(INFO_LOG_FORMATTER)
+                syslog_handler.setLevel(logging.INFO)
+            elif logger_config.formatter == DEBUG_LOG_FORMATTER:
+                syslog_handler.setFormatter(DEBUG_LOG_FORMATTER)
+                syslog_handler.setLevel(logging.DEBUG)
+            logger_config.logger.addHandler(syslog_handler)
