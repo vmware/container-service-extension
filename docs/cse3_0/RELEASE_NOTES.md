@@ -4,11 +4,11 @@ title: Release Notes
 ---
 
 # General Announcement
-**Date : 2022-01-27**  
-* Container Service Extension 3.0.x reaches end of support on October 15, 2022.  
+**Date : 2022-01-27**
+* Container Service Extension 3.0.x reaches end of support on October 15, 2022.
 * Tanzu Kubernetes Grid Integrated Edition (TKG-I) reaches end of support on Feb 24, 2022.
 
-**Date : 2021-10-14**  
+**Date : 2021-10-14**
 * If you are using VMware Tanzu Kubernetes Grid (TKG) distribution with CSE 3.0.3 or CSE 3.0.4,
 then these CSE installations can be upgraded to CSE 3.1.z with some intervention.
 For more details, please check [this guide](../cse3_1/CSE31.html#remove_tkgm).
@@ -35,10 +35,7 @@ and bring it to our attention.
 | 3.0.4      | 3.0.4   | 1.0.3                                    | 10.1, 10.0     | NA           | 1.7 with 2.5.1            | Native and Enterprise PKS cluster management                                                                                |
 | NA         | 3.0.4   | 2.3.0**                                  | 10.2.2         | NA           | NA                        | TKG-S cluster management only                                                                                               |
 
-** Kubernetes Container Clusters UI Plug-in v2.3.0 should be downloaded separately from
-[here](https://my.vmware.com/en/web/vmware/downloads/details?downloadGroup=VCD-CSE-PLUGIN-303&productId=1079)
-and manually uploaded to VCD. By default, VCD 10.2.2 will have
-Kubernetes Container Clusters UI Plug-in v2.2.0.
+By default, VCD 10.2.2 will have Kubernetes Container Clusters UI Plug-in v2.2.0.
 
 **What's New**
 * Following fixes have been added
@@ -64,10 +61,7 @@ and bring it to our attention.
 | 3.0.3      | 3.0.3   | 1.0.3                                    | 10.1, 10.0     | NA           | 1.7 with 2.5.1            | Native and Enterprise PKS cluster management                                                                                |
 | NA         | 3.0.3   | 2.3.0**                                  | 10.2.2         | NA           | NA                        | TKG-S cluster management only                                                                                               |
 
-** Kubernetes Container Clusters UI Plug-in v2.3.0 should be downloaded separately from
-[here](https://my.vmware.com/en/web/vmware/downloads/details?downloadGroup=VCD-CSE-PLUGIN-303&productId=1079)
-and manually uploaded to VCD. By default, VCD 10.2.2 will have
-Kubernetes Container Clusters UI Plug-in v2.2.0.
+By default, VCD 10.2.2 will have Kubernetes Container Clusters UI Plug-in v2.2.0.
 
 **What's New**
 * CSE can now deploy VMware Tanzu Kubernetes Grid (TKG) distribution based Kubernetes
@@ -113,11 +107,11 @@ CSE 3.1.0 beta.
 * PUT on `/api/cse/3.0/cluster/<id>` endpoint now supports cluster upgrades in addition to the resize operation.
     * `/api/cse/3.0/cluster/<id>/action/upgrade` is not supported at api_version = 36.0
 * Cluster YAML specification changes
-    * Keys of all the properties are expected to be in CamelCase. 
-    * New required field `apiVersion` in the cluster YAML specification. The 
-      value for it must be `cse.vmware.com/v2.0`, which indicates the RDE version 
+    * Keys of all the properties are expected to be in CamelCase.
+    * New required field `apiVersion` in the cluster YAML specification. The
+      value for it must be `cse.vmware.com/v2.0`, which indicates the RDE version
       of the native clusters, that CSE server uses.
-    * Sample input YAML 
+    * Sample input YAML
         * ```
           apiVersion: cse.vmware.com/v2.0
           kind: native
@@ -155,7 +149,7 @@ the issue related to runtime defined entities listed in [Known Issues](KNOWN_ISS
 
 **Known issues specific to 3.1.0-beta**:
 Resizing an empty cluster will fail for non-null values of sizingClass and storageProfile in the input yaml spec.
-Workaround: specify `storageProfile: null` and `sizingClass: null` in 
+Workaround: specify `storageProfile: null` and `sizingClass: null` in
 the `vcd cse cluster apply` specification for worker/nfs nodes.
 
 ---
@@ -216,7 +210,7 @@ the same will be fixed in a future CSE release.
 * Support for MQTT message bus for communication between VCD (10.2 and above) and CSE server
     * Improved message bus connection management (applies to MQTT as well as AMQP)
     * More details at [CSE Server Configuration File](CSE_CONFIG.html#mqtt_section)
-* Support and tools for CSE service account (vCD 10.2 and above) 
+* Support and tools for CSE service account (vCD 10.2 and above)
     * VCD System Administrator credential is no longer required to run the CSE Server
     * More details at [CSE Server Installation Prerequisites](CSE_INSTALL_PREREQUISITES.html#service_account)
 * CSE 3.0.1 can be used with the VMware Cloud Director service for Native Clusters
@@ -349,7 +343,7 @@ cse convert-cluster
 * From CSE 2.5.0 or above - To be able to upgrade the cluster.
 * From CSE older than 2.5.0 - To preserve managablilty of the clusters.
 
-This command adds new metadata to the cluster. If the cluster was deployed by 
+This command adds new metadata to the cluster. If the cluster was deployed by
 CSE version below 2.5.0, the command will also reset the admin password of all
 nodes in the cluster. If nodes in the cluster are setup with ssh keys for root
 login, those key pairings will be preserved. The command will force a
