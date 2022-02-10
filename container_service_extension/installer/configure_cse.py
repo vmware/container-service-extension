@@ -355,14 +355,12 @@ def install_cse(
         )
 
         # if it's a PKS setup, setup NSX-T constructs
-        try:
+        if config.get('pks_config'):
             configure_nsxt_for_cse(
                 nsxt_servers=config['pks_config']['nsxt_servers'],
                 log_wire=log_wire,
                 msg_update_callback=msg_update_callback
             )
-        except KeyError:
-            pass
 
         # Setup extension based on message bus protocol
         if server_utils.should_use_mqtt_protocol(config):

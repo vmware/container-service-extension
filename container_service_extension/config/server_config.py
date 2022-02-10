@@ -44,7 +44,7 @@ discouraged.
 
 
 def _is_index(key: str, full_key: str = "") -> Tuple[bool, int, str]:
-    """Determine  whether.a key fragment is an index or not.
+    """Determine  whether a key fragment is an index or not.
 
     Convert keys of format "[n]" to int(n).
 
@@ -118,22 +118,22 @@ def _get_element(root: Union[List, Dict], key: str, full_key: str = "") -> Union
     raise TypeError(err_msg)
 
 
-def _split_key(compressed_key: str) -> (str, str):
-    """."""
-    tokens = compressed_key.split(".")
+def _split_key(full_key: str) -> (str, str):
+    """Return key to the parent element and fragment key to the leaf node."""
+    tokens = full_key.split(".")
     return ".".join(tokens[0:-1]), tokens[-1]
 
 
-def _navigate_to_parent(root: Dict, compressed_key: str) -> Dict:
+def _navigate_to_parent(root: Dict, full_key: str) -> Dict:
     """Given a key, return the parent element of the element corresponding to the key."""  # noqa: E501
-    parent_key, _ = _split_key(compressed_key)
+    parent_key, _ = _split_key(full_key)
     if parent_key:
         tokens = parent_key.split(".")
     else:
         tokens = []
 
     for i in range(0, len(tokens)):
-        root = _get_element(root, key=tokens[i], full_key=compressed_key)
+        root = _get_element(root, key=tokens[i], full_key=full_key)
 
     return root
 

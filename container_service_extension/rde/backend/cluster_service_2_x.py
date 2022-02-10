@@ -70,7 +70,6 @@ CLUSTER_UPGRADE_OPERATION_MESSAGE = 'Cluster upgrade'
 DOWNLOAD_KUBECONFIG_OPERATION_MESSAGE = 'Download kubeconfig'
 
 
-# noinspection PyTypeChecker
 class ClusterService(abstract_broker.AbstractBroker):
     """Handles cluster operations for native DEF based clusters."""
 

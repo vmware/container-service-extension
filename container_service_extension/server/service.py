@@ -524,13 +524,12 @@ class Service(object, metaclass=Singleton):
         sysadmin_client = None
         try:
             sysadmin_client = vcd_utils.get_sys_admin_client(api_version=None)
+            logger_wire = logger.NULL_LOGGER
             try:
-                if utils.str_to_bool(str(self.config.get_value_at('service.log_wire'))):   # noqa: E501
+                if utils.str_to_bool(self.config.get_value_at('service.log_wire')):   # noqa: E501
                     logger_wire = logger.SERVER_CLOUDAPI_WIRE_LOGGER
-                else:
-                    logger_wire = logger.NULL_LOGGER
             except KeyError:
-                logger_wire = logger.NULL_LOGGER
+                pass
 
             cloudapi_client = \
                 vcd_utils.get_cloudapi_client_from_vcd_client(

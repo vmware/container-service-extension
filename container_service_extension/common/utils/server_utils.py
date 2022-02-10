@@ -88,8 +88,12 @@ def should_use_mqtt_protocol(config: ServerConfig) -> bool:
     :return: whether to use the mqtt protocol
     :rtype: bool
     """
-    return config.get_value_at('mqtt') is not None and \
-        not utils.str_to_bool(config.get_value_at('service.legacy_mode'))
+    try:
+        has_mqtt_section = config.get_value_at('mqtt') is not None
+        running_in_legacy_mode = utils.str_to_bool(config.get_value_at('service.legacy_mode'))  # noqa: E501
+        return has_mqtt_section and not running_in_legacy_mode
+    except KeyError:
+        return False
 
 
 def is_no_vc_communication_mode(config: Optional[ServerConfig] = None) -> bool:  # noqa: E501
