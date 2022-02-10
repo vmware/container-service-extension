@@ -1582,7 +1582,7 @@ def _register_entity_type(
         current_entity_type: common_models.DefEntityType2_0 = \
             schema_svc.get_entity_type(entity_type.id)
         if update_schema:
-            updated_native_entity_type = rde_entity_svc.DefEntityType(
+            updated_native_entity_type = common_models.DefEntityType(
                 id=current_entity_type.id,
                 name=current_entity_type.name,
                 description=current_entity_type.description,
@@ -2883,5 +2883,6 @@ def _get_native_def_entity_types(
         logger_wire=logger_wire
     )
     schema_svc = rde_schema_svc.DefSchemaService(cloudapi_client)
-    return [entity_type for entity_type in schema_svc.list_entity_types()
-            if entity_type.nss == rde_constants.Nss.NATIVE_CLUSTER.value]
+    return schema_svc.list_entity_types(
+        filter_dict={'nss': rde_constants.Nss.NATIVE_CLUSTER.value}
+    )
