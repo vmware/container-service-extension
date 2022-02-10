@@ -7,7 +7,7 @@ from collections import namedtuple
 from container_service_extension.common.constants.server_constants import PKS_CLUSTER_DOMAIN_KEY  # noqa: E501
 from container_service_extension.common.constants.server_constants import PKS_COMPUTE_PROFILE_KEY  # noqa: E501
 from container_service_extension.common.constants.server_constants import PKS_PLANS_KEY  # noqa: E501
-from container_service_extension.common.utils.pyvcloud_utils import get_pvdc_id_from_pvdc_name  # noqa: E501
+import container_service_extension.common.utils.pyvcloud_utils as pyvcloud_utils  # noqa: E501
 
 
 class PksCache(object):
@@ -229,7 +229,7 @@ class PksCache(object):
 
             pvdc_info = PvdcInfo(pvdc_name, vc, datacenter, cluster, cpi)
 
-            pvdc_id = get_pvdc_id_from_pvdc_name(pvdc_name, vc)
+            pvdc_id = pyvcloud_utils.get_pvdc_id_from_pvdc_name(pvdc_name, vc)
             pvdc_info_table[str(pvdc_id)] = pvdc_info
 
         return pvdc_info_table

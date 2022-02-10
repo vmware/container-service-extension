@@ -28,6 +28,7 @@ import container_service_extension.common.utils.core_utils as utils
 import container_service_extension.common.utils.pyvcloud_utils as vcd_utils
 import container_service_extension.common.utils.server_utils as server_utils
 from container_service_extension.common.utils.vsphere_utils import populate_vsphere_list  # noqa: E501
+from container_service_extension.config.server_config import ServerConfig
 import container_service_extension.exception.exceptions as cse_exception
 from container_service_extension.installer.right_bundle_manager import RightBundleManager  # noqa: E501
 import container_service_extension.installer.templates.local_template_manager as ltm  # noqa: E501
@@ -126,7 +127,7 @@ def check_cse_installation(
         )
         client.set_credentials(credentials)
 
-        if server_utils.should_use_mqtt_protocol(config):
+        if server_utils.should_use_mqtt_protocol(ServerConfig(config)):
             _check_mqtt_extension_installation(
                 client,
                 msg_update_callback,
@@ -273,7 +274,7 @@ def install_cse(
 
     client = None
     try:
-        if not server_utils.is_no_vc_communication_mode(config):
+        if not server_utils.is_no_vc_communication_mode(ServerConfig(config)):
             populate_vsphere_list(config['vcs'])
 
         # Telemetry - Construct telemetry data
@@ -335,7 +336,7 @@ def install_cse(
         )
 
         # set up placement policies for all types of clusters
-        is_tkg_plus_enabled = server_utils.is_tkg_plus_enabled(config)
+        is_tkg_plus_enabled = server_utils.is_tkg_plus_enabled(ServerConfig(config))  # noqa: E501
         _setup_placement_policies(
             client=client,
             policy_list=shared_constants.CLUSTER_RUNTIME_PLACEMENT_POLICIES,
@@ -363,7 +364,7 @@ def install_cse(
             )
 
         # Setup extension based on message bus protocol
-        if server_utils.should_use_mqtt_protocol(config):
+        if server_utils.should_use_mqtt_protocol(ServerConfig(config)):
             description = \
                 _construct_cse_extension_description(
                     config['service']['rde_version_in_use']
@@ -428,7 +429,7 @@ def install_cse(
                 vcd_username=config['vcd']['username'],
                 vcd_password=config['vcd']['password'],
                 verify_ssl=config['vcd']['verify'],
-                is_mqtt_exchange=server_utils.should_use_mqtt_protocol(config)
+                is_mqtt_exchange=server_utils.should_use_mqtt_protocol(ServerConfig(config))  # noqa: E501
             )
 
         # Telemetry - Record successful install action
@@ -509,7 +510,7 @@ def install_template(
             telemetry_settings=config['service']['telemetry'])
 
         is_no_vc_communication_mode = \
-            server_utils.is_no_vc_communication_mode(config)
+            server_utils.is_no_vc_communication_mode(ServerConfig(config))
         if is_no_vc_communication_mode:
             msg = "Native template can not be installed when " \
                   "running in `No communication with VCenter` mode."
@@ -594,7 +595,7 @@ def install_template(
                     force_update=force_create,
                     retain_temp_vapp=retain_temp_vapp,
                     ssh_key=ssh_key,
-                    is_tkg_plus_enabled=server_utils.is_tkg_plus_enabled(config),  # noqa: E501
+                    is_tkg_plus_enabled=server_utils.is_tkg_plus_enabled(ServerConfig(config)),  # noqa: E501
                     msg_update_callback=msg_update_callback)
 
         if not LEGACY_MODE and template_name != "*" and not found_template:
@@ -688,7 +689,7 @@ def upgrade_cse(
 
     client = None
     try:
-        if not server_utils.is_no_vc_communication_mode(config):
+        if not server_utils.is_no_vc_communication_mode(ServerConfig(config)):
             populate_vsphere_list(config['vcs'])
 
         log_filename = None
@@ -727,7 +728,7 @@ def upgrade_cse(
             msg = "No existing extension.  Please use `cse install' instead " \
                 "of 'cse upgrade'."
             raise Exception(msg)
-        elif is_source_extension_mqtt and not server_utils.should_use_mqtt_protocol(config):  # noqa: E501
+        elif is_source_extension_mqtt and not server_utils.should_use_mqtt_protocol(ServerConfig(config)):  # noqa: E501
             # Upgrading from MQTT to AMQP extension
             msg = "Upgrading from MQTT extension to AMQP extension is not " \
                   "supported"
@@ -2087,7 +2088,7 @@ def _install_all_templates(
             force_update=force_create,
             retain_temp_vapp=retain_temp_vapp,
             ssh_key=ssh_key,
-            is_tkg_plus_enabled=server_utils.is_tkg_plus_enabled(config),
+            is_tkg_plus_enabled=server_utils.is_tkg_plus_enabled(ServerConfig(config)),  # noqa: E501
             msg_update_callback=msg_update_callback)
 
 
@@ -2225,7 +2226,7 @@ def _upgrade_to_cse_3_1_non_legacy(
     :raises requests.exceptions.HTTPError: (when using MQTT) if the MQTT
         components were not installed correctly
     """
-    is_tkg_plus_enabled = server_utils.is_tkg_plus_enabled(config=config)
+    is_tkg_plus_enabled = server_utils.is_tkg_plus_enabled(config=ServerConfig(config))  # noqa: E501
 
     # Add global placement policies
     _setup_placement_policies(

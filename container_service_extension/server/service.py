@@ -412,18 +412,24 @@ class Service(object, metaclass=Singleton):
             logger.SERVER_LOGGER.debug(msg)
 
         if self.should_check_config:
+            # TODO: find a better way to get the raw dictionary from the object
+            # this method is also called via CSE server cli,
+            # so can't force this method to accept a ServerConfig object
             configure_cse.check_cse_installation(
-                self.config,
-                msg_update_callback=msg_update_callback)
+                self.config._config,
+                msg_update_callback=msg_update_callback
+            )
 
         try:
             pks_config = self.config.get_value_at('pks_config')
-            self.pks_cache = PksCache(
-                pks_servers=pks_config.get('pks_api_servers', []),
-                pks_accounts=pks_config.get('pks_accounts', []),
-                pvdcs=pks_config.get('pvdcs', []),
-                orgs=pks_config.get('orgs', []),
-                nsxt_servers=pks_config.get('nsxt_servers', []))
+            if pks_config:
+                self.pks_cache = PksCache(
+                    pks_servers=pks_config.get('pks_api_servers', []),
+                    pks_accounts=pks_config.get('pks_accounts', []),
+                    pvdcs=pks_config.get('pvdcs', []),
+                    orgs=pks_config.get('orgs', []),
+                    nsxt_servers=pks_config.get('nsxt_servers', [])
+                )
         except KeyError:
             pass
 
