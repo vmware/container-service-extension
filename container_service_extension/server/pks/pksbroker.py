@@ -51,13 +51,13 @@ from container_service_extension.security.authorization import secure
 import container_service_extension.security.context.operation_context as ctx
 from container_service_extension.server.abstract_broker import AbstractBroker
 from container_service_extension.server.pks.pks_cache import PKS_COMPUTE_PROFILE_KEY  # noqa: E501
-import container_service_extension.server.request_handlers.request_utils as req_utils # noqa: E501
+import container_service_extension.server.request_handlers.request_utils as req_utils  # noqa: E501
 
 
 # Delimiter to append with user id context
 USER_ID_SEPARATOR = "---"
 # Properties that need to be excluded from cluster info before sending
-# to the client for reasons: security, too big that runs thru lines
+# to the client for reasons: security, too big that runs through lines
 SENSITIVE_PKS_KEYS = [
     'authorization_mode', 'available_upgrades', 'cluster_tags',
     'compute_profile', 'compute_profile_name', 'custom_ca_certs',
@@ -81,7 +81,7 @@ class PksBroker(AbstractBroker):
     def __init__(self, pks_ctx, op_ctx: ctx.OperationContext):
         """Initialize PKS broker.
 
-        :param dict pks_ctx: A dictionary with which should atleast have the
+        :param dict pks_ctx: A dictionary with which should at least have the
             following keys in it ['username', 'secret', 'host', 'port',
             'uaac_port'], 'proxy' and 'pks_compute_profile_name' are optional
             keys. Currently all callers of this method is using ovdc cache
@@ -109,7 +109,7 @@ class PksBroker(AbstractBroker):
         self.pks_wire_logger = NULL_LOGGER
         nsxt_wire_logger = NULL_LOGGER
         config = server_utils.get_server_runtime_config()
-        if utils.str_to_bool(config['service'].get('log_wire')):
+        if utils.str_to_bool(config.get_value_at('service.log_wire')):
             nsxt_wire_logger = SERVER_NSXT_WIRE_LOGGER
             self.pks_wire_logger = SERVER_PKS_WIRE_LOGGER
         if self.nsxt_server:
@@ -139,13 +139,19 @@ class PksBroker(AbstractBroker):
         :return: token
         """
         try:
-            uaaClient = UaaClient(self.uaac_uri, self.username, self.secret,
-                                  proxy_uri=self.proxy_uri)
-            return uaaClient.getToken()
+            uaa_client = UaaClient(
+                self.uaac_uri,
+                self.username,
+                self.secret,
+                proxy_uri=self.proxy_uri
+            )
+            return uaa_client.getToken()
         except Exception as err:
-            raise PksConnectionError(requests.codes.bad_gateway,
-                                     f'Connection establishment to PKS host'
-                                     f' {self.uaac_uri} failed: {err}')
+            raise PksConnectionError(
+                requests.codes.bad_gateway,
+                f'Connection establishment to PKS host'
+                f' {self.uaac_uri} failed: {err}'
+            )
 
     def _get_pks_config(self, token):
         """Construct PKS configuration.
@@ -185,12 +191,12 @@ class PksBroker(AbstractBroker):
         :rtype: list
         """
         plan_api = PlansApi(api_client=self.pks_client)
-        self.pks_wire_logger.debug(f"Sending request to PKS: {self.pks_host_uri} " # noqa: E501
+        self.pks_wire_logger.debug(f"Sending request to PKS: {self.pks_host_uri} "  # noqa: E501
                                    f"to list all available plans")
         try:
             pks_plans = plan_api.list_plans()
         except ApiException as err:
-            SERVER_LOGGER.debug(f"Listing PKS plans failed with error:\n {err}") # noqa: E501
+            SERVER_LOGGER.debug(f"Listing PKS plans failed with error:\n {err}")  # noqa: E501
             raise PksServerError(err.status, err.body)
 
         result = []
@@ -239,7 +245,7 @@ class PksBroker(AbstractBroker):
                 self.update_cluster_with_vcd_info(cluster_info)
                 result.append(cluster_info)
         except ApiException as err:
-            SERVER_LOGGER.debug(f"Listing PKS clusters failed with error:\n {err}") # noqa: E501
+            SERVER_LOGGER.debug(f"Listing PKS clusters failed with error:\n {err}")  # noqa: E501
             raise PksServerError(err.status, err.body)
 
         return self._filter_clusters(result, **data)
@@ -251,7 +257,7 @@ class PksBroker(AbstractBroker):
         To retain the user context, user-id of the logged-in user is appended
         to the original cluster name before the actual cluster creation.
 
-        :param **data:
+        :param kwargs:
             dict cluster_spec: named parameters necessary to create
             cluster (cluster_name, node_count, pks_plan, pks_ext_host, compute-
             profile_name)
@@ -326,7 +332,7 @@ class PksBroker(AbstractBroker):
                            compute_profile_name=self.compute_profile)
         try:
             self.pks_wire_logger.debug(
-                f"Sending request to PKS: {self.pks_host_uri} to create " # noqa: E501
+                f"Sending request to PKS: {self.pks_host_uri} to create "
                 f"cluster of name: {cluster_name}")
             cluster = cluster_api.add_cluster(cluster_request)
             self.pks_wire_logger.debug(
@@ -422,12 +428,12 @@ class PksBroker(AbstractBroker):
 
         cluster_api = ClusterApi(api_client=self.pks_client)
 
-        self.pks_wire_logger.debug(f"Sending request to PKS: {self.pks_host_uri} to get" # noqa: E501
-                                   f" kubectl configuration of cluster with name: " # noqa: E501
+        self.pks_wire_logger.debug(f"Sending request to PKS: {self.pks_host_uri} to get"  # noqa: E501
+                                   f" kubectl configuration of cluster with name: "  # noqa: E501
                                    f"{qualified_cluster_name}")
         config = cluster_api.create_user(cluster_name=qualified_cluster_name)
-        self.pks_wire_logger.debug(f"Received response from PKS: {self.pks_host_uri} on " # noqa: E501
-                                   f"cluster: {qualified_cluster_name} with details: " # noqa: E501
+        self.pks_wire_logger.debug(f"Received response from PKS: {self.pks_host_uri} on "  # noqa: E501
+                                   f"cluster: {qualified_cluster_name} with details: "  # noqa: E501
                                    f"{config}")
         cluster_config = yaml.safe_dump(config, default_flow_style=False)
 
@@ -440,8 +446,6 @@ class PksBroker(AbstractBroker):
         System administrator can delete the given cluster regardless of
         who is the owner of the cluster. Other users can only delete
         the cluster they own.
-        :param **data
-            :param str cluster_name: Name of the cluster
         """
         data = kwargs[KwargKey.DATA]
         cluster_name = data[RequestKey.CLUSTER_NAME]
@@ -478,12 +482,13 @@ class PksBroker(AbstractBroker):
             cluster_network_isolater.remove_cluster_isolation(
                 qualified_cluster_name)
         except Exception as err:
-            # NSX-T oprations are idempotent so they should not cause erros
+            # NSX-T operations are idempotent so they should not cause errors
             # if say NSGroup is missing. But for any other exception, simply
             # catch them and ignore.
-            SERVER_LOGGER.debug(f"Error {err} occured while deleting cluster "
-                                "isolation rules for cluster "
-                                f"{qualified_cluster_name}")
+            SERVER_LOGGER.debug(
+                f"Error {err} occurred while deleting cluster "
+                "isolation rules for cluster "
+                f"{qualified_cluster_name}")
 
         return result
 
@@ -554,7 +559,7 @@ class PksBroker(AbstractBroker):
             raise ValueError(f"Invalid cluster_id for cluster "
                              f"'{cluster_name}'")
 
-        SERVER_LOGGER.debug(f"Isolating network of cluster {qualified_cluster_name}.") # noqa: E501
+        SERVER_LOGGER.debug(f"Isolating network of cluster {qualified_cluster_name}.")  # noqa: E501
         try:
             cluster_network_isolater = ClusterNetworkIsolater(self.nsxt_client)
             cluster_network_isolater.isolate_cluster(qualified_cluster_name,
@@ -764,7 +769,7 @@ class PksBroker(AbstractBroker):
             return cluster_list
 
         # Filter the cluster list for org admin and others.
-        if self.context.user.has_org_admin_rights or kwargs.get('is_org_admin_search'): # noqa: E501
+        if self.context.user.has_org_admin_rights or kwargs.get('is_org_admin_search'):  # noqa: E501
             # TODO() - Service accounts for exclusive org does not
             #  require the following filtering.
             cluster_list = [cluster_info for cluster_info in cluster_list
@@ -777,9 +782,9 @@ class PksBroker(AbstractBroker):
 
     def _is_cluster_visible_to_org_admin(self, cluster_info):
         # Returns True if org-admin is the cluster owner, or
-        # the cluster belongs to same org as org-admin's.
+        # the cluster belongs to same org as org admin.
         return (self._is_user_cluster_owner(cluster_info)
-                or self._does_cluster_belong_to_org(cluster_info, self.context.user.org_name)) # noqa: E501
+                or self._does_cluster_belong_to_org(cluster_info, self.context.user.org_name))  # noqa: E501
 
     def _is_user_cluster_owner(self, cluster_info):
         # Returns True if the logged-in user is the owner of the given cluster.
@@ -843,10 +848,10 @@ class PksBroker(AbstractBroker):
             self.context.sysadmin_client, vdc_id)
 
     def _apply_vdc_filter(self, cluster_list, vdc_name):
-        return [cluster_info for cluster_info in cluster_list if self._does_cluster_belong_to_vdc(cluster_info, vdc_name)] # noqa: E501
+        return [cluster_info for cluster_info in cluster_list if self._does_cluster_belong_to_vdc(cluster_info, vdc_name)]  # noqa: E501
 
     def _apply_org_filter(self, cluster_list, org_name):
-        return [cluster_info for cluster_info in cluster_list if self._does_cluster_belong_to_org(cluster_info, org_name)] # noqa: E501
+        return [cluster_info for cluster_info in cluster_list if self._does_cluster_belong_to_org(cluster_info, org_name)]  # noqa: E501
 
     def _does_cluster_belong_to_vdc(self, cluster_info, vdc_name):
         # Returns True if the cluster backed by given vdc
@@ -856,7 +861,7 @@ class PksBroker(AbstractBroker):
             SERVER_LOGGER.debug("compute-profile-name of"
                                 f" {cluster_info.get('name')} is not found")
             return False
-        return vdc_name == self._extract_vdc_name_from_pks_compute_profile_name(compute_profile_name) # noqa: E501
+        return vdc_name == self._extract_vdc_name_from_pks_compute_profile_name(compute_profile_name)  # noqa: E501
 
     # TODO() Should be moved to filtering layer
     def _filter_sensitive_pks_properties(self, cluster_info):

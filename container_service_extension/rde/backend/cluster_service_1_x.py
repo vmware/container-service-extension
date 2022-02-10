@@ -249,16 +249,16 @@ class ClusterService(abstract_broker.AbstractBroker):
                            DefEntityOperationStatus.IN_PROGRESS))
         def_entity.entity.status.kubernetes = \
             _create_k8s_software_string(
-                template[LocalTemplateKey.KUBERNETES.value],
-                template[LocalTemplateKey.KUBERNETES_VERSION.value]
+                template[LocalTemplateKey.KUBERNETES],
+                template[LocalTemplateKey.KUBERNETES_VERSION]
             )
         def_entity.entity.status.cni = \
             _create_k8s_software_string(
-                template[LocalTemplateKey.CNI.value],
-                template[LocalTemplateKey.CNI_VERSION.value]
+                template[LocalTemplateKey.CNI],
+                template[LocalTemplateKey.CNI_VERSION]
             )
-        def_entity.entity.status.docker_version = template[LocalTemplateKey.DOCKER_VERSION.value]  # noqa: E501
-        def_entity.entity.status.os = template[LocalTemplateKey.OS.value]
+        def_entity.entity.status.docker_version = template[LocalTemplateKey.DOCKER_VERSION]  # noqa: E501
+        def_entity.entity.status.os = template[LocalTemplateKey.OS]
         # No need to set org context for non sysadmin users
         org_context = None
         if client_v35.is_sysadmin():
@@ -742,14 +742,14 @@ class ClusterService(abstract_broker.AbstractBroker):
             tags = {
                 ClusterMetadataKey.CLUSTER_ID: cluster_id,
                 ClusterMetadataKey.CSE_VERSION: pkg_resources.require('container-service-extension')[0].version,  # noqa: E501
-                ClusterMetadataKey.TEMPLATE_NAME: template[LocalTemplateKey.NAME.value],  # noqa: E501
-                ClusterMetadataKey.TEMPLATE_REVISION: template[LocalTemplateKey.REVISION.value],  # noqa: E501
-                ClusterMetadataKey.OS: template[LocalTemplateKey.OS.value],
-                ClusterMetadataKey.DOCKER_VERSION: template[LocalTemplateKey.DOCKER_VERSION.value],  # noqa: E501
-                ClusterMetadataKey.KUBERNETES: template[LocalTemplateKey.KUBERNETES.value],  # noqa: E501
-                ClusterMetadataKey.KUBERNETES_VERSION: template[LocalTemplateKey.KUBERNETES_VERSION.value],  # noqa: E501
-                ClusterMetadataKey.CNI: template[LocalTemplateKey.CNI.value],
-                ClusterMetadataKey.CNI_VERSION: template[LocalTemplateKey.CNI_VERSION.value]  # noqa: E501
+                ClusterMetadataKey.TEMPLATE_NAME: template[LocalTemplateKey.NAME],  # noqa: E501
+                ClusterMetadataKey.TEMPLATE_REVISION: template[LocalTemplateKey.REVISION],  # noqa: E501
+                ClusterMetadataKey.OS: template[LocalTemplateKey.OS],
+                ClusterMetadataKey.DOCKER_VERSION: template[LocalTemplateKey.DOCKER_VERSION],  # noqa: E501
+                ClusterMetadataKey.KUBERNETES: template[LocalTemplateKey.KUBERNETES],  # noqa: E501
+                ClusterMetadataKey.KUBERNETES_VERSION: template[LocalTemplateKey.KUBERNETES_VERSION],  # noqa: E501
+                ClusterMetadataKey.CNI: template[LocalTemplateKey.CNI],
+                ClusterMetadataKey.CNI_VERSION: template[LocalTemplateKey.CNI_VERSION]  # noqa: E501
             }
             vapp = vcd_vapp.VApp(client_v35, href=vapp_resource.get('href'))
             task = vapp.set_multiple_metadata(tags)
@@ -766,18 +766,20 @@ class ClusterService(abstract_broker.AbstractBroker):
             sysadmin_client_v35 = self.context.get_sysadmin_client(
                 api_version=DEFAULT_API_VERSION)
             try:
-                _add_nodes(sysadmin_client_v35,
-                           num_nodes=1,
-                           node_type=NodeType.CONTROL_PLANE,
-                           org=org,
-                           vdc=vdc,
-                           vapp=vapp,
-                           catalog_name=catalog_name,
-                           template=template,
-                           network_name=network_name,
-                           storage_profile=control_plane_storage_profile,
-                           ssh_key=ssh_key,
-                           sizing_class_name=control_plane_sizing_class)
+                _add_nodes(
+                    sysadmin_client_v35,
+                    num_nodes=1,
+                    node_type=NodeType.CONTROL_PLANE,
+                    org=org,
+                    vdc=vdc,
+                    vapp=vapp,
+                    catalog_name=catalog_name,
+                    template=template,
+                    network_name=network_name,
+                    storage_profile=control_plane_storage_profile,
+                    ssh_key=ssh_key,
+                    sizing_class_name=control_plane_sizing_class
+                )
             except Exception as err:
                 LOGGER.error(err, exc_info=True)
                 raise exceptions.ControlPlaneNodeCreationError(
@@ -814,12 +816,14 @@ class ClusterService(abstract_broker.AbstractBroker):
                 # wait for a minute before proceeding to make sure the password
                 # is set in the VM by guest customization
                 time.sleep(60)
-            _init_cluster(sysadmin_client_v35,
-                          vapp,
-                          template[LocalTemplateKey.KIND],
-                          template[LocalTemplateKey.KUBERNETES_VERSION],
-                          template[LocalTemplateKey.CNI_VERSION],
-                          expose_ip=expose_ip)
+            _init_cluster(
+                sysadmin_client_v35,
+                vapp,
+                template[LocalTemplateKey.KIND],
+                template[LocalTemplateKey.KUBERNETES_VERSION],
+                template[LocalTemplateKey.CNI_VERSION],
+                expose_ip=expose_ip
+            )
             task = vapp.set_metadata('GENERAL', 'READWRITE', 'cse.master.ip',
                                      control_plane_ip)
             client_v35.get_task_monitor().wait_for_status(task)
@@ -1880,7 +1884,7 @@ class ClusterService(abstract_broker.AbstractBroker):
 
 
 def _get_cluster_upgrade_target_templates(
-        source_template_name, source_template_revision) -> List[dict]:
+        source_template_name, source_template_revision) -> List[Dict]:
     """Get list of templates that a given cluster can upgrade to.
 
     :param str source_template_name:
@@ -1892,9 +1896,9 @@ def _get_cluster_upgrade_target_templates(
     upgrades = []
     config = server_utils.get_server_runtime_config()
     for t in config.get_value_at('broker.templates'):
-        if source_template_name in t[LocalTemplateKey.UPGRADE_FROM.value]:
-            if t[LocalTemplateKey.NAME.value] == source_template_name and \
-                    int(t[LocalTemplateKey.REVISION.value]) <= int(source_template_revision):  # noqa: E501
+        if source_template_name in t[LocalTemplateKey.UPGRADE_FROM]:
+            if t[LocalTemplateKey.NAME] == source_template_name and \
+                    int(t[LocalTemplateKey.REVISION]) <= int(source_template_revision):  # noqa: E501
                 continue
             upgrades.append(t)
 
@@ -2129,7 +2133,7 @@ def _cluster_exists(client, cluster_name, org_name=None, ovdc_name=None):
     return len(list(result)) != 0
 
 
-def _get_template(name=None, revision=None):
+def _get_template(name=None, revision=None) -> Dict:
     if not name or not revision:
         raise ValueError(
             "Template name and revision both must be specified."
@@ -2175,7 +2179,7 @@ def _add_nodes(sysadmin_client, num_nodes, node_type, org, vdc, vapp,
             config = server_utils.get_server_runtime_config()
             cpm = compute_policy_manager.ComputePolicyManager(
                 sysadmin_client,
-                log_wire=utils.str_to_bool(config.get_value_at('service.log_wire'))
+                log_wire=utils.str_to_bool(config.get_value_at('service.log_wire'))  # noqa: E501
             )
             sizing_class_href = None
             if sizing_class_name:

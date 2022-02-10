@@ -307,7 +307,7 @@ class VcdBroker(abstract_broker.AbstractBroker):
 
         upgrades = []
         config = server_utils.get_server_runtime_config()
-        for t in config['broker']['templates']:
+        for t in config.get_value_at('broker.templates'):
             if src_name in t[LocalTemplateKey.UPGRADE_FROM]:
                 if t[LocalTemplateKey.NAME] == src_name and int(t[LocalTemplateKey.REVISION]) <= int(src_rev):  # noqa: E501
                     continue
@@ -948,7 +948,7 @@ class VcdBroker(abstract_broker.AbstractBroker):
             self._update_task(vcd_client.TaskStatus.RUNNING, message=msg)
             vapp.reload()
             server_config = server_utils.get_server_runtime_config()
-            catalog_name = server_config['broker']['catalog']
+            catalog_name = server_config.get_value_at('broker.catalog')
             try:
                 _add_nodes(client_v33,
                            num_nodes=1,
@@ -1095,7 +1095,7 @@ class VcdBroker(abstract_broker.AbstractBroker):
             template = _get_template(name=template_name,
                                      revision=template_revision)
             server_config = server_utils.get_server_runtime_config()
-            catalog_name = server_config['broker']['catalog']
+            catalog_name = server_config.get_value_at('broker.catalog')
 
             node_type = NodeType.WORKER
             if enable_nfs:
@@ -1834,7 +1834,7 @@ def _get_template(name=None, revision=None):
             "Template name and revision both must be specified."
         )
     server_config = server_utils.get_server_runtime_config()
-    for template in server_config['broker']['templates']:
+    for template in server_config.get_value_at('broker.templates'):
         if (template[LocalTemplateKey.NAME], str(template[LocalTemplateKey.REVISION])) == (name, str(revision)):  # noqa: E501
             return template
     raise Exception(f"Template '{name}' at revision {revision} not found.")

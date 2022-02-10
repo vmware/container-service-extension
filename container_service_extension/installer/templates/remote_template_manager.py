@@ -49,7 +49,8 @@ class RemoteTemplateManager:
             legacy_mode: bool = False,
             cookbook_version=None,
             logger: logging.Logger = NULL_LOGGER,
-            msg_update_callback: Union[utils.NullPrinter, utils.ConsoleMessagePrinter] = utils.NullPrinter()):
+            msg_update_callback: Union[utils.NullPrinter, utils.ConsoleMessagePrinter] = utils.NullPrinter()  # noqa: E501
+    ):
         """.
 
         :param str remote_template_cookbook_url:

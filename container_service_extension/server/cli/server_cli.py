@@ -26,9 +26,9 @@ import container_service_extension.common.utils.config_utils as config_utils
 import container_service_extension.common.utils.core_utils as utils
 import container_service_extension.common.utils.pyvcloud_utils as vcd_utils
 import container_service_extension.common.utils.server_utils as server_utils
+from container_service_extension.config.server_config import ServerConfig
 import container_service_extension.installer.config_validator as config_validator  # noqa: E501
 import container_service_extension.installer.configure_cse as configure_cse
-from container_service_extension.config.server_config import ServerConfig
 from container_service_extension.installer.cse_service_role_mgr import create_cse_service_role  # noqa : E501
 import container_service_extension.installer.sample_generator as sample_generator  # noqa: E501
 import container_service_extension.installer.templates.local_template_manager as ltm  # noqa: E501
@@ -524,7 +524,7 @@ def check(ctx, config_file_path, pks_config_file_path, skip_config_decryption,
         if check_install:
             try:
                 configure_cse.check_cse_installation(
-                    ServerConfig(config_dict),
+                    config_dict,
                     msg_update_callback=console_message_printer
                 )
             except Exception as err:
@@ -705,7 +705,7 @@ def install(ctx, config_file_path, pks_config_file_path,
 
         configure_cse.install_cse(
             config_file_name=config_file_path,
-            config=ServerConfig(config),
+            config=config,
             pks_config_file_name=pks_config_file_path,
             skip_config_decryption=skip_config_decryption,
             msg_update_callback=console_message_printer
@@ -944,7 +944,7 @@ def upgrade(ctx, config_file_path, skip_config_decryption):
 
         configure_cse.upgrade_cse(
             config_file_name=config_file_path,
-            config=ServerConfig(config),
+            config=config,
             msg_update_callback=console_message_printer
         )
     except Exception as err:
@@ -1299,7 +1299,7 @@ def install_cse_template(ctx, template_name, template_revision,
             template_name=template_name,
             template_revision=template_revision,
             config_file_name=config_file_path,
-            config=ServerConfig(config),
+            config=config,
             force_create=force_create,
             retain_temp_vapp=retain_temp_vapp,
             ssh_key=ssh_key,
@@ -1472,7 +1472,7 @@ def import_tkgm_template(
                 vcd_password=config['vcd']['password'],
                 verify_ssl=config['vcd']['verify'],
                 is_legacy_mode=config['service']['legacy_mode'],
-                is_mqtt_exchange=server_utils.should_use_mqtt_protocol(ServerConfig(config)),
+                is_mqtt_exchange=server_utils.should_use_mqtt_protocol(ServerConfig(config)),  # noqa: E501
                 log_wire=config['service']['log_wire'],
                 log_wire_file=log_wire_file
             )

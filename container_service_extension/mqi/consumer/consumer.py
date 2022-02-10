@@ -25,9 +25,9 @@ class MessageConsumer:
         if server_utils.should_use_mqtt_protocol(config):
             return MQTTConsumer(
                 url=config.get_value_at('vcd.host'),
-                listen_topic=config.get_value_at(f'mqtt.{MQTTExtKey.EXT_LISTEN_TOPIC}'),
-                respond_topic=config.get_value_at(f'mqtt.{MQTTExtKey.EXT_RESPOND_TOPIC}'),
-                verify_ssl=config.get_value_at(f'mqtt.verify_ssl'),
+                listen_topic=config.get_value_at(f'mqtt.{MQTTExtKey.EXT_LISTEN_TOPIC}'),  # noqa: E501
+                respond_topic=config.get_value_at(f'mqtt.{MQTTExtKey.EXT_RESPOND_TOPIC}'),  # noqa: E501
+                verify_ssl=config.get_value_at('mqtt.verify_ssl'),
                 token=config.get_value_at(f'mqtt.{MQTTExtTokenKey.TOKEN}'),
                 client_username=f'{server_constants.MQTT_EXTENSION_VENDOR}/'
                                 f'{server_constants.CSE_SERVICE_NAME}/'

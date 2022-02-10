@@ -29,7 +29,6 @@ import container_service_extension.common.utils.pyvcloud_utils as vcd_utils
 import container_service_extension.common.utils.server_utils as server_utils
 from container_service_extension.common.utils.vsphere_utils import populate_vsphere_list  # noqa: E501
 import container_service_extension.exception.exceptions as cse_exception
-from container_service_extension.config.server_config import ServerConfig
 from container_service_extension.installer.right_bundle_manager import RightBundleManager  # noqa: E501
 import container_service_extension.installer.templates.local_template_manager as ltm  # noqa: E501
 from container_service_extension.installer.templates.remote_template_manager import RemoteTemplateManager  # noqa: E501
@@ -78,7 +77,10 @@ API_FILTER_PATTERNS = [
 LEGACY_MODE = False
 
 
-def check_cse_installation(config: ServerConfig, msg_update_callback=utils.NullPrinter()):
+def check_cse_installation(
+        config: Dict,
+        msg_update_callback=utils.NullPrinter()
+):
     """Ensure that CSE is installed on vCD according to the config file.
 
     Checks,
@@ -86,7 +88,7 @@ def check_cse_installation(config: ServerConfig, msg_update_callback=utils.NullP
         2. CSE is registered with vCD,
         3. CSE K8 catalog exists
 
-    :param ServerConfig config:
+    :param Dict config:
     :param core_utils.ConsoleMessagePrinter msg_update_callback: Callback object.  # noqa: E501
 
     :raises Exception: if CSE is not registered to vCD as an extension, or if
@@ -100,7 +102,7 @@ def check_cse_installation(config: ServerConfig, msg_update_callback=utils.NullP
     client = None
     try:
         log_filename = None
-        log_wire = utils.str_to_bool(config.get_value_at('service.log_wire'))
+        log_wire = utils.str_to_bool(config['service']['log_wire'])
         if log_wire:
             log_filename = SERVER_CLI_WIRELOG_FILEPATH
 
@@ -109,18 +111,18 @@ def check_cse_installation(config: ServerConfig, msg_update_callback=utils.NullP
         # default_api_version key, it will be set to the highest api
         # version supported by VCD and CSE.
         client = Client(
-            config.get_value_at('vcd.host'),
-            api_version=config.get_value_at('service.default_api_version'),
-            verify_ssl_certs=config.get_value_at('vcd.verify'),
+            config['vcd']['host'],
+            api_version=config['service']['default_api_version'],
+            verify_ssl_certs=config['vcd']['verify'],
             log_file=log_filename,
             log_requests=log_wire,
             log_headers=log_wire,
             log_bodies=log_wire
         )
         credentials = BasicLoginCredentials(
-            config.get_value_at('vcd.username'),
+            config['vcd']['username'],
             shared_constants.SYSTEM_ORG_NAME,
-            config.get_value_at('vcd.password')
+            config['vcd']['password']
         )
         client.set_credentials(credentials)
 
@@ -139,9 +141,9 @@ def check_cse_installation(config: ServerConfig, msg_update_callback=utils.NullP
             )
 
         # check that catalog exists in vCD
-        org_name = config.get_value_at('broker.org')
+        org_name = config['broker']['org']
         org = vcd_utils.get_org(client, org_name=org_name)
-        catalog_name = config.get_value_at('broker.catalog')
+        catalog_name = config['broker']['catalog']
         if vcd_utils.catalog_exists(org, catalog_name):
             msg = f"Found catalog '{catalog_name}'"
             msg_update_callback.general(msg)
@@ -236,7 +238,7 @@ def parse_cse_extension_description(description: str):
 
 def install_cse(
         config_file_name,
-        config: ServerConfig,
+        config: Dict,
         pks_config_file_name=None,
         skip_config_decryption=False,
         msg_update_callback=utils.NullPrinter()
@@ -250,7 +252,7 @@ def install_cse(
     Also records telemetry data on installation details.
 
     :param str config_file_name: config file name.
-    :param ServerConfig config: content of the CSE config file.
+    :param Dict config: content of the CSE config file.
     :param str pks_config_file_name: pks config file name.
     :param bool skip_config_decryption: do not decrypt the config file.
     :param core_utils.ConsoleMessagePrinter msg_update_callback: Callback object.  # noqa: E501
@@ -288,7 +290,7 @@ def install_cse(
         )
 
         log_filename = None
-        log_wire = utils.str_to_bool(config['service'].get('log_wire'))
+        log_wire = utils.str_to_bool(config['service']['log_wire'])
         if log_wire:
             log_filename = INSTALL_WIRELOG_FILEPATH
 
@@ -355,7 +357,7 @@ def install_cse(
         # if it's a PKS setup, setup NSX-T constructs
         try:
             configure_nsxt_for_cse(
-                nsxt_servers=config.get_value_at('pks_config.nsxt_servers'),
+                nsxt_servers=config['pks_config']['nsxt_servers'],
                 log_wire=log_wire,
                 msg_update_callback=msg_update_callback
             )
@@ -458,7 +460,7 @@ def install_template(
         template_name,
         template_revision,
         config_file_name,
-        config: ServerConfig,
+        config: Dict,
         force_create,
         retain_temp_vapp,
         ssh_key,
@@ -473,7 +475,7 @@ def install_template(
     :param str template_name:
     :param str template_revision:
     :param str config_file_name: config file name.
-    :param ServerConfig config: content of the CSE config file.
+    :param Dict config: content of the CSE config file.
     :param bool force_create: if True and template already exists in vCD,
         overwrites existing template.
     :param str ssh_key: public ssh key to place into template vApp(s).
@@ -662,7 +664,7 @@ def install_template(
 # Changing message bus from MQTT to AMQP is not allowed
 def upgrade_cse(
         config_file_name,
-        config: ServerConfig,
+        config: Dict,
         msg_update_callback=utils.NullPrinter()
 ):
     """Handle logistics for upgrading CSE to 3.1.
@@ -674,7 +676,7 @@ def upgrade_cse(
     policy to concerned org VDCs, and create DEF entity for existing clusters.
 
     :param str config_file_name: config file name.
-    :param ServerConfig config: content of the CSE config file.
+    :param Dict config: content of the CSE config file.
     :param core_utils.ConsoleMessagePrinter msg_update_callback: Callback object.  # noqa: E501
     """
     msg = f"Upgrading CSE on vCloud Director using config file " \
@@ -926,19 +928,19 @@ def configure_nsxt_for_cse(
 
 def _check_amqp_extension_installation(
         client,
-        config: ServerConfig,
+        config: Dict,
         msg_update_callback,
         err_msgs
 ):
     """Check that AMQP exchange and api extension exists."""
     credentials = pika.PlainCredentials(
-        config.get_value_at('amqp.username'),
-        config.get_value_at('amqp.password')
+        config['amqp']['username'],
+        config['amqp']['password']
     )
     parameters = pika.ConnectionParameters(
-        config.get_value_at('amqp.host'),
-        config.get_value_at('amqp.port'),
-        config.get_value_at('amqp.vhost'),
+        config['amqp']['host'],
+        config['amqp']['port'],
+        config['amqp']['vhost'],
         credentials,
         connection_attempts=3,
         retry_delay=2,
@@ -950,22 +952,22 @@ def _check_amqp_extension_installation(
         channel = connection.channel()
         try:
             channel.exchange_declare(
-                exchange=config.get_value_at('amqp.exchange'),
+                exchange=config['amqp']['exchange'],
                 exchange_type=server_constants.EXCHANGE_TYPE,
                 durable=True,
                 passive=True,
                 auto_delete=False
             )
-            msg = f"AMQP exchange '{config.get_value_at('amqp.exchange')}' exists"
+            msg = f"AMQP exchange '{config['amqp']['exchange']}' exists"
             msg_update_callback.general(msg)
             SERVER_CLI_LOGGER.info(msg)
         except pika.exceptions.ChannelClosed:
-            msg = f"AMQP exchange '{config.get_value_at('amqp.exchange')}' does not exist"
+            msg = f"AMQP exchange '{config['amqp']['exchange']}' does not exist"  # noqa: E501
             msg_update_callback.error(msg)
             SERVER_CLI_LOGGER.error(msg, exc_info=True)
             err_msgs.append(msg)
     except Exception:  # TODO() replace raw exception with specific
-        msg = f"Could not connect to AMQP exchange '{config.get_value_at('amqp.exchange')}'"
+        msg = f"Could not connect to AMQP exchange '{config['amqp']['exchange']}'"  # noqa: E501
         msg_update_callback.error(msg)
         SERVER_CLI_LOGGER.error(msg, exc_info=True)
         err_msgs.append(msg)
@@ -980,8 +982,8 @@ def _check_amqp_extension_installation(
             server_constants.CSE_SERVICE_NAME,
             namespace=server_constants.CSE_SERVICE_NAMESPACE
         )
-        rkey_matches = cse_info['routingKey'] == config.get_value_at('amqp.routing_key')
-        exchange_matches = cse_info['exchange'] == config.get_value_at('amqp.exchange')
+        rkey_matches = cse_info['routingKey'] == config['amqp']['routing_key']
+        exchange_matches = cse_info['exchange'] == config['amqp']['exchange']
         if not rkey_matches or not exchange_matches:
             msg = "CSE is registered as an extension, but the " \
                   "extension settings on vCD are not the same as " \
@@ -990,10 +992,10 @@ def _check_amqp_extension_installation(
                 msg += f"\nvCD-CSE routing key: " \
                        f"{cse_info['routingKey']}" \
                        f"\nCSE config routing key: " \
-                       f"{config.get_value_at('amqp.routing_key')}"
+                       f"{config['amqp']['routing_key']}"
             if not exchange_matches:
                 msg += f"\nvCD-CSE exchange: {cse_info['exchange']}" \
-                       f"\nCSE config exchange: {config.get_value_at('amqp.exchange')}"
+                       f"\nCSE config exchange: {config['amqp']['exchange']}"
             msg_update_callback.info(msg)
             SERVER_CLI_LOGGER.info(msg)
             err_msgs.append(msg)
@@ -1384,7 +1386,7 @@ def _update_user_role_with_right_bundle(
 
 def _register_rde_schema(
         client: Client,
-        config: ServerConfig,
+        config: Dict,
         msg_update_callback=utils.NullPrinter(),
         update_schema=False,
         log_wire=False
@@ -1864,7 +1866,7 @@ def _update_metadata_of_templates(
 
 def _assign_placement_policies_to_existing_templates(
         client: Client,
-        config: ServerConfig,
+        config: Dict,
         all_templates: list,
         is_tkg_plus_enabled: bool,
         log_wire: bool = False,
@@ -1921,7 +1923,7 @@ def _assign_placement_policies_to_existing_templates(
 
 def _process_existing_templates(
         client: Client,
-        config: ServerConfig,
+        config: Dict,
         is_tkg_plus_enabled: bool,
         log_wire: bool = False,
         msg_update_callback=utils.NullPrinter()
@@ -1936,7 +1938,7 @@ def _process_existing_templates(
     assign the respective placement policy to the template.
 
     :param vcdClient.Client client:
-    :param ServerConfig config: content of the CSE config file.
+    :param Dict config: content of the CSE config file.
     :param bool is_tkg_plus_enabled:
     :param bool log_wire:
     :param core_utils.ConsoleMessagePrinter msg_update_callback:
@@ -2056,7 +2058,7 @@ def _process_existing_templates(
 
 def _install_all_templates(
         client,
-        config: ServerConfig,
+        config: Dict,
         force_create,
         retain_temp_vapp,
         ssh_key,
@@ -2212,7 +2214,7 @@ def _install_single_template(
 
 def _upgrade_to_cse_3_1_non_legacy(
         client,
-        config: ServerConfig,
+        config: Dict,
         update_schema=False,
         msg_update_callback=utils.NullPrinter(),
         log_wire=False
@@ -2310,7 +2312,7 @@ def _upgrade_to_cse_3_1_non_legacy(
 
 def _upgrade_to_cse_3_1_legacy(
         client,
-        config: ServerConfig,
+        config: Dict,
         msg_update_callback=utils.NullPrinter()
 ):
     """Handle upgrade when no support from VCD for RDE.
@@ -2557,7 +2559,7 @@ def _remove_old_cse_sizing_compute_policies(
 
 def _process_existing_clusters(
         client,
-        config: ServerConfig,
+        config: Dict,
         cse_clusters,
         is_tkg_plus_enabled,
         msg_update_callback=utils.NullPrinter(),

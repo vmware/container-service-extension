@@ -573,7 +573,7 @@ class ClusterService(abstract_broker.AbstractBroker):
         client_v36 = self.context.get_client(api_version=DEFAULT_API_VERSION)
         config = server_utils.get_server_runtime_config()
         logger_wire = NULL_LOGGER
-        if utils.str_to_bool(config['service']['log_wire']):
+        if utils.str_to_bool(config.get_value_at('service.log_wire')):
             logger_wire = SERVER_CLOUDAPI_WIRE_LOGGER
         acl_svc = acl_service.ClusterACLService(
             cluster_id=cluster_id,
@@ -633,7 +633,7 @@ class ClusterService(abstract_broker.AbstractBroker):
         client_v36 = self.context.get_client(api_version=DEFAULT_API_VERSION)
         config = server_utils.get_server_runtime_config()
         logger_wire = NULL_LOGGER
-        if utils.str_to_bool(config['service']['log_wire']):
+        if utils.str_to_bool(config.get_value_at('service.log_wire')):
             logger_wire = SERVER_CLOUDAPI_WIRE_LOGGER
         acl_svc = acl_service.ClusterACLService(
             cluster_id=cluster_id,
@@ -808,7 +808,7 @@ class ClusterService(abstract_broker.AbstractBroker):
             # Get refresh token
             config = server_utils.get_server_runtime_config()
             logger_wire = NULL_LOGGER
-            if utils.str_to_bool(config['service']['log_wire']):
+            if utils.str_to_bool(config.get_value_at('service.log_wire')):
                 logger_wire = SERVER_CLOUDAPI_WIRE_LOGGER
             oauth_client_name = _get_oauth_client_name_from_cluster_id(cluster_id)  # noqa: E501
             mts = oauth_service.MachineTokenService(
@@ -827,7 +827,7 @@ class ClusterService(abstract_broker.AbstractBroker):
             self._update_task(BehaviorTaskStatus.RUNNING, message=msg)
             vapp.reload()
             server_config = server_utils.get_server_runtime_config()
-            catalog_name = server_config['broker']['catalog']
+            catalog_name = server_config.get_value_at('broker.catalog')
 
             msg = f"Adding control plane node for '{cluster_name}' ({cluster_id})"  # noqa: E501
             LOGGER.debug(msg)
@@ -1286,7 +1286,7 @@ class ClusterService(abstract_broker.AbstractBroker):
             num_workers_to_add = desired_worker_count - curr_worker_count
 
             server_config = server_utils.get_server_runtime_config()
-            catalog_name = server_config['broker']['catalog']
+            catalog_name = server_config.get_value_at('broker.catalog')
             client_v36 = self.context.get_client(
                 api_version=DEFAULT_API_VERSION)
             org = vcd_utils.get_org(client_v36, org_name=org_name)
@@ -1841,7 +1841,6 @@ class ClusterService(abstract_broker.AbstractBroker):
                     nw_exp_helper.handle_delete_expose_dnat_rule(
                         client=user_client,
                         org_name=org_name,
-                        ovdc_name=ovdc_name,
                         network_name=network_name,
                         cluster_name=cluster_name,
                         cluster_id=entity_id)
@@ -2075,13 +2074,11 @@ def _is_valid_vcd_url(vcd_site: str) -> bool:
     parsed_url = urllib.parse.urlparse(vcd_site)
     # Compare with the value in CSE server config
     server_config = server_utils.get_server_runtime_config()
-    cse_server_host = ""
-    if (
-        server_config is not None
-        and server_config['vcd'] is not None
-        and server_config['vcd']['host'] is not None
-    ):
-        cse_server_host = server_config['vcd']['host']
+    try:
+        cse_server_host = server_config.get_value_at('vcd.host')
+    except KeyError:
+        return False
+
     if parsed_url.netloc != cse_server_host:
         return False
     return True
@@ -2108,23 +2105,27 @@ def _cluster_exists(client, cluster_name, org_name=None, ovdc_name=None):
     return len(list(result)) != 0
 
 
-def _get_tkgm_template(name: str):
+def _get_tkgm_template(name: str) -> Dict:
     if not name:
         raise ValueError("Template name should be specified.")
     server_config = server_utils.get_server_runtime_config()
-    for template in server_config['broker']['tkgm_templates']:
+    for template in server_config.get_value_at('broker.tkgm_templates'):
         if template[LocalTemplateKey.NAME] == name:
             return template
     raise Exception(
         f"Template '{name}' not found in list "
-        f"[{server_config['broker']['tkgm_templates']}]"
+        f"[{server_config.get_value_at('broker.tkgm_templates')}]"
     )
 
 
 def _get_tkgm_proxy_config() -> dict:
     server_config = server_utils.get_server_runtime_config()
-    extra_options: dict = server_config.get('extra_options', {})
-    extra_options = extra_options if isinstance(extra_options, dict) else {}
+    try:
+        extra_options: dict = server_config.get_value_at('extra_options')
+        extra_options = extra_options if isinstance(extra_options, dict) else {}  # noqa: E501
+    except KeyError:
+        extra_options: dict = {}
+
     return {
         proxy_key.value: extra_options.get(proxy_key.name, '')
         for proxy_key in TKGmProxyKey
@@ -2664,7 +2665,7 @@ def _get_vm_specifications(
     config = server_utils.get_server_runtime_config()
     cpm = compute_policy_manager.ComputePolicyManager(
         client,
-        log_wire=utils.str_to_bool(config['service']['log_wire'])
+        log_wire=utils.str_to_bool(config.get_value_at('service.log_wire'))
     )
     sizing_class_href = None
     if sizing_class_name:

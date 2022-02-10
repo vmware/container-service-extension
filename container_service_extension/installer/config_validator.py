@@ -221,7 +221,9 @@ def get_validated_config(
         vcd_password=config['vcd']['password'],
         verify_ssl=config['vcd']['verify'],
         is_legacy_mode=config['service']['legacy_mode'],
-        is_mqtt_exchange=server_utils.should_use_mqtt_protocol(ServerConfig(config)),
+        is_mqtt_exchange=server_utils.should_use_mqtt_protocol(
+            ServerConfig(config)
+        ),
         log_wire=log_wire,
         log_wire_file=log_wire_file
     )

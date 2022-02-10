@@ -2,6 +2,7 @@
 # Copyright (c) 2019 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 import hashlib
+from typing import Dict
 
 from pyvcloud.vcd.api_extension import APIExtension
 from pyvcloud.vcd.client import BasicLoginCredentials
@@ -15,7 +16,6 @@ from container_service_extension.common.constants.server_constants import MQTT_E
 from container_service_extension.common.constants.server_constants import MQTTExtKey  # noqa: E501
 from container_service_extension.common.constants.shared_constants import SYSTEM_ORG_NAME  # noqa: E501
 from container_service_extension.common.utils.core_utils import NullPrinter
-from container_service_extension.config.server_config import ServerConfig
 from container_service_extension.lib.telemetry.constants import COLLECTOR_ID
 from container_service_extension.lib.telemetry.constants import VAC_URL
 from container_service_extension.logging.logger import NULL_LOGGER
@@ -135,7 +135,7 @@ def get_telemetry_instance_id(
 
 
 def update_with_telemetry_settings(
-        config_dict: ServerConfig,
+        config_dict: Dict,
         vcd_host: str,
         vcd_username: str,
         vcd_password: str,
@@ -144,14 +144,14 @@ def update_with_telemetry_settings(
 ):
     """Populate telemetry instance id, url and collector id in config.
 
-    :param ServerConfig config_dict: CSE configuration
+    :param dict config_dict: CSE configuration
     :param str vcd_host:
     :param str vcd_username:
     :param str vcd_password:
     :param bool verify_ssl:
     :param bool is_mqtt_exchange:
 
-    :rtype: ServerConfig
+    :rtype: dict
     :return: updated config dict
     """
     if not isinstance(config_dict, dict):

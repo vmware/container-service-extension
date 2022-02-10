@@ -10,7 +10,7 @@ import threading
 from threading import Thread
 import time
 import traceback
-from typing import List, Optional, Dict
+from typing import Dict, List, Optional
 
 import click
 from pyvcloud.vcd.client import BasicLoginCredentials
@@ -525,7 +525,7 @@ class Service(object, metaclass=Singleton):
         try:
             sysadmin_client = vcd_utils.get_sys_admin_client(api_version=None)
             try:
-                if utils.str_to_bool(str(self.config.get_value_at('service.log_wire'))):
+                if utils.str_to_bool(str(self.config.get_value_at('service.log_wire'))):   # noqa: E501
                     logger_wire = logger.SERVER_CLOUDAPI_WIRE_LOGGER
                 else:
                     logger_wire = logger.NULL_LOGGER
@@ -648,7 +648,7 @@ class Service(object, metaclass=Singleton):
             # version supported by VCD and CSE.
             client = Client(
                 self.config.get_value_at('vcd.host'),
-                api_version=self.config.get_value_at('service.default_api_version'),
+                api_version=self.config.get_value_at('service.default_api_version'),  # noqa: E501
                 verify_ssl_certs=self.config.get_value_at('vcd.verify'),
                 log_file=log_filename,
                 log_requests=log_wire,
@@ -701,7 +701,7 @@ class Service(object, metaclass=Singleton):
             # version supported by VCD and CSE.
             client = Client(
                 self.config.get_value_at('vcd.host'),
-                api_version=self.config.get_value_at('service.default_api_version'),
+                api_version=self.config.get_value_at('service.default_api_version'),  # noqa: E501
                 verify_ssl_certs=self.config.get_value_at('vcd.verify'),
                 log_file=log_filename,
                 log_requests=log_wire,

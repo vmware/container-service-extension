@@ -91,8 +91,7 @@ class OperationContext:
             api_version=api_version
         )
 
-        log_wire = server_utils.get_server_runtime_config() \
-            .get('service', {}).get('log_wire', False)  # noqa: E501
+        log_wire = server_utils.get_server_runtime_config().get_value_at('service.log_wire')  # noqa: E501
         logger_wire = logger.NULL_LOGGER
         if log_wire:
             logger_wire = logger.SERVER_CLOUDAPI_WIRE_LOGGER
@@ -109,8 +108,7 @@ class OperationContext:
         _sysadmin_client = vcd_utils.get_sys_admin_client(
             api_version=api_version)
 
-        log_wire = server_utils.get_server_runtime_config() \
-            .get('service', {}).get('log_wire', False)
+        log_wire = server_utils.get_server_runtime_config().get_value_at('service.log_wire')  # noqa: E501
         logger_wire = logger.NULL_LOGGER
         if log_wire:
             logger_wire = logger.SERVER_CLOUDAPI_WIRE_LOGGER

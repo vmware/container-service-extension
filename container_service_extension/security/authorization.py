@@ -30,7 +30,7 @@ def secure(required_rights=None):
         def decorator_wrapper(*args, **kwargs):
             server_config = server_utils.get_server_runtime_config()
 
-            if (server_config['service']['enforce_authorization']
+            if (server_config.get_value_at('service.enforce_authorization')
                     and required_rights is not None
                     and len(required_rights) > 0):
                 class_instance: abstract_broker.AbstractBroker = args[0]
