@@ -90,17 +90,6 @@ TEMPLATE_HANDLERS = [
                 'handler': template_handler.tkgm_template_list
             }
         }
-    },
-    {
-        'url': "cse/templates/action/reload",
-        RequestMethod.POST: {
-            ('36.0',): {
-                'allowed_params': [],
-                'required_params': [],
-                'operation': CseOperation.TEMPLATE_RELOAD,
-                'handler': template_handler.reload_templates
-            }
-        }
     }
 ]
 

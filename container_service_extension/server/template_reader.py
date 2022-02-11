@@ -1,15 +1,15 @@
 # container-service-extension
 # Copyright (c) 2020 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
-from pyvcloud.vcd.client import Client, BasicLoginCredentials
+from pyvcloud.vcd.client import BasicLoginCredentials, Client
 
+import container_service_extension.common.constants.shared_constants as shared_constants  # noqa: E501
+import container_service_extension.common.utils.core_utils as utils
+import container_service_extension.common.utils.server_utils as server_utils
+from container_service_extension.config.server_config import ServerConfig
 import container_service_extension.installer.templates.local_template_manager as ltm  # noqa: E501
 import container_service_extension.installer.templates.tkgm_template_manager as ttm  # noqa: E501
-from container_service_extension.config.server_config import ServerConfig
-import container_service_extension.common.utils.core_utils as utils
 from container_service_extension.logging import logger
-import container_service_extension.common.constants.shared_constants as shared_constants  # noqa: E501
-import container_service_extension.common.utils.server_utils as server_utils
 
 
 def read_native_template_definition_from_catalog(
