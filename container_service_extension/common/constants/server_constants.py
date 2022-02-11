@@ -468,6 +468,7 @@ class CseOperation(Enum):
     SYSTEM_INFO = ('get info of system', '/cse/system')
     SYSTEM_UPDATE = ('update system status', '/cse/system')
     TEMPLATE_LIST = ('list all templates', '/cse/templates')
+    TEMPLATE_RELOAD = ('reload native and TKGm templates into server runtime config', '/cse/templates/action/reload')  # noqa: E501
     TKGM_TEMPLATE_LIST = ('list TKGm templates', '/cse/templates/tkgm')
 
     V35_OVDC_LIST = ('list ovdcs for v35', '/cse/3.0/ovdcs')

@@ -7,6 +7,8 @@ from container_service_extension.common.constants.server_constants import TKGmTe
 import container_service_extension.common.utils.server_utils as server_utils
 from container_service_extension.lib.telemetry.constants import CseOperation
 from container_service_extension.lib.telemetry.telemetry_handler import record_user_action_telemetry  # noqa: E501
+from container_service_extension.logging import logger
+from container_service_extension.server import template_reader
 
 
 @record_user_action_telemetry(cse_operation=CseOperation.TEMPLATE_LIST_CLIENT_SIDE)  # noqa: E501
@@ -73,3 +75,30 @@ def tkgm_template_list(request_data, op_ctx):
         })
 
     return sorted(tkgm_templates, key=lambda i: (i['name'], i['revision']), reverse=True)  # noqa: E501
+
+
+def reload_templates(request_data, op_ctx):
+    """."""
+    server_config = server_utils.get_server_runtime_config()
+    if not server_utils.is_no_vc_communication_mode():
+        native_templates = \
+            template_reader.read_native_template_definition_from_catalog(
+                config=server_config
+            )
+        server_config.set_value_at('broker.templates', native_templates)
+    else:
+        msg = "Skipping loading k8s template definition from catalog " \
+              "since `No communication with VCenter` mode is on."
+        logger.SERVER_LOGGER.info(msg)
+        server_config.set_value_at('broker.templates', [])
+
+    tkgm_templates = \
+        template_reader.read_tkgm_template_definition_from_catalog(
+            config=server_config
+        )
+    server_config.set_value_at('broker.tkgm_templates', tkgm_templates)
+
+    return_dict = {
+        "message": "Successfully reloaded native and TKG templates into memory."
+    }
+    return return_dict
