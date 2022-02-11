@@ -469,7 +469,7 @@ class CseOperation(Enum):
     SYSTEM_SERVER_CONFIG = ('fetch server runtime configuration', '/cse/system/config')  # noqa: E501
     SYSTEM_UPDATE = ('update system status', '/cse/system')
     TEMPLATE_LIST = ('list all templates', '/cse/templates')
-    TEMPLATE_RELOAD = ('reload native and TKGm templates into server runtime config', '/cse/templates/action/reload')  # noqa: E501
+    TEMPLATE_RELOAD = ('reload native and TKGm templates into server runtime config', '/cse/templates/action/reload', requests.codes.accepted)  # noqa: E501
     TKGM_TEMPLATE_LIST = ('list TKGm templates', '/cse/templates/tkgm')
 
     V35_OVDC_LIST = ('list ovdcs for v35', '/cse/3.0/ovdcs')

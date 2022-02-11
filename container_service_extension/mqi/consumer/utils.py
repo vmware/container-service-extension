@@ -86,6 +86,8 @@ def get_task_href(body):
             body['entity'].get('status') is not None:
         rde = DefEntity(**body)
         return rde.entity.status.task_href
+    elif body.get('task_href'):
+        return body.get('task_href')
     return None
 
 
