@@ -237,7 +237,7 @@ def ovdc_compute_policy_list(
         op_ctx.get_sysadmin_client(api_version=DEFAULT_API_VERSION)
     cpm = compute_policy_manager.ComputePolicyManager(
         sysadmin_client_v33,
-        log_wire=utils.str_to_bool(config['service'].get('log_wire')))
+        log_wire=utils.str_to_bool(config.get_value_at('service.log_wire')))
     compute_policies = []
     for cp in \
             compute_policy_manager.list_cse_sizing_policies_on_vdc(
@@ -284,7 +284,7 @@ def ovdc_compute_policy_update(
             op_ctx.get_sysadmin_client(api_version=DEFAULT_API_VERSION)
         cpm = compute_policy_manager.ComputePolicyManager(
             sysadmin_client_v33,
-            log_wire=utils.str_to_bool(config['service'].get('log_wire')))  # noqa: E501
+            log_wire=utils.str_to_bool(config.get_value_at('service.log_wire')))  # noqa: E501
         cp_href = None
         cp_id = None
         if cp_name == SYSTEM_DEFAULT_COMPUTE_POLICY_NAME:

@@ -18,12 +18,12 @@ def template_list(request_data, op_ctx):
     config = server_utils.get_server_runtime_config()
     templates = []
 
-    for t in config['broker']['templates']:
+    for t in config.get_value_at('broker.templates'):
         template_name = t[LocalTemplateKey.NAME]
         template_revision = str(t[LocalTemplateKey.REVISION])
 
         templates.append({
-            'catalog': config['broker']['catalog'],
+            'catalog': config.get_value_at('broker.catalog'),
             'catalog_item': t[LocalTemplateKey.CATALOG_ITEM_NAME],
             'cni': t[LocalTemplateKey.CNI],
             'cni_version': t[LocalTemplateKey.CNI_VERSION],
@@ -51,9 +51,9 @@ def tkgm_template_list(request_data, op_ctx):
     config = server_utils.get_server_runtime_config()
     tkgm_templates = []
 
-    for t in config['broker']['tkgm_templates']:
+    for t in config.get_value_at('broker.tkgm_templates'):
         tkgm_templates.append({
-            'catalog': config['broker']['catalog'],
+            'catalog': config.get_value_at('broker.catalog'),
             'catalog_item': t[TKGmTemplateKey.NAME],
             'cni': t[TKGmTemplateKey.CNI],
             'cni_version': t[TKGmTemplateKey.CNI_VERSION],

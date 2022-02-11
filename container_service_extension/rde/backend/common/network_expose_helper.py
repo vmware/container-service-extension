@@ -29,7 +29,7 @@ def _get_gateway(
 ):
     config = server_utils.get_server_runtime_config()
     logger_wire = NULL_LOGGER
-    if utils.str_to_bool(config['service']['log_wire']):
+    if utils.str_to_bool(config.get_value_at('service.log_wire')):
         logger_wire = SERVER_CLOUDAPI_WIRE_LOGGER
     cloudapi_client = vcd_utils.get_cloudapi_client_from_vcd_client(
         client=client,
@@ -38,10 +38,10 @@ def _get_gateway(
     )
 
     gateway_name, gateway_href, gateway_exists = None, None, False
-    page, pageCount = 1, 1
+    page, page_count = 1, 1
     base_path = f'{cloudapi_constants.CloudApiResource.ORG_VDC_NETWORKS}?filter=name=={network_name};_context==includeAccessible&pageSize=1&page='  # noqa: E501
 
-    while page <= pageCount:
+    while page <= page_count:
         response, headers = cloudapi_client.do_request(
             method=RequestMethod.GET,
             cloudapi_version=cloudapi_constants.CloudApiVersion.VERSION_1_0_0,
@@ -59,7 +59,7 @@ def _get_gateway(
                 gateway_id = entry['connection']['routerRef']['id'].split(':').pop()  # noqa: E501
                 gateway_href = headers['Content-Location'].split('cloudapi')[0] + f'api/admin/edgeGateway/{gateway_id}'  # noqa: E501
         page += 1
-        pageCount = response['pageCount']
+        page_count = response['pageCount']
 
     if not gateway_exists:
         raise EntityNotFoundException(f"No routed networks named {network_name} found.")  # noqa: E501
@@ -82,7 +82,7 @@ def _get_nsxt_backed_gateway_service(client: vcd_client.Client, org_name: str,
 
     config = server_utils.get_server_runtime_config()
     logger_wire = NULL_LOGGER
-    if utils.str_to_bool(config['service']['log_wire']):
+    if utils.str_to_bool(config.get_value_at('service.log_wire')):
         logger_wire = SERVER_CLOUDAPI_WIRE_LOGGER
     return NsxtBackedGatewayService(
         gateway=gateway,
@@ -176,7 +176,6 @@ def expose_cluster(client: vcd_client.Client, org_name: str,
 
     :param vcd_client.Client client:
     :param str org_name:
-    :param str ovdc_name:
     :param str network_name:
     :param str cluster_name:
     :param str cluster_id:
@@ -203,10 +202,7 @@ def expose_cluster(client: vcd_client.Client, org_name: str,
             internal_address=internal_ip,
             external_address=expose_ip)
     except Exception as err:
-        raise Exception(
-            f"Unable to add dnat rule with error: {str(err)}",
-            exc_info=True
-        )
+        raise Exception(f"Unable to add dnat rule with error: {str(err)}")
     return expose_ip
 
 
@@ -219,7 +215,6 @@ def handle_delete_expose_dnat_rule(client: vcd_client.Client,
 
     :param vcd_client.Client client:
     :param str org_name:
-    :param str ovdc_name:
     :param str network_name:
     :param str cluster_name:
     :param str cluster_id:

@@ -701,7 +701,7 @@ class ClusterService(abstract_broker.AbstractBroker):
         client_v36 = self.context.get_client(api_version=DEFAULT_API_VERSION)
         config = server_utils.get_server_runtime_config()
         logger_wire = NULL_LOGGER
-        if utils.str_to_bool(config['service']['log_wire']):
+        if utils.str_to_bool(config.get_value_at('service.log_wire')):
             logger_wire = SERVER_CLOUDAPI_WIRE_LOGGER
         acl_svc = acl_service.ClusterACLService(
             cluster_id=cluster_id,
@@ -761,7 +761,7 @@ class ClusterService(abstract_broker.AbstractBroker):
         client_v36 = self.context.get_client(api_version=DEFAULT_API_VERSION)
         config = server_utils.get_server_runtime_config()
         logger_wire = NULL_LOGGER
-        if utils.str_to_bool(config['service']['log_wire']):
+        if utils.str_to_bool(config.get_value_at('service.log_wire')):
             logger_wire = SERVER_CLOUDAPI_WIRE_LOGGER
         acl_svc = acl_service.ClusterACLService(
             cluster_id=cluster_id,
@@ -917,7 +917,7 @@ class ClusterService(abstract_broker.AbstractBroker):
             self._update_task(BehaviorTaskStatus.RUNNING, message=msg)
             vapp.reload()
             server_config = server_utils.get_server_runtime_config()
-            catalog_name = server_config['broker']['catalog']
+            catalog_name = server_config.get_value_at('broker.catalog')
             sysadmin_client_v36 = self.context.get_sysadmin_client(
                 api_version=DEFAULT_API_VERSION)
             try:
@@ -1407,7 +1407,7 @@ class ClusterService(abstract_broker.AbstractBroker):
             num_nfs_to_add = desired_nfs_count - curr_nfs_count
 
             server_config = server_utils.get_server_runtime_config()
-            catalog_name = server_config['broker']['catalog']
+            catalog_name = server_config.get_value_at('broker.catalog')
             client_v36 = self.context.get_client(
                 api_version=DEFAULT_API_VERSION)
             org = vcd_utils.get_org(client_v36, org_name=org_name)
@@ -2047,7 +2047,6 @@ class ClusterService(abstract_broker.AbstractBroker):
                     nw_exp_helper.handle_delete_expose_dnat_rule(
                         client=user_client,
                         org_name=org_name,
-                        ovdc_name=ovdc_name,
                         network_name=network_name,
                         cluster_name=cluster_name,
                         cluster_id=entity_id)
@@ -2270,7 +2269,7 @@ def _get_cluster_upgrade_target_templates(
     """
     upgrades = []
     config = server_utils.get_server_runtime_config()
-    for t in config['broker']['templates']:
+    for t in config.get_value_at('broker.templates'):
         if source_template_name in t[LocalTemplateKey.UPGRADE_FROM]:
             if t[LocalTemplateKey.NAME] == source_template_name and \
                     int(t[LocalTemplateKey.REVISION]) <= int(source_template_revision):  # noqa: E501
@@ -2522,13 +2521,13 @@ def _cluster_exists(client, cluster_name, org_name=None, ovdc_name=None):
     return len(list(result)) != 0
 
 
-def _get_template(name=None, revision=None):
+def _get_template(name=None, revision=None) -> Dict:
     if not name or not revision:
         raise ValueError(
             "Template name and revision both must be specified."
         )
     server_config = server_utils.get_server_runtime_config()
-    for template in server_config['broker']['templates']:
+    for template in server_config.get_value_at('broker.templates'):
         if (template[LocalTemplateKey.NAME], str(template[LocalTemplateKey.REVISION])) == (name, str(revision)):  # noqa: E501
             return template
     raise Exception(f"Template '{name}' at revision {revision} not found.")
@@ -2571,8 +2570,10 @@ def _add_nodes(sysadmin_client, num_nodes, node_type, org, vdc, vapp,
                 storage_profile = vdc.get_storage_profile(storage_profile)
 
             config = server_utils.get_server_runtime_config()
-            cpm = compute_policy_manager.ComputePolicyManager(sysadmin_client,
-                                                              log_wire=utils.str_to_bool(config['service']['log_wire']))  # noqa: E501
+            cpm = compute_policy_manager.ComputePolicyManager(
+                sysadmin_client,
+                log_wire=utils.str_to_bool(config.get_value_at('service.log_wire'))  # noqa: E501
+            )
             sizing_class_href = None
             if sizing_class_name:
                 vdc_resource = vdc.get_resource()
@@ -2620,7 +2621,7 @@ def _add_nodes(sysadmin_client, num_nodes, node_type, org, vdc, vapp,
                 }
                 if sizing_class_href:
                     spec['sizing_policy_href'] = sizing_class_href
-                    spec['placement_policy_href'] = config['placement_policy_hrefs'][template[LocalTemplateKey.KIND]]  # noqa: E501
+                    spec['placement_policy_href'] = config.get_value_at(f"placement_policy_hrefs.{template[LocalTemplateKey.KIND.value]}")  # noqa: E501
                 if cust_script is not None:
                     spec['cust_script'] = cust_script
                 if storage_profile is not None:

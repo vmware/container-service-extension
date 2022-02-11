@@ -52,23 +52,24 @@ def connect_vcd_user_via_token(
         api_version: Optional[str]):
     server_config = get_server_runtime_config()
     if not api_version:
-        api_version = server_config['service']['default_api_version']
-    verify_ssl_certs = server_config['vcd']['verify']
+        api_version = server_config.get_value_at('service.default_api_version')
+    verify_ssl_certs = server_config.get_value_at('vcd.verify')
     if not verify_ssl_certs:
         requests.packages.urllib3.disable_warnings()
     log_filename = None
-    log_wire = str_to_bool(server_config['service'].get('log_wire'))
+    log_wire = str_to_bool(server_config.get_value_at('service.log_wire'))
     if log_wire:
         log_filename = SERVER_DEBUG_WIRELOG_FILEPATH
 
     client_tenant = vcd_client.Client(
-        uri=server_config['vcd']['host'],
+        uri=server_config.get_value_at('vcd.host'),
         api_version=api_version,
         verify_ssl_certs=verify_ssl_certs,
         log_file=log_filename,
         log_requests=log_wire,
         log_headers=log_wire,
-        log_bodies=log_wire)
+        log_bodies=log_wire
+    )
     client_tenant.rehydrate_from_token(
         token=tenant_auth_token,
         is_jwt_token=True
@@ -79,27 +80,29 @@ def connect_vcd_user_via_token(
 def get_sys_admin_client(api_version: Optional[str]):
     server_config = get_server_runtime_config()
     if not api_version:
-        api_version = server_config['service']['default_api_version']
-    verify_ssl_certs = server_config['vcd']['verify']
+        api_version = server_config.get_value_at('service.default_api_version')
+    verify_ssl_certs = server_config.get_value_at('vcd.verify')
     if not verify_ssl_certs:
         requests.packages.urllib3.disable_warnings()
     log_filename = None
-    log_wire = str_to_bool(server_config['service'].get('log_wire'))
+    log_wire = str_to_bool(server_config.get_value_at('service.log_wire'))
     if log_wire:
         log_filename = SERVER_DEBUG_WIRELOG_FILEPATH
 
     client = vcd_client.Client(
-        uri=server_config['vcd']['host'],
+        uri=server_config.get_value_at('vcd.host'),
         api_version=api_version,
         verify_ssl_certs=verify_ssl_certs,
         log_file=log_filename,
         log_requests=log_wire,
         log_headers=log_wire,
-        log_bodies=log_wire)
+        log_bodies=log_wire
+    )
     credentials = vcd_client.BasicLoginCredentials(
-        server_config['vcd']['username'],
+        server_config.get_value_at('vcd.username'),
         shared_constants.SYSTEM_ORG_NAME,
-        server_config['vcd']['password'])
+        server_config.get_value_at('vcd.password')
+    )
     client.set_credentials(credentials)
     return client
 
@@ -789,8 +792,7 @@ def get_missing_rights_for_cluster_force_delete(
     :raises: OperationNotSupportedException
     :raises: Exception for any unexpected errors
     """
-    missing_rights = set()
-    role_name = ''
+    role_name = ""
     try:
         role_name = get_user_role_name(client)
         org_obj = vcd_org.Org(client, resource=client.get_org())

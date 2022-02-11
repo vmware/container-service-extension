@@ -26,6 +26,7 @@ import container_service_extension.common.utils.config_utils as config_utils
 import container_service_extension.common.utils.core_utils as utils
 import container_service_extension.common.utils.pyvcloud_utils as vcd_utils
 import container_service_extension.common.utils.server_utils as server_utils
+from container_service_extension.config.server_config import ServerConfig
 import container_service_extension.installer.config_validator as config_validator  # noqa: E501
 import container_service_extension.installer.configure_cse as configure_cse
 from container_service_extension.installer.cse_service_role_mgr import create_cse_service_role  # noqa : E501
@@ -523,7 +524,9 @@ def check(ctx, config_file_path, pks_config_file_path, skip_config_decryption,
         if check_install:
             try:
                 configure_cse.check_cse_installation(
-                    config_dict, msg_update_callback=console_message_printer)
+                    config_dict,
+                    msg_update_callback=console_message_printer
+                )
             except Exception as err:
                 msg = f"Error : {err}\nCSE installation is invalid"
                 SERVER_CLI_LOGGER.error(msg)
@@ -1080,7 +1083,7 @@ def list_template(ctx, config_file_path, skip_config_decryption,
 
                 org_name = config_dict['broker']['org']
                 catalog_name = config_dict['broker']['catalog']
-                is_tkg_plus_enabled = server_utils.is_tkg_plus_enabled(config_dict)  # noqa: E501
+                is_tkg_plus_enabled = server_utils.is_tkg_plus_enabled(ServerConfig(config_dict))  # noqa: E501
 
                 local_template_definitions = \
                     ltm.get_valid_k8s_local_template_definition(
@@ -1469,7 +1472,7 @@ def import_tkgm_template(
                 vcd_password=config['vcd']['password'],
                 verify_ssl=config['vcd']['verify'],
                 is_legacy_mode=config['service']['legacy_mode'],
-                is_mqtt_exchange=server_utils.should_use_mqtt_protocol(config),
+                is_mqtt_exchange=server_utils.should_use_mqtt_protocol(ServerConfig(config)),  # noqa: E501
                 log_wire=config['service']['log_wire'],
                 log_wire_file=log_wire_file
             )
@@ -1655,7 +1658,9 @@ def _get_unvalidated_config(
             vcd_username=config_dict['vcd']['username'],
             vcd_password=config_dict['vcd']['password'],
             verify_ssl=config_dict['vcd']['verify'],
-            is_mqtt_exchange=server_utils.should_use_mqtt_protocol(config_dict)
+            is_mqtt_exchange=server_utils.should_use_mqtt_protocol(
+                ServerConfig(config_dict)
+            )
         )
 
         return config_dict

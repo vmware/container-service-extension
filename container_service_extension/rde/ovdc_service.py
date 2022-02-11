@@ -109,10 +109,12 @@ def get_ovdc(operation_context: ctx.OperationContext, ovdc_id: str) -> dict:
     telemetry_handler.record_user_action_details(cse_operation=CseOperation.OVDC_INFO,  # noqa: E501
                                                  cse_params=cse_params)
     config = server_utils.get_server_runtime_config()
-    log_wire = utils.str_to_bool(config.get('service', {}).get('log_wire'))
-    result = asdict(get_ovdc_k8s_runtime_details(operation_context.sysadmin_client,  # noqa: E501
-                                                 ovdc_id=ovdc_id,
-                                                 log_wire=log_wire))
+    log_wire = utils.str_to_bool(config.get_value_at('service.log_wire'))
+    result = asdict(get_ovdc_k8s_runtime_details(
+        operation_context.sysadmin_client,
+        ovdc_id=ovdc_id,
+        log_wire=log_wire)
+    )
     # TODO: Find a better way to avoid sending remove_cp_from_vms_on_disable
     # flag
     if ClusterEntityKind.TKG_PLUS.value in result['k8s_runtime'] \
@@ -125,7 +127,7 @@ def get_ovdc(operation_context: ctx.OperationContext, ovdc_id: str) -> dict:
 def _get_cse_ovdc_list(sysadmin_client: vcd_client.Client, ovdc_list: list):
     ovdcs = []
     config = server_utils.get_server_runtime_config()
-    log_wire = utils.str_to_bool(config.get('service', {}).get('log_wire'))
+    log_wire = utils.str_to_bool(config.get_value_at('service.log_wire'))
     cpm = compute_policy_manager.ComputePolicyManager(sysadmin_client,
                                                       log_wire=log_wire)
     for ovdc in ovdc_list:
@@ -281,7 +283,7 @@ def _update_ovdc_using_placement_policy_async(operation_context: ctx.OperationCo
     k8s_runtimes_deleted = ''
     try:
         config = server_utils.get_server_runtime_config()
-        log_wire = utils.str_to_bool(config.get('service', {}).get('log_wire'))
+        log_wire = utils.str_to_bool(config.get_value_at('service.log_wire'))
         cpm = compute_policy_manager.ComputePolicyManager(
             operation_context.sysadmin_client, log_wire=log_wire)
         existing_policies = []
