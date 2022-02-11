@@ -11,3 +11,6 @@ class Template:
 
     def get_templates(self, is_tkgm: bool):
         return self._templates_api.list_templates(is_tkgm)
+
+    def reload_templates(self):
+        return self._templates_api.reload_templates()

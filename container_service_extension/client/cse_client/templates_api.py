@@ -14,6 +14,7 @@ class TemplatesApi(CseClient):
         self._uri = f"{self._uri}/{shared_constants.CSE_URL_FRAGMENT}"
         self._templates_uri = f"{self._uri}/templates"
         self._tkgm_templates_uri = f"{self._templates_uri}/tkgm"
+        self._reload_templates_uri = f"{self._templates_uri}/action/reload"
 
     def list_templates(self, is_tkgm: bool):
         if is_tkgm:
@@ -24,4 +25,12 @@ class TemplatesApi(CseClient):
             uri=uri,
             method=shared_constants.RequestMethod.GET,
             accept_type='application/json')
+        return self.process_response(response)
+
+    def reload_templates(self):
+        response = self.do_request(
+            uri=self._reload_templates_uri,
+            method=shared_constants.RequestMethod.POST,
+            accept_type='application/json'
+        )
         return self.process_response(response)
