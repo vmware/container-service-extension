@@ -62,7 +62,8 @@ def list_templates(ctx, is_tkgm):
 
 @template_group.command(
     'reload',
-    short_help='Reload CSE native and TKG templates in server runtime configuration')
+    short_help='Reload CSE native and TKG templates in server runtime configuration'  # noqa: E501
+)
 @click.pass_context
 def reload_templates(ctx):
     """Reload CSE native and TKG templates."""
