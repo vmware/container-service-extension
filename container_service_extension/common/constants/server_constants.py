@@ -466,6 +466,7 @@ class CseOperation(Enum):
     OVDC_COMPUTE_POLICY_LIST = ('list ovdc compute policies', '/cse/ovdc/%s/compute-policies')  # noqa: E501
     OVDC_COMPUTE_POLICY_UPDATE = ('update ovdc compute policies', '/cse/ovdc/%s/compute-policies')  # noqa: E501
     SYSTEM_INFO = ('get info of system', '/cse/system')
+    SYSTEM_SERVER_CONFIG = ('fetch server runtime configuration', '/cse/system/config')  # noqa: E501
     SYSTEM_UPDATE = ('update system status', '/cse/system')
     TEMPLATE_LIST = ('list all templates', '/cse/templates')
     TKGM_TEMPLATE_LIST = ('list TKGm templates', '/cse/templates/tkgm')

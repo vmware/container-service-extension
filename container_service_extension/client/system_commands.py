@@ -4,6 +4,7 @@
 import click
 from vcd_cli.utils import stderr
 from vcd_cli.utils import stdout
+import yaml
 
 from container_service_extension.client.system import System
 import container_service_extension.client.utils as client_utils
@@ -60,7 +61,7 @@ def stop_service(ctx):
         client_utils.cse_restore_session(ctx)
         client = ctx.obj['client']
         system = System(client)
-        result = system.update_service_status(action=shared_constants.ServerAction.STOP) # noqa: E501
+        result = system.update_service_status(action=shared_constants.ServerAction.STOP)  # noqa: E501
         stdout(result, ctx)
         CLIENT_LOGGER.debug(result)
     except Exception as e:
@@ -77,7 +78,7 @@ def enable_service(ctx):
         client_utils.cse_restore_session(ctx)
         client = ctx.obj['client']
         system = System(client)
-        result = system.update_service_status(action=shared_constants.ServerAction.ENABLE) # noqa: E501
+        result = system.update_service_status(action=shared_constants.ServerAction.ENABLE)  # noqa: E501
         stdout(result, ctx)
         CLIENT_LOGGER.debug(result)
     except Exception as e:
@@ -94,8 +95,26 @@ def disable_service(ctx):
         client_utils.cse_restore_session(ctx)
         client = ctx.obj['client']
         system = System(client)
-        result = system.update_service_status(action=shared_constants.ServerAction.DISABLE) # noqa: E501
+        result = system.update_service_status(action=shared_constants.ServerAction.DISABLE)  # noqa: E501
         stdout(result, ctx)
+        CLIENT_LOGGER.debug(result)
+    except Exception as e:
+        stderr(e, ctx)
+        CLIENT_LOGGER.error(str(e), exc_info=True)
+
+
+@system_group.command('config', short_help='Display CSE server configuration')
+@click.pass_context
+def system_config(ctx):
+    """Display CSE server info."""
+    CLIENT_LOGGER.debug(f'Executing command: {ctx.command_path}')
+    try:
+        client_utils.cse_restore_session(ctx)
+        client = ctx.obj['client']
+        system = System(client)
+        result = system.get_runtime_config()
+        result = yaml.safe_dump(result)
+        click.secho(result)
         CLIENT_LOGGER.debug(result)
     except Exception as e:
         stderr(e, ctx)

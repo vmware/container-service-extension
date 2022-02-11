@@ -346,7 +346,8 @@ class Service(object, metaclass=Singleton):
                     ext_name=server_constants.CSE_SERVICE_NAME,
                     ext_version=server_constants.MQTT_EXTENSION_VERSION,
                     ext_vendor=server_constants.MQTT_EXTENSION_VENDOR,
-                    ext_urn_id=ext_urn_id)
+                    ext_urn_id=ext_urn_id
+                )
 
                 for key, value in ext_info.items():
                     self.config.set_value_at(f"mqtt.{key}", value)

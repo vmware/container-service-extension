@@ -64,6 +64,17 @@ SYSTEM_HANDLERS = [
                 'handler': system_handler.system_update
             }
         }
+    },
+    {
+        'url': "cse/system/config",
+        RequestMethod.GET: {
+            tuple(SUPPORTED_VCD_API_VERSIONS): {
+                'allowed_params': [],
+                'required_params': [],
+                'operation': CseOperation.SYSTEM_SERVER_CONFIG,
+                'handler': system_handler.get_server_config
+            }
+        }
     }
 ]
 
@@ -865,6 +876,7 @@ def process_request(message, mqtt_publisher=None):
 
     :param dict message: message received over AMQP/MQTT bus representing the
         incoming REST request.
+    :param MQTTPublisher mqtt_publisher:
 
     :returns: response computed by the handler after processing the request
     """
@@ -1019,6 +1031,7 @@ def process_request(message, mqtt_publisher=None):
 
     try:
         body_content = handler_method(request_data, operation_ctx)
+        LOGGER.debug(f"body content: {body_content}")
     finally:
         if not operation_ctx.is_async:
             operation_ctx.end()
