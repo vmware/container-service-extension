@@ -1,8 +1,10 @@
 # container-service-extension
 # Copyright (c) 2019 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
+from copy import deepcopy
 
 from container_service_extension.common.constants.shared_constants import RequestKey  # noqa: E501
+import container_service_extension.common.utils.server_utils as server_utils
 import container_service_extension.exception.exceptions as e
 from container_service_extension.lib.telemetry.constants import CseOperation
 from container_service_extension.lib.telemetry.constants import OperationStatus
@@ -64,3 +66,31 @@ def system_update(request_data, op_ctx: ctx.OperationContext):
     record_user_action(cse_operation=cse_operation, status=status)
     raise e.UnauthorizedRequestError(
         error_message='Unauthorized to update CSE')
+
+
+def get_server_config(request_data, op_ctx: ctx.OperationContext):
+    """."""
+    if op_ctx.client.is_sysadmin:
+        # TODO: Find a better way to access to the config dict
+        # in ServerConfig object
+        server_config = deepcopy(
+            server_utils.get_server_runtime_config()._config
+        )
+
+        server_config['mqtt']['token'] = "REDACTED"
+        server_config['mqtt']['token_id'] = "REDACTED"
+
+        for vc in server_config.get('vcs', []):
+            vc['password'] = "REDACTED"
+
+        server_config['vcd']['password'] = "REDACTED"
+
+        rde_version = server_config['service']['rde_version_in_use']
+        rde_version_str = f"{rde_version.major}.{rde_version.minor}.{rde_version.patch}"  # noqa: E501
+        server_config['service']['rde_version_in_use'] = rde_version_str
+
+        return server_config
+
+    raise e.UnauthorizedRequestError(
+        error_message='Unauthorized to access CSE server configuration.'
+    )

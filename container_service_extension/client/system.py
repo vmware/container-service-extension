@@ -14,3 +14,6 @@ class System:
 
     def update_service_status(self, action):
         return self._system_api.update_system(action)
+
+    def get_runtime_config(self):
+        return self._system_api.get_runtime_config()
