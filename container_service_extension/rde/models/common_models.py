@@ -53,7 +53,7 @@ class DefEntityType:
     """Defined Entity type schema for the apiVersion = 35.0."""
 
     name: str
-    description: str
+    description: Optional[str]
     schema: dict
     interfaces: List[str]
     version: str
@@ -84,7 +84,7 @@ class DefEntityType2_0:
     """Defined Entity type schema for the apiVersion = 36.0."""
 
     name: str
-    description: str
+    description: Optional[str]
     schema: dict
     interfaces: List[str]
     version: str

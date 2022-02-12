@@ -4,6 +4,8 @@
 
 import functools
 import json
+from typing import Dict
+import urllib
 
 from requests.exceptions import HTTPError
 import semantic_version
@@ -15,8 +17,9 @@ from container_service_extension.lib.cloudapi.cloudapi_client import CloudApiCli
 from container_service_extension.lib.cloudapi.constants import CloudApiResource
 from container_service_extension.lib.cloudapi.constants import CloudApiVersion
 from container_service_extension.logging.logger import SERVER_LOGGER as LOGGER
+import container_service_extension.rde.constants as rde_constants
 import container_service_extension.rde.models.common_models as common_models
-from container_service_extension.rde.utils import raise_error_if_def_not_supported # noqa: E501
+from container_service_extension.rde.utils import raise_error_if_def_not_supported   # noqa: E501
 
 
 def handle_schema_service_exception(func):
@@ -50,7 +53,7 @@ def handle_schema_service_exception(func):
     return exception_handler_wrapper
 
 
-class DefSchemaService():
+class DefSchemaService:
     """Manages lifecycle of defined entity interfaces and entity types."""
 
     def __init__(self, cloudapi_client: CloudApiClient):
@@ -147,7 +150,8 @@ class DefSchemaService():
     def create_entity_type(self, entity_type: common_models.DefEntityType) -> common_models.DefEntityType:  # noqa: E501
         """Create the Defined entity type.
 
-        :param DefEntityType interface: body of the entity type
+        :param DefEntityType entity_type: body of the entity type
+
         :return: DefEntityType that is just created
         :rtype: DefEntityType
         """
@@ -175,20 +179,31 @@ class DefSchemaService():
         return common_models.DefEntityType.from_dict(response_body)
 
     @handle_schema_service_exception
-    def list_entity_types(self):
+    def list_entity_types(self, filter_dict: Dict = None):
         """List Entity types.
 
         :return: Generator of entity types
         :rtype: Generator[DefEntityType]
         """
+        partial_path = f"{CloudApiResource.ENTITY_TYPES}?"
+        if filter_dict:
+            query_filter = ""
+            for key, value in filter_dict.items():
+                query_filter += f"{key}=={urllib.parse.quote(value)};"
+            # get rid of the extra ; at the end
+            query_filter = query_filter[0:-1]
+            partial_path += f"filter={query_filter}&"
+
         page_num = 0
         while True:
             page_num += 1
+            full_query_path = f"{partial_path}page={page_num}"
+
             response_body = self._cloudapi_client.do_request(
                 method=cse_shared_constants.RequestMethod.GET,
                 cloudapi_version=CloudApiVersion.VERSION_1_0_0,
-                resource_url_relative_path=f"{CloudApiResource.ENTITY_TYPES}?"
-                f"page={page_num}")
+                resource_url_relative_path=full_query_path
+            )
             if len(response_body['values']) > 0:
                 for entityType in response_body['values']:
                     yield common_models.DefEntityType.from_dict(entityType)
@@ -203,7 +218,7 @@ class DefSchemaService():
         :rtype: str
         """
         max_entity_type_version = semantic_version.Version('0.0.0')
-        for entity_type in self.list_entity_types():
+        for entity_type in self.list_entity_types(filter_dict={'nss': rde_constants.Nss.NATIVE_CLUSTER.value}):  # noqa: E501
             entity_type_version = semantic_version.Version(entity_type.version)
             if max_entity_type_version < entity_type_version:  # noqa: E501
                 max_entity_type_version = entity_type_version
