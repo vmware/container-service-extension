@@ -112,7 +112,7 @@ TEMPLATE_HANDLERS = [
                 'handler': template_handler.reload_templates
             }
         }
-     }
+    }
 ]
 
 # /pks end points
