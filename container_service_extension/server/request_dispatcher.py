@@ -64,6 +64,17 @@ SYSTEM_HANDLERS = [
                 'handler': system_handler.system_update
             }
         }
+    },
+    {
+        'url': "cse/system/config",
+        RequestMethod.GET: {
+            tuple(SUPPORTED_VCD_API_VERSIONS): {
+                'allowed_params': [],
+                'required_params': [],
+                'operation': CseOperation.SYSTEM_SERVER_CONFIG,
+                'handler': system_handler.get_server_config
+            }
+        }
     }
 ]
 
@@ -865,6 +876,7 @@ def process_request(message, mqtt_publisher=None):
 
     :param dict message: message received over AMQP/MQTT bus representing the
         incoming REST request.
+    :param MQTTPublisher mqtt_publisher:
 
     :returns: response computed by the handler after processing the request
     """
@@ -957,7 +969,7 @@ def process_request(message, mqtt_publisher=None):
         required_feature_flags = matched_handler.get('feature_flags', {})
         feature_flags_satisfied = True
         for feature_flag in required_feature_flags:
-            value = server_config.get_value_at('feature_flags').get(feature_flag, False)
+            value = server_config.get_value_at('feature_flags').get(feature_flag, False)  # noqa: E501
             if not value:
                 LOGGER.debug("Url matched but failed to satisfy feature "
                              f"flag {feature_flag}")
@@ -1019,6 +1031,7 @@ def process_request(message, mqtt_publisher=None):
 
     try:
         body_content = handler_method(request_data, operation_ctx)
+        LOGGER.debug(f"body content: {body_content}")
     finally:
         if not operation_ctx.is_async:
             operation_ctx.end()

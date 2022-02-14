@@ -13,6 +13,7 @@ class SystemApi(CseClient):
         super().__init__(client)
         self._uri = f"{self._uri}/{shared_constants.CSE_URL_FRAGMENT}"
         self._system_uri = f"{self._uri}/system"
+        self._config_uri = f"{self._system_uri}/config"
 
     def get_system_details(self):
         response = self.do_request(
@@ -31,4 +32,11 @@ class SystemApi(CseClient):
             accept_type='application/json',
             media_type='application/json',
             payload=payload)
+        return self.process_response(response)
+
+    def get_runtime_config(self):
+        response = self.do_request(
+            uri=self._config_uri,
+            method=shared_constants.RequestMethod.GET,
+            accept_type='application/json')
         return self.process_response(response)

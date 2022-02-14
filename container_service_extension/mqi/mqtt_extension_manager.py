@@ -168,11 +168,11 @@ class MQTTExtensionManager:
             payload=payload)
         mqtt_topics = response_body['mqttTopics']
         ext_info = {
-            MQTTExtKey.EXT_URN_ID: response_body['id'],
-            MQTTExtKey.EXT_LISTEN_TOPIC: mqtt_topics['monitor'],
-            MQTTExtKey.EXT_RESPOND_TOPIC: mqtt_topics['respond'],
-            MQTTExtKey.EXT_ENABLED: response_body['enabled'],
-            MQTTExtKey.EXT_DESCRIPTION: response_body['description']
+            MQTTExtKey.EXT_URN_ID.value: response_body['id'],
+            MQTTExtKey.EXT_LISTEN_TOPIC.value: mqtt_topics['monitor'],
+            MQTTExtKey.EXT_RESPOND_TOPIC.value: mqtt_topics['respond'],
+            MQTTExtKey.EXT_ENABLED.value: response_body['enabled'],
+            MQTTExtKey.EXT_DESCRIPTION.value: response_body['description']
         }
         return ext_info
 
@@ -202,11 +202,11 @@ class MQTTExtensionManager:
                     and curr_info['vendor'] == ext_vendor:
                 mqtt_topics = curr_info['mqttTopics']
                 ext_info = {
-                    MQTTExtKey.EXT_URN_ID: curr_info['id'],
-                    MQTTExtKey.EXT_LISTEN_TOPIC: mqtt_topics['monitor'],
-                    MQTTExtKey.EXT_RESPOND_TOPIC: mqtt_topics['respond'],
-                    MQTTExtKey.EXT_ENABLED: curr_info['enabled'],
-                    MQTTExtKey.EXT_DESCRIPTION: curr_info['description']
+                    MQTTExtKey.EXT_URN_ID.value: curr_info['id'],
+                    MQTTExtKey.EXT_LISTEN_TOPIC.value: mqtt_topics['monitor'],
+                    MQTTExtKey.EXT_RESPOND_TOPIC.value: mqtt_topics['respond'],
+                    MQTTExtKey.EXT_ENABLED.value: curr_info['enabled'],
+                    MQTTExtKey.EXT_DESCRIPTION.value: curr_info['description']
                 }
                 break
         return ext_info
@@ -378,8 +378,8 @@ class MQTTExtensionManager:
             resource_url_relative_path=constants.TOKEN_PATH,
             payload=payload)
         token_info = {
-            MQTTExtTokenKey.TOKEN: response_body['token'],
-            MQTTExtTokenKey.TOKEN_ID: response_body['id']
+            MQTTExtTokenKey.TOKEN.value: response_body['token'],
+            MQTTExtTokenKey.TOKEN_ID.value: response_body['id']
         }
         return token_info
 
