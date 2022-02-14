@@ -969,7 +969,7 @@ def process_request(message, mqtt_publisher=None):
         required_feature_flags = matched_handler.get('feature_flags', {})
         feature_flags_satisfied = True
         for feature_flag in required_feature_flags:
-            value = server_config.get_value_at('feature_flags').get(feature_flag, False)
+            value = server_config.get_value_at('feature_flags').get(feature_flag, False)  # noqa: E501
             if not value:
                 LOGGER.debug("Url matched but failed to satisfy feature "
                              f"flag {feature_flag}")
