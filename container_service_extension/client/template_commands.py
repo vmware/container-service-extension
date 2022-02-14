@@ -58,3 +58,29 @@ def list_templates(ctx, is_tkgm):
     except Exception as e:
         stderr(e, ctx)
         CLIENT_LOGGER.error(str(e), exc_info=True)
+
+
+@template_group.command(
+    'reload',
+    short_help='Reload CSE native and TKG templates in server runtime configuration'  # noqa: E501
+)
+@click.pass_context
+def reload_templates(ctx):
+    """Reload CSE native and TKG templates."""
+    CLIENT_LOGGER.debug(f'Executing command: {ctx.command_path}')
+    try:
+        client_utils.cse_restore_session(ctx)
+        client = ctx.obj['client']
+        if client.is_sysadmin():
+            template = Template(client)
+            result = template.reload_templates()
+            CLIENT_LOGGER.debug(result)
+            stdout(result, ctx)
+        else:
+            msg = "Insufficient permission to perform operation."
+            stderr(msg, ctx)
+            CLIENT_LOGGER.error(msg)
+
+    except Exception as e:
+        stderr(e, ctx)
+        CLIENT_LOGGER.error(str(e), exc_info=True)

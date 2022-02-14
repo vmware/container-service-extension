@@ -13,7 +13,6 @@ import traceback
 from typing import Dict, List, Optional
 
 import click
-from pyvcloud.vcd.client import BasicLoginCredentials
 from pyvcloud.vcd.client import Client
 from pyvcloud.vcd.exceptions import EntityNotFoundException
 from pyvcloud.vcd.exceptions import OperationNotSupportedException
@@ -28,9 +27,7 @@ from container_service_extension.common.utils.vsphere_utils import populate_vsph
 from container_service_extension.config.server_config import ServerConfig
 import container_service_extension.exception.exceptions as cse_exception
 import container_service_extension.installer.configure_cse as configure_cse
-import container_service_extension.installer.templates.local_template_manager as ltm  # noqa: E501
 from container_service_extension.installer.templates.template_rule import TemplateRule  # noqa: E501
-import container_service_extension.installer.templates.tkgm_template_manager as ttm  # noqa: E501
 from container_service_extension.lib.telemetry.constants import CseOperation
 from container_service_extension.lib.telemetry.constants import PayloadKey
 from container_service_extension.lib.telemetry.telemetry_handler \
@@ -49,6 +46,7 @@ from container_service_extension.rde.utils import raise_error_if_def_not_support
 import container_service_extension.server.compute_policy_manager \
     as compute_policy_manager
 from container_service_extension.server.pks.pks_cache import PksCache
+import container_service_extension.server.template_reader as template_reader
 
 
 class Singleton(type):
@@ -373,9 +371,12 @@ class Service(object, metaclass=Singleton):
         # Read k8s catalog definition from catalog item metadata and append
         # the same to to server run-time config
         if not server_utils.is_no_vc_communication_mode(self.config):
-            self._load_template_definition_from_catalog(
-                msg_update_callback=msg_update_callback
-            )
+            native_templates = \
+                template_reader.read_native_template_definition_from_catalog(
+                    config=self.config,
+                    msg_update_callback=msg_update_callback
+                )
+            self.config.set_value_at('broker.templates', native_templates)
         else:
             msg = "Skipping loading k8s template definition from catalog " \
                   "since `No communication with VCenter` mode is on."
@@ -385,9 +386,13 @@ class Service(object, metaclass=Singleton):
 
         # Read TKGm catalog definition from catalog item metadata and append
         # the same to to server run-time config
-        self._load_tkgm_template_definition_from_catalog(
-            msg_update_callback=msg_update_callback
-        )
+
+        tkgm_templates = \
+            template_reader.read_tkgm_template_definition_from_catalog(
+                config=self.config,
+                msg_update_callback=msg_update_callback
+            )
+        self.config.set_value_at('broker.tkgm_templates', tkgm_templates)
 
         self._load_placement_policy_details(
             msg_update_callback=msg_update_callback
@@ -628,113 +633,6 @@ class Service(object, metaclass=Singleton):
             msg_update_callback.error(msg)
             logger.SERVER_LOGGER.error(msg)
             raise
-
-    def _load_template_definition_from_catalog(
-            self,
-            msg_update_callback=utils.NullPrinter()
-    ):
-        # NOTE: If `enable_tkg_plus` in the config file is set to false,
-        # CSE server will skip loading the TKG+ template this will prevent
-        # users from performing TKG+ related operations.
-        msg = "Loading k8s template definition from catalog"
-        logger.SERVER_LOGGER.info(msg)
-        msg_update_callback.general_no_color(msg)
-
-        client = None
-        try:
-            log_filename = None
-            log_wire = \
-                utils.str_to_bool(self.config.get_value_at('service.log_wire'))
-            if log_wire:
-                log_filename = logger.SERVER_DEBUG_WIRELOG_FILEPATH
-
-            # Since the config param has been read from file by
-            # get_validated_config method, we can safely use the
-            # default_api_version key, it will be set to the highest api
-            # version supported by VCD and CSE.
-            client = Client(
-                self.config.get_value_at('vcd.host'),
-                api_version=self.config.get_value_at('service.default_api_version'),  # noqa: E501
-                verify_ssl_certs=self.config.get_value_at('vcd.verify'),
-                log_file=log_filename,
-                log_requests=log_wire,
-                log_headers=log_wire,
-                log_bodies=log_wire
-            )
-            credentials = BasicLoginCredentials(
-                self.config.get_value_at('vcd.username'),
-                shared_constants.SYSTEM_ORG_NAME,
-                self.config.get_value_at('vcd.password')
-            )
-            client.set_credentials(credentials)
-
-            is_tkg_plus_enabled = server_utils.is_tkg_plus_enabled(self.config)
-            legacy_mode = self.config.get_value_at('service.legacy_mode')
-            org_name = self.config.get_value_at('broker.org')
-            catalog_name = self.config.get_value_at('broker.catalog')
-            k8_templates = ltm.get_valid_k8s_local_template_definition(
-                client=client, catalog_name=catalog_name, org_name=org_name,
-                legacy_mode=legacy_mode,
-                is_tkg_plus_enabled=is_tkg_plus_enabled,
-                logger_debug=logger.SERVER_LOGGER,
-                msg_update_callback=msg_update_callback)
-
-            self.config.set_value_at('broker.templates', k8_templates)
-        finally:
-            if client:
-                client.logout()
-
-    def _load_tkgm_template_definition_from_catalog(
-            self,
-            msg_update_callback=utils.NullPrinter()
-    ):
-        msg = "Loading TKGm template definition from catalog"
-        logger.SERVER_LOGGER.info(msg)
-        msg_update_callback.general_no_color(msg)
-
-        client = None
-        try:
-            log_filename = None
-            log_wire = utils.str_to_bool(
-                self.config.get_value_at('service.log_wire')
-            )
-            if log_wire:
-                log_filename = logger.SERVER_DEBUG_WIRELOG_FILEPATH
-
-            # Since the config param has been read from file by
-            # get_validated_config method, we can safely use the
-            # default_api_version key, it will be set to the highest api
-            # version supported by VCD and CSE.
-            client = Client(
-                self.config.get_value_at('vcd.host'),
-                api_version=self.config.get_value_at('service.default_api_version'),  # noqa: E501
-                verify_ssl_certs=self.config.get_value_at('vcd.verify'),
-                log_file=log_filename,
-                log_requests=log_wire,
-                log_headers=log_wire,
-                log_bodies=log_wire
-            )
-            credentials = BasicLoginCredentials(
-                self.config.get_value_at('vcd.username'),
-                shared_constants.SYSTEM_ORG_NAME,
-                self.config.get_value_at('vcd.password')
-            )
-            client.set_credentials(credentials)
-
-            org_name = self.config.get_value_at('broker.org')
-            catalog_name = self.config.get_value_at('broker.catalog')
-            tkgm_templates = ttm.read_all_tkgm_template(
-                client=client,
-                org_name=org_name,
-                catalog_name=catalog_name,
-                logger=logger.SERVER_LOGGER,
-                msg_update_callback=msg_update_callback
-            )
-
-            self.config.set_value_at('broker.tkgm_templates', tkgm_templates)
-        finally:
-            if client:
-                client.logout()
 
     def _process_template_rules(self, msg_update_callback=utils.NullPrinter()):
         try:
