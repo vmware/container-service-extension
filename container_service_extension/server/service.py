@@ -308,6 +308,21 @@ class Service(object, metaclass=Singleton):
     def run(self, msg_update_callback=utils.NullPrinter()):
         sysadmin_client = None
         try:
+            syslog_host = None
+            syslog_port = None
+            try:
+                syslog_host = self.config.get_value_at('service.syslog_host')
+                syslog_port = self.config.get_value_at('service.syslog_port')
+            except KeyError:
+                pass
+            if syslog_host:
+                logger.configure_loggers_for_syslog(
+                    syslog_host=syslog_host,
+                    syslog_port=syslog_port
+                )
+        except Exception as err:
+            logger.SERVER_LOGGER.error(f"Syslog server error:{err}")
+        try:
             sysadmin_client = vcd_utils.get_sys_admin_client(api_version=None)
             verify_version_compatibility(
                 sysadmin_client,
