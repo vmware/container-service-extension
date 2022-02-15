@@ -151,7 +151,8 @@ write_files:
     vmtoolsd --cmd "info-set guestinfo.kubeconfig $(cat /etc/kubernetes/admin.conf | base64 | tr -d '\n')"
     vmtoolsd --cmd "info-set guestinfo.postcustomization.kubeinit.status successful"
 
-    # open_bracket(all caps) will be replaced by `{` and close_bracket (all caps) will be replaced by `}`.
+    # open_bracket(all caps) will be replaced by the open bracket and close_bracket (all caps)
+    # will be replaced by an open bracket.
     # This convention is needed so that python's template format function does not view the bash
     # $\open_bracket/VAR/\close_bracket as a format variable that will be replaced by the python format function.
     vmtoolsd --cmd "info-set guestinfo.postcustomization.tkr.get_versions.status in_progress"
@@ -187,7 +188,7 @@ write_files:
       done
 
       if [[ "$no_tkr_found" = true ]] ; then
-        echo "no tkr bom found, will use default component versions"  &>> /var/log/capvcd/customization/status.log
+        echo "no tkr bom found, will use default component versions"  &>> /var/log/cse/customization/status.log
         antrea_version=$default_antrea_version
       fi
 
@@ -200,7 +201,7 @@ write_files:
         antrea_version=$($yq_path e ".components.antrea[0].version" $components_path | sed 's/+.*//')
         if [[ -z "$antrea_version" ]] || [[ "$antrea_version" = "null" ]] || [[ "$antrea_version" = "false" ]]; then
           antrea_version=$default_antrea_version
-          echo "no antrea version found in tkr bom, will use default antrea version: $OPEN_BRACKETdefault_antrea_versionCLOSE_BRACKET" &>> /var/log/capvcd/customization/status.log
+          echo "no antrea version found in tkr bom, will use default antrea version: $OPEN_BRACKETdefault_antrea_versionCLOSE_BRACKET" &>> /var/log/cse/customization/status.log
         else
           antrea_version=$(echo $OPEN_BRACKETantrea_versionCLOSE_BRACKET | sed "s/v//") # remove leading `v`, which will be added later
         fi
@@ -210,12 +211,11 @@ write_files:
       rm -rf $tkr_bom_dir
     vmtoolsd --cmd "info-set guestinfo.postcustomization.tkr.get_versions.status successful"
 
-
     vmtoolsd --cmd "info-set guestinfo.postcustomization.kubectl.cni.install.status in_progress"
       antrea_path=/root/antrea-$OPEN_BRACKETantrea_versionCLOSE_BRACKET.yaml
-      wget -O $antrea_path https://github.com/vmware-tanzu/antrea/releases/download/$OPEN_BRACKETantrea_versionCLOSE_BRACKET/antrea.yml
+      wget -O $antrea_path https://github.com/vmware-tanzu/antrea/releases/download/v$OPEN_BRACKETantrea_versionCLOSE_BRACKET/antrea.yml
       # This does not need to be done from v0.12.0 onwards inclusive
-      sed -i 's/antrea\/antrea-ubuntu:{antrea_cni_version}/projects.registry.vmware.com\/antrea\/antrea-ubuntu:{antrea_cni_version}/g' $antrea_path
+      sed -i "s/antrea\/antrea-ubuntu:v$OPEN_BRACKETantrea_versionCLOSE_BRACKET/projects.registry.vmware.com\/antrea\/antrea-ubuntu:v$OPEN_BRACKETantrea_versionCLOSE_BRACKET/g" $antrea_path
       kubectl apply -f $antrea_path
     vmtoolsd --cmd "info-set guestinfo.postcustomization.kubectl.cni.install.status successful"
 
