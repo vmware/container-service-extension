@@ -2305,6 +2305,12 @@ def _add_control_plane_nodes(
                 base64_encoded_refresh_token=base64_refresh_token.decode("utf-8"),  # noqa: E501
                 **proxy_config
             )
+
+            # place bash open and close brackets after the python template
+            # function
+            cloud_init_spec = cloud_init_spec.replace("OPEN_BRACKET", "{")
+            cloud_init_spec = cloud_init_spec.replace("CLOSE_BRACKET", "}")
+
             # create a cloud-init spec and update the VMs with it
             _set_cloud_init_spec(sysadmin_client, vapp, vm, cloud_init_spec)
 
