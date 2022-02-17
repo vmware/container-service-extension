@@ -151,12 +151,70 @@ write_files:
     vmtoolsd --cmd "info-set guestinfo.kubeconfig $(cat /etc/kubernetes/admin.conf | base64 | tr -d '\n')"
     vmtoolsd --cmd "info-set guestinfo.postcustomization.kubeinit.status successful"
 
+    # open_bracket(all caps) will be replaced by the open bracket and close_bracket (all caps)
+    # will be replaced by an open bracket.
+    # This convention is needed so that python's template format function does not view the bash
+    # $\open_bracket/VAR/\close_bracket as a format variable that will be replaced by the python format function.
+    vmtoolsd --cmd "info-set guestinfo.postcustomization.tkr.get_versions.status in_progress"
+      tkr_bom_dir=/tmp/tkr_bom
+      bom_path=$tkr_bom_dir/bom
+      mkdir -p $bom_path
+      components_path=$bom_path/components.yaml
+      imgpkg_path=$tkr_bom_dir/imgpkg
+      yq_path=$tkr_bom_dir/yq
+      default_antrea_version="0.11.3"
+
+      xml_version_property=$(vmtoolsd --cmd "info-get guestinfo.ovfenv" | grep "oe:key=\"VERSION\"")
+      init_k8s_version=$(echo $xml_version_property | sed 's/.*oe:value=\"//; s/\(.*\)-.*/\1/')
+      k8s_version=$(echo $init_k8s_version | tr -s "+" "_")
+
+      # install imgpkg, which is needed for getting the components yaml file
+      wget -nv github.com/vmware-tanzu/carvel-imgpkg/releases/download/v0.24.0/imgpkg-linux-amd64 -O $imgpkg_path
+      chmod +x $imgpkg_path
+
+      # We need to loop through the `X` value in `tkg.X` because of some TKR unexpected design.
+      # We increment `X`, looking fir a valid tkr bom version.
+      no_tkr_found=false
+      until $imgpkg_path pull -i projects.registry.vmware.com/tkg/tkr-bom:$OPEN_BRACKETk8s_versionCLOSE_BRACKET -o $bom_path
+      do
+        tkg_version=$(echo $OPEN_BRACKETk8s_version//*.CLOSE_BRACKET)
+        tkg_version=$((tkg_version+1))
+        k8s_version=$(echo $k8s_version | sed "s/.$/"$tkg_version"/")
+        if [[ $tkg_version -gt 10 ]]; then
+          no_tkr_found=true
+          break
+        fi
+      done
+
+      if [[ "$no_tkr_found" = true ]] ; then
+        echo "no tkr bom found, will use default component versions"  &>> /var/log/cse/customization/status.log
+        antrea_version=$default_antrea_version
+      fi
+
+      if [[ "$no_tkr_found" = false ]]; then
+        mv $bom_path/*.yaml $components_path
+
+        # install yq for yaml parsing
+        wget https://github.com/mikefarah/yq/releases/download/v4.2.0/yq_linux_amd64 -O $yq_path
+        chmod +x $yq_path
+        antrea_version=$($yq_path e ".components.antrea[0].version" $components_path | sed 's/+.*//')
+        if [[ -z "$antrea_version" ]] || [[ "$antrea_version" = "null" ]] || [[ "$antrea_version" = "false" ]]; then
+          antrea_version=$default_antrea_version
+          echo "no antrea version found in tkr bom, will use default antrea version: $OPEN_BRACKETdefault_antrea_versionCLOSE_BRACKET" &>> /var/log/cse/customization/status.log
+        else
+          antrea_version=$(echo $antrea_version | sed "s/v//") # remove leading `v`, which will be added later
+        fi
+      fi
+
+      # cleanup components downloads
+      rm -rf $tkr_bom_dir
+    vmtoolsd --cmd "info-set guestinfo.postcustomization.tkr.get_versions.status successful"
 
     vmtoolsd --cmd "info-set guestinfo.postcustomization.kubectl.cni.install.status in_progress"
-      antrea_path=/root/antrea-{antrea_cni_version}.yaml
-      wget -O $antrea_path https://github.com/vmware-tanzu/antrea/releases/download/{antrea_cni_version}/antrea.yml
+      antrea_path=/root/antrea-$OPEN_BRACKETantrea_versionCLOSE_BRACKET.yaml
+      wget -O $antrea_path https://github.com/vmware-tanzu/antrea/releases/download/v$OPEN_BRACKETantrea_versionCLOSE_BRACKET/antrea.yml
       # This does not need to be done from v0.12.0 onwards inclusive
-      sed -i 's/antrea\/antrea-ubuntu:{antrea_cni_version}/projects.registry.vmware.com\/antrea\/antrea-ubuntu:{antrea_cni_version}/g' $antrea_path
+      sed -i "s/antrea\/antrea-ubuntu:v$OPEN_BRACKETantrea_versionCLOSE_BRACKET/projects.registry.vmware.com\/antrea\/antrea-ubuntu:v$OPEN_BRACKETantrea_versionCLOSE_BRACKET/g" $antrea_path
       kubectl apply -f $antrea_path
     vmtoolsd --cmd "info-set guestinfo.postcustomization.kubectl.cni.install.status successful"
 

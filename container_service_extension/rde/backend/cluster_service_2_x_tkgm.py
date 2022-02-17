@@ -73,7 +73,6 @@ DEFAULT_API_VERSION = vcd_client.ApiVersion.VERSION_36.value
 
 # Hardcode the Antrea CNI version until there's a better way to retrieve it
 CNI_NAME = "antrea"
-ANTREA_CNI_VERSION = 'v0.11.3'
 CPI_VERSION = '1.1.0'
 CSI_VERSION = '1.1.0'
 
@@ -279,9 +278,7 @@ class ClusterService(abstract_broker.AbstractBroker):
                 'entity.status.kubernetes': _create_k8s_software_string(
                     template[LocalTemplateKey.KUBERNETES],
                     template[LocalTemplateKey.KUBERNETES_VERSION]),
-                'entity.status.cni': _create_k8s_software_string(
-                    CNI_NAME,
-                    ANTREA_CNI_VERSION),
+                'entity.status.cni': CNI_NAME,
                 'entity.status.os': template[LocalTemplateKey.OS],
                 'entity.status.cloud_properties': cloud_properties,
                 'entity.status.uid': entity_id,
@@ -794,7 +791,6 @@ class ClusterService(abstract_broker.AbstractBroker):
                 ClusterMetadataKey.KUBERNETES: template[LocalTemplateKey.KUBERNETES],  # noqa: E501
                 ClusterMetadataKey.KUBERNETES_VERSION: template[LocalTemplateKey.KUBERNETES_VERSION],  # noqa: E501
                 ClusterMetadataKey.CNI: CNI_NAME,
-                ClusterMetadataKey.CNI_VERSION: ANTREA_CNI_VERSION  # noqa: E501
             }
 
             sysadmin_client_v36 = self.context.get_sysadmin_client(
@@ -923,10 +919,7 @@ class ClusterService(abstract_broker.AbstractBroker):
                     )
                 ),
                 'entity.status.nodes': _get_nodes_details(vapp),
-                'entity.status.cni': _create_k8s_software_string(
-                    CNI_NAME,
-                    ANTREA_CNI_VERSION,
-                ),
+                'entity.status.cni': CNI_NAME,
                 'entity.status.cloud_properties.distribution.''template_name':
                     tags[ClusterMetadataKey.TEMPLATE_NAME],
                 'entity.status.cloud_properties.distribution.''template_revision':  # noqa: E501
@@ -2230,7 +2223,6 @@ def _add_control_plane_nodes(
                 vm_host_name=spec['target_vm_name'],
                 service_cidr=k8s_svc_cidr,
                 pod_cidr=k8s_pod_cidr,
-                antrea_cni_version=ANTREA_CNI_VERSION,
                 cpi_version=CPI_VERSION,
                 csi_version=CSI_VERSION,
                 ssh_key=ssh_key if ssh_key else '',
@@ -2305,7 +2297,6 @@ def _add_control_plane_nodes(
                 vm_host_name=spec['target_vm_name'],
                 service_cidr=k8s_svc_cidr,
                 pod_cidr=k8s_pod_cidr,
-                antrea_cni_version=ANTREA_CNI_VERSION,
                 cpi_version=CPI_VERSION,
                 csi_version=CSI_VERSION,
                 ssh_key=ssh_key if ssh_key else '',
@@ -2313,6 +2304,12 @@ def _add_control_plane_nodes(
                 base64_encoded_refresh_token=base64_refresh_token.decode("utf-8"),  # noqa: E501
                 **proxy_config
             )
+
+            # place bash open and close brackets after the python template
+            # function
+            cloud_init_spec = cloud_init_spec.replace("OPEN_BRACKET", "{")
+            cloud_init_spec = cloud_init_spec.replace("CLOSE_BRACKET", "}")
+
             # create a cloud-init spec and update the VMs with it
             _set_cloud_init_spec(sysadmin_client, vapp, vm, cloud_init_spec)
 
