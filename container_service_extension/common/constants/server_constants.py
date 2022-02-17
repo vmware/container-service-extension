@@ -803,6 +803,7 @@ class PostCustomizationPhase(Enum):
     NETWORK_CONFIGURATION = 'guestinfo.postcustomization.networkconfiguration.status'  # noqa: E501
     STORE_SSH_KEY = 'guestinfo.postcustomization.store.sshkey.status'
     KUBEADM_INIT = 'guestinfo.postcustomization.kubeinit.status'
+    TKR_GET_VERSIONS = 'guestinfo.postcustomization.tkr.get_versions.status'
     KUBECTL_APPLY_CNI = 'guestinfo.postcustomization.kubectl.cni.install.status'  # noqa: E501
     KUBECTL_APPLY_CPI = 'guestinfo.postcustomization.kubectl.cpi.install.status'  # noqa: E501
     KUBECTL_APPLY_CSI = 'guestinfo.postcustomization.kubectl.csi.install.status'  # noqa: E501
