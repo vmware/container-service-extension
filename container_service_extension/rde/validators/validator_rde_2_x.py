@@ -15,12 +15,12 @@ from container_service_extension.rde.common.entity_service import DefEntityServi
 import container_service_extension.rde.constants as rde_constants
 from container_service_extension.rde.models import rde_factory
 from container_service_extension.rde.models.abstractNativeEntity import AbstractNativeEntity  # noqa: E501
-import container_service_extension.rde.models.rde_2_0_0 as rde_2_0_0
+import container_service_extension.rde.models.rde_2_1_0 as rde_2_1_0
 import container_service_extension.rde.utils as rde_utils
 from container_service_extension.rde.validators.abstract_validator import AbstractValidator  # noqa: E501
 
 
-class Validator_2_0_0(AbstractValidator):
+class Validator_2_1_0(AbstractValidator):
     def __init__(self):
         pass
 
@@ -79,7 +79,7 @@ class Validator_2_0_0(AbstractValidator):
 
         # Need to ensure that sizing class along with cpu/memory is not
         # present in the request
-        if isinstance(input_entity, rde_2_0_0.NativeEntity):
+        if isinstance(input_entity, rde_2_1_0.NativeEntity):
             # cpu and mem are properties of only rde 2.0.0
             bad_request_msg = ""
             if input_entity.spec.topology.workers.sizing_class and \
@@ -100,8 +100,8 @@ class Validator_2_0_0(AbstractValidator):
             if not entity_id or not entity:
                 raise ValueError('Both entity_id and entity are required to validate the Update operation.')  # noqa: E501
             current_entity: AbstractNativeEntity = entity_svc.get_entity(entity_id).entity  # noqa: E501
-            input_entity_spec: rde_2_0_0.ClusterSpec = input_entity.spec
-            current_entity_status: rde_2_0_0.Status = current_entity.status
+            input_entity_spec: rde_2_1_0.ClusterSpec = input_entity.spec
+            current_entity_status: rde_2_1_0.Status = current_entity.status
             is_tkgm_with_default_sizing_in_control_plane = False
             is_tkgm_with_default_sizing_in_workers = False
             if is_tkgm_cluster:
@@ -127,7 +127,7 @@ class Validator_2_0_0(AbstractValidator):
             current_entity_spec = \
                 rde_utils.construct_cluster_spec_from_entity_status(
                     current_entity_status,
-                    rde_constants.RDEVersion.RDE_2_0_0.value,
+                    rde_constants.RDEVersion.RDE_2_1_0.value,
                     is_tkgm_with_default_sizing_in_control_plane=is_tkgm_with_default_sizing_in_control_plane,  # noqa: E501
                     is_tkgm_with_default_sizing_in_workers=is_tkgm_with_default_sizing_in_workers)  # noqa: E501
             return validate_cluster_update_request_and_check_cluster_upgrade(
@@ -141,8 +141,8 @@ class Validator_2_0_0(AbstractValidator):
 
 
 def validate_cluster_update_request_and_check_cluster_upgrade(
-        input_spec: rde_2_0_0.ClusterSpec,
-        reference_spec: rde_2_0_0.ClusterSpec,
+        input_spec: rde_2_1_0.ClusterSpec,
+        reference_spec: rde_2_1_0.ClusterSpec,
         is_tkgm_cluster: bool,
 ) -> bool:
     """

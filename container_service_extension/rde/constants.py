@@ -46,6 +46,7 @@ class Nss(str, Enum):
 class SchemaFile(str, Enum):
     SCHEMA_1_0_0 = 'schema_1_0_0.json'
     SCHEMA_2_0_0 = 'schema_2_0_0.json'
+    SCHEMA_2_1_0 = 'schema_2_1_0.json'
     CAPVCD_1_0_0 = 'capvcd_schema_1_0_0.json'
 
 
@@ -79,7 +80,7 @@ class CapvcdRDEVersion(str, Enum):
 @unique
 class RDEVersion(str, Enum):
     RDE_1_0_0 = '1.0.0'
-    RDE_2_0_0 = '2.0.0'
+    RDE_2_1_0 = '2.1.0'
 
 
 @unique
@@ -149,11 +150,11 @@ MAP_VCD_API_VERSION_TO_RUNTIME_RDE_VERSION = {
 # }
 MAP_VCD_API_VERSION_TO_RDE_VERSION = {
     '35.0': RDEVersion.RDE_1_0_0.value,
-    '36.0': RDEVersion.RDE_2_0_0.value
+    '36.0': RDEVersion.RDE_2_1_0.value
 }
 
 MAP_INPUT_PAYLOAD_VERSION_TO_RDE_VERSION = {
-    PAYLOAD_VERSION_2_0: RDEVersion.RDE_2_0_0.value
+    PAYLOAD_VERSION_2_0: RDEVersion.RDE_2_1_0.value
 }
 
 

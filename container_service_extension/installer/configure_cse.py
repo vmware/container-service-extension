@@ -60,7 +60,7 @@ from container_service_extension.rde.behaviors.behavior_service import BehaviorS
 import container_service_extension.rde.common.entity_service as rde_entity_svc
 import container_service_extension.rde.constants as rde_constants
 import container_service_extension.rde.models.common_models as common_models
-import container_service_extension.rde.models.rde_2_0_0 as rde_2_x
+import container_service_extension.rde.models.rde_2_1_0 as rde_2_x
 from container_service_extension.rde.models.rde_factory import get_rde_model
 import container_service_extension.rde.schema_service as rde_schema_svc
 import container_service_extension.rde.utils as rde_utils
@@ -1590,7 +1590,7 @@ def _register_entity_type(
 ):
     schema_svc = rde_schema_svc.DefSchemaService(cloudapi_client)
     try:
-        current_entity_type: common_models.DefEntityType2_0 = \
+        current_entity_type: common_models.DefEntityType2_1 = \
             schema_svc.get_entity_type(entity_type.id)
         if update_schema:
             updated_native_entity_type = common_models.DefEntityType(
@@ -2716,7 +2716,7 @@ def _create_cluster_rde(
     # TODO: Need to find a better approach to avoid conditional logic for
     #   filling missing properties.
     if semantic_version.Version(runtime_rde_version).major == \
-            semantic_version.Version(rde_constants.RDEVersion.RDE_2_0_0).major:
+            semantic_version.Version(rde_constants.RDEVersion.RDE_2_1_0).major:
         # Update with the correct cluster id
         native_entity_2_x: rde_2_x.NativeEntity = def_entity.entity
         native_entity_2_x.status.uid = def_entity_id
@@ -2793,7 +2793,7 @@ def _upgrade_cluster_rde(
     # TODO: Need to find a better approach to avoid conditional logic for
     # filling missing properties.
     if semantic_version.Version(runtime_rde_version).major == \
-            semantic_version.Version(rde_constants.RDEVersion.RDE_2_0_0).major:
+            semantic_version.Version(rde_constants.RDEVersion.RDE_2_1_0).major:
         # RDE upgrade possible only from RDE 1.x or RDE 2.x
         native_entity_2_x: rde_2_x.NativeEntity = new_native_entity
         native_entity_2_x.status.uid = rde_to_upgrade.id

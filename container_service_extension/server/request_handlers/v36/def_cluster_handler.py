@@ -36,7 +36,7 @@ def cluster_create(data: dict, op_ctx: ctx.OperationContext):
     # Validate the input
     # ToDo: Should the validation be done using a v36 client?
     rde_validator_factory.get_validator(
-        rde_version=rde_constants.RDEVersion.RDE_2_0_0). \
+        rde_version=rde_constants.RDEVersion.RDE_2_1_0). \
         validate(cloudapi_client=op_ctx.cloudapi_client, entity=input_entity)
 
     rde_in_use = server_utils.get_rde_version_in_use()
@@ -152,7 +152,7 @@ def cluster_update(data: dict, op_ctx: ctx.OperationContext):
     # Validate the input
     # ToDo: Should the validation be done using a v36 client?
     rde_validator_factory.get_validator(
-        rde_version=rde_constants.RDEVersion.RDE_2_0_0). \
+        rde_version=rde_constants.RDEVersion.RDE_2_1_0). \
         validate(cloudapi_client=op_ctx.cloudapi_client, entity_id=cluster_id,
                  entity=input_entity,
                  operation=BehaviorOperation.UPDATE_CLUSTER)

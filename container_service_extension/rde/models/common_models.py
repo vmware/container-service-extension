@@ -80,7 +80,7 @@ class DefEntityType:
 
 @dataclass_json(undefined=Undefined.EXCLUDE)
 @dataclass(frozen=True)
-class DefEntityType2_0:
+class DefEntityType2_1:
     """Defined Entity type schema for the apiVersion = 36.0."""
 
     name: str
@@ -363,15 +363,15 @@ class EntityType(Enum):
         nss=Nss.NATIVE_CLUSTER.value,
         description=''
     )
-    NATIVE_ENTITY_TYPE_2_0_0 = DefEntityType2_0(
+    NATIVE_ENTITY_TYPE_2_1_0 = DefEntityType2_1(
         name='nativeClusterEntityType',
-        id=f"{DEF_ENTITY_TYPE_ID_PREFIX}:{Vendor.CSE.value}:{Nss.NATIVE_CLUSTER}:2.0.0",  # noqa: E501
-        schema=load_rde_schema(SchemaFile.SCHEMA_2_0_0),
+        id=f"{DEF_ENTITY_TYPE_ID_PREFIX}:{Vendor.CSE.value}:{Nss.NATIVE_CLUSTER}:2.1.0",# noqa: E501
+        schema=load_rde_schema(SchemaFile.SCHEMA_2_1_0),
         interfaces=[
             K8Interface.VCD_INTERFACE.value.id,
             K8Interface.CSE_INTERFACE.value.id
         ],
-        version='2.0.0',
+        version='2.1.0',
         vendor=Vendor.CSE.value,
         nss=Nss.NATIVE_CLUSTER.value,
         description='',
@@ -415,7 +415,7 @@ MAP_RDE_VERSION_TO_ITS_METADATA = {
     RuntimeRDEVersion.RDE_2_X: {
         RDEMetadataKey.INTERFACES: [K8Interface.VCD_INTERFACE.value,
                                     K8Interface.CSE_INTERFACE.value],
-        RDEMetadataKey.ENTITY_TYPE: EntityType.NATIVE_ENTITY_TYPE_2_0_0.value,
+        RDEMetadataKey.ENTITY_TYPE: EntityType.NATIVE_ENTITY_TYPE_2_1_0.value,
 
         RDEMetadataKey.INTERFACE_TO_BEHAVIORS_MAP: {
             K8Interface.CSE_INTERFACE.value.id:
@@ -425,11 +425,11 @@ MAP_RDE_VERSION_TO_ITS_METADATA = {
                  BehaviorOperation.DELETE_NFS_NODE.value]
         },
         RDEMetadataKey.ENTITY_TYPE_TO_OVERRIDABLE_BEHAVIORS_MAP: {
-            EntityType.NATIVE_ENTITY_TYPE_2_0_0.value.id:
+            EntityType.NATIVE_ENTITY_TYPE_2_1_0.value.id:
                 [BehaviorOperation.GET_KUBE_CONFIG.value]
         },
         RDEMetadataKey.BEHAVIOR_TO_ACL_MAP: {
-            EntityType.NATIVE_ENTITY_TYPE_2_0_0.value.id:
+            EntityType.NATIVE_ENTITY_TYPE_2_1_0.value.id:
                 [BehaviorAcl.CREATE_CLUSTER_ACL.value,
                  BehaviorAcl.UPDATE_CLUSTER_ACL.value,
                  BehaviorAcl.DELETE_CLUSTER_ACL.value,

@@ -19,7 +19,7 @@ from container_service_extension.lib.telemetry.constants import PayloadTable
 from container_service_extension.lib.telemetry.constants import PayloadValue
 from container_service_extension.lib.telemetry.constants import SourceMap
 from container_service_extension.lib.telemetry.telemetry_utils import uuid_hash
-import container_service_extension.rde.models.rde_2_0_0 as rde_2_x
+import container_service_extension.rde.models.rde_2_1_0 as rde_2_x
 
 
 def get_payload_for_user_action(cse_operation, status, message=None):

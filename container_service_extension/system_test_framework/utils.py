@@ -12,7 +12,7 @@ import yaml
 import container_service_extension.logging.logger as logger
 from container_service_extension.rde.constants import RuntimeRDEVersion
 import container_service_extension.rde.models.rde_1_0_0 as rde_1_0_0
-import container_service_extension.rde.models.rde_2_0_0 as rde_2_0_0
+import container_service_extension.rde.models.rde_2_1_0 as rde_2_1_0
 from container_service_extension.rde.utils import get_runtime_rde_version_by_vcd_api_version  # noqa: E501
 import container_service_extension.system_test_framework.environment as env
 
@@ -107,9 +107,9 @@ def list_cluster_output_validator():
     return validator
 
 
-def _update_cluster_apply_spec_for_2_0(apply_spec, properties):
+def _update_cluster_apply_spec_for_2_1(apply_spec, properties):
     # setting default values for ovdc network, org name and ovdc name
-    apply_spec_rde: rde_2_0_0.NativeEntity = rde_2_0_0.NativeEntity.from_dict(apply_spec)  # noqa: E501
+    apply_spec_rde: rde_2_1_0.NativeEntity = rde_2_1_0.NativeEntity.from_dict(apply_spec)  # noqa: E501
     apply_spec_rde.spec.settings.ovdc_network = env.TEST_NETWORK
     apply_spec_rde.metadata.org_name = env.TEST_ORG
     apply_spec_rde.metadata.virtual_data_center_name = env.TEST_VDC
@@ -200,7 +200,7 @@ def modify_cluster_apply_spec(apply_spec_file_path, properties):
             modified_spec = _update_cluster_apply_spec_for_1_0(
                 sample_apply_spec, properties)
         elif rde_version == RuntimeRDEVersion.RDE_2_X.value:
-            modified_spec = _update_cluster_apply_spec_for_2_0(
+            modified_spec = _update_cluster_apply_spec_for_2_1(
                 sample_apply_spec, properties)
         else:
             raise Exception("Invalid RDE version")
@@ -216,8 +216,8 @@ def get_worker_count_from_1_0_0_entity_dict(cluster_dict):
 
 
 def get_worker_count_from_2_0_0_entity_dict(cluster_dict):
-    native_entity: rde_2_0_0.NativeEntity = \
-        rde_2_0_0.NativeEntity.from_dict(cluster_dict)
+    native_entity: rde_2_1_0.NativeEntity = \
+        rde_2_1_0.NativeEntity.from_dict(cluster_dict)
     return len(native_entity.status.nodes.workers)
 
 
