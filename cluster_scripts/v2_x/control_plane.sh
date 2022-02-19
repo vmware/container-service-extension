@@ -1,21 +1,18 @@
 #!/usr/bin/env bash
+set -e
 tkg_plus_kind="TKG+"
 input_kind="{cluster_kind}"
 kubeadm_config_path=/root/kubeadm-defaults.conf
 
 while [ `systemctl is-active docker` != 'active' ]; do echo 'waiting for docker'; sleep 5; done
-# use kubeadm config if TKG plus cluster
 if [ "$input_kind" == "$tkg_plus_kind" ]; then
-    set -e
+    # use kubeadm config if TKG plus cluster
     kubeadm init --config=$kubeadm_config_path > /root/kubeadm-init.out
 else
-    lsb_release -a | grep -q 20.04
-    if [ $? == 0 ]; then
+    if [[ "$(lsb_release -rs)" =~ "20.04" ]]; then
         # if os is ubuntu 20.04, then use containerd cri-socket
-        set -e
         kubeadm init --kubernetes-version=v{k8s_version} --cri-socket=/run/containerd/containerd.sock > /root/kubeadm-init.out
     else
-        set -e
         kubeadm init --kubernetes-version=v{k8s_version} > /root/kubeadm-init.out
     fi
 fi
