@@ -297,17 +297,127 @@ class NativeEntity(AbstractNativeEntity):
 
     @classmethod
     def from_native_entity(cls, native_entity: AbstractNativeEntity):
-        """Construct rde_2.0.0 native entity from different rde_x.x.x.
+        """Construct rde_2.1.0 native entity from different rde_x.x.x.
 
         Use case: converts the NativeEntity of the specified RDE version
-        to RDE 2.0.0.
+        to RDE 2.1.0.
 
         :param AbstractNativeEntity native_entity: input native entity
         :return: native entity
-        :rtype: rde_2.0.0.NativeEntity
+        :rtype: rde_2.1.0.NativeEntity
         """
         if isinstance(native_entity, NativeEntity):
-            return native_entity
+            if native_entity.api_version == rde_constants.PAYLOAD_VERSION_2_1:
+                return native_entity
+            else:
+                # Upgrade RDE 2.0 -> 2.1
+                distribution = Distribution(
+                    template_name=native_entity.spec.k8_distribution.template_name,  # noqa: E501
+                    template_revision=native_entity.spec.k8_distribution.template_revision  # noqa: E501
+                )
+                cloud_properties = CloudProperties(
+                    site=native_entity.status.cloud_properties.site,
+                    org_name=native_entity.metadata.org_name,
+                    virtual_data_center_name=native_entity.metadata.ovdc_name,
+                    ovdc_network_name=native_entity.spec.settings.network,
+                    distribution=distribution,
+                    ssh_key=native_entity.spec.settings.ssh_key,
+                    rollback_on_failure=native_entity.spec.settings.rollback_on_failure,  # noqa: E501
+                    exposed=native_entity.status.exposed)
+
+                control_plane = Node(
+                    name=native_entity.status.nodes.control_plane.name,
+                    ip=native_entity.status.nodes.control_plane.ip,
+                    sizing_class=native_entity.status.nodes.control_plane.sizing_class,  # noqa: E501
+                    storage_profile=native_entity.spec.control_plane.storage_prnative  # noqa: E501
+                )
+                workers = []
+                for worker in native_entity.status.nodes.workers:
+                    worker_node_2_x = Node(
+                        name=worker.name,
+                        ip=worker.ip,
+                        sizing_class=worker.sizing_class,
+                        storage_profile=native_entity.spec.workers.storage_profile  # noqa: E501
+                    )
+                    workers.append(worker_node_2_x)
+                nfs_nodes = []
+                for nfs_node in native_entity.status.nodes.nfs:
+                    nfs_node_2_x = NfsNode(
+                        name=nfs_node.name,
+                        ip=nfs_node.ip,
+                        sizing_class=nfs_node.sizing_class,
+                        storage_profile=native_entity.spec.nfs.storage_profile,  # noqa: E501
+                        exports=nfs_node.exports
+                    )
+                    nfs_nodes.append(nfs_node_2_x)
+                nodes = Nodes(
+                    control_plane=control_plane,
+                    workers=workers,
+                    nfs=nfs_nodes
+                )
+
+                external_ip = None
+                if native_entity.status.exposed:
+                    external_ip = native_entity.status.nodes.control_plane.native  # noqa: E501
+
+                status = Status(phase=native_entity.status.phase,
+                                cni=native_entity.status.cni,
+                                task_href=native_entity.status.task_href,
+                                kubernetes=native_entity.status.kubernetes,
+                                docker_version=native_entity.status.docker_version,  # noqa: E501
+                                os=native_entity.status.os,
+                                external_ip=external_ip,
+                                nodes=nodes,
+                                uid=native_entity.status.uid,
+                                cloud_properties=cloud_properties)
+
+                metadata = Metadata(name=native_entity.metadata.cluster_name,
+                                    org_name=native_entity.metadata.org_name,
+                                    virtual_data_center_name=native_entity.metadata.ovdc_name,  # noqa: E501
+                                    site=native_entity.metadata.site)
+
+                topology = Topology(
+                    control_plane=ControlPlane(
+                        sizing_class=native_entity.spec.control_plane.sizing_class,  # noqa: E501
+                        storage_profile=native_entity.spec.control_plane.storage_profile,  # noqa: E501
+                        count=native_entity.spec.control_plane.count
+                    ),
+                    workers=Workers(
+                        sizing_class=native_entity.spec.workers.sizing_class,
+                        storage_profile=native_entity.spec.workers.storage_profile,  # noqa: E501
+                        count=native_entity.spec.workers.count
+                    ),
+                    nfs=Nfs(
+                        sizing_class=native_entity.spec.nfs.sizing_class,
+                        storage_profile=native_entity.spec.nfs.storage_profile,
+                        count=native_entity.spec.nfs.count
+                    ),
+                )
+
+                spec = ClusterSpec(
+                    settings=Settings(
+                        ovdc_network=native_entity.spec.settings.network,
+                        ssh_key=native_entity.spec.settings.ssh_key,
+                        rollback_on_failure=native_entity.spec.settings.rollback_on_failure,  # noqa: E501
+                        network=Network(
+                            expose=native_entity.spec.expose
+                        )
+                    ),
+                    topology=topology,
+                    distribution=Distribution(
+                        template_name=native_entity.spec.k8_distribution.template_name,  # noqa: E501
+                        template_revision=native_entity.spec.k8_distribution.template_revision  # noqa: E501
+                    )
+                )
+
+                rde_2_entity = cls(
+                    metadata=metadata,
+                    spec=spec,
+                    status=status,
+                    kind=native_entity.kind,
+                    api_version=rde_constants.PAYLOAD_VERSION_2_1
+                )
+                return rde_2_entity
 
         if isinstance(native_entity, rde_1_0_0.NativeEntity):
             # TODO should change very much
@@ -385,7 +495,7 @@ class NativeEntity(AbstractNativeEntity):
                 # NOTE: since details for the field `uid` is not present in
                 # RDE 1.0, it is left empty.
                 # Proper value for `uid` should be populated after RDE is converted  # noqa: E501
-                # as `uid` is a required property in Status for RDE 2.0
+                # as `uid` is a required property in Status for RDE > 2.0
                 status = Status(phase=rde_1_x_entity.status.phase,
                                 cni=rde_1_x_entity.status.cni,
                                 task_href=rde_1_x_entity.status.task_href,
@@ -400,7 +510,7 @@ class NativeEntity(AbstractNativeEntity):
             # RDE 1.0, it is left empty.
             # Proper value for `site` should be populated after RDE is
             # converted. Since, `site` is a required property in Metadata
-            # for RDE 2.0
+            # for RDE > 2.0
             metadata = Metadata(name=rde_1_x_entity.metadata.cluster_name,
                                 org_name=rde_1_x_entity.metadata.org_name,
                                 virtual_data_center_name=rde_1_x_entity.metadata.ovdc_name,  # noqa: E501
@@ -442,13 +552,13 @@ class NativeEntity(AbstractNativeEntity):
                 spec=spec,
                 status=status,
                 kind=rde_1_x_entity.kind,
-                api_version=rde_constants.PAYLOAD_VERSION_2_0
+                api_version=rde_constants.PAYLOAD_VERSION_2_1
             )
             return rde_2_entity
 
     @classmethod
     def from_cluster_data(cls, cluster: dict, kind: str, **kwargs):
-        """Construct rde_2.0.0 native entity from non-rde cluster.
+        """Construct rde_2.1.0 native entity from non-rde cluster.
 
         NOTE: This method is used primarily to create RDE for legacy clusters.
             So, only cpu/memory fields for RDE can be populated. Sizing class
@@ -457,7 +567,7 @@ class NativeEntity(AbstractNativeEntity):
         :param dict cluster: cluster metadata
         :param str kind: cluster kind
         :return: native entity
-        :rtype: rde_2.0.0.NativeEntity
+        :rtype: rde_2.1.0.NativeEntity
         """
         site = kwargs.get('site', '')
         worker_nodes = []
@@ -562,7 +672,7 @@ class NativeEntity(AbstractNativeEntity):
                 virtual_data_center_name=cluster['vdc_name'],
                 name=cluster['name']
             ),
-            api_version=rde_constants.PAYLOAD_VERSION_2_0
+            api_version=rde_constants.PAYLOAD_VERSION_2_1
         )
         return cluster_entity
 
@@ -577,7 +687,7 @@ class NativeEntity(AbstractNativeEntity):
         :rtype: str
         """
         cluster_spec_field_descriptions = """# Short description of various properties used in this sample cluster configuration
-# apiVersion: Represents the payload version of the cluster specification. By default, \"cse.vmware.com/v2.0\" is used.
+# apiVersion: Represents the payload version of the cluster specification. By default, \"cse.vmware.com/v2.1\" is used.
 # kind: The kind of the Kubernetes cluster.
 #
 # metadata: This is a required section
@@ -660,7 +770,7 @@ class NativeEntity(AbstractNativeEntity):
         status = Status()
 
         native_entity_dict = NativeEntity(
-            api_version=rde_constants.PAYLOAD_VERSION_2_0,
+            api_version=rde_constants.PAYLOAD_VERSION_2_1,
             metadata=metadata,
             spec=cluster_spec,
             status=status,

@@ -215,7 +215,7 @@ def get_worker_count_from_1_0_0_entity_dict(cluster_dict):
     return len(native_entity.status.nodes.workers)
 
 
-def get_worker_count_from_2_0_0_entity_dict(cluster_dict):
+def get_worker_count_from_2_1_0_entity_dict(cluster_dict):
     native_entity: rde_2_1_0.NativeEntity = \
         rde_2_1_0.NativeEntity.from_dict(cluster_dict)
     return len(native_entity.status.nodes.workers)
@@ -241,7 +241,7 @@ def generate_validate_node_count_func(cluster_name, expected_nodes, rde_version,
         if rde_version == RuntimeRDEVersion.RDE_1_X.value:
             return get_worker_count_from_1_0_0_entity_dict(cluster_info_dict) == expected_nodes  # noqa: E501
         elif rde_version == RuntimeRDEVersion.RDE_2_X.value:
-            return get_worker_count_from_2_0_0_entity_dict(cluster_info_dict) == expected_nodes  # noqa: 501
+            return get_worker_count_from_2_1_0_entity_dict(cluster_info_dict) == expected_nodes  # noqa: 501
         else:
             raise Exception("Invalid RDE version")
 
