@@ -92,10 +92,42 @@ class Services:
 @dataclass_json(letter_case=LetterCase.CAMEL)
 @dataclass
 class Network:
-    cni: Optional[Cni] = None
+    cni: Optional[Cni] = None  # deprecated, should use spec.settings.cni
     pods: Optional[Pods] = None
     services: Optional[Services] = None
     expose: bool = False
+
+
+@dataclass_json(letter_case=LetterCase.CAMEL)
+@dataclass
+class DefaultK8sStorageClass:
+    vcd_storage_profile_name: str
+    k8s_storage_class_name: Optional[str] = None
+    filesystem: Optional[str] = None
+    use_delete_reclaim_policy: Optional[bool] = None
+
+
+@dataclass_json(letter_case=LetterCase.CAMEL)
+@dataclass
+class CsiElem:
+    default: Optional[bool] = None
+    name: Optional[str] = None
+    version: Optional[str] = None
+    default_k8s_storage_class: Optional[DefaultK8sStorageClass] = None
+
+
+@dataclass_json(letter_case=LetterCase.CAMEL)
+@dataclass
+class VersionedCni:
+    name: Optional[str] = None
+    version: Optional[str] = None
+
+
+@dataclass_json(letter_case=LetterCase.CAMEL)
+@dataclass
+class Cpi:
+    name: Optional[str] = None
+    version: Optional[str] = None
 
 
 @dataclass_json(letter_case=LetterCase.CAMEL)
@@ -105,6 +137,9 @@ class Settings:
     ssh_key: Optional[str] = None
     rollback_on_failure: bool = True
     network: Network = Network()
+    csi: Optional[List[CsiElem]] = None
+    cni: Optional[VersionedCni] = None
+    cpi: Optional[Cpi] = None
 
 
 @dataclass_json(letter_case=LetterCase.CAMEL)
@@ -160,6 +195,12 @@ class Private:
 
 @dataclass_json(letter_case=LetterCase.CAMEL)
 @dataclass
+class TkgCorePackages:
+    kapp_controller: Optional[str] = None
+
+
+@dataclass_json(letter_case=LetterCase.CAMEL)
+@dataclass
 class Status:
     phase: Optional[str] = None
     cni: Optional[str] = None
@@ -174,6 +215,10 @@ class Status:
     persistent_volumes: Optional[List[str]] = None
     virtual_IPs: Optional[List[str]] = None
     private: Optional[Private] = None
+    csi: Optional[List[CsiElem]] = None
+    versioned_cni: Optional[VersionedCni] = None
+    cpi: Optional[Cpi] = None
+    tkgCorePackages: Optional[TkgCorePackages] = None
 
 
 @dataclass_json(letter_case=LetterCase.CAMEL)

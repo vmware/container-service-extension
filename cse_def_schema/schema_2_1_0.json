@@ -485,7 +485,7 @@
                 "tkgCorePackages":{
                     "type":"object",
                     "properties":{
-                        "kapp-controller":{
+                        "kappController":{
                             "type":"string",
                             "description":"The kapp-controller version."
                         }

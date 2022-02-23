@@ -193,11 +193,56 @@ def construct_2_1_0_cluster_spec_from_entity_status(
     network_settings = rde_2_1_0.Network(
         expose=entity_status.cloud_properties.exposed)
 
+    csi = None
+    if (
+            entity_status is not None
+            and entity_status.csi is not None
+            and len(entity_status.csi) > 0
+    ):
+        status_csi_elem = entity_status.csi[0]
+        status_csi_k8s_storage = status_csi_elem.default_k8s_storage_class
+        spec_csi_k8s_storage = rde_2_1_0.DefaultK8sStorageClass(
+            vcd_storage_profile_name=status_csi_k8s_storage.vcd_storage_profile_name,  # noqa: E501
+            k8s_storage_class_name=status_csi_k8s_storage.k8s_storage_class_name,  # noqa: E501
+            filesystem=status_csi_k8s_storage.filesystem,
+            use_delete_reclaim_policy=status_csi_k8s_storage.use_delete_reclaim_policy  # noqa: E501
+        )
+        csi = [rde_2_1_0.CsiElem(
+            name=status_csi_elem.name,
+            version=status_csi_elem.version,
+            default=status_csi_elem.default,
+            default_k8s_storage_class=spec_csi_k8s_storage
+        )]
+
+    versioned_cni = None
+    if (
+            entity_status is not None
+            and entity_status.versioned_cni is not None
+    ):
+        versioned_cni = rde_2_1_0.VersionedCni(
+            name=entity_status.versioned_cni.name,
+            version=entity_status.versioned_cni.version
+        )
+
+    cpi = None
+    if (
+        entity_status is not None
+        and entity_status.cpi is not None
+    ):
+        cpi = rde_2_1_0.Cpi(
+            name=entity_status.cpi.name,
+            version=entity_status.cpi.version
+        )
+
     settings = rde_2_1_0.Settings(
         ovdc_network=entity_status.cloud_properties.ovdc_network_name,
         ssh_key=entity_status.cloud_properties.ssh_key,
         rollback_on_failure=entity_status.cloud_properties.rollback_on_failure,  # noqa: E501
-        network=network_settings)
+        network=network_settings,
+        csi=csi,
+        versioned_cni=versioned_cni,
+        cpi=cpi
+    )
 
     topology = rde_2_1_0.Topology(
         control_plane=control_plane,
