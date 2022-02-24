@@ -2213,6 +2213,7 @@ def _add_control_plane_nodes(
         base64_refresh_token = base64.b64encode(refresh_token.encode("utf-8"))
         proxy_config = _get_tkgm_proxy_config()
         for spec in vm_specs:
+            # TODO: replace default storage values with user values
             spec['cloud_init_spec'] = templated_script.format(
                 vcd_host=vcd_host.replace("/", r"\/"),
                 org=org.get_name(),
@@ -2229,6 +2230,11 @@ def _add_control_plane_nodes(
                 ssh_key=ssh_key if ssh_key else '',
                 control_plane_endpoint='',
                 base64_encoded_refresh_token=base64_refresh_token.decode("utf-8"),  # noqa: E501
+                default_storage_class_name="default_storage_class_name",
+                storage_class_reclaim_policy="Delete",
+                vcd_storage_profile_name="*",
+                storage_class_filesystem_type="ext4",
+                antrea_version="",
                 **proxy_config
             )
 
