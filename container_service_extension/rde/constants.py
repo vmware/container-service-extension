@@ -70,7 +70,7 @@ DEF_NATIVE_ENTITY_TYPE_RIGHT_BUNDLE = \
 @unique
 class RuntimeRDEVersion(str, Enum):
     RDE_1_X = '1.0.0'
-    RDE_2_X = '2.0.0'
+    RDE_2_X = '2.1.0'
 
 
 @unique
@@ -109,10 +109,10 @@ class RDEMetadataKey(str, Enum):
 #   CSE releases.
 
 # Examples:
-# Mapping for CSE 3.1:
+# Mapping for CSE 3.1.3:
 # MAP_VCD_API_VERSION_TO_RUNTIME_RDE_VERSION = {
 #     35.0: 1.0.0,
-#     36.0: 2.0.0
+#     36.0: 2.1.0
 # }
 #
 # If CSE 3.2 introduces Minor version bump in RDE (i.e 2.1) and is released

@@ -360,8 +360,14 @@ class NativeEntity(AbstractNativeEntity):
                 if native_entity.status.exposed:
                     external_ip = native_entity.status.nodes.control_plane.native  # noqa: E501
 
+                cni_name = cni_version = None
+                if native_entity.status.cni:
+                    cni_split = native_entity.status.cni.split()
+                    cni_name = cni_split[0]
+                    if len(cni_split) > 1:
+                        cni_version = cni_split[1]
                 status = Status(phase=native_entity.status.phase,
-                                cni=native_entity.status.cni,
+                                cni=None,  # deprecated field
                                 task_href=native_entity.status.task_href,
                                 kubernetes=native_entity.status.kubernetes,
                                 docker_version=native_entity.status.docker_version,  # noqa: E501
@@ -369,7 +375,12 @@ class NativeEntity(AbstractNativeEntity):
                                 external_ip=external_ip,
                                 nodes=nodes,
                                 uid=native_entity.status.uid,
-                                cloud_properties=cloud_properties)
+                                cloud_properties=cloud_properties,
+                                versioned_cni=VersionedCni(
+                                    name=cni_name,
+                                    version=cni_version
+                                )
+                                )
 
                 metadata = Metadata(name=native_entity.metadata.cluster_name,
                                     org_name=native_entity.metadata.org_name,
@@ -496,8 +507,14 @@ class NativeEntity(AbstractNativeEntity):
                 # RDE 1.0, it is left empty.
                 # Proper value for `uid` should be populated after RDE is converted  # noqa: E501
                 # as `uid` is a required property in Status for RDE > 2.0
+                cni_name = cni_version = None
+                if rde_1_x_entity.status.cni:
+                    cni_split = rde_1_x_entity.status.cni.split()
+                    cni_name = cni_split[0]
+                    if len(cni_split) > 1:
+                        cni_version = cni_split[1]
                 status = Status(phase=rde_1_x_entity.status.phase,
-                                cni=rde_1_x_entity.status.cni,
+                                cni=None,  # deprecated
                                 task_href=rde_1_x_entity.status.task_href,
                                 kubernetes=rde_1_x_entity.status.kubernetes,
                                 docker_version=rde_1_x_entity.status.docker_version,  # noqa: E501
@@ -505,7 +522,12 @@ class NativeEntity(AbstractNativeEntity):
                                 external_ip=external_ip,
                                 nodes=nodes,
                                 uid=None,
-                                cloud_properties=cloud_properties)
+                                cloud_properties=cloud_properties,
+                                versioned_cni=VersionedCni(
+                                    name=cni_name,
+                                    version=cni_version
+                                )
+                                )
             # NOTE: since details for the field `site` is not present in
             # RDE 1.0, it is left empty.
             # Proper value for `site` should be populated after RDE is
