@@ -81,6 +81,7 @@ class CapvcdRDEVersion(str, Enum):
 @unique
 class RDEVersion(str, Enum):
     RDE_1_0_0 = '1.0.0'
+    RDE_2_0_0 = '2.0.0'
     RDE_2_1_0 = '2.1.0'
 
 

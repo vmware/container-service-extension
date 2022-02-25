@@ -109,7 +109,7 @@ class DefaultK8sStorageClass:
 
 @dataclass_json(letter_case=LetterCase.CAMEL)
 @dataclass
-class CsiElem:
+class CsiElement:
     default: Optional[bool] = None
     name: Optional[str] = None
     version: Optional[str] = None
@@ -137,7 +137,7 @@ class Settings:
     ssh_key: Optional[str] = None
     rollback_on_failure: bool = True
     network: Network = Network()
-    csi: Optional[List[CsiElem]] = None
+    csi: Optional[List[CsiElement]] = None
     cni: Optional[VersionedCni] = None
     cpi: Optional[Cpi] = None
 
@@ -215,7 +215,7 @@ class Status:
     persistent_volumes: Optional[List[str]] = None
     virtual_IPs: Optional[List[str]] = None
     private: Optional[Private] = None
-    csi: Optional[List[CsiElem]] = None
+    csi: Optional[List[CsiElement]] = None
     versioned_cni: Optional[VersionedCni] = None
     cpi: Optional[Cpi] = None
     tkgCorePackages: Optional[TkgCorePackages] = None
@@ -311,124 +311,7 @@ class NativeEntity(AbstractNativeEntity):
                 return native_entity
             else:
                 # Upgrade RDE 2.0 -> 2.1
-                distribution = Distribution(
-                    template_name=native_entity.spec.k8_distribution.template_name,  # noqa: E501
-                    template_revision=native_entity.spec.k8_distribution.template_revision  # noqa: E501
-                )
-                cloud_properties = CloudProperties(
-                    site=native_entity.status.cloud_properties.site,
-                    org_name=native_entity.metadata.org_name,
-                    virtual_data_center_name=native_entity.metadata.ovdc_name,
-                    ovdc_network_name=native_entity.spec.settings.network,
-                    distribution=distribution,
-                    ssh_key=native_entity.spec.settings.ssh_key,
-                    rollback_on_failure=native_entity.spec.settings.rollback_on_failure,  # noqa: E501
-                    exposed=native_entity.status.exposed)
-
-                control_plane = Node(
-                    name=native_entity.status.nodes.control_plane.name,
-                    ip=native_entity.status.nodes.control_plane.ip,
-                    sizing_class=native_entity.status.nodes.control_plane.sizing_class,  # noqa: E501
-                    storage_profile=native_entity.spec.control_plane.storage_prnative  # noqa: E501
-                )
-                workers = []
-                for worker in native_entity.status.nodes.workers:
-                    worker_node_2_x = Node(
-                        name=worker.name,
-                        ip=worker.ip,
-                        sizing_class=worker.sizing_class,
-                        storage_profile=native_entity.spec.workers.storage_profile  # noqa: E501
-                    )
-                    workers.append(worker_node_2_x)
-                nfs_nodes = []
-                for nfs_node in native_entity.status.nodes.nfs:
-                    nfs_node_2_x = NfsNode(
-                        name=nfs_node.name,
-                        ip=nfs_node.ip,
-                        sizing_class=nfs_node.sizing_class,
-                        storage_profile=native_entity.spec.nfs.storage_profile,  # noqa: E501
-                        exports=nfs_node.exports
-                    )
-                    nfs_nodes.append(nfs_node_2_x)
-                nodes = Nodes(
-                    control_plane=control_plane,
-                    workers=workers,
-                    nfs=nfs_nodes
-                )
-
-                external_ip = None
-                if native_entity.status.exposed:
-                    external_ip = native_entity.status.nodes.control_plane.native  # noqa: E501
-
-                cni_name = cni_version = None
-                if native_entity.status.cni:
-                    cni_split = native_entity.status.cni.split()
-                    cni_name = cni_split[0]
-                    if len(cni_split) > 1:
-                        cni_version = cni_split[1]
-                status = Status(phase=native_entity.status.phase,
-                                cni=None,  # deprecated field
-                                task_href=native_entity.status.task_href,
-                                kubernetes=native_entity.status.kubernetes,
-                                docker_version=native_entity.status.docker_version,  # noqa: E501
-                                os=native_entity.status.os,
-                                external_ip=external_ip,
-                                nodes=nodes,
-                                uid=native_entity.status.uid,
-                                cloud_properties=cloud_properties,
-                                versioned_cni=VersionedCni(
-                                    name=cni_name,
-                                    version=cni_version
-                                )
-                                )
-
-                metadata = Metadata(name=native_entity.metadata.cluster_name,
-                                    org_name=native_entity.metadata.org_name,
-                                    virtual_data_center_name=native_entity.metadata.ovdc_name,  # noqa: E501
-                                    site=native_entity.metadata.site)
-
-                topology = Topology(
-                    control_plane=ControlPlane(
-                        sizing_class=native_entity.spec.control_plane.sizing_class,  # noqa: E501
-                        storage_profile=native_entity.spec.control_plane.storage_profile,  # noqa: E501
-                        count=native_entity.spec.control_plane.count
-                    ),
-                    workers=Workers(
-                        sizing_class=native_entity.spec.workers.sizing_class,
-                        storage_profile=native_entity.spec.workers.storage_profile,  # noqa: E501
-                        count=native_entity.spec.workers.count
-                    ),
-                    nfs=Nfs(
-                        sizing_class=native_entity.spec.nfs.sizing_class,
-                        storage_profile=native_entity.spec.nfs.storage_profile,
-                        count=native_entity.spec.nfs.count
-                    ),
-                )
-
-                spec = ClusterSpec(
-                    settings=Settings(
-                        ovdc_network=native_entity.spec.settings.network,
-                        ssh_key=native_entity.spec.settings.ssh_key,
-                        rollback_on_failure=native_entity.spec.settings.rollback_on_failure,  # noqa: E501
-                        network=Network(
-                            expose=native_entity.spec.expose
-                        )
-                    ),
-                    topology=topology,
-                    distribution=Distribution(
-                        template_name=native_entity.spec.k8_distribution.template_name,  # noqa: E501
-                        template_revision=native_entity.spec.k8_distribution.template_revision  # noqa: E501
-                    )
-                )
-
-                rde_2_entity = cls(
-                    metadata=metadata,
-                    spec=spec,
-                    status=status,
-                    kind=native_entity.kind,
-                    api_version=rde_constants.PAYLOAD_VERSION_2_1
-                )
-                return rde_2_entity
+                return NativeEntity(native_entity.to_dict())
 
         if isinstance(native_entity, rde_1_0_0.NativeEntity):
             # TODO should change very much

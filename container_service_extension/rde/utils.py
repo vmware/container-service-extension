@@ -207,7 +207,7 @@ def construct_2_1_0_cluster_spec_from_entity_status(
             filesystem=status_csi_k8s_storage.filesystem,
             use_delete_reclaim_policy=status_csi_k8s_storage.use_delete_reclaim_policy  # noqa: E501
         )
-        csi = [rde_2_1_0.CsiElem(
+        csi = [rde_2_1_0.CsiElement(
             name=status_csi_elem.name,
             version=status_csi_elem.version,
             default=status_csi_elem.default,
