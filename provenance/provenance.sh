@@ -11,7 +11,7 @@ set -e
 # Reads requirements.txt and returns its contents with the following syntax:
 # <module>:<version>
 function getPyModules {
-    awk  'NR > 3 && /^#/ {print "\""$2":"$3"\""}' ./requirements.txt
+    awk  'NR > 3 && /^#/ {print "\""$2":"$3"\","}' ./requirements.txt
 }
 
 # Returns the given amount of spaces, intended for JSON identation
