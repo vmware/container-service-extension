@@ -63,6 +63,7 @@ tmpDir='tmp'
 rm -rf $tmpDir
 git clone https://github.com/vmware/$project.git $tmpDir
 cd $tmpDir
+git checkout origin/cse_3_1_updates
 
 head=$(git log -1 --pretty=format:%H)
 version=$(git describe --tags --abbrev=0)
