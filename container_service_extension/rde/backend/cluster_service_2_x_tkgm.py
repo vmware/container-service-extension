@@ -2,6 +2,7 @@
 # Copyright (c) 2021 VMware, Inc. All Rights Reserved.
 # SPDX-License-Identifier: BSD-2-Clause
 import base64
+import copy
 from dataclasses import asdict
 import random
 import re
@@ -20,8 +21,13 @@ import pyvcloud.vcd.vm as vcd_vm
 import validators
 
 from container_service_extension.common.constants.server_constants import \
+    ANTREA_NAME, \
     CLOUDINIT_GUEST_USERDATA, \
     CLOUDINIT_GUEST_USERDATA_ENCODING, \
+    CPI_DEFAULT_VERSION, \
+    CPI_NAME, \
+    CSI_DEFAULT_VERSION, \
+    CSI_NAME, \
     DISK_ENABLE_UUID
 from container_service_extension.common.constants.server_constants import ClusterMetadataKey  # noqa: E501
 from container_service_extension.common.constants.server_constants import ClusterScriptFile  # noqa: E501
@@ -271,6 +277,53 @@ class ClusterService(abstract_broker.AbstractBroker):
                   f"(revision {template_revision})"
             self._update_task(BehaviorTaskStatus.RUNNING, message=msg)
 
+            # Handle defaults for csi
+            # if user does not specify versions
+            if input_native_entity.spec.settings.csi is None or \
+                    len(input_native_entity.spec.settings.csi) == 0:
+                input_native_entity.spec.settings.csi = [rde_2_x.CsiElem()]
+            curr_csi_elem = input_native_entity.spec.settings.csi[0]
+            curr_csi_elem.name = CSI_NAME
+            curr_csi_elem.default = True
+            if curr_csi_elem.version is None:
+                # TODO: check server config for version
+                curr_csi_elem.version = CSI_DEFAULT_VERSION
+            if curr_csi_elem.default_k8s_storage_class is not None:
+                default_storage_class = curr_csi_elem.default_k8s_storage_class  # noqa: E501
+                if default_storage_class.vcd_storage_profile_name is None:
+                    default_storage_class.vcd_storage_profile_name = '*'
+                if default_storage_class.use_delete_reclaim_policy is None:
+                    default_storage_class.use_delete_reclaim_policy = False
+                if not default_storage_class.filesystem:
+                    default_storage_class.filesystem = "ext4"
+
+            # Handle defaults for cpi
+            if input_native_entity.spec.settings.cpi is None:
+                input_native_entity.spec.settings.cpi = rde_2_x.Cpi()
+            input_native_entity.spec.settings.cpi.name = CPI_NAME
+            if input_native_entity.spec.settings.cpi.version is None:
+                # TODO: check server config for version
+                input_native_entity.spec.settings.cpi = CPI_DEFAULT_VERSION
+
+            # Handle defaults for cni
+            if input_native_entity.spec.settings.cni is None:
+                input_native_entity.spec.settings.cni = rde_2_x.Cni()
+            input_native_entity.spec.settings.cni.name = ANTREA_NAME
+            if input_native_entity.spec.settings.cni.version is None:
+                # TODO: check server config for version
+                input_native_entity.spec.settings.cni = ""
+
+            # Get changes needed for rde update
+            csi_elem_rde_status_value = rde_2_x.CsiElem()
+            input_csi_elem = input_native_entity.spec.settings.csi[0]
+            # no deep copy is currently needed because the default
+            # storage class has no object fields
+            csi_elem_rde_status_value.default_k8s_storage_class = \
+                copy.copy(input_csi_elem.default_k8s_storage_class)
+            csi_elem_rde_status_value.name = input_csi_elem.name
+            csi_elem_rde_status_value.version = input_csi_elem.version
+            csi_elem_rde_status_value.default = input_csi_elem.default
+            input_settings = input_native_entity.spec.settings
             changes = {
                 'entity.status.phase':
                     str(DefEntityPhase(DefEntityOperation.CREATE,
@@ -278,11 +331,15 @@ class ClusterService(abstract_broker.AbstractBroker):
                 'entity.status.kubernetes': _create_k8s_software_string(
                     template[LocalTemplateKey.KUBERNETES],
                     template[LocalTemplateKey.KUBERNETES_VERSION]),
-                'entity.status.cni': CNI_NAME,
                 'entity.status.os': template[LocalTemplateKey.OS],
                 'entity.status.cloud_properties': cloud_properties,
                 'entity.status.uid': entity_id,
-                'entity.status.task_href': self.task_href
+                'entity.status.task_href': self.task_href,
+                'entity.status.versioned_cni.name': input_settings.cni.name,
+                'entity.status.versioned_cni.version': input_settings.cni.version,  # noqa: E501
+                'entity.status.cpi.name': input_settings.cpi.name,
+                'entity.status.cpi.version': input_settings.cpi.version,
+                'entity.status.csi': [csi_elem_rde_status_value]
             }
             try:
                 curr_rde = self._update_cluster_entity(entity_id, changes=changes)  # noqa: E501
@@ -737,6 +794,21 @@ class ClusterService(abstract_broker.AbstractBroker):
             ssh_key = input_native_entity.spec.settings.ssh_key
             rollback = input_native_entity.spec.settings.rollback_on_failure
             expose = input_native_entity.spec.settings.network.expose
+            # Caller functions guarantee that cni/cpi/csi are not None
+            cni_version = input_native_entity.spec.settings.cni.version
+            cpi_version = input_native_entity.spec.settings.cpi.version
+            csi_version = input_native_entity.spec.settings.csi[0].version
+            default_storage_class = input_native_entity.spec.settings.csi[0].default_k8s_storage_class  # noqa: E501
+            create_default_storage_class: bool = default_storage_class is not None  # noqa: E501
+            dsc_storage_profile_name = None
+            dsc_k8s_storage_class_name = None
+            dsc_filesystem = None
+            dsc_use_delete_reclaim_policy: bool = False
+            if create_default_storage_class:
+                dsc_storage_profile_name = default_storage_class.vcd_storage_profile_name  # noqa: E501
+                dsc_k8s_storage_class_name = default_storage_class.k8s_storage_class_name  # noqa: E501
+                dsc_filesystem = default_storage_class.filesystem
+                dsc_use_delete_reclaim_policy = default_storage_class.use_delete_reclaim_policy  # noqa: E501
 
             k8s_pod_cidr = TKGM_DEFAULT_POD_NETWORK_CIDR
             if (

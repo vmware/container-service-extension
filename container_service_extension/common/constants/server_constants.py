@@ -828,3 +828,10 @@ MAX_RDE_UPDATE_ATTEMPTS = 10
 # keys of the Behavior task response that gets sent to VCD
 BEHAVIOR_TASK_RESPONSE_RESULT_MESSAGE_KEY = "result"
 BEHAVIOR_TASK_RESPONSE_RESULT_CONTENT_MESSAGE_KEY = "resultContent"
+
+# CPI/CNI/CSI constants
+CPI_NAME = "cloud-provider-for-cloud-director"
+CPI_DEFAULT_VERSION = "1.1.0"
+CSI_NAME = "cloud-director-named-disk-csi-driver"
+CSI_DEFAULT_VERSION = "1.1.0"
+ANTREA_NAME = "antrea"

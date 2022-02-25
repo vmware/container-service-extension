@@ -101,7 +101,7 @@ class Network:
 @dataclass_json(letter_case=LetterCase.CAMEL)
 @dataclass
 class DefaultK8sStorageClass:
-    vcd_storage_profile_name: str
+    vcd_storage_profile_name: Optional[str] = None
     k8s_storage_class_name: Optional[str] = None
     filesystem: Optional[str] = None
     use_delete_reclaim_policy: Optional[bool] = None
@@ -781,7 +781,23 @@ class NativeEntity(AbstractNativeEntity):
             template_revision=2
         )
 
-        settings = Settings(ovdc_network='ovdc_network_name', ssh_key=None)
+        if k8_runtime == shared_constants.ClusterEntityKind.TKG_M.value:
+            sample_default_storage_class = DefaultK8sStorageClass(
+                vcd_storage_profile_name="Silver_storage_profile",
+                k8s_storage_class_name="my_storage_class",
+                filesystem="ext4",
+                use_delete_reclaim_policy=True
+            )
+            sample_csi_elem = CsiElem(
+                default_k8s_storage_class=sample_default_storage_class
+            )
+            settings = Settings(
+                ovdc_network='ovdc_network_name',
+                ssh_key=None,
+                csi=[sample_csi_elem]
+            )
+        else:
+            settings = Settings(ovdc_network='ovdc_network_name', ssh_key=None)
 
         cluster_spec = ClusterSpec(
             topology=topology,
