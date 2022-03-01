@@ -153,6 +153,9 @@ class FlattenedClusterSpecKey2X(Enum):
     EXPOSE = 'settings.network.expose'
     POD_CIDR = 'settings.network.pods.cidrBlocks'
     SVC_CIDR = 'settings.network.services.cidrBlocks'
+    CSI = "settings.csi"
+    CPI_OBJECT = "settings.cpiObject"
+    CNI = "settings.cni"
 
 
 VALID_UPDATE_FIELDS_2X = \
@@ -504,6 +507,8 @@ class ClusterMetadataKey(str, Enum):
     KUBERNETES_VERSION = "cse.kubernetes.version"
     CNI = "cse.cni"
     CNI_VERSION = 'cse.cni.version'
+    CPI = "cse.cpi"
+    CSI = "cse.csi"
 
 
 @unique

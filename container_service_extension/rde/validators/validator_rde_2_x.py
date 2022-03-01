@@ -165,6 +165,11 @@ def validate_cluster_update_request_and_check_cluster_upgrade(
         FlattenedClusterSpecKey2X.SVC_CIDR.value,
     ]
 
+    if is_tkgm_cluster:
+        exclude_fields.append(FlattenedClusterSpecKey2X.CSI.value)
+        exclude_fields.append(FlattenedClusterSpecKey2X.CNI.value)
+        exclude_fields.append(FlattenedClusterSpecKey2X.CPI_OBJECT.value)
+
     if reference_spec.topology.workers.count == 0:
         # Exclude worker nodes' sizing class and storage profile from
         # validation if worker count is 0

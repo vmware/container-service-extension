@@ -281,21 +281,13 @@ class ClusterService(abstract_broker.AbstractBroker):
             # if user does not specify versions
             if input_native_entity.spec.settings.csi is None or \
                     len(input_native_entity.spec.settings.csi) == 0:
-                input_native_entity.spec.settings.csi = [rde_2_x.CsiElem()]
+                input_native_entity.spec.settings.csi = [rde_2_x.CsiElement()]
             curr_csi_elem = input_native_entity.spec.settings.csi[0]
             curr_csi_elem.name = CSI_NAME
             curr_csi_elem.default = True
             if curr_csi_elem.version is None:
                 # TODO: check server config for version
                 curr_csi_elem.version = CSI_DEFAULT_VERSION
-            if curr_csi_elem.default_k8s_storage_class is not None:
-                default_storage_class = curr_csi_elem.default_k8s_storage_class  # noqa: E501
-                if default_storage_class.vcd_storage_profile_name is None:
-                    default_storage_class.vcd_storage_profile_name = '*'
-                if default_storage_class.use_delete_reclaim_policy is None:
-                    default_storage_class.use_delete_reclaim_policy = False
-                if not default_storage_class.filesystem:
-                    default_storage_class.filesystem = "ext4"
 
             # Handle defaults for cpi
             if input_native_entity.spec.settings.cpi is None:
@@ -303,26 +295,25 @@ class ClusterService(abstract_broker.AbstractBroker):
             input_native_entity.spec.settings.cpi.name = CPI_NAME
             if input_native_entity.spec.settings.cpi.version is None:
                 # TODO: check server config for version
-                input_native_entity.spec.settings.cpi = CPI_DEFAULT_VERSION
+                input_native_entity.spec.settings.cpi.version = CPI_DEFAULT_VERSION  # noqa: E501
 
             # Handle defaults for cni
-            if input_native_entity.spec.settings.cni is None:
-                input_native_entity.spec.settings.cni = rde_2_x.Cni()
-            input_native_entity.spec.settings.cni.name = ANTREA_NAME
-            if input_native_entity.spec.settings.cni.version is None:
+            if input_native_entity.spec.settings.cniObject is None:
+                input_native_entity.spec.settings.cniObject = rde_2_x.CniObject()  # noqa: E501
+            input_native_entity.spec.settings.cniObject.name = ANTREA_NAME
+            if input_native_entity.spec.settings.cniObject.version is None:
                 # TODO: check server config for version
-                input_native_entity.spec.settings.cni = ""
+                input_native_entity.spec.settings.cniObject.version = ""
 
             # Get changes needed for rde update
-            csi_elem_rde_status_value = rde_2_x.CsiElem()
-            input_csi_elem = input_native_entity.spec.settings.csi[0]
+            csi_elem_rde_status_value = rde_2_x.CsiElement()
             # no deep copy is currently needed because the default
             # storage class has no object fields
             csi_elem_rde_status_value.default_k8s_storage_class = \
-                copy.copy(input_csi_elem.default_k8s_storage_class)
-            csi_elem_rde_status_value.name = input_csi_elem.name
-            csi_elem_rde_status_value.version = input_csi_elem.version
-            csi_elem_rde_status_value.default = input_csi_elem.default
+                copy.copy(curr_csi_elem.default_k8s_storage_class)
+            csi_elem_rde_status_value.name = curr_csi_elem.name
+            csi_elem_rde_status_value.version = curr_csi_elem.version
+            csi_elem_rde_status_value.default = curr_csi_elem.default
             input_settings = input_native_entity.spec.settings
             changes = {
                 'entity.status.phase':
@@ -335,8 +326,8 @@ class ClusterService(abstract_broker.AbstractBroker):
                 'entity.status.cloud_properties': cloud_properties,
                 'entity.status.uid': entity_id,
                 'entity.status.task_href': self.task_href,
-                'entity.status.versioned_cni.name': input_settings.cni.name,
-                'entity.status.versioned_cni.version': input_settings.cni.version,  # noqa: E501
+                'entity.status.cni_object.name': input_settings.cniObject.name,  # noqa: E501
+                'entity.status.cni_object.version': input_settings.cniObject.version,  # noqa: E501
                 'entity.status.cpi.name': input_settings.cpi.name,
                 'entity.status.cpi.version': input_settings.cpi.version,
                 'entity.status.csi': [csi_elem_rde_status_value]
@@ -795,7 +786,7 @@ class ClusterService(abstract_broker.AbstractBroker):
             rollback = input_native_entity.spec.settings.rollback_on_failure
             expose = input_native_entity.spec.settings.network.expose
             # Caller functions guarantee that cni/cpi/csi are not None
-            cni_version = input_native_entity.spec.settings.cni.version
+            cni_version = input_native_entity.spec.settings.cniObject.version
             cpi_version = input_native_entity.spec.settings.cpi.version
             csi_version = input_native_entity.spec.settings.csi[0].version
             default_storage_class = input_native_entity.spec.settings.csi[0].default_k8s_storage_class  # noqa: E501
@@ -863,6 +854,8 @@ class ClusterService(abstract_broker.AbstractBroker):
                 ClusterMetadataKey.KUBERNETES: template[LocalTemplateKey.KUBERNETES],  # noqa: E501
                 ClusterMetadataKey.KUBERNETES_VERSION: template[LocalTemplateKey.KUBERNETES_VERSION],  # noqa: E501
                 ClusterMetadataKey.CNI: CNI_NAME,
+                ClusterMetadataKey.CSI: CSI_NAME,
+                ClusterMetadataKey.CPI: CPI_NAME
             }
 
             sysadmin_client_v36 = self.context.get_sysadmin_client(
@@ -925,6 +918,14 @@ class ClusterService(abstract_broker.AbstractBroker):
                     cluster_name=cluster_name,
                     cluster_id=cluster_id,
                     refresh_token=refresh_token,
+                    cni_version=cni_version,
+                    cpi_version=cpi_version,
+                    csi_version=csi_version,
+                    create_default_storage_class=create_default_storage_class,
+                    dsc_storage_profile_name=f"\"{dsc_storage_profile_name}\"",
+                    dsc_k8s_storage_class_name=dsc_k8s_storage_class_name,
+                    dsc_filesystem=dsc_filesystem,
+                    dsc_use_delete_reclaim_policy=dsc_use_delete_reclaim_policy
                 )
             except Exception as err:
                 LOGGER.error(err, exc_info=True)
@@ -991,7 +992,6 @@ class ClusterService(abstract_broker.AbstractBroker):
                     )
                 ),
                 'entity.status.nodes': _get_nodes_details(vapp),
-                'entity.status.cni': CNI_NAME,
                 'entity.status.cloud_properties.distribution.''template_name':
                     tags[ClusterMetadataKey.TEMPLATE_NAME],
                 'entity.status.cloud_properties.distribution.''template_revision':  # noqa: E501
@@ -2243,7 +2243,15 @@ def _add_control_plane_nodes(
         expose=False,
         cluster_name=None,
         cluster_id=None,
-        refresh_token=None) -> Tuple[str, List[Dict]]:
+        refresh_token=None,
+        cni_version=None,
+        cpi_version=None,
+        csi_version=None,
+        create_default_storage_class=False,
+        dsc_storage_profile_name=None,
+        dsc_k8s_storage_class_name=None,
+        dsc_filesystem=None,
+        dsc_use_delete_reclaim_policy=False) -> Tuple[str, List[Dict]]:
 
     vcd_utils.raise_error_if_user_not_from_system_org(sysadmin_client)
 
@@ -2297,16 +2305,17 @@ def _add_control_plane_nodes(
                 vm_host_name=spec['target_vm_name'],
                 service_cidr=k8s_svc_cidr,
                 pod_cidr=k8s_pod_cidr,
-                cpi_version=CPI_VERSION,
-                csi_version=CSI_VERSION,
+                cpi_version=cpi_version,
+                csi_version=csi_version,
                 ssh_key=ssh_key if ssh_key else '',
                 control_plane_endpoint='',
                 base64_encoded_refresh_token=base64_refresh_token.decode("utf-8"),  # noqa: E501
-                default_storage_class_name="default_storage_class_name",
-                storage_class_reclaim_policy="Delete",
-                vcd_storage_profile_name="*",
-                storage_class_filesystem_type="ext4",
-                antrea_version="",
+                create_default_storage_class="true" if create_default_storage_class else "false",  # noqa: E501
+                default_storage_class_name=dsc_k8s_storage_class_name,
+                storage_class_reclaim_policy="Delete" if dsc_use_delete_reclaim_policy else "Retain",  # noqa: E501
+                vcd_storage_profile_name=f"\"{dsc_storage_profile_name}\"",
+                storage_class_filesystem_type=dsc_filesystem,
+                antrea_version=cni_version,
                 **proxy_config
             )
 
@@ -2381,6 +2390,12 @@ def _add_control_plane_nodes(
                 ssh_key=ssh_key if ssh_key else '',
                 control_plane_endpoint=f"{control_plane_endpoint}:6443",
                 base64_encoded_refresh_token=base64_refresh_token.decode("utf-8"),  # noqa: E501
+                create_default_storage_class="true" if create_default_storage_class else "false",  # noqa: E501
+                default_storage_class_name=dsc_k8s_storage_class_name,
+                storage_class_reclaim_policy="Delete" if dsc_use_delete_reclaim_policy else "Retain",  # noqa: E501
+                vcd_storage_profile_name=dsc_storage_profile_name,
+                storage_class_filesystem_type=dsc_filesystem,
+                antrea_version=cni_version,
                 **proxy_config
             )
 
@@ -2406,6 +2421,7 @@ def _add_control_plane_nodes(
                 PostCustomizationPhase.STORE_SSH_KEY,
                 PostCustomizationPhase.PROXY_SETTING,
                 PostCustomizationPhase.KUBEADM_INIT,
+                PostCustomizationPhase.TKR_GET_VERSIONS,
                 PostCustomizationPhase.KUBECTL_APPLY_CNI,
                 PostCustomizationPhase.KUBECTL_APPLY_CPI,
                 PostCustomizationPhase.KUBECTL_APPLY_CSI,

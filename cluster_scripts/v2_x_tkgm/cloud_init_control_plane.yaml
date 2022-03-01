@@ -271,6 +271,11 @@ write_files:
       kubectl apply -f $csi_driver_path
       kubectl apply -f $csi_controller_path
       kubectl apply -f $csi_node_path
+
+      create_default_storage_class={create_default_storage_class}
+      if [[ "$create_default_storage_class" = true ]] ; then
+        kubectl apply -f /root/default-storage-class.yaml
+      fi
     vmtoolsd --cmd "info-set guestinfo.postcustomization.kubectl.csi.install.status successful"
 
 
