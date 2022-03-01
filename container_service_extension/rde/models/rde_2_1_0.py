@@ -101,10 +101,10 @@ class Network:
 @dataclass_json(letter_case=LetterCase.CAMEL)
 @dataclass
 class DefaultK8sStorageClass:
-    vcd_storage_profile_name: str
-    k8s_storage_class_name: Optional[str] = None
-    filesystem: Optional[str] = None
-    use_delete_reclaim_policy: Optional[bool] = None
+    vcd_storage_profile_name: str = "*"
+    k8s_storage_class_name: str = "default-storage-class"
+    filesystem: str = "ext4"
+    use_delete_reclaim_policy: bool = False
 
 
 @dataclass_json(letter_case=LetterCase.CAMEL)
@@ -118,7 +118,7 @@ class CsiElement:
 
 @dataclass_json(letter_case=LetterCase.CAMEL)
 @dataclass
-class VersionedCni:
+class CniObject:
     name: Optional[str] = None
     version: Optional[str] = None
 
@@ -138,8 +138,8 @@ class Settings:
     rollback_on_failure: bool = True
     network: Network = Network()
     csi: Optional[List[CsiElement]] = None
-    cni: Optional[VersionedCni] = None
-    cpi: Optional[Cpi] = None
+    cniObject: CniObject = CniObject()
+    cpi: Cpi = Cpi()
 
 
 @dataclass_json(letter_case=LetterCase.CAMEL)
@@ -203,7 +203,7 @@ class TkgCorePackages:
 @dataclass
 class Status:
     phase: Optional[str] = None
-    cni: Optional[str] = None
+    cni: Optional[str] = None  # deprecated
     task_href: Optional[str] = None
     kubernetes: Optional[str] = None
     docker_version: Optional[str] = None
@@ -216,9 +216,9 @@ class Status:
     virtual_IPs: Optional[List[str]] = None
     private: Optional[Private] = None
     csi: Optional[List[CsiElement]] = None
-    versioned_cni: Optional[VersionedCni] = None
-    cpi: Optional[Cpi] = None
-    tkgCorePackages: Optional[TkgCorePackages] = None
+    cni_object: CniObject = CniObject()
+    cpi: Cpi = Cpi()
+    tkgCorePackages: TkgCorePackages = TkgCorePackages()
 
 
 @dataclass_json(letter_case=LetterCase.CAMEL)
@@ -311,6 +311,7 @@ class NativeEntity(AbstractNativeEntity):
                 return native_entity
             else:
                 # Upgrade RDE 2.0 -> 2.1
+                # TODO: Ensure settings.cni is deprecated
                 return NativeEntity(native_entity.to_dict())
 
         if isinstance(native_entity, rde_1_0_0.NativeEntity):
@@ -406,7 +407,7 @@ class NativeEntity(AbstractNativeEntity):
                                 nodes=nodes,
                                 uid=None,
                                 cloud_properties=cloud_properties,
-                                versioned_cni=VersionedCni(
+                                cni_object=CniObject(
                                     name=cni_name,
                                     version=cni_version
                                 )
@@ -664,7 +665,25 @@ class NativeEntity(AbstractNativeEntity):
             template_revision=2
         )
 
-        settings = Settings(ovdc_network='ovdc_network_name', ssh_key=None)
+        if k8_runtime == shared_constants.ClusterEntityKind.TKG_M.value:
+            sample_default_storage_class = DefaultK8sStorageClass(
+                vcd_storage_profile_name="Silver_storage_profile",
+                k8s_storage_class_name="my_storage_class",
+                filesystem="ext4",
+                use_delete_reclaim_policy=True
+            )
+            sample_csi_elem = CsiElement(
+                default_k8s_storage_class=sample_default_storage_class
+            )
+            settings = Settings(
+                ovdc_network='ovdc_network_name',
+                ssh_key=None,
+                csi=[sample_csi_elem],
+                cniObject=CniObject(),
+                cpi=Cpi()
+            )
+        else:
+            settings = Settings(ovdc_network='ovdc_network_name', ssh_key=None)
 
         cluster_spec = ClusterSpec(
             topology=topology,

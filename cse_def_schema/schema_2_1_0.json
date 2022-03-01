@@ -45,7 +45,7 @@
             },
             "additionalProperties":true
         },
-        "csiElem":{
+        "csiElement":{
             "type":"object",
             "properties":{
               "name":{
@@ -267,7 +267,7 @@
                                 }
                             }
                         },
-                        "cni":{
+                        "cniObject":{
                             "type":"object",
                             "description":"The CNI and version to use.",
                             "properties":{
@@ -296,7 +296,7 @@
                             "type":"array",
                             "description":"Array of CSI's to use for the cluster.",
                             "items":{
-                                "$ref":"#/definitions/csiElem"
+                                "$ref":"#/definitions/csiElement"
                             },
                             "default":[
 
@@ -447,7 +447,7 @@
                         "type": "string"
                     }
                 },
-                "cni":{
+                "cniObject":{
                     "type":"object",
                     "description":"The CNI and version to use.",
                     "properties":{
@@ -476,7 +476,7 @@
                     "type":"array",
                     "description":"Array of CSI's to use for the cluster.",
                     "items":{
-                        "$ref":"#/definitions/csiElem"
+                        "$ref":"#/definitions/csiElement"
                     },
                     "default":[
 

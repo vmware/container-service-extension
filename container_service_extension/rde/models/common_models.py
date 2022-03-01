@@ -80,7 +80,7 @@ class DefEntityType:
 
 @dataclass_json(undefined=Undefined.EXCLUDE)
 @dataclass(frozen=True)
-class DefEntityType2_0:
+class DefEntityType2_1:
     """Defined Entity type schema for the apiVersion = 36.0."""
 
     name: str
@@ -363,7 +363,7 @@ class EntityType(Enum):
         nss=Nss.NATIVE_CLUSTER.value,
         description=''
     )
-    NATIVE_ENTITY_TYPE_2_1_0 = DefEntityType2_0(
+    NATIVE_ENTITY_TYPE_2_1_0 = DefEntityType2_1(
         name='nativeClusterEntityType',
         id=f"{DEF_ENTITY_TYPE_ID_PREFIX}:{Vendor.CSE.value}:{Nss.NATIVE_CLUSTER}:2.1.0",# noqa: E501
         schema=load_rde_schema(SchemaFile.SCHEMA_2_1_0),
