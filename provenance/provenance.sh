@@ -69,6 +69,7 @@ head=$(git log -1 --pretty=format:%H)
 version=$(git describe --tags --abbrev=0)
 identifier=$(git describe --tags)
 components=$(getComponents)
+release_version=`curl -s 'https://pypi.org/pypi/container-service-extension/json' | python -mjson.tool | grep \"version\" | awk -F"\"" '{print $4}'`
 
 provenanceJsonTemplate="
 {
@@ -82,7 +83,7 @@ provenanceJsonTemplate="
             \"source_repositories\": [
                 {
                     \"content\": \"source\",
-                    \"branch\": \"main\",
+                    \"branch\": \"cse_3_1_updates\",
                     \"host\": \"github.com\",
                     \"path\": \"vmware/$project\",
                     \"ref\": \"$head\",
@@ -91,31 +92,17 @@ provenanceJsonTemplate="
             ],
             \"target_repositories\": [
                 {
-                    \"content\": \"binary\",
+                    \"content\": \"bdist_wheel\",
                     \"protocol\": \"https\",
-                    \"host\": \"github.com\",
+                    \"host\": \"pypi.org\",
                     \"path\": [
-                        \"vmware/$project/releases/tag/$version\"
+                        \"project/$project/$release_version/\"
                     ]
                 }
             ],
             \"components\": [
                 ${components%,}
-            ],
-            \"actions\": {
-                \"edit-changelog\": {
-                    \"typename\": \"action\"
-                },
-                \"create-zipped-binaries\": {
-                    \"typename\": \"action\"
-                },
-                \"create-github-tag\": {
-                    \"typename\": \"action\"
-                },
-                \"prepare-next-version\": {
-                    \"typename\": \"action\"
-                }
-            }
+            ]
         }
     }
 }"
