@@ -21,7 +21,7 @@ from container_service_extension.logging.logger import NULL_LOGGER
 import container_service_extension.rde.constants as def_constants
 from container_service_extension.rde.models.abstractNativeEntity import AbstractNativeEntity  # noqa: E501
 import container_service_extension.rde.models.rde_1_0_0 as rde_1_0_0
-import container_service_extension.rde.models.rde_2_0_0 as rde_2_0_0
+import container_service_extension.rde.models.rde_2_1_0 as rde_2_1_0
 import container_service_extension.rde.models.rde_factory as rde_factory
 
 
@@ -85,10 +85,10 @@ def get_rde_metadata(rde_version: str) -> dict:
 
 
 def construct_cluster_spec_from_entity_status(
-        entity_status: Union[rde_1_0_0.Status, rde_2_0_0.Status],
+        entity_status: Union[rde_1_0_0.Status, rde_2_1_0.Status],
         rde_version: str,
         is_tkgm_with_default_sizing_in_control_plane: bool = False,
-        is_tkgm_with_default_sizing_in_workers: bool = False) -> Union[rde_1_0_0.ClusterSpec, rde_2_0_0.ClusterSpec]:  # noqa: E501
+        is_tkgm_with_default_sizing_in_workers: bool = False) -> Union[rde_1_0_0.ClusterSpec, rde_2_1_0.ClusterSpec]:  # noqa: E501
     """Construct cluster spec of the specified rde version from the current status of the cluster.
 
     :param rde_X_X_X Status entity_status: Entity Status of rde of given version  # noqa: E501
@@ -101,8 +101,8 @@ def construct_cluster_spec_from_entity_status(
     :raises NotImplementedError
     """
     # TODO: Refactor this multiple if to rde_version -> handler pattern
-    if rde_version == def_constants.RDEVersion.RDE_2_0_0.value:
-        return construct_2_0_0_cluster_spec_from_entity_status(
+    if rde_version == def_constants.RDEVersion.RDE_2_1_0.value:
+        return construct_2_1_0_cluster_spec_from_entity_status(
             entity_status,
             is_tkgm_with_default_sizing_in_control_plane=is_tkgm_with_default_sizing_in_control_plane,  # noqa: E501
             is_tkgm_with_default_sizing_in_workers=is_tkgm_with_default_sizing_in_workers)  # noqa: E501
@@ -112,12 +112,12 @@ def construct_cluster_spec_from_entity_status(
                               f" not implemented ")
 
 
-def construct_2_0_0_cluster_spec_from_entity_status(
-    entity_status: rde_2_0_0.Status, is_tkgm_with_default_sizing_in_control_plane=False, is_tkgm_with_default_sizing_in_workers=False) -> rde_2_0_0.ClusterSpec:  # noqa:
-    """Construct cluster specification from entity status using rde_2_0_0 model.
+def construct_2_1_0_cluster_spec_from_entity_status(
+    entity_status: rde_2_1_0.Status, is_tkgm_with_default_sizing_in_control_plane=False, is_tkgm_with_default_sizing_in_workers=False) -> rde_2_1_0.ClusterSpec:  # noqa:
+    """Construct cluster specification from entity status using rde_2_1_0 model.
 
-    :param rde_2_0_0.Status entity_status: Entity Status as defined in rde_2_0_0  # noqa: E501
-    :return: Cluster Specification as defined in rde_2_0_0 model
+    :param rde_2_1_0.Status entity_status: Entity Status as defined in rde_2_1_0  # noqa: E501
+    :return: Cluster Specification as defined in rde_2_1_0 model
     """
 
     # Currently only single control-plane is supported.
@@ -137,7 +137,7 @@ def construct_2_0_0_cluster_spec_from_entity_status(
         if not is_tkgm_with_default_sizing_in_control_plane and control_plane_sizing_class:  # noqa: E501
             control_plane_cpu = None
             control_plane_memory = None
-    control_plane = rde_2_0_0.ControlPlane(
+    control_plane = rde_2_1_0.ControlPlane(
         sizing_class=control_plane_sizing_class,
         storage_profile=control_plane_storage_profile,
         cpu=control_plane_cpu,
@@ -163,7 +163,7 @@ def construct_2_0_0_cluster_spec_from_entity_status(
         if not is_tkgm_with_default_sizing_in_workers and worker_sizing_class:
             worker_cpu = None
             worker_memory = None
-    workers = rde_2_0_0.Workers(sizing_class=worker_sizing_class,
+    workers = rde_2_1_0.Workers(sizing_class=worker_sizing_class,
                                 cpu=worker_cpu,
                                 memory=worker_memory,
                                 storage_profile=worker_storage_profile,
@@ -181,30 +181,75 @@ def construct_2_0_0_cluster_spec_from_entity_status(
         if nfs_count > 0:
             nfs_sizing_class = entity_status.nodes.nfs[0].sizing_class
             nfs_storage_profile = entity_status.nodes.nfs[0].storage_profile
-    nfs = rde_2_0_0.Nfs(
+    nfs = rde_2_1_0.Nfs(
         sizing_class=nfs_sizing_class,
         storage_profile=nfs_storage_profile,
         count=nfs_count)
 
-    k8_distribution = rde_2_0_0.Distribution(
+    k8_distribution = rde_2_1_0.Distribution(
         template_name=entity_status.cloud_properties.distribution.template_name,  # noqa: E501
         template_revision=entity_status.cloud_properties.distribution.template_revision)  # noqa: E501
 
-    network_settings = rde_2_0_0.Network(
+    network_settings = rde_2_1_0.Network(
         expose=entity_status.cloud_properties.exposed)
 
-    settings = rde_2_0_0.Settings(
+    csi = None
+    if (
+            entity_status is not None
+            and entity_status.csi is not None
+            and len(entity_status.csi) > 0
+    ):
+        status_csi_elem = entity_status.csi[0]
+        status_csi_k8s_storage = status_csi_elem.default_k8s_storage_class
+        spec_csi_k8s_storage = rde_2_1_0.DefaultK8sStorageClass(
+            vcd_storage_profile_name=status_csi_k8s_storage.vcd_storage_profile_name,  # noqa: E501
+            k8s_storage_class_name=status_csi_k8s_storage.k8s_storage_class_name,  # noqa: E501
+            filesystem=status_csi_k8s_storage.filesystem,
+            use_delete_reclaim_policy=status_csi_k8s_storage.use_delete_reclaim_policy  # noqa: E501
+        )
+        csi = [rde_2_1_0.CsiElement(
+            name=status_csi_elem.name,
+            version=status_csi_elem.version,
+            default=status_csi_elem.default,
+            default_k8s_storage_class=spec_csi_k8s_storage
+        )]
+
+    versioned_cni = None
+    if (
+            entity_status is not None
+            and entity_status.versioned_cni is not None
+    ):
+        versioned_cni = rde_2_1_0.VersionedCni(
+            name=entity_status.versioned_cni.name,
+            version=entity_status.versioned_cni.version
+        )
+
+    cpi = None
+    if (
+        entity_status is not None
+        and entity_status.cpi is not None
+    ):
+        cpi = rde_2_1_0.Cpi(
+            name=entity_status.cpi.name,
+            version=entity_status.cpi.version
+        )
+
+    settings = rde_2_1_0.Settings(
         ovdc_network=entity_status.cloud_properties.ovdc_network_name,
         ssh_key=entity_status.cloud_properties.ssh_key,
         rollback_on_failure=entity_status.cloud_properties.rollback_on_failure,  # noqa: E501
-        network=network_settings)
+        network=network_settings,
+        csi=csi,
+        versioned_cni=versioned_cni,
+        cpi=cpi
+    )
 
-    topology = rde_2_0_0.Topology(
+    topology = rde_2_1_0.Topology(
         control_plane=control_plane,
         workers=workers,
         nfs=nfs)
 
-    return rde_2_0_0.ClusterSpec(settings=settings,
+    return rde_2_1_0.ClusterSpec(settings=settings,
                                  distribution=k8_distribution,
                                  topology=topology)
 

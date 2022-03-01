@@ -62,7 +62,7 @@ from container_service_extension.rde.behaviors.behavior_model import BehaviorErr
 import container_service_extension.rde.common.entity_service as def_entity_svc
 import container_service_extension.rde.constants as def_constants
 import container_service_extension.rde.models.common_models as common_models
-import container_service_extension.rde.models.rde_2_0_0 as rde_2_x
+import container_service_extension.rde.models.rde_2_1_0 as rde_2_x
 import container_service_extension.rde.utils as def_utils
 from container_service_extension.security.context.behavior_request_context import RequestContext  # noqa: E501
 import container_service_extension.security.context.operation_context as operation_context  # noqa: E501

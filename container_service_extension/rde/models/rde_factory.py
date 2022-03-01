@@ -5,7 +5,7 @@
 import semantic_version
 
 from container_service_extension.rde.models.rde_1_0_0 import NativeEntity as NativeEntity1X  # noqa: E501
-from container_service_extension.rde.models.rde_2_0_0 import NativeEntity as NativeEntity2X  # noqa: E501
+from container_service_extension.rde.models.rde_2_1_0 import NativeEntity as NativeEntity2X  # noqa: E501
 
 
 def get_rde_model(rde_version):

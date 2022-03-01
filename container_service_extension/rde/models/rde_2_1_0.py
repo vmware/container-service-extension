@@ -92,10 +92,42 @@ class Services:
 @dataclass_json(letter_case=LetterCase.CAMEL)
 @dataclass
 class Network:
-    cni: Optional[Cni] = None
+    cni: Optional[Cni] = None  # deprecated, should use spec.settings.cni
     pods: Optional[Pods] = None
     services: Optional[Services] = None
     expose: bool = False
+
+
+@dataclass_json(letter_case=LetterCase.CAMEL)
+@dataclass
+class DefaultK8sStorageClass:
+    vcd_storage_profile_name: str
+    k8s_storage_class_name: Optional[str] = None
+    filesystem: Optional[str] = None
+    use_delete_reclaim_policy: Optional[bool] = None
+
+
+@dataclass_json(letter_case=LetterCase.CAMEL)
+@dataclass
+class CsiElement:
+    default: Optional[bool] = None
+    name: Optional[str] = None
+    version: Optional[str] = None
+    default_k8s_storage_class: Optional[DefaultK8sStorageClass] = None
+
+
+@dataclass_json(letter_case=LetterCase.CAMEL)
+@dataclass
+class VersionedCni:
+    name: Optional[str] = None
+    version: Optional[str] = None
+
+
+@dataclass_json(letter_case=LetterCase.CAMEL)
+@dataclass
+class Cpi:
+    name: Optional[str] = None
+    version: Optional[str] = None
 
 
 @dataclass_json(letter_case=LetterCase.CAMEL)
@@ -105,6 +137,9 @@ class Settings:
     ssh_key: Optional[str] = None
     rollback_on_failure: bool = True
     network: Network = Network()
+    csi: Optional[List[CsiElement]] = None
+    cni: Optional[VersionedCni] = None
+    cpi: Optional[Cpi] = None
 
 
 @dataclass_json(letter_case=LetterCase.CAMEL)
@@ -160,6 +195,12 @@ class Private:
 
 @dataclass_json(letter_case=LetterCase.CAMEL)
 @dataclass
+class TkgCorePackages:
+    kapp_controller: Optional[str] = None
+
+
+@dataclass_json(letter_case=LetterCase.CAMEL)
+@dataclass
 class Status:
     phase: Optional[str] = None
     cni: Optional[str] = None
@@ -174,6 +215,10 @@ class Status:
     persistent_volumes: Optional[List[str]] = None
     virtual_IPs: Optional[List[str]] = None
     private: Optional[Private] = None
+    csi: Optional[List[CsiElement]] = None
+    versioned_cni: Optional[VersionedCni] = None
+    cpi: Optional[Cpi] = None
+    tkgCorePackages: Optional[TkgCorePackages] = None
 
 
 @dataclass_json(letter_case=LetterCase.CAMEL)
@@ -252,17 +297,21 @@ class NativeEntity(AbstractNativeEntity):
 
     @classmethod
     def from_native_entity(cls, native_entity: AbstractNativeEntity):
-        """Construct rde_2.0.0 native entity from different rde_x.x.x.
+        """Construct rde_2.1.0 native entity from different rde_x.x.x.
 
         Use case: converts the NativeEntity of the specified RDE version
-        to RDE 2.0.0.
+        to RDE 2.1.0.
 
         :param AbstractNativeEntity native_entity: input native entity
         :return: native entity
-        :rtype: rde_2.0.0.NativeEntity
+        :rtype: rde_2.1.0.NativeEntity
         """
         if isinstance(native_entity, NativeEntity):
-            return native_entity
+            if native_entity.api_version == rde_constants.PAYLOAD_VERSION_2_1:
+                return native_entity
+            else:
+                # Upgrade RDE 2.0 -> 2.1
+                return NativeEntity(native_entity.to_dict())
 
         if isinstance(native_entity, rde_1_0_0.NativeEntity):
             # TODO should change very much
@@ -340,9 +389,15 @@ class NativeEntity(AbstractNativeEntity):
                 # NOTE: since details for the field `uid` is not present in
                 # RDE 1.0, it is left empty.
                 # Proper value for `uid` should be populated after RDE is converted  # noqa: E501
-                # as `uid` is a required property in Status for RDE 2.0
+                # as `uid` is a required property in Status for RDE > 2.0
+                cni_name = cni_version = None
+                if rde_1_x_entity.status.cni:
+                    cni_split = rde_1_x_entity.status.cni.split()
+                    cni_name = cni_split[0]
+                    if len(cni_split) > 1:
+                        cni_version = cni_split[1]
                 status = Status(phase=rde_1_x_entity.status.phase,
-                                cni=rde_1_x_entity.status.cni,
+                                cni=None,  # deprecated
                                 task_href=rde_1_x_entity.status.task_href,
                                 kubernetes=rde_1_x_entity.status.kubernetes,
                                 docker_version=rde_1_x_entity.status.docker_version,  # noqa: E501
@@ -350,12 +405,17 @@ class NativeEntity(AbstractNativeEntity):
                                 external_ip=external_ip,
                                 nodes=nodes,
                                 uid=None,
-                                cloud_properties=cloud_properties)
+                                cloud_properties=cloud_properties,
+                                versioned_cni=VersionedCni(
+                                    name=cni_name,
+                                    version=cni_version
+                                )
+                                )
             # NOTE: since details for the field `site` is not present in
             # RDE 1.0, it is left empty.
             # Proper value for `site` should be populated after RDE is
             # converted. Since, `site` is a required property in Metadata
-            # for RDE 2.0
+            # for RDE > 2.0
             metadata = Metadata(name=rde_1_x_entity.metadata.cluster_name,
                                 org_name=rde_1_x_entity.metadata.org_name,
                                 virtual_data_center_name=rde_1_x_entity.metadata.ovdc_name,  # noqa: E501
@@ -397,13 +457,13 @@ class NativeEntity(AbstractNativeEntity):
                 spec=spec,
                 status=status,
                 kind=rde_1_x_entity.kind,
-                api_version=rde_constants.PAYLOAD_VERSION_2_0
+                api_version=rde_constants.PAYLOAD_VERSION_2_1
             )
             return rde_2_entity
 
     @classmethod
     def from_cluster_data(cls, cluster: dict, kind: str, **kwargs):
-        """Construct rde_2.0.0 native entity from non-rde cluster.
+        """Construct rde_2.1.0 native entity from non-rde cluster.
 
         NOTE: This method is used primarily to create RDE for legacy clusters.
             So, only cpu/memory fields for RDE can be populated. Sizing class
@@ -412,7 +472,7 @@ class NativeEntity(AbstractNativeEntity):
         :param dict cluster: cluster metadata
         :param str kind: cluster kind
         :return: native entity
-        :rtype: rde_2.0.0.NativeEntity
+        :rtype: rde_2.1.0.NativeEntity
         """
         site = kwargs.get('site', '')
         worker_nodes = []
@@ -517,7 +577,7 @@ class NativeEntity(AbstractNativeEntity):
                 virtual_data_center_name=cluster['vdc_name'],
                 name=cluster['name']
             ),
-            api_version=rde_constants.PAYLOAD_VERSION_2_0
+            api_version=rde_constants.PAYLOAD_VERSION_2_1
         )
         return cluster_entity
 
@@ -532,7 +592,7 @@ class NativeEntity(AbstractNativeEntity):
         :rtype: str
         """
         cluster_spec_field_descriptions = """# Short description of various properties used in this sample cluster configuration
-# apiVersion: Represents the payload version of the cluster specification. By default, \"cse.vmware.com/v2.0\" is used.
+# apiVersion: Represents the payload version of the cluster specification. By default, \"cse.vmware.com/v2.1\" is used.
 # kind: The kind of the Kubernetes cluster.
 #
 # metadata: This is a required section
@@ -615,7 +675,7 @@ class NativeEntity(AbstractNativeEntity):
         status = Status()
 
         native_entity_dict = NativeEntity(
-            api_version=rde_constants.PAYLOAD_VERSION_2_0,
+            api_version=rde_constants.PAYLOAD_VERSION_2_1,
             metadata=metadata,
             spec=cluster_spec,
             status=status,

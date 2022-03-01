@@ -46,7 +46,7 @@ When support for a particular API version is removed, corresponding entries in t
 Maintaining backward compatibility is of utmost importance and hence existing handler mapping and old handler
 behavior shouldn't be changed ever. If we ever feel that it is hard to maintain backward compatibility with a single
 handler function, we should choose to have two handler functions that map to their respective API versions in the
-handler map. Additioanly, any change in input/output of an endpoint that can't get an API version bump,
+handler map. Additionaly, any change in input/output of an endpoint that can't get an API version bump,
 should be moved to a new url.
 
 ## RDE

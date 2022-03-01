@@ -26,6 +26,7 @@ DEF_RESOLVED_STATE = 'RESOLVED'
 
 PAYLOAD_VERSION_PREFIX = 'cse.vmware.com/'
 PAYLOAD_VERSION_2_0 = PAYLOAD_VERSION_PREFIX + 'v2.0'
+PAYLOAD_VERSION_2_1 = PAYLOAD_VERSION_PREFIX + 'v2.1'
 
 
 @unique
@@ -46,6 +47,7 @@ class Nss(str, Enum):
 class SchemaFile(str, Enum):
     SCHEMA_1_0_0 = 'schema_1_0_0.json'
     SCHEMA_2_0_0 = 'schema_2_0_0.json'
+    SCHEMA_2_1_0 = 'schema_2_1_0.json'
     CAPVCD_1_0_0 = 'capvcd_schema_1_0_0.json'
 
 
@@ -68,7 +70,7 @@ DEF_NATIVE_ENTITY_TYPE_RIGHT_BUNDLE = \
 @unique
 class RuntimeRDEVersion(str, Enum):
     RDE_1_X = '1.0.0'
-    RDE_2_X = '2.0.0'
+    RDE_2_X = '2.1.0'
 
 
 @unique
@@ -80,6 +82,7 @@ class CapvcdRDEVersion(str, Enum):
 class RDEVersion(str, Enum):
     RDE_1_0_0 = '1.0.0'
     RDE_2_0_0 = '2.0.0'
+    RDE_2_1_0 = '2.1.0'
 
 
 @unique
@@ -107,10 +110,10 @@ class RDEMetadataKey(str, Enum):
 #   CSE releases.
 
 # Examples:
-# Mapping for CSE 3.1:
+# Mapping for CSE 3.1.3:
 # MAP_VCD_API_VERSION_TO_RUNTIME_RDE_VERSION = {
 #     35.0: 1.0.0,
-#     36.0: 2.0.0
+#     36.0: 2.1.0
 # }
 #
 # If CSE 3.2 introduces Minor version bump in RDE (i.e 2.1) and is released
@@ -149,11 +152,11 @@ MAP_VCD_API_VERSION_TO_RUNTIME_RDE_VERSION = {
 # }
 MAP_VCD_API_VERSION_TO_RDE_VERSION = {
     '35.0': RDEVersion.RDE_1_0_0.value,
-    '36.0': RDEVersion.RDE_2_0_0.value
+    '36.0': RDEVersion.RDE_2_1_0.value
 }
 
 MAP_INPUT_PAYLOAD_VERSION_TO_RDE_VERSION = {
-    PAYLOAD_VERSION_2_0: RDEVersion.RDE_2_0_0.value
+    PAYLOAD_VERSION_2_1: RDEVersion.RDE_2_1_0.value
 }
 
 

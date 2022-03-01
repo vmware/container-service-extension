@@ -11,7 +11,7 @@ import yaml
 import container_service_extension.common.constants.server_constants as server_constants  # noqa: E501
 import container_service_extension.common.constants.shared_constants as shared_constants  # noqa: E501
 from container_service_extension.rde.models.abstractNativeEntity import AbstractNativeEntity  # noqa: E501
-import container_service_extension.rde.models.rde_2_0_0 as rde_2_0_0
+import container_service_extension.rde.models.rde_2_1_0 as rde_2_1_0
 
 
 @dataclass_json
@@ -211,8 +211,8 @@ class NativeEntity(AbstractNativeEntity):
         if isinstance(native_entity, NativeEntity):
             return native_entity
 
-        if isinstance(native_entity, rde_2_0_0.NativeEntity):
-            rde_2_x_entity: rde_2_0_0.NativeEntity = native_entity
+        if isinstance(native_entity, rde_2_1_0.NativeEntity):
+            rde_2_x_entity: rde_2_1_0.NativeEntity = native_entity
 
             metadata = Metadata(
                 cluster_name=rde_2_x_entity.metadata.name,
