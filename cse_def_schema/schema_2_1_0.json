@@ -477,11 +477,11 @@
                             "type":"string",
                             "description":"The kapp-controller version."
                         },
-                        "metrics-server":{
+                        "metricsServer":{
                             "type":"string",
                             "description":"The metrics-server version."
                         },
-                        "tanzu-addons-manager":{
+                        "tanzuAddonsManager":{
                             "type":"string",
                             "description":"The tanzu-addons-manager version."
                         }
