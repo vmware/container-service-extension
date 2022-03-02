@@ -298,12 +298,12 @@ class ClusterService(abstract_broker.AbstractBroker):
                 input_native_entity.spec.settings.cpi.version = CPI_DEFAULT_VERSION  # noqa: E501
 
             # Handle defaults for cni
-            if input_native_entity.spec.settings.cniObject is None:
-                input_native_entity.spec.settings.cniObject = rde_2_x.CniObject()  # noqa: E501
-            input_native_entity.spec.settings.cniObject.name = ANTREA_NAME
-            if input_native_entity.spec.settings.cniObject.version is None:
+            if input_native_entity.spec.settings.cni is None:
+                input_native_entity.spec.settings.cni = rde_2_x.CniObject()  # noqa: E501
+            input_native_entity.spec.settings.cni.name = ANTREA_NAME
+            if input_native_entity.spec.settings.cni.version is None:
                 # TODO: check server config for version
-                input_native_entity.spec.settings.cniObject.version = ""
+                input_native_entity.spec.settings.cni.version = ""
 
             # Get changes needed for rde update
             csi_elem_rde_status_value = rde_2_x.CsiElement()
@@ -326,8 +326,7 @@ class ClusterService(abstract_broker.AbstractBroker):
                 'entity.status.cloud_properties': cloud_properties,
                 'entity.status.uid': entity_id,
                 'entity.status.task_href': self.task_href,
-                'entity.status.cni_object.name': input_settings.cniObject.name,  # noqa: E501
-                'entity.status.cni_object.version': input_settings.cniObject.version,  # noqa: E501
+                'entity.status.cni': f"{input_settings.cni.name} {input_settings.cni.version}",  # noqa: E501
                 'entity.status.cpi.name': input_settings.cpi.name,
                 'entity.status.cpi.version': input_settings.cpi.version,
                 'entity.status.csi': [csi_elem_rde_status_value]
@@ -786,7 +785,7 @@ class ClusterService(abstract_broker.AbstractBroker):
             rollback = input_native_entity.spec.settings.rollback_on_failure
             expose = input_native_entity.spec.settings.network.expose
             # Caller functions guarantee that cni/cpi/csi are not None
-            cni_version = input_native_entity.spec.settings.cniObject.version
+            cni_version = input_native_entity.spec.settings.cni.version
             cpi_version = input_native_entity.spec.settings.cpi.version
             csi_version = input_native_entity.spec.settings.csi[0].version
             default_storage_class = input_native_entity.spec.settings.csi[0].default_k8s_storage_class  # noqa: E501

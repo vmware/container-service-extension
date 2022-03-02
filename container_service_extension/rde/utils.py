@@ -217,11 +217,12 @@ def construct_2_1_0_cluster_spec_from_entity_status(
     cni_obj = None
     if (
             entity_status is not None
-            and entity_status.cni_object is not None
+            and entity_status.cni is not None
     ):
+        cni_version_list = entity_status.cni.split()
         cni_obj = rde_2_1_0.CniObject(
-            name=entity_status.cni_object.name,
-            version=entity_status.cni_object.version
+            name=cni_version_list[0],
+            version=cni_version_list[1] if len(cni_version_list) > 0 else ''
         )
 
     cpi = None
@@ -240,7 +241,7 @@ def construct_2_1_0_cluster_spec_from_entity_status(
         rollback_on_failure=entity_status.cloud_properties.rollback_on_failure,
         network=network_settings,
         csi=csi,
-        cniObject=cni_obj,
+        cni=cni_obj,
         cpi=cpi
     )
 

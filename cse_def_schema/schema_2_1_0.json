@@ -267,7 +267,7 @@
                                 }
                             }
                         },
-                        "cniObject":{
+                        "cni":{
                             "type":"object",
                             "description":"The CNI and version to use.",
                             "properties":{
@@ -447,18 +447,6 @@
                         "type": "string"
                     }
                 },
-                "cniObject":{
-                    "type":"object",
-                    "description":"The CNI and version to use.",
-                    "properties":{
-                        "name":{
-                            "type":"string"
-                        },
-                        "version":{
-                            "type":"string"
-                        }
-                    }
-                },
                 "cpi":{
                     "type":"object",
                     "description":"The CPI and version to use.",
@@ -488,6 +476,14 @@
                         "kappController":{
                             "type":"string",
                             "description":"The kapp-controller version."
+                        },
+                        "metrics-server":{
+                            "type":"string",
+                            "description":"The metrics-server version."
+                        },
+                        "tanzu-addons-manager":{
+                            "type":"string",
+                            "description":"The tanzu-addons-manager version."
                         }
                     },
                     "additionalProperties":true

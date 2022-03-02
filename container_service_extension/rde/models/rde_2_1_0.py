@@ -138,7 +138,7 @@ class Settings:
     rollback_on_failure: bool = True
     network: Network = Network()
     csi: Optional[List[CsiElement]] = None
-    cniObject: CniObject = CniObject()
+    cni: CniObject = CniObject()
     cpi: Cpi = Cpi()
 
 
@@ -197,13 +197,15 @@ class Private:
 @dataclass
 class TkgCorePackages:
     kapp_controller: Optional[str] = None
+    metrics_server: Optional[str] = None
+    tanzu_addons_manager: Optional[str] = None
 
 
 @dataclass_json(letter_case=LetterCase.CAMEL)
 @dataclass
 class Status:
     phase: Optional[str] = None
-    cni: Optional[str] = None  # deprecated
+    cni: Optional[str] = None
     task_href: Optional[str] = None
     kubernetes: Optional[str] = None
     docker_version: Optional[str] = None
@@ -216,7 +218,6 @@ class Status:
     virtual_IPs: Optional[List[str]] = None
     private: Optional[Private] = None
     csi: Optional[List[CsiElement]] = None
-    cni_object: CniObject = CniObject()
     cpi: Cpi = Cpi()
     tkgCorePackages: TkgCorePackages = TkgCorePackages()
 
@@ -311,8 +312,15 @@ class NativeEntity(AbstractNativeEntity):
                 return native_entity
             else:
                 # Upgrade RDE 2.0 -> 2.1
-                # TODO: Ensure settings.cni is deprecated
-                return NativeEntity(native_entity.to_dict())
+                # Ensure settings.cni is deprecated
+                upgraded_native_entity = NativeEntity(native_entity.to_dict())
+                if not upgraded_native_entity.spec.settings.network.cni:  # noqa: E501
+                    cni_version_list = upgraded_native_entity.spec.settings.network.cni.split()  # noqa: E501
+                    upgraded_native_entity.spec.settings.cni.name = cni_version_list[0]  # noqa: E501
+                    if len(cni_version_list) > 0:
+                        upgraded_native_entity.spec.settings.cni.version = cni_version_list[1]  # noqa: E501
+                    upgraded_native_entity.spec.settings.network.cni = None
+                return upgraded_native_entity
 
         if isinstance(native_entity, rde_1_0_0.NativeEntity):
             # TODO should change very much
@@ -391,14 +399,8 @@ class NativeEntity(AbstractNativeEntity):
                 # RDE 1.0, it is left empty.
                 # Proper value for `uid` should be populated after RDE is converted  # noqa: E501
                 # as `uid` is a required property in Status for RDE > 2.0
-                cni_name = cni_version = None
-                if rde_1_x_entity.status.cni:
-                    cni_split = rde_1_x_entity.status.cni.split()
-                    cni_name = cni_split[0]
-                    if len(cni_split) > 1:
-                        cni_version = cni_split[1]
                 status = Status(phase=rde_1_x_entity.status.phase,
-                                cni=None,  # deprecated
+                                cni=rde_1_x_entity.status.cni,
                                 task_href=rde_1_x_entity.status.task_href,
                                 kubernetes=rde_1_x_entity.status.kubernetes,
                                 docker_version=rde_1_x_entity.status.docker_version,  # noqa: E501
@@ -407,10 +409,6 @@ class NativeEntity(AbstractNativeEntity):
                                 nodes=nodes,
                                 uid=None,
                                 cloud_properties=cloud_properties,
-                                cni_object=CniObject(
-                                    name=cni_name,
-                                    version=cni_version
-                                )
                                 )
             # NOTE: since details for the field `site` is not present in
             # RDE 1.0, it is left empty.
@@ -679,7 +677,7 @@ class NativeEntity(AbstractNativeEntity):
                 ovdc_network='ovdc_network_name',
                 ssh_key=None,
                 csi=[sample_csi_elem],
-                cniObject=CniObject(),
+                cni=CniObject(),
                 cpi=Cpi()
             )
         else:
