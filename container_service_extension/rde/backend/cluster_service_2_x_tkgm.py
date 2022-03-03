@@ -21,7 +21,6 @@ import pyvcloud.vcd.vm as vcd_vm
 import validators
 
 from container_service_extension.common.constants.server_constants import \
-    ANTREA_NAME, \
     CLOUDINIT_GUEST_USERDATA, \
     CLOUDINIT_GUEST_USERDATA_ENCODING, \
     CPI_DEFAULT_VERSION, \
@@ -746,47 +745,46 @@ class ClusterService(abstract_broker.AbstractBroker):
             # The order of precedence for csi/cpi/cni defaults is:
             # 1. RDE params 2. CSE config file 3. hard-coded constants
             # Handle defaults for csi
-            if input_native_entity.spec.settings.csi is None or \
-                    len(input_native_entity.spec.settings.csi) == 0:
-                input_native_entity.spec.settings.csi = [rde_2_x.CsiElement()]
-            curr_csi_elem = input_native_entity.spec.settings.csi[0]
-            curr_csi_elem.name = CSI_NAME
-            curr_csi_elem.default = True
-            if curr_csi_elem.version is None:
+            csi_list = input_native_entity.spec.settings.csi
+            if csi_list is None and len(csi_list) > 0 and \
+                    csi_list[0].version is not None:
+                csi_version = csi_list[0].version
+            else:
                 # TODO: check server config for version
-                curr_csi_elem.version = CSI_DEFAULT_VERSION
+                csi_version = CSI_DEFAULT_VERSION
 
             # Handle defaults for cpi
-            if input_native_entity.spec.settings.cpi is None:
-                input_native_entity.spec.settings.cpi = rde_2_x.Cpi()
-            input_native_entity.spec.settings.cpi.name = CPI_NAME
-            if input_native_entity.spec.settings.cpi.version is None:
+            if input_native_entity.spec.settings.cpi is not None and \
+                    input_native_entity.spec.settings.cpi.version is not None:
+                cpi_version = input_native_entity.spec.settings.cpi.version
+            else:
                 # TODO: check server config for version
-                input_native_entity.spec.settings.cpi.version = CPI_DEFAULT_VERSION  # noqa: E501
+                cpi_version = CPI_DEFAULT_VERSION
 
             # Handle defaults for cni
-            if input_native_entity.spec.settings.cni is None:
-                input_native_entity.spec.settings.cni = rde_2_x.CniObject()  # noqa: E501
-            input_native_entity.spec.settings.cni.name = ANTREA_NAME
-            if input_native_entity.spec.settings.cni.version is None:
+            if input_native_entity.spec.settings.cni is not None and \
+                    input_native_entity.spec.settings.cni.version is not None:
+                cni_version = input_native_entity.spec.settings.cni.version
+            else:
                 # TODO: check server config for version
-                input_native_entity.spec.settings.cni.version = ""
+                cni_version = ""
 
-            cni_version = input_native_entity.spec.settings.cni.version
-            cpi_version = input_native_entity.spec.settings.cpi.version
-            csi_version = input_native_entity.spec.settings.csi[0].version
-            default_storage_class = input_native_entity.spec.settings.csi[0].default_k8s_storage_class  # noqa: E501
-            create_default_storage_class: bool = default_storage_class is not None  # noqa: E501
+            input_default_storage_class = None
+            create_default_storage_class = False
+            if csi_list is not None and len(csi_list) > 0 and \
+                    csi_list[0].default_k8s_storage_class is not None:
+                input_default_storage_class = csi_list[0].default_k8s_storage_class  # noqa: E501
+                create_default_storage_class = True
             # dsc: default storage class
             dsc_storage_profile_name = None
             dsc_k8s_storage_class_name = None
             dsc_filesystem = None
             dsc_use_delete_reclaim_policy: bool = False
             if create_default_storage_class:
-                dsc_storage_profile_name = default_storage_class.vcd_storage_profile_name  # noqa: E501
-                dsc_k8s_storage_class_name = default_storage_class.k8s_storage_class_name  # noqa: E501
-                dsc_filesystem = default_storage_class.filesystem
-                dsc_use_delete_reclaim_policy = default_storage_class.use_delete_reclaim_policy  # noqa: E501
+                dsc_storage_profile_name = input_default_storage_class.vcd_storage_profile_name  # noqa: E501
+                dsc_k8s_storage_class_name = input_default_storage_class.k8s_storage_class_name  # noqa: E501
+                dsc_filesystem = input_default_storage_class.filesystem
+                dsc_use_delete_reclaim_policy = input_default_storage_class.use_delete_reclaim_policy  # noqa: E501
 
             k8s_pod_cidr = TKGM_DEFAULT_POD_NETWORK_CIDR
             if (
@@ -967,12 +965,15 @@ class ClusterService(abstract_broker.AbstractBroker):
             csi_elem_rde_status_value = rde_2_x.CsiElement()
             # no deep copy is currently needed because the default
             # storage class has no object fields
-            csi_elem_rde_status_value.default_k8s_storage_class = \
-                copy.copy(curr_csi_elem.default_k8s_storage_class)
-            csi_elem_rde_status_value.name = curr_csi_elem.name
-            csi_elem_rde_status_value.version = curr_csi_elem.version
-            csi_elem_rde_status_value.default = curr_csi_elem.default
-            input_settings = input_native_entity.spec.settings
+            if create_default_storage_class:
+                csi_elem_rde_status_value.default_k8s_storage_class = \
+                    copy.copy(input_default_storage_class)
+            csi_elem_rde_status_value.name = CSI_NAME
+            csi_elem_rde_status_value.version = csi_version
+            # When multiple CSI's are supported we cannot hardcode this
+            # csi `default` field; we will need to look into the spec and we
+            # may need to validate if there is only one default csi
+            csi_elem_rde_status_value.default = True
             changes = {
                 'entity.status.private': rde_2_x.Private(
                     kube_token=control_plane_join_cmd,
@@ -993,9 +994,9 @@ class ClusterService(abstract_broker.AbstractBroker):
                     tags[ClusterMetadataKey.TEMPLATE_NAME],
                 'entity.status.cloud_properties.distribution.''template_revision':  # noqa: E501
                     tags[ClusterMetadataKey.TEMPLATE_REVISION],
-                'entity.status.cni': f"{input_settings.cni.name} {input_settings.cni.version}",  # noqa: E501
-                'entity.status.cpi.name': input_settings.cpi.name,
-                'entity.status.cpi.version': input_settings.cpi.version,
+                'entity.status.cni': f"{CNI_NAME} {cni_version}",
+                'entity.status.cpi.name': CPI_NAME,
+                'entity.status.cpi.version': cpi_version,
                 'entity.status.csi': [csi_elem_rde_status_value]
             }
 
