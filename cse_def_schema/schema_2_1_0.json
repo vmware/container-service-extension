@@ -45,7 +45,7 @@
             },
             "additionalProperties":true
         },
-        "csiElem":{
+        "csiElement":{
             "type":"object",
             "properties":{
               "name":{
@@ -296,7 +296,7 @@
                             "type":"array",
                             "description":"Array of CSI's to use for the cluster.",
                             "items":{
-                                "$ref":"#/definitions/csiElem"
+                                "$ref":"#/definitions/csiElement"
                             },
                             "default":[
 
@@ -447,18 +447,6 @@
                         "type": "string"
                     }
                 },
-                "cni":{
-                    "type":"object",
-                    "description":"The CNI and version to use.",
-                    "properties":{
-                        "name":{
-                            "type":"string"
-                        },
-                        "version":{
-                            "type":"string"
-                        }
-                    }
-                },
                 "cpi":{
                     "type":"object",
                     "description":"The CPI and version to use.",
@@ -476,7 +464,7 @@
                     "type":"array",
                     "description":"Array of CSI's to use for the cluster.",
                     "items":{
-                        "$ref":"#/definitions/csiElem"
+                        "$ref":"#/definitions/csiElement"
                     },
                     "default":[
 
@@ -488,6 +476,14 @@
                         "kappController":{
                             "type":"string",
                             "description":"The kapp-controller version."
+                        },
+                        "metricsServer":{
+                            "type":"string",
+                            "description":"The metrics-server version."
+                        },
+                        "tanzuAddonsManager":{
+                            "type":"string",
+                            "description":"The tanzu-addons-manager version."
                         }
                     },
                     "additionalProperties":true

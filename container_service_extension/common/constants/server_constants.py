@@ -153,6 +153,9 @@ class FlattenedClusterSpecKey2X(Enum):
     EXPOSE = 'settings.network.expose'
     POD_CIDR = 'settings.network.pods.cidrBlocks'
     SVC_CIDR = 'settings.network.services.cidrBlocks'
+    CSI = "settings.csi"
+    CPI_OBJECT = "settings.cpiObject"
+    CNI = "settings.cni"
 
 
 VALID_UPDATE_FIELDS_2X = \
@@ -504,6 +507,8 @@ class ClusterMetadataKey(str, Enum):
     KUBERNETES_VERSION = "cse.kubernetes.version"
     CNI = "cse.cni"
     CNI_VERSION = 'cse.cni.version'
+    CPI = "cse.cpi"
+    CSI = "cse.csi"
 
 
 @unique
@@ -807,6 +812,7 @@ class PostCustomizationPhase(Enum):
     KUBECTL_APPLY_CNI = 'guestinfo.postcustomization.kubectl.cni.install.status'  # noqa: E501
     KUBECTL_APPLY_CPI = 'guestinfo.postcustomization.kubectl.cpi.install.status'  # noqa: E501
     KUBECTL_APPLY_CSI = 'guestinfo.postcustomization.kubectl.csi.install.status'  # noqa: E501
+    KUBECTL_APPLY_DEFAULT_STORAGE_CLASS = 'guestinfo.postcustomization.kubectl.default_storage_class.status'  # noqa: E501
     KUBEADM_TOKEN_GENERATE = 'guestinfo.postcustomization.kubeadm.token.generate.status'  # noqa: E501
     KUBEADM_NODE_JOIN = 'guestinfo.postcustomization.kubeadm.node.join.status'
     PROXY_SETTING = 'guestinfo.postcustomization.proxy.setting.status'
@@ -828,3 +834,9 @@ MAX_RDE_UPDATE_ATTEMPTS = 10
 # keys of the Behavior task response that gets sent to VCD
 BEHAVIOR_TASK_RESPONSE_RESULT_MESSAGE_KEY = "result"
 BEHAVIOR_TASK_RESPONSE_RESULT_CONTENT_MESSAGE_KEY = "resultContent"
+
+# CPI/CNI/CSI constants
+CPI_NAME = "cloud-provider-for-cloud-director"
+CPI_DEFAULT_VERSION = "1.1.0"
+CSI_NAME = "cloud-director-named-disk-csi-driver"
+CSI_DEFAULT_VERSION = "1.1.0"

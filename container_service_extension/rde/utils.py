@@ -214,14 +214,15 @@ def construct_2_1_0_cluster_spec_from_entity_status(
             default_k8s_storage_class=spec_csi_k8s_storage
         )]
 
-    versioned_cni = None
+    cni_obj = None
     if (
             entity_status is not None
-            and entity_status.versioned_cni is not None
+            and entity_status.cni is not None
     ):
-        versioned_cni = rde_2_1_0.VersionedCni(
-            name=entity_status.versioned_cni.name,
-            version=entity_status.versioned_cni.version
+        cni_version_list = entity_status.cni.split()
+        cni_obj = rde_2_1_0.CniObject(
+            name=cni_version_list[0],
+            version=cni_version_list[1] if len(cni_version_list) > 1 else ''
         )
 
     cpi = None
@@ -237,10 +238,10 @@ def construct_2_1_0_cluster_spec_from_entity_status(
     settings = rde_2_1_0.Settings(
         ovdc_network=entity_status.cloud_properties.ovdc_network_name,
         ssh_key=entity_status.cloud_properties.ssh_key,
-        rollback_on_failure=entity_status.cloud_properties.rollback_on_failure,  # noqa: E501
+        rollback_on_failure=entity_status.cloud_properties.rollback_on_failure,
         network=network_settings,
         csi=csi,
-        versioned_cni=versioned_cni,
+        cni=cni_obj,
         cpi=cpi
     )
 
