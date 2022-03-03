@@ -222,7 +222,7 @@ def construct_2_1_0_cluster_spec_from_entity_status(
         cni_version_list = entity_status.cni.split()
         cni_obj = rde_2_1_0.CniObject(
             name=cni_version_list[0],
-            version=cni_version_list[1] if len(cni_version_list) > 0 else ''
+            version=cni_version_list[1] if len(cni_version_list) > 1 else ''
         )
 
     cpi = None

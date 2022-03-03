@@ -277,44 +277,6 @@ class ClusterService(abstract_broker.AbstractBroker):
                   f"(revision {template_revision})"
             self._update_task(BehaviorTaskStatus.RUNNING, message=msg)
 
-            # Handle defaults for csi
-            # if user does not specify versions
-            if input_native_entity.spec.settings.csi is None or \
-                    len(input_native_entity.spec.settings.csi) == 0:
-                input_native_entity.spec.settings.csi = [rde_2_x.CsiElement()]
-            curr_csi_elem = input_native_entity.spec.settings.csi[0]
-            curr_csi_elem.name = CSI_NAME
-            curr_csi_elem.default = True
-            if curr_csi_elem.version is None:
-                # TODO: check server config for version
-                curr_csi_elem.version = CSI_DEFAULT_VERSION
-
-            # Handle defaults for cpi
-            if input_native_entity.spec.settings.cpi is None:
-                input_native_entity.spec.settings.cpi = rde_2_x.Cpi()
-            input_native_entity.spec.settings.cpi.name = CPI_NAME
-            if input_native_entity.spec.settings.cpi.version is None:
-                # TODO: check server config for version
-                input_native_entity.spec.settings.cpi.version = CPI_DEFAULT_VERSION  # noqa: E501
-
-            # Handle defaults for cni
-            if input_native_entity.spec.settings.cni is None:
-                input_native_entity.spec.settings.cni = rde_2_x.CniObject()  # noqa: E501
-            input_native_entity.spec.settings.cni.name = ANTREA_NAME
-            if input_native_entity.spec.settings.cni.version is None:
-                # TODO: check server config for version
-                input_native_entity.spec.settings.cni.version = ""
-
-            # Get changes needed for rde update
-            csi_elem_rde_status_value = rde_2_x.CsiElement()
-            # no deep copy is currently needed because the default
-            # storage class has no object fields
-            csi_elem_rde_status_value.default_k8s_storage_class = \
-                copy.copy(curr_csi_elem.default_k8s_storage_class)
-            csi_elem_rde_status_value.name = curr_csi_elem.name
-            csi_elem_rde_status_value.version = curr_csi_elem.version
-            csi_elem_rde_status_value.default = curr_csi_elem.default
-            input_settings = input_native_entity.spec.settings
             changes = {
                 'entity.status.phase':
                     str(DefEntityPhase(DefEntityOperation.CREATE,
@@ -326,10 +288,6 @@ class ClusterService(abstract_broker.AbstractBroker):
                 'entity.status.cloud_properties': cloud_properties,
                 'entity.status.uid': entity_id,
                 'entity.status.task_href': self.task_href,
-                'entity.status.cni': f"{input_settings.cni.name} {input_settings.cni.version}",  # noqa: E501
-                'entity.status.cpi.name': input_settings.cpi.name,
-                'entity.status.cpi.version': input_settings.cpi.version,
-                'entity.status.csi': [csi_elem_rde_status_value]
             }
             try:
                 curr_rde = self._update_cluster_entity(entity_id, changes=changes)  # noqa: E501
@@ -784,12 +742,42 @@ class ClusterService(abstract_broker.AbstractBroker):
             ssh_key = input_native_entity.spec.settings.ssh_key
             rollback = input_native_entity.spec.settings.rollback_on_failure
             expose = input_native_entity.spec.settings.network.expose
-            # Caller functions guarantee that cni/cpi/csi are not None
+
+            # The order of precedence for csi/cpi/cni defaults is:
+            # 1. RDE params 2. CSE config file 3. hard-coded constants
+            # Handle defaults for csi
+            if input_native_entity.spec.settings.csi is None or \
+                    len(input_native_entity.spec.settings.csi) == 0:
+                input_native_entity.spec.settings.csi = [rde_2_x.CsiElement()]
+            curr_csi_elem = input_native_entity.spec.settings.csi[0]
+            curr_csi_elem.name = CSI_NAME
+            curr_csi_elem.default = True
+            if curr_csi_elem.version is None:
+                # TODO: check server config for version
+                curr_csi_elem.version = CSI_DEFAULT_VERSION
+
+            # Handle defaults for cpi
+            if input_native_entity.spec.settings.cpi is None:
+                input_native_entity.spec.settings.cpi = rde_2_x.Cpi()
+            input_native_entity.spec.settings.cpi.name = CPI_NAME
+            if input_native_entity.spec.settings.cpi.version is None:
+                # TODO: check server config for version
+                input_native_entity.spec.settings.cpi.version = CPI_DEFAULT_VERSION  # noqa: E501
+
+            # Handle defaults for cni
+            if input_native_entity.spec.settings.cni is None:
+                input_native_entity.spec.settings.cni = rde_2_x.CniObject()  # noqa: E501
+            input_native_entity.spec.settings.cni.name = ANTREA_NAME
+            if input_native_entity.spec.settings.cni.version is None:
+                # TODO: check server config for version
+                input_native_entity.spec.settings.cni.version = ""
+
             cni_version = input_native_entity.spec.settings.cni.version
             cpi_version = input_native_entity.spec.settings.cpi.version
             csi_version = input_native_entity.spec.settings.csi[0].version
             default_storage_class = input_native_entity.spec.settings.csi[0].default_k8s_storage_class  # noqa: E501
             create_default_storage_class: bool = default_storage_class is not None  # noqa: E501
+            # dsc: default storage class
             dsc_storage_profile_name = None
             dsc_k8s_storage_class_name = None
             dsc_filesystem = None
@@ -975,6 +963,16 @@ class ClusterService(abstract_broker.AbstractBroker):
             LOGGER.debug(msg)
             self._update_task(BehaviorTaskStatus.RUNNING, message=msg)
 
+            # Get changes needed for rde update
+            csi_elem_rde_status_value = rde_2_x.CsiElement()
+            # no deep copy is currently needed because the default
+            # storage class has no object fields
+            csi_elem_rde_status_value.default_k8s_storage_class = \
+                copy.copy(curr_csi_elem.default_k8s_storage_class)
+            csi_elem_rde_status_value.name = curr_csi_elem.name
+            csi_elem_rde_status_value.version = curr_csi_elem.version
+            csi_elem_rde_status_value.default = curr_csi_elem.default
+            input_settings = input_native_entity.spec.settings
             changes = {
                 'entity.status.private': rde_2_x.Private(
                     kube_token=control_plane_join_cmd,
@@ -994,7 +992,11 @@ class ClusterService(abstract_broker.AbstractBroker):
                 'entity.status.cloud_properties.distribution.''template_name':
                     tags[ClusterMetadataKey.TEMPLATE_NAME],
                 'entity.status.cloud_properties.distribution.''template_revision':  # noqa: E501
-                    tags[ClusterMetadataKey.TEMPLATE_REVISION]
+                    tags[ClusterMetadataKey.TEMPLATE_REVISION],
+                'entity.status.cni': f"{input_settings.cni.name} {input_settings.cni.version}",  # noqa: E501
+                'entity.status.cpi.name': input_settings.cpi.name,
+                'entity.status.cpi.version': input_settings.cpi.version,
+                'entity.status.csi': [csi_elem_rde_status_value]
             }
 
             # Update status with exposed ip
@@ -2424,6 +2426,7 @@ def _add_control_plane_nodes(
                 PostCustomizationPhase.KUBECTL_APPLY_CNI,
                 PostCustomizationPhase.KUBECTL_APPLY_CPI,
                 PostCustomizationPhase.KUBECTL_APPLY_CSI,
+                PostCustomizationPhase.KUBECTL_APPLY_DEFAULT_STORAGE_CLASS,
                 PostCustomizationPhase.KUBEADM_TOKEN_GENERATE,
             ]:
                 vapp.reload()

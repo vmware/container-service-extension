@@ -812,6 +812,7 @@ class PostCustomizationPhase(Enum):
     KUBECTL_APPLY_CNI = 'guestinfo.postcustomization.kubectl.cni.install.status'  # noqa: E501
     KUBECTL_APPLY_CPI = 'guestinfo.postcustomization.kubectl.cpi.install.status'  # noqa: E501
     KUBECTL_APPLY_CSI = 'guestinfo.postcustomization.kubectl.csi.install.status'  # noqa: E501
+    KUBECTL_APPLY_DEFAULT_STORAGE_CLASS = 'guestinfo.postcustomization.kubectl.default_storage_class.status'  # noqa: E501
     KUBEADM_TOKEN_GENERATE = 'guestinfo.postcustomization.kubeadm.token.generate.status'  # noqa: E501
     KUBEADM_NODE_JOIN = 'guestinfo.postcustomization.kubeadm.node.join.status'
     PROXY_SETTING = 'guestinfo.postcustomization.proxy.setting.status'

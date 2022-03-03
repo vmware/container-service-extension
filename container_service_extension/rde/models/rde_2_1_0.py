@@ -317,8 +317,10 @@ class NativeEntity(AbstractNativeEntity):
                 if not upgraded_native_entity.spec.settings.network.cni:  # noqa: E501
                     cni_version_list = upgraded_native_entity.spec.settings.network.cni.split()  # noqa: E501
                     upgraded_native_entity.spec.settings.cni.name = cni_version_list[0]  # noqa: E501
-                    if len(cni_version_list) > 0:
+                    if len(cni_version_list) > 1:
                         upgraded_native_entity.spec.settings.cni.version = cni_version_list[1]  # noqa: E501
+                    else:
+                        upgraded_native_entity.spec.settings.cni.version = ''
                     upgraded_native_entity.spec.settings.network.cni = None
                 return upgraded_native_entity
 

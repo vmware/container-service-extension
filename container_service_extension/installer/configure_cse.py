@@ -1590,7 +1590,7 @@ def _register_entity_type(
 ):
     schema_svc = rde_schema_svc.DefSchemaService(cloudapi_client)
     try:
-        current_entity_type: common_models.DefEntityType2_1 = \
+        current_entity_type: common_models.DefEntityType2_0 = \
             schema_svc.get_entity_type(entity_type.id)
         if update_schema:
             updated_native_entity_type = common_models.DefEntityType(
