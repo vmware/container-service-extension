@@ -689,7 +689,7 @@ def _generate_cluster_apply_tests(test_users=None):
                         exit_code=0,
                         should_rde_exist=False,
                         should_vapp_exist=False,
-                        required_rde_version=['1.0.0', '2.0.0'],
+                        required_rde_version=['1.0.0', '2.1.0'],
                         expect_failure=True
                     ),
                     # Invalid Storage profile
@@ -712,7 +712,7 @@ def _generate_cluster_apply_tests(test_users=None):
                         exit_code=0,
                         should_rde_exist=False,
                         should_vapp_exist=False,
-                        required_rde_version=['1.0.0', '2.0.0'],
+                        required_rde_version=['1.0.0', '2.1.0'],
                         expect_failure=True
                     ),
                     # Invalid Network
@@ -735,7 +735,7 @@ def _generate_cluster_apply_tests(test_users=None):
                         exit_code=0,
                         should_rde_exist=False,
                         should_vapp_exist=False,
-                        required_rde_version=['1.0.0', '2.0.0'],
+                        required_rde_version=['1.0.0', '2.1.0'],
                         expect_failure=True
                     ),
                     # Invalid network without rollback
@@ -758,7 +758,7 @@ def _generate_cluster_apply_tests(test_users=None):
                         exit_code=0,
                         should_rde_exist=True,
                         should_vapp_exist=False,  # creation of vapp will fail
-                        required_rde_version=['1.0.0', '2.0.0'],
+                        required_rde_version=['1.0.0', '2.1.0'],
                         expect_failure=True
                     ),
                     # cpu/memory and sizing class provided
@@ -781,7 +781,7 @@ def _generate_cluster_apply_tests(test_users=None):
                         exit_code=2,
                         should_rde_exist=False,
                         should_vapp_exist=False,
-                        required_rde_version=['2.0.0'],
+                        required_rde_version=['2.1.0'],
                         expect_failure=True
                     ),
                     # cluster created with cpu/memory and no sizing class
@@ -804,7 +804,7 @@ def _generate_cluster_apply_tests(test_users=None):
                         exit_code=0,
                         should_rde_exist=True,
                         should_vapp_exist=True,
-                        required_rde_version=['2.0.0'],
+                        required_rde_version=['2.1.0'],
                         expect_failure=False
                     ),
                     # Resize a cluster created using cpu/memory with sizing
@@ -828,7 +828,7 @@ def _generate_cluster_apply_tests(test_users=None):
                         exit_code=2,   # should be 2?
                         should_rde_exist=True,
                         should_vapp_exist=True,
-                        required_rde_version=['2.0.0'],
+                        required_rde_version=['2.1.0'],
                         expect_failure=True
                     ),
                     # Resize a cluster created using cpu/memory using
@@ -852,7 +852,7 @@ def _generate_cluster_apply_tests(test_users=None):
                         exit_code=0,
                         should_rde_exist=True,
                         should_vapp_exist=True,
-                        required_rde_version=['2.0.0'],
+                        required_rde_version=['2.1.0'],
                         expect_failure=False
                     ),
                     # Create cluster using sizing policy
@@ -875,7 +875,7 @@ def _generate_cluster_apply_tests(test_users=None):
                         exit_code=0,
                         should_rde_exist=True,
                         should_vapp_exist=True,
-                        required_rde_version=['1.0.0', '2.0.0'],
+                        required_rde_version=['1.0.0', '2.1.0'],
                         expect_failure=False
                     ),
                     # Resize cluster created with sizing class using cpu/mem
@@ -898,7 +898,7 @@ def _generate_cluster_apply_tests(test_users=None):
                         exit_code=2,
                         should_rde_exist=True,
                         should_vapp_exist=True,
-                        required_rde_version=['2.0.0'],
+                        required_rde_version=['2.1.0'],
                         expect_failure=True
                     ),
                     # Resize up a valid deployment
@@ -921,7 +921,7 @@ def _generate_cluster_apply_tests(test_users=None):
                         exit_code=0,
                         should_rde_exist=True,
                         should_vapp_exist=True,
-                        required_rde_version=['1.0.0', '2.0.0'],
+                        required_rde_version=['1.0.0', '2.1.0'],
                         expect_failure=False
                     ),
                     # Resize down a valid deployment
@@ -944,7 +944,7 @@ def _generate_cluster_apply_tests(test_users=None):
                         exit_code=0,
                         should_rde_exist=True,
                         should_vapp_exist=True,
-                        required_rde_version=['1.0.0', '2.0.0'],
+                        required_rde_version=['1.0.0', '2.1.0'],
                         expect_failure=False
                     )
                 ]
