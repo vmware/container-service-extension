@@ -22,7 +22,9 @@ def parse_tkgm_template_name(ova_file_name):
     # ubuntu-2004-kube-v1.19.8-vmware.1-tkg.0-18171857641727074969.ova
     # ubuntu-2004-kube-v1.18.16-vmware.1-tkg.0-14744207219736322255.ova
     # ubuntu-2004-kube-v1.21.2+vmware.1-tkg.1-7832907791984498322.ova
-    name_regex = re.compile(r"ubuntu-([\d]+)-kube-v([\d]+[.][\d]+[.][\d]+[-|+][vmware.[\d]*]*)-tkg[.][-|\d]*[.]ova")  # noqa: E501
+    # ubuntu-2004-kube-v1.20.14+vmware.1-tkg.2-5a5027ce2528a6229acb35b38ff8084e.ova
+    # ubuntu-2004-kube-v1.22.5+vmware.1-tkg.2-f838b27ca494fee7083c0340e11ce243.ova
+    name_regex = re.compile(r"ubuntu-([\d]+)-kube-v([\d]+[.][\d]+[.][\d]+[-|+][vmware.[\d]*]*)-tkg[.][-|a-z0-9]*[.]ova")  # noqa: E501
     m = name_regex.match(ova_file_name)
     os_version = None
     kubernetes_version = None
