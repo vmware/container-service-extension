@@ -44,59 +44,50 @@ function getComponents {
 
 if [ $# != 1 ]
 then
-    echo "Usage: ./provenance.sh <PROJECT NAME>"
+    echo "Usage: ./provenance.sh <BRANCH>"
     echo ""
-    echo "PROJECT NAME: container-service-extension'"
+    echo "BRANCH: Branch from which provenance data should be generated"
     exit 1
 fi
 
-project="$1"
-
-if [[ "$project" != 'container-service-extension' ]] 
-then
-    echo "PROJECT NAME must be container-service-extension"
-    exit 1
-fi
+project="container-service-extension"
+branch="$1"
 
 tmpDir='tmp'
 
 rm -rf $tmpDir
 git clone https://github.com/vmware/$project.git $tmpDir
 cd $tmpDir
-git checkout origin/cse_3_1_updates
+git checkout origin/$branch -b $branch
 
 head=$(git log -1 --pretty=format:%H)
 version=$(git describe --tags --abbrev=0)
 identifier=$(git describe --tags)
 components=$(getComponents)
-release_version=`curl -s 'https://pypi.org/pypi/container-service-extension/json' | python -mjson.tool | grep \"version\" | awk -F"\"" '{print $4}'`
 
 provenanceJsonTemplate="
 {
     \"id\": \"http://vmware.com/schemas/software_provenance-0.2.5.json\",
-    \"root\": [\"$project\"],
+    \"tools\": {
+        \"https://sp-taas-vcd-butler.svc.eng.vmware.com/view/CSE/job/cse-provenance/\": null
+    },
+    \"root\": \"comp_id.build(target_name='$project', version='$version', sha1='$head')\",
     \"all_components\": {
         \"$project-$identifier\": {
-            \"typename\": \"comp.build\",
+            \"typename\": \"comp.build.golang\",
             \"name\": \"$project\",
             \"version\": \"$version\",
+            \"build\": \"$head\",
             \"source_repositories\": [
                 {
                     \"content\": \"source\",
-                    \"branch\": \"cse_3_1_updates\",
+                    \"branch\": \"$branch\",
                     \"host\": \"github.com\",
-                    \"path\": \"vmware/$project\",
+                    \"repo\": \"vmware/$project\",
                     \"ref\": \"$head\",
-                    \"protocol\": \"git\"
-                }
-            ],
-            \"target_repositories\": [
-                {
-                    \"content\": \"bdist_wheel\",
-                    \"protocol\": \"https\",
-                    \"host\": \"pypi.org\",
-                    \"path\": [
-                        \"project/$project/$release_version/\"
+                    \"protocol\": \"git\",
+                    \"paths\": [
+                        \"/\"
                     ]
                 }
             ],
