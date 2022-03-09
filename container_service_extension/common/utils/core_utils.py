@@ -352,7 +352,8 @@ def flatten_dictionary(input_dict, parent_key='', separator='.'):
         val = input_dict.get(k)
         key_prefix = f"{parent_key}{k}"
         # Only 1 CSI is currently expected, so we can flatten using the 1
-        # csi element
+        # csi element. When multiple CSI's are expected, this logic needs to
+        # be updated.
         if k == 'csi' and isinstance(val, list) and len(val) > 0:
             val = val[0]
         if isinstance(val, dict):
