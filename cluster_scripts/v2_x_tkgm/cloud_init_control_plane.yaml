@@ -171,7 +171,7 @@ write_files:
     # will be replaced by an open bracket.
     # This convention is needed so that python's template format function does not view the bash
     # $\open_bracket/VAR/\close_bracket as a format variable that will be replaced by the python format function.
-    antrea_version={antrea_version}
+    antrea_version="{antrea_version}"
     vmtoolsd --cmd "info-set guestinfo.postcustomization.tkr.get_versions.status in_progress"
       if [[ -z "$antrea_version" ]]; then
         tkr_bom_dir=/tmp/tkr_bom
@@ -225,7 +225,7 @@ write_files:
         fi
 
         # cleanup components downloads
-        rm -rf $tkr_bom_dir
+         rm -rf $tkr_bom_dir
       fi
     vmtoolsd --cmd "info-set guestinfo.postcustomization.tkr.get_versions.status successful"
 
