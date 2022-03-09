@@ -746,7 +746,7 @@ class ClusterService(abstract_broker.AbstractBroker):
             # 1. RDE params 2. CSE config file 3. hard-coded constants
             # Handle defaults for csi
             csi_list = input_native_entity.spec.settings.csi
-            if csi_list is None and len(csi_list) > 0 and \
+            if csi_list is not None and len(csi_list) > 0 and \
                     csi_list[0].version is not None:
                 csi_version = csi_list[0].version
             else:
