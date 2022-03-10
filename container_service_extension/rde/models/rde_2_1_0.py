@@ -668,7 +668,7 @@ class NativeEntity(AbstractNativeEntity):
         if k8_runtime == shared_constants.ClusterEntityKind.TKG_M.value:
             sample_default_storage_class = DefaultK8sStorageClass(
                 vcd_storage_profile_name="Silver_storage_profile",
-                k8s_storage_class_name="my_storage_class",
+                k8s_storage_class_name="my-storage-class",
                 filesystem="ext4",
                 use_delete_reclaim_policy=True
             )
