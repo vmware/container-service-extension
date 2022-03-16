@@ -810,9 +810,12 @@ class PostCustomizationPhase(Enum):
     KUBECTL_APPLY_CPI = 'guestinfo.postcustomization.kubectl.cpi.install.status'  # noqa: E501
     KUBECTL_APPLY_CSI = 'guestinfo.postcustomization.kubectl.csi.install.status'  # noqa: E501
     KUBECTL_APPLY_DEFAULT_STORAGE_CLASS = 'guestinfo.postcustomization.kubectl.default_storage_class.status'  # noqa: E501
+    KUBECTL_APPLY_KAPP_CONTROLLER = 'guestinfo.postcustomization.kubectl.kapp_controller.install'  # noqa: E501
     KUBEADM_TOKEN_GENERATE = 'guestinfo.postcustomization.kubeadm.token.generate.status'  # noqa: E501
     KUBEADM_NODE_JOIN = 'guestinfo.postcustomization.kubeadm.node.join.status'
     PROXY_SETTING = 'guestinfo.postcustomization.proxy.setting.status'
+    TANZU_CLI_INSTALL = 'guestinfo.postcustomization.tanzu_cli.install'
+    METRICS_SERVER_INSTALL = 'guestinfo.postcustomization.metrics_server.install'  # noqa: E501
 
 
 KUBEADM_TOKEN_INFO = 'guestinfo.postcustomization.kubeadm.token.info'
@@ -821,7 +824,8 @@ POST_CUSTOMIZATION_SCRIPT_EXECUTION_STATUS = 'guestinfo.post_customization_scrip
 POST_CUSTOMIZATION_SCRIPT_EXECUTION_FAILURE_REASON = 'guestinfo.post_customization_script_execution_failure_reason'  # noqa: E501
 DEFAULT_POST_CUSTOMIZATION_STATUS_LIST = [cust_status.value for cust_status in PostCustomizationStatus]  # noqa: E501
 DEFAULT_POST_CUSTOMIZATION_POLL_SEC = 5
-DEFAULT_POST_CUSTOMIZATION_TIMEOUT_SEC = 600
+# DEFAULT_POST_CUSTOMIZATION_TIMEOUT_SEC = 600
+DEFAULT_POST_CUSTOMIZATION_TIMEOUT_SEC = 1200
 DISK_ENABLE_UUID = 'disk.enableUUID'
 CLOUDINIT_GUEST_USERDATA = 'guestinfo.userdata'
 CLOUDINIT_GUEST_USERDATA_ENCODING = 'guestinfo.userdata.encoding'

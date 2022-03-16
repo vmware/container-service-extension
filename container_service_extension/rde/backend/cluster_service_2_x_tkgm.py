@@ -2428,7 +2428,10 @@ def _add_control_plane_nodes(
                 PostCustomizationPhase.KUBECTL_APPLY_CPI,
                 PostCustomizationPhase.KUBECTL_APPLY_CSI,
                 PostCustomizationPhase.KUBECTL_APPLY_DEFAULT_STORAGE_CLASS,
+                PostCustomizationPhase.KUBECTL_APPLY_KAPP_CONTROLLER,
                 PostCustomizationPhase.KUBEADM_TOKEN_GENERATE,
+                PostCustomizationPhase.TANZU_CLI_INSTALL,
+                PostCustomizationPhase.METRICS_SERVER_INSTALL,
             ]:
                 vapp.reload()
                 vcd_utils.wait_for_completion_of_post_customization_procedure(
