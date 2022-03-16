@@ -764,6 +764,10 @@ class ClusterService(abstract_broker.AbstractBroker):
                     input_native_entity.spec.settings.cni.version is not None:
                 cni_version = input_native_entity.spec.settings.cni.version
             else:
+                # No default CNI version is provided so that the control plane
+                # script will see an empty version and use the tkr bom file
+                # to find the compatible CNI version. Only CNI and CPI have
+                # default versions since they are not currently in the tkr bom
                 cni_version = extra_options_config.get("antrea_version", "")
 
             input_default_storage_class = None
