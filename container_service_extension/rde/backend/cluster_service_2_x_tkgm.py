@@ -78,8 +78,6 @@ DEFAULT_API_VERSION = vcd_client.ApiVersion.VERSION_36.value
 
 # Hardcode the Antrea CNI version until there's a better way to retrieve it
 CNI_NAME = "antrea"
-CPI_VERSION = '1.1.0'
-CSI_VERSION = '1.1.0'
 
 CLUSTER_CREATE_OPERATION_MESSAGE = 'Cluster create'
 CLUSTER_RESIZE_OPERATION_MESSAGE = 'Cluster resize'
@@ -287,6 +285,7 @@ class ClusterService(abstract_broker.AbstractBroker):
                 'entity.status.cloud_properties': cloud_properties,
                 'entity.status.uid': entity_id,
                 'entity.status.task_href': self.task_href,
+                'entity.status.site': vcd_site,
             }
             try:
                 curr_rde = self._update_cluster_entity(entity_id, changes=changes)  # noqa: E501
@@ -745,29 +744,31 @@ class ClusterService(abstract_broker.AbstractBroker):
             # The order of precedence for csi/cpi/cni defaults is:
             # 1. RDE params 2. CSE config file 3. hard-coded constants
             # Handle defaults for csi
+            extra_options_config: dict = _get_extra_options_config()
             csi_list = input_native_entity.spec.settings.csi
             if csi_list is not None and len(csi_list) > 0 and \
                     csi_list[0].version is not None:
                 csi_version = csi_list[0].version
             else:
-                # TODO: check server config for version
-                csi_version = CSI_DEFAULT_VERSION
+                csi_version = extra_options_config.get("csi_version", CSI_DEFAULT_VERSION)  # noqa: E501
 
             # Handle defaults for cpi
             if input_native_entity.spec.settings.cpi is not None and \
                     input_native_entity.spec.settings.cpi.version is not None:
                 cpi_version = input_native_entity.spec.settings.cpi.version
             else:
-                # TODO: check server config for version
-                cpi_version = CPI_DEFAULT_VERSION
+                cpi_version = extra_options_config.get("cpi_version", CPI_DEFAULT_VERSION)  # noqa: E501
 
             # Handle defaults for cni
             if input_native_entity.spec.settings.cni is not None and \
                     input_native_entity.spec.settings.cni.version is not None:
                 cni_version = input_native_entity.spec.settings.cni.version
             else:
-                # TODO: check server config for version
-                cni_version = ""
+                # No default CNI version is provided so that the control plane
+                # script will see an empty version and use the tkr bom file
+                # to find the compatible CNI version. Only CNI and CPI have
+                # default versions since they are not currently in the tkr bom
+                cni_version = extra_options_config.get("antrea_version", "")
 
             input_default_storage_class = None
             create_default_storage_class = False
@@ -2185,13 +2186,18 @@ def _get_tkgm_template(name: str) -> Dict:
     )
 
 
-def _get_tkgm_proxy_config() -> dict:
+def _get_extra_options_config() -> dict:
     server_config = server_utils.get_server_runtime_config()
     try:
         extra_options: dict = server_config.get_value_at('extra_options')
         extra_options = extra_options if isinstance(extra_options, dict) else {}  # noqa: E501
     except KeyError:
         extra_options: dict = {}
+    return extra_options
+
+
+def _get_tkgm_proxy_config() -> dict:
+    extra_options: dict = _get_extra_options_config()
 
     return {
         proxy_key.value: extra_options.get(proxy_key.name, '')
@@ -2295,7 +2301,6 @@ def _add_control_plane_nodes(
         base64_refresh_token = base64.b64encode(refresh_token.encode("utf-8"))
         proxy_config = _get_tkgm_proxy_config()
         for spec in vm_specs:
-            # TODO: replace default storage values with user values
             spec['cloud_init_spec'] = templated_script.format(
                 vcd_host=vcd_host.replace("/", r"\/"),
                 org=org.get_name(),
@@ -2387,8 +2392,8 @@ def _add_control_plane_nodes(
                 vm_host_name=spec['target_vm_name'],
                 service_cidr=k8s_svc_cidr,
                 pod_cidr=k8s_pod_cidr,
-                cpi_version=CPI_VERSION,
-                csi_version=CSI_VERSION,
+                cpi_version=cpi_version,
+                csi_version=csi_version,
                 ssh_key=ssh_key if ssh_key else '',
                 control_plane_endpoint=f"{control_plane_endpoint}:6443",
                 base64_encoded_refresh_token=base64_refresh_token.decode("utf-8"),  # noqa: E501
