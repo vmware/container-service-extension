@@ -1571,7 +1571,7 @@ write_files:
     csi_driver_path=/root/csi-driver.yaml
     csi_controller_path=/root/csi-controller.yaml
     csi_node_path=/root/csi-node.yaml
-    kapp_controller_path=/root/kapp_controller.yaml
+    kapp_controller_path=/root/kapp-controller.yaml
 
     vmtoolsd --cmd "info-set guestinfo.postcustomization.networkconfiguration.status in_progress"
       echo 'net.ipv6.conf.all.disable_ipv6 = 1' >> /etc/sysctl.conf
@@ -1708,11 +1708,12 @@ write_files:
       full_kapp_controller_version=$($yq_path e ".components.kapp-controller[0].images.kappControllerImage.tag" $components_path | sed 's/v//')
       kapp_controller_version=$(echo $full_kapp_controller_version | sed 's/_.*//')
       metrics_server_version=$($yq_path e ".components.metrics-server[0].version" $components_path | sed 's/v//')
-      if [[ -z "$metrics_server_version_ready" ]] || [[ "$metrics_server_version_ready" = "null" ]] || [[ "$metrics_server_version_ready" = "false" ]]; then
-        metrics_server_version_ready=false
+      if [[ -z "$metrics_server_version" ]] || [[ "$metrics_server_version" = "null" ]] || [[ "$metrics_server_version" = "false" ]]; then
+        metrics_server_version_valid=false
       fi
+      vmtoolsd --cmd "info-set guestinfo.postcustomization.metrics_server.got_version $metrics_server_version"
       # cleanup components downloads
-      rm -rf $tkr_bom_dir
+      # rm -rf $tkr_bom_dir TODO: uncomment
       fi
     vmtoolsd --cmd "info-set guestinfo.postcustomization.tkr.get_versions.status successful"
 
@@ -1769,36 +1770,43 @@ write_files:
 
 
     vmtoolsd --cmd "info-set guestinfo.postcustomization.kubectl.kapp_controller.install in_progress"
-      if [[ -z "$full_kapp_controller_version" ]] || [[ "$full_kapp_controller_version" = "null" ]] || [[ "$full_kapp_controller_version" = "false" ]]; then
-        sed -i "s/__KAPP_CONTROLLER_VERSION_SED_ME__/$kapp_controller_version/" $kapp_controller_path
-        sed -i "s/__FULL_KAPP_CONTROLLER_VERSION_SED_ME__/$kapp_controller_version/" $full_kapp_controller_path
-        kubectl apply -f $kapp_controller_path
+      # vmtoolsd --cmd "info-set guestinfo.postcustomization.kubectl.kapp_controller.full_version $full_kapp_controller_version"
+      vmtoolsd --cmd "info-set guestinfo.postcustomization.kubectl.kapp_controller.version $kapp_controller_version"
+      kapp_ready=false
+      # if [[ ! -z "$full_kapp_controller_version" ]]; then
+      vmtoolsd --cmd "info-set guestinfo.postcustomization.kubectl.kapp_controller.in_loop true"
+      sed -i "s/__KAPP_CONTROLLER_VERSION_SED_ME__/$kapp_controller_version/" $kapp_controller_path
+      sed -i "s/__FULL_KAPP_CONTROLLER_VERSION_SED_ME__/$full_kapp_controller_version/" $kapp_controller_path
+      kubectl apply -f $kapp_controller_path
 
-        # kapp controller takes ~5 minutes to be in ready status
-        kapp_loops_try=0
-        max_kapp_loops_try=17
-        kapp_ready=true
-        while [[ "$(kubectl get pods -l=app='kapp-controller' -A -o jsonpath='OPEN_BRACKET.items[*].status.containerStatuses[0].readyCLOSE_BRACKET')" != "true" ]]; do
-          if [[ "$kapp_loops_try" -gt  $max_kapp_loops_try"]]; then
-            kapp_ready=false
-            break
-          fi
-          sleep 30
-          echo "waiting for kapp-controller" >> /var/log/cse/customization/status.log
-          ((kapp_loops_try=kapp_loops_try++))
-        done
-        if [[ "$kapp_ready" = false ]]; then
-          full_kapp_controller_version=""
+      # kapp controller takes ~5 minutes to be in ready status
+      kapp_loops_try=0
+      max_kapp_loops_try=17
+      kapp_ready=$(kubectl get pods -l=app='kapp-controller' -A -o jsonpath='OPEN_BRACKET.items[*].status.containerStatuses[0].readyCLOSE_BRACKET')
+      while [[ "$kapp_ready" != "true" ]]; do
+        if [[ "$kapp_loops_try" -gt  "$max_kapp_loops_try"]]; then
+          break # kapp_ready is already false
         fi
+        sleep 30
+        echo "waiting for kapp-controller" >> /var/log/cse/customization/status.log
+        ((kapp_loops_try++))
+        kapp_ready=$(kubectl get pods -l=app='kapp-controller' -A -o jsonpath='OPEN_BRACKET.items[*].status.containerStatuses[0].readyCLOSE_BRACKET')
+        vmtoolsd --cmd "info-set guestinfo.postcustomization.kubectl.kapp_controller.loop_cnt $kapp_loops_try"
+      done
+
+      if [[ "$kapp_ready" = false ]]; then
+        full_kapp_controller_version=""
       fi
+      # fi
       vmtoolsd --cmd "info-set guestinfo.postcustomization.kapp_controller.version $full_kapp_controller_version"
+      vmtoolsd --cmd "info-set guestinfo.postcustomization.kubectl.kapp_controller.kapp_ready $kapp_ready"
     vmtoolsd --cmd "info-set guestinfo.postcustomization.kubectl.kapp_controller.install successful"
 
 
     vmtoolsd --cmd "info-set guestinfo.postcustomization.tanzu_cli.install in_progress"
       # kapp controller is needed to use tanzu-cli
       tanzu_cli_installed=false
-      if [[ "$kapp_ready" = true ]] && [[ "metrics_server_version_ready" = true ]]; then
+      if [[ "$kapp_ready" = true ]] && [[ "metrics_server_version_valid" = true ]]; then
         wget https://github.com/vmware-tanzu/tanzu-framework/releases/download/v0.17.0/tanzu-cli-linux-amd64.tar.gz
         mkdir tanzu && tar -zxvf tanzu-cli-linux-amd64.tar.gz -C tanzu
         sudo install tanzu/v0.17.0/tanzu-core-linux_amd64 /usr/local/bin/tanzu
