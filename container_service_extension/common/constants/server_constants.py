@@ -814,8 +814,15 @@ class PostCustomizationPhase(Enum):
     KUBEADM_TOKEN_GENERATE = 'guestinfo.postcustomization.kubeadm.token.generate.status'  # noqa: E501
     KUBEADM_NODE_JOIN = 'guestinfo.postcustomization.kubeadm.node.join.status'
     PROXY_SETTING = 'guestinfo.postcustomization.proxy.setting.status'
-    TANZU_CLI_INSTALL = 'guestinfo.postcustomization.tanzu_cli.install'
-    METRICS_SERVER_INSTALL = 'guestinfo.postcustomization.metrics_server.install'  # noqa: E501
+    CORE_PACKAGES = 'guestinfo.postcustomization.core_packages.install'
+
+
+@unique
+class PostCustomizationVersions(Enum):
+    TKR_KAPP_CONTROLLER = 'guestinfo.postcustomization.tkr.get_versions.kapp_controller'  # noqa: E501
+    TKR_METRICS_SERVER = 'guestinfo.postcustomization.tkr.get_versions.metrics_server'  # noqa: E501
+    INSTALLED_KAPP_CONTROLLER = 'guestinfo.postcustomization.core_packages.kapp_controller_version'  # noqa: E501
+    INSTALLED_METRICS_SERVER = 'guestinfo.postcustomization.core_packages.metrics_server_version'  # noqa: E501
 
 
 KUBEADM_TOKEN_INFO = 'guestinfo.postcustomization.kubeadm.token.info'

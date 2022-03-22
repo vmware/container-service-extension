@@ -93,6 +93,48 @@ write_files:
       kubeadm join --config /root/kubeadm-defaults-join.conf --v=10 &> /root/kubeadm-join.out
     vmtoolsd --cmd "info-set guestinfo.postcustomization.kubeadm.node.join.status successful"
 
+    vmtoolsd --cmd "info-set guestinfo.postcustomization.core_packages.install in_progress"
+      install_core_packages={install_core_packages}
+      if [[ "$install_core_packages" = true ]]; then
+        # install kapp-controller, which is needed for tanzu-cli
+        kapp_controller_version="{kapp_controller_version}"
+        kapp_controller_version=$(echo $kapp_controller_version | sed 's/+.*//' | sed 's/v//')
+        kapp_controller_installed=false
+        if [[ ! -z "$kapp_controller_version" ]]; then
+          kubectl apply -f https://github.com/vmware-tanzu/carvel-kapp-controller/releases/download/v$OPEN_BRACKETkapp_controller_versionCLOSE_BRACKET/release.yml
+          sleep 60 # wait for pod to get to Running
+          kapp_controller_installed=true
+        fi
+
+        # install tanzu-cli
+        tanzu_cli_installed=false
+        if [[ "$kapp_controller_installed" = true ]]; then
+          wget https://github.com/vmware-tanzu/tanzu-framework/releases/download/v0.17.0/tanzu-cli-linux-amd64.tar.gz
+          mkdir tanzu && tar -zxvf tanzu-cli-linux-amd64.tar.gz -C tanzu
+          sudo install tanzu/v0.17.0/tanzu-core-linux_amd64 /usr/local/bin/tanzu
+          tanzu plugin install package
+
+          xml_version_property=$(vmtoolsd --cmd "info-get guestinfo.ovfenv" | grep "oe:key=\"VERSION\"")
+          init_k8s_version=$(echo $xml_version_property | sed 's/.*oe:value=\"//; s/\(.*\)-.*/\1/')
+          k8s_version=$(echo $init_k8s_version | tr -s "+" "_")
+          tanzu package repository add tanzu-core --namespace tkg-system --create-namespace --url projects.registry.vmware.com/tkg/packages/core/repo:$OPEN_BRACKETk8s_versionCLOSE_BRACKET
+          tanzu_cli_installed=true
+        fi
+
+        # install metrics server
+        metrics_server_version=""
+        if [[ "$tanzu_cli_installed" = true ]]; then
+          metrics_server_version="{metrics_server_version}"
+          if [[ ! -z "$metrics_server_version" ]]; then
+            tanzu package install metrics-server --namespace tkg-system --create-namespace --package-name metrics-server.tanzu.vmware.com --version $metrics_server_version
+          fi
+        fi
+
+        vmtoolsd --cmd "info-set guestinfo.postcustomization.core_packages.kapp_controller_version $kapp_controller_version"
+        vmtoolsd --cmd "info-set guestinfo.postcustomization.core_packages.metrics_server_version $metrics_server_version"
+      fi
+    vmtoolsd --cmd "info-set guestinfo.postcustomization.core_packages.install successful"
+
     echo "$(date) post customization script execution completed" &>> /var/log/cse/customization/status.log
 
     exit 0

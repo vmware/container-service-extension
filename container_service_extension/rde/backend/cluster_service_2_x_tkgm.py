@@ -38,6 +38,7 @@ from container_service_extension.common.constants.server_constants import KUBEAD
 from container_service_extension.common.constants.server_constants import LocalTemplateKey  # noqa: E501
 from container_service_extension.common.constants.server_constants import NodeType  # noqa: E501
 from container_service_extension.common.constants.server_constants import PostCustomizationPhase  # noqa: E501
+from container_service_extension.common.constants.server_constants import PostCustomizationVersions  # noqa: E501
 from container_service_extension.common.constants.server_constants import ThreadLocalData  # noqa: E501
 from container_service_extension.common.constants.server_constants import TKGM_DEFAULT_POD_NETWORK_CIDR  # noqa: E501
 from container_service_extension.common.constants.server_constants import TKGM_DEFAULT_SERVICE_CIDR  # noqa: E501
@@ -881,7 +882,7 @@ class ClusterService(abstract_broker.AbstractBroker):
             vapp.reload()
 
             try:
-                expose_ip, _ = _add_control_plane_nodes(
+                expose_ip, _, core_pkg_versions = _add_control_plane_nodes(
                     sysadmin_client_v36,
                     user_client=self.context.client,
                     num_nodes=1,
@@ -942,7 +943,8 @@ class ClusterService(abstract_broker.AbstractBroker):
                     sizing_class_name=worker_sizing_class,
                     cpu_count=worker_cpu_count,
                     memory_mb=worker_memory_mb,
-                    control_plane_join_cmd=control_plane_join_cmd
+                    control_plane_join_cmd=control_plane_join_cmd,
+                    core_pkg_versions=core_pkg_versions
                 )
             except Exception as err:
                 LOGGER.error(err, exc_info=True)
@@ -2253,7 +2255,7 @@ def _add_control_plane_nodes(
         dsc_storage_profile_name=None,
         dsc_k8s_storage_class_name=None,
         dsc_filesystem=None,
-        dsc_use_delete_reclaim_policy=False) -> Tuple[str, List[Dict]]:
+        dsc_use_delete_reclaim_policy=False) -> Tuple[str, List[Dict], Dict]:
 
     vcd_utils.raise_error_if_user_not_from_system_org(sysadmin_client)
 
@@ -2338,6 +2340,7 @@ def _add_control_plane_nodes(
             spec = vm_specs[0]
             internal_ip = vapp.get_primary_ip(vm_name=spec['target_vm_name'])
 
+        core_pkg_versions = {}  # TODO: update when > 1 control plane node used
         for spec in vm_specs:
             vm_name = spec['target_vm_name']
             vm_resource = vapp.get_vm(vm_name)
@@ -2428,10 +2431,7 @@ def _add_control_plane_nodes(
                 PostCustomizationPhase.KUBECTL_APPLY_CPI,
                 PostCustomizationPhase.KUBECTL_APPLY_CSI,
                 PostCustomizationPhase.KUBECTL_APPLY_DEFAULT_STORAGE_CLASS,
-                PostCustomizationPhase.KUBECTL_APPLY_KAPP_CONTROLLER,
                 PostCustomizationPhase.KUBEADM_TOKEN_GENERATE,
-                PostCustomizationPhase.TANZU_CLI_INSTALL,
-                PostCustomizationPhase.METRICS_SERVER_INSTALL,
             ]:
                 vapp.reload()
                 vcd_utils.wait_for_completion_of_post_customization_procedure(
@@ -2448,6 +2448,15 @@ def _add_control_plane_nodes(
             )
             vapp.reload()
 
+            core_pkg_versions['kapp_controller'] = \
+                vcd_utils.get_vm_extra_config_element(
+                    vm,
+                    PostCustomizationVersions.TKR_KAPP_CONTROLLER.value)
+            core_pkg_versions['metrics_server'] = \
+                vcd_utils.get_vm_extra_config_element(
+                    vm,
+                    PostCustomizationVersions.TKR_METRICS_SERVER.value)
+
     except Exception as err:
         LOGGER.error(err, exc_info=True)
         node_list = [entry.get('target_vm_name') for entry in vm_specs]
@@ -2459,15 +2468,19 @@ def _add_control_plane_nodes(
 
         raise exceptions.NodeCreationError(node_list, str(err))
 
-    return expose_ip, vm_specs
+    return expose_ip, vm_specs, core_pkg_versions
 
 
 def _add_worker_nodes(sysadmin_client, num_nodes, org, vdc, vapp,
                       catalog_name, template, network_name,
                       storage_profile=None, ssh_key=None,
                       sizing_class_name=None, cpu_count=None, memory_mb=None,
-                      control_plane_join_cmd='') -> List:
+                      control_plane_join_cmd='',
+                      core_pkg_versions=None) -> List:
     vcd_utils.raise_error_if_user_not_from_system_org(sysadmin_client)
+
+    if not core_pkg_versions:
+        core_pkg_versions = {}
 
     if (cpu_count or memory_mb) and sizing_class_name:
         raise exceptions.BadRequestError("Cannot specify both cpu/memory and "
@@ -2514,15 +2527,24 @@ def _add_worker_nodes(sysadmin_client, num_nodes, org, vdc, vapp,
             sizing_class_name=sizing_class_name,
             cust_script=None,
         )
-        for spec in vm_specs:
-            spec['cloudinit_node_spec'] = templated_script.format(
+        for ind in range(len(vm_specs)):
+            spec = vm_specs[ind]
+            formatted_script = templated_script.format(
                 vm_host_name=spec['target_vm_name'],
                 ssh_key=ssh_key if ssh_key else '',
                 ip_port=ip_port,
                 token=token,
                 discovery_token_ca_cert_hash=discovery_token_ca_cert_hash,
+                install_core_packages="true" if ind == 0 else "false",
+                kapp_controller_version=core_pkg_versions.get('kapp_controller', "") if ind == 0 else "",  # noqa: E501
+                metrics_server_version=core_pkg_versions.get('metrics_server', "") if ind == 0 else "",  # noqa: E501
                 **proxy_config
             )
+
+            formatted_script = formatted_script.replace("OPEN_BRACKET", "{")
+            formatted_script = formatted_script.replace("CLOSE_BRACKET", "}")
+
+            spec['cloudinit_node_spec'] = formatted_script
 
         task = vapp.add_vms(
             vm_specs,
@@ -2574,6 +2596,7 @@ def _add_worker_nodes(sysadmin_client, num_nodes, org, vdc, vapp,
                 PostCustomizationPhase.STORE_SSH_KEY,
                 PostCustomizationPhase.PROXY_SETTING,
                 PostCustomizationPhase.KUBEADM_NODE_JOIN,
+                PostCustomizationPhase.CORE_PACKAGES,
             ]:
                 vapp.reload()
                 vcd_utils.wait_for_completion_of_post_customization_procedure(
