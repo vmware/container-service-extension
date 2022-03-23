@@ -2722,7 +2722,8 @@ def _init_cluster(sysadmin_client: vcd_client.Client, vapp, cluster_kind,
 
     try:
         templated_script = get_cluster_script_file_contents(
-            ClusterScriptFile.CONTROL_PLANE, ClusterScriptFile.VERSION_2_X)
+            ClusterScriptFile.CONTROL_PLANE.value,
+            ClusterScriptFile.VERSION_2_X.value)
         script = templated_script.format(
             cluster_kind=cluster_kind,
             k8s_version=k8s_version,
@@ -2778,7 +2779,7 @@ def _join_cluster(sysadmin_client: vcd_client.Client, vapp, target_nodes=None):
         join_info = control_plane_result[0][1].content.decode().split()
 
         templated_script = get_cluster_script_file_contents(
-            ClusterScriptFile.NODE, ClusterScriptFile.VERSION_2_X)
+            ClusterScriptFile.NODE.value, ClusterScriptFile.VERSION_2_X.value)
         script = templated_script.format(
             ip_port=join_info[2],
             token=join_info[4],
