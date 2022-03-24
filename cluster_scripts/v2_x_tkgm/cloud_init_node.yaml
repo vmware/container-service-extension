@@ -107,7 +107,11 @@ write_files:
         if [[ ! -z "$kapp_controller_version" && $kapp_controller_version != "null" ]]; then
           kubectl apply -f https://github.com/vmware-tanzu/carvel-kapp-controller/releases/download/v$OPEN_BRACKETkapp_controller_versionCLOSE_BRACKET/release.yml
           kapp_controller_installed=true
-          sleep 120 # wait for kapp controller to be running
+
+          # Wait for kapp-controller to be running so that tanzu cli can run
+          kapp_controller_pod=$(kubectl get pods -l=app='kapp-controller' -A -o jsonpath='OPEN_BRACKET.items[*].metadata.nameCLOSE_BRACKET')
+          kapp_controller_namespace=$(kubectl get pods -l=app='kapp-controller' -A -o jsonpath='OPEN_BRACKET.items[*].metadata.namespaceCLOSE_BRACKET')
+          kubectl wait --for=condition=Ready pod/$OPEN_BRACKETkapp_controller_podCLOSE_BRACKET -n $kapp_controller_namespace --timeout=5m
         fi
 
         # install tanzu-cli
@@ -119,7 +123,7 @@ write_files:
           wget https://github.com/vmware-tanzu/tanzu-framework/releases/download/v0.17.0/tanzu-cli-linux-amd64.tar.gz -O $tanzu_tar_path
           tar -zxvf $tanzu_tar_path -C $tanzu_path
           sudo install $OPEN_BRACKETtanzu_pathCLOSE_BRACKET/v0.17.0/tanzu-core-linux_amd64 /usr/local/bin/tanzu
-          # export HOME=/root
+          export HOME=/root
           tanzu plugin install package
 
           xml_version_property=$(vmtoolsd --cmd "info-get guestinfo.ovfenv" | grep "oe:key=\"VERSION\"")
@@ -134,7 +138,7 @@ write_files:
         # install metrics server
         metrics_server_version=""
         if [[ "$tanzu_cli_installed" = true ]]; then
-          # export KUBECONFIG=$kubeconfig_path
+          export KUBECONFIG=$kubeconfig_path
           metrics_server_version=$(tanzu package available list -A | grep metrics-server | sed -n 's/^.*\([0-9]\+\.[0-9]\+\.[0-9]\++vmware.[0-9]\+-tkg.[0-9]\+\).*$/\1/p')
           if [[ ! -z "$metrics_server_version" && $metrics_server_version != "null" ]]; then
             tanzu package install metrics-server --namespace tkg-system --create-namespace --package-name metrics-server.tanzu.vmware.com --version $metrics_server_version
