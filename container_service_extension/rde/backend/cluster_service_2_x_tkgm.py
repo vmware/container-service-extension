@@ -27,7 +27,8 @@ from container_service_extension.common.constants.server_constants import \
     CPI_NAME, \
     CSI_DEFAULT_VERSION, \
     CSI_NAME, \
-    DISK_ENABLE_UUID
+    DISK_ENABLE_UUID, \
+    PostCustomizationKubeconfig
 from container_service_extension.common.constants.server_constants import ClusterMetadataKey  # noqa: E501
 from container_service_extension.common.constants.server_constants import ClusterScriptFile  # noqa: E501
 from container_service_extension.common.constants.server_constants import DefEntityOperation  # noqa: E501
@@ -2527,6 +2528,7 @@ def _add_worker_nodes(sysadmin_client, num_nodes, org, vdc, vapp,
             sizing_class_name=sizing_class_name,
             cust_script=None,
         )
+
         for ind in range(len(vm_specs)):
             spec = vm_specs[ind]
             formatted_script = templated_script.format(
@@ -2537,7 +2539,7 @@ def _add_worker_nodes(sysadmin_client, num_nodes, org, vdc, vapp,
                 discovery_token_ca_cert_hash=discovery_token_ca_cert_hash,
                 install_core_packages="true" if ind == 0 else "false",
                 kapp_controller_version=core_pkg_versions.get('kapp_controller', "") if ind == 0 else "",  # noqa: E501
-                metrics_server_version=core_pkg_versions.get('metrics_server', "") if ind == 0 else "",  # noqa: E501
+                # metrics_server_version=core_pkg_versions.get('metrics_server', "") if ind == 0 else "",  # noqa: E501
                 **proxy_config
             )
 
@@ -2558,7 +2560,10 @@ def _add_worker_nodes(sysadmin_client, num_nodes, org, vdc, vapp,
         )
         vapp.reload()
 
-        for spec in vm_specs:
+        kube_config = _get_kube_config_from_control_plane_vm(
+            sysadmin_client, vapp)
+        for ind in range(len(vm_specs)):
+            spec = vm_specs[ind]
             vm_name = spec['target_vm_name']
             vm_resource = vapp.get_vm(vm_name)
             vm = vcd_vm.VM(sysadmin_client, resource=vm_resource)
@@ -2579,6 +2584,13 @@ def _add_worker_nodes(sysadmin_client, num_nodes, org, vdc, vapp,
 
             # create a cloud-init spec and update the VMs with it
             _set_cloud_init_spec(sysadmin_client, vapp, vm, spec['cloudinit_node_spec'])  # noqa: E501
+
+            if ind == 0:
+                task = vm.add_extra_config_element(PostCustomizationKubeconfig, kube_config)  # noqa: E501
+                sysadmin_client.get_task_monitor().wait_for_status(
+                    task,
+                    callback=wait_for_updating_kubeconfig
+                )
 
             task = vm.power_on()
             # wait_for_vm_power_on is reused for all vm creation callback
@@ -2605,6 +2617,14 @@ def _add_worker_nodes(sysadmin_client, num_nodes, org, vdc, vapp,
                     logger=LOGGER
                 )
             vm.reload()
+
+            # remove kubeconfig from extra config
+            if ind == 0:
+                task = vm.add_extra_config_element(PostCustomizationKubeconfig, "")  # noqa: E501
+                sysadmin_client.get_task_monitor().wait_for_status(
+                    task,
+                    callback=wait_for_updating_kubeconfig
+                )
 
             task = vm.add_extra_config_element(DISK_ENABLE_UUID, "1", True)  # noqa: E501
             sysadmin_client.get_task_monitor().wait_for_status(
@@ -2737,11 +2757,15 @@ def wait_for_updating_disk_enable_uuid(task):
 
 
 def wait_for_updating_cloud_init_spec(task):
-    LOGGER.debug(f"cloud init spec, status: {task.get('status').lower()}")  # noqa: E501
+    LOGGER.debug(f"cloud init spec, status: {task.get('status').lower()}")
 
 
 def wait_for_updating_cloud_init_spec_encoding(task):
     LOGGER.debug(f"cloud init spec encoding, status: {task.get('status').lower()}")  # noqa: E501
+
+
+def wait_for_updating_kubeconfig(task):
+    LOGGER.debug(f"adding kubeconfig, status: {task.get('status').lower()}")
 
 
 def _create_k8s_software_string(software_name: str, software_version: str) -> str:  # noqa: E501

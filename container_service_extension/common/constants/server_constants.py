@@ -825,6 +825,8 @@ class PostCustomizationVersions(Enum):
     INSTALLED_METRICS_SERVER = 'guestinfo.postcustomization.core_packages.metrics_server_version'  # noqa: E501
 
 
+PostCustomizationKubeconfig = 'guestinfo.postcustomization.control_plane.kubeconfig'  # noqa: E501
+
 KUBEADM_TOKEN_INFO = 'guestinfo.postcustomization.kubeadm.token.info'
 KUBE_CONFIG = 'guestinfo.kubeconfig'
 POST_CUSTOMIZATION_SCRIPT_EXECUTION_STATUS = 'guestinfo.post_customization_script_execution_status'  # noqa: E501

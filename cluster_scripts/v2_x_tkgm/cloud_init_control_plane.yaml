@@ -194,7 +194,7 @@ write_files:
       chmod +x $imgpkg_path
 
       # We need to loop through the `X` value in `tkg.X` because of some TKR unexpected design.
-      # We increment `X`, looking fir a valid tkr bom version.
+      # We increment `X`, looking for a valid tkr bom version.
       no_tkr_found=false
       until $imgpkg_path pull -i projects.registry.vmware.com/tkg/tkr-bom:$OPEN_BRACKETk8s_versionCLOSE_BRACKET -o $bom_path
       do
