@@ -28,7 +28,8 @@ from container_service_extension.common.constants.server_constants import \
     CSI_DEFAULT_VERSION, \
     CSI_NAME, \
     DISK_ENABLE_UUID, \
-    PostCustomizationKubeconfig
+    PostCustomizationKubeconfig, \
+    CorePkgVersionKeys
 from container_service_extension.common.constants.server_constants import ClusterMetadataKey  # noqa: E501
 from container_service_extension.common.constants.server_constants import ClusterScriptFile  # noqa: E501
 from container_service_extension.common.constants.server_constants import DefEntityOperation  # noqa: E501
@@ -930,7 +931,7 @@ class ClusterService(abstract_broker.AbstractBroker):
             LOGGER.debug(msg)
             self._update_task(BehaviorTaskStatus.RUNNING, message=msg)
             try:
-                _add_worker_nodes(
+                _, installed_core_pkg_versions = _add_worker_nodes(
                     sysadmin_client_v36,
                     num_nodes=num_workers,
                     org=org,
@@ -977,6 +978,10 @@ class ClusterService(abstract_broker.AbstractBroker):
             # csi `default` field; we will need to look into the spec and we
             # may need to validate if there is only one default csi
             csi_elem_rde_status_value.default = True
+
+            # get installed core pkg versions
+            installed_kapp_controller_version = installed_core_pkg_versions.get(CorePkgVersionKeys.KAPP_CONTROLLER.value, "")  # noqa: E501
+            installed_metrics_server_version = installed_core_pkg_versions.get(CorePkgVersionKeys.METRICS_SERVER.value, "")  # noqa: E501
             changes = {
                 'entity.status.private': rde_2_x.Private(
                     kube_token=control_plane_join_cmd,
@@ -1000,7 +1005,9 @@ class ClusterService(abstract_broker.AbstractBroker):
                 'entity.status.cni': f"{CNI_NAME} {cni_version}",
                 'entity.status.cpi.name': CPI_NAME,
                 'entity.status.cpi.version': cpi_version,
-                'entity.status.csi': [csi_elem_rde_status_value]
+                'entity.status.csi': [csi_elem_rde_status_value],
+                'entity.status.tkg_core_packages.kapp_controller': installed_kapp_controller_version,  # noqa: E501
+                'entity.status.tkg_core_packages.metrics_server': installed_metrics_server_version  # noqa: E501
             }
 
             # Update status with exposed ip
@@ -2449,14 +2456,10 @@ def _add_control_plane_nodes(
             )
             vapp.reload()
 
-            core_pkg_versions['kapp_controller'] = \
+            core_pkg_versions[CorePkgVersionKeys.KAPP_CONTROLLER.value] = \
                 vcd_utils.get_vm_extra_config_element(
                     vm,
                     PostCustomizationVersions.TKR_KAPP_CONTROLLER.value)
-            core_pkg_versions['metrics_server'] = \
-                vcd_utils.get_vm_extra_config_element(
-                    vm,
-                    PostCustomizationVersions.TKR_METRICS_SERVER.value)
 
     except Exception as err:
         LOGGER.error(err, exc_info=True)
@@ -2477,7 +2480,7 @@ def _add_worker_nodes(sysadmin_client, num_nodes, org, vdc, vapp,
                       storage_profile=None, ssh_key=None,
                       sizing_class_name=None, cpu_count=None, memory_mb=None,
                       control_plane_join_cmd='',
-                      core_pkg_versions=None) -> List:
+                      core_pkg_versions=None) -> Tuple[List, Dict]:
     vcd_utils.raise_error_if_user_not_from_system_org(sysadmin_client)
 
     if not core_pkg_versions:
@@ -2529,8 +2532,13 @@ def _add_worker_nodes(sysadmin_client, num_nodes, org, vdc, vapp,
             cust_script=None,
         )
 
+        installed_core_pkg_versions = {}
         for ind in range(len(vm_specs)):
             spec = vm_specs[ind]
+            # Core packages will only be installed during cluster creation
+            # To avoid installing core packages during a cluster resize
+            # operation, we also check that core_pkg_versions is non-empty
+            should_install_core_pkgs: bool = (ind == 0) and len(core_pkg_versions) > 0  # noqa: E501
             formatted_script = templated_script.format(
                 vm_host_name=spec['target_vm_name'],
                 ssh_key=ssh_key if ssh_key else '',
@@ -2538,8 +2546,7 @@ def _add_worker_nodes(sysadmin_client, num_nodes, org, vdc, vapp,
                 token=token,
                 discovery_token_ca_cert_hash=discovery_token_ca_cert_hash,
                 install_core_packages="true" if ind == 0 else "false",
-                kapp_controller_version=core_pkg_versions.get('kapp_controller', "") if ind == 0 else "",  # noqa: E501
-                # metrics_server_version=core_pkg_versions.get('metrics_server', "") if ind == 0 else "",  # noqa: E501
+                kapp_controller_version=core_pkg_versions.get(CorePkgVersionKeys.KAPP_CONTROLLER.value, "") if should_install_core_pkgs else "",  # noqa: E501
                 **proxy_config
             )
 
@@ -2585,7 +2592,8 @@ def _add_worker_nodes(sysadmin_client, num_nodes, org, vdc, vapp,
             # create a cloud-init spec and update the VMs with it
             _set_cloud_init_spec(sysadmin_client, vapp, vm, spec['cloudinit_node_spec'])  # noqa: E501
 
-            if ind == 0:
+            should_install_core_pkgs: bool = (ind == 0) and len(core_pkg_versions) > 0  # noqa: E501
+            if should_install_core_pkgs:
                 task = vm.add_extra_config_element(PostCustomizationKubeconfig, kube_config)  # noqa: E501
                 sysadmin_client.get_task_monitor().wait_for_status(
                     task,
@@ -2618,15 +2626,22 @@ def _add_worker_nodes(sysadmin_client, num_nodes, org, vdc, vapp,
                 )
             vm.reload()
 
-            # remove kubeconfig from extra config
-            if ind == 0:
-                task = vm.add_extra_config_element(PostCustomizationKubeconfig, "")  # noqa: E501
+            # remove kubeconfig from extra config and
+            # get installed core pkg versions
+            if should_install_core_pkgs:
+                task = vm.add_extra_config_element(PostCustomizationKubeconfig, "null")  # noqa: E501
                 sysadmin_client.get_task_monitor().wait_for_status(
                     task,
                     callback=wait_for_updating_kubeconfig
                 )
+                installed_core_pkg_versions[CorePkgVersionKeys.KAPP_CONTROLLER.value] = vcd_utils.get_vm_extra_config_element(  # noqa: E501
+                    vm,
+                    PostCustomizationVersions.INSTALLED_KAPP_CONTROLLER.value)  # noqa: E501
+                installed_core_pkg_versions[CorePkgVersionKeys.METRICS_SERVER.value] = vcd_utils.get_vm_extra_config_element(  # noqa: E501
+                    vm,
+                    PostCustomizationVersions.INSTALLED_METRICS_SERVER.value)
 
-            task = vm.add_extra_config_element(DISK_ENABLE_UUID, "1", True)  # noqa: E501
+                task = vm.add_extra_config_element(DISK_ENABLE_UUID, "1", True)  # noqa: E501
             sysadmin_client.get_task_monitor().wait_for_status(
                 task,
                 callback=wait_for_updating_disk_enable_uuid
@@ -2646,7 +2661,7 @@ def _add_worker_nodes(sysadmin_client, num_nodes, org, vdc, vapp,
 
         raise exceptions.NodeCreationError(node_list, str(err))
 
-    return vm_specs
+    return vm_specs, installed_core_pkg_versions
 
 
 def _get_node_names(vapp, node_type):

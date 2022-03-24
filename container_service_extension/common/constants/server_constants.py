@@ -825,6 +825,12 @@ class PostCustomizationVersions(Enum):
     INSTALLED_METRICS_SERVER = 'guestinfo.postcustomization.core_packages.metrics_server_version'  # noqa: E501
 
 
+@unique
+class CorePkgVersionKeys(Enum):
+    KAPP_CONTROLLER = 'kapp-controller'
+    METRICS_SERVER = 'metrics-server'
+
+
 PostCustomizationKubeconfig = 'guestinfo.postcustomization.control_plane.kubeconfig'  # noqa: E501
 
 KUBEADM_TOKEN_INFO = 'guestinfo.postcustomization.kubeadm.token.info'
@@ -833,7 +839,7 @@ POST_CUSTOMIZATION_SCRIPT_EXECUTION_STATUS = 'guestinfo.post_customization_scrip
 POST_CUSTOMIZATION_SCRIPT_EXECUTION_FAILURE_REASON = 'guestinfo.post_customization_script_execution_failure_reason'  # noqa: E501
 DEFAULT_POST_CUSTOMIZATION_STATUS_LIST = [cust_status.value for cust_status in PostCustomizationStatus]  # noqa: E501
 DEFAULT_POST_CUSTOMIZATION_POLL_SEC = 5
-DEFAULT_POST_CUSTOMIZATION_TIMEOUT_SEC = 2000
+DEFAULT_POST_CUSTOMIZATION_TIMEOUT_SEC = 600
 DISK_ENABLE_UUID = 'disk.enableUUID'
 CLOUDINIT_GUEST_USERDATA = 'guestinfo.userdata'
 CLOUDINIT_GUEST_USERDATA_ENCODING = 'guestinfo.userdata.encoding'
@@ -846,6 +852,6 @@ BEHAVIOR_TASK_RESPONSE_RESULT_CONTENT_MESSAGE_KEY = "resultContent"
 
 # CPI/CNI/CSI constants
 CPI_NAME = "cloud-provider-for-cloud-director"
-CPI_DEFAULT_VERSION = "1.1.0"
+CPI_DEFAULT_VERSION = "1.1.1"
 CSI_NAME = "cloud-director-named-disk-csi-driver"
-CSI_DEFAULT_VERSION = "1.1.0"
+CSI_DEFAULT_VERSION = "1.1.1"

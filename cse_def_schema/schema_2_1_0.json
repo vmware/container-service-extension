@@ -480,10 +480,6 @@
                         "metricsServer":{
                             "type":"string",
                             "description":"The metrics-server version."
-                        },
-                        "tanzuAddonsManager":{
-                            "type":"string",
-                            "description":"The tanzu-addons-manager version."
                         }
                     },
                     "additionalProperties":true

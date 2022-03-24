@@ -198,7 +198,6 @@ class Private:
 class TkgCorePackages:
     kapp_controller: Optional[str] = None
     metrics_server: Optional[str] = None
-    tanzu_addons_manager: Optional[str] = None
 
 
 @dataclass_json(letter_case=LetterCase.CAMEL)
