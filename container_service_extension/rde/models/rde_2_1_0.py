@@ -218,7 +218,7 @@ class Status:
     private: Optional[Private] = None
     csi: Optional[List[CsiElement]] = None
     cpi: Cpi = Cpi()
-    tkgCorePackages: TkgCorePackages = TkgCorePackages()
+    tkg_core_packages: TkgCorePackages = TkgCorePackages()
 
 
 @dataclass_json(letter_case=LetterCase.CAMEL)
