@@ -229,7 +229,6 @@ write_files:
       fi
 
       # get kapp-controller version
-      # kapp_controller_version=$($yq_path e ".components.kapp-controller[0].version" $components_path | sed 's/v//' | sed 's/+.*//')
       kapp_controller_version=$($yq_path e ".components.kapp-controller[0].version" $components_path | sed 's/v//')
       metrics_server_version=$($yq_path e ".components.metrics-server[0].version" $components_path | sed 's/v//')
       if [[ -z "$metrics_server_version" ]] || [[ "$metrics_server_version" = "null" ]] || [[ "$metrics_server_version" = "false" ]]; then
@@ -240,9 +239,9 @@ write_files:
       # store tkr versions in extra config
       vmtoolsd --cmd "info-set guestinfo.postcustomization.tkr.get_versions.kapp_controller $kapp_controller_version"
       vmtoolsd --cmd "info-set guestinfo.postcustomization.tkr.get_versions.metrics_server $metrics_server_version"
+
       # cleanup components downloads
-      # rm -rf $tkr_bom_dir TODO: uncomment
-      # fi
+      rm -rf $tkr_bom_dir
     vmtoolsd --cmd "info-set guestinfo.postcustomization.tkr.get_versions.status successful"
 
     vmtoolsd --cmd "info-set guestinfo.postcustomization.kubectl.cni.install.status in_progress"
@@ -295,65 +294,6 @@ write_files:
         kubectl apply -f /root/default-storage-class.yaml
       fi
     vmtoolsd --cmd "info-set guestinfo.postcustomization.kubectl.default_storage_class.status successful"
-
-
-    vmtoolsd --cmd "info-set guestinfo.postcustomization.kubectl.kapp_controller.install in_progress"
-      # cp_name=$(kubectl get nodes -o jsonpath='OPEN_BRACKET.items[*].metadata.nameCLOSE_BRACKET')
-      # The control plane node needs to have the taint removed in order to schedule the
-      # kapp controller. While it is not ideal to run an application on the control plane,
-      # this is needed in order to install tanzu-cli. kapp controller is also not a high-usage
-      # application.
-      # kubectl taint node $cp_name node.cloudprovider.kubernetes.io/uninitialized-
-      # kubectl taint nodes $cp_name  node-role.kubernetes.io/master-
-      # kubectl apply -f https://github.com/vmware-tanzu/carvel-kapp-controller/releases/download/v$OPEN_BRACKETkapp_controller_versionCLOSE_BRACKET/release.yml
-
-      # kapp controller takes ~5 minutes to be in ready status
-      # kapp_ready=true
-      # sleep 10
-      # kapp_loops_try=0
-      # max_kapp_loops_try=17
-      # kapp_ready=$(kubectl get pods -l=app='kapp-controller' -A -o jsonpath='OPEN_BRACKET.items[*].status.containerStatuses[0].readyCLOSE_BRACKET')
-      # while [[ "$kapp_ready" = false ]]; do
-      #   if [[ "$kapp_loops_try" -gt  "$max_kapp_loops_try"]]; then
-      #     break # kapp_ready is already false
-      #   fi
-      #   sleep 30
-      #   echo "waiting for kapp-controller" >> /var/log/cse/customization/status.log
-      #   ((kapp_loops_try++))
-      #   kapp_ready=$(kubectl get pods -l=app='kapp-controller' -A -o jsonpath='OPEN_BRACKET.items[*].status.containerStatuses[0].readyCLOSE_BRACKET')
-      #   vmtoolsd --cmd "info-set guestinfo.postcustomization.kubectl.kapp_controller.loop_cnt $kapp_loops_try"
-      # done
-
-      # if [[ "$kapp_ready" = false ]]; then
-      #   kapp_controller_version=""
-      # fi
-      # vmtoolsd --cmd "info-set guestinfo.postcustomization.kapp_controller.version $kapp_controller_version"
-    vmtoolsd --cmd "info-set guestinfo.postcustomization.kubectl.kapp_controller.install successful"
-
-
-    vmtoolsd --cmd "info-set guestinfo.postcustomization.tanzu_cli.install in_progress"
-      # kapp controller is needed to use tanzu-cli
-      # tanzu_cli_installed=false
-      # if [[ "$kapp_ready" = true ]] && [[ "metrics_server_version_valid" = true ]]; then
-        # wget https://github.com/vmware-tanzu/tanzu-framework/releases/download/v0.17.0/tanzu-cli-linux-amd64.tar.gz
-        # mkdir tanzu && tar -zxvf tanzu-cli-linux-amd64.tar.gz -C tanzu
-        # sudo install tanzu/v0.17.0/tanzu-core-linux_amd64 /usr/local/bin/tanzu
-        # tanzu plugin install package
-
-        # tanzu package repository add tanzu-core --namespace tkg-system --create-namespace --url projects.registry.vmware.com/tkg/packages/core/repo:$OPEN_BRACKETk8s_versionCLOSE_BRACKET
-        # tanzu_cli_installed=true
-      # fi
-    vmtoolsd --cmd "info-set guestinfo.postcustomization.tanzu_cli.install successful"
-
-
-    vmtoolsd --cmd "info-set guestinfo.postcustomization.metrics_server.install in_progress"
-      # if [[ "$tanzu_cli_installed" = true ]]; then
-      #   tanzu package install metrics-server --namespace tkg-system --create-namespace --package-name metrics-server.tanzu.vmware.com --version $metrics_server_version
-      # else
-      #   metrics_server_version=""
-      # fi
-      # vmtoolsd --cmd "info-set guestinfo.postcustomization.metrics_server.version $metrics_server_version"
-    vmtoolsd --cmd "info-set guestinfo.postcustomization.metrics_server.install successful"
 
 
     vmtoolsd --cmd "info-set guestinfo.postcustomization.kubeadm.token.generate.status in_progress"
