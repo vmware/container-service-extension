@@ -137,8 +137,7 @@ write_files:
           init_k8s_version=$(echo $xml_version_property | sed 's/.*oe:value=\"//; s/\(.*\)-.*/\1/')
           k8s_version=$(echo $init_k8s_version | tr -s "+" "_")
           export KUBECONFIG=$kubeconfig_path
-          kubectl get po -A &>> /var/log/cse/customization/status.log
-          tanzu package repository add tanzu-core --namespace tkg-system --create-namespace --url projects.registry.vmware.com/tkg/packages/core/repo:$OPEN_BRACKETk8s_versionCLOSE_BRACKET &>> /var/log/cse/customization/status.log
+          tanzu package repository add tanzu-core --namespace tkg-system --create-namespace --url projects.registry.vmware.com/tkg/packages/core/repo:$OPEN_BRACKETk8s_versionCLOSE_BRACKET
           tanzu_cli_installed=true
         fi
 
