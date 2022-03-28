@@ -2459,7 +2459,7 @@ def _add_control_plane_nodes(
             core_pkg_versions[CorePkgVersionKeys.KAPP_CONTROLLER.value] = \
                 vcd_utils.get_vm_extra_config_element(
                     vm,
-                    PostCustomizationVersions.TKR_KAPP_CONTROLLER.value)
+                    PostCustomizationVersions.TKR_KAPP_CONTROLLER_VERSION_TO_INSTALL.value)  # noqa: E501
 
     except Exception as err:
         LOGGER.error(err, exc_info=True)
@@ -2616,7 +2616,7 @@ def _add_worker_nodes(sysadmin_client, num_nodes, org, vdc, vapp,
                 PostCustomizationPhase.STORE_SSH_KEY,
                 PostCustomizationPhase.PROXY_SETTING,
                 PostCustomizationPhase.KUBEADM_NODE_JOIN,
-                PostCustomizationPhase.CORE_PACKAGES,
+                PostCustomizationPhase.CORE_PACKAGES_ATTEMPTED_INSTALL,
             ]:
                 vapp.reload()
                 vcd_utils.wait_for_completion_of_post_customization_procedure(
@@ -2636,10 +2636,10 @@ def _add_worker_nodes(sysadmin_client, num_nodes, org, vdc, vapp,
                 )
                 installed_core_pkg_versions[CorePkgVersionKeys.KAPP_CONTROLLER.value] = vcd_utils.get_vm_extra_config_element(  # noqa: E501
                     vm,
-                    PostCustomizationVersions.INSTALLED_KAPP_CONTROLLER.value)  # noqa: E501
+                    PostCustomizationVersions.INSTALLED_VERSION_OF_KAPP_CONTROLLER.value)  # noqa: E501
                 installed_core_pkg_versions[CorePkgVersionKeys.METRICS_SERVER.value] = vcd_utils.get_vm_extra_config_element(  # noqa: E501
                     vm,
-                    PostCustomizationVersions.INSTALLED_METRICS_SERVER.value)
+                    PostCustomizationVersions.INSTALLED_VERSION_OF_METRICS_SERVER.value)  # noqa: E501
 
                 task = vm.add_extra_config_element(DISK_ENABLE_UUID, "1", True)  # noqa: E501
             sysadmin_client.get_task_monitor().wait_for_status(

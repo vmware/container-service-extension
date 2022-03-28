@@ -97,7 +97,7 @@ write_files:
     # will be replaced by an open bracket.
     # This convention is needed so that python's template format function does not view the bash
     # $\open_bracket/VAR/\close_bracket as a format variable that will be replaced by the python format function.
-    vmtoolsd --cmd "info-set guestinfo.postcustomization.core_packages.install in_progress"
+    vmtoolsd --cmd "info-set guestinfo.postcustomization.core_packages.attempted_install in_progress"
       install_core_packages={install_core_packages}
       kubeconfig_path=/root/kubeconfig.yaml
       if [[ "$install_core_packages" = true ]]; then
@@ -111,7 +111,8 @@ write_files:
         if [[ ! -z "$kapp_controller_version" && $kapp_controller_version != "null" ]]; then
           kubectl apply -f https://github.com/vmware-tanzu/carvel-kapp-controller/releases/download/v$OPEN_BRACKETkapp_controller_versionCLOSE_BRACKET/release.yml
 
-          # Wait for kapp-controller to be ready for 8 minutes to be running so that tanzu cli can run
+          # Wait for kapp-controller to be ready for at most 8 minutes to be running so that tanzu cli can be fully
+          # functional for our purposes
           kapp_controller_pod=$(kubectl get pods -l=app='kapp-controller' -A -o jsonpath='OPEN_BRACKET.items[*].metadata.nameCLOSE_BRACKET')
           kapp_controller_namespace=$(kubectl get pods -l=app='kapp-controller' -A -o jsonpath='OPEN_BRACKET.items[*].metadata.namespaceCLOSE_BRACKET')
           kapp_controller_ready_path=/root/kapp_controller_ready.txt
@@ -161,7 +162,7 @@ write_files:
         fi
         vmtoolsd --cmd "info-set guestinfo.postcustomization.core_packages.metrics_server_version $metrics_server_version"
       fi
-    vmtoolsd --cmd "info-set guestinfo.postcustomization.core_packages.install successful"
+    vmtoolsd --cmd "info-set guestinfo.postcustomization.core_packages.attempted_install successful"
 
     echo "$(date) post customization script execution completed" &>> /var/log/cse/customization/status.log
 

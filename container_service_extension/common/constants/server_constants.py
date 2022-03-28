@@ -814,15 +814,18 @@ class PostCustomizationPhase(Enum):
     KUBEADM_TOKEN_GENERATE = 'guestinfo.postcustomization.kubeadm.token.generate.status'  # noqa: E501
     KUBEADM_NODE_JOIN = 'guestinfo.postcustomization.kubeadm.node.join.status'
     PROXY_SETTING = 'guestinfo.postcustomization.proxy.setting.status'
-    CORE_PACKAGES = 'guestinfo.postcustomization.core_packages.install'
+    CORE_PACKAGES_ATTEMPTED_INSTALL = 'guestinfo.postcustomization.core_packages.attempted_install'  # noqa: E501
 
 
+# TO_INSTALL versions indicate versions that the control plane node retrieved
+# for worker node(s) to install. INSTALLED_VERSION refers to the version
+# that the worker node(s) were able to install.
 @unique
 class PostCustomizationVersions(Enum):
-    TKR_KAPP_CONTROLLER = 'guestinfo.postcustomization.tkr.get_versions.kapp_controller'  # noqa: E501
-    TKR_METRICS_SERVER = 'guestinfo.postcustomization.tkr.get_versions.metrics_server'  # noqa: E501
-    INSTALLED_KAPP_CONTROLLER = 'guestinfo.postcustomization.core_packages.kapp_controller_version'  # noqa: E501
-    INSTALLED_METRICS_SERVER = 'guestinfo.postcustomization.core_packages.metrics_server_version'  # noqa: E501
+    TKR_KAPP_CONTROLLER_VERSION_TO_INSTALL = 'guestinfo.postcustomization.tkr.get_versions.kapp_controller'  # noqa: E501
+    TKR_METRICS_SERVER_VERSION_TO_INSTALL = 'guestinfo.postcustomization.tkr.get_versions.metrics_server'  # noqa: E501
+    INSTALLED_VERSION_OF_KAPP_CONTROLLER = 'guestinfo.postcustomization.core_packages.kapp_controller_version'  # noqa: E501
+    INSTALLED_VERSION_OF_METRICS_SERVER = 'guestinfo.postcustomization.core_packages.metrics_server_version'  # noqa: E501
 
 
 @unique
