@@ -2278,8 +2278,8 @@ def _add_control_plane_nodes(
             )
 
         templated_script = get_cluster_script_file_contents(
-            ClusterScriptFile.CLOUDINIT_CONTROL_PLANE,
-            ClusterScriptFile.VERSION_2_X_TKGM)
+            ClusterScriptFile.CLOUDINIT_CONTROL_PLANE.value,
+            ClusterScriptFile.VERSION_2_X_TKGM.value)
 
         # Get template with no expose_ip; expose_ip will be computed
         # later when control_plane internal ip is computed below.

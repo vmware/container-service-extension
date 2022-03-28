@@ -356,7 +356,7 @@ class EntityType(Enum):
     NATIVE_ENTITY_TYPE_1_0_0 = DefEntityType(
         name='nativeClusterEntityType',
         id=f"{DEF_ENTITY_TYPE_ID_PREFIX}:{Vendor.CSE.value}:{Nss.NATIVE_CLUSTER}:1.0.0",  # noqa: E501
-        schema=load_rde_schema(SchemaFile.SCHEMA_1_0_0),
+        schema=load_rde_schema(SchemaFile.SCHEMA_1_0_0.value),
         interfaces=[K8Interface.VCD_INTERFACE.value.id],
         version='1.0.0',
         vendor=Vendor.CSE.value,
@@ -366,7 +366,7 @@ class EntityType(Enum):
     NATIVE_ENTITY_TYPE_2_1_0 = DefEntityType2_0(
         name='nativeClusterEntityType',
         id=f"{DEF_ENTITY_TYPE_ID_PREFIX}:{Vendor.CSE.value}:{Nss.NATIVE_CLUSTER}:2.1.0",# noqa: E501
-        schema=load_rde_schema(SchemaFile.SCHEMA_2_1_0),
+        schema=load_rde_schema(SchemaFile.SCHEMA_2_1_0.value),
         interfaces=[
             K8Interface.VCD_INTERFACE.value.id,
             K8Interface.CSE_INTERFACE.value.id
@@ -394,7 +394,7 @@ class EntityType(Enum):
     CAPVCD_ENTITY_TYPE_1_0_0 = DefEntityType(
         name='CAPVCD Cluster',
         id=f"{DEF_ENTITY_TYPE_ID_PREFIX}:{Vendor.VMWARE.value}:{Nss.CAPVCD}:1.0.0",  # noqa: E501
-        schema=load_rde_schema(SchemaFile.CAPVCD_1_0_0),
+        schema=load_rde_schema(SchemaFile.CAPVCD_1_0_0.value),
         interfaces=[K8Interface.VCD_INTERFACE.value.id],
         version='1.0.0',
         vendor=Vendor.VMWARE.value,
