@@ -149,13 +149,30 @@ def read_all_tkgm_template(
         filtered_dict = {}
         kind = metadata_dict.get(server_constants.TKGmTemplateKey.KIND)
         if kind == shared_constants.ClusterEntityKind.TKG_M.value:
-            msg = f"Found TKGm template {item_name}."
+            msg = f"Found catalog item `{item_name}`."
             logger.debug(msg)
             msg_update_callback.general(msg)
-            for item in server_constants.TKGmTemplateKey:
-                key = item.value
+            for entry in server_constants.TKGmTemplateKey:
+                key = entry.value
                 value = metadata_dict.get(key, '')
+                # If catalog item has been renamed directly in VCD,
+                # update the `name` metadata field.
+                if entry == server_constants.TKGmTemplateKey.NAME and value != item_name:  # noqa: E501
+                    msg = f"Template `{value}` has been " \
+                          "renamed outside of CSE. Attempting to fix."
+                    logger.debug(msg)
+                    msg_update_callback.general(msg)
+                    org.set_metadata_on_catalog_item(
+                        catalog_name=catalog_name,
+                        item_name=item_name,
+                        key=key,
+                        value=item_name
+                    )
+                    value = item_name
                 filtered_dict[key] = value
+            msg = f"Template `{item_name}` successfully loaded."
+            logger.debug(msg)
+            msg_update_callback.general(msg)
             templates.append(filtered_dict)
 
     return templates
