@@ -2541,7 +2541,7 @@ def _add_worker_nodes(sysadmin_client, num_nodes, org, vdc, vapp,
             # worker node in order to allow time for the kapp controller pod
             # to be ready
             to_install_tkr_kapp_controller_version = core_pkg_versions.get(CorePkgVersionKeys.KAPP_CONTROLLER.value, "")  # noqa: E501
-            should_install_kapp_controller = (ind == 0) and not to_install_tkr_kapp_controller_version  # noqa: E501
+            should_install_kapp_controller = (ind == 0) and to_install_tkr_kapp_controller_version  # noqa: E501
             should_use_kapp_controller_version = ((ind == 0) or (ind == num_vm_specs - 1)) and to_install_tkr_kapp_controller_version  # noqa: E501
             should_install_tanzu_cli_packages = (ind == num_vm_specs - 1) and len(core_pkg_versions) > 0  # noqa: E501
             formatted_script = templated_script.format(
