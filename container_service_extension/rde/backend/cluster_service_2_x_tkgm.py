@@ -1390,7 +1390,13 @@ class ClusterService(abstract_broker.AbstractBroker):
                                     shared_constants.RDEProperty.KUBE_TOKEN.value):  # noqa: E501
                     control_plane_join_cmd = curr_native_entity.status.private.kube_token  # noqa: E501
 
-                _add_worker_nodes(
+                # If the cluster currently only has no worker nodes, then
+                # resizing the cluster will add the core packages
+                installed_core_pkg_versions = None
+                if curr_worker_count == 0:
+                    control_plane_vm = _get_control_plane_vm(sysadmin_client_v36, vapp)  # noqa: E501
+                    core_pkg_versions = _get_core_pkg_versions(control_plane_vm)  # noqa: E501
+                _, installed_core_pkg_versions = _add_worker_nodes(
                     sysadmin_client_v36,
                     num_nodes=num_workers_to_add,
                     org=org,
@@ -1404,12 +1410,32 @@ class ClusterService(abstract_broker.AbstractBroker):
                     sizing_class_name=worker_sizing_class,
                     cpu_count=worker_cpu_count,
                     memory_mb=worker_memory_mb,
-                    control_plane_join_cmd=control_plane_join_cmd
+                    control_plane_join_cmd=control_plane_join_cmd,
+                    core_pkg_versions=core_pkg_versions
                 )
 
                 msg = f"Added {num_workers_to_add} node(s) to cluster " \
                       f"{cluster_name}({cluster_id})"
                 self._update_task(BehaviorTaskStatus.RUNNING, message=msg)
+
+                # handle updating entity with core package info
+                if installed_core_pkg_versions and len(installed_core_pkg_versions) > 0:  # noqa: E501
+                    changes = {}
+                    installed_kapp_controller_version = installed_core_pkg_versions.get(  # noqa: E501
+                        CorePkgVersionKeys.KAPP_CONTROLLER.value, "")
+                    if installed_kapp_controller_version:
+                        changes['entity.status.tkg_core_packages.kapp_controller'] = installed_kapp_controller_version  # noqa: E501
+                    installed_metrics_server_version = installed_core_pkg_versions.get(  # noqa: E501
+                        CorePkgVersionKeys.METRICS_SERVER.value, "")
+                    if installed_metrics_server_version:
+                        changes['entity.status.tkg_core_packages.metrics_server'] = installed_metrics_server_version  # noqa: E501
+                    if len(changes) > 0:
+                        self._update_cluster_entity(
+                            cluster_id,
+                            changes=changes,
+                            external_id=vapp_href
+                        )
+
             msg = f"Created {num_workers_to_add} workers for '{cluster_name}' ({cluster_id}) "  # noqa: E501
             self._update_task(BehaviorTaskStatus.RUNNING, message=msg)
         except (exceptions.NodeCreationError, exceptions.ClusterJoiningError) as err:  # noqa: E501
@@ -2348,7 +2374,7 @@ def _add_control_plane_nodes(
             spec = vm_specs[0]
             internal_ip = vapp.get_primary_ip(vm_name=spec['target_vm_name'])
 
-        core_pkg_versions = {}  # TODO: update when > 1 control plane node used
+        core_pkg_versions = None
         for spec in vm_specs:
             vm_name = spec['target_vm_name']
             vm_resource = vapp.get_vm(vm_name)
@@ -2456,10 +2482,7 @@ def _add_control_plane_nodes(
             )
             vapp.reload()
 
-            core_pkg_versions[CorePkgVersionKeys.KAPP_CONTROLLER.value] = \
-                vcd_utils.get_vm_extra_config_element(
-                    vm,
-                    PostCustomizationVersions.TKR_KAPP_CONTROLLER_VERSION_TO_INSTALL.value)  # noqa: E501
+            core_pkg_versions = _get_core_pkg_versions(vm)
 
     except Exception as err:
         LOGGER.error(err, exc_info=True)
@@ -2473,6 +2496,15 @@ def _add_control_plane_nodes(
         raise exceptions.NodeCreationError(node_list, str(err))
 
     return expose_ip, vm_specs, core_pkg_versions
+
+
+def _get_core_pkg_versions(control_plane_vm: vcd_vm.VM) -> Dict:
+    core_pkg_versions = {
+        CorePkgVersionKeys.KAPP_CONTROLLER.value: vcd_utils.get_vm_extra_config_element(  # noqa: E501
+            control_plane_vm,
+            PostCustomizationVersions.TKR_KAPP_CONTROLLER_VERSION_TO_INSTALL.value)  # noqa: E501
+    }
+    return core_pkg_versions
 
 
 def _add_worker_nodes(sysadmin_client, num_nodes, org, vdc, vapp,
@@ -2492,8 +2524,9 @@ def _add_worker_nodes(sysadmin_client, num_nodes, org, vdc, vapp,
                                          "node creation")
 
     vm_specs = []
+    installed_core_pkg_versions = {}
     if num_nodes <= 0:
-        return vm_specs
+        return vm_specs, installed_core_pkg_versions
 
     try:
         templated_script = get_cluster_script_file_contents(
@@ -2532,7 +2565,6 @@ def _add_worker_nodes(sysadmin_client, num_nodes, org, vdc, vapp,
             cust_script=None,
         )
 
-        installed_core_pkg_versions = {}
         num_vm_specs = len(vm_specs)
         for ind in range(num_vm_specs):
             spec = vm_specs[ind]
@@ -2719,16 +2751,24 @@ def _get_join_cmd(sysadmin_client: vcd_client.Client, vapp):
     return control_plane_join_cmd
 
 
-def _get_kube_config_from_control_plane_vm(sysadmin_client: vcd_client.Client, vapp):  # noqa: E501
+def _get_control_plane_vm(sysadmin_client: vcd_client.Client, vapp):
     vcd_utils.raise_error_if_user_not_from_system_org(sysadmin_client)
     vapp.reload()
     node_names = _get_node_names(vapp, NodeType.CONTROL_PLANE)
     if not node_names:
-        raise exceptions.KubeconfigNotFound("No control plane node found")   # noqa: E501
+        raise Exception("No control plane node found")
 
     vm_resource = vapp.get_vm(node_names[0])
     control_plane_vm = vcd_vm.VM(sysadmin_client, resource=vm_resource)
     control_plane_vm.reload()
+    return control_plane_vm
+
+
+def _get_kube_config_from_control_plane_vm(sysadmin_client: vcd_client.Client, vapp):  # noqa: E501
+    try:
+        control_plane_vm = _get_control_plane_vm(sysadmin_client, vapp)
+    except Exception as e:
+        raise exceptions.KubeconfigNotFound(str(e))
     kube_config: str = vcd_utils.get_vm_extra_config_element(control_plane_vm, KUBE_CONFIG)  # noqa: E501
     if not kube_config:
         raise exceptions.KubeconfigNotFound("kubeconfig not found in control plane extra configuration")  # noqa: E501
