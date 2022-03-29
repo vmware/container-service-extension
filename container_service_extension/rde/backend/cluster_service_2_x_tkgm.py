@@ -2533,20 +2533,26 @@ def _add_worker_nodes(sysadmin_client, num_nodes, org, vdc, vapp,
         )
 
         installed_core_pkg_versions = {}
-        for ind in range(len(vm_specs)):
+        num_vm_specs = len(vm_specs)
+        for ind in range(num_vm_specs):
             spec = vm_specs[ind]
-            # Core packages will only be installed during cluster creation
-            # To avoid installing core packages during a cluster resize
-            # operation, we also check that core_pkg_versions is non-empty
-            should_install_core_pkgs: bool = (ind == 0) and len(core_pkg_versions) > 0  # noqa: E501
+            # kapp controller is installed on the 0th worker node
+            # tanzu cli and metrics server will be installed on the last
+            # worker node in order to allow time for the kapp controller pod
+            # to be ready
+            to_install_tkr_kapp_controller_version = core_pkg_versions.get(CorePkgVersionKeys.KAPP_CONTROLLER.value, "")  # noqa: E501
+            should_install_kapp_controller = (ind == 0) and not to_install_tkr_kapp_controller_version  # noqa: E501
+            should_use_kapp_controller_version = ((ind == 0) or (ind == num_vm_specs - 1)) and to_install_tkr_kapp_controller_version  # noqa: E501
+            should_install_tanzu_cli_packages = (ind == num_vm_specs - 1) and len(core_pkg_versions) > 0  # noqa: E501
             formatted_script = templated_script.format(
                 vm_host_name=spec['target_vm_name'],
                 ssh_key=ssh_key if ssh_key else '',
                 ip_port=ip_port,
                 token=token,
                 discovery_token_ca_cert_hash=discovery_token_ca_cert_hash,
-                install_core_packages="true" if ind == 0 else "false",
-                kapp_controller_version=core_pkg_versions.get(CorePkgVersionKeys.KAPP_CONTROLLER.value, "") if should_install_core_pkgs else "",  # noqa: E501
+                install_kapp_controller="true" if should_install_kapp_controller else "false",  # noqa: E501
+                kapp_controller_version=to_install_tkr_kapp_controller_version if should_use_kapp_controller_version else "",  # noqa: E501
+                install_tanzu_cli_packages="true" if should_install_tanzu_cli_packages else "false",  # noqa: E501
                 **proxy_config
             )
 
@@ -2569,7 +2575,7 @@ def _add_worker_nodes(sysadmin_client, num_nodes, org, vdc, vapp,
 
         kube_config = _get_kube_config_from_control_plane_vm(
             sysadmin_client, vapp)
-        for ind in range(len(vm_specs)):
+        for ind in range(num_vm_specs):
             spec = vm_specs[ind]
             vm_name = spec['target_vm_name']
             vm_resource = vapp.get_vm(vm_name)
@@ -2592,8 +2598,8 @@ def _add_worker_nodes(sysadmin_client, num_nodes, org, vdc, vapp,
             # create a cloud-init spec and update the VMs with it
             _set_cloud_init_spec(sysadmin_client, vapp, vm, spec['cloudinit_node_spec'])  # noqa: E501
 
-            should_install_core_pkgs: bool = (ind == 0) and len(core_pkg_versions) > 0  # noqa: E501
-            if should_install_core_pkgs:
+            should_use_kubeconfig: bool = ((ind == 0) or (ind == num_vm_specs - 1)) and len(core_pkg_versions) > 0  # noqa: E501
+            if should_use_kubeconfig:
                 task = vm.add_extra_config_element(PostCustomizationKubeconfig, kube_config)  # noqa: E501
                 sysadmin_client.get_task_monitor().wait_for_status(
                     task,
@@ -2628,7 +2634,7 @@ def _add_worker_nodes(sysadmin_client, num_nodes, org, vdc, vapp,
 
             # remove kubeconfig from extra config and
             # get installed core pkg versions
-            if should_install_core_pkgs:
+            if should_use_kubeconfig:
                 task = vm.add_extra_config_element(PostCustomizationKubeconfig, "null")  # noqa: E501
                 sysadmin_client.get_task_monitor().wait_for_status(
                     task,

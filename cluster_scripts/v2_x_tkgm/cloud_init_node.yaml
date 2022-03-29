@@ -98,33 +98,43 @@ write_files:
     # This convention is needed so that python's template format function does not view the bash
     # $\open_bracket/VAR/\close_bracket as a format variable that will be replaced by the python format function.
     vmtoolsd --cmd "info-set guestinfo.postcustomization.core_packages.attempted_install in_progress"
-      install_core_packages={install_core_packages}
+      install_kapp_controller={install_kapp_controller}
       kubeconfig_path=/root/kubeconfig.yaml
-      if [[ "$install_core_packages" = true ]]; then
+      touch $kubeconfig_path
+      # Kapp-controller is installed on the first worker node
+      kapp_controller_version="{kapp_controller_version}"
+      kapp_controller_version=$(echo $kapp_controller_version | sed 's/+.*//' | sed 's/v//')
+      if [[ "$install_kapp_controller" = true ]]; then
         vmtoolsd --cmd "info-get guestinfo.postcustomization.control_plane.kubeconfig" > $kubeconfig_path
         export KUBECONFIG=$kubeconfig_path
 
         # install kapp-controller, which is needed for tanzu-cli
-        kapp_controller_version="{kapp_controller_version}"
-        kapp_controller_version=$(echo $kapp_controller_version | sed 's/+.*//' | sed 's/v//')
         kapp_controller_installed=false
         if [[ ! -z "$kapp_controller_version" && $kapp_controller_version != "null" ]]; then
           kubectl apply -f https://github.com/vmware-tanzu/carvel-kapp-controller/releases/download/v$OPEN_BRACKETkapp_controller_versionCLOSE_BRACKET/release.yml
+        fi
+      fi
 
-          # Wait for kapp-controller to be ready for at most 8 minutes to be running so that tanzu cli can be fully
-          # functional for our purposes
-          kapp_controller_pod=$(kubectl get pods -l=app='kapp-controller' -A -o jsonpath='OPEN_BRACKET.items[*].metadata.nameCLOSE_BRACKET')
-          kapp_controller_namespace=$(kubectl get pods -l=app='kapp-controller' -A -o jsonpath='OPEN_BRACKET.items[*].metadata.namespaceCLOSE_BRACKET')
-          kapp_controller_ready_path=/root/kapp_controller_ready.txt
-          kubectl wait --for=condition=Ready pod/$OPEN_BRACKETkapp_controller_podCLOSE_BRACKET -n $kapp_controller_namespace --timeout=8m > $kapp_controller_ready_path
-          if [[ -f "$kapp_controller_ready_path" && -s $kapp_controller_ready_path ]]; then
-            kapp_controller_installed=true
-          fi
+      # Metrics server (currently the only tanzu cli installed package) is installed on the last worker node
+      install_tanzu_cli_packages={install_tanzu_cli_packages}
+      tanzu_cli_installed=false
+      if [[ "$install_tanzu_cli_packages" = true ]]; then
+        vmtoolsd --cmd "info-get guestinfo.postcustomization.control_plane.kubeconfig" > $kubeconfig_path
+        export KUBECONFIG=$kubeconfig_path
+
+        # Wait for kapp-controller to be ready for at most 8 minutes to be running so that tanzu cli can be fully
+        # functional for our purposes
+        kapp_controller_pod=$(kubectl get pods -l=app='kapp-controller' -A -o jsonpath='OPEN_BRACKET.items[*].metadata.nameCLOSE_BRACKET')
+        kapp_controller_namespace=$(kubectl get pods -l=app='kapp-controller' -A -o jsonpath='OPEN_BRACKET.items[*].metadata.namespaceCLOSE_BRACKET')
+        kapp_controller_ready_path=/root/kapp_controller_ready.txt
+        kapp_controller_ready=false
+        kubectl wait --for=condition=Ready pod/$OPEN_BRACKETkapp_controller_podCLOSE_BRACKET -n $kapp_controller_namespace --timeout=8m > $kapp_controller_ready_path
+        if [[ -f "$kapp_controller_ready_path" && -s $kapp_controller_ready_path ]]; then
+          kapp_controller_ready=true
         fi
 
-        # install tanzu-cli
-        tanzu_cli_installed=false
-        if [[ "$kapp_controller_installed" = true ]]; then
+        if [[ "$kapp_controller_ready" = true ]]; then
+          # install tanzu cli
           tanzu_path=/root/tanzu
           mkdir $tanzu_path
           tanzu_tar_path=$tanzu_path/tanzu_cli.tar.gz
@@ -139,28 +149,26 @@ write_files:
           k8s_version=$(echo $init_k8s_version | tr -s "+" "_")
           export KUBECONFIG=$kubeconfig_path
           tanzu package repository add tanzu-core --namespace tkg-system --create-namespace --url projects.registry.vmware.com/tkg/packages/core/repo:$OPEN_BRACKETk8s_versionCLOSE_BRACKET
-          tanzu_cli_installed=true
-        fi
 
-        # install metrics server
-        metrics_server_version=""
-        if [[ "$tanzu_cli_installed" = true ]]; then
+          # install metrics server
+          metrics_server_version=""
           export KUBECONFIG=$kubeconfig_path
           metrics_server_version=$(tanzu package available list -A | grep metrics-server | sed -n 's/^.*\([0-9]\+\.[0-9]\+\.[0-9]\++vmware.[0-9]\+-tkg.[0-9]\+\).*$/\1/p')
           if [[ ! -z "$metrics_server_version" && $metrics_server_version != "null" ]]; then
             tanzu package install metrics-server --namespace tkg-system --create-namespace --package-name metrics-server.tanzu.vmware.com --version $metrics_server_version
           fi
+
+          if [[ -z "$kapp_controller_version" ]]; then
+            kapp_controller_version="null"
+          fi
+          vmtoolsd --cmd "info-set guestinfo.postcustomization.core_packages.kapp_controller_version $kapp_controller_version"
+          if [[ -z "$metrics_server_version" ]]; then
+            metrics_server_version="null"
+          fi
+          vmtoolsd --cmd "info-set guestinfo.postcustomization.core_packages.metrics_server_version $metrics_server_version"
         fi
 
         rm $kubeconfig_path
-        if [[ -z "$kapp_controller_version" ]]; then
-          kapp_controller_version="null"
-        fi
-        vmtoolsd --cmd "info-set guestinfo.postcustomization.core_packages.kapp_controller_version $kapp_controller_version"
-        if [[ -z "$metrics_server_version" ]]; then
-          metrics_server_version="null"
-        fi
-        vmtoolsd --cmd "info-set guestinfo.postcustomization.core_packages.metrics_server_version $metrics_server_version"
       fi
     vmtoolsd --cmd "info-set guestinfo.postcustomization.core_packages.attempted_install successful"
 
