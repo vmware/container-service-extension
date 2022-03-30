@@ -2482,7 +2482,7 @@ def _add_worker_nodes(sysadmin_client, num_nodes, org, vdc, vapp,
 
     try:
         templated_script = get_cluster_script_file_contents(
-            ClusterScriptFile.CLOUDINIT_NODE, ClusterScriptFile.VERSION_2_X_TKGM)  # noqa: E501
+            ClusterScriptFile.CLOUDINIT_NODE.value, ClusterScriptFile.VERSION_2_X_TKGM.value)  # noqa: E501
 
         # Example format:
         # kubeadm join 192.168.7.8:6443 --token 5edbci.duu55v7k6hdv52sm \
