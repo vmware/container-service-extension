@@ -3,10 +3,12 @@
 # SPDX-License-Identifier: BSD-2-Clause
 import ipaddress
 import logging
+import time
 from typing import Optional
 
 import pyvcloud.vcd.client as vcd_client
 import pyvcloud.vcd.gateway as vcd_gateway
+import requests
 
 import container_service_extension.common.constants.server_constants as server_constants  # noqa: E501
 import container_service_extension.common.constants.shared_constants as shared_constants  # noqa: E501
@@ -116,15 +118,18 @@ class NsxtBackedGatewayService:
             f'{gateway_relative_path}/{nsxt_constants.NATS_PATH_FRAGMENT}/' \
             f'{nsxt_constants.RULES_PATH_FRAGMENT}'
 
-    def add_dnat_rule(self,
-                      name,
-                      internal_address,
-                      external_address,
-                      dnat_external_port=DNAT_EXTERNAL_PORT,
-                      description='',
-                      logging_enabled=False,
-                      enabled=True,
-                      application_port_profile=None):
+    def add_dnat_rule(
+        self,
+        name,
+        internal_address,
+        external_address,
+        dnat_external_port=DNAT_EXTERNAL_PORT,
+        description='',
+        logging_enabled=False,
+        enabled=True,
+        application_port_profile=None,
+        num_retry_if_gateway_busy=0
+    ):
         """Add a DNAT rule for an NSX-T backed gateway.
 
         :param str name: name of the rule
@@ -136,6 +141,8 @@ class NsxtBackedGatewayService:
         :param bool enabled: indicate state
         :param dict application_port_profile: dict with keys "id" and "name"
             for port profile
+        :param int num_retry_if_gateway_busy: number of times to retry the
+            operation if the underlying gateway is busy.
         """
         post_body = {
             NsxtNATRuleKey.NAME: name,
@@ -149,17 +156,39 @@ class NsxtBackedGatewayService:
             NsxtNATRuleKey.DNAT_EXTERNAL_PORT: dnat_external_port
         }
 
-        try:
-            self._cloudapi_client.do_request(
-                method=shared_constants.RequestMethod.POST,
-                cloudapi_version=cloudapi_constants.CloudApiVersion.VERSION_1_0_0,  # noqa: E501
-                resource_url_relative_path=self._nat_rules_relative_path,
-                payload=post_body,
-                content_type='application/json')
-            self._wait_for_last_cloudapi_task()
-        except Exception as err:
-            SERVER_LOGGER.info(f'Error when creating dnat rule: {err}')
-            raise
+        retry_attempt_count = 0
+        while True:
+            try:
+                self._cloudapi_client.do_request(
+                    method=shared_constants.RequestMethod.POST,
+                    cloudapi_version=cloudapi_constants.CloudApiVersion.VERSION_1_0_0,  # noqa: E501
+                    resource_url_relative_path=self._nat_rules_relative_path,
+                    payload=post_body,
+                    content_type='application/json'
+                )
+                self._wait_for_last_cloudapi_task()
+                break
+            except requests.exceptions.HTTPError as err:
+                retry = False
+                if err.response.status_code == requests.codes.bad_request:
+                    SERVER_LOGGER.error(
+                        "Error creating dnat rule, underlying "
+                        "gateway might be in busy state."
+                    )
+                    retry_attempt_count += 1
+                    if retry_attempt_count <= num_retry_if_gateway_busy:
+                        SERVER_LOGGER.error(f"Retrying operation. Attempt#{retry_attempt_count}.")  # noqa: E501
+                        retry = True
+                        time.sleep(30)
+                    else:
+                        SERVER_LOGGER.error("Maximum retry count reached.")
+
+                if not retry:
+                    SERVER_LOGGER.error(f'Error creating dnat rule: {err}')  # noqa: E501
+                    raise
+            except Exception as err:
+                SERVER_LOGGER.error(f"Error creating dnat rule: {err}")
+                raise
 
     def _wait_for_last_cloudapi_task(self):
         """Wait for last cloudapi task.
