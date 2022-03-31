@@ -857,6 +857,6 @@ BEHAVIOR_TASK_RESPONSE_RESULT_CONTENT_MESSAGE_KEY = "resultContent"
 
 # CPI/CNI/CSI constants
 CPI_NAME = "cloud-provider-for-cloud-director"
-CPI_DEFAULT_VERSION = "1.1.1"
+CPI_DEFAULT_VERSION = "1.1.0"
 CSI_NAME = "cloud-director-named-disk-csi-driver"
-CSI_DEFAULT_VERSION = "1.1.1"
+CSI_DEFAULT_VERSION = "1.1.0"

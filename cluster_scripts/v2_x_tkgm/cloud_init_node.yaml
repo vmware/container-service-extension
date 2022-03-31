@@ -25,6 +25,14 @@ write_files:
     #!/usr/bin/env bash
 
     catch() {{
+      kubeconfig_path=/root/kubeconfig.yaml
+      if [[ -f "$kubeconfig_path" ]]; then
+        rm $kubeconfig_path
+      fi
+      # ensure kubeconfig is null, even if this worker doesn't use the kubeconfig to avoid
+      # getting the config if the value is not set
+      vmtoolsd --cmd "info-set guestinfo.postcustomization.control_plane.kubeconfig null"
+
        vmtoolsd --cmd "info-set guestinfo.post_customization_script_execution_status $?"
        error_message="$(date) $(caller): $BASH_COMMAND"
        echo "$error_message" &>> /var/log/cse/customization/error.log
@@ -93,10 +101,10 @@ write_files:
       kubeadm join --config /root/kubeadm-defaults-join.conf --v=10 &> /root/kubeadm-join.out
     vmtoolsd --cmd "info-set guestinfo.postcustomization.kubeadm.node.join.status successful"
 
-    # open_bracket(all caps) will be replaced by the open bracket and close_bracket (all caps)
+    # openbracket(all caps) will be replaced by the open bracket and closebracket (all caps)
     # will be replaced by an open bracket.
     # This convention is needed so that python's template format function does not view the bash
-    # $\open_bracket/VAR/\close_bracket as a format variable that will be replaced by the python format function.
+    # $\openbracket/VAR/\closebracket as a format variable that will be replaced by the python format function.
     vmtoolsd --cmd "info-set guestinfo.postcustomization.core_packages.attempted_install in_progress"
       install_kapp_controller={install_kapp_controller}
       kubeconfig_path=/root/kubeconfig.yaml
@@ -111,7 +119,7 @@ write_files:
         # install kapp-controller, which is needed for tanzu-cli
         kapp_controller_installed=false
         if [[ ! -z "$kapp_controller_version" && $kapp_controller_version != "null" ]]; then
-          kubectl apply -f https://github.com/vmware-tanzu/carvel-kapp-controller/releases/download/v$OPEN_BRACKETkapp_controller_versionCLOSE_BRACKET/release.yml
+          kubectl apply -f https://github.com/vmware-tanzu/carvel-kapp-controller/releases/download/v$OPENBRACKETkapp_controller_versionCLOSE_BRACKET/release.yml
         fi
       fi
 
@@ -120,16 +128,18 @@ write_files:
       tanzu_cli_installed=false
       if [[ "$install_tanzu_cli_packages" = true ]]; then
         vmtoolsd --cmd "info-get guestinfo.postcustomization.control_plane.kubeconfig" > $kubeconfig_path
+        # clear extra config to avoid leaking it
+        vmtoolsd --cmd "info-set guestinfo.postcustomization.control_plane.kubeconfig null"
         export KUBECONFIG=$kubeconfig_path
         metrics_server_version=""
 
         # Wait for kapp-controller to be ready for at most 8 minutes to be running so that tanzu cli can be fully
         # functional for our purposes
-        kapp_controller_pod=$(kubectl get pods -l=app='kapp-controller' -A -o jsonpath='OPEN_BRACKET.items[*].metadata.nameCLOSE_BRACKET')
-        kapp_controller_namespace=$(kubectl get pods -l=app='kapp-controller' -A -o jsonpath='OPEN_BRACKET.items[*].metadata.namespaceCLOSE_BRACKET')
+        kapp_controller_pod=$(kubectl get pods -l=app='kapp-controller' -A -o jsonpath='OPENBRACKET.items[*].metadata.nameCLOSE_BRACKET')
+        kapp_controller_namespace=$(kubectl get pods -l=app='kapp-controller' -A -o jsonpath='OPENBRACKET.items[*].metadata.namespaceCLOSE_BRACKET')
         kapp_controller_ready_path=/root/kapp_controller_ready.txt
         kapp_controller_ready=false
-        kubectl wait --for=condition=Ready pod/$OPEN_BRACKETkapp_controller_podCLOSE_BRACKET -n $kapp_controller_namespace --timeout=8m > $kapp_controller_ready_path
+        kubectl wait --for=condition=Ready pod/$OPENBRACKETkapp_controller_podCLOSE_BRACKET -n $kapp_controller_namespace --timeout=8m > $kapp_controller_ready_path
         if [[ -f "$kapp_controller_ready_path" && -s $kapp_controller_ready_path ]]; then
           kapp_controller_ready=true
         else
@@ -143,7 +153,7 @@ write_files:
           tanzu_tar_path=$tanzu_path/tanzu_cli.tar.gz
           wget https://github.com/vmware-tanzu/tanzu-framework/releases/download/v0.17.0/tanzu-cli-linux-amd64.tar.gz -O $tanzu_tar_path
           tar -zxvf $tanzu_tar_path -C $tanzu_path
-          sudo install $OPEN_BRACKETtanzu_pathCLOSE_BRACKET/v0.17.0/tanzu-core-linux_amd64 /usr/local/bin/tanzu
+          sudo install $OPENBRACKETtanzu_pathCLOSE_BRACKET/v0.17.0/tanzu-core-linux_amd64 /usr/local/bin/tanzu
           export HOME=/root
           tanzu plugin install package
 
@@ -151,7 +161,7 @@ write_files:
           init_k8s_version=$(echo $xml_version_property | sed 's/.*oe:value=\"//; s/\(.*\)-.*/\1/')
           k8s_version=$(echo $init_k8s_version | tr -s "+" "_")
           export KUBECONFIG=$kubeconfig_path
-          tanzu package repository add tanzu-core --namespace tkg-system --create-namespace --url projects.registry.vmware.com/tkg/packages/core/repo:$OPEN_BRACKETk8s_versionCLOSE_BRACKET
+          tanzu package repository add tanzu-core --namespace tkg-system --create-namespace --url projects.registry.vmware.com/tkg/packages/core/repo:$OPENBRACKETk8s_versionCLOSE_BRACKET
 
           # wait for metrics server to be available
           metrics_server_info_str=$(tanzu package available list -A | grep metrics-server)
@@ -168,7 +178,9 @@ write_files:
           # install metrics server
           metrics_server_version=$(echo $metrics_server_info_str | sed -n 's/^.*\([0-9]\+\.[0-9]\+\.[0-9]\++vmware.[0-9]\+-tkg.[0-9]\+\).*$/\1/p')
           if [[ ! -z "$metrics_server_version" && $metrics_server_version != "null" ]]; then
-            tanzu package install metrics-server --namespace tkg-system --create-namespace --package-name metrics-server.tanzu.vmware.com --version $metrics_server_version --wait=false &>> /var/log/cse/customization/status.log
+            # similar to other k8s packages, we are not waiting in order to avoid
+            # timeout issues crashing the cluster creation
+            tanzu package install metrics-server --namespace tkg-system --create-namespace --package-name metrics-server.tanzu.vmware.com --version $metrics_server_version --wait=false
           fi
 
           if [[ -z "$kapp_controller_version" ]]; then

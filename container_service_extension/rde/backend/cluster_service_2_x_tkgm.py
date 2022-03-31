@@ -2451,8 +2451,8 @@ def _add_control_plane_nodes(
 
             # place bash open and close brackets after the python template
             # function
-            cloud_init_spec = cloud_init_spec.replace("OPEN_BRACKET", "{")
-            cloud_init_spec = cloud_init_spec.replace("CLOSE_BRACKET", "}")
+            cloud_init_spec = cloud_init_spec.replace("OPENBRACKET", "{")
+            cloud_init_spec = cloud_init_spec.replace("CLOSEBRACKET", "}")
 
             # create a cloud-init spec and update the VMs with it
             _set_cloud_init_spec(sysadmin_client, vapp, vm, cloud_init_spec)
@@ -2604,8 +2604,8 @@ def _add_worker_nodes(sysadmin_client, num_nodes, org, vdc, vapp,
                 **proxy_config
             )
 
-            formatted_script = formatted_script.replace("OPEN_BRACKET", "{")
-            formatted_script = formatted_script.replace("CLOSE_BRACKET", "}")
+            formatted_script = formatted_script.replace("OPENBRACKET", "{")
+            formatted_script = formatted_script.replace("CLOSEBRACKET", "}")
 
             spec['cloudinit_node_spec'] = formatted_script
 
@@ -2648,6 +2648,8 @@ def _add_worker_nodes(sysadmin_client, num_nodes, org, vdc, vapp,
 
             should_use_kubeconfig: bool = ((ind == 0) or (ind == num_vm_specs - 1)) and len(core_pkg_versions_to_install) > 0  # noqa: E501
             if should_use_kubeconfig:
+                # The worker node will clear this value upon reading it or
+                # failure
                 task = vm.add_extra_config_element(PostCustomizationKubeconfig, kube_config)  # noqa: E501
                 sysadmin_client.get_task_monitor().wait_for_status(
                     task,
@@ -2680,10 +2682,8 @@ def _add_worker_nodes(sysadmin_client, num_nodes, org, vdc, vapp,
                 )
             vm.reload()
 
-            # remove kubeconfig from extra config and
             # get installed core pkg versions
             if should_use_kubeconfig:
-                task = vm.add_extra_config_element(PostCustomizationKubeconfig, "null")  # noqa: E501
                 sysadmin_client.get_task_monitor().wait_for_status(
                     task,
                     callback=wait_for_updating_kubeconfig
@@ -2695,7 +2695,7 @@ def _add_worker_nodes(sysadmin_client, num_nodes, org, vdc, vapp,
                     vm,
                     PostCustomizationVersions.INSTALLED_VERSION_OF_METRICS_SERVER.value)  # noqa: E501
 
-                task = vm.add_extra_config_element(DISK_ENABLE_UUID, "1", True)  # noqa: E501
+            task = vm.add_extra_config_element(DISK_ENABLE_UUID, "1", True)  # noqa: E501
             sysadmin_client.get_task_monitor().wait_for_status(
                 task,
                 callback=wait_for_updating_disk_enable_uuid
