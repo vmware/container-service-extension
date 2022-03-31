@@ -313,8 +313,14 @@ class NativeEntity(AbstractNativeEntity):
             else:
                 # Upgrade RDE 2.0 -> 2.1
                 # Ensure settings.cni is deprecated
-                upgraded_native_entity = NativeEntity(native_entity.to_dict())
-                if not upgraded_native_entity.spec.settings.network.cni:  # noqa: E501
+                upgraded_native_entity = cls(
+                    metadata=native_entity.metadata,
+                    spec=native_entity.spec,
+                    status=native_entity.status,
+                    kind=native_entity.kind,
+                    api_version=rde_constants.PAYLOAD_VERSION_2_1
+                )
+                if upgraded_native_entity.spec.settings.network.cni is not None:  # noqa: E501
                     cni_version_list = upgraded_native_entity.spec.settings.network.cni.split()  # noqa: E501
                     upgraded_native_entity.spec.settings.cni.name = cni_version_list[0]  # noqa: E501
                     if len(cni_version_list) > 1:
