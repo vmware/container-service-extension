@@ -884,6 +884,9 @@ class ClusterService(abstract_broker.AbstractBroker):
             vapp.reload()
 
             try:
+                # antrea will be installed on the first control plane node.
+                # kapp controller and metrics server will be installed on
+                # the worker nodes.
                 expose_ip, _, core_pkg_versions = _add_control_plane_nodes(
                     sysadmin_client_v36,
                     user_client=self.context.client,
@@ -930,6 +933,11 @@ class ClusterService(abstract_broker.AbstractBroker):
                   f"'{cluster_name}' ({cluster_id})"
             LOGGER.debug(msg)
             self._update_task(BehaviorTaskStatus.RUNNING, message=msg)
+            cni_version = core_pkg_versions.get(CorePkgVersionKeys.ANTREA.value)  # noqa: E501
+            # because antrea is already installed, remove it from the core pkg
+            # dictionary so that it is not installed
+            if cni_version:
+                del core_pkg_versions[CorePkgVersionKeys.ANTREA.value]
             try:
                 _, installed_core_pkg_versions = _add_worker_nodes(
                     sysadmin_client_v36,
@@ -946,7 +954,7 @@ class ClusterService(abstract_broker.AbstractBroker):
                     cpu_count=worker_cpu_count,
                     memory_mb=worker_memory_mb,
                     control_plane_join_cmd=control_plane_join_cmd,
-                    core_pkg_versions=core_pkg_versions
+                    core_pkg_versions_to_install=core_pkg_versions
                 )
             except Exception as err:
                 LOGGER.error(err, exc_info=True)
@@ -1396,6 +1404,9 @@ class ClusterService(abstract_broker.AbstractBroker):
                 if curr_worker_count == 0:
                     control_plane_vm = _get_control_plane_vm(sysadmin_client_v36, vapp)  # noqa: E501
                     core_pkg_versions = _get_core_pkg_versions(control_plane_vm)  # noqa: E501
+                    # remove antrea since it is already installed
+                    if core_pkg_versions.get(CorePkgVersionKeys.ANTREA.value):
+                        del core_pkg_versions[CorePkgVersionKeys.ANTREA.value]
                 _, installed_core_pkg_versions = _add_worker_nodes(
                     sysadmin_client_v36,
                     num_nodes=num_workers_to_add,
@@ -1411,7 +1422,7 @@ class ClusterService(abstract_broker.AbstractBroker):
                     cpu_count=worker_cpu_count,
                     memory_mb=worker_memory_mb,
                     control_plane_join_cmd=control_plane_join_cmd,
-                    core_pkg_versions=core_pkg_versions
+                    core_pkg_versions_to_install=core_pkg_versions
                 )
 
                 msg = f"Added {num_workers_to_add} node(s) to cluster " \
@@ -2499,10 +2510,15 @@ def _add_control_plane_nodes(
 
 
 def _get_core_pkg_versions(control_plane_vm: vcd_vm.VM) -> Dict:
+    # the values of the dictionary will be None if the key does not exist
+    # in the vm extra config
     core_pkg_versions = {
         CorePkgVersionKeys.KAPP_CONTROLLER.value: vcd_utils.get_vm_extra_config_element(  # noqa: E501
             control_plane_vm,
-            PostCustomizationVersions.TKR_KAPP_CONTROLLER_VERSION_TO_INSTALL.value)  # noqa: E501
+            PostCustomizationVersions.TKR_KAPP_CONTROLLER_VERSION_TO_INSTALL.value),  # noqa: E501
+        CorePkgVersionKeys.ANTREA.value: vcd_utils.get_vm_extra_config_element(
+            control_plane_vm,
+            PostCustomizationVersions.INSTALLED_VERSION_OF_ANTREA.value)
     }
     return core_pkg_versions
 
@@ -2512,11 +2528,11 @@ def _add_worker_nodes(sysadmin_client, num_nodes, org, vdc, vapp,
                       storage_profile=None, ssh_key=None,
                       sizing_class_name=None, cpu_count=None, memory_mb=None,
                       control_plane_join_cmd='',
-                      core_pkg_versions=None) -> Tuple[List, Dict]:
+                      core_pkg_versions_to_install=None) -> Tuple[List, Dict]:
     vcd_utils.raise_error_if_user_not_from_system_org(sysadmin_client)
 
-    if not core_pkg_versions:
-        core_pkg_versions = {}
+    if not core_pkg_versions_to_install:
+        core_pkg_versions_to_install = {}
 
     if (cpu_count or memory_mb) and sizing_class_name:
         raise exceptions.BadRequestError("Cannot specify both cpu/memory and "
@@ -2572,10 +2588,10 @@ def _add_worker_nodes(sysadmin_client, num_nodes, org, vdc, vapp,
             # tanzu cli and metrics server will be installed on the last
             # worker node in order to allow time for the kapp controller pod
             # to be ready
-            to_install_tkr_kapp_controller_version = core_pkg_versions.get(CorePkgVersionKeys.KAPP_CONTROLLER.value, "")  # noqa: E501
+            to_install_tkr_kapp_controller_version = core_pkg_versions_to_install.get(CorePkgVersionKeys.KAPP_CONTROLLER.value, "")  # noqa: E501
             should_install_kapp_controller = (ind == 0) and to_install_tkr_kapp_controller_version  # noqa: E501
             should_use_kapp_controller_version = ((ind == 0) or (ind == num_vm_specs - 1)) and to_install_tkr_kapp_controller_version  # noqa: E501
-            should_install_tanzu_cli_packages = (ind == num_vm_specs - 1) and len(core_pkg_versions) > 0  # noqa: E501
+            should_install_tanzu_cli_packages = (ind == num_vm_specs - 1) and len(core_pkg_versions_to_install) > 0  # noqa: E501
             formatted_script = templated_script.format(
                 vm_host_name=spec['target_vm_name'],
                 ssh_key=ssh_key if ssh_key else '',
@@ -2630,7 +2646,7 @@ def _add_worker_nodes(sysadmin_client, num_nodes, org, vdc, vapp,
             # create a cloud-init spec and update the VMs with it
             _set_cloud_init_spec(sysadmin_client, vapp, vm, spec['cloudinit_node_spec'])  # noqa: E501
 
-            should_use_kubeconfig: bool = ((ind == 0) or (ind == num_vm_specs - 1)) and len(core_pkg_versions) > 0  # noqa: E501
+            should_use_kubeconfig: bool = ((ind == 0) or (ind == num_vm_specs - 1)) and len(core_pkg_versions_to_install) > 0  # noqa: E501
             if should_use_kubeconfig:
                 task = vm.add_extra_config_element(PostCustomizationKubeconfig, kube_config)  # noqa: E501
                 sysadmin_client.get_task_monitor().wait_for_status(

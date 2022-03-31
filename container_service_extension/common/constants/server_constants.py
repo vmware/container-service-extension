@@ -826,12 +826,14 @@ class PostCustomizationVersions(Enum):
     TKR_METRICS_SERVER_VERSION_TO_INSTALL = 'guestinfo.postcustomization.tkr.get_versions.metrics_server'  # noqa: E501
     INSTALLED_VERSION_OF_KAPP_CONTROLLER = 'guestinfo.postcustomization.core_packages.kapp_controller_version'  # noqa: E501
     INSTALLED_VERSION_OF_METRICS_SERVER = 'guestinfo.postcustomization.core_packages.metrics_server_version'  # noqa: E501
+    INSTALLED_VERSION_OF_ANTREA = 'guestinfo.postcustomization.core_packages.antrea_version'  # noqa: E501
 
 
 @unique
 class CorePkgVersionKeys(Enum):
     KAPP_CONTROLLER = 'kapp-controller'
     METRICS_SERVER = 'metrics-server'
+    ANTREA = 'antrea'
 
 
 PostCustomizationKubeconfig = 'guestinfo.postcustomization.control_plane.kubeconfig'  # noqa: E501

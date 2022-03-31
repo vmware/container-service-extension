@@ -250,6 +250,7 @@ write_files:
       # This does not need to be done from v0.12.0 onwards inclusive
       sed -i "s/image: antrea\/antrea-ubuntu:v$OPEN_BRACKETantrea_versionCLOSE_BRACKET/image: projects.registry.vmware.com\/antrea\/antrea-ubuntu:v$OPEN_BRACKETantrea_versionCLOSE_BRACKET/g" $antrea_path
       kubectl apply -f $antrea_path
+      vmtoolsd --cmd "info-set guestinfo.postcustomization.core_packages.antrea_version $antrea_version"
     vmtoolsd --cmd "info-set guestinfo.postcustomization.kubectl.cni.install.status successful"
 
 

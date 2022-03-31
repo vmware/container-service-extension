@@ -121,6 +121,7 @@ write_files:
       if [[ "$install_tanzu_cli_packages" = true ]]; then
         vmtoolsd --cmd "info-get guestinfo.postcustomization.control_plane.kubeconfig" > $kubeconfig_path
         export KUBECONFIG=$kubeconfig_path
+        metrics_server_version=""
 
         # Wait for kapp-controller to be ready for at most 8 minutes to be running so that tanzu cli can be fully
         # functional for our purposes
@@ -131,6 +132,8 @@ write_files:
         kubectl wait --for=condition=Ready pod/$OPEN_BRACKETkapp_controller_podCLOSE_BRACKET -n $kapp_controller_namespace --timeout=8m > $kapp_controller_ready_path
         if [[ -f "$kapp_controller_ready_path" && -s $kapp_controller_ready_path ]]; then
           kapp_controller_ready=true
+        else
+          kapp_controller_version=""
         fi
 
         if [[ "$kapp_controller_ready" = true ]]; then
@@ -150,12 +153,22 @@ write_files:
           export KUBECONFIG=$kubeconfig_path
           tanzu package repository add tanzu-core --namespace tkg-system --create-namespace --url projects.registry.vmware.com/tkg/packages/core/repo:$OPEN_BRACKETk8s_versionCLOSE_BRACKET
 
+          # wait for metrics server to be available
+          metrics_server_info_str=$(tanzu package available list -A | grep metrics-server)
+          num_metrics_server_loops=0
+          while [[ -z "$metrics_server_info_str" ]]; do
+            sleep 15
+            ((num_metrics_server_loops++))
+            if [[ $num_metrics_server_loops -gt 20 ]]; then # max 5 minutes
+              break
+            fi
+            metrics_server_info_str=$(tanzu package available list -A | grep metrics-server)
+          done
+
           # install metrics server
-          metrics_server_version=""
-          export KUBECONFIG=$kubeconfig_path
-          metrics_server_version=$(tanzu package available list -A | grep metrics-server | sed -n 's/^.*\([0-9]\+\.[0-9]\+\.[0-9]\++vmware.[0-9]\+-tkg.[0-9]\+\).*$/\1/p')
+          metrics_server_version=$(echo $metrics_server_info_str | sed -n 's/^.*\([0-9]\+\.[0-9]\+\.[0-9]\++vmware.[0-9]\+-tkg.[0-9]\+\).*$/\1/p')
           if [[ ! -z "$metrics_server_version" && $metrics_server_version != "null" ]]; then
-            tanzu package install metrics-server --namespace tkg-system --create-namespace --package-name metrics-server.tanzu.vmware.com --version $metrics_server_version
+            tanzu package install metrics-server --namespace tkg-system --create-namespace --package-name metrics-server.tanzu.vmware.com --version $metrics_server_version --wait=false &>> /var/log/cse/customization/status.log
           fi
 
           if [[ -z "$kapp_controller_version" ]]; then
