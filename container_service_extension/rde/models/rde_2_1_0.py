@@ -104,7 +104,7 @@ class DefaultK8sStorageClass:
     vcd_storage_profile_name: str = "*"
     k8s_storage_class_name: str = "default-storage-class"
     filesystem: str = "ext4"
-    use_delete_reclaim_policy: bool = False
+    use_delete_reclaim_policy: bool = True
 
 
 @dataclass_json(letter_case=LetterCase.CAMEL)

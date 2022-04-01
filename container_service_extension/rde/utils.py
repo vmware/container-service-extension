@@ -201,12 +201,14 @@ def construct_2_1_0_cluster_spec_from_entity_status(
     ):
         status_csi_elem = entity_status.csi[0]
         status_csi_k8s_storage = status_csi_elem.default_k8s_storage_class
-        spec_csi_k8s_storage = rde_2_1_0.DefaultK8sStorageClass(
-            vcd_storage_profile_name=status_csi_k8s_storage.vcd_storage_profile_name,  # noqa: E501
-            k8s_storage_class_name=status_csi_k8s_storage.k8s_storage_class_name,  # noqa: E501
-            filesystem=status_csi_k8s_storage.filesystem,
-            use_delete_reclaim_policy=status_csi_k8s_storage.use_delete_reclaim_policy  # noqa: E501
-        )
+        spec_csi_k8s_storage = None
+        if status_csi_k8s_storage is not None:
+            spec_csi_k8s_storage = rde_2_1_0.DefaultK8sStorageClass(
+                vcd_storage_profile_name=status_csi_k8s_storage.vcd_storage_profile_name,  # noqa: E501
+                k8s_storage_class_name=status_csi_k8s_storage.k8s_storage_class_name,  # noqa: E501
+                filesystem=status_csi_k8s_storage.filesystem,
+                use_delete_reclaim_policy=status_csi_k8s_storage.use_delete_reclaim_policy  # noqa: E501
+            )
         csi = [rde_2_1_0.CsiElement(
             name=status_csi_elem.name,
             version=status_csi_elem.version,
