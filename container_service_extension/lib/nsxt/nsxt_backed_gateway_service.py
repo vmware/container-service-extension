@@ -16,7 +16,7 @@ import container_service_extension.common.utils.pyvcloud_utils as pyvcloud_utils
 import container_service_extension.lib.cloudapi.constants as cloudapi_constants
 import container_service_extension.lib.nsxt.constants as nsxt_constants
 from container_service_extension.lib.nsxt.constants import \
-    NsxtGatewayRequestKey, NsxtNATRuleKey
+    NsxtGatewayRequestKey, NsxtNATRuleKey, DNAT_EXTERNAL_PORT
 from container_service_extension.logging.logger import NULL_LOGGER
 from container_service_extension.logging.logger import SERVER_LOGGER
 
@@ -120,7 +120,7 @@ class NsxtBackedGatewayService:
                       name,
                       internal_address,
                       external_address,
-                      dnat_external_port=None,
+                      dnat_external_port=DNAT_EXTERNAL_PORT,
                       description='',
                       logging_enabled=False,
                       enabled=True,
