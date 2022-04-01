@@ -169,8 +169,8 @@ COMMENTED_EXTRA_OPTIONS_SECTION = """# [Optional] Extra options section
 #  tkgm_http_proxy: [http proxy url with port]
 #  tkgm_https_proxy: [https proxy url with port]
 #  tkgm_no_proxy: [comma separated list of IP addresses]
-#  cpi_version: "1.1.0"
-#  csi_version: "1.1.0"
+#  cpi_version: "1.1.1"
+#  csi_version: "1.1.1"
 #  antrea_version: "0.11.3"
 """
 
