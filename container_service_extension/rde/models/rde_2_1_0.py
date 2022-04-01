@@ -198,7 +198,6 @@ class Private:
 class TkgCorePackages:
     kapp_controller: Optional[str] = None
     metrics_server: Optional[str] = None
-    tanzu_addons_manager: Optional[str] = None
 
 
 @dataclass_json(letter_case=LetterCase.CAMEL)
@@ -219,7 +218,7 @@ class Status:
     private: Optional[Private] = None
     csi: Optional[List[CsiElement]] = None
     cpi: Cpi = Cpi()
-    tkgCorePackages: TkgCorePackages = TkgCorePackages()
+    tkg_core_packages: TkgCorePackages = TkgCorePackages()
 
 
 @dataclass_json(letter_case=LetterCase.CAMEL)
