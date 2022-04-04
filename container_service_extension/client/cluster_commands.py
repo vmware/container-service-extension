@@ -145,7 +145,7 @@ Examples
     help="ID of the cluster which needs to be deleted;"
          "Supported only for CSE api version >= 35."
          "ID gets precedence over cluster name.")
-def cluster_delete(ctx, name, force, vdc, org, k8_runtime=None, cluster_id=None):  # noqa: E501
+def cluster_delete(ctx, name, vdc, org, force=False, k8_runtime=None, cluster_id=None):  # noqa: E501
     """Delete a Kubernetes cluster.
 
 \b
