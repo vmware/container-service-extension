@@ -200,7 +200,10 @@ def expose_cluster(client: vcd_client.Client, org_name: str,
         nsxt_gateway_svc.add_dnat_rule(
             name=dnat_rule_name,
             internal_address=internal_ip,
-            external_address=expose_ip)
+            external_address=expose_ip,
+            num_retry_if_gateway_busy=3
+        )
+
     except Exception as err:
         raise Exception(f"Unable to add dnat rule with error: {str(err)}")
     return expose_ip
