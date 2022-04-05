@@ -18,7 +18,7 @@ import container_service_extension.common.utils.pyvcloud_utils as pyvcloud_utils
 import container_service_extension.lib.cloudapi.constants as cloudapi_constants
 import container_service_extension.lib.nsxt.constants as nsxt_constants
 from container_service_extension.lib.nsxt.constants import \
-    NsxtGatewayRequestKey, NsxtNATRuleKey, DNAT_EXTERNAL_PORT
+    DNAT_EXTERNAL_PORT, NsxtGatewayRequestKey, NsxtNATRuleKey
 from container_service_extension.logging.logger import NULL_LOGGER
 from container_service_extension.logging.logger import SERVER_LOGGER
 
