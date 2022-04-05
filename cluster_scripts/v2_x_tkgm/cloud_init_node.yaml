@@ -143,7 +143,7 @@ write_files:
         kapp_controller_namespace=$(kubectl get pods -l=app='kapp-controller' -A -o jsonpath='OPENBRACKET.items[*].metadata.namespaceCLOSEBRACKET')
         kapp_controller_ready_path=/root/kapp_controller_ready.txt
         kapp_controller_ready=false
-        kubectl wait --for=condition=Ready pod/$OPENBRACKETkapp_controller_podCLOSEBRACKET -n $kapp_controller_namespace --timeout=8m > $kapp_controller_ready_path
+        kubectl wait --for=condition=Ready pod/$OPENBRACKETkapp_controller_podCLOSEBRACKET -n $kapp_controller_namespace --timeout=10m > $kapp_controller_ready_path
         if [[ -f "$kapp_controller_ready_path" && -s $kapp_controller_ready_path ]]; then
           kapp_controller_ready=true
         else
@@ -161,9 +161,8 @@ write_files:
           export HOME=/root
           tanzu plugin install package
 
-          xml_version_property=$(vmtoolsd --cmd "info-get guestinfo.ovfenv" | grep "oe:key=\"VERSION\"")
-          init_k8s_version=$(echo $xml_version_property | sed 's/.*oe:value=\"//; s/\(.*\)-.*/\1/')
           k8s_version=$(echo $init_k8s_version | tr -s "+" "_")
+          k8s_version="{k8s_version}"
           export KUBECONFIG=$kubeconfig_path
           tanzu package repository add tanzu-core --namespace tkg-system --create-namespace --url projects.registry.vmware.com/tkg/packages/core/repo:$OPENBRACKETk8s_versionCLOSEBRACKET
 

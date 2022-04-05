@@ -29,7 +29,8 @@ from container_service_extension.common.constants.server_constants import \
     CSI_NAME, \
     DISK_ENABLE_UUID, \
     PostCustomizationKubeconfig, \
-    CorePkgVersionKeys
+    CorePkgVersionKeys, \
+    DEFAULT_POST_CUSTOMIZATION_TIMEOUT_SEC
 from container_service_extension.common.constants.server_constants import ClusterMetadataKey  # noqa: E501
 from container_service_extension.common.constants.server_constants import ClusterScriptFile  # noqa: E501
 from container_service_extension.common.constants.server_constants import DefEntityOperation  # noqa: E501
@@ -2523,7 +2524,10 @@ def _get_core_pkg_versions(control_plane_vm: vcd_vm.VM) -> Dict:
             PostCustomizationVersions.TKR_KAPP_CONTROLLER_VERSION_TO_INSTALL.value),  # noqa: E501
         CorePkgVersionKeys.ANTREA.value: vcd_utils.get_vm_extra_config_element(
             control_plane_vm,
-            PostCustomizationVersions.INSTALLED_VERSION_OF_ANTREA.value)
+            PostCustomizationVersions.INSTALLED_VERSION_OF_ANTREA.value),
+        CorePkgVersionKeys.K8S.value: vcd_utils.get_vm_extra_config_element(
+            control_plane_vm,
+            PostCustomizationVersions.TKR_K8S_VERSION.value)
     }
     return core_pkg_versions
 
@@ -2587,16 +2591,18 @@ def _add_worker_nodes(sysadmin_client, num_nodes, org, vdc, vapp,
         )
 
         num_vm_specs = len(vm_specs)
+        to_install_tkr_kapp_controller_version = core_pkg_versions_to_install.get(CorePkgVersionKeys.KAPP_CONTROLLER.value, "")  # noqa: E501
+        tkr_k8s_version = core_pkg_versions_to_install.get(CorePkgVersionKeys.K8S.value, "")  # noqa: E501
         for ind in range(num_vm_specs):
             spec = vm_specs[ind]
             # kapp controller is installed on the 0th worker node
             # tanzu cli and metrics server will be installed on the last
             # worker node in order to allow time for the kapp controller pod
             # to be ready
-            to_install_tkr_kapp_controller_version = core_pkg_versions_to_install.get(CorePkgVersionKeys.KAPP_CONTROLLER.value, "")  # noqa: E501
+            is_last_worker = (ind == num_vm_specs - 1)
             should_install_kapp_controller = (ind == 0) and to_install_tkr_kapp_controller_version  # noqa: E501
             should_use_kapp_controller_version = ((ind == 0) or (ind == num_vm_specs - 1)) and to_install_tkr_kapp_controller_version  # noqa: E501
-            should_install_tanzu_cli_packages = (ind == num_vm_specs - 1) and len(core_pkg_versions_to_install) > 0  # noqa: E501
+            should_install_tanzu_cli_packages = is_last_worker and len(core_pkg_versions_to_install) > 0  # noqa: E501
             formatted_script = templated_script.format(
                 vm_host_name=spec['target_vm_name'],
                 ssh_key=ssh_key if ssh_key else '',
@@ -2606,6 +2612,7 @@ def _add_worker_nodes(sysadmin_client, num_nodes, org, vdc, vapp,
                 install_kapp_controller="true" if should_install_kapp_controller else "false",  # noqa: E501
                 kapp_controller_version=to_install_tkr_kapp_controller_version if should_use_kapp_controller_version else "",  # noqa: E501
                 install_tanzu_cli_packages="true" if should_install_tanzu_cli_packages else "false",  # noqa: E501
+                k8s_version=tkr_k8s_version if is_last_worker else "",
                 **proxy_config
             )
 
@@ -2679,11 +2686,13 @@ def _add_worker_nodes(sysadmin_client, num_nodes, org, vdc, vapp,
                 PostCustomizationPhase.KUBEADM_NODE_JOIN,
                 PostCustomizationPhase.CORE_PACKAGES_ATTEMPTED_INSTALL,
             ]:
+                is_core_pkg_phase = customization_phase == PostCustomizationPhase.CORE_PACKAGES_ATTEMPTED_INSTALL  # noqa: E501
                 vapp.reload()
                 vcd_utils.wait_for_completion_of_post_customization_procedure(
                     vm,
                     customization_phase=customization_phase.value,  # noqa: E501
-                    logger=LOGGER
+                    logger=LOGGER,
+                    timeout=750 if is_core_pkg_phase else DEFAULT_POST_CUSTOMIZATION_TIMEOUT_SEC  # noqa: E501
                 )
             vm.reload()
 

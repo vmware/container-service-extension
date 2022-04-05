@@ -179,6 +179,10 @@ write_files:
           break
         fi
       done
+      # This version is written into the extra config for worker nodes to use for tanzu-cli.
+      # Note: this approach can be done in R1 clusters since there are no rolling upgrade.
+      # However, this approach should not be done in capvcd clusters due to rolling upgrades.
+      vmtoolsd --cmd "info-set guestinfo.postcustomization.tkr.get_versions.k8s $k8s_version"
 
       mv $bom_path/*.yaml $components_path
       # download yq for yaml parsing
