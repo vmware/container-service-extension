@@ -179,6 +179,7 @@ write_files:
           break
         fi
       done
+      vmtoolsd --cmd "info-set guestinfo.postcustomization.tkr.get_versions.k8s $k8s_version"
 
       mv $bom_path/*.yaml $components_path
       # download yq for yaml parsing
