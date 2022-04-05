@@ -32,6 +32,8 @@ AVAILABLE_IP_PATH_FRAGMENT = 'availableIpAddresses'
 # NSX-T realized status
 NSXT_GATEWAY_REALIZED_STATUS = 'REALIZED'
 
+DNAT_EXTERNAL_PORT = 6443
+
 
 class RequestMethodVerb(Enum):
     GET = 'Get'
