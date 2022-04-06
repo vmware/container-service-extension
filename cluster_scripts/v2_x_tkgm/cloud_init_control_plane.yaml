@@ -205,19 +205,13 @@ write_files:
         fi
       fi
 
-      # get kapp-controller and metrics-server versions, which will be installed on the worker nodes
-      # These versions are retrieved here since the antrea version is already retrieved and installed
-      # on the control plane node, so this avoids retrieving core package versions later
+      # get kapp-controller, which will be installed on the worker node
+      # This version is retrieved here since the antrea version is already retrieved and installed
+      # on the control plane node, so this avoids retrieving another core package version on the worker node
       kapp_controller_version=$($yq_path e ".components.kapp-controller[0].version" $components_path | sed 's/v//')
-      metrics_server_version=$($yq_path e ".components.metrics-server[0].version" $components_path | sed 's/v//')
-      if [[ -z "$metrics_server_version" ]] || [[ "$metrics_server_version" = "null" ]] || [[ "$metrics_server_version" = "false" ]]; then
-        metrics_server_version_valid=false
-        echo "metrics server version not valid" >> /var/log/cse/customization/status.log
-      fi
 
       # store tkr versions in extra config
       vmtoolsd --cmd "info-set guestinfo.postcustomization.tkr.get_versions.kapp_controller $kapp_controller_version"
-      vmtoolsd --cmd "info-set guestinfo.postcustomization.tkr.get_versions.metrics_server $metrics_server_version"
 
       # cleanup components downloads
       rm -rf $tkr_bom_dir
