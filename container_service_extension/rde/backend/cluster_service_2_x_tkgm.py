@@ -1947,27 +1947,25 @@ class ClusterService(abstract_broker.AbstractBroker):
 
             native_entity: rde_2_x.NativeEntity = rde_entity.entity
             cluster_spec = native_entity.spec
-            exposed: bool = native_entity.status.cloud_properties.exposed
 
-            if exposed:
-                msg = f"Deleting dnat rule of '{cluster_name}'"
+            msg = f"Deleting dnat rule of '{cluster_name}'"
+            self._update_task_with_no_behavior(vcd_client.TaskStatus.RUNNING, message=msg)  # noqa: E501
+            network_name: str = cluster_spec.settings.ovdc_network
+            try:
+                nw_exp_helper.handle_delete_expose_dnat_rule(
+                    client=user_client,
+                    org_name=org_name,
+                    network_name=network_name,
+                    cluster_name=cluster_name,
+                    cluster_id=entity_id)
+            except Exception as err:
+                msg = f"Delete dnat rule of of cluster '{cluster_name}' status:{err}"  # noqa: E501
+                LOGGER.error(msg, exc_info=True)
                 self._update_task_with_no_behavior(vcd_client.TaskStatus.RUNNING, message=msg)  # noqa: E501
-                network_name: str = cluster_spec.settings.ovdc_network
-                try:
-                    nw_exp_helper.handle_delete_expose_dnat_rule(
-                        client=user_client,
-                        org_name=org_name,
-                        network_name=network_name,
-                        cluster_name=cluster_name,
-                        cluster_id=entity_id)
-                except Exception as err:
-                    msg = f"Delete dnat rule of of cluster '{cluster_name}' status:{err}"  # noqa: E501
-                    LOGGER.error(msg, exc_info=True)
-                    self._update_task_with_no_behavior(vcd_client.TaskStatus.RUNNING, message=msg)  # noqa: E501
-                else:
-                    msg = f"Delete dnat rule of cluster '{cluster_name}' status:success "  # noqa: E501
-                    LOGGER.info(msg)
-                    self._update_task_with_no_behavior(vcd_client.TaskStatus.RUNNING, message=msg)  # noqa: E501
+            else:
+                msg = f"Delete dnat rule of cluster '{cluster_name}' status:success "  # noqa: E501
+                LOGGER.info(msg)
+                self._update_task_with_no_behavior(vcd_client.TaskStatus.RUNNING, message=msg)  # noqa: E501
 
             try:
                 msg = f"Deleting rde of '{cluster_name}'"
