@@ -109,21 +109,21 @@ def construct_init_cluster_script_with_exposed_ip(script: str, expose_ip: str):
     kubeadm_init_match: re.Match = re.search('kubeadm init .+\n', script)
     if not kubeadm_init_match:
         return script
-    kubeadm_init_line: str = kubeadm_init_match.group(0)
-
-    # Either add or replace the control plane endpoint option
+    # Either add or replace the control plane endpoint option on every line that has kubeadm init  # noqa: E501
     expose_control_plane_endpoint_option = f'--control-plane-endpoint=\"{expose_ip}:6443\"'  # noqa: E501
-    expose_kubeadm_init_line = re.sub(
-        f'--control-plane-endpoint={IP_PORT_REGEX}',
-        expose_control_plane_endpoint_option,
-        kubeadm_init_line)
-    if kubeadm_init_line == expose_kubeadm_init_line:  # no option was replaced
-        expose_kubeadm_init_line = kubeadm_init_line.replace(
-            'kubeadm init',
-            f'kubeadm init --control-plane-endpoint=\"{expose_ip}:6443\"')
-
-    # Replace current kubeadm init line with line containing expose_ip
-    return script.replace(kubeadm_init_line, expose_kubeadm_init_line)
+    updated_script: list = []
+    for current_line in script.splitlines(keepends=True):
+        expose_kubeadm_init_line = re.sub(
+            f'--control-plane-endpoint="?{IP_PORT_REGEX}"?',
+            expose_control_plane_endpoint_option,
+            current_line)
+        if current_line == expose_kubeadm_init_line:  # no option was replaced
+            expose_kubeadm_init_line = current_line.replace(
+                'kubeadm init',
+                f'kubeadm init --control-plane-endpoint=\"{expose_ip}:6443\"')
+        updated_script.append(expose_kubeadm_init_line)
+    # Final updated script as string
+    return ''.join(updated_script)
 
 
 def construct_expose_dnat_rule_name(cluster_name: str, cluster_id: str):
