@@ -1402,7 +1402,7 @@ class ClusterService(abstract_broker.AbstractBroker):
 
                 # If the cluster currently only has no worker nodes, then
                 # resizing the cluster will add the core packages
-                installed_core_pkg_versions = None
+                core_pkg_versions = None
                 if curr_worker_count == 0:
                     control_plane_vm = _get_control_plane_vm(sysadmin_client_v36, vapp)  # noqa: E501
                     core_pkg_versions = _get_core_pkg_versions(control_plane_vm)  # noqa: E501

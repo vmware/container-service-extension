@@ -122,7 +122,6 @@ write_files:
         export KUBECONFIG=$kubeconfig_path
 
         # install kapp-controller, which is needed for tanzu-cli
-        kapp_controller_installed=false
         if [[ ! -z "$kapp_controller_version" && $kapp_controller_version != "null" ]]; then
           kubectl apply -f https://github.com/vmware-tanzu/carvel-kapp-controller/releases/download/v$OPENBRACKETkapp_controller_versionCLOSEBRACKET/release.yml
         fi
@@ -143,11 +142,13 @@ write_files:
         kapp_controller_namespace=$(kubectl get pods -l=app='kapp-controller' -A -o jsonpath='OPENBRACKET.items[*].metadata.namespaceCLOSEBRACKET')
         kapp_controller_ready_path=/root/kapp_controller_ready.txt
         kapp_controller_ready=false
-        kubectl wait --for=condition=Ready pod/$OPENBRACKETkapp_controller_podCLOSEBRACKET -n $kapp_controller_namespace --timeout=10m > $kapp_controller_ready_path
-        if [[ -f "$kapp_controller_ready_path" && -s $kapp_controller_ready_path ]]; then
-          kapp_controller_ready=true
-        else
-          kapp_controller_version=""
+        if [[ ! -z "$kapp_controller_pod" ]]; then
+          kubectl wait --for=condition=Ready pod/$OPENBRACKETkapp_controller_podCLOSEBRACKET -n $kapp_controller_namespace --timeout=10m > $kapp_controller_ready_path
+          if [[ -f "$kapp_controller_ready_path" && -s $kapp_controller_ready_path ]]; then
+            kapp_controller_ready=true
+          else
+            kapp_controller_version=""
+          fi
         fi
 
         if [[ "$kapp_controller_ready" = true ]]; then
