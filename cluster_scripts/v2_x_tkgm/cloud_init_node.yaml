@@ -128,7 +128,6 @@ write_files:
       fi
 
       # Metrics server (currently the only tanzu cli installed package) is installed on the last worker node
-      tanzu_cli_installed=false
       if [[ "$install_tanzu_cli_packages" = true ]]; then
         vmtoolsd --cmd "info-get guestinfo.postcustomization.control_plane.kubeconfig" > $kubeconfig_path
         # clear extra config to avoid leaking it
@@ -162,7 +161,6 @@ write_files:
           export HOME=/root
           tanzu plugin install package
 
-          k8s_version=$(echo $init_k8s_version | tr -s "+" "_")
           k8s_version="{k8s_version}"
           export KUBECONFIG=$kubeconfig_path
           tanzu package repository add tanzu-core --namespace tkg-system --create-namespace --url projects.registry.vmware.com/tkg/packages/core/repo:$OPENBRACKETk8s_versionCLOSEBRACKET

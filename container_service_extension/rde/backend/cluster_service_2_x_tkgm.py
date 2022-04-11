@@ -2597,10 +2597,9 @@ def _add_worker_nodes(sysadmin_client, num_nodes, org, vdc, vapp,
             # tanzu cli and metrics server will be installed on the last
             # worker node in order to allow time for the kapp controller pod
             # to be ready
-            is_last_worker = (ind == num_vm_specs - 1)
             should_install_kapp_controller = (ind == 0) and to_install_tkr_kapp_controller_version  # noqa: E501
             should_use_kapp_controller_version = ((ind == 0) or (ind == num_vm_specs - 1)) and to_install_tkr_kapp_controller_version  # noqa: E501
-            should_install_tanzu_cli_packages = is_last_worker and len(core_pkg_versions_to_install) > 0  # noqa: E501
+            should_install_tanzu_cli_packages = (ind == num_vm_specs - 1) and len(core_pkg_versions_to_install) > 0  # noqa: E501
             formatted_script = templated_script.format(
                 vm_host_name=spec['target_vm_name'],
                 ssh_key=ssh_key if ssh_key else '',
@@ -2610,7 +2609,7 @@ def _add_worker_nodes(sysadmin_client, num_nodes, org, vdc, vapp,
                 install_kapp_controller="true" if should_install_kapp_controller else "false",  # noqa: E501
                 kapp_controller_version=to_install_tkr_kapp_controller_version if should_use_kapp_controller_version else "",  # noqa: E501
                 install_tanzu_cli_packages="true" if should_install_tanzu_cli_packages else "false",  # noqa: E501
-                k8s_version=tkr_k8s_version if is_last_worker else "",
+                k8s_version=tkr_k8s_version if should_install_tanzu_cli_packages else "",  # noqa: E501
                 **proxy_config
             )
 
