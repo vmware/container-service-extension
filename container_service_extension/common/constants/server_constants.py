@@ -861,3 +861,29 @@ CPI_NAME = "cloud-provider-for-cloud-director"
 CPI_DEFAULT_VERSION = "1.1.1"
 CSI_NAME = "cloud-director-named-disk-csi-driver"
 CSI_DEFAULT_VERSION = "1.1.1"
+
+
+@unique
+class TkgmNodeSizing(Enum):
+    """Predefined configuration for TKGm cluster node size.
+
+    1.cpu - number of cpus
+    2.memory - cpu memory size in mb
+    """
+
+    def __init__(self, cpu, memory):
+        self._cpu = cpu
+        self._memory = memory
+
+    @property
+    def cpu(self):
+        return self._cpu
+
+    @property
+    def memory(self):
+        return self._memory
+
+    SMALL = (2, 4096)
+    MEDIUM = (2, 8192)
+    LARGE = (4, 16384)
+    EXTRA_LARGE = (8, 32768)

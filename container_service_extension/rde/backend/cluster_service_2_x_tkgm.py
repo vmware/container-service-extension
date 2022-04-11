@@ -44,6 +44,7 @@ from container_service_extension.common.constants.server_constants import PostCu
 from container_service_extension.common.constants.server_constants import PostCustomizationVersions  # noqa: E501
 from container_service_extension.common.constants.server_constants import ThreadLocalData  # noqa: E501
 from container_service_extension.common.constants.server_constants import TKGM_DEFAULT_POD_NETWORK_CIDR  # noqa: E501
+from container_service_extension.common.constants.server_constants import TkgmNodeSizing # noqa: E501
 from container_service_extension.common.constants.server_constants import TKGM_DEFAULT_SERVICE_CIDR  # noqa: E501
 from container_service_extension.common.constants.server_constants import TKGmProxyKey  # noqa: E501
 import container_service_extension.common.constants.shared_constants as shared_constants  # noqa: E501
@@ -2419,12 +2420,33 @@ def _add_control_plane_nodes(
                 sysadmin_client.get_task_monitor().wait_for_status(
                     task,
                     callback=wait_for_cpu_update)
+                vm.reload()
+                vapp.reload()
+
             if memory_mb and memory_mb > 0:
                 # updating memory
                 task = vm.modify_memory(memory_mb)
                 sysadmin_client.get_task_monitor().wait_for_status(
                     task,
                     callback=wait_for_memory_update)
+                vm.reload()
+                vapp.reload()
+
+            if not (cpu_count and cpu_count > 0) and not sizing_class_name:
+                task = vm.modify_cpu(TkgmNodeSizing.SMALL.cpu)
+                sysadmin_client.get_task_monitor().wait_for_status(
+                    task,
+                    callback=wait_for_cpu_update)
+                vm.reload()
+                vapp.reload()
+
+            if not (memory_mb and memory_mb > 0) and not sizing_class_name:
+                task = vm.modify_memory(TkgmNodeSizing.SMALL.memory)
+                sysadmin_client.get_task_monitor().wait_for_status(
+                    task,
+                    callback=wait_for_memory_update)
+                vm.reload()
+                vapp.reload()
 
             # If expose is set, control_plane_endpoint is exposed ip
             # Else control_plane_endpoint is internal_ip
@@ -2646,12 +2668,33 @@ def _add_worker_nodes(sysadmin_client, num_nodes, org, vdc, vapp,
                 sysadmin_client.get_task_monitor().wait_for_status(
                     task,
                     callback=wait_for_cpu_update)
+                vm.reload()
+                vapp.reload()
+
             if memory_mb and memory_mb > 0:
                 # updating memory
                 task = vm.modify_memory(memory_mb)
                 sysadmin_client.get_task_monitor().wait_for_status(
                     task,
                     callback=wait_for_memory_update)
+                vm.reload()
+                vapp.reload()
+
+            if not (cpu_count and cpu_count > 0) and not sizing_class_name:
+                task = vm.modify_cpu(TkgmNodeSizing.SMALL.cpu)
+                sysadmin_client.get_task_monitor().wait_for_status(
+                    task,
+                    callback=wait_for_cpu_update)
+                vm.reload()
+                vapp.reload()
+
+            if not (memory_mb and memory_mb > 0) and not sizing_class_name:
+                task = vm.modify_memory(TkgmNodeSizing.SMALL.memory)
+                sysadmin_client.get_task_monitor().wait_for_status(
+                    task,
+                    callback=wait_for_memory_update)
+                vm.reload()
+                vapp.reload()
 
             # create a cloud-init spec and update the VMs with it
             _set_cloud_init_spec(sysadmin_client, vapp, vm, spec['cloudinit_node_spec'])  # noqa: E501
