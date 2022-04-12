@@ -2419,7 +2419,7 @@ def _add_control_plane_nodes(
                 task = vm.modify_cpu(cpu_count)
             elif not sizing_class_name:
                 task = vm.modify_cpu(TkgmNodeSizing.SMALL.cpu)
-            if task:
+            if task is not None:
                 sysadmin_client.get_task_monitor().wait_for_status(
                     task,
                     callback=wait_for_cpu_update)
@@ -2432,7 +2432,7 @@ def _add_control_plane_nodes(
                 task = vm.modify_memory(memory_mb)
             elif not sizing_class_name:
                 task = vm.modify_memory(TkgmNodeSizing.SMALL.memory)
-            if task:
+            if task is not None:
                 sysadmin_client.get_task_monitor().wait_for_status(
                     task,
                     callback=wait_for_memory_update)
@@ -2657,7 +2657,7 @@ def _add_worker_nodes(sysadmin_client, num_nodes, org, vdc, vapp,
                 task = vm.modify_cpu(cpu_count)
             elif not sizing_class_name:
                 task = vm.modify_cpu(TkgmNodeSizing.SMALL.cpu)
-            if task:
+            if task is not None:
                 sysadmin_client.get_task_monitor().wait_for_status(
                     task,
                     callback=wait_for_cpu_update)
@@ -2670,7 +2670,7 @@ def _add_worker_nodes(sysadmin_client, num_nodes, org, vdc, vapp,
                 task = vm.modify_memory(memory_mb)
             elif not sizing_class_name:
                 task = vm.modify_memory(TkgmNodeSizing.SMALL.memory)
-            if task:
+            if task is not None:
                 sysadmin_client.get_task_monitor().wait_for_status(
                     task,
                     callback=wait_for_memory_update)
