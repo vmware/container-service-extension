@@ -44,8 +44,8 @@ from container_service_extension.common.constants.server_constants import PostCu
 from container_service_extension.common.constants.server_constants import PostCustomizationVersions  # noqa: E501
 from container_service_extension.common.constants.server_constants import ThreadLocalData  # noqa: E501
 from container_service_extension.common.constants.server_constants import TKGM_DEFAULT_POD_NETWORK_CIDR  # noqa: E501
-from container_service_extension.common.constants.server_constants import TkgmNodeSizing # noqa: E501
 from container_service_extension.common.constants.server_constants import TKGM_DEFAULT_SERVICE_CIDR  # noqa: E501
+from container_service_extension.common.constants.server_constants import TkgmNodeSizing # noqa: E501
 from container_service_extension.common.constants.server_constants import TKGmProxyKey  # noqa: E501
 import container_service_extension.common.constants.shared_constants as shared_constants  # noqa: E501
 from container_service_extension.common.constants.shared_constants import \
@@ -2413,35 +2413,26 @@ def _add_control_plane_nodes(
                     # functionality fails.
                     raise
 
-            # modify CPU and memory if needed
+            task = None
+            # updating cpu count on the VM
             if cpu_count and cpu_count > 0:
-                # updating cpu count on the VM
                 task = vm.modify_cpu(cpu_count)
-                sysadmin_client.get_task_monitor().wait_for_status(
-                    task,
-                    callback=wait_for_cpu_update)
-                vm.reload()
-                vapp.reload()
-
-            if memory_mb and memory_mb > 0:
-                # updating memory
-                task = vm.modify_memory(memory_mb)
-                sysadmin_client.get_task_monitor().wait_for_status(
-                    task,
-                    callback=wait_for_memory_update)
-                vm.reload()
-                vapp.reload()
-
-            if not (cpu_count and cpu_count > 0) and not sizing_class_name:
+            elif not sizing_class_name:
                 task = vm.modify_cpu(TkgmNodeSizing.SMALL.cpu)
+            if task:
                 sysadmin_client.get_task_monitor().wait_for_status(
                     task,
                     callback=wait_for_cpu_update)
                 vm.reload()
                 vapp.reload()
 
-            if not (memory_mb and memory_mb > 0) and not sizing_class_name:
+            task = None
+            # updating memory
+            if memory_mb and memory_mb > 0:
+                task = vm.modify_memory(memory_mb)
+            elif not sizing_class_name:
                 task = vm.modify_memory(TkgmNodeSizing.SMALL.memory)
+            if task:
                 sysadmin_client.get_task_monitor().wait_for_status(
                     task,
                     callback=wait_for_memory_update)
@@ -2661,35 +2652,26 @@ def _add_worker_nodes(sysadmin_client, num_nodes, org, vdc, vapp,
             vm_resource = vapp.get_vm(vm_name)
             vm = vcd_vm.VM(sysadmin_client, resource=vm_resource)
 
-            # modify CPU and memory if needed
+            task = None
+            # updating cpu count on the VM
             if cpu_count and cpu_count > 0:
-                # updating cpu count on the VM
                 task = vm.modify_cpu(cpu_count)
-                sysadmin_client.get_task_monitor().wait_for_status(
-                    task,
-                    callback=wait_for_cpu_update)
-                vm.reload()
-                vapp.reload()
-
-            if memory_mb and memory_mb > 0:
-                # updating memory
-                task = vm.modify_memory(memory_mb)
-                sysadmin_client.get_task_monitor().wait_for_status(
-                    task,
-                    callback=wait_for_memory_update)
-                vm.reload()
-                vapp.reload()
-
-            if not (cpu_count and cpu_count > 0) and not sizing_class_name:
+            elif not sizing_class_name:
                 task = vm.modify_cpu(TkgmNodeSizing.SMALL.cpu)
+            if task:
                 sysadmin_client.get_task_monitor().wait_for_status(
                     task,
                     callback=wait_for_cpu_update)
                 vm.reload()
                 vapp.reload()
 
-            if not (memory_mb and memory_mb > 0) and not sizing_class_name:
+            task = None
+            # updating memory
+            if memory_mb and memory_mb > 0:
+                task = vm.modify_memory(memory_mb)
+            elif not sizing_class_name:
                 task = vm.modify_memory(TkgmNodeSizing.SMALL.memory)
+            if task:
                 sysadmin_client.get_task_monitor().wait_for_status(
                     task,
                     callback=wait_for_memory_update)
