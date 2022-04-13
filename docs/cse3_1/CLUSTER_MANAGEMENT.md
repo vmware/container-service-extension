@@ -101,15 +101,18 @@ Here is a summary of commands available to view templates and manage clusters an
           scale-up nfs (`spec.topology.nfs.count`), and upgrade (`spec.distribution.templateName` and `spec.distribution.templateRevision`).
       - Save the file as `update_cluster.yaml` and issue the command `vcd cse cluster apply update_cluster.yaml`
 
-
-    * New for CSE 3.1.3: RDE 2.1 fields
-        - CSE 3.1.3 introduces the following fields that only apply to TKG clusters: `spec.settings.cpi`, `spec.settings.csi`, and `spec.settings.cni`
+    <a name="rde21_new_fields"></a>
+    * CPI, CSI, and CNI fields for TKG clusters (added in CSE 3.1.3 for RDE 2.1)
+        - CSE 3.1.3 introduces the following fields that only apply to TKG clusters: `spec.settings.cpi`, `spec.settings.csi`, and `spec.settings.cni`. 
+        For each of these fields, if a version is not specified, then the version specified in the CSE server configuration for each of these components
+        file will be used. If no version is specified in the CSE server configuration, then a default will be used for csi and cpi; for cni, a TKG-compatible
+        version will be used
             - `cpi.name` will be `cloud-provider-for-cloud-director`
-            - `cpi.version` can be specified; otherwise, a default will be used
+            - `cpi.version` can be specified
             - `csi.name` will be `cloud-director-named-disk-csi-driver`
-            - `cpi.version` can be specified; otherwise, a default will be used
+            - `cpi.version` can be specified
             - `cni.name` will be `antrea`
-            - `cni.version` can be specified; otherwise, a default will be used
+            - `cni.version` can be specified
         - `spec.settings.csi.defaultK8sStorageClass` allows users to create a default storage class, which has the following 4 fields
             - `filesystem`: This can be `ext4` (default) or `xfs`
             - `k8sStorageClassName`: the name of the storage class
@@ -118,7 +121,7 @@ Here is a summary of commands available to view templates and manage clusters an
             - `vcdStorageProfileName`: The VCD storage profile to use
             - Please leave `spec.settings.csi.defaultK8sStorageClass: null` if no default storage class should be created
 
-
+    <a name="sample_input_spec"></a>
     * Sample input specification file
         ```sh
         # Short description of various properties used in this sample cluster configuration

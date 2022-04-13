@@ -22,10 +22,11 @@ For greenfield installations, please get started with [CSE introduction](INTRO.h
 
 ### CSE 3.1.3
 
-* Default Storage Class creation support through CLI and UI plugin.
+* New RDE 2.1 for TKG and native clusters. Learn more [here](CLUSTER_MANAGEMENT.html#sample_input_spec).
+* Support for default storage class for TKG clusters through UI Plugin 3.3.0 and CLI on VCD 10.3.1+. The UI Plugin 3.3.0 needs to be downloaded from VMware Cloud Director 10.3.3 Download page directly.
 * TKG Core Package installation for kapp-controller and metrics-server for TKG clusters.
-    * Antrea now has the most compatible version installed if the antrea version is not specified in the CSE server config
-        or cluster spec.
+    * Support for TKG compatible Antrea version installation for TKG clusters, by default. Users can overwrite the Antrea version, if required. Learn more [here](CLUSTER_MANAGEMENT.html#rde21_new_fields).
+*
 
 ### CSE 3.1.2
 
