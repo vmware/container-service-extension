@@ -245,14 +245,22 @@ for further details on compute policies.
 <a name="extra_options"></a>
 ### `extra_options` Section (Added in CSE 3.1.2)
 
-It allows providers to specify proxy details that will be injected into TKG Clusters.
+The proxy options allow providers to specify proxy details that will be injected into TKG Clusters.
 The proxy enables TKG clusters to reach out to the internet to download packages, such as Cloud Provider for Cloud Director.
+
+If the user does not specify CPI, CSI, or antrea version in the cluster spec, then the CSE server will use the CPI, CSI, or antrea
+version used in this section.
 
 | Property         | Value                                                                                               | Remarks |
 |------------------|-----------------------------------------------------------------------------------------------------|---------|
 | tkgm_http_proxy  | URL of the http proxy server                                                                        |         |
 | tkgm_https_proxy | URL of the https proxy server                                                                       |         |
 | tkgm_no_proxy    | Comma separated list of IP addresses. Network traffic to these destinations will not use the proxy. |         |
+| cpi_version      | CPI version in quotes                                                                               |         |
+| csi_version      | CSI version in quotes                                                                               |         |
+| antrea_version   | antrea version in quotes                                                                            |         |
+
+**CSE 3.1.3 - added fields `cpi_version`, `csi_version`, and `antrea_version`. These fields are supported only for TKG clusters.
 
 Note: Proxy injection is supported for only TKG clusters. CSE injects the value of these variables into `http-proxy.conf` file on each node of the cluster.
 
@@ -262,7 +270,11 @@ extra_options:
   tkgm_http_proxy: http://192.168.7.10:3128
   tkgm_https_proxy: https://192.168.7.10:3128
   tkgm_no_proxy: localhost,127.0.0.1,192.168.7.0/24
+  cpi_version: "1.1.1"
+  csi_version: "1.2.0"
+  antrea_version: "0.11.3"
 ```
+
 
 <a name="ent_pks_config"></a>
 ## Enterprise PKS Configuration File for CSE

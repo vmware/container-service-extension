@@ -104,7 +104,7 @@ Here is a summary of commands available to view templates and manage clusters an
     * Sample input specification file
         ```sh
         # Short description of various properties used in this sample cluster configuration
-        # apiVersion: Represents the payload version of the cluster specification. By default, "cse.vmware.com/v2.0" is used.
+        # apiVersion: Represents the payload version of the cluster specification. By default, "cse.vmware.com/v2.1" is used.
         # kind: The kind of the Kubernetes cluster.
         #
         # metadata: This is a required section
@@ -141,7 +141,7 @@ Here is a summary of commands available to view templates and manage clusters an
         #
         # status: Current state of the cluster in the server. This is not a required section for any of the operations.
 
-        apiVersion: cse.vmware.com/v2.0
+        apiVersion: cse.vmware.com/v2.1
         kind: native
         metadata:
           name: cluster_name
@@ -153,6 +153,13 @@ Here is a summary of commands available to view templates and manage clusters an
             templateName: ubuntu-16.04_k8-1.17_weave-2.6.0
             templateRevision: 2
           settings:
+            cni:
+              name: null
+              version: null
+            cpi:
+              name: null
+              version: null
+            csi: null
             network:
               expose: false
             ovdcNetwork: ovdc_network_name
@@ -161,6 +168,8 @@ Here is a summary of commands available to view templates and manage clusters an
           topology:
             controlPlane:
               count: 1
+              cpu: null
+              memory: null
               sizingClass: Large_sizing_policy_name
               storageProfile: Gold_storage_profile_name
             nfs:
@@ -169,6 +178,8 @@ Here is a summary of commands available to view templates and manage clusters an
               storageProfile: Platinum_storage_profile_name
             workers:
               count: 2
+              cpu: null
+              memory: null
               sizingClass: Medium_sizing_policy_name
               storageProfile: Silver_storage_profile
         ```
@@ -312,6 +323,8 @@ Please use CSI for VCD to work with static and dynamic persistent volumes for K8
 * Cluster sharing is not supported for TKG clusters.
 
 * Kubernetes upgrade is not supported for TKG clusters.
+
+* In CSE 3.1.3, the `spec.settings` has three new fields (`csi`, `cpi`, and `cni`) that only pertain to TKG clusters.
 
 <a name="force_delete"></a>
 ## Force deleting clusters

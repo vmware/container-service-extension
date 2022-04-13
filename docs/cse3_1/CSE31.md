@@ -20,6 +20,13 @@ For greenfield installations, please get started with [CSE introduction](INTRO.h
 * Defined entity API: VCD's generic defined entity api to manage lifecycle of RDEs.
 * UI plugin : Kubernetes Container Clusters UI plugin, that is used to manage Native, TKG, TKGs, TKGi clusters from VCD UI.
 
+### CSE 3.1.3
+
+* Default Storage Class creation support through CLI and UI plugin.
+* TKG Core Package installation for kapp-controller and metrics-server for TKG clusters.
+    * Antrea now has the most compatible version installed if the antrea version is not specified in the CSE server config
+        or cluster spec.
+
 ### CSE 3.1.2
 
 * Cluster API Provider for Cloud Director that offers multi-control plane clusters and cluster upgrades using declarative, Kubernetes-style APIs. Learn more about [CAPI for VCD](https://github.com/vmware/cluster-api-provider-cloud-director/blob/0.5.0/README.md)
