@@ -630,9 +630,9 @@ class NativeEntity(AbstractNativeEntity):
 """  # noqa: E501
         if k8_runtime == shared_constants.ClusterEntityKind.TKG_M.value:
             cluster_spec_field_descriptions += """#
-# For the following cpi, csi, and cni versions, they can be specified in the spec. If they are not specified in the spec,
-# the version will be the one specified in the cse server config file. If no corresponding version is specified in the cse server
-# config file for one of these components, then a default version will be used in the case of cpi and csi, and a TKG specific version will be used in the case of cni.
+# For the following versions of cpi, csi, and cni, they can be specified in the spec. If any of the versions is not specified in the spec,
+# the version for each component will be the one specified in the cse server config file. If the corresponding version is not specified in the cse server
+# config file for one of these components, then a default version will be used in the cases of cpi and csi, and a TKG specific version will be used in the case of cni.
 # spec.settings.network.cni.name: Only \"antrea\" is supported.
 # spec.settings.network.cni.version: can be specified.
 # spec.settings.network.cpi.name: Will be \"cloud-provider-for-cloud-director\".
@@ -644,6 +644,10 @@ class NativeEntity(AbstractNativeEntity):
 # spec.settings.network.csi.defaultK8sStorageClass.k8sStorageClassName: name of default storage class.
 # spec.settings.network.csi.defaultK8sStorageClass.useDeleteReclaimPolicy: If \"true\", the Delete reclaim policy if used. If \"false\", the Retain reclaim policy is used.
 # spec.settings.network.csi.defaultK8sStorageClass.vcdStorageProfileName: The VCD storage profile to use.
+"""  # noqa: E501
+        else:
+            cluster_spec_field_descriptions += """#
+# For the spec.settings.network section, the `cni`, `cpi`, and `csi` fields can be null since they only apply to TKG clusters.
 """  # noqa: E501
         cluster_spec_field_descriptions += """#
 # spec.topology.workers: Optional sub-section for the desired worker state of the cluster. The properties \"sizingClass\" and \"storageProfile\" can be specified only during the cluster creation phase. These properties will no longer be modifiable in further update operations like \"resize\" and \"upgrade\". Non uniform worker nodes in the clusters is not yet supported.
