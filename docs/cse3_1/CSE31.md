@@ -23,6 +23,7 @@ For greenfield installations, please get started with [CSE introduction](INTRO.h
 ### CSE 3.1.3
 
 * New RDE 2.1 for TKG and native clusters. Learn more [here](CLUSTER_MANAGEMENT.html#sample_input_spec).
+* New Kubernetes Container Clusters plugin version 3.3.0. The plugin needs to be downloaded directly from VMware Cloud Director 10.3.3 Download page and installed into VCD 10.3.1+ being used.
 * Support for default storage class for TKG clusters through UI Plugin 3.3.0 and CLI on VCD 10.3.1+. The UI Plugin 3.3.0 needs to be downloaded from VMware Cloud Director 10.3.3 Download page directly.
 * Support for TKG Core Package installation for kapp-controller and metrics-server for TKG clusters.
     * Support for TKG compatible Antrea version installation for TKG clusters, by default. Users can overwrite the Antrea version, if required. Learn more [here](CLUSTER_MANAGEMENT.html#rde21_new_fields)
@@ -30,8 +31,8 @@ For greenfield installations, please get started with [CSE introduction](INTRO.h
 * Support for Kubernetes Container Storage Interface for VCD (CSI) version 1.2, as default. Learn more about [CSI for VCD](https://github.com/vmware/cloud-director-named-disk-csi-driver/blob/1.2.0/README.md)
 * Support for Python 3.10 version for CSE installation
 * Support for Antrea, CPI, CSI version overwrites. Learn more [here](CLUSTER_MANAGEMENT.html#rde21_new_fields)
-
-
+* A new Ubuntu 20.04 Native template for K8s 1.23 Kubernetes Clusters. Learn more here.(FILL)
+* Revision updates to existing Ubuntu 16.04 Native templates. Learn more here (FILL)
 ### CSE 3.1.2
 
 * Cluster API Provider for Cloud Director that offers multi-control plane clusters and cluster upgrades using declarative, Kubernetes-style APIs. Learn more about [CAPI for VCD](https://github.com/vmware/cluster-api-provider-cloud-director/blob/0.5.0/README.md)
