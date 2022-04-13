@@ -636,14 +636,14 @@ class NativeEntity(AbstractNativeEntity):
 # spec.settings.network.cni.name: Only \"antrea\" is supported.
 # spec.settings.network.cni.version: can be specified.
 # spec.settings.network.cpi.name: Will be \"cloud-provider-for-cloud-director\".
-# spec.settings.network.cpi.version: can be specified.
-# spec.settings.network.csi.default: Will be \"true\".
-# spec.settings.network.csi.name: Will be \"cloud-director-named-disk-csi-driver\".
+# spec.settings.network.cpi[0].version: can be specified.
+# spec.settings.network.csi[0].default: Will be \"true\".
+# spec.settings.network.csi[0].name: Will be \"cloud-director-named-disk-csi-driver\".
 # spec.settings.network.csi.defaultK8sStorageClass: Can be null in order not to create a default storage class.
-# spec.settings.network.csi.defaultK8sStorageClass.filesystem: defaults to \"ext4\". \"xfs\" is also supported.
-# spec.settings.network.csi.defaultK8sStorageClass.k8sStorageClassName: name of default storage class.
-# spec.settings.network.csi.defaultK8sStorageClass.useDeleteReclaimPolicy: If \"true\", the Delete reclaim policy if used. If \"false\", the Retain reclaim policy is used.
-# spec.settings.network.csi.defaultK8sStorageClass.vcdStorageProfileName: The VCD storage profile to use.
+# spec.settings.network.csi[0].defaultK8sStorageClass.filesystem: defaults to \"ext4\". \"xfs\" is also supported.
+# spec.settings.network.csi[0].defaultK8sStorageClass.k8sStorageClassName: name of default storage class.
+# spec.settings.network.csi[0].defaultK8sStorageClass.useDeleteReclaimPolicy: If \"true\", the Delete reclaim policy if used. If \"false\", the Retain reclaim policy is used.
+# spec.settings.network.csi[0].defaultK8sStorageClass.vcdStorageProfileName: The VCD storage profile to use.
 """  # noqa: E501
         else:
             cluster_spec_field_descriptions += """#
