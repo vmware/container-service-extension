@@ -24,7 +24,7 @@ All available templates:
 * New templates are highlighted
 * Updated template revisions are highlighted
 * Removed templates are striked out
-* Templates marked with '*' are deprecated and will be removed in future update.
+* Templates marked with '*' continues to be deprecated and will be removed in future update.
 
 
 ## October 14, 2021
