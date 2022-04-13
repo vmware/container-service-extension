@@ -37,11 +37,8 @@ consult the [vcd-cli install procedure](https://vmware.github.io/vcd-cli/install
 
 Please note: PhotonOS 3 supports only python 3.7, while PhotonOS 4 supports only python 3.10.
 
-One of the libraries that CSE depends on (viz. lru-dict) needs the following python packages, if these
-packages are missing, CSE installtion will fail with the following error:
+One of the libraries that CSE depends on (viz. lru-dict) needs the following python packages:
 ```
-error: command 'x86_64-linux-gnu-gcc' failed with exit status 1
-
 PhotonOS essentials for python to work with CSE
 -----------------------------------------------
 tdnf update
@@ -53,6 +50,12 @@ Ubuntu OS essentials for python to work with CSE
 # x = the minor version of python 3
 sudo apt install python3.x-dev
 ```
+
+If these packages are missing, CSE installtion will fail with the following error:
+```
+error: command 'x86_64-linux-gnu-gcc' failed with exit status 1
+```
+
 
 `Pip`, python's package manager is present by default in every python installation.
 To make sure it is present and updated to its latest version, run
