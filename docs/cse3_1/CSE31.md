@@ -24,9 +24,13 @@ For greenfield installations, please get started with [CSE introduction](INTRO.h
 
 * New RDE 2.1 for TKG and native clusters. Learn more [here](CLUSTER_MANAGEMENT.html#sample_input_spec).
 * Support for default storage class for TKG clusters through UI Plugin 3.3.0 and CLI on VCD 10.3.1+. The UI Plugin 3.3.0 needs to be downloaded from VMware Cloud Director 10.3.3 Download page directly.
-* TKG Core Package installation for kapp-controller and metrics-server for TKG clusters.
-    * Support for TKG compatible Antrea version installation for TKG clusters, by default. Users can overwrite the Antrea version, if required. Learn more [here](CLUSTER_MANAGEMENT.html#rde21_new_fields).
-*
+* Support for TKG Core Package installation for kapp-controller and metrics-server for TKG clusters.
+    * Support for TKG compatible Antrea version installation for TKG clusters, by default. Users can overwrite the Antrea version, if required. Learn more [here](CLUSTER_MANAGEMENT.html#rde21_new_fields)
+* Support for Kubernetes External Cloud Provider for VCD (CPI) version 1.1.1, as default. Learn more about [CPI for VCD](https://github.com/vmware/cloud-provider-for-cloud-director/blob/1.1.1/README.md)
+* Support for Kubernetes Container Storage Interface for VCD (CSI) version 1.2, as default. Learn more about [CSI for VCD](https://github.com/vmware/cloud-director-named-disk-csi-driver/blob/1.2.0/README.md)
+* Support for Python 3.10 version for CSE installation
+* Support for Antrea, CPI, CSI version overwrites. Learn more [here](CLUSTER_MANAGEMENT.html#rde21_new_fields)
+
 
 ### CSE 3.1.2
 
