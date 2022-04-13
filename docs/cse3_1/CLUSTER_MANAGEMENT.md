@@ -100,7 +100,25 @@ Here is a summary of commands available to view templates and manage clusters an
           you can only update few properties: scale-up/down (`spec.topology.workers.count`), 
           scale-up nfs (`spec.topology.nfs.count`), and upgrade (`spec.distribution.templateName` and `spec.distribution.templateRevision`).
       - Save the file as `update_cluster.yaml` and issue the command `vcd cse cluster apply update_cluster.yaml`
-      
+
+
+    * New for CSE 3.1.3: RDE 2.1 fields
+        - CSE 3.1.3 introduces the following fields that only apply to TKG clusters: `spec.settings.cpi`, `spec.settings.csi`, and `spec.settings.cni`
+            - `cpi.name` will be `cloud-provider-for-cloud-director`
+            - `cpi.version` can be specified; otherwise, a default will be used
+            - `csi.name` will be `cloud-director-named-disk-csi-driver`
+            - `cpi.version` can be specified; otherwise, a default will be used
+            - `cni.name` will be `antrea`
+            - `cni.version` can be specified; otherwise, a default will be used
+        - `spec.settings.csi.defaultK8sStorageClass` allows users to create a default storage class, which has the following 4 fields
+            - `filesystem`: This can be `ext4` (default) or `xfs`
+            - `k8sStorageClassName`: the name of the storage class
+            - `useDeleteReclaimPolicy`: If `true` the Delete reclaim policy is used, which deletes the PV when the PVC is deleted. If `false`,
+            the Retain reclaim policy is used, which allows the PV to be manually reclaimed after the PVC is deleted.
+            - `vcdStorageProfileName`: The VCD storage profile to use
+            - Please leave `spec.settings.csi.defaultK8sStorageClass: null` if no default storage class should be created
+
+
     * Sample input specification file
         ```sh
         # Short description of various properties used in this sample cluster configuration
