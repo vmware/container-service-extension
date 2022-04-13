@@ -627,7 +627,25 @@ class NativeEntity(AbstractNativeEntity):
 # spec.settings.rollbackOnFailure: Optional value that is true by default. On any cluster operation failure, if the value is set to true, affected node VMs will be automatically deleted.
 # spec.settings.sshKey: Optional ssh key that users can use to log into the node VMs without explicitly providing passwords.
 # spec.settings.network.expose: Optional value that is false by default. Set to true to enable access to the cluster from the external world.
-#
+"""  # noqa: E501
+        if k8_runtime == shared_constants.ClusterEntityKind.TKG_M.value:
+            cluster_spec_field_descriptions += """#
+# For the following cpi, csi, and cni versions, they can be specified in the spec. If they are not specified in the spec,
+# the version will be the one specified in the cse server config file. If no corresponding version is specified in the cse server
+# config file for one of these components, then a default version will be used in the case of cpi and csi, and a TKG specific version will be used in the case of cni.
+# spec.settings.network.cni.name: Only \"antrea\" is supported.
+# spec.settings.network.cni.version: can be specified.
+# spec.settings.network.cpi.name: Will be \"cloud-provider-for-cloud-director\".
+# spec.settings.network.cpi.version: can be specified.
+# spec.settings.network.csi.default: Will be \"true\".
+# spec.settings.network.csi.name: Will be \"cloud-director-named-disk-csi-driver\".
+# spec.settings.network.csi.defaultK8sStorageClass: Can be null in order not to create a default storage class.
+# spec.settings.network.csi.defaultK8sStorageClass.filesystem: defaults to \"ext4\". \"xfs\" is also supported.
+# spec.settings.network.csi.defaultK8sStorageClass.k8sStorageClassName: name of default storage class.
+# spec.settings.network.csi.defaultK8sStorageClass.useDeleteReclaimPolicy: If \"true\", the Delete reclaim policy if used. If \"false\", the Retain reclaim policy is used.
+# spec.settings.network.csi.defaultK8sStorageClass.vcdStorageProfileName: The VCD storage profile to use.
+"""  # noqa: E501
+        cluster_spec_field_descriptions += """#
 # spec.topology.workers: Optional sub-section for the desired worker state of the cluster. The properties \"sizingClass\" and \"storageProfile\" can be specified only during the cluster creation phase. These properties will no longer be modifiable in further update operations like \"resize\" and \"upgrade\". Non uniform worker nodes in the clusters is not yet supported.
 # spec.topology.workers.count: number of worker nodes (default value:1) Worker nodes can be scaled up and down.
 # spec.topology.workers.sizingClass: The compute sizing policy with which worker nodes need to be provisioned in a given \"ovdc\". The specified sizing policy is expected to be pre-published to the given ovdc.
