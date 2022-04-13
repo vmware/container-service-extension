@@ -4,6 +4,9 @@ title: Release Notes
 ---
 
 # General Announcement
+**Date: 2022-04-14**
+* VCD 10.1 with CSE reaches end of support on April 9, 2022.
+
 **Date : 2022-01-27**
 * Container Service Extension 3.0.x reaches end of support on October 15, 2022.
 * Tanzu Kubernetes Grid Integrated Edition (TKGi) integration with CSE reaches end of support on Feb 24, 2022.
