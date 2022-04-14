@@ -110,8 +110,9 @@ write_files:
       kubeconfig_path=/root/kubeconfig.yaml
       touch $kubeconfig_path
       # Kapp-controller is installed on the first worker node
-      kapp_controller_version="{kapp_controller_version}"
-      kapp_controller_version=$(echo $kapp_controller_version | sed 's/+.*//' | sed 's/v//')
+      kapp_controller_tkg_version="{kapp_controller_version}"
+      kapp_controller_tkg_version=$(echo $kapp_controller_tkg_version | sed 's/+/_/')
+      kapp_controller_version=$(echo $kapp_controller_tkg_version | sed 's/_.*//' | sed 's/v//')
       install_tanzu_cli_packages={install_tanzu_cli_packages}
       if [[ "$install_kapp_controller" = true ]]; then
         vmtoolsd --cmd "info-get guestinfo.postcustomization.control_plane.kubeconfig" > $kubeconfig_path
@@ -123,7 +124,13 @@ write_files:
 
         # install kapp-controller, which is needed for tanzu-cli
         if [[ ! -z "$kapp_controller_version" && $kapp_controller_version != "null" ]]; then
-          kubectl apply -f https://github.com/vmware-tanzu/carvel-kapp-controller/releases/download/v$OPENBRACKETkapp_controller_versionCLOSEBRACKET/release.yml
+          # If the kapp-controller image pulls from docker, we modify the manifest to pull from harbor
+          # Note: this does not replace pulling from ghcr, which is currently okay since there not rate limits
+          kapp_controller_manifest_path=/root/kapp-controller-v$OPENBRACKETkapp_controller_versionCLOSEBRACKET.yaml
+          wget -O $kapp_controller_manifest_path https://github.com/vmware-tanzu/carvel-kapp-controller/releases/download/v$OPENBRACKETkapp_controller_versionCLOSEBRACKET/release.yml
+          sed -i "s/image: index.docker.io.*/image: projects.registry.VMware.com\/tkg\/kapp-controller:v$OPENBRACKETkapp_controller_tkg_versionCLOSEBRACKET/g" $kapp_controller_manifest_path
+          sed -i "s/URL: index.docker.io.*/ URL: projects.registry.VMware.com\/tkg\/kapp-controller:v$OPENBRACKETkapp_controller_tkg_versionCLOSEBRACKET/g" $kapp_controller_manifest_path
+          kubectl apply -f $kapp_controller_manifest_path
         fi
       fi
 
