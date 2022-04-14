@@ -25,12 +25,13 @@ For greenfield installations, please get started with [CSE introduction](INTRO.h
 * New RDE 2.1 for TKG and native clusters. Learn more [here](CLUSTER_MANAGEMENT.html#sample_input_spec).
 * New Kubernetes Container Clusters plugin version 3.3.0. The plugin needs to be downloaded directly from VMware Cloud Director 10.3.3 Download page and installed into VCD 10.3.1+ being used.
 * Support for default storage class for TKG clusters through UI Plugin 3.3.0 and CLI on VCD 10.3.1+. The UI Plugin 3.3.0 needs to be downloaded from VMware Cloud Director 10.3.3 Download page directly.
+* Support for Ubuntu 20.04 Kubernetes OVAs from VMware Tanzu Kubernetes Grid Versions 1.5.1 and K8s version 1.22.
 * Support for TKG Core Package installation for kapp-controller and metrics-server for TKG clusters. Learn more [here](CLUSTER_MANAGEMENT.html#313_core_package_installation).
 * Support for TKG compatible Antrea version installation for TKG clusters, by default. Users can overwrite the Antrea version, if required. Learn more [here](CLUSTER_MANAGEMENT.html#rde21_new_fields).
 * Support for Kubernetes External Cloud Provider for VCD (CPI) version 1.1.1, as default. Learn more about [CPI for VCD](https://github.com/vmware/cloud-provider-for-cloud-director/blob/1.1.1/README.md).
 * Support for Kubernetes Container Storage Interface for VCD (CSI) version 1.2.0, as default. Learn more about [CSI for VCD](https://github.com/vmware/cloud-director-named-disk-csi-driver/blob/1.2.0/README.md).
 * Support for Python version 3.10 for CSE installation. Learn more [here](INSTALLATION.html#getting_cse).
-* Support for Antrea, CPI, CSI version overwrites in cluster spec (learn more [here](CLUSTER_MANAGEMENT.html#rde21_new_fields)) and CSE server config (learn more [here](CSE_CONFIG.html#313_extra_options)).
+* Support for Antrea, CPI, CSI version override in cluster spec (learn more [here](CLUSTER_MANAGEMENT.html#rde21_new_fields)) and CSE server config (learn more [here](CSE_CONFIG.html#313_extra_options)).
 * A new Ubuntu 20.04 Native template for K8s 1.23 Kubernetes Clusters. Learn more [here](TEMPLATE_ANNOUNCEMENTS.html).
 * Revision updates to existing Ubuntu 16.04 Native templates. Learn more [here](TEMPLATE_ANNOUNCEMENTS.html).
 
@@ -86,7 +87,7 @@ For greenfield installations, please get started with [CSE introduction](INTRO.h
 | CSE Server/CLI | UI plugin | Cloud Director | Comments               |
 |----------------|-----------|----------------|------------------------|
 | 3.1.3          | 3.3.0     | 10.3.1+        | Must use UI Plugin 3.3.0. Plugin ships on VMware Cloud Director 10.3.3 Download page |
-| 3.1.3          | 2.2.0     | 2.2.2          |  |
+| 3.1.3          | 2.2.0     | 10.2.2         | Plugin ships with VCD  |
 | 3.1.2          | 3.2.0     | 10.3.2         | Plugin ships with VCD  |
 | 3.1.2          | 3.1.0     | 10.3.1         | Plugin ships with VCD  |
 | 3.1.2          | 2.2.0     | 10.2.2         | Plugin ships with VCD  |
