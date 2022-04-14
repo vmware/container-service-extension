@@ -124,6 +124,8 @@ write_files:
 
         # install kapp-controller, which is needed for tanzu-cli
         if [[ ! -z "$kapp_controller_version" && $kapp_controller_version != "null" ]]; then
+          # If the kapp-controller image pulls from docker, we modify the manifest to pull from harbor
+          # Note: this does not replace pulling from ghcr, which is currently okay since there not rate limits
           kapp_controller_manifest_path=/root/kapp-controller-v$OPENBRACKETkapp_controller_versionCLOSEBRACKET.yaml
           wget -O $kapp_controller_manifest_path https://github.com/vmware-tanzu/carvel-kapp-controller/releases/download/v$OPENBRACKETkapp_controller_versionCLOSEBRACKET/release.yml
           sed -i "s/image: index.docker.io.*/image: projects.registry.VMware.com\/tkg\/kapp-controller:v$OPENBRACKETkapp_controller_tkg_versionCLOSEBRACKET/g" $kapp_controller_manifest_path
