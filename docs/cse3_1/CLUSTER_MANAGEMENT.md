@@ -197,6 +197,8 @@ Here is a summary of commands available to view templates and manage clusters an
               sizingClass: Medium_sizing_policy_name
               storageProfile: Silver_storage_profile
         ```
+
+        Note: CSE 3.1.3 introduces RDE 2.1, which is reflected in the spec field `apiVersion: cse.vmware.com/v2.1`
       
 <a name="cse31_cluster_share"></a>
 ### CSE 3.1 `Cluster share` command
@@ -306,6 +308,7 @@ TKG cluster deployment can be generated using the following command
 vcd cse cluster apply --sample --tkg
 ```
 
+
 **Please note:**
 * Routability of external network traffic to the cluster is crucial for VCD CPI to work.
 Therefore, it is mandatory to deploy TKG clusters with `expose` field set to `True`.
@@ -341,6 +344,14 @@ Please use CSI for VCD to work with static and dynamic persistent volumes for K8
 * Kubernetes upgrade is not supported for TKG clusters.
 
 * In CSE 3.1.3, the `spec.settings` has three new fields (`csi`, `cpi`, and `cni`) that only pertain to TKG clusters.
+
+<a name="313_core_package_installation"></a>
+### CSE 3.1.3 Core package installation
+In CSE 3.1.3, TKG clusters will automatically install kapp-controller and metrics-server.
+Nothing needs to be specified in the cluster spec for these installations. The installed kapp-controller and metrics-server versions
+can be viewed using `vcd cse cluster info` or the cluster info on the container plugin.
+
+**Note**: It is a known issue (see more [here](KNOWN_ISSUES.html#core_package_installation)) that TKG 1.3.Z ova's will not have automatic kapp-controller and metrics-server installation.
 
 <a name="force_delete"></a>
 ## Force deleting clusters
