@@ -20,6 +20,20 @@ For greenfield installations, please get started with [CSE introduction](INTRO.h
 * Defined entity API: VCD's generic defined entity api to manage lifecycle of RDEs.
 * UI plugin : Kubernetes Container Clusters UI plugin, that is used to manage Native, TKG, TKGs, TKGi clusters from VCD UI.
 
+### CSE 3.1.3
+
+* New RDE 2.1 for TKG and native clusters. Learn more [here](CLUSTER_MANAGEMENT.html#sample_input_spec).
+* New Kubernetes Container Clusters plugin version 3.3.0. The plugin needs to be downloaded directly from VMware Cloud Director 10.3.3 Download page and installed into VCD 10.3.1+ being used.
+* Support for default storage class for TKG clusters through UI Plugin 3.3.0 and CLI on VCD 10.3.1+. The UI Plugin 3.3.0 needs to be downloaded from VMware Cloud Director 10.3.3 Download page directly.
+* Support for TKG Core Package installation for kapp-controller and metrics-server for TKG clusters. Learn more [here](CLUSTER_MANAGEMENT.html#313_core_package_installation).
+* Support for TKG compatible Antrea version installation for TKG clusters, by default. Users can overwrite the Antrea version, if required. Learn more [here](CLUSTER_MANAGEMENT.html#rde21_new_fields).
+* Support for Kubernetes External Cloud Provider for VCD (CPI) version 1.1.1, as default. Learn more about [CPI for VCD](https://github.com/vmware/cloud-provider-for-cloud-director/blob/1.1.1/README.md).
+* Support for Kubernetes Container Storage Interface for VCD (CSI) version 1.2.0, as default. Learn more about [CSI for VCD](https://github.com/vmware/cloud-director-named-disk-csi-driver/blob/1.2.0/README.md).
+* Support for Python version 3.10 for CSE installation. Learn more [here](INSTALLATION.html#getting_cse).
+* Support for Antrea, CPI, CSI version overwrites in cluster spec (learn more [here](CLUSTER_MANAGEMENT.html#rde21_new_fields)) and CSE server config (learn more [here](CSE_CONFIG.html#313_extra_options)).
+* A new Ubuntu 20.04 Native template for K8s 1.23 Kubernetes Clusters. Learn more [here](TEMPLATE_ANNOUNCEMENTS.html).
+* Revision updates to existing Ubuntu 16.04 Native templates. Learn more [here](TEMPLATE_ANNOUNCEMENTS.html).
+
 ### CSE 3.1.2
 
 * Cluster API Provider for Cloud Director that offers multi-control plane clusters and cluster upgrades using declarative, Kubernetes-style APIs. Learn more about [CAPI for VCD](https://github.com/vmware/cluster-api-provider-cloud-director/blob/0.5.0/README.md)
@@ -71,6 +85,8 @@ For greenfield installations, please get started with [CSE introduction](INTRO.h
 
 | CSE Server/CLI | UI plugin | Cloud Director | Comments               |
 |----------------|-----------|----------------|------------------------|
+| 3.1.3          | 3.3.0     | 10.3.1+        | Must use UI Plugin 3.3.0. Plugin ships on VMware Cloud Director 10.3.3 Download page |
+| 3.1.3          | 2.2.0     | 2.2.2          |  |
 | 3.1.2          | 3.2.0     | 10.3.2         | Plugin ships with VCD  |
 | 3.1.2          | 3.1.0     | 10.3.1         | Plugin ships with VCD  |
 | 3.1.2          | 2.2.0     | 10.2.2         | Plugin ships with VCD  |
@@ -83,10 +99,12 @@ For greenfield installations, please get started with [CSE introduction](INTRO.h
 | 3.1.0          | 1.0.3     | 10.1           |  |
 
 
-**Native cluster comaptiblity matrix**
+**Native cluster compatiblity matrix**
 
 | CSE Server/CLI | Cloud Director | NSX-T | NSX-V   | Comments                            |
 |----------------|----------------|-------|---------|-------------------------------------|
+| 3.1.3          | 10.3.1+        | 3.1.1 | 6.4.10† | Cluster representation as RDE 2.1.0 |
+| 3.1.3          | 10.2.2         | 3.1.1 | 6.4.10† | Cluster representation as RDE 1.0.0 |
 | 3.1.2          | 10.3.2         | 3.1.1 | 6.4.10† | Cluster representation as RDE 2.0.0 |
 | 3.1.2          | 10.3.1         | 3.1.1 | 6.4.10† | Cluster representation as RDE 2.0.0 |
 | 3.1.2          | 10.2.2         | 3.1.1 | 6.4.10† | Cluster representation as RDE 1.0.0 |
@@ -100,20 +118,19 @@ For greenfield installations, please get started with [CSE introduction](INTRO.h
 
 <sub><sup>† - With NSX-V, CSE doesn't support creation of clusters on routed Org VDC networks.</sup></sub>
 
-**TKG compatibility matrix**
+**TKG compatibility**
 
-| CSE Server/CLI   | Cloud Director | NSX-T with Avi             |
-|------------------|----------------|----------------------------|
-| 3.1.2            | 10.3.2         | NSX-T 3.1.3 and Avi 21.1.1 |
-| 3.1.2            | 10.3.1         | NSX-T 3.1.3 and Avi 21.1.1 |
-| 3.1.1            | 10.3.1         | NSX-T 3.1.3 and Avi 21.1.1 |
+* For CSE and VCD interoperability, please check the VMware Product Interoperability Matrix [link](https://interopmatrix.vmware.com/Interoperability)
 
-**Note**: Ubuntu 20.04 Kubernetes OVAs from VMware Tanzu Kubernetes Grid Versions 1.4.0, 1.3.1, 1.3.0 are supported.
+* CSE TKG supports the NSX and Avi versions supported by VCD. Please check the VMware Product Interoperability Matrix [link](https://interopmatrix.vmware.com/Interoperability)
+
+* Ubuntu 20.04 Kubernetes OVAs from VMware Tanzu Kubernetes Grid Versions 1.5.1, 1.4.0, 1.3.1, 1.3.0 are supported.
 
 **TKGs compatibility matrix**
 
 | CSE CLI | UI plugin  | Cloud Director |
 |---------|------------|----------------|
+| 3.1.3   | 3.3.0      | 10.3.3         |
 | 3.1.2   | 3.2.0      | 10.3.2         |
 | 3.1.2   | 3.1.0      | 10.3.1         |
 | 3.1.2   | 2.2.0      | 10.2.2         |
@@ -135,6 +152,9 @@ For greenfield installations, please get started with [CSE introduction](INTRO.h
 <a name="cse31-config"></a>
 #### 2.2.1 Changes in the configuration file
 Refer to the [sample config file](CSE_CONFIG.html)
+
+### CSE 3.1.3
+1. Addition of new [extra_options](CSE_CONFIG.html#extra_options) fields: cpi_version, csi_version, and antrea_version
 
 ### CSE 3.1.2
 1. Addition of new [extra_options](CSE_CONFIG.html#extra_options) section that allows
@@ -161,6 +181,18 @@ Refer to [CSE 3.1 installation](CSE_SERVER_MANAGEMENT.html#cse31-greenfield).
 <a name="brown_field_upgrades"></a>
 #### 2.2.3 Brownfield upgrade
 
+**3.1.3**
+CSE can be upgraded from version 3.1.1, 3.1.0 and 3.0.z to version 3.1.3 GA.
+Any CSE release older than CSE 3.0.0 first needs to be upgraded to
+CSE 3.0.z product line before it can be upgraded to CSE 3.1.3.
+
+**Note** :
+If Tanzu Kubernetes Grid (TKG) distribution is enabled
+on [CSE 3.0.z](https://github.com/vmware/container-service-extension-templates/blob/tkgm/TKG_INSTRUCTIONS.md),
+then please consider upgrading to CSE 3.1.3 following these [steps](CSE31.html#remove_tkgm).
+
+Refer to [CSE 3.1 upgrade command](CSE_SERVER_MANAGEMENT.html#cse31-upgrade-cmd) for details.
+
 **3.1.2**
 CSE can be upgraded from version 3.1.1, 3.1.0 and 3.0.z to version 3.1.2 GA.
 Any CSE release older than CSE 3.0.0 first needs to be upgraded to
@@ -175,13 +207,7 @@ then the steps mentioned below must be followed in order to upgrade to CSE 3.1.2
 1. Evaluate your environment for any stateful applications that run on TKG clusters
 powered by CSE 3.0.z. If you wish to retain these application's data, then leverage
 a Kubernetes application backup/restore strategy to backup the applications data so you can restore it later.
-2. The next set of steps lead you through removal of TKG clusters from CSE 3.0.z after which you can safely upgrade to CSE 3.1.2
-  2.1. Delete all deployed TKG clusters across all tenants via `vcd-cli` or `Kubernetes Container Clusters UI plugin`.
-  2.2. Disable TKG deployment on all Org VDCs via `vcd cse ovdc disable`.
-  2.3. Stop the CSE server.
-  2.4. Delete all TKG templates via VCD UI.
-  2.5. Remove the VM Placement Policy `cse---tkgm` from the system via VCD UI or VCD REST api.
-  2.6. Revert CSE configuration file to disable TKG.
+2. Remove tkgm from CSE 3.0.z, following these [steps](CSE31.html#remove_tkgm_from_30z)
 3. Upgrade CSE via `cse upgrade` command.
 4. Create new TKG clusters from Ubuntu 20.04 TKG OVAs, using CSE 3.1.2.
 5. Restore applications on newly created TKG clusters.
@@ -215,7 +241,16 @@ then please consider upgrading to CSE 3.1.1 following these [steps](CSE31.html#r
 
 Refer to [CSE 3.1 upgrade command](CSE_SERVER_MANAGEMENT.html#cse31-upgrade-cmd) for details.
 
-#### 2.2.4 Tenant onboarding
+<a name="remove_tkgm_from_30z"></a>
+#### 2.2.4 Removal of TKG clusters from CSE 3.0.z
+1. Delete all deployed TKG clusters across all tenants via `vcd-cli` or `Kubernetes Container Clusters UI plugin`.
+2. Disable TKG deployment on all Org VDCs via `vcd cse ovdc disable`.
+3. Stop the CSE server.
+4. Delete all TKG templates via VCD UI.
+5. Remove the VM Placement Policy `cse---tkgm` from the system via VCD UI or VCD REST api.
+6. Revert CSE configuration file to disable TKG.
+
+#### 2.2.5 Tenant onboarding
 The provider needs to perform below operations to enable Kubernetes cluster
 deployments in tenant organizations and tenant virtual data centers.
 1. Grant rights to the tenant users. Refer to [CSE 3.1 RBAC](RBAC.html#rde_rbac)
@@ -228,9 +263,10 @@ for more details.
 to the desired organizations.
 
 ### 2.3 Kubernetes Container Clusters UI plugin
-Kubernetes Container Clusters UI plugin 3.2.0 is available out of the box with VCD 10.3.2.
-Kubernetes Container Clusters UI plugin 3.1.0 is available out of the box with VCD 10.3.1.
-Kubernetes Container Clusters UI plugin 3.0.0 is available out of the box with VCD 10.3.0.
+* Kubernetes Container Clusters UI plugin 3.3.0 is available on the VMware Cloud Director 10.3.3 Download page.
+* Kubernetes Container Clusters UI plugin 3.2.0 is available out of the box with VCD 10.3.2.
+* Kubernetes Container Clusters UI plugin 3.1.0 is available out of the box with VCD 10.3.1.
+* Kubernetes Container Clusters UI plugin 3.0.0 is available out of the box with VCD 10.3.0.
 
 Provider can publish it to the desired tenants to offer Kubernetes services.
 Refer to [publish Kubernetes Container Clusters UI plugin](https://docs.vmware.com/en/VMware-Cloud-Director/10.3/VMware-Cloud-Director-Service-Provider-Admin-Portal-Guide/GUID-A1910FF9-B2CF-49DD-B031-D1245E8740AE.html).
@@ -255,10 +291,11 @@ CSE 3.1.0 introduces below changes in CLI
    Refer to [cluster share usage](CLUSTER_MANAGEMENT.html#cse31_cluster_share)
 
 ### 3.2 Kubernetes Container Clusters UI plugin
-For VCD 10.3.z, you must use the [Kubernetes Container Clusters UI plugin 3.y.0](https://docs.vmware.com/en/VMware-Cloud-Director/10.3/VMware-Cloud-Director-Service-Provider-Admin-Portal-Guide/GUID-A1910FF9-B2CF-49DD-B031-D1245E8740AE.html) that comes with VCD to manage the cluster deployments.
-For VCD 10.2.z, you must use the [Kubernetes Container Clusters UI plugin 2.y.0](https://docs.vmware.com/en/VMware-Cloud-Director/10.2/VMware-Cloud-Director-Service-Provider-Admin-Portal-Guide/GUID-A1910FF9-B2CF-49DD-B031-D1245E8740AE.html) that comes with VCD to manage the cluster deployments.
+* For VCD 10.3.z, you must use the [Kubernetes Container Clusters UI plugin 3.y.0](https://docs.vmware.com/en/VMware-Cloud-Director/10.3/VMware-Cloud-Director-Service-Provider-Admin-Portal-Guide/GUID-A1910FF9-B2CF-49DD-B031-D1245E8740AE.html) that comes with VCD to manage the cluster deployments.
+    * If using CSE 3.1.3 with VCD 10.3.1+, you must use Kubernetes Container Clusters UI plugin 3.3.0, which must be downloaded from VMware Cloud Director 10.3.3 Download page and installed into VCD 10.3.1+.
+* For VCD 10.2.z, you must use the [Kubernetes Container Clusters UI plugin 2.y.0](https://docs.vmware.com/en/VMware-Cloud-Director/10.2/VMware-Cloud-Director-Service-Provider-Admin-Portal-Guide/GUID-A1910FF9-B2CF-49DD-B031-D1245E8740AE.html) that comes with VCD to manage the cluster deployments.
 
-If you are working with VCD versions prior to 10.2, you must use the [Kubernetes Container Clusters UI plugin 1.0.3](CSE_UI_PLUGIN.html) to manage the cluster deployments.
+* If you are working with VCD versions prior to 10.2, you must use the [Kubernetes Container Clusters UI plugin 1.0.3](CSE_UI_PLUGIN.html) to manage the cluster deployments.
 
 <a name="faq"></a>
 ## 4. FAQ

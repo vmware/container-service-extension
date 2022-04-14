@@ -98,7 +98,7 @@ organization virtual data center(s), delete the old compute policies. Note
 that this clean-up is done only on CSE-created compute policies.
 * Prepare the environment to be able to perform organization virtual datacenter 
 enablement for native clusters. 
-* Auto-install templates of the latest revision unless specified otherwise. (Not  applicable for CSE 3.1.2)
+* Auto-install templates of the latest revision unless specified otherwise. (Not  applicable for CSE 3.1.2 and CSE 3.1.3)
 * Identify existing organization virtual datacenter(s) with existing clusters 
 and publish appropriate placement policies on the same.
 * Make pre-existing clusters forward compatible.
@@ -134,6 +134,12 @@ can be upgraded to environment CSE 3.1, configured with VCD 10.2, running with `
 Note the below recommendation when the target combination is CSE 3.1 (legacy_mode=false):
 - CSE 3.1 will do its best effort to make the existing templates forward compatible. 
   It is recommended to recreate the templates from the new template cookbook 2.0 to avoid any errors.
+
+```
+Note for CSE 3.1.3: Because CSE 3.1.3 uses RDE 2.1, the above holds true, except that
+`urn:vcloud:type:cse:nativeCluster:2.1.0` instead of `urn:vcloud:type:cse:nativeCluster:2.0.0` will be used,
+and RDE 1.0 clusters will be upgraded to use RDE 2.1.
+```
 
 ### Validate CSE Installation
 

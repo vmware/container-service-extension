@@ -100,11 +100,32 @@ Here is a summary of commands available to view templates and manage clusters an
           you can only update few properties: scale-up/down (`spec.topology.workers.count`), 
           scale-up nfs (`spec.topology.nfs.count`), and upgrade (`spec.distribution.templateName` and `spec.distribution.templateRevision`).
       - Save the file as `update_cluster.yaml` and issue the command `vcd cse cluster apply update_cluster.yaml`
-      
+
+    <a name="rde21_new_fields"></a>
+    * CSE 3.1.3 for TKG - CPI, CSI, and CNI fields in RDE 2.1
+        - CSE 3.1.3 introduces the following fields that only apply to TKG clusters: `spec.settings.cpi`, `spec.settings.csi`, and `spec.settings.cni`. 
+        Each of these fields is covered by CSE defaults. For each of these fields, if a version is not specified, then the version specified in the
+        CSE server configuration for each of these components will be used. If no version is specified in the CSE server configuration, then a default
+        will be used for csi (1.2.0 in CSE 3.1.3) and cpi (1.1.1 in CSE 3.1.3); for cni, a TKG-compatible version will be used.
+            - `cpi.name` will be `cloud-provider-for-cloud-director`
+            - `cpi.version` can be specified
+            - `csi.name` will be `cloud-director-named-disk-csi-driver`
+            - `cpi.version` can be specified
+            - `cni.name` will be `antrea`
+            - `cni.version` can be specified
+        - `spec.settings.csi.defaultK8sStorageClass` allows users to create a default storage class, which has the following 4 fields
+            - `filesystem`: This can be `ext4` (default) or `xfs`
+            - `k8sStorageClassName`: the name of the storage class
+            - `useDeleteReclaimPolicy`: If `true` the Delete reclaim policy is used, which deletes the PV when the PVC is deleted. If `false`,
+            the Retain reclaim policy is used, which allows the PV to be manually reclaimed after the PVC is deleted.
+            - `vcdStorageProfileName`: The VCD storage profile to use
+            - If a default storage class is not needed, set `spec.settings.csi.defaultK8sStorageClass: null`.
+
+    <a name="sample_input_spec"></a>
     * Sample input specification file
         ```sh
         # Short description of various properties used in this sample cluster configuration
-        # apiVersion: Represents the payload version of the cluster specification. By default, "cse.vmware.com/v2.0" is used.
+        # apiVersion: Represents the payload version of the cluster specification. By default, "cse.vmware.com/v2.1" is used.
         # kind: The kind of the Kubernetes cluster.
         #
         # metadata: This is a required section
@@ -141,7 +162,7 @@ Here is a summary of commands available to view templates and manage clusters an
         #
         # status: Current state of the cluster in the server. This is not a required section for any of the operations.
 
-        apiVersion: cse.vmware.com/v2.0
+        apiVersion: cse.vmware.com/v2.1
         kind: native
         metadata:
           name: cluster_name
@@ -161,6 +182,8 @@ Here is a summary of commands available to view templates and manage clusters an
           topology:
             controlPlane:
               count: 1
+              cpu: null
+              memory: null
               sizingClass: Large_sizing_policy_name
               storageProfile: Gold_storage_profile_name
             nfs:
@@ -169,9 +192,13 @@ Here is a summary of commands available to view templates and manage clusters an
               storageProfile: Platinum_storage_profile_name
             workers:
               count: 2
+              cpu: null
+              memory: null
               sizingClass: Medium_sizing_policy_name
               storageProfile: Silver_storage_profile
         ```
+
+        Note: CSE 3.1.3 introduces RDE 2.1, which is reflected in the spec field `apiVersion: cse.vmware.com/v2.1`
       
 <a name="cse31_cluster_share"></a>
 ### CSE 3.1 `Cluster share` command
@@ -281,10 +308,13 @@ TKG cluster deployment can be generated using the following command
 vcd cse cluster apply --sample --tkg
 ```
 
+
 **Please note:**
 * Routability of external network traffic to the cluster is crucial for VCD CPI to work.
 Therefore, it is mandatory to deploy TKG clusters with `expose` field set to `True`.
 Read more about expose functionality [here](CLUSTER_MANAGEMENT.html#expose_cluster).
+    * For clusters with expose=True, we need an SNAT rule to allow nodes of the cluster to communicate via a provisioned external IP.
+    * It is known due to a VCD limitation that SNAT rules with 0.0.0.0/0  will not work.  Please use the exact Tier-1 network subnet mask with a Tier-0 external IP of your choice to create the SNAT rule.
 
 * Users deploying VMware Tanzu Kubernetes Grid clusters should have the rights required
 to deploy `exposed` native clusters and additionally the right `Full Control: CSE:NATIVECLUSTER`.
@@ -312,6 +342,16 @@ Please use CSI for VCD to work with static and dynamic persistent volumes for K8
 * Cluster sharing is not supported for TKG clusters.
 
 * Kubernetes upgrade is not supported for TKG clusters.
+
+* In CSE 3.1.3, the `spec.settings` has three new fields (`csi`, `cpi`, and `cni`) that only pertain to TKG clusters.
+
+<a name="313_core_package_installation"></a>
+### CSE 3.1.3 Core package installation
+In CSE 3.1.3, TKG clusters will automatically install kapp-controller and metrics-server.
+Nothing needs to be specified in the cluster spec for these installations. The installed kapp-controller and metrics-server versions
+can be viewed using `vcd cse cluster info` or the cluster info on the container plugin.
+
+**Note**: It is a known issue (see more [here](KNOWN_ISSUES.html#core_package_installation)) that TKG 1.3.Z ova's will not have automatic kapp-controller and metrics-server installation.
 
 <a name="force_delete"></a>
 ## Force deleting clusters

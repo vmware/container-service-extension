@@ -30,34 +30,61 @@ Install kubectl using directions from the [Kubernetes web site](https://kubernet
 <a name="getting_cse"></a>
 ## Install CSE Software
 
-Install python 3.7.3 or greater. Please note that python 3.8.0 and above is
-not supported. See python installation instructions and
-downloads at <https://www.python.org> or consult the [vcd-cli install
-procedure](https://vmware.github.io/vcd-cli/install.html). `Pip`, python's
-package manager is present by default in every python installation.
+Install python 3.7.3+, 3.8.x, 3.9.x or 3.10.x.
+
+See python installation instructions and downloads at <https://www.python.org> or
+consult the [vcd-cli install procedure](https://vmware.github.io/vcd-cli/install.html).
+
+Please note: PhotonOS 3 supports only python 3.7, while PhotonOS 4 supports only python 3.10.
+
+One of the libraries that CSE depends on (viz. lru-dict) needs the following python packages:
+```
+PhotonOS essentials for python to work with CSE
+-----------------------------------------------
+tdnf update
+tdnf install build-essential
+tdnf install python3-devel
+
+Ubuntu OS essentials for python to work with CSE
+------------------------------------------------
+# x = the minor version of python 3
+sudo apt install python3.x-dev
+```
+
+If these packages are missing, CSE installtion will fail with the following error:
+```
+error: command 'x86_64-linux-gnu-gcc' failed with exit status 1
+```
+
+
+`Pip`, python's package manager is present by default in every python installation.
+To make sure it is present and updated to its latest version, run
+```
+python -m ensurepip --upgrade
+```
 
 Verify python and pip installation:
-```sh
+```
 $ python3 --version
-Python 3.7.4
+Python 3.7.3
 
 $ pip3 --version
 pip 21.2.4 from /usr/local/lib/python3.7/site-packages/pip (python 3.7)
 ```
 
 Install and verify CSE:
-```sh
+```
 $ pip3 install container-service-extension
 ...
 
 $ cse version
-CSE, Container Service Extension for VMware vCloud Director, version 3.1.1
+CSE, Container Service Extension for VMware vCloud Director, version 3.1.3
 ```
 
 Alternatively, a specific version of CSE can be installed from GitHub as
 follows:
-```sh
-> pip3 install git+https://github.com/vmware/container-service-extension.git@3.1.1
+```
+> pip3 install git+https://github.com/vmware/container-service-extension.git@3.1.3
 ```
 
 To discover available CSE source versions on GitHub see the following URL:

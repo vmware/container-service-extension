@@ -81,6 +81,9 @@ broker:
 #  tkgm_http_proxy: [http proxy url with port]
 #  tkgm_https_proxy: [https proxy url with port]
 #  tkgm_no_proxy: [comma separated list of IP addresses]
+#  cpi_version: cpi version in quotes
+#  csi_version: csi version in quotes
+#  antrea_version: antrea version in quotes
 ```
 
 The config file has 4 mandatory sections ( [`amqp` | `mqtt`], `vcd`, `service`, and, `broker`)
@@ -245,7 +248,7 @@ for further details on compute policies.
 <a name="extra_options"></a>
 ### `extra_options` Section (Added in CSE 3.1.2)
 
-It allows providers to specify proxy details that will be injected into TKG Clusters.
+The proxy options allow providers to specify proxy details that will be injected into TKG Clusters.
 The proxy enables TKG clusters to reach out to the internet to download packages, such as Cloud Provider for Cloud Director.
 
 | Property         | Value                                                                                               | Remarks |
@@ -256,13 +259,34 @@ The proxy enables TKG clusters to reach out to the internet to download packages
 
 Note: Proxy injection is supported for only TKG clusters. CSE injects the value of these variables into `http-proxy.conf` file on each node of the cluster.
 
+<a name="313_extra_options"></a>
+**CSE 3.1.3 added `extra_options` fields `cpi_version`, `csi_version`, and `antrea_version`**: These fields are supported only for TKG clusters.
+
+| Property         | Value                                                                                               | Remarks |
+|------------------|-----------------------------------------------------------------------------------------------------|---------|
+| cpi_version      | CPI version in quotes                                                                               | added in CSE 3.1.3 |
+| csi_version      | CSI version in quotes                                                                               | added in CSE 3.1.3 |
+| antrea_version   | antrea version in quotes                                                                            | added in CSE 3.1.3 |
+
+If the user does not specify CPI, CSI, or antrea version in the cluster spec (see more [here](CLUSTER_MANAGEMENT.html#rde21_new_fields)), then the CSE server will use the CPI, CSI, or antrea
+version used in this section. These options are all optional, and the following defaults are used if these versions are not specified:
+* cpi: the default version is 1.1.1
+* csi: the default version is 1.2.0
+* antrea: CSE will find a TKG compatible antrea version
+if no antrea version is specified in the CSE server config or in the cluster spec.
+
+
 Example:
 ```
 extra_options:
   tkgm_http_proxy: http://192.168.7.10:3128
   tkgm_https_proxy: https://192.168.7.10:3128
   tkgm_no_proxy: localhost,127.0.0.1,192.168.7.0/24
+  cpi_version: "1.1.1"
+  csi_version: "1.2.0"
+  antrea_version: "0.11.3"
 ```
+
 
 <a name="ent_pks_config"></a>
 ## Enterprise PKS Configuration File for CSE
