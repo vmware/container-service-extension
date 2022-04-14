@@ -119,7 +119,7 @@ Here is a summary of commands available to view templates and manage clusters an
             - `useDeleteReclaimPolicy`: If `true` the Delete reclaim policy is used, which deletes the PV when the PVC is deleted. If `false`,
             the Retain reclaim policy is used, which allows the PV to be manually reclaimed after the PVC is deleted.
             - `vcdStorageProfileName`: The VCD storage profile to use
-            - If a default storage class is not needed, leave this section as null.
+            - If a default storage class is not needed, set `spec.settings.csi.defaultK8sStorageClass: null`.
 
     <a name="sample_input_spec"></a>
     * Sample input specification file
