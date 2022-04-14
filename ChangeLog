@@ -1,11 +1,76 @@
 CHANGES
 =======
 
+* turn on production vac (#1348)
+* [VCDA-3585] pull kapp from harbor (#1352)
+* added description for rde 2.1 csi/cpi/cni fields for TKG clusters for cluster spec sample (#1350)
+* updated csi version to 1.2.0 (#1347)
+* update vcd-cli version to support python 3.10 (#1346)
+* future warning fix:check for not None (#1345)
+* Fix cpu,memory size defaults to Tkgm node size; Fix vm update issues (#1344)
+* linted node script (#1343)
+* testfest backend fixes (#1342)
+* Replace all internal ip with exposed external-ip; there are more than one kubadm init occurrences in the input (#1341)
+* remove metrics server version (#1340)
+* remove conditional check for DNAT rule removal (#1339)
+* [VCDA-3410] Retry creation of DNAT rule on failure (#1333)
+* Fix for using tkr k8s version in node script (#1338)
+* adding default dnat port (#1336)
+* set default value for force delete option (#1334)
+* updated constants to 1.1.1 (#1335)
+* [VCDA-3330 and VCDA-3343] Install Tanzu Core packages and read versions from extra config (#1329)
+* working upgrade (#1330)
+* Update missed .value invocations for python 3.10 support (#1332)
+* [VCDA-3485] Update TKGm template metadata if it is renamed in VCD (#1331)
+* use absolute strings where Enums were used incorrectly with pkg\_resources.open\_text() (#1328)
+* [VCDA-3401] supporting cni/cpi/csi override in cse config (#1327)
+* [VCDA-3346] fail PUT operations for cni/csi/cpi update (#1324)
+* fix for checking csi (#1323)
+* enable nfs delete (#1322)
+* Automate CSE Provenance data generation  (#1321)
+* regex update to include alphanumeric in the last segment of tkg ova name (#1320)
+* Update RDE version in cluster apply system tests (#1319)
+* not editing input entity 2 (#1318)
+* [VCDA-3343] Implement RDE 2.1 backend (#1316)
+* added params to cloud init script (#1315)
+* [VCDA-3342] Prepare the CSE for RDE 2.1.0 usage (#1313)
+* Move set -e command so script does not fail on lsb\_release (#1309)
+* Fix constant value for CAPVCD cluster entity type (#1312)
+* added fix for antrea image (#1311)
+* [VCDA-3237] Using TKR bom for antrea version (#1308)
+* CSE Support-For-Syslog (#1302)
+* [VCDA-3193] Add REST end point and CLI command to reload templates in server runtime config (#1307)
+* [VCDA-3271] Expose REST api and CLI command to fetch CSE server's runtime config (#1305)
+* [VCDA-3247] Fix vcd cse cluster list shows JSON warning (#1304)
+* Fix failing ovdc system tests (#1306)
+* [VCDA-3194] Make accessing CSE server runtime config thread safe (#1303)
+* Remove plugin download page links (#1301)
+* Update cluster scripts to use containerd cri-socket (#1298)
+* [VCDA-3324] Remove plugin binaries and update docs (#1299)
+* [VCDA-3288] Add --ttl 0 option to kubeadm token create command (#1296)
+* VCDA-3255: cloud-init failures with missing files (#1293)
+* Fix minor flake8 warning
+* Update CSE 3.1.2 docs - rename TKG-I to TKGi, TKG-S to TKGs
+* Documentation for CSE 3.1.2 (#1291)
+* Reconciling diff between old master and master after rebasing from cse\_3\_1\_updates
+* Documentation for CSE 3.1.1 (#1246)
+* Bump nokogiri from 1.11.4 to 1.12.5 in /docs (#1211)
+* Add release notes for CSE 3.1.1 beta 2 (#1200)
+* Add UI plugin v3.0.4
+* Add notice for TKGI deprecation (#1192)
+* Fix broken link in CSE 3.1.1 beta release notes
+* [Docs] CSE 3.1.1 beta docs (#1190)
+* Upload Kubernetes Clusters Container UI Plugin v3.0.1 for CSE 3.1.1 beta1
+* Docs for CSE 3.0.4 (#1141)
+* update VAC url back to staging (#1289)
+* update AUTHORS and ChangeLog for 3.1.2
+
 3.1.2
 -----
 
 * [VCDA-3178] updated csi and cpi to 1.1.0 (#1290)
 * Update \`cse sample\` to generate cleaner \`extra\_options\` section (#1292)
+* [VCDA-3248] Add extra options to \`cse sample\` command (#1288)
 * Disable \`delete nfs\` test
 * [VCDA-3147] Force delete cluster (#1287)
 * Fix flake8 warnings (#1285)
