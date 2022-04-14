@@ -268,7 +268,9 @@ Note: Proxy injection is supported for only TKG clusters. CSE injects the value 
 | antrea_version   | antrea version in quotes                                                                            | added in CSE 3.1.3 |
 
 If the user does not specify CPI, CSI, or antrea version in the cluster spec (see more [here](CLUSTER_MANAGEMENT.html#rde21_new_fields)), then the CSE server will use the CPI, CSI, or antrea
-version used in this section.
+version used in this section. These options are all optional, and defaults are used if these versions are not specified.
+The default for cpi is 1.1.1; the default for csi is 1.2.0, and the CSE server will find a TKG compatible antrea version
+if no antrea version is specified in the CSE server config or in the cluster spec.
 
 
 Example:
