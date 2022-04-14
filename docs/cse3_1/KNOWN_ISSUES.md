@@ -8,6 +8,10 @@ title: Known Issues
 ## General Issues
 ---
 
+### No kapp-controller or metrics-server version is listed in the UI/CLI on TKG clusters using TKG ova 1.3.X
+The compatible kapp-controller and metrics-server versions are listed in an ova's TKR bom file. For TKG ova 1.3.X, these versions
+are not found in the same section of the TKR bom file as the section for TKG ova's >= 1.4.0.
+
 ### Output of `vcd cse cluster info` for TKG clusters has the kubeconfig of the cluster embedded in it, while output for Native clusters don't have it.
 Although both native and TKG clusters use RDE 2.0.0 for representation in VCD, they differ quite a bit in their structure.
 kubeconfig content being part of the output of `vcd cse cluster info` for TKG clusters and not native clusters is by design.

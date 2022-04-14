@@ -102,11 +102,11 @@ Here is a summary of commands available to view templates and manage clusters an
       - Save the file as `update_cluster.yaml` and issue the command `vcd cse cluster apply update_cluster.yaml`
 
     <a name="rde21_new_fields"></a>
-    * CPI, CSI, and CNI fields for TKG clusters (added in CSE 3.1.3 for RDE 2.1)
+    * CSE 3.1.3 for TKG - CPI, CSI, and CNI fields in RDE 2.1
         - CSE 3.1.3 introduces the following fields that only apply to TKG clusters: `spec.settings.cpi`, `spec.settings.csi`, and `spec.settings.cni`. 
-        For each of these fields, if a version is not specified, then the version specified in the CSE server configuration for each of these components
-        file will be used. If no version is specified in the CSE server configuration, then a default will be used for csi and cpi; for cni, a TKG-compatible
-        version will be used
+        Each of these fields is covered by CSE defaults. For each of these fields, if a version is not specified, then the version specified in the
+        CSE server configuration for each of these components will be used. If no version is specified in the CSE server configuration, then a default
+        will be used for csi (1.2.0 in CSE 3.1.3) and cpi (1.1.1 in CSE 3.1.3); for cni, a TKG-compatible version will be used.
             - `cpi.name` will be `cloud-provider-for-cloud-director`
             - `cpi.version` can be specified
             - `csi.name` will be `cloud-director-named-disk-csi-driver`
@@ -119,7 +119,7 @@ Here is a summary of commands available to view templates and manage clusters an
             - `useDeleteReclaimPolicy`: If `true` the Delete reclaim policy is used, which deletes the PV when the PVC is deleted. If `false`,
             the Retain reclaim policy is used, which allows the PV to be manually reclaimed after the PVC is deleted.
             - `vcdStorageProfileName`: The VCD storage profile to use
-            - Please leave `spec.settings.csi.defaultK8sStorageClass: null` if no default storage class should be created
+            - If a default storage class is not needed, leave this section as null.
 
     <a name="sample_input_spec"></a>
     * Sample input specification file
@@ -174,13 +174,6 @@ Here is a summary of commands available to view templates and manage clusters an
             templateName: ubuntu-16.04_k8-1.17_weave-2.6.0
             templateRevision: 2
           settings:
-            cni:
-              name: null
-              version: null
-            cpi:
-              name: null
-              version: null
-            csi: null
             network:
               expose: false
             ovdcNetwork: ovdc_network_name
@@ -317,6 +310,8 @@ vcd cse cluster apply --sample --tkg
 * Routability of external network traffic to the cluster is crucial for VCD CPI to work.
 Therefore, it is mandatory to deploy TKG clusters with `expose` field set to `True`.
 Read more about expose functionality [here](CLUSTER_MANAGEMENT.html#expose_cluster).
+    * For clusters with expose=True, we need an SNAT rule to allow nodes of the cluster to communicate via a provisioned external IP.
+    * It is known due to a VCD limitation that SNAT rules with 0.0.0.0/0  will not work.  Please use the exact Tier-1 network subnet mask with a Tier-0 external IP of your choice to create the SNAT rule.
 
 * Users deploying VMware Tanzu Kubernetes Grid clusters should have the rights required
 to deploy `exposed` native clusters and additionally the right `Full Control: CSE:NATIVECLUSTER`.

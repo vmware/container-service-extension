@@ -84,6 +84,8 @@ For greenfield installations, please get started with [CSE introduction](INTRO.h
 
 | CSE Server/CLI | UI plugin | Cloud Director | Comments               |
 |----------------|-----------|----------------|------------------------|
+| 3.1.3          | 3.3.0     | 10.3.1+        | Must use UI Plugin 3.3.0. Plugin ships on VMware Cloud Director 10.3.3 Download page |
+| 3.1.3          | 2.2.0     | 2.2.2          |  |
 | 3.1.2          | 3.2.0     | 10.3.2         | Plugin ships with VCD  |
 | 3.1.2          | 3.1.0     | 10.3.1         | Plugin ships with VCD  |
 | 3.1.2          | 2.2.0     | 10.2.2         | Plugin ships with VCD  |
@@ -96,10 +98,11 @@ For greenfield installations, please get started with [CSE introduction](INTRO.h
 | 3.1.0          | 1.0.3     | 10.1           |  |
 
 
-**Native cluster comaptiblity matrix**
+**Native cluster compatiblity matrix**
 
 | CSE Server/CLI | Cloud Director | NSX-T | NSX-V   | Comments                            |
 |----------------|----------------|-------|---------|-------------------------------------|
+| 3.1.3          | 10.3.1+        | 3.1.1 | 6.4.10† | Cluster representation as RDE 2.1.0 |
 | 3.1.2          | 10.3.2         | 3.1.1 | 6.4.10† | Cluster representation as RDE 2.0.0 |
 | 3.1.2          | 10.3.1         | 3.1.1 | 6.4.10† | Cluster representation as RDE 2.0.0 |
 | 3.1.2          | 10.2.2         | 3.1.1 | 6.4.10† | Cluster representation as RDE 1.0.0 |
@@ -113,20 +116,19 @@ For greenfield installations, please get started with [CSE introduction](INTRO.h
 
 <sub><sup>† - With NSX-V, CSE doesn't support creation of clusters on routed Org VDC networks.</sup></sub>
 
-**TKG compatibility matrix**
+**TKG compatibility**
 
-| CSE Server/CLI   | Cloud Director | NSX-T with Avi             |
-|------------------|----------------|----------------------------|
-| 3.1.2            | 10.3.2         | NSX-T 3.1.3 and Avi 21.1.1 |
-| 3.1.2            | 10.3.1         | NSX-T 3.1.3 and Avi 21.1.1 |
-| 3.1.1            | 10.3.1         | NSX-T 3.1.3 and Avi 21.1.1 |
+* For CSE and VCD interoperability, please check the VMware Product Interoperability Matrix [link](https://interopmatrix.vmware.com/Interoperability)
 
-**Note**: Ubuntu 20.04 Kubernetes OVAs from VMware Tanzu Kubernetes Grid Versions 1.4.0, 1.3.1, 1.3.0 are supported.
+* CSE TKG supports the NSX and Avi versions supported by VCD. Please check the VMware Product Interoperability Matrix [link](https://interopmatrix.vmware.com/Interoperability)
+
+**Note**: Ubuntu 20.04 Kubernetes OVAs from VMware Tanzu Kubernetes Grid Versions 1.5.1, 1.4.0, 1.3.1, 1.3.0 are supported.
 
 **TKGs compatibility matrix**
 
 | CSE CLI | UI plugin  | Cloud Director |
 |---------|------------|----------------|
+| 3.1.3   | 3.3.0      | 10.3.3         |
 | 3.1.2   | 3.2.0      | 10.3.2         |
 | 3.1.2   | 3.1.0      | 10.3.1         |
 | 3.1.2   | 2.2.0      | 10.2.2         |
