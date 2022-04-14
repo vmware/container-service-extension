@@ -103,6 +103,7 @@ For greenfield installations, please get started with [CSE introduction](INTRO.h
 | CSE Server/CLI | Cloud Director | NSX-T | NSX-V   | Comments                            |
 |----------------|----------------|-------|---------|-------------------------------------|
 | 3.1.3          | 10.3.1+        | 3.1.1 | 6.4.10† | Cluster representation as RDE 2.1.0 |
+| 3.1.3          | 10.2.2         | 3.1.1 | 6.4.10† | Cluster representation as RDE 1.0.0 |
 | 3.1.2          | 10.3.2         | 3.1.1 | 6.4.10† | Cluster representation as RDE 2.0.0 |
 | 3.1.2          | 10.3.1         | 3.1.1 | 6.4.10† | Cluster representation as RDE 2.0.0 |
 | 3.1.2          | 10.2.2         | 3.1.1 | 6.4.10† | Cluster representation as RDE 1.0.0 |
@@ -122,7 +123,7 @@ For greenfield installations, please get started with [CSE introduction](INTRO.h
 
 * CSE TKG supports the NSX and Avi versions supported by VCD. Please check the VMware Product Interoperability Matrix [link](https://interopmatrix.vmware.com/Interoperability)
 
-**Note**: Ubuntu 20.04 Kubernetes OVAs from VMware Tanzu Kubernetes Grid Versions 1.5.1, 1.4.0, 1.3.1, 1.3.0 are supported.
+* Ubuntu 20.04 Kubernetes OVAs from VMware Tanzu Kubernetes Grid Versions 1.5.1, 1.4.0, 1.3.1, 1.3.0 are supported.
 
 **TKGs compatibility matrix**
 
@@ -151,6 +152,9 @@ For greenfield installations, please get started with [CSE introduction](INTRO.h
 #### 2.2.1 Changes in the configuration file
 Refer to the [sample config file](CSE_CONFIG.html)
 
+### CSE 3.1.3
+1. Addition of new [extra_options](CSE_CONFIG.html#extra_options) fields: cpi_version, csi_version, and antrea_version
+
 ### CSE 3.1.2
 1. Addition of new [extra_options](CSE_CONFIG.html#extra_options) section that allows
 Providers to specify proxy details for TKG clusters.
@@ -176,6 +180,18 @@ Refer to [CSE 3.1 installation](CSE_SERVER_MANAGEMENT.html#cse31-greenfield).
 <a name="brown_field_upgrades"></a>
 #### 2.2.3 Brownfield upgrade
 
+**3.1.3**
+CSE can be upgraded from version 3.1.1, 3.1.0 and 3.0.z to version 3.1.3 GA.
+Any CSE release older than CSE 3.0.0 first needs to be upgraded to
+CSE 3.0.z product line before it can be upgraded to CSE 3.1.3.
+
+**Note** :
+If Tanzu Kubernetes Grid (TKG) distribution is enabled
+on [CSE 3.0.z](https://github.com/vmware/container-service-extension-templates/blob/tkgm/TKG_INSTRUCTIONS.md),
+then please consider upgrading to CSE 3.1.3 following these [steps](CSE31.html#remove_tkgm).
+
+Refer to [CSE 3.1 upgrade command](CSE_SERVER_MANAGEMENT.html#cse31-upgrade-cmd) for details.
+
 **3.1.2**
 CSE can be upgraded from version 3.1.1, 3.1.0 and 3.0.z to version 3.1.2 GA.
 Any CSE release older than CSE 3.0.0 first needs to be upgraded to
@@ -190,13 +206,7 @@ then the steps mentioned below must be followed in order to upgrade to CSE 3.1.2
 1. Evaluate your environment for any stateful applications that run on TKG clusters
 powered by CSE 3.0.z. If you wish to retain these application's data, then leverage
 a Kubernetes application backup/restore strategy to backup the applications data so you can restore it later.
-2. The next set of steps lead you through removal of TKG clusters from CSE 3.0.z after which you can safely upgrade to CSE 3.1.2
-  2.1. Delete all deployed TKG clusters across all tenants via `vcd-cli` or `Kubernetes Container Clusters UI plugin`.
-  2.2. Disable TKG deployment on all Org VDCs via `vcd cse ovdc disable`.
-  2.3. Stop the CSE server.
-  2.4. Delete all TKG templates via VCD UI.
-  2.5. Remove the VM Placement Policy `cse---tkgm` from the system via VCD UI or VCD REST api.
-  2.6. Revert CSE configuration file to disable TKG.
+2. Remove tkgm from CSE 3.0.z, following these [steps](CSE31.html#remove_tkgm_from_30z)
 3. Upgrade CSE via `cse upgrade` command.
 4. Create new TKG clusters from Ubuntu 20.04 TKG OVAs, using CSE 3.1.2.
 5. Restore applications on newly created TKG clusters.
@@ -230,7 +240,16 @@ then please consider upgrading to CSE 3.1.1 following these [steps](CSE31.html#r
 
 Refer to [CSE 3.1 upgrade command](CSE_SERVER_MANAGEMENT.html#cse31-upgrade-cmd) for details.
 
-#### 2.2.4 Tenant onboarding
+<a name="remove_tkgm_from_30z"></a>
+#### 2.2.4 Removal of TKG clusters from CSE 3.0.z
+1. Delete all deployed TKG clusters across all tenants via `vcd-cli` or `Kubernetes Container Clusters UI plugin`.
+2. Disable TKG deployment on all Org VDCs via `vcd cse ovdc disable`.
+3. Stop the CSE server.
+4. Delete all TKG templates via VCD UI.
+5. Remove the VM Placement Policy `cse---tkgm` from the system via VCD UI or VCD REST api.
+6. Revert CSE configuration file to disable TKG.
+
+#### 2.2.5 Tenant onboarding
 The provider needs to perform below operations to enable Kubernetes cluster
 deployments in tenant organizations and tenant virtual data centers.
 1. Grant rights to the tenant users. Refer to [CSE 3.1 RBAC](RBAC.html#rde_rbac)
@@ -243,9 +262,10 @@ for more details.
 to the desired organizations.
 
 ### 2.3 Kubernetes Container Clusters UI plugin
-Kubernetes Container Clusters UI plugin 3.2.0 is available out of the box with VCD 10.3.2.
-Kubernetes Container Clusters UI plugin 3.1.0 is available out of the box with VCD 10.3.1.
-Kubernetes Container Clusters UI plugin 3.0.0 is available out of the box with VCD 10.3.0.
+* Kubernetes Container Clusters UI plugin 3.3.0 is available on the VMware Cloud Director 10.3.3 Download page.
+* Kubernetes Container Clusters UI plugin 3.2.0 is available out of the box with VCD 10.3.2.
+* Kubernetes Container Clusters UI plugin 3.1.0 is available out of the box with VCD 10.3.1.
+* Kubernetes Container Clusters UI plugin 3.0.0 is available out of the box with VCD 10.3.0.
 
 Provider can publish it to the desired tenants to offer Kubernetes services.
 Refer to [publish Kubernetes Container Clusters UI plugin](https://docs.vmware.com/en/VMware-Cloud-Director/10.3/VMware-Cloud-Director-Service-Provider-Admin-Portal-Guide/GUID-A1910FF9-B2CF-49DD-B031-D1245E8740AE.html).
