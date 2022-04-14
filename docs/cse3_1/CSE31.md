@@ -30,9 +30,10 @@ For greenfield installations, please get started with [CSE introduction](INTRO.h
 * Support for Kubernetes External Cloud Provider for VCD (CPI) version 1.1.1, as default. Learn more about [CPI for VCD](https://github.com/vmware/cloud-provider-for-cloud-director/blob/1.1.1/README.md)
 * Support for Kubernetes Container Storage Interface for VCD (CSI) version 1.2, as default. Learn more about [CSI for VCD](https://github.com/vmware/cloud-director-named-disk-csi-driver/blob/1.2.0/README.md)
 * Support for Python 3.10 version for CSE installation
-* Support for Antrea, CPI, CSI version overwrites. Learn more [here](CLUSTER_MANAGEMENT.html#rde21_new_fields)
-* A new Ubuntu 20.04 Native template for K8s 1.23 Kubernetes Clusters. Learn more here.(FILL)
-* Revision updates to existing Ubuntu 16.04 Native templates. Learn more here (FILL)
+* Support for Antrea, CPI, CSI version overwrites in cluster spec (learn more [here](CLUSTER_MANAGEMENT.html#rde21_new_fields)) and CSE server config (learn more [here](CSE_CONFIG.html#313_extra_options)).
+* A new Ubuntu 20.04 Native template for K8s 1.23 Kubernetes Clusters. Learn more [here](TEMPLATE_ANNOUNCEMENTS.html).
+* Revision updates to existing Ubuntu 16.04 Native templates. Learn more [here](TEMPLATE_MANAGEMENT.html).
+
 ### CSE 3.1.2
 
 * Cluster API Provider for Cloud Director that offers multi-control plane clusters and cluster upgrades using declarative, Kubernetes-style APIs. Learn more about [CAPI for VCD](https://github.com/vmware/cluster-api-provider-cloud-director/blob/0.5.0/README.md)

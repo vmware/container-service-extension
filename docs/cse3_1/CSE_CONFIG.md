@@ -259,6 +259,7 @@ The proxy enables TKG clusters to reach out to the internet to download packages
 
 Note: Proxy injection is supported for only TKG clusters. CSE injects the value of these variables into `http-proxy.conf` file on each node of the cluster.
 
+<a name="313_extra_options"></a>
 **CSE 3.1.3 added `extra_options` fields `cpi_version`, `csi_version`, and `antrea_version`**: These fields are supported only for TKG clusters.
 
 | Property         | Value                                                                                               | Remarks |
