@@ -8,6 +8,12 @@ title: Known Issues
 ## General Issues
 ---
 
+### CSE Upgrade from 3.1.3 to 3.1.3 fails
+The use case for upgrading from CSE 3.1.3 to 3.1.3 is needed if `cse upgrade` or `cse install` fails; in this case,
+one would need to run `cse upgrade` for CSE to be able to run, but this upgrade is failing. The workaround for this
+upgrade failure is to delete the CSE extension (instructions [here](CSE_SERVER_MANAGEMENT.html#uninstalling_cse_server))
+and then run `cse install` again.
+
 <a name="core_package_installation"></a>
 ### No kapp-controller or metrics-server version is installed or listed in the UI/CLI on TKG clusters using TKG ova 1.3.X
 The compatible kapp-controller and metrics-server versions are listed in an ova's TKR bom file. For TKG ova 1.3.Z, these versions

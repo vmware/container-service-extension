@@ -349,6 +349,7 @@ version                            3.1.1
 7. If CSE is being run as a service, start the new version of the service with
    * `systemctl start cse`.
 
+<a name="uninstalling_cse_server"></a>
 ### Uninstalling CSE Server
 
 * Gracefully stop CSE Server
