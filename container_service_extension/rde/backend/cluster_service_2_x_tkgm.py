@@ -23,14 +23,14 @@ import validators
 from container_service_extension.common.constants.server_constants import \
     CLOUDINIT_GUEST_USERDATA, \
     CLOUDINIT_GUEST_USERDATA_ENCODING, \
+    CorePkgVersionKeys, \
     CPI_DEFAULT_VERSION, \
     CPI_NAME, \
     CSI_DEFAULT_VERSION, \
     CSI_NAME, \
+    DEFAULT_POST_CUSTOMIZATION_TIMEOUT_SEC, \
     DISK_ENABLE_UUID, \
-    PostCustomizationKubeconfig, \
-    CorePkgVersionKeys, \
-    DEFAULT_POST_CUSTOMIZATION_TIMEOUT_SEC
+    PostCustomizationKubeconfig
 from container_service_extension.common.constants.server_constants import ClusterMetadataKey  # noqa: E501
 from container_service_extension.common.constants.server_constants import ClusterScriptFile  # noqa: E501
 from container_service_extension.common.constants.server_constants import DefEntityOperation  # noqa: E501
