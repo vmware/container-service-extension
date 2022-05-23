@@ -832,6 +832,11 @@ class ClusterService(abstract_broker.AbstractBroker):
                     f"Error while creating vApp: {err}")
             client_v36.get_task_monitor().wait_for_status(vapp_resource.Tasks.Task[0])  # noqa: E501
 
+            sysadmin_client_v36 = self.context.get_sysadmin_client(api_version=DEFAULT_API_VERSION)  # noqa: E501
+            # Extra config elements of VApp are visible only for admin client
+            vapp = vcd_vapp.VApp(client_v36, href=vapp_resource.get('href'))
+            admin_vapp = vcd_vapp.VApp(sysadmin_client_v36, href=vapp_resource.get('href'))  # noqa: E501
+
             template = _get_tkgm_template(template_name)
 
             LOGGER.debug(f"Setting metadata on cluster vApp '{cluster_name}'")
@@ -849,12 +854,6 @@ class ClusterService(abstract_broker.AbstractBroker):
                 ClusterMetadataKey.CPI: CPI_NAME
             }
 
-            sysadmin_client_v36 = self.context.get_sysadmin_client(
-                api_version=DEFAULT_API_VERSION)
-            # Extra config elements of VApp are visible only for admin client
-            vapp = vcd_vapp.VApp(client_v36,
-                                 href=vapp_resource.get('href'))
-            admin_vapp = vcd_vapp.VApp(sysadmin_client_v36, href=vapp_resource.get('href'))
             task = vapp.set_multiple_metadata(tags)
             client_v36.get_task_monitor().wait_for_status(task)
 
@@ -2478,12 +2477,12 @@ def _add_control_plane_nodes(
             cloud_init_spec = cloud_init_spec.replace("OPENBRACKET", "{")
             cloud_init_spec = cloud_init_spec.replace("CLOSEBRACKET", "}")
 
-            # NOTE: admin-vapp reload is mandatory; else Extra-Config-Element XML section won't be found.
-            # Setting Cloud init spec and customization requires extra config section to be visible for updates.
+            # NOTE: admin-vapp reload is mandatory; else Extra-Config-Element XML section won't be found. # noqa: E501
+            # Setting Cloud init spec and customization requires extra config section to be visible for updates.  # noqa: E501
             admin_vm.reload()
             admin_vapp.reload()
             # create a cloud-init spec and update the VMs with it
-            _set_cloud_init_spec(sysadmin_client, admin_vapp, admin_vm, cloud_init_spec)
+            _set_cloud_init_spec(sysadmin_client, admin_vapp, admin_vm, cloud_init_spec)  # noqa: E501
 
             task = vm.power_on()
             # wait_for_vm_power_on is reused for all vm creation callback
@@ -2491,6 +2490,7 @@ def _add_control_plane_nodes(
                 task,
                 callback=wait_for_vm_power_on
             )
+            vapp.reload()
             admin_vapp.reload()
 
             # Note that this is an ordered list.
@@ -2554,8 +2554,8 @@ def _get_core_pkg_versions(control_plane_vm: vcd_vm.VM) -> Dict:
     return core_pkg_versions
 
 
-def _add_worker_nodes(sysadmin_client, user_client, num_nodes, org, vdc, vapp, admin_vapp,
-                      catalog_name, template, network_name,
+def _add_worker_nodes(sysadmin_client, user_client, num_nodes, org, vdc, vapp,
+                      admin_vapp, catalog_name, template, network_name,
                       storage_profile=None, ssh_key=None,
                       sizing_class_name=None, cpu_count=None, memory_mb=None,
                       control_plane_join_cmd='',
@@ -2690,8 +2690,8 @@ def _add_worker_nodes(sysadmin_client, user_client, num_nodes, org, vdc, vapp, a
                 vm.reload()
                 vapp.reload()
 
-            # NOTE: admin-vapp reload is mandatory; else Extra-Config-Element XML section won't be found.
-            # Setting Cloud init spec and customization requires extra config section to be visible for updates.
+            # NOTE: admin-vapp reload is mandatory; else Extra-Config-Element XML section won't be found.  # noqa: E501
+            # Setting Cloud init spec and customization requires extra config section to be visible for updates.  # noqa: E501
             admin_vm.reload()
             admin_vapp.reload()
 
@@ -2714,6 +2714,7 @@ def _add_worker_nodes(sysadmin_client, user_client, num_nodes, org, vdc, vapp, a
                 task,
                 callback=wait_for_vm_power_on
             )
+            vapp.reload()
             admin_vapp.reload()
 
             LOGGER.debug(f"worker {vm_name} to join cluster using:{control_plane_join_cmd}")  # noqa: E501
