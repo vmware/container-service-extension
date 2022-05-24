@@ -1383,7 +1383,8 @@ class ClusterService(abstract_broker.AbstractBroker):
             org = vcd_utils.get_org(client_v36, org_name=org_name)
             ovdc = vcd_utils.get_vdc(client_v36, vdc_name=ovdc_name, org=org)
             # Extra config elements of VApp are visible only for admin client
-            vapp = vcd_vapp.VApp(sysadmin_client_v36, href=vapp_href)
+            vapp = vcd_vapp.VApp(client_v36, href=vapp_href)
+            admin_vapp = vcd_vapp.VApp(sysadmin_client_v36, href=vapp_href)
 
             if num_workers_to_add > 0:
                 msg = f"Creating {num_workers_to_add} workers from template" \
@@ -1415,10 +1416,12 @@ class ClusterService(abstract_broker.AbstractBroker):
                         del core_pkg_versions[CorePkgVersionKeys.ANTREA.value]
                 _, installed_core_pkg_versions = _add_worker_nodes(
                     sysadmin_client_v36,
+                    user_client=self.context.client,
                     num_nodes=num_workers_to_add,
                     org=org,
                     vdc=ovdc,
                     vapp=vapp,
+                    admin_vapp=admin_vapp,
                     catalog_name=catalog_name,
                     template=template,
                     network_name=network_name,
