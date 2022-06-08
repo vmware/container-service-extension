@@ -5,8 +5,6 @@
 import json
 import os
 
-from pyvcloud.vcd.client import ApiVersion
-from pyvcloud.vcd.vcd_api_version import VCDApiVersion
 import yaml
 
 import container_service_extension.client.constants as cli_constants
@@ -48,13 +46,18 @@ class DEClusterTKGS:
 
         # get highest supported api version
         api_version = self._client.get_api_version()
-        supported_api_versions = self._client.get_supported_versions_list()
-        max_api_version = utils.get_max_api_version(supported_api_versions)
+        supported_api_versions = self._client.get_supported_versions_list(
+            include_alpha_versions=True
+        )
 
-        # api_version = self._client.get_api_version()
-        # use api_version 37.0.0-alpha if VCD 10.3 is used.
-        if VCDApiVersion(max_api_version) >= VCDApiVersion(ApiVersion.VERSION_36.value):  # noqa: E501
-            api_version = '37.0.0-alpha'
+        # api versions are returned sorted, so we check the last api version
+        # to find the alpha version
+        start_alpha_ind = supported_api_versions[-1].find(shared_constants.ALPHA_API_SUBSTRING)  # noqa: E501
+        if start_alpha_ind != -1:
+            # form of the alpha version may by 38.0.0-alpha-1234567,
+            # so we want to remove the portion after "alpha"
+            api_version = supported_api_versions[-1][:start_alpha_ind + len(shared_constants.ALPHA_API_SUBSTRING)]  # noqa: E501
+
         self._tkg_s_client.set_default_header(cli_constants.TKGRequestHeaderKey.ACCEPT,  # noqa: E501
                                               f"application/json;version={api_version}")  # noqa: E501
         self._tkg_s_client_api = TkgClusterApi(api_client=self._tkg_s_client)
