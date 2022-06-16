@@ -50,13 +50,12 @@ class DEClusterTKGS:
             include_alpha_versions=True
         )
 
-        # api versions are returned sorted, so we check the last api version
-        # to find the alpha version
-        start_alpha_ind = supported_api_versions[-1].find(shared_constants.ALPHA_API_SUBSTRING)  # noqa: E501
-        if start_alpha_ind != -1:
-            # form of the alpha version may by 38.0.0-alpha-1234567,
-            # so we want to remove the portion after "alpha"
-            api_version = supported_api_versions[-1][:start_alpha_ind + len(shared_constants.ALPHA_API_SUBSTRING)]  # noqa: E501
+        # The supported api versions are sorted in increasing order, so we
+        # loop through the array of api versions and get the latest
+        # alpha api version (in case there is more than one alpha version)
+        for version in supported_api_versions:
+            if shared_constants.ALPHA_API_SUBSTRING in version:
+                api_version = version
 
         self._tkg_s_client.set_default_header(cli_constants.TKGRequestHeaderKey.ACCEPT,  # noqa: E501
                                               f"application/json;version={api_version}")  # noqa: E501
