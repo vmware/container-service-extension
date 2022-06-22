@@ -96,6 +96,9 @@ CSE_PAGINATION_DEFAULT_PAGE_SIZE = 25
 SYSTEM_ORG_NAME = 'system'
 SYSTEM_USER_GENERIC_NAME = 'system user'
 
+# alpha API version substring
+ALPHA_API_SUBSTRING = "alpha"
+
 
 @unique
 class ServerAction(str, Enum):
