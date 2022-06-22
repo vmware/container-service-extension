@@ -5,10 +5,9 @@
 from dataclasses import asdict
 import json
 
-from pyvcloud.vcd.client import ApiVersion
-
 from container_service_extension.common.constants.shared_constants import \
-    API_VERSION_37_ALPHA
+    ALPHA_API_SUBSTRING, SUPPORTED_VCD_API_VERSIONS
+import container_service_extension.common.utils.core_utils as core_utils
 from container_service_extension.exception.exceptions import CseRequestError
 from container_service_extension.logging.logger import SERVER_LOGGER as LOGGER
 from container_service_extension.mqi.consumer.mqtt_publisher import \
@@ -45,8 +44,10 @@ def process_behavior_request(msg_json, mqtt_publisher: MQTTPublisher):
 
     # This is needed to enable unified API endpoint workflows. Unified API
     # endpoint is currently exposed at 37.0.0-alpha (VCD 10.3 Andromeda).
-    if api_version == API_VERSION_37_ALPHA:
-        api_version = ApiVersion.VERSION_36.value
+    # To make this check generalized, we are checking if the api version
+    # contains the "alpha" substring
+    if ALPHA_API_SUBSTRING in api_version:
+        api_version = core_utils.get_max_api_version(SUPPORTED_VCD_API_VERSIONS)  # noqa: E501
     auth_token: str = payload['_metadata']['actAsToken']
     request_id: str = payload['_metadata']['requestId']
     arguments: dict = payload['arguments']
