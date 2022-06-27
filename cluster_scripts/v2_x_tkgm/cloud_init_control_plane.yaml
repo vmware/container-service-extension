@@ -167,24 +167,46 @@ write_files:
       chmod +x $imgpkg_path
 
       # We need to loop through the `X` value in `tkg.X` because of some TKR unexpected design.
-      # We increment `X`, looking for a valid tkr bom version.
+      # We start at the `X` of the current version in the guestinfo variable and increment `X` so that we do not
+      # pick a lower version if there is a higher one available. We stop when a valid tkr bom version is found.
       no_tkr_found=false
+      init_tkg_version=$(echo $OPENBRACKETk8s_version//*.CLOSEBRACKET) # to be used to count down if needed
       until $imgpkg_path pull -i projects.registry.vmware.com/tkg/tkr-bom:$OPENBRACKETk8s_versionCLOSEBRACKET -o $bom_path
       do
         tkg_version=$(echo $OPENBRACKETk8s_version//*.CLOSEBRACKET)
         tkg_version=$((tkg_version+1))
-        k8s_version=$(echo $k8s_version | sed "s/.$/"$tkg_version"/")
         if [[ $tkg_version -gt 10 ]]; then
           no_tkr_found=true
           break
         fi
+        k8s_version=$(echo $k8s_version | sed "s/[^\.]*$/"$tkg_version"/")
       done
+
+      if [[ "$no_tkr_found" = true ]] ; then
+        # If no tkr bom is found, this means that tkg versions `X` (the initial tkg version) through 10 (inclusive)
+        # are not found. Therefore, we will search for a tkg version from  `X-1` to ` 1 (inclusive)
+        echo "no tkr bom found initially, will check for lower tkg version by counting down from initial tkg version"  &>> /var/log/cse/customization/status.log
+        tkg_version=$init_tkg_version
+        no_tkr_found=false # reset variable
+        until $imgpkg_path pull -i projects.registry.vmware.com/tkg/tkr-bom:$OPENBRACKETk8s_versionCLOSEBRACKET -o $bom_path
+        do
+          tkg_version=$((tkg_version-1))
+          if [[ $tkg_version -lt 1 ]]; then
+            no_tkr_found=true
+            break
+          fi
+          k8s_version=$(echo $k8s_version | sed "s/[^\.]*$/"$tkg_version"/")
+        done
+      fi
+      if [[ "$no_tkr_found" = false ]] ; then
+        mv $bom_path/*.yaml $components_path
+      fi
+
       # This version is written into the extra config for worker nodes to use for tanzu-cli.
       # Note: this approach can be done in R1 clusters since there are no rolling upgrade.
       # However, this approach should not be done in capvcd clusters due to rolling upgrades.
       vmtoolsd --cmd "info-set guestinfo.postcustomization.tkr.get_versions.k8s $k8s_version"
 
-      mv $bom_path/*.yaml $components_path
       # download yq for yaml parsing
       wget https://github.com/mikefarah/yq/releases/download/v4.2.0/yq_linux_amd64 -O $yq_path
       chmod +x $yq_path
@@ -192,7 +214,7 @@ write_files:
       # handle getting antrea version
       if [[ -z "$antrea_version" ]]; then
         if [[ "$no_tkr_found" = true ]] ; then
-          echo "no tkr bom found, will use default component versions"  &>> /var/log/cse/customization/status.log
+          echo "no tkr bom found from tkg versions 1 to 10 (inclusive)"  &>> /var/log/cse/customization/status.log
           antrea_version=$default_antrea_version
         else
           # will get antrea version from tkr file
@@ -208,7 +230,10 @@ write_files:
       # get kapp-controller, which will be installed on the worker node
       # This version is retrieved here since the antrea version is already retrieved and installed
       # on the control plane node, so this avoids retrieving another core package version on the worker node
-      kapp_controller_version=$($yq_path e ".components.kapp-controller[0].version" $components_path | sed 's/v//')
+      kapp_controller_version=""
+      if [[ "$no_tkr_found" = false ]] ; then
+        kapp_controller_version=$($yq_path e ".components.kapp-controller[0].version" $components_path | sed 's/v//')
+      fi
 
       # store tkr versions in extra config
       vmtoolsd --cmd "info-set guestinfo.postcustomization.tkr.get_versions.kapp_controller $kapp_controller_version"
