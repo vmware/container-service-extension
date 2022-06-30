@@ -102,7 +102,10 @@ class DECluster:
                         filters=filters,
                         page_number=page_number,
                         page_size=page_size,
-                        exclude_entity_type_ids=[EntityTypeId.CAPVCD_1_0_0.value]  # noqa: E501
+                        include_entity_type_ids=[EntityTypeId.NATIVE_1_0_0.value,  # noqa: E501
+                                                 EntityTypeId.NATIVE_2_0_0.value,  # noqa: E501
+                                                 EntityTypeId.NATIVE_2_1_0.value,  # noqa: E501
+                                                 EntityTypeId.TKG_1_0_0.value]
                     )
                     # Get the list of cluster defined entities
                     entities: List[common_models.GenericClusterEntity] = clusters_page_results[PaginationKey.VALUES]  # noqa: E501
