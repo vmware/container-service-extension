@@ -30,7 +30,10 @@ CSE_SERVER_LEGACY_MODE = "cse_server_running_in_legacy_mode"
 
 
 class EntityTypeId(Enum):
-    CAPVCD_1_0_0 = 'urn:vcloud:type:vmware:capvcdCluster:1.0.0'
+    NATIVE_1_0_0 = 'urn:vcloud:type:cse:nativeCluster:1.0.0'
+    NATIVE_2_0_0 = 'urn:vcloud:type:cse:nativeCluster:2.0.0'
+    NATIVE_2_1_0 = 'urn:vcloud:type:cse:nativeCluster:2.1.0'
+    TKG_1_0_0 = 'urn:vcloud:type:vmware:tkgcluster:1.0.0'
 
 
 class ClusterEntityKind(Enum):
