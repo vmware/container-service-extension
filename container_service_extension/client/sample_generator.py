@@ -120,6 +120,20 @@ def _get_sample_tkg_s_cluster_configuration():
             },
             "distribution": {
                 "version": "v1.16"
+            },
+            "settings": {
+                "network": {
+                    "pods": {
+                        "cidrBlocks": [
+                            "192.168.0.0/16"
+                        ]
+                    },
+                    "services": {
+                        "cidrBlocks": [
+                            "10.96.0.0/12"
+                        ]
+                    }
+                }
             }
         },
         "metadata": {
