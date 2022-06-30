@@ -862,6 +862,8 @@ CPI_DEFAULT_VERSION = "1.1.1"
 CSI_NAME = "cloud-director-named-disk-csi-driver"
 CSI_DEFAULT_VERSION = "1.2.0"
 
+UBUNTU_20_04_TEMPLATE_OS = "ubuntu-20.04"
+
 
 @unique
 class TkgmNodeSizing(Enum):
