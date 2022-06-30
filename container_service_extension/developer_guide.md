@@ -70,6 +70,13 @@ Versioning guidelines:
 - The goal must be always to provide the latest features (newer RDE versions) 
   on older versions of VCD. When this cannot be achieved for any reason, that 
   is an indication to bump up the major version.
+- The current CSE-CLI uses an include-list approach for `vcd cse cluster list`. In this
+  approach, all entity types and versions (e.g., 1.0.0) are listed under `EntityTypeId`
+  in `shared_constants.py`. Each entity type id needs to be added to the array in the
+  `get_all_entities_per_page_by_interface` function call in the `list_clusters` function
+  in `de_cluster.py`. Any new entity type id will need to be added to the constants file,
+  and this entity id needs to be added to the include list array mentioned earlier in
+  `de_cluster.py`.
   
 Code organization:
 - cluster_service_2x.py represents the backend related to RDE major version = 2. 
