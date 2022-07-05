@@ -76,7 +76,6 @@ chmod +x srp-tools/observer/bin/observer_agent.bash
 echo "[INFO] SRP cli version: $(./srp-tools/srp --version)"
 
 # Generate SRP UIDs. The convention is described at https://confluence.eng.vmware.com/display/SRPIPELINE/How+to+create+a+SRP+UID
-jenkins_job_name="${project}-provenance"
 jenkins_instance='sp-taas-vcd-butler.svc.eng.vmware.com'
 timestamp="$(date +%Y%m%d%H%M%S)"
 
