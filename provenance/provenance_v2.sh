@@ -111,7 +111,7 @@ mkdir provenance
 # Generate dependencies provenance file
 echo "[INFO] Generating dependencies provenance file..."
 cd tmp
-../srp-tools/observer/bin/observer_agent.bash -t -o ./ -- pip3 install . --no-cache-dir
+../srp-tools/observer/bin/observer_agent.bash -t -o ./ -- pip3 install . --force-reinstall
 mv provenance.json ../provenance/dependencies.json
 cd ..
 
