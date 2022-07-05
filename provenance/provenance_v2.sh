@@ -48,6 +48,7 @@ fi
 project="$1"
 git_ref="$2"
 jenkins_build_number="$3"
+jenkins_job_name="cse-provenance"
 
 # This script creates and uploads provenance data for only one project
 if [[ "${project}" != "container-service-extension" ]]
@@ -96,7 +97,8 @@ mkdir tmp
 git clone "https://github.com/vmware/${project}.git" tmp
 cd tmp
 git checkout "$git_ref"
-version="$(git describe --tags --abbrev=0)"
+pip3 install .
+version="$(pip show container-service-extension | awk '/Version: / {print $2}')"
 cd ..
 
 # Generate source code provenance file
@@ -109,7 +111,7 @@ mkdir provenance
 # Generate dependencies provenance file
 echo "[INFO] Generating dependencies provenance file..."
 cd tmp
-../srp-tools/observer/bin/observer_agent.bash -t -o ./ -- pip3 install .
+../srp-tools/observer/bin/observer_agent.bash -t -o ./ -- pip3 install . --no-cache-dir
 mv provenance.json ../provenance/dependencies.json
 cd ..
 
