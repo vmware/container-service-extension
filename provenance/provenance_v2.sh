@@ -97,8 +97,7 @@ mkdir tmp
 git clone "https://github.com/vmware/${project}.git" tmp
 cd tmp
 git checkout "$git_ref"
-pip3 install .
-version="$(pip show container-service-extension | awk '/Version: / {print $2}')"
+version="$(git describe --tags --abbrev=1)"
 cd ..
 
 # Generate source code provenance file
@@ -111,7 +110,7 @@ mkdir provenance
 # Generate dependencies provenance file
 echo "[INFO] Generating dependencies provenance file..."
 cd tmp
-../srp-tools/observer/bin/observer_agent.bash -t -o ./ -- pip3 install . --force-reinstall
+../srp-tools/observer/bin/observer_agent.bash -t -o ./ -- pip3 install .
 mv provenance.json ../provenance/dependencies.json
 cd ..
 
