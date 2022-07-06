@@ -19,5 +19,6 @@ def get_validator(rde_version: str) -> AbstractValidator:  # noqa: E501
         rde_version)  # noqa: E501
     if str(rde_version) == rde_constants.RDEVersion.RDE_1_0_0.value:
         return Validator_1_0_0()
-    elif str(rde_version) == rde_constants.RDEVersion.RDE_2_1_0.value:
+    elif str(rde_version) == rde_constants.RDEVersion.RDE_2_0_0.value or \
+            str(rde_version) == rde_constants.RDEVersion.RDE_2_1_0.value:
         return Validator_2_1_0()
