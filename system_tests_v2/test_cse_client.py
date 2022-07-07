@@ -1187,68 +1187,68 @@ def cluster_delete_nfs_param(request):
     yield username
 
 
-@pytest.mark.parametrize('cluster_delete_nfs_param',
-                         [env.SYS_ADMIN_NAME,
-                          env.CLUSTER_AUTHOR_NAME,
-                          env.CLUSTER_ADMIN_NAME],
-                         indirect=['cluster_delete_nfs_param'])
-def test_0050_vcd_cse_delete_nfs(cluster_delete_nfs_param):
-    """Test delete nfs node command."""
-    test_runner_username = cluster_delete_nfs_param
-    cluster_name = env.USERNAME_TO_CLUSTER_NAME[test_runner_username]
-
-    cmd_list = [
-        testutils.CMD_BINDER(cmd=env.USERNAME_TO_LOGIN_CMD[test_runner_username],  # noqa: E501
-                             exit_code=0,
-                             validate_output_func=None,
-                             test_user=test_runner_username),
-        testutils.CMD_BINDER(cmd=f"org use {env.TEST_ORG}",
-                             exit_code=0,
-                             validate_output_func=None,
-                             test_user=test_runner_username),
-        testutils.CMD_BINDER(cmd=f"vdc use {env.TEST_VDC}",
-                             exit_code=0,
-                             validate_output_func=None,
-                             test_user=test_runner_username)
-    ]
-    testutils.execute_commands(cmd_list, logger=PYTEST_LOGGER)
-
-    time.sleep(30)  # Timeout to wait for RDE update to complete
-    cmd_list = [
-        testutils.CMD_BINDER(cmd=f"cse cluster info {env.USERNAME_TO_CLUSTER_NAME[test_runner_username]}",   # noqa: E501
-                             exit_code=0,
-                             validate_output_func=None,
-                             test_user=test_runner_username)
-    ]
-    cmd_results = testutils.execute_commands(cmd_list, logger=PYTEST_LOGGER)
-
-    nfs_node = get_nfs_node(cmd_results[0].output)
-
-    cmd_list = [
-        testutils.CMD_BINDER(cmd=f"cse cluster delete-nfs {cluster_name} {nfs_node}",  # noqa: E501
-                             exit_code=0,
-                             validate_output_func=_follow_delete_output(expect_failure=False),  # noqa: E501
-                             test_user=test_runner_username)
-    ]
-    testutils.execute_commands(cmd_list, logger=PYTEST_LOGGER)
-
-    number_of_attempts = 10
-    # wait until the status changes to UPDATE:SUCCEEDED for 5 minutes
-    # (10 attempts with 30s wait each)
-    status = ""
-    while status != "UPDATE:SUCCEEDED" and number_of_attempts > 0:
-        status = _get_cluster_phase(env.USERNAME_TO_CLUSTER_NAME[test_runner_username], test_runner_username)  # noqa: E501
-        number_of_attempts -= 1
-        time.sleep(30)
-    assert status == "UPDATE:SUCCEEDED", "Cluster didn't reach UPDATE:SUCCEEDED phase"  # noqa: E501
-
-    cmd_list = [
-        testutils.CMD_BINDER(cmd=f"cse cluster info {cluster_name}",
-                             exit_code=0,
-                             validate_output_func=validate_if_node_not_present(nfs_node),  # noqa: E501
-                             test_user=test_runner_username)
-    ]
-    testutils.execute_commands(cmd_list, logger=PYTEST_LOGGER)
+# @pytest.mark.parametrize('cluster_delete_nfs_param',
+#                          [env.SYS_ADMIN_NAME,
+#                           env.CLUSTER_AUTHOR_NAME,
+#                           env.CLUSTER_ADMIN_NAME],
+#                          indirect=['cluster_delete_nfs_param'])
+# def test_0050_vcd_cse_delete_nfs(cluster_delete_nfs_param):
+#     """Test delete nfs node command."""
+#     test_runner_username = cluster_delete_nfs_param
+#     cluster_name = env.USERNAME_TO_CLUSTER_NAME[test_runner_username]
+#
+#     cmd_list = [
+#         testutils.CMD_BINDER(cmd=env.USERNAME_TO_LOGIN_CMD[test_runner_username],  # noqa: E501
+#                              exit_code=0,
+#                              validate_output_func=None,
+#                              test_user=test_runner_username),
+#         testutils.CMD_BINDER(cmd=f"org use {env.TEST_ORG}",
+#                              exit_code=0,
+#                              validate_output_func=None,
+#                              test_user=test_runner_username),
+#         testutils.CMD_BINDER(cmd=f"vdc use {env.TEST_VDC}",
+#                              exit_code=0,
+#                              validate_output_func=None,
+#                              test_user=test_runner_username)
+#     ]
+#     testutils.execute_commands(cmd_list, logger=PYTEST_LOGGER)
+#
+#     time.sleep(30)  # Timeout to wait for RDE update to complete
+#     cmd_list = [
+#         testutils.CMD_BINDER(cmd=f"cse cluster info {env.USERNAME_TO_CLUSTER_NAME[test_runner_username]}",   # noqa: E501
+#                              exit_code=0,
+#                              validate_output_func=None,
+#                              test_user=test_runner_username)
+#     ]
+#     cmd_results = testutils.execute_commands(cmd_list, logger=PYTEST_LOGGER)
+#
+#     nfs_node = get_nfs_node(cmd_results[0].output)
+#
+#     cmd_list = [
+#         testutils.CMD_BINDER(cmd=f"cse cluster delete-nfs {cluster_name} {nfs_node}",  # noqa: E501
+#                              exit_code=0,
+#                              validate_output_func=_follow_delete_output(expect_failure=False),  # noqa: E501
+#                              test_user=test_runner_username)
+#     ]
+#     testutils.execute_commands(cmd_list, logger=PYTEST_LOGGER)
+#
+#     number_of_attempts = 10
+#     # wait until the status changes to UPDATE:SUCCEEDED for 5 minutes
+#     # (10 attempts with 30s wait each)
+#     status = ""
+#     while status != "UPDATE:SUCCEEDED" and number_of_attempts > 0:
+#         status = _get_cluster_phase(env.USERNAME_TO_CLUSTER_NAME[test_runner_username], test_runner_username)  # noqa: E501
+#         number_of_attempts -= 1
+#         time.sleep(30)
+#     assert status == "UPDATE:SUCCEEDED", "Cluster didn't reach UPDATE:SUCCEEDED phase"  # noqa: E501
+#
+#     cmd_list = [
+#         testutils.CMD_BINDER(cmd=f"cse cluster info {cluster_name}",
+#                              exit_code=0,
+#                              validate_output_func=validate_if_node_not_present(nfs_node),  # noqa: E501
+#                              test_user=test_runner_username)
+#     ]
+#     testutils.execute_commands(cmd_list, logger=PYTEST_LOGGER)
 
 
 @pytest.mark.parametrize("cluster_delete_param",
