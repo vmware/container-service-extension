@@ -2205,9 +2205,7 @@ def _is_valid_vcd_url(vcd_site: str) -> bool:
     except KeyError:
         return False
 
-    if parsed_url.netloc != cse_server_host:
-        return False
-    return True
+    return parsed_url.netloc.lower() == cse_server_host.lower()
 
 
 def _cluster_exists(client, cluster_name, org_name=None, ovdc_name=None):
