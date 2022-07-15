@@ -330,6 +330,7 @@ write_files:
     echo "$(date) post customization script execution completed" &>> /var/log/cse/customization/status.log
     exit 0
 runcmd:
+- 'cloud-init clean'
 - '[ ! -f /root/kubeadm-defaults.conf ] && cloud-init clean && sudo reboot'
 - '[ ! -f /root/vcloud-basic-auth.yaml ] && cloud-init clean && sudo reboot'
 - '[ ! -f /root/control_plane.sh ] && cloud-init clean && sudo reboot'
