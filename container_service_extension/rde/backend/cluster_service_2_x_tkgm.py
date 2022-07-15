@@ -194,17 +194,7 @@ class ClusterService(abstract_broker.AbstractBroker):
         self._update_task(BehaviorTaskStatus.RUNNING, message=msg)
 
         # Get kube config from RDE
-        kube_config = None
-        if hasattr(curr_native_entity.status,
-                   shared_constants.RDEProperty.PRIVATE.value) and \
-                hasattr(curr_native_entity.status.private,
-                        shared_constants.RDEProperty.KUBE_CONFIG.value):
-            kube_config = curr_native_entity.status.private.kube_config
-
-        if not kube_config:
-            msg = "Failed to get cluster kube-config"
-            LOGGER.error(msg)
-            raise exceptions.ClusterOperationError(msg)
+        kube_config = _get_kube_config_from_native_entity(curr_native_entity)
 
         return self.mqtt_publisher.construct_behavior_payload(
             message=kube_config,
@@ -932,6 +922,24 @@ class ClusterService(abstract_broker.AbstractBroker):
                 sysadmin_client=sysadmin_client_v36,
                 vapp=admin_vapp
             )
+            # have the kubeconfig in the RDE so that worker nodes
+            # can use the kubeconfig when installing core packages
+            kubeconfig_changes = {
+                'entity.status.private': rde_2_x.Private(
+                    kube_token=control_plane_join_cmd,
+                    kube_config=_get_kube_config_from_control_plane_vm(
+                        sysadmin_client=sysadmin_client_v36,
+                        vapp=vapp
+                    )
+                )
+            }
+            self._update_cluster_entity(
+                cluster_id,
+                changes=kubeconfig_changes,
+                external_id=vapp_resource.get('href')
+            )
+            curr_rde = self.entity_svc.get_entity(cluster_id)
+            curr_native_entity: rde_2_x.NativeEntity = curr_rde.entity
 
             msg = f"Creating {num_workers} node(s) for cluster " \
                   f"'{cluster_name}' ({cluster_id})"
@@ -960,7 +968,8 @@ class ClusterService(abstract_broker.AbstractBroker):
                     cpu_count=worker_cpu_count,
                     memory_mb=worker_memory_mb,
                     control_plane_join_cmd=control_plane_join_cmd,
-                    core_pkg_versions_to_install=core_pkg_versions
+                    core_pkg_versions_to_install=core_pkg_versions,
+                    native_entity=curr_native_entity
                 )
             except Exception as err:
                 LOGGER.error(err, exc_info=True)
@@ -997,13 +1006,6 @@ class ClusterService(abstract_broker.AbstractBroker):
             installed_kapp_controller_version = installed_core_pkg_versions.get(CorePkgVersionKeys.KAPP_CONTROLLER.value, "")  # noqa: E501
             installed_metrics_server_version = installed_core_pkg_versions.get(CorePkgVersionKeys.METRICS_SERVER.value, "")  # noqa: E501
             changes = {
-                'entity.status.private': rde_2_x.Private(
-                    kube_token=control_plane_join_cmd,
-                    kube_config=_get_kube_config_from_control_plane_vm(
-                        sysadmin_client=sysadmin_client_v36,
-                        vapp=vapp
-                    )
-                ),
                 'entity.status.uid': cluster_id,
                 'entity.status.phase': str(
                     DefEntityPhase(
@@ -1407,6 +1409,9 @@ class ClusterService(abstract_broker.AbstractBroker):
 
                 # If the cluster currently only has no worker nodes, then
                 # resizing the cluster will add the core packages
+                # TODO: account for the case when a CSE <3.1.2 cluster has
+                # no worker nodes and is upgraded
+                # no core packages should be installed
                 core_pkg_versions = None
                 if curr_worker_count == 0:
                     control_plane_vm = _get_control_plane_vm(sysadmin_client_v36, vapp)  # noqa: E501
@@ -2562,7 +2567,8 @@ def _add_worker_nodes(sysadmin_client, user_client, num_nodes, org, vdc, vapp,
                       storage_profile=None, ssh_key=None,
                       sizing_class_name=None, cpu_count=None, memory_mb=None,
                       control_plane_join_cmd='',
-                      core_pkg_versions_to_install=None) -> Tuple[List, Dict]:
+                      core_pkg_versions_to_install=None,
+                      native_entity: rde_2_x.NativeEntity = None) -> Tuple[List, Dict]:  # noqa: E501
     vcd_utils.raise_error_if_user_not_from_system_org(sysadmin_client)
 
     if not core_pkg_versions_to_install:
@@ -2658,8 +2664,9 @@ def _add_worker_nodes(sysadmin_client, user_client, num_nodes, org, vdc, vapp,
         )
         vapp.reload()
 
-        kube_config = _get_kube_config_from_control_plane_vm(
-            sysadmin_client, vapp)
+        kube_config = None
+        if len(core_pkg_versions_to_install) > 0 and native_entity is not None:
+            kube_config = _get_kube_config_from_native_entity(native_entity)
         for ind in range(num_vm_specs):
             spec = vm_specs[ind]
             vm_name = spec['target_vm_name']
@@ -2849,6 +2856,22 @@ def _get_kube_config_from_control_plane_vm(sysadmin_client: vcd_client.Client, v
     LOGGER.debug("Got kubeconfig from control plane extra configuration successfully")  # noqa: E501
     kube_config_in_bytes: bytes = base64.b64decode(kube_config)
     return kube_config_in_bytes.decode()
+
+
+def _get_kube_config_from_native_entity(native_entity: rde_2_x.NativeEntity):
+    # Get kube config from RDE
+    kube_config = None
+    if hasattr(native_entity.status,
+               shared_constants.RDEProperty.PRIVATE.value) and \
+            hasattr(native_entity.status.private,
+                    shared_constants.RDEProperty.KUBE_CONFIG.value):
+        kube_config = native_entity.status.private.kube_config
+
+    if not kube_config:
+        msg = "Failed to get cluster kube-config"
+        LOGGER.error(msg)
+        raise exceptions.ClusterOperationError(msg)
+    return kube_config
 
 
 def wait_for_cpu_update(task):
