@@ -2728,10 +2728,10 @@ def _add_worker_nodes(sysadmin_client, user_client, num_nodes, org, vdc, vapp,
                     callback=wait_for_updating_kubeconfig
                 )
                 installed_core_pkg_versions[CorePkgVersionKeys.KAPP_CONTROLLER.value] = vcd_utils.get_vm_extra_config_element(  # noqa: E501
-                    vm,
+                    admin_vm,
                     PostCustomizationVersions.INSTALLED_VERSION_OF_KAPP_CONTROLLER.value)  # noqa: E501
                 installed_core_pkg_versions[CorePkgVersionKeys.METRICS_SERVER.value] = vcd_utils.get_vm_extra_config_element(  # noqa: E501
-                    vm,
+                    admin_vm,
                     PostCustomizationVersions.INSTALLED_VERSION_OF_METRICS_SERVER.value)  # noqa: E501
 
             task = admin_vm.add_extra_config_element(DISK_ENABLE_UUID, "1", True)  # noqa: E501
