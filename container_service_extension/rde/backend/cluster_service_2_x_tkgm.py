@@ -224,6 +224,12 @@ class ClusterService(abstract_broker.AbstractBroker):
             template_revision = 1  # templateRevision for TKGm is always 1
             vcd_site = input_native_entity.metadata.site
 
+            # check that there is at least 1 worker node
+            num_workers = input_native_entity.spec.topology.workers.count
+            if num_workers < 1:
+                raise exceptions.CseServerError(
+                    f"worker count must be at least 1 for cluster '{cluster_name}'")  # noqa: E501
+
             # check that the vcd site is a valid url
             if not _is_valid_vcd_url(vcd_site):
                 raise exceptions.CseServerError(
@@ -1407,19 +1413,14 @@ class ClusterService(abstract_broker.AbstractBroker):
                                     shared_constants.RDEProperty.KUBE_TOKEN.value):  # noqa: E501
                     control_plane_join_cmd = curr_native_entity.status.private.kube_token  # noqa: E501
 
-                # If the cluster currently only has no worker nodes, then
-                # resizing the cluster will add the core packages
-                # TODO: account for the case when a CSE <3.1.2 cluster has
-                # no worker nodes and is upgraded
-                # no core packages should be installed
-                core_pkg_versions = None
-                if curr_worker_count == 0:
-                    control_plane_vm = _get_control_plane_vm(sysadmin_client_v36, vapp)  # noqa: E501
-                    core_pkg_versions = _get_core_pkg_versions(control_plane_vm)  # noqa: E501
-                    # remove antrea since it is already installed
-                    if core_pkg_versions.get(CorePkgVersionKeys.ANTREA.value):
-                        del core_pkg_versions[CorePkgVersionKeys.ANTREA.value]
-                _, installed_core_pkg_versions = _add_worker_nodes(
+                # core_pkg_versions_to_install is None because it is assumed
+                # that core packages are already installed if the cluster
+                # was created in the current CSE version since the minimum
+                # number of worker nodes is 1.
+                # core packages not being installed in this resize function
+                # guarantees that upgraded clusters that are resized won't have
+                # core packages installed.
+                _, _ = _add_worker_nodes(
                     sysadmin_client_v36,
                     user_client=self.context.client,
                     num_nodes=num_workers_to_add,
@@ -1436,30 +1437,12 @@ class ClusterService(abstract_broker.AbstractBroker):
                     cpu_count=worker_cpu_count,
                     memory_mb=worker_memory_mb,
                     control_plane_join_cmd=control_plane_join_cmd,
-                    core_pkg_versions_to_install=core_pkg_versions
+                    core_pkg_versions_to_install=None
                 )
 
                 msg = f"Added {num_workers_to_add} node(s) to cluster " \
                       f"{cluster_name}({cluster_id})"
                 self._update_task(BehaviorTaskStatus.RUNNING, message=msg)
-
-                # handle updating entity with core package info
-                if installed_core_pkg_versions and len(installed_core_pkg_versions) > 0:  # noqa: E501
-                    changes = {}
-                    installed_kapp_controller_version = installed_core_pkg_versions.get(  # noqa: E501
-                        CorePkgVersionKeys.KAPP_CONTROLLER.value, "")
-                    if installed_kapp_controller_version:
-                        changes['entity.status.tkg_core_packages.kapp_controller'] = installed_kapp_controller_version  # noqa: E501
-                    installed_metrics_server_version = installed_core_pkg_versions.get(  # noqa: E501
-                        CorePkgVersionKeys.METRICS_SERVER.value, "")
-                    if installed_metrics_server_version:
-                        changes['entity.status.tkg_core_packages.metrics_server'] = installed_metrics_server_version  # noqa: E501
-                    if len(changes) > 0:
-                        self._update_cluster_entity(
-                            cluster_id,
-                            changes=changes,
-                            external_id=vapp_href
-                        )
 
             msg = f"Created {num_workers_to_add} workers for '{cluster_name}' ({cluster_id}) "  # noqa: E501
             self._update_task(BehaviorTaskStatus.RUNNING, message=msg)
@@ -2752,10 +2735,10 @@ def _add_worker_nodes(sysadmin_client, user_client, num_nodes, org, vdc, vapp,
                     callback=wait_for_updating_kubeconfig
                 )
                 installed_core_pkg_versions[CorePkgVersionKeys.KAPP_CONTROLLER.value] = vcd_utils.get_vm_extra_config_element(  # noqa: E501
-                    vm,
+                    admin_vm,
                     PostCustomizationVersions.INSTALLED_VERSION_OF_KAPP_CONTROLLER.value)  # noqa: E501
                 installed_core_pkg_versions[CorePkgVersionKeys.METRICS_SERVER.value] = vcd_utils.get_vm_extra_config_element(  # noqa: E501
-                    vm,
+                    admin_vm,
                     PostCustomizationVersions.INSTALLED_VERSION_OF_METRICS_SERVER.value)  # noqa: E501
 
             task = admin_vm.add_extra_config_element(DISK_ENABLE_UUID, "1", True)  # noqa: E501
