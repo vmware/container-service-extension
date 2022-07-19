@@ -228,7 +228,7 @@ class ClusterService(abstract_broker.AbstractBroker):
             num_workers = input_native_entity.spec.topology.workers.count
             if num_workers < 1:
                 raise exceptions.CseServerError(
-                    "worker count must be at least 1")
+                    f"worker count must be at least 1 for cluster '{cluster_name}'")  # noqa: E501
 
             # check that the vcd site is a valid url
             if not _is_valid_vcd_url(vcd_site):
@@ -1413,6 +1413,13 @@ class ClusterService(abstract_broker.AbstractBroker):
                                     shared_constants.RDEProperty.KUBE_TOKEN.value):  # noqa: E501
                     control_plane_join_cmd = curr_native_entity.status.private.kube_token  # noqa: E501
 
+                # core_pkg_versions_to_install is None because it is assumed
+                # that core packages are already installed if the cluster
+                # was created in the current CSE version since the minimum
+                # number of worker nodes is 1.
+                # core packages not being installed in this resize function
+                # guarantees that upgraded clusters that are resized won't have
+                # core packages installed.
                 _, _ = _add_worker_nodes(
                     sysadmin_client_v36,
                     user_client=self.context.client,
