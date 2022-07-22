@@ -1,6 +1,28 @@
 CHANGES
 =======
 
+3.1.4
+-----
+
+* consume pyvcloud 23.0.4 (#1377)
+* [VCDA-4083 and VCDA-4085] requiring TKG clusters to have at least 1 worker and no core packages installed on upgraded clusters with 0 workers (#1374)
+* comparing lowercase sites (#1372)
+* reading kubeconfig from rde (#1373)
+* added cloud init clean (#1371)
+* supporting upgrade to cse 3.1.4 (#1368)
+* added payload 2.0 support (#1367)
+* fix for gettting tkgs cluster sample (#1365)
+* added sleeps for ubuntu 20 (#1364)
+* [VCDA-3567] include list for cluster list (#1362)
+* edited control plane script to count down from original tkg version (#1363)
+* [VCDA-3810] Fix \`vcd cse cluster info/config\` command with VCD 10.4 due to 37-alpha version (#1361)
+* use admin client and admin vapp only for post guest customization; cluster create and resize tested (#1360)
+* flake8:wrong import order fix (#1355) (#1356)
+
+3.1.3
+-----
+
+* Update Chagelog and AUTHORS for CSE 3.1.3
 * turn on production vac (#1348)
 * [VCDA-3585] pull kapp from harbor (#1352)
 * added description for rde 2.1 csi/cpi/cni fields for TKG clusters for cluster spec sample (#1350)
