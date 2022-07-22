@@ -29,6 +29,7 @@ from container_service_extension.common.constants.server_constants import DefEnt
 from container_service_extension.common.constants.server_constants import LocalTemplateKey  # noqa: E501
 from container_service_extension.common.constants.server_constants import NodeType  # noqa: E501
 from container_service_extension.common.constants.server_constants import ThreadLocalData  # noqa: E501
+from container_service_extension.common.constants.server_constants import UBUNTU_20_04_TEMPLATE_OS  # noqa: E501
 import container_service_extension.common.constants.shared_constants as shared_constants  # noqa: E501
 from container_service_extension.common.constants.shared_constants import \
     CSE_PAGINATION_DEFAULT_PAGE_SIZE, SYSTEM_ORG_NAME
@@ -950,7 +951,8 @@ class ClusterService(abstract_broker.AbstractBroker):
                 # password is set in the VM by guest customization
                 time.sleep(60)
             control_plane_ip = _get_control_plane_ip(
-                sysadmin_client_v36, vapp, check_tools=True)
+                sysadmin_client_v36, vapp, check_tools=True,
+                template_os=template.get('os'))
 
             # Handle exposing cluster
             if expose:
@@ -1014,7 +1016,7 @@ class ClusterService(abstract_broker.AbstractBroker):
                 # wait for a minute before proceeding to make sure the password
                 # is set in the VM by guest customization
                 time.sleep(60)
-            _join_cluster(sysadmin_client_v36, vapp)
+            _join_cluster(sysadmin_client_v36, vapp, template_os=template.get('os'))  # noqa: E501
 
             if nfs_count > 0:
                 msg = f"Creating {nfs_count} NFS nodes for cluster " \
@@ -1448,7 +1450,8 @@ class ClusterService(abstract_broker.AbstractBroker):
                     time.sleep(60)
                 _join_cluster(sysadmin_client_v36,
                               vapp,
-                              target_nodes=target_nodes)
+                              target_nodes=target_nodes,
+                              template_os=template.get('os'))
                 msg = f"Added {num_workers_to_add} node(s) to cluster " \
                       f"{cluster_name}({cluster_id})"
                 self._update_task(BehaviorTaskStatus.RUNNING, message=msg)
@@ -2690,7 +2693,7 @@ def _get_node_names(vapp, node_type):
 
 
 def _get_control_plane_ip(sysadmin_client: vcd_client.Client, vapp,
-                          check_tools=False):
+                          check_tools=False, template_os=None):
     vcd_utils.raise_error_if_user_not_from_system_org(sysadmin_client)
 
     LOGGER.debug(f"Getting control_plane IP for vapp: "
@@ -2701,7 +2704,8 @@ def _get_control_plane_ip(sysadmin_client: vcd_client.Client, vapp,
     node_names = _get_node_names(vapp, NodeType.CONTROL_PLANE)
     result = _execute_script_in_nodes(sysadmin_client, vapp=vapp,
                                       node_names=node_names, script=script,
-                                      check_tools=check_tools)
+                                      check_tools=check_tools,
+                                      template_os=template_os)
     errors = _get_script_execution_errors(result)
     if errors:
         raise exceptions.ScriptExecutionError(
@@ -2754,7 +2758,8 @@ def _init_cluster(sysadmin_client: vcd_client.Client, vapp, cluster_kind,
         )
 
 
-def _join_cluster(sysadmin_client: vcd_client.Client, vapp, target_nodes=None):
+def _join_cluster(sysadmin_client: vcd_client.Client, vapp, target_nodes=None,
+                  template_os=None):
     vcd_utils.raise_error_if_user_not_from_system_org(sysadmin_client)
     try:
 
@@ -2767,7 +2772,7 @@ def _join_cluster(sysadmin_client: vcd_client.Client, vapp, target_nodes=None):
         control_plane_result = _execute_script_in_nodes(sysadmin_client,
                                                         vapp=vapp,
                                                         node_names=node_names,
-                                                        script=script)
+                                                        script=script)  # noqa: E501
         errors = _get_script_execution_errors(control_plane_result)
         if errors:
             raise exceptions.ClusterJoiningError(
@@ -2789,7 +2794,8 @@ def _join_cluster(sysadmin_client: vcd_client.Client, vapp, target_nodes=None):
 
         worker_results = _execute_script_in_nodes(sysadmin_client, vapp=vapp,
                                                   node_names=node_names,
-                                                  script=script)
+                                                  script=script,
+                                                  template_os=template_os)
         errors = _get_script_execution_errors(worker_results)
         if errors:
             raise exceptions.ClusterJoiningError(
@@ -2845,7 +2851,7 @@ def _wait_until_ready_to_exec(vs, vm, password, tries=30):
 
 def _execute_script_in_nodes(sysadmin_client: vcd_client.Client,
                              vapp, node_names, script,
-                             check_tools=True, wait=True):
+                             check_tools=True, wait=True, template_os=None):
     vcd_utils.raise_error_if_user_not_from_system_org(sysadmin_client)
     all_results = []
     for node_name in node_names:
@@ -2860,6 +2866,8 @@ def _execute_script_in_nodes(sysadmin_client: vcd_client.Client,
             vm = vs.get_vm_by_moid(moid)
             password = vapp.get_admin_password(node_name)
             if check_tools:
+                if template_os is not None and UBUNTU_20_04_TEMPLATE_OS == template_os:  # noqa: E501
+                    time.sleep(120)  # sleep for process to be ready
                 LOGGER.debug(f"waiting for tools on {node_name}")
                 vs.wait_until_tools_ready(
                     vm,
@@ -2869,6 +2877,8 @@ def _execute_script_in_nodes(sysadmin_client: vcd_client.Client,
             LOGGER.debug(f"about to execute script on {node_name} "
                          f"(vm={vm}), wait={wait}")
             if wait:
+                if template_os is not None and UBUNTU_20_04_TEMPLATE_OS == template_os:  # noqa: E501
+                    time.sleep(120)  # sleep for process to be ready
                 result = vs.execute_script_in_guest(
                     vm, 'root', password, script,
                     target_file=None,

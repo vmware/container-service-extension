@@ -222,7 +222,7 @@ class DefEntityService:
                                                filters: dict = None,
                                                page_number: int = CSE_PAGINATION_FIRST_PAGE_NUMBER,  # noqa: E501
                                                page_size: int = CSE_PAGINATION_DEFAULT_PAGE_SIZE, # noqa: E501
-                                               exclude_entity_type_ids: list = None):  # noqa: E501
+                                               include_entity_type_ids: list = None):  # noqa: E501
         """Get a page of entities belonging to an interface.
 
         An interface is uniquely identified by properties vendor, nss and
@@ -234,22 +234,22 @@ class DefEntityService:
         :param dict filters:
         :param int page_number:
         :param int page_size:
-        :param list exclude_entity_type_ids: exclude entity types
+        :param list include_entity_type_ids: include entity types
 
         :return: Generator of entities of that interface type
         :rtype: Generator[List, None, None]
         """
         filter_string = utils.construct_filter_string(filters)
 
-        exclude_entity_type_filter = ''
-        if exclude_entity_type_ids:
-            exclude_entity_type_filter = ";".join([f"entityType!={entity_type}" for entity_type in exclude_entity_type_ids])  # noqa: E501
+        include_entity_type_filter = ''
+        if include_entity_type_ids:
+            include_entity_type_filter = "(" + ",".join([f"entityType=={entity_type}" for entity_type in include_entity_type_ids]) + ")"  # noqa: E501
 
         if filter_string:
-            if exclude_entity_type_filter:
-                filter_string += f";{exclude_entity_type_filter}"
+            if include_entity_type_filter:
+                filter_string += f";{include_entity_type_filter}"
         else:
-            filter_string = exclude_entity_type_filter
+            filter_string = include_entity_type_filter
 
         query_string = f"page={page_number}&pageSize={page_size}"
         if filter_string:

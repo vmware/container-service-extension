@@ -787,7 +787,7 @@ def upgrade_cse(
         # CSE version info in extension description is only applicable for
         # CSE 3.0.0+ versions.
         allowed_source_cse_versions = \
-            semantic_version.SimpleSpec('>=3.0.0,<=3.1.2')
+            semantic_version.SimpleSpec('>=3.0.0,<=3.1.4')
         valid_source_cse_installation = \
             allowed_source_cse_versions.match(ext_cse_version)
 

@@ -194,17 +194,7 @@ class ClusterService(abstract_broker.AbstractBroker):
         self._update_task(BehaviorTaskStatus.RUNNING, message=msg)
 
         # Get kube config from RDE
-        kube_config = None
-        if hasattr(curr_native_entity.status,
-                   shared_constants.RDEProperty.PRIVATE.value) and \
-                hasattr(curr_native_entity.status.private,
-                        shared_constants.RDEProperty.KUBE_CONFIG.value):
-            kube_config = curr_native_entity.status.private.kube_config
-
-        if not kube_config:
-            msg = "Failed to get cluster kube-config"
-            LOGGER.error(msg)
-            raise exceptions.ClusterOperationError(msg)
+        kube_config = _get_kube_config_from_native_entity(curr_native_entity)
 
         return self.mqtt_publisher.construct_behavior_payload(
             message=kube_config,
@@ -233,6 +223,12 @@ class ClusterService(abstract_broker.AbstractBroker):
             template_name = input_native_entity.spec.distribution.template_name
             template_revision = 1  # templateRevision for TKGm is always 1
             vcd_site = input_native_entity.metadata.site
+
+            # check that there is at least 1 worker node
+            num_workers = input_native_entity.spec.topology.workers.count
+            if num_workers < 1:
+                raise exceptions.CseServerError(
+                    f"worker count must be at least 1 for cluster '{cluster_name}'")  # noqa: E501
 
             # check that the vcd site is a valid url
             if not _is_valid_vcd_url(vcd_site):
@@ -832,6 +828,11 @@ class ClusterService(abstract_broker.AbstractBroker):
                     f"Error while creating vApp: {err}")
             client_v36.get_task_monitor().wait_for_status(vapp_resource.Tasks.Task[0])  # noqa: E501
 
+            sysadmin_client_v36 = self.context.get_sysadmin_client(api_version=DEFAULT_API_VERSION)  # noqa: E501
+            # Extra config elements of VApp are visible only for admin client
+            vapp = vcd_vapp.VApp(client_v36, href=vapp_resource.get('href'))
+            admin_vapp = vcd_vapp.VApp(sysadmin_client_v36, href=vapp_resource.get('href'))  # noqa: E501
+
             template = _get_tkgm_template(template_name)
 
             LOGGER.debug(f"Setting metadata on cluster vApp '{cluster_name}'")
@@ -849,11 +850,6 @@ class ClusterService(abstract_broker.AbstractBroker):
                 ClusterMetadataKey.CPI: CPI_NAME
             }
 
-            sysadmin_client_v36 = self.context.get_sysadmin_client(
-                api_version=DEFAULT_API_VERSION)
-            # Extra config elements of VApp are visible only for admin client
-            vapp = vcd_vapp.VApp(sysadmin_client_v36,
-                                 href=vapp_resource.get('href'))
             task = vapp.set_multiple_metadata(tags)
             client_v36.get_task_monitor().wait_for_status(task)
 
@@ -898,6 +894,7 @@ class ClusterService(abstract_broker.AbstractBroker):
                     org=org,
                     vdc=vdc,
                     vapp=vapp,
+                    admin_vapp=admin_vapp,
                     catalog_name=catalog_name,
                     template=template,
                     network_name=network_name,
@@ -929,8 +926,26 @@ class ClusterService(abstract_broker.AbstractBroker):
 
             control_plane_join_cmd = _get_join_cmd(
                 sysadmin_client=sysadmin_client_v36,
-                vapp=vapp
+                vapp=admin_vapp
             )
+            # have the kubeconfig in the RDE so that worker nodes
+            # can use the kubeconfig when installing core packages
+            kubeconfig_changes = {
+                'entity.status.private': rde_2_x.Private(
+                    kube_token=control_plane_join_cmd,
+                    kube_config=_get_kube_config_from_control_plane_vm(
+                        sysadmin_client=sysadmin_client_v36,
+                        vapp=vapp
+                    )
+                )
+            }
+            self._update_cluster_entity(
+                cluster_id,
+                changes=kubeconfig_changes,
+                external_id=vapp_resource.get('href')
+            )
+            curr_rde = self.entity_svc.get_entity(cluster_id)
+            curr_native_entity: rde_2_x.NativeEntity = curr_rde.entity
 
             msg = f"Creating {num_workers} node(s) for cluster " \
                   f"'{cluster_name}' ({cluster_id})"
@@ -944,10 +959,12 @@ class ClusterService(abstract_broker.AbstractBroker):
             try:
                 _, installed_core_pkg_versions = _add_worker_nodes(
                     sysadmin_client_v36,
+                    user_client=self.context.client,
                     num_nodes=num_workers,
                     org=org,
                     vdc=vdc,
                     vapp=vapp,
+                    admin_vapp=admin_vapp,
                     catalog_name=catalog_name,
                     template=template,
                     network_name=network_name,
@@ -957,7 +974,8 @@ class ClusterService(abstract_broker.AbstractBroker):
                     cpu_count=worker_cpu_count,
                     memory_mb=worker_memory_mb,
                     control_plane_join_cmd=control_plane_join_cmd,
-                    core_pkg_versions_to_install=core_pkg_versions
+                    core_pkg_versions_to_install=core_pkg_versions,
+                    native_entity=curr_native_entity
                 )
             except Exception as err:
                 LOGGER.error(err, exc_info=True)
@@ -994,13 +1012,6 @@ class ClusterService(abstract_broker.AbstractBroker):
             installed_kapp_controller_version = installed_core_pkg_versions.get(CorePkgVersionKeys.KAPP_CONTROLLER.value, "")  # noqa: E501
             installed_metrics_server_version = installed_core_pkg_versions.get(CorePkgVersionKeys.METRICS_SERVER.value, "")  # noqa: E501
             changes = {
-                'entity.status.private': rde_2_x.Private(
-                    kube_token=control_plane_join_cmd,
-                    kube_config=_get_kube_config_from_control_plane_vm(
-                        sysadmin_client=sysadmin_client_v36,
-                        vapp=vapp
-                    )
-                ),
                 'entity.status.uid': cluster_id,
                 'entity.status.phase': str(
                     DefEntityPhase(
@@ -1380,7 +1391,8 @@ class ClusterService(abstract_broker.AbstractBroker):
             org = vcd_utils.get_org(client_v36, org_name=org_name)
             ovdc = vcd_utils.get_vdc(client_v36, vdc_name=ovdc_name, org=org)
             # Extra config elements of VApp are visible only for admin client
-            vapp = vcd_vapp.VApp(sysadmin_client_v36, href=vapp_href)
+            vapp = vcd_vapp.VApp(client_v36, href=vapp_href)
+            admin_vapp = vcd_vapp.VApp(sysadmin_client_v36, href=vapp_href)
 
             if num_workers_to_add > 0:
                 msg = f"Creating {num_workers_to_add} workers from template" \
@@ -1401,21 +1413,21 @@ class ClusterService(abstract_broker.AbstractBroker):
                                     shared_constants.RDEProperty.KUBE_TOKEN.value):  # noqa: E501
                     control_plane_join_cmd = curr_native_entity.status.private.kube_token  # noqa: E501
 
-                # If the cluster currently only has no worker nodes, then
-                # resizing the cluster will add the core packages
-                core_pkg_versions = None
-                if curr_worker_count == 0:
-                    control_plane_vm = _get_control_plane_vm(sysadmin_client_v36, vapp)  # noqa: E501
-                    core_pkg_versions = _get_core_pkg_versions(control_plane_vm)  # noqa: E501
-                    # remove antrea since it is already installed
-                    if core_pkg_versions.get(CorePkgVersionKeys.ANTREA.value):
-                        del core_pkg_versions[CorePkgVersionKeys.ANTREA.value]
-                _, installed_core_pkg_versions = _add_worker_nodes(
+                # core_pkg_versions_to_install is None because it is assumed
+                # that core packages are already installed if the cluster
+                # was created in the current CSE version since the minimum
+                # number of worker nodes is 1.
+                # core packages not being installed in this resize function
+                # guarantees that upgraded clusters that are resized won't have
+                # core packages installed.
+                _, _ = _add_worker_nodes(
                     sysadmin_client_v36,
+                    user_client=self.context.client,
                     num_nodes=num_workers_to_add,
                     org=org,
                     vdc=ovdc,
                     vapp=vapp,
+                    admin_vapp=admin_vapp,
                     catalog_name=catalog_name,
                     template=template,
                     network_name=network_name,
@@ -1425,30 +1437,12 @@ class ClusterService(abstract_broker.AbstractBroker):
                     cpu_count=worker_cpu_count,
                     memory_mb=worker_memory_mb,
                     control_plane_join_cmd=control_plane_join_cmd,
-                    core_pkg_versions_to_install=core_pkg_versions
+                    core_pkg_versions_to_install=None
                 )
 
                 msg = f"Added {num_workers_to_add} node(s) to cluster " \
                       f"{cluster_name}({cluster_id})"
                 self._update_task(BehaviorTaskStatus.RUNNING, message=msg)
-
-                # handle updating entity with core package info
-                if installed_core_pkg_versions and len(installed_core_pkg_versions) > 0:  # noqa: E501
-                    changes = {}
-                    installed_kapp_controller_version = installed_core_pkg_versions.get(  # noqa: E501
-                        CorePkgVersionKeys.KAPP_CONTROLLER.value, "")
-                    if installed_kapp_controller_version:
-                        changes['entity.status.tkg_core_packages.kapp_controller'] = installed_kapp_controller_version  # noqa: E501
-                    installed_metrics_server_version = installed_core_pkg_versions.get(  # noqa: E501
-                        CorePkgVersionKeys.METRICS_SERVER.value, "")
-                    if installed_metrics_server_version:
-                        changes['entity.status.tkg_core_packages.metrics_server'] = installed_metrics_server_version  # noqa: E501
-                    if len(changes) > 0:
-                        self._update_cluster_entity(
-                            cluster_id,
-                            changes=changes,
-                            external_id=vapp_href
-                        )
 
             msg = f"Created {num_workers_to_add} workers for '{cluster_name}' ({cluster_id}) "  # noqa: E501
             self._update_task(BehaviorTaskStatus.RUNNING, message=msg)
@@ -2194,9 +2188,7 @@ def _is_valid_vcd_url(vcd_site: str) -> bool:
     except KeyError:
         return False
 
-    if parsed_url.netloc != cse_server_host:
-        return False
-    return True
+    return parsed_url.netloc.lower() == cse_server_host.lower()
 
 
 def _cluster_exists(client, cluster_name, org_name=None, ovdc_name=None):
@@ -2285,6 +2277,7 @@ def _add_control_plane_nodes(
         org,
         vdc,
         vapp,
+        admin_vapp,
         catalog_name,
         template,
         network_name,
@@ -2331,7 +2324,8 @@ def _add_control_plane_nodes(
         # Get template with no expose_ip; expose_ip will be computed
         # later when control_plane internal ip is computed below.
         vm_specs = _get_vm_specifications(
-            client=sysadmin_client,
+            user_client=user_client,
+            sysadmin_client=sysadmin_client,
             num_nodes=num_nodes,
             node_type=NodeType.CONTROL_PLANE.value,
             org=org,
@@ -2394,7 +2388,8 @@ def _add_control_plane_nodes(
         for spec in vm_specs:
             vm_name = spec['target_vm_name']
             vm_resource = vapp.get_vm(vm_name)
-            vm = vcd_vm.VM(sysadmin_client, resource=vm_resource)
+            vm = vcd_vm.VM(user_client, resource=vm_resource)
+            admin_vm = vcd_vm.VM(sysadmin_client, resource=vm_resource)
             # Handle exposing cluster
             control_plane_endpoint = internal_ip
             if expose:
@@ -2471,8 +2466,12 @@ def _add_control_plane_nodes(
             cloud_init_spec = cloud_init_spec.replace("OPENBRACKET", "{")
             cloud_init_spec = cloud_init_spec.replace("CLOSEBRACKET", "}")
 
+            # NOTE: admin-vapp reload is mandatory; else Extra-Config-Element XML section won't be found. # noqa: E501
+            # Setting Cloud init spec and customization requires extra config section to be visible for updates.  # noqa: E501
+            admin_vm.reload()
+            admin_vapp.reload()
             # create a cloud-init spec and update the VMs with it
-            _set_cloud_init_spec(sysadmin_client, vapp, vm, cloud_init_spec)
+            _set_cloud_init_spec(sysadmin_client, admin_vapp, admin_vm, cloud_init_spec)  # noqa: E501
 
             task = vm.power_on()
             # wait_for_vm_power_on is reused for all vm creation callback
@@ -2481,6 +2480,7 @@ def _add_control_plane_nodes(
                 callback=wait_for_vm_power_on
             )
             vapp.reload()
+            admin_vapp.reload()
 
             # Note that this is an ordered list.
             for customization_phase in [
@@ -2495,22 +2495,22 @@ def _add_control_plane_nodes(
                 PostCustomizationPhase.KUBECTL_APPLY_DEFAULT_STORAGE_CLASS,
                 PostCustomizationPhase.KUBEADM_TOKEN_GENERATE,
             ]:
-                vapp.reload()
+                admin_vapp.reload()
                 vcd_utils.wait_for_completion_of_post_customization_procedure(
-                    vm,
+                    admin_vm,
                     customization_phase=customization_phase.value,  # noqa: E501
                     logger=LOGGER
                 )
-            vm.reload()
+            admin_vm.reload()
 
-            task = vm.add_extra_config_element(DISK_ENABLE_UUID, "1", True)  # noqa: E501
+            task = admin_vm.add_extra_config_element(DISK_ENABLE_UUID, "1", True)  # noqa: E501
             sysadmin_client.get_task_monitor().wait_for_status(
                 task,
                 callback=wait_for_updating_disk_enable_uuid
             )
-            vapp.reload()
+            admin_vapp.reload()
 
-            core_pkg_versions = _get_core_pkg_versions(vm)
+            core_pkg_versions = _get_core_pkg_versions(admin_vm)
 
     except Exception as err:
         LOGGER.error(err, exc_info=True)
@@ -2543,12 +2543,13 @@ def _get_core_pkg_versions(control_plane_vm: vcd_vm.VM) -> Dict:
     return core_pkg_versions
 
 
-def _add_worker_nodes(sysadmin_client, num_nodes, org, vdc, vapp,
-                      catalog_name, template, network_name,
+def _add_worker_nodes(sysadmin_client, user_client, num_nodes, org, vdc, vapp,
+                      admin_vapp, catalog_name, template, network_name,
                       storage_profile=None, ssh_key=None,
                       sizing_class_name=None, cpu_count=None, memory_mb=None,
                       control_plane_join_cmd='',
-                      core_pkg_versions_to_install=None) -> Tuple[List, Dict]:
+                      core_pkg_versions_to_install=None,
+                      native_entity: rde_2_x.NativeEntity = None) -> Tuple[List, Dict]:  # noqa: E501
     vcd_utils.raise_error_if_user_not_from_system_org(sysadmin_client)
 
     if not core_pkg_versions_to_install:
@@ -2587,7 +2588,8 @@ def _add_worker_nodes(sysadmin_client, num_nodes, org, vdc, vapp,
         # _get_vm_specifications function, so the specs are obtained and
         # the cust_script is recomputed and added.
         vm_specs = _get_vm_specifications(
-            client=sysadmin_client,
+            user_client=user_client,
+            sysadmin_client=sysadmin_client,
             num_nodes=num_nodes,
             node_type=NodeType.WORKER.value,
             org=org,
@@ -2643,13 +2645,15 @@ def _add_worker_nodes(sysadmin_client, num_nodes, org, vdc, vapp,
         )
         vapp.reload()
 
-        kube_config = _get_kube_config_from_control_plane_vm(
-            sysadmin_client, vapp)
+        kube_config = None
+        if len(core_pkg_versions_to_install) > 0 and native_entity is not None:
+            kube_config = _get_kube_config_from_native_entity(native_entity)
         for ind in range(num_vm_specs):
             spec = vm_specs[ind]
             vm_name = spec['target_vm_name']
             vm_resource = vapp.get_vm(vm_name)
-            vm = vcd_vm.VM(sysadmin_client, resource=vm_resource)
+            vm = vcd_vm.VM(user_client, resource=vm_resource)
+            admin_vm = vcd_vm.VM(sysadmin_client, resource=vm_resource)
 
             task = None
             # updating cpu count on the VM
@@ -2677,14 +2681,19 @@ def _add_worker_nodes(sysadmin_client, num_nodes, org, vdc, vapp,
                 vm.reload()
                 vapp.reload()
 
+            # NOTE: admin-vapp reload is mandatory; else Extra-Config-Element XML section won't be found.  # noqa: E501
+            # Setting Cloud init spec and customization requires extra config section to be visible for updates.  # noqa: E501
+            admin_vm.reload()
+            admin_vapp.reload()
+
             # create a cloud-init spec and update the VMs with it
-            _set_cloud_init_spec(sysadmin_client, vapp, vm, spec['cloudinit_node_spec'])  # noqa: E501
+            _set_cloud_init_spec(sysadmin_client, admin_vapp, admin_vm, spec['cloudinit_node_spec'])  # noqa: E501
 
             should_use_kubeconfig: bool = ((ind == 0) or (ind == num_vm_specs - 1)) and len(core_pkg_versions_to_install) > 0  # noqa: E501
             if should_use_kubeconfig:
                 # The worker node will clear this value upon reading it or
                 # failure
-                task = vm.add_extra_config_element(PostCustomizationKubeconfig, kube_config)  # noqa: E501
+                task = admin_vm.add_extra_config_element(PostCustomizationKubeconfig, kube_config)  # noqa: E501
                 sysadmin_client.get_task_monitor().wait_for_status(
                     task,
                     callback=wait_for_updating_kubeconfig
@@ -2697,6 +2706,7 @@ def _add_worker_nodes(sysadmin_client, num_nodes, org, vdc, vapp,
                 callback=wait_for_vm_power_on
             )
             vapp.reload()
+            admin_vapp.reload()
 
             LOGGER.debug(f"worker {vm_name} to join cluster using:{control_plane_join_cmd}")  # noqa: E501
 
@@ -2709,14 +2719,14 @@ def _add_worker_nodes(sysadmin_client, num_nodes, org, vdc, vapp,
                 PostCustomizationPhase.CORE_PACKAGES_ATTEMPTED_INSTALL,
             ]:
                 is_core_pkg_phase = customization_phase == PostCustomizationPhase.CORE_PACKAGES_ATTEMPTED_INSTALL  # noqa: E501
-                vapp.reload()
+                admin_vapp.reload()
                 vcd_utils.wait_for_completion_of_post_customization_procedure(
-                    vm,
+                    admin_vm,
                     customization_phase=customization_phase.value,  # noqa: E501
                     logger=LOGGER,
                     timeout=750 if is_core_pkg_phase else DEFAULT_POST_CUSTOMIZATION_TIMEOUT_SEC  # noqa: E501
                 )
-            vm.reload()
+            admin_vm.reload()
 
             # get installed core pkg versions
             if should_use_kubeconfig:
@@ -2725,18 +2735,18 @@ def _add_worker_nodes(sysadmin_client, num_nodes, org, vdc, vapp,
                     callback=wait_for_updating_kubeconfig
                 )
                 installed_core_pkg_versions[CorePkgVersionKeys.KAPP_CONTROLLER.value] = vcd_utils.get_vm_extra_config_element(  # noqa: E501
-                    vm,
+                    admin_vm,
                     PostCustomizationVersions.INSTALLED_VERSION_OF_KAPP_CONTROLLER.value)  # noqa: E501
                 installed_core_pkg_versions[CorePkgVersionKeys.METRICS_SERVER.value] = vcd_utils.get_vm_extra_config_element(  # noqa: E501
-                    vm,
+                    admin_vm,
                     PostCustomizationVersions.INSTALLED_VERSION_OF_METRICS_SERVER.value)  # noqa: E501
 
-            task = vm.add_extra_config_element(DISK_ENABLE_UUID, "1", True)  # noqa: E501
+            task = admin_vm.add_extra_config_element(DISK_ENABLE_UUID, "1", True)  # noqa: E501
             sysadmin_client.get_task_monitor().wait_for_status(
                 task,
                 callback=wait_for_updating_disk_enable_uuid
             )
-            vapp.reload()
+            admin_vapp.reload()
 
     except Exception as err:
         LOGGER.error(err, exc_info=True)
@@ -2829,6 +2839,22 @@ def _get_kube_config_from_control_plane_vm(sysadmin_client: vcd_client.Client, v
     return kube_config_in_bytes.decode()
 
 
+def _get_kube_config_from_native_entity(native_entity: rde_2_x.NativeEntity):
+    # Get kube config from RDE
+    kube_config = None
+    if hasattr(native_entity.status,
+               shared_constants.RDEProperty.PRIVATE.value) and \
+            hasattr(native_entity.status.private,
+                    shared_constants.RDEProperty.KUBE_CONFIG.value):
+        kube_config = native_entity.status.private.kube_config
+
+    if not kube_config:
+        msg = "Failed to get cluster kube-config"
+        LOGGER.error(msg)
+        raise exceptions.ClusterOperationError(msg)
+    return kube_config
+
+
 def wait_for_cpu_update(task):
     LOGGER.debug(f"Updating CPU count, status: {task.get('status').lower()}")
 
@@ -2895,7 +2921,8 @@ def _create_k8s_software_string(software_name: str, software_version: str) -> st
 
 
 def _get_vm_specifications(
-        client,
+        user_client,
+        sysadmin_client,
         num_nodes,
         node_type,
         org,
@@ -2908,20 +2935,20 @@ def _get_vm_specifications(
         sizing_class_name=None,
         cust_script=None) -> List[Dict]:
     org_name = org.get_name()
-    org_resource = client.get_org_by_name(org_name)
-    org_sa = vcd_org.Org(client, resource=org_resource)
+    org_resource = user_client.get_org_by_name(org_name)
+    org_sa = vcd_org.Org(user_client, resource=org_resource)
     catalog_item = org_sa.get_catalog_item(
         catalog_name, template[LocalTemplateKey.NAME])
     catalog_item_href = catalog_item.Entity.get('href')
 
-    source_vapp = vcd_vapp.VApp(client, href=catalog_item_href)  # noqa: E501
+    source_vapp = vcd_vapp.VApp(user_client, href=catalog_item_href)  # noqa: E501
     source_vm = source_vapp.get_all_vms()[0].get('name')
     if storage_profile is not None:
         storage_profile = vdc.get_storage_profile(storage_profile)
 
     config = server_utils.get_server_runtime_config()
     cpm = compute_policy_manager.ComputePolicyManager(
-        client,
+        sysadmin_client=sysadmin_client,
         log_wire=utils.str_to_bool(config.get_value_at('service.log_wire'))
     )
     sizing_class_href = None
