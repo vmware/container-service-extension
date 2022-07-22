@@ -7,6 +7,19 @@ title: Known Issues
 <a name="general"></a>
 ## General Issues
 ---
+### CSE 3.1.1 line TKG clusters prior to CSE 3.1.3 fail to resize cluster >1 day after cluster creation
+This issue in resizing the TKG cluster occurs because the token to join a cluster has expired. Please note that
+the issue may also be encountered when trying to resize a TKG cluster which was upgraded to CSE >= 3.1.3 from the
+CSE 3.1.1 line prior to CSE 3.1.3.
+The following workaround is to create a new token and update the RDE:
+1. Run the following in the control plane node: `kubeadm token create --print-join-command --ttl 0`
+2. In Postman, GET the entity at: https://{{VCD_IP}}/cloudapi/1.0.0/entities/{{ENTITY_ID}}. The entity ID can be
+retrieved from the cluster info page or via `vcd cse cluster info`
+3. Copy the response body in (2) and replace the `kubeadm join ...` command with the output in (1) to form the request body.
+4. Do a PUT on the same URL in (2) with `Content-Type: application/json` and with the request body formed in (3).
+5. The resize operation can then be performed. If the resize failed, then the operation may be triggered again after (4)
+due to the RDE update triggering the behavior.
+
 
 ### TKG Cluster creation in CSE <3.1.3 fails with "ACCESS_TO_RESOURCE_IS_FORBIDDEN due to lack of [VAPP_VIEW] right" even though this right is not missing
 This issue is due to a bug in CSE in which the service account role is used to add and power on the VMs. If there is a
