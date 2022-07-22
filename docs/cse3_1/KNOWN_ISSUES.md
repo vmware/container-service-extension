@@ -8,6 +8,21 @@ title: Known Issues
 ## General Issues
 ---
 
+### TKG Cluster creation in CSE <3.1.3 fails with "ACCESS_TO_RESOURCE_IS_FORBIDDEN due to lack of [VAPP_VIEW] right" even though this right is not missing
+This issue is due to a bug in CSE in which the service account role is used to add and power on the VMs. If there is a
+subsequent login to the service account, VCD wipes out the security context that is needed to power on the VM, so the
+forbidden error is seen. There is a fix in CSE 3.1.4 to reduce using the service account role for this operation in
+order to avoid this issue.
+
+### Native cluster creation in CSE <3.1.3 fails for Ubuntu 20 templates
+This failure is due to a race condition due to faster infrastructures in customer environments.
+We have a fix in CSE 3.1.4 to mitigate this race to allow for successful cluster creations.
+
+### TKG cluster creation in CSE 3.1.3 intermittently fails due to a VM reboot
+This issue may be seen as a VM postcustomization timeout. This issue cannot be fully fixed on the CSE
+side because the VM is rebooted outside of CSE's logic during cloud-init script execution, but there is
+a fix for most cases in CSE 3.1.4 to allow script execution to proceed even if the VM is rebooted.
+
 ### CSE Upgrade from 3.1.3 to 3.1.3 fails
 The use case for upgrading from CSE 3.1.3 to 3.1.3 is needed if `cse upgrade` or `cse install` fails; in this case,
 one would need to run `cse upgrade` for CSE to be able to run, but this upgrade is failing. The workaround for this
