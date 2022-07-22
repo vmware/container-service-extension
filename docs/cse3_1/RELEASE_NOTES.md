@@ -16,6 +16,17 @@ CSE is not impacted by the Apache Log4j open source component vulnerability.
 
 # Release Notes
 
+## CSE 3.1.4 GA (3.1.4)
+Release Date : 2022-07-22
+
+**Supported VCD versions**: 10.4.0 GA, 10.3.3 GA, 10.3.2 GA, 10.3.1 GA, 10.2.2 GA
+
+* Check out [what's new](CSE31.html) in this release.
+* Compatility matrix for CSE 3.1.4 can be found [here](CSE31.html#cse31-compatibility-matrix).
+
+**Notes to System Administrator**:
+* Please take note of the supported upgrade paths for CSE 3.1.4 [here](CSE31.html#brown_field_upgrades).
+
 ## CSE 3.1.3 GA (3.1.3)
 Release Date : 2022-04-14
 
