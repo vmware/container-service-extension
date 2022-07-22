@@ -26,7 +26,7 @@ For greenfield installations, please get started with [CSE introduction](INTRO.h
 * Support for RDE 2.0 request payloads in which RDE 2.1 clusters are created.
 * Bug fix to support Ubuntu 20.04 native templates. Learn more [here](KNOWN_ISSUES.html#general)
 * Bug fix to mitigate VM reboot issue. Learn more [here](KNOWN_ISSUES.html#general)
-* Bug fix for TKG cluster creation failure due to missing right. Learn more [here](KNOWN_ISSUES.html#general)
+* Bug fix for TKG cluster creation failure with missing right error. Learn more [here](KNOWN_ISSUES.html#general)
 
 ### CSE 3.1.3
 
