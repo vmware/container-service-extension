@@ -94,8 +94,9 @@ For greenfield installations, please get started with [CSE introduction](INTRO.h
 
 | CSE Server/CLI | UI plugin | Cloud Director | Comments               |
 |----------------|-----------|----------------|------------------------|
-| 3.1.4          | 3.4.0     | 10.4.0         |  |
+| 3.1.4          | 3.4.0     | 10.4.0         | Plugin ships with VCD |
 | 3.1.4          | 3.3.0     | 10.3.1+        | Must use UI Plugin 3.3.0. Plugin ships on VMware Cloud Director 10.3.3 Download page |
+| 3.1.4          | 2.2.0     | 10.2.2         | Plugin ships with VCD  |
 | 3.1.3          | 3.3.0     | 10.3.1+        | Must use UI Plugin 3.3.0. Plugin ships on VMware Cloud Director 10.3.3 Download page |
 | 3.1.3          | 2.2.0     | 10.2.2         | Plugin ships with VCD  |
 | 3.1.2          | 3.2.0     | 10.3.2         | Plugin ships with VCD  |
