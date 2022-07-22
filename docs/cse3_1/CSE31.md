@@ -20,6 +20,14 @@ For greenfield installations, please get started with [CSE introduction](INTRO.h
 * Defined entity API: VCD's generic defined entity api to manage lifecycle of RDEs.
 * UI plugin : Kubernetes Container Clusters UI plugin, that is used to manage Native, TKG, TKGs, TKGi clusters from VCD UI.
 
+### CSE 3.1.4
+* Support for TKG 1.5.3 and 1.5.4 Ubuntu ova's
+* Interoperability with VCD 10.4.0 GA
+* Support for RDE 2.0 request payloads in which RDE 2.1 clusters are created.
+* Bug fix to support Ubuntu 20.04 native templates. Learn more [here](KNOWN_ISSUES.html#general)
+* Bug fix to mitigate VM reboot issue. Learn more [here](KNOWN_ISSUES.html#general)
+* Bug fix for TKG cluster creation failure with missing right error. Learn more [here](KNOWN_ISSUES.html#general)
+
 ### CSE 3.1.3
 
 * New RDE 2.1 for TKG and native clusters. Learn more [here](CLUSTER_MANAGEMENT.html#sample_input_spec).
@@ -86,6 +94,9 @@ For greenfield installations, please get started with [CSE introduction](INTRO.h
 
 | CSE Server/CLI | UI plugin | Cloud Director | Comments               |
 |----------------|-----------|----------------|------------------------|
+| 3.1.4          | 3.4.0     | 10.4.0         | Plugin ships with VCD |
+| 3.1.4          | 3.3.0     | 10.3.1+        | Must use UI Plugin 3.3.0. Plugin ships on VMware Cloud Director 10.3.3 Download page |
+| 3.1.4          | 2.2.0     | 10.2.2         | Plugin ships with VCD  |
 | 3.1.3          | 3.3.0     | 10.3.1+        | Must use UI Plugin 3.3.0. Plugin ships on VMware Cloud Director 10.3.3 Download page |
 | 3.1.3          | 2.2.0     | 10.2.2         | Plugin ships with VCD  |
 | 3.1.2          | 3.2.0     | 10.3.2         | Plugin ships with VCD  |
@@ -181,6 +192,18 @@ Refer to [CSE 3.1 installation](CSE_SERVER_MANAGEMENT.html#cse31-greenfield).
 
 <a name="brown_field_upgrades"></a>
 #### 2.2.3 Brownfield upgrade
+
+**3.1.4**
+CSE can be upgraded from version 3.1.3, 3.1.2, 3.1.1, 3.1.0 and 3.0.z to version 3.1.4 GA.
+Any CSE release older than CSE 3.0.0 first needs to be upgraded to
+CSE 3.0.z product line before it can be upgraded to CSE 3.1.4.
+
+**Note** :
+If Tanzu Kubernetes Grid (TKG) distribution is enabled
+on [CSE 3.0.z](https://github.com/vmware/container-service-extension-templates/blob/tkgm/TKG_INSTRUCTIONS.md),
+then please consider upgrading to CSE 3.1.4 following these [steps](CSE31.html#remove_tkgm).
+
+Refer to [CSE 3.1 upgrade command](CSE_SERVER_MANAGEMENT.html#cse31-upgrade-cmd) for details
 
 **3.1.3**
 CSE can be upgraded from version 3.1.2, 3.1.1, 3.1.0 and 3.0.z to version 3.1.3 GA.

@@ -7,11 +7,40 @@ title: Known Issues
 <a name="general"></a>
 ## General Issues
 ---
-### CSE 3.1.1 line TKG clusters prior to CSE 3.1.3 fail to resize cluster >1 day after cluster creation
+
+### TKG Cluster creation fails with "ACCESS_TO_RESOURCE_IS_FORBIDDEN due to lack of [VAPP_VIEW] right" even though this right is not missing
+This issue is due to a security context being wiped out.
+
+**Resolution**
+
+This issue is fixed in CSE 3.1.4.
+
+### Native cluster creation fails for Ubuntu 20 templates
+This failure is due to a race condition in faster customer environment infrastructures.
+
+**Resolution**
+
+This issue is fixed in CSE 3.1.4.
+
+### TKG cluster creation intermittently fails due to a VM reboot
+This occurs due to a cloud-init script execution error when a VM is rebooted, and this issue
+may be encountered as a VM postcustomization timeout.
+
+**Resolution**
+
+This issue is fixed in CSE 3.1.4.
+
+### TKG cluster resize fails after 1 day of cluster creation
 This issue in resizing the TKG cluster occurs because the token to join a cluster has expired. Please note that
-the issue may also be encountered when trying to resize a TKG cluster which was upgraded to CSE >= 3.1.3 from the
-CSE 3.1.1 line prior to CSE 3.1.3.
-The following workaround is to create a new token and update the RDE:
+the issue may also be encountered when trying to resize a TKG cluster that was upgraded to CSE 3.1.3 or 3.1.4.
+
+**Resolution**
+
+This issue is fixed in CSE 3.1.3 for newly created clusters.
+
+**Workaround**
+
+For clusters created prior to CSE 3.1.3, the following workaround is to create a new token and update the RDE:
 1. Run the following in the control plane node: `kubeadm token create --print-join-command --ttl 0`
 2. In Postman, GET the entity at: https://{{VCD_IP}}/cloudapi/1.0.0/entities/{{ENTITY_ID}}. The entity ID can be
 retrieved from the cluster info page or via `vcd cse cluster info`
@@ -19,7 +48,6 @@ retrieved from the cluster info page or via `vcd cse cluster info`
 4. Do a PUT on the same URL in (2) with `Content-Type: application/json` and with the request body formed in (3).
 5. The resize operation can then be performed. If the resize failed, then the operation may be triggered again after (4)
 due to the RDE update triggering the behavior.
-
 
 ### CSE Upgrade from 3.1.3 to 3.1.3 fails
 The use case for upgrading from CSE 3.1.3 to 3.1.3 is needed if `cse upgrade` or `cse install` fails; in this case,

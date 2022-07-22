@@ -87,10 +87,6 @@
       sublink: useful_commands
     - name: Upgrading software installed on Kubernetes clusters
       sublink: k8s_upgrade
-    - name: Automation
-      sublink: automation
-    - name: Example Use Case
-      sublink: example
   - name: "Kubernetes Clusters UI Plugin"
     link: CSE_UI_PLUGIN.html
   - name: "Enterprise PKS enablement"
