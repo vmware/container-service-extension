@@ -21,7 +21,8 @@ For greenfield installations, please get started with [CSE introduction](INTRO.h
 * UI plugin : Kubernetes Container Clusters UI plugin, that is used to manage Native, TKG, TKGs, TKGi clusters from VCD UI.
 
 ### CSE 3.1.4
-* Support for TKG 1.5.3 and 1.5.4 Ubuntu ova's
+* Support for Ubuntu 20.04 Kubernetes OVAs from VMware Tanzu Kubernetes Grid Versions 1.5.3 and K8s version 1.22.8
+* Support for Ubuntu 20.04 Kubernetes OVAs from VMware Tanzu Kubernetes Grid Versions 1.5.4 and K8s version 1.22.9
 * Interoperability with VCD 10.4.0 GA
 * Support for RDE 2.0 request payloads in which RDE 2.1 clusters are created.
 * Bug fix to support Ubuntu 20.04 native templates. Learn more [here](KNOWN_ISSUES.html#general)
