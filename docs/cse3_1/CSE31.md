@@ -115,6 +115,7 @@ For greenfield installations, please get started with [CSE introduction](INTRO.h
 
 | CSE Server/CLI | Cloud Director | NSX-T | NSX-V   | Comments                            |
 |----------------|----------------|-------|---------|-------------------------------------|
+| 3.1.4          | 10.3.1+        | 3.1.1 | 6.4.10† | Cluster representation as RDE 2.1.0 |
 | 3.1.3          | 10.3.1+        | 3.1.1 | 6.4.10† | Cluster representation as RDE 2.1.0 |
 | 3.1.3          | 10.2.2         | 3.1.1 | 6.4.10† | Cluster representation as RDE 1.0.0 |
 | 3.1.2          | 10.3.2         | 3.1.1 | 6.4.10† | Cluster representation as RDE 2.0.0 |
