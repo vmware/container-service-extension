@@ -107,6 +107,8 @@ and publish appropriate placement policies on the same.
 * Convert legacy clusters to RDE based clusters.
 * Update RDE 1.0 clusters to RDE 2.0 clusters.
 
+CSE 3.1.4 can be upgraded from 3.1.0, 3.1.1, 3.1.2, 3.1.3 or 3.0.X.
+CSE 3.1.3 can be upgraded from 3.1.0, 3.1.1, 3.1.2 or 3.0.X.
 CSE 3.1.2 can be upgraded from 3.1.0, 3.1.1 or 3.0.X.
 CSE 3.1.1 can be upgraded from 3.1.0 or 3.0.X.
 CSE 3.1.0 can only be upgraded from 3.0.X.
@@ -136,7 +138,7 @@ Note the below recommendation when the target combination is CSE 3.1 (legacy_mod
   It is recommended to recreate the templates from the new template cookbook 2.0 to avoid any errors.
 
 ```
-Note for CSE 3.1.3: Because CSE 3.1.3 uses RDE 2.1, the above holds true, except that
+Note for CSE 3.1.3 and 3.1.4: Because these use RDE 2.1, the above holds true, except that
 `urn:vcloud:type:cse:nativeCluster:2.1.0` instead of `urn:vcloud:type:cse:nativeCluster:2.0.0` will be used,
 and RDE 1.0 clusters will be upgraded to use RDE 2.1.
 ```
