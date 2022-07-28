@@ -8,6 +8,23 @@ title: Known Issues
 ## General Issues
 ---
 
+### Resizing pre-existing TKG clusters after upgrade to CSE 3.1.3 fails with "kubeconfig not found in control plane extra configuration" in server logs
+In CSE 3.1.3, the control plane node writes the kubeconfig to the extra config so that worker nodes can install core
+packages. During cluster resize, when the pre-existing cluster's worker nodes look for the kubeconfig, the control plane's
+extra config does not have it because the cluster was created prior to 3.1.3.
+
+**Resolution**
+
+This issue is fixed in CSE 3.1.4 for pre-existing clusters not to retrieve the kubeconfig during cluster resize.
+
+**Workaround for CSE 3.1.3**
+
+1. Log in to the control plane vm
+2. Add a placeholder VM extra config element by executing `vmtoolsd --cmd "info-set guestinfo.kubeconfig $(echo VMware | base64)"`.
+This step allows the worker nodes to retrieve a placeholder kubeconfig even though this kubeconfig won't be used.
+3. Verify if the extra config element has been set properly with command `vmtoolsd --cmd "info-get gustinfo.kubeconfig"`
+4. Reattempt Resize operation
+
 ### TKG Cluster creation fails with "ACCESS_TO_RESOURCE_IS_FORBIDDEN due to lack of [VAPP_VIEW] right" even though this right is not missing
 This issue is due to a security context being wiped out.
 
