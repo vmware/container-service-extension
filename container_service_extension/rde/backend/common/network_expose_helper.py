@@ -104,7 +104,7 @@ def construct_init_cluster_script_with_exposed_ip(script: str, expose_ip: str):
 
     :return: the updated init cluster script
     :rtype: str
-    """
+    """  # noqa: E501
     # Get line with 'kubeadm init'
     kubeadm_init_match: re.Match = re.search('kubeadm init .+\n', script)
     if not kubeadm_init_match:
