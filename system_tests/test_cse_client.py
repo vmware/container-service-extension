@@ -506,7 +506,7 @@ def generate_validate_node_count_func(expected_nodes):
     :param expected_nodes: Expected number of nodes in the cluster
 
     :return validator: function(output, test_user)
-    """
+    """  # noqa: E501
     node_pattern = r'(node-\S+)'
 
     def validator(output, test_runner_username):
