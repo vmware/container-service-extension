@@ -636,8 +636,6 @@ class ClusterService(abstract_broker.AbstractBroker):
             control_plane_ip = _get_control_plane_ip(
                 self.context.sysadmin_client,
                 vapp,
-                check_tools=True,
-                use_authentication_sleep=True
             )
 
             # Handle exposing cluster
@@ -941,12 +939,9 @@ class ClusterService(abstract_broker.AbstractBroker):
                     vapp_href = curr_entity.externalId
                     vapp = vcd_vapp.VApp(self.context.client,
                                          href=vapp_href)
-                    # Since the VM is already running at this point in the
-                    # code, there is no need to add the additional sleep
                     control_plane_internal_ip = _get_control_plane_ip(
                         sysadmin_client=self.context.sysadmin_client,
-                        vapp=vapp,
-                        check_tools=True)
+                        vapp=vapp)
 
                     # update kubeconfig with internal ip
                     self._replace_kubeconfig_expose_ip(
@@ -2132,29 +2127,13 @@ def _get_node_names(vapp, node_type):
     return [vm.get('name') for vm in vapp.get_all_vms() if vm.get('name').startswith(node_type)]  # noqa: E501
 
 
-def _get_control_plane_ip(sysadmin_client: vcd_client.Client, vapp,
-                          check_tools=False, use_authentication_sleep=False):
+def _get_control_plane_ip(sysadmin_client: vcd_client.Client, vapp):
     vcd_utils.raise_error_if_user_not_from_system_org(sysadmin_client)
 
     LOGGER.debug(f"Getting control_plane IP for vapp: "
                  f"{vapp.get_resource().get('name')}")
-    script = "#!/usr/bin/env bash\n" \
-             "ip route get 1 | awk '{print $NF;exit}'\n" \
-
     node_names = _get_node_names(vapp, NodeType.CONTROL_PLANE)
-    result = _execute_script_in_nodes(
-        sysadmin_client,
-        vapp=vapp,
-        node_names=node_names,
-        script=script,
-        check_tools=check_tools,
-        use_authentication_sleep=use_authentication_sleep)
-    errors = _get_script_execution_errors(result)
-    if errors:
-        raise E.ScriptExecutionError(f"Get control plane IP script execution "
-                                     f"failed on control plane node "
-                                     f"{node_names}:{errors}")
-    control_plane_ip = result[0][1].content.decode().split()[0]
+    control_plane_ip = vapp.get_primary_ip(node_names[0])
     LOGGER.debug(f"Retrieved control plane IP for vapp: "
                  f"{vapp.get_resource().get('name')}, ip: {control_plane_ip}")
     return control_plane_ip
