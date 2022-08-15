@@ -1499,7 +1499,7 @@ def upgrade_cse(config_file_name, config, skip_template_creation,
         # CSE version info in extension description is only applicable for
         # CSE 2.6.02b.dev and CSE 3.0.0+ versions.
         cse_2_6_any_patch = semantic_version.SimpleSpec('>=2.6.0,<2.7.0')
-        cse_3_0_any_previous_patch = semantic_version.SimpleSpec('>=3.0.0,<=3.0.4')  # noqa: E501
+        cse_3_0_any_previous_patch = semantic_version.SimpleSpec('>=3.0.0,<=3.0.5')  # noqa: E501
         cse_3_0_patch_below_3 = semantic_version.SimpleSpec('>=3.0.0,<3.0.3')
         allow_upgrade = \
             ext_cse_version == server_constants.UNKNOWN_CSE_VERSION or \
