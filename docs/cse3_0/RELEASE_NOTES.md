@@ -36,7 +36,7 @@ Release Date: 2022-08-17
 ** Kubernetes Container Clusters UI Plug-in 2.4.0 is available on the VMware Cloud Director 10.2 download page
 
 **What's New**
-* Fix for TKG cluster creation with Ubuntu 20.04
+* Fix for TKG cluster creation that uses the Ubuntu 20.04 template
 * CSE 3.0.5 is certified with Direct Connect Org VDC Networks for NSX-T VDCs
 * Kubernetes Container Clusters UI Plug-in 2.4.0 supports `expose` cluster creation for external connectivity for clusters
 on routed Org VDC networks. Please see more [here](CLUSTER_MANAGEMENT.html#expose_cluster).

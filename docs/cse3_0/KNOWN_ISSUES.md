@@ -8,7 +8,7 @@ title: Known Issues
 ## General Issues
 ---
 ### In CSE 3.0 TKG clusters can fail during cluster creation
-This issue is due to an issue in the CSE codebase related to Ubuntu 20.04.
+This is due to an issue in CSE related to the ubuntu-20.04_tkgm-1.20_antrea-0.11 template.
 
 **Resolution**
 
