@@ -22,6 +22,24 @@ For more details, please read [CSE 3.1.1](../cse3_1/RELEASE_NOTES.html)
 
 # Release Notes
 
+## CSE 3.0.5 GA (3.0.5)
+Release Date: 2022-08-17
+
+**Supported VCD versions** : 10.2.2, 10.1.3, 10.0.0.3
+
+| CSE Server | CSE CLI | Kubernetes Container Clusters UI Plug-in | Cloud Director | NSX-T        | Enterprise PKS with NSX-T | Features offered                                                                                                            |
+|------------|---------|------------------------------------------|----------------|--------------|---------------------------|-----------------------------------------------------------------------------------------------------------------------------|
+| 3.0.5      | 3.0.5   | 2.4.0**                                  | 10.2.2         | 3.0.2, 3.1.2 | 1.7 with 2.5.1            | Native, TKG, TKG-S, and Enterprise PKS Cluster management; Runtime Defined entity representation for native, TKG and TKG-S. |
+| 3.0.5      | 3.0.5   | 1.0.3                                    | 10.1, 10.0     | NA           | 1.7 with 2.5.1            | Native and Enterprise PKS cluster management                                                                                |
+| NA         | 3.0.5   | 2.4.0**                                  | 10.2.2         | NA           | NA                        | TKG-S cluster management only                                                                                               |
+
+** Kubernetes clusters UI plug-in 2.2.0 ships with VCD 10.2.2
+
+**What's New**
+* Fix for TKG cluster creation with Ubuntu 20
+* Certification for CSE Server with NSX-T Direct Networks
+* UI Plug-in 2.4.0 supports `expose` cluster creation
+
 ## CSE 3.0.4 GA (3.0.4)
 Release Date: 2021-07-23
 
