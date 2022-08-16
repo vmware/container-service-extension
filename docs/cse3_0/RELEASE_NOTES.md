@@ -33,12 +33,13 @@ Release Date: 2022-08-17
 | 3.0.5      | 3.0.5   | 1.0.3                                    | 10.1, 10.0     | NA           | 1.7 with 2.5.1            | Native and Enterprise PKS cluster management                                                                                |
 | NA         | 3.0.5   | 2.4.0**                                  | 10.2.2         | NA           | NA                        | TKG-S cluster management only                                                                                               |
 
-** Kubernetes clusters UI plug-in 2.2.0 ships with VCD 10.2.2
+** Kubernetes Container Clusters UI Plug-in 2.4.0 is available on the VMware Cloud Director 10.2 download page
 
 **What's New**
-* Fix for TKG cluster creation with Ubuntu 20
-* Certification for CSE Server with NSX-T Direct Networks
-* UI Plug-in 2.4.0 supports `expose` cluster creation
+* Fix for TKG cluster creation with Ubuntu 20.04
+* CSE 3.0.5 is certified with Direct Connect Org VDC Networks for NSX-T VDCs
+* Kubernetes Container Clusters UI Plug-in 2.4.0 supports `expose` cluster creation for external connectivity for clusters
+on routed Org VDC networks. Please see more [here](CLUSTER_MANAGEMENT.html#expose_cluster).
 
 ## CSE 3.0.4 GA (3.0.4)
 Release Date: 2021-07-23
