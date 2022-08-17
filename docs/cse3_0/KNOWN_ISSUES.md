@@ -7,6 +7,13 @@ title: Known Issues
 <a name="general"></a>
 ## General Issues
 ---
+### In CSE 3.0 TKG clusters can fail during cluster creation
+This is due to an issue in CSE related to the ubuntu-20.04_tkgm-1.20_antrea-0.11 template.
+
+**Resolution**
+
+This issue is fixed in CSE 3.0.5.
+
 ### In CSE 3.0 users of System organization are unable to create clusters
 If a user from System org who didn't install CSE 3.0 attempts to create clusters,
 the operation fails with an error message "Access denied". The reason behind the
