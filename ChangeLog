@@ -1,6 +1,18 @@
 CHANGES
 =======
 
+3.0.5
+-----
+
+* allow self-upgrade to CSE 3.0.5 (#1390)
+* getting cp ip through vapp and no sleep (#1389)
+* flake8 fix (#1388)
+* updated default template (#1383)
+
+3.0.4
+-----
+
+* Update ChangeLog for CSE 3.0.4 release
 * Add sleeps in vcdbroker to prevent authentication failures (#1142)
 * Remove hyphenated variables in setup.cfg (#1140)
 * Fix README.md rendering in pypi (#1139)
