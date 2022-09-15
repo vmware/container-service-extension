@@ -315,6 +315,9 @@ routed OrgVDC networks are used to deploy K8s clusters. In order to grant Intern
 to the cluster VMs connected to NSX-T backed routed OrgVDC networks, and maintain
 accessibility to the clusters, CSE 3.0.2 offers an option to `expose` the cluster.
 
+It is a prerequisite that the network is configured to receive external traffic and to send
+out traffic externally.
+
 Users deploying clusters must have the following rights, if they want to leverage
 the `expose` functionality.
 
