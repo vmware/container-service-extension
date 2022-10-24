@@ -8,6 +8,33 @@ title: Known Issues
 ## General Issues
 ---
 
+### Unable to create, update, or delete cluster after upgrade to CSE 3.1.1 or 3.1.2 from CSE 3.1.0
+The native cluster entity type in CSE 3.1.Z has a `hooks` section in the native entity type that allows for cluster
+creation, update, and deletion. When upgrading from CSE 3.1.0 to CSE 3.1.1 or 3.1.2, the `hooks` section
+of the native cluster entity type is incorrectly overwritten to `null`, leading to this issue.
+
+**Resolution**
+
+This issue does not exist when upgrading from CSE 3.1.0 to CSE 3.1.3 and 3.1.4.
+
+**Workaround for CSE 3.1.1 and 3.1.2**
+1. Make a GET request on https://{{VCD_IP}}/cloudapi/1.0.0/entityTypes/urn:vcloud:type:cse:nativeCluster:2.0.0
+at api version 36.0 for the `Accept` header.
+2. Copy the response body from (1) to format a new request body. The `hooks` section in the response body from (1) should be `null`.
+3. Change the request body of the `hooks` section in (2) to be:
+    ```
+    "hooks": {
+            "PreDelete": "urn:vcloud:behavior-interface:deleteCluster:cse:k8s:1.0.0",
+            "PostCreate": "urn:vcloud:behavior-interface:createCluster:cse:k8s:1.0.0",
+            "PostUpdate": "urn:vcloud:behavior-interface:updateCluster:cse:k8s:1.0.0"
+        }
+    ```
+4. Make a PUT request on https://{{VCD_IP}}/cloudapi/1.0.0/entityTypes/urn:vcloud:type:cse:nativeCluster:2.0.0
+using the request body in (3).
+5. Repeat step (1) and ensure that the `hooks` section in the response body has the hooks section in (3).
+
+
+
 ### Resizing pre-existing TKG clusters after upgrade to CSE 3.1.3 fails with "kubeconfig not found in control plane extra configuration" in server logs
 In CSE 3.1.3, the control plane node writes the kubeconfig to the extra config so that worker nodes can install core
 packages. During cluster resize, when the pre-existing cluster's worker nodes look for the kubeconfig, the control plane's
