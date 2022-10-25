@@ -4,8 +4,14 @@ title: Release Notes
 ---
 
 # General Announcement
+
+**Date: 2022-10-25**
+* CSE 3.1.x reaches end of general support on February 15th, 2023.
+* Check updates on supported templates with CSE 3.1.x at [Template Announcements](TEMPLATE_ANNOUNCEMENTS.html).
+
+
 **Date: 2022-04-14**
-* VCD 10.1 with CSE reaches end of support on April 9, 2022
+* VCD 10.1 with CSE reaches end of support on April 9, 2022.
 
 **Date : 2022-01-27**
 * Container Service Extension 3.1.x reaches end of support on July 15, 2023.
