@@ -6,7 +6,7 @@ title: Template Announcements
 
 ## October 25, 2022
 
-Due to cloud.weave.works being [shut down](https://www.weave.works/blog/weave-cloud-end-of-service), all templates currently compatible with CSE 3.0.x will stop working. Additionally, since CSE 3.0.x has reached end of general support, these templates will not be updated and will remain non functional.
+Recently, cloud.weave.works has been shut down. Native K8s templates will no longer work with CSE 3.0.x. Additionally, CSE 3.0.x has reached end of support on Oct 15, 2022, so these templates will not be updated.
 
 ## Jul 2, 2021
 

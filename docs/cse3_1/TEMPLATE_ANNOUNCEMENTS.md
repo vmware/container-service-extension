@@ -4,18 +4,18 @@ title: Template Announcements
 ---
 # Template Announcements
 
-## Ocotber 25th, 2022
+## October 25th, 2022
 
 **Highlights**
 
-* All templates with Kubernetes v1.20 or below has been removed.
+* All templates with Kubernetes v1.20 and below has been removed.
 * No new templates will be offered/updated in future.
 
 All available templates:
 
 | Template Name                        | Revision | Operating System  | Kubernetes  | Weave     | Docker                  |
 |--------------------------------------|----------|-------------------|-------------|-----------|-------------------------|
-| **ubuntu-20.04_k8-1.23_weave-2.8.1** | 1        | Ubuntu 20.04      | 1.23.3      | 2.8.1     | Docker-ce 20.10.12      |
+| ubuntu-20.04_k8-1.23_weave-2.8.1 | 1        | Ubuntu 20.04      | 1.23.3      | 2.8.1     | Docker-ce 20.10.12      |
 | ubuntu-16.04_k8-1.21_weave-2.8.1     | 1        | Ubuntu-16.04      | 1.21.2      | 2.8.1     | Docker-ce 20.10.7       |
 | ~~ubuntu-16.04_k8-1.20_weave-2.6.5~~     | ~~3~~    | ~~Ubuntu-16.04~~      | ~~1.20.6~~     | ~~2.6.5~~     | ~~Docker-ce 19.03.15~~     |
 | ~~ubuntu-16.04_k8-1.19_weave-2.6.5~~     | ~~3~~    | ~~Ubuntu-16.04~~      | ~~1.19.3~~      | ~~2.6.5~~    | ~~Docker-ce 19.03.12~~      |
