@@ -8,7 +8,7 @@ title: Template Announcements
 
 **Highlights**
 
-* All templates with Kubernetes v1.20 and below has been removed.
+* All templates with Kubernetes v1.20 and below have been removed.
 * No new templates will be offered/updated in future.
 
 All available templates:

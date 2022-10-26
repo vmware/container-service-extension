@@ -6,7 +6,7 @@ title: Release Notes
 # General Announcement
 
 **Date: 2022-10-25**
-* Native offering for CSE 3.1.x will reach end of general support on February 15th, 2023.
+* Native offering for CSE 3.1.x will reach end of general support on February 1st, 2023.
 * Native K8s Templates will no longer be updated. Consider using TKG offering. Please check [Template Announcements](TEMPLATE_ANNOUNCEMENTS.html) for more details.
 
 
