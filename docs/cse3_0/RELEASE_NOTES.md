@@ -4,6 +4,11 @@ title: Release Notes
 ---
 
 # General Announcement
+
+**Date: 2022-10-25**
+* CSE 3.0.x has reached end of general support on October 15, 2022.
+* Native K8s Templates have reached end of support with CSE 3.0.x. Please check [Template Announcements](TEMPLATE_ANNOUNCEMENTS.html) for more details.
+
 **Date: 2022-04-14**
 * VCD 10.1 with CSE reaches end of support on April 9, 2022.
 

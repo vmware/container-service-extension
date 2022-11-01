@@ -4,8 +4,14 @@ title: Release Notes
 ---
 
 # General Announcement
+
+**Date: 2022-10-25**
+* Native offering for CSE 3.1.x will reach end of general support on February 1st, 2023.
+* Native K8s Templates will no longer be updated. Consider using TKG offering. Please check [Template Announcements](TEMPLATE_ANNOUNCEMENTS.html) for more details.
+
+
 **Date: 2022-04-14**
-* VCD 10.1 with CSE reaches end of support on April 9, 2022
+* VCD 10.1 with CSE reaches end of support on April 9, 2022.
 
 **Date : 2022-01-27**
 * Container Service Extension 3.1.x reaches end of support on July 15, 2023.
