@@ -501,7 +501,7 @@ def test_0100_vcd_cse_cluster_config(test_runner_username):
 
 
 def generate_validate_node_count_func(expected_nodes):
-    """Generate validator function to verify the number of nodes in the cluster.
+    """Generate validator function to verify number of nodes in the cluster.
 
     :param expected_nodes: Expected number of nodes in the cluster
 
