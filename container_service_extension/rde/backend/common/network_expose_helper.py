@@ -93,7 +93,7 @@ def _get_nsxt_backed_gateway_service(client: vcd_client.Client, org_name: str,
 
 
 def construct_init_cluster_script_with_exposed_ip(script: str, expose_ip: str):
-    """Construct init cluster script with expose ip control plane endpoint option.
+    """Make init cluster script with expose ip control plane endpoint option.
 
     If the '--control-plane-endpoint' option is already present, this option
     will be replaced with this option specifying the exposed ip. If this option
