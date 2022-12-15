@@ -235,3 +235,7 @@ to
 
 Kubernetes version has to be specified within the configuration file itself,
 since `--kubernetes-version` and `--config` are incompatible.
+
+### Task for create cluster goes on forever even when cluster create has failed in CSE server
+CSE server with versions 3.1.1, 3.1.2, 3.1.3 and 3.1.4 are impacted. The issue will happen when the user's role used to deploy a TKGm kubernetes cluster is missing "Manage user's own API token" right. The cluster create task will not be marked as "failed" even when CSE server logs indicate that the cluster creation has failed.
+Adding the missing "Manage user's own API token" right to the user's role and re-attemplting the cluster creation should fix the issue.
