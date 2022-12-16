@@ -1,7 +1,7 @@
-tox
-flake8
-flake8-import-order
-flake8-docstrings
-pytest
+tox < 4
+flake8 < 4
+flake8-import-order < 1
+flake8-docstrings < 2
+pytest < 8
 pydocstyle < 4
-pytest-logger
+pytest-logger < 1
