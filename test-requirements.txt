@@ -1,5 +1,5 @@
 tox < 4
-flake8 < 4
+flake8 == 4.0.0
 flake8-import-order < 1
 flake8-docstrings < 2
 pytest < 8
