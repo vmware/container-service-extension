@@ -5,3 +5,4 @@ flake8-docstrings < 2
 pytest < 8
 pydocstyle < 4
 pytest-logger < 1
+importlib-metadata < 5
