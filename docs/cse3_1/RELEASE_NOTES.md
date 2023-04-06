@@ -6,7 +6,7 @@ title: Release Notes
 # General Announcement
 
 **Date: 2023-04-07**
-* containerd 1.4 support reached end of support from March 3, 2022.
+* containerd 1.4 support reached end of support on March 3, 2022.
 * Cluster operations that use existing native k8 template: ubuntu-20.04_k8-1.23_weave-2.8.1 are affected.
 * Please check [Template Announcements](TEMPLATE_ANNOUNCEMENTS.html) for necessary workaround.
 

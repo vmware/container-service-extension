@@ -9,7 +9,7 @@ title: Template Announcements
 **Highlights**
 
 * **ubuntu-20.04_k8-1.23_weave-2.8.1** has been updated to use containerd 1.6
-* Reinstall **ubuntu-20.04_k8-1.23_weave-2.8.1** with **cse template install --force** before any new cluster creation or resize of existing cluster.
+* Please reinstall **ubuntu-20.04_k8-1.23_weave-2.8.1** with **cse template install --force** before creating new clusters or resizing existing clusters.
 
 ## October 25th, 2022
 
