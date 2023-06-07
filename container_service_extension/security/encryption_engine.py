@@ -106,7 +106,7 @@ def _derive_pbkdf2_key(passwd, salt):
     :rtype: bytes
     """
     kdf = PBKDF2HMAC(
-        algorithm=hashes.SHA256,
+        algorithm=hashes.SHA256(),
         length=constants.PBKDF2_OUTPUT_SIZE,
         salt=salt,
         iterations=constants.PBKDF2_ITERATIONS,
