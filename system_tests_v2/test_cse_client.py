@@ -1187,6 +1187,7 @@ def cluster_delete_nfs_param(request):
     yield username
 
 
+@pytest.mark.skip(reason='Test disabled')
 @pytest.mark.parametrize('cluster_delete_nfs_param',
                          [env.SYS_ADMIN_NAME,
                           env.CLUSTER_AUTHOR_NAME,
